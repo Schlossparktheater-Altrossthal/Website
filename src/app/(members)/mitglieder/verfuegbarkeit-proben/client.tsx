@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -66,11 +66,6 @@ export function RehearsalAvailabilityClient({
       return acc;
     }, {} as Record<string, AvailabilityDay>)
   );
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const updateAttendance = async (rehearsalId: string, status: "yes" | "no" | "maybe") => {
     try {
@@ -203,27 +198,23 @@ export function RehearsalAvailabilityClient({
                         )}
                       </div>
                       
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-3 h-3" />
-                            {isClient ? rehearsalDate.toLocaleDateString("de-DE") : rehearsalDate.toISOString().split('T')[0]}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-3 h-3" />
-                            {isClient ? (
-                              <>
-                                {rehearsalDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} - 
-                                {new Date(rehearsal.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
-                              </>
-                            ) : (
-                              `${rehearsalDate.getUTCHours().toString().padStart(2, '0')}:${rehearsalDate.getUTCMinutes().toString().padStart(2, '0')} - ${new Date(rehearsal.end).getUTCHours().toString().padStart(2, '0')}:${new Date(rehearsal.end).getUTCMinutes().toString().padStart(2, '0')}`
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-3 h-3" />
-                            {rehearsal.location}
-                          </div>
-                        </div>                      {rehearsal.description && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3 h-3" />
+                          {rehearsalDate.toLocaleDateString("de-DE")}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3 h-3" />
+                          {rehearsalDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} - 
+                          {new Date(rehearsal.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-3 h-3" />
+                          {rehearsal.location}
+                        </div>
+                      </div>
+                      
+                      {rehearsal.description && (
                         <p className="text-sm text-muted-foreground mt-2">{rehearsal.description}</p>
                       )}
                     </div>
