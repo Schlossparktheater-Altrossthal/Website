@@ -1,7 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "picsum.photos",
+      },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "i.imgur.com" },
+      { protocol: "https", hostname: "www.elbmargarita.de" },
+      { protocol: "https", hostname: "www.dresden.de" },
+      { protocol: "https", hostname: "radiodresden.de" },
+      { protocol: "https", hostname: "www.felix-hitzig.de" },
+    ],
+  },
 };
 
 export default nextConfig;

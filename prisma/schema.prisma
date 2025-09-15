@@ -1,0 +1,294 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  member
+  cast
+  tech
+  board
+  finance_admin
+  admin
+}
+
+enum ClueType {
+  text
+  image
+  audio
+  riddle
+}
+
+enum AttendanceStatus {
+  yes
+  no
+  maybe
+}
+
+enum AvailabilityStatus {
+  blocked
+  available
+}
+
+// Availability (new, per-day granular)
+enum AvailabilityKind {
+  FULL_AVAILABLE
+  FULL_UNAVAILABLE
+  PARTIAL
+}
+
+model AvailabilityDay {
+  id               String           @id @default(cuid())
+  userId           String
+  date             DateTime
+  kind             AvailabilityKind
+  availableFromMin Int?
+  availableToMin   Int?
+  note             String?
+  user             User             @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+}
+
+model AvailabilityTemplate {
+  id               String           @id @default(cuid())
+  userId           String
+  weekday          Int              // 0=Sonntag … 6=Samstag
+  kind             AvailabilityKind
+  availableFromMin Int?
+  availableToMin   Int?
+  validFrom        DateTime?
+  validTo          DateTime?
+  user             User             @relation(fields: [userId], references: [id])
+}
+
+enum TaskStatus {
+  todo
+  doing
+  done
+}
+
+enum FinanceType {
+  income
+  expense
+}
+
+enum VisibilityScope {
+  board
+  finance_admin
+}
+
+enum Audience {
+  all
+  group
+  role
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?  @unique
+  role      Role     @default(member)
+  createdAt DateTime @default(now())
+
+  accounts     Account[]
+  sessions     Session[]
+  guesses      Guess[]
+  attendance   RehearsalAttendance[]
+  availability Availability[]
+  tasks        Task[]                @relation("TaskAssignee")
+  // New availability relations
+  availabilityDays       AvailabilityDay[]
+  availabilityTemplates  AvailabilityTemplate[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Show {
+  id         String         @id @default(cuid())
+  year       Int
+  title      String?
+  synopsis   String?
+  dates      Json
+  posterUrl  String?
+  revealedAt DateTime?
+  meta       Json?
+  clues      Clue[]
+  rehearsals Rehearsal[]
+  finance    FinanceEntry[]
+  guesses    Guess[]
+}
+
+model Clue {
+  id        String   @id @default(cuid())
+  showId    String
+  index     Int
+  type      ClueType
+  content   Json
+  releaseAt DateTime
+  points    Int
+  published Boolean  @default(false)
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@unique([showId, index], name: "showId_index")
+  @@index([showId, published, releaseAt])
+}
+
+model Guess {
+  id        String   @id @default(cuid())
+  userId    String
+  showId    String
+  guessText String
+  score     Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+}
+
+model Rehearsal {
+  id            String                @id @default(cuid())
+  showId        String?               // Optional - für allgemeine Proben
+  title         String                @default("Probe")
+  start         DateTime
+  end           DateTime
+  location      String
+  description   String?
+  requiredRoles Json
+  isFromTemplate Boolean              @default(false)
+  templateId    String?
+  priority      RehearsalPriority     @default(NORMAL)
+  status        RehearsalStatus       @default(PLANNED)
+  createdBy     String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @default(now()) @updatedAt
+  show          Show?                 @relation(fields: [showId], references: [id], onDelete: Cascade)
+  attendance    RehearsalAttendance[]
+  template      RehearsalTemplate?    @relation(fields: [templateId], references: [id])
+}
+
+model RehearsalTemplate {
+  id            String              @id @default(cuid())
+  name          String
+  description   String?
+  weekday       Int                 // 0=Sonntag, 1=Montag, etc.
+  startTime     String              // HH:MM format
+  endTime       String              // HH:MM format
+  location      String
+  requiredRoles Json
+  isActive      Boolean             @default(true)
+  priority      RehearsalPriority   @default(NORMAL)
+  validFrom     DateTime?
+  validTo       DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @default(now()) @updatedAt
+  rehearsals    Rehearsal[]
+}
+
+enum RehearsalPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum RehearsalStatus {
+  PLANNED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model RehearsalAttendance {
+  id          String           @id @default(cuid())
+  rehearsalId String
+  userId      String
+  status      AttendanceStatus
+  rehearsal   Rehearsal        @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([rehearsalId, userId], name: "rehearsalId_userId")
+}
+
+model Availability {
+  id     String             @id @default(cuid())
+  userId String
+  start  DateTime
+  end    DateTime
+  status AvailabilityStatus
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  assigneeId  String?
+  status      TaskStatus @default(todo)
+  labels      Json
+  dueAt       DateTime?
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+}
+
+model InventoryItem {
+  id        String  @id @default(cuid())
+  name      String
+  qty       Int
+  location  String?
+  owner     String?
+  condition String?
+}
+
+model FinanceEntry {
+  id              String          @id @default(cuid())
+  type            FinanceType
+  amount          Float
+  category        String?
+  showId          String?
+  visibilityScope VisibilityScope
+  show            Show?           @relation(fields: [showId], references: [id])
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  audience    Audience
+  body        String
+  attachments Json?
+  createdAt   DateTime @default(now())
+}

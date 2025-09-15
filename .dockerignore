@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+build
+pnpm-store
+.git
+.gitignore
+dev.db*
+.DS_Store
+

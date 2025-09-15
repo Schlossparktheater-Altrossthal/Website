@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: theater
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # UI
+      - "1025:1025" # SMTP
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_SECRET: dev-secret-change-me
+      AUTH_DEV_NO_DB: "0" # DB-backed sessions (NextAuth Prisma Adapter)
+      NEXT_PUBLIC_AUTH_DEV_NO_DB: "0" # mirror to client to avoid hydration mismatch
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/theater?schema=public
+      EMAIL_SERVER: smtp://mailpit:1025
+      EMAIL_FROM: noreply@example.com
+      # EMAIL_SERVER / EMAIL_FROM not required when AUTH_DEV_NO_DB=1
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      # Omit .next bind to ensure full rebuilds pick up server code changes
+    command: >-
+      sh -c "pnpm -s prisma:generate && pnpm -s exec prisma db push && pnpm -s db:seed || true && pnpm -s dev --turbo -p 3000 -H 0.0.0.0"
+
+volumes:
+  pgdata:
