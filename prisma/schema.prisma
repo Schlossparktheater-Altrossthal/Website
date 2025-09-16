@@ -148,6 +148,7 @@ model User {
   sizes                  MemberSize[]
   roles                  UserRole[]
   approvedProposals      RehearsalProposal[] @relation("ProposalApprover")
+  notifications         NotificationRecipient[]
 }
 
 model Account {
@@ -249,6 +250,7 @@ model Rehearsal {
   attendanceLogs RehearsalAttendanceLog[]
   template      RehearsalTemplate?    @relation(fields: [templateId], references: [id])
   proposals     RehearsalProposal[]
+  notifications Notification[]
 }
 
 model RehearsalTemplate {
@@ -424,6 +426,28 @@ model FinanceEntry {
   showId          String?
   visibilityScope VisibilityScope
   show            Show?           @relation(fields: [showId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  body        String?
+  type        String?
+  createdAt   DateTime @default(now())
+  rehearsalId String?
+  rehearsal   Rehearsal? @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  recipients  NotificationRecipient[]
+}
+
+model NotificationRecipient {
+  id             String        @id @default(cuid())
+  notificationId String
+  userId         String
+  readAt         DateTime?
+  notification   Notification  @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
 }
 
 model Announcement {
