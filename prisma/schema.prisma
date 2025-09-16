@@ -292,3 +292,69 @@ model Announcement {
   attachments Json?
   createdAt   DateTime @default(now())
 }
+
+// =========================
+// Flexible Maße & Größen
+// =========================
+
+enum MeasurementUnit {
+  mm
+  cm
+  inch
+}
+
+enum SizeSystem {
+  EU
+  DE
+  US
+  UK
+  FR
+  IT
+  INT // International/Generic
+}
+
+enum SizeCategory {
+  top
+  bottom
+  dress
+  suit
+  shirt
+  pants
+  jeans
+  bra
+  shoe
+  hat
+  glove
+  belt
+  ring
+  other
+}
+
+// Freie, erweiterbare Körpermaße pro Mitglied (mit Historie)
+model MemberMeasurement {
+  id        String          @id @default(cuid())
+  userId    String
+  key       String          // z. B. "chest", "waist", "hips", "inseam", "neck" …
+  value     Float
+  unit      MeasurementUnit @default(cm)
+  takenAt   DateTime        @default(now())
+  takenBy   String?
+  note      String?
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, key, takenAt])
+}
+
+// Konfektions-/Schuh-/Hutgrößen etc. als flexible Einträge
+model MemberSize {
+  id        String       @id @default(cuid())
+  userId    String
+  category  SizeCategory
+  system    SizeSystem   @default(EU)
+  value     String       // frei: z. B. "M", "38", "75B", "42-44"
+  note      String?
+  updatedAt DateTime     @default(now()) @updatedAt
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, category, system])
+}

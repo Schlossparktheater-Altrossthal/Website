@@ -1,5 +1,4 @@
 = Entwurfs- und Analysephase
-
 :toc: macro
 :toc-title: Inhaltsverzeichnis
 :sectnums:
@@ -139,6 +138,76 @@ toc::[]
 * *Dienstplan*: Erstellung eines Schichtplans pro Vorstellung mit Zuordnung der Mitglieder; Integration mit Verfügbarkeiten.
 * *ToDo-Listen*: Rollenbasierte Filter, Kommentarfunktion, Verlauf.
 
+== Anwendungsbeschreibung & Workflows (Mitglieder/Planung)
+
+=== Schauspieler*innen-Sicht: Verfügbarkeiten, Zusagen, Kalender
+
+Ziel: Ein zentraler Kalender zeigt alle potenziellen Proben sowie persönliche Blocker. Der Standard ist „geplant“ (eingerechnet), bis man sich aktiv austrägt.
+
+- Verfügbarkeiten/Blocker:
+  - Personen markieren Nicht-Verfügbarkeiten über Tages-/Zeitfenster (siehe `AvailabilityDay`, `AvailabilityTemplate`).
+  - Wiederkehrende Muster (z. B. Mo–Fr abends nicht) werden über Templates gepflegt.
+- Proben im Kalender:
+  - Alle offenen/geplanten Proben werden angezeigt, eigene Einplanung ist standardmäßig „geplant“.
+  - Proben, in die man (noch) eingeplant ist, werden visuell hervorgehoben.
+- Zusage/Absage-Flow:
+  - Aktive Bestätigung möglich („Zusage“), ebenso Absage oder Tentative.
+  - „Keine Reaktion“ zählt als „geplant“ (für die Planungsgrundlage).
+  - Jede Statusänderung wird geloggt (Zeitpunkt, Person, vorher/nachher, optional Kommentar).
+
+Akzeptanzkriterien:
+- Blocker in der Zukunft blenden Konflikte farblich im Kalender ein.
+- Zusagen zeigen einen Haken/Badge; Absagen entfernen Hervorhebung.
+- Historie je Probe/Person ist nachvollziehbar.
+
+=== Planungs-Sicht: Serien, Status, Calltimes
+
+Ziel: Proben effizient aus Vorlagen/Serien anlegen, finalisieren und individuelle Ankunftszeiten planen.
+
+- Serien/Vorlagen:
+  - Wochentagsbasierte Templates (z. B. jeden Fr/Sa/So) erzeugen Vorschläge.
+  - Lifecycle: Entwurf/Vorschlag → Final (veröffentlicht) → ggf. Abgesagt/Abgeschlossen.
+- Finalisierung:
+  - Beim Finalisieren werden Benachrichtigungen und Kalender-Hervorhebungen ausgelöst.
+- Individuelle Calltimes:
+  - Für finale Proben können Calltimes je Person/Team zugewiesen werden (z. B. „Crew 17:30, Cast 18:00“ oder individuell pro Person).
+
+Akzeptanzkriterien:
+- Serie erzeugt die korrekten Slots mit Ort/Zeit und Status „Entwurf/Vorschlag“.
+- Finalisierung ändert sichtbar den Status und informiert betroffene Personen.
+- Calltimes sind pro Person einsehbar und im Kalender/Tooltip sichtbar.
+
+=== Szenen, Besetzung und Probierbarkeit
+
+Ziel: Optionale Szenen-/Rollenstruktur erlaubt, je nach An- und Abwesenheiten, sinnvolle Szenen zu identifizieren.
+
+- Szenenmodell:
+  - Szenen gehören zu einer Show, enthalten Titel, Reihenfolge/Schätzung und beteiligte Figuren.
+  - Figuren (`Character`) werden Menschen zugeordnet (`CharacterCasting`, mit Primary/Understudy optional).
+- Probierbarkeit:
+  - Für eine geplante Probe kann gefiltert werden, welche Szenen mit der aktuellen Anwesenheit sinnvoll probierbar sind (alle notwendigen Figuren verfügbar oder sinnvolle Teilproben).
+
+Akzeptanzkriterien:
+- Liste „heute probierbar“ reflektiert Abwesenheiten korrekt.
+- Teilproben können markiert werden (z. B. Fokus ohne komplette Besetzung).
+
+=== Nachbereitung, Statistik und Belastung
+
+Ziel: Transparenz, was tatsächlich geprobt wurde, und faire Verteilung der Belastung.
+
+- Nachbereitung:
+  - Pro Probe werden die tatsächlich geprobten Szenen inkl. Dauer und Anwesenden festgehalten.
+  - Notizen/Highlights zur Probe sind dokumentierbar.
+- Statistik:
+  - Pro Szene: summierte Probenminuten, letzte Probe, Abdeckung pro Figur.
+  - Pro Person: summierte Probenminuten/Frequenz im Zeitfenster.
+- Exhaustion-Metrik:
+  - Warnhinweise, wenn eine Person in einem Wochenende (Fr–So) übermäßig oft/zu lange eingeplant ist.
+
+Akzeptanzkriterien:
+- Statistik aktualisiert sich nach Nachbereitung; Dashboard/Tooltip zeigt Kennzahlen.
+- Planungsansicht warnt bei Überschreitung definierter Richtwerte (konfigurierbar).
+
 == Nicht-funktionale Anforderungen
 
 * *Sicherheit*: Rollenbasierte Zugriffskontrolle (RBAC) erweitert; sensible Daten verschlüsselt speichern (z. B. Allergien optional verschlüsseln).
@@ -162,18 +231,14 @@ toc::[]
 [source,prisma]
 ----
 model MemberProfile {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  heightCm         Int?
-  clothingTop      String?
-  clothingBottom   String?
-  shoeSizeEu       Decimal?
-  notes            String?
-  allergies        AllergyEntry[]
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  notes             String?
+  allergies         AllergyEntry[]
   dietaryPreference DietaryPreference?
-  updatedBy        String?
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedBy         String?
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AllergyEntry {
@@ -221,6 +286,48 @@ model StagePlan {
 
 * Ergänzende Indizes: `@@index([showId, date])` für Reservierungen, `@@index([userId, updatedAt])` für Profile.
 * Historisierung: optional separate `ProfileChangeLog`-Tabelle zur Nachverfolgung von Änderungen.
+
+=== Flexible Maße & Größen (Kostüm)
+
+Problem: Starre Felder wie `heightCm`, `clothingTop`, `clothingBottom`, `shoeSizeEu` sind unflexibel und schwer erweiterbar.
+
+Lösung: Freiform‑Maße mit Historie plus generische Größen‑Einträge. Dadurch lassen sich zusätzliche Maße (z. B. Hals, Oberarm, Schulter, Rückenlänge, Kopf), Systeme (EU/US/UK) und Kategorien (Schuhe/Hüte/Handschuhe) ohne Migrationsdruck abbilden.
+
+[source,prisma]
+----
+enum MeasurementUnit { mm cm inch }
+enum SizeSystem { EU DE US UK FR IT INT }
+enum SizeCategory { top bottom dress suit shirt pants jeans bra shoe hat glove belt ring other }
+
+model MemberMeasurement {
+  id        String          @id @default(cuid())
+  userId    String
+  key       String          // z. B. "chest", "waist", "hips", "inseam", "neck", "head"
+  value     Float
+  unit      MeasurementUnit @default(cm)
+  takenAt   DateTime        @default(now())
+  takenBy   String?
+  note      String?
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MemberSize {
+  id        String       @id @default(cuid())
+  userId    String
+  category  SizeCategory
+  system    SizeSystem   @default(EU)
+  value     String       // frei: "M", "38", "75B", "42-44"
+  note      String?
+  updatedAt DateTime     @default(now()) @updatedAt
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+----
+
+Anwendung:
+- Standardisieren per UI: Vorschlagsliste/Autocomplete für übliche Keys (chest/waist/hips/inseam/neck/sleeve/shoulder/head/etc.).
+- Historie: Jüngster `takenAt`-Eintrag gilt als „aktuell“; ältere bleiben nachvollziehbar.
+- Systeme: `MemberSize` erlaubt parallele Einträge für EU/US/UK, auch nach Kategorie.
+- Validierung: Einfache Einheitenprüfung; optional Limits per UI (z. B. 30–250 cm) statt im Schema.
 
 === Probenkalender & Szenenplanung
 
@@ -329,32 +436,43 @@ enum AvailabilityType {
   preferred
 }
 
+model Character {
+  id        String  @id @default(cuid())
+  showId    String
+  name      String
+  shortName String?
+  notes     String?
+  isLead    Boolean @default(false)
+  show      Show    @relation(fields: [showId], references: [id], onDelete: Cascade)
+}
+
 model Scene {
-  id          String   @id @default(cuid())
-  showId      String
-  order       Int
-  title       String
+  id           String   @id @default(cuid())
+  showId       String
+  order        Int
+  title        String
   estimatedMin Int?
-  description String?
-  roles       SceneRole[]
-  show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  description  String?
+  characters   SceneCharacter[]
+  show         Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
 }
 
-model SceneRole {
-  id        String   @id @default(cuid())
-  sceneId   String
-  roleId    String
-  isPrimary Boolean @default(true)
-  scene     Scene   @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  role      Role    @relation(fields: [roleId], references: [id])
+model SceneCharacter {
+  id          String   @id @default(cuid())
+  sceneId     String
+  characterId String
+  required    Boolean  @default(true)
+  scene       Scene     @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id])
 }
 
-model RoleAssignment {
-  id     String @id @default(cuid())
-  roleId String
-  userId String
-  role   Role   @relation(fields: [roleId], references: [id])
-  user   User   @relation(fields: [userId], references: [id])
+model CharacterCasting {
+  id          String   @id @default(cuid())
+  characterId String
+  userId      String
+  isPrimary   Boolean  @default(true)
+  character   Character @relation(fields: [characterId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
 }
 
 model RehearsalScenePlan {
@@ -405,6 +523,147 @@ model MemberLoadSnapshot {
 * `MemberLoadSnapshot` dient als Ausgangspunkt für Exhaustion-Metriken (z. B. Warnungen bei mehr als zwei Einsätzen pro Wochenende).
 * Zusätzliche Indizes: `@@index([rehearsalId, sceneId])` auf `RehearsalScenePlan`, `@@index([userId, windowStart])` auf `MemberLoadSnapshot`.
 * `RehearsalTemplateScene` erlaubt Szenen-Defaults pro Template, `RehearsalCalltime` sichert individuelle Calltimes mit optionaler Rollenbindung.
+
+== An Dramatify orientierte Erweiterungen
+
+Ziel: Feature-Parität für Theaterproben/-aufführungen mit klarer Szenenauflösung, Call Sheets, Breakdown und Abteilungs-Sichten (Kostüm, Requisite, Technik, Maske), ohne unnötige Komplexität.
+
+=== Datenmodell-Ergänzungen (Breakdown, Set/Ort, Call Sheet)
+
+[source,prisma]
+----
+enum BreakdownType { // Abteilungsbedarfe pro Szene
+  prop
+  costume
+  makeup
+  hair
+  set
+  light
+  sound
+  fx
+  music
+  document
+}
+
+model SceneBreakdownItem {
+  id          String        @id @default(cuid())
+  sceneId     String
+  kind        BreakdownType
+  title       String
+  description String?
+  quantity    Int?          @default(1)
+  refUrl      String?
+  scene       Scene         @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+}
+
+model SetLocation { // Bühne/Set/Ort (für Dramatify-ähnliche Planung)
+  id        String   @id @default(cuid())
+  showId    String
+  name      String
+  area      String?  // z. B. "Hauptbühne", "Seitenbühne"
+  notes     String?
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  scenes    Scene[]
+}
+
+// Szene um Attribute wie Ort, Tageszeit, INT/EXT ergänzen
+enum Daytime { morning, day, afternoon, evening, night }
+enum InteriorExterior { interior, exterior }
+
+// UPDATE HINWEIS: Scene erhält weitere optionale Felder
+// (Kein breaking Change, Felder sind optional)
+
+// In der echten Migration: "Scene" um folgende Felder erweitern:
+// setLocationId String?  @db.VarChar
+// daytime       Daytime?
+// intExt        InteriorExterior?
+// pageLength    Float?   // Seitenlänge (Skriptnäherung)
+
+model Callsheet { // Tages-/Probenzettel
+  id          String   @id @default(cuid())
+  showId      String
+  rehearsalId String?  // optional: an Probe gekoppelt
+  date        DateTime
+  location    String?
+  notes       String?
+  scenes      CallsheetScene[]
+  createdAt   DateTime @default(now())
+  show        Show     @relation(fields: [showId], references: [id])
+  rehearsal   RehearsalSlot? @relation(fields: [rehearsalId], references: [id])
+}
+
+model CallsheetScene {
+  id           String   @id @default(cuid())
+  callsheetId  String
+  sceneId      String
+  order        Int
+  specialNotes String?
+  callsheet    Callsheet @relation(fields: [callsheetId], references: [id], onDelete: Cascade)
+  scene        Scene     @relation(fields: [sceneId], references: [id])
+}
+
+model ContinuityNote { // Kontinuität je Szene/Probe
+  id          String   @id @default(cuid())
+  sceneId     String
+  rehearsalId String?
+  note        String
+  createdAt   DateTime @default(now())
+  scene       Scene         @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  rehearsal   RehearsalSlot @relation(fields: [rehearsalId], references: [id])
+}
+----
+
+Hinweise:
+- Trennung von RBAC-`Role` und Bühnen-`Character` verhindert Kollisionen mit `SceneRole` (besser: `SceneCharacter`).
+- `SceneBreakdownItem` bildet Dramatify‑ähnliche Abteilungslisten pro Szene ab.
+- `Callsheet` ermöglicht formales Call Sheet (auch aus Probe generierbar). 
+- Optionale Felder auf `Scene` (Ort/Tageszeit/INT‑EXT) verbessern Planung und Filtern.
+
+=== Zentrale Workflows (Dramatify‑ähnlich)
+- Szenenverwaltung: Import/Anlage von Szenen, Zuordnung von Figuren (`SceneCharacter`), Set/Ort, Tageszeit, Aufwand.
+- Breakdown: Pro Szene Items für Kostüm/Requisite/Technik/Maske pflegen; Abteilungsansichten und Export/Checklisten.
+- Call Sheet: Aus Probenplan oder ad‑hoc erstellt; enthält Datum, Ort, Szenenreihenfolge, individuelle Calltimes (bestehend), Notizen, Anhänge.
+- Kontinuität: Notizen aus Proben dokumentieren (`ContinuityNote`) und mit Szenen verknüpfen.
+- Abteilungs-Sichten: Filter „meine Abteilung“ (z. B. Kostüm) über Szenen, Proben, Call Sheets hinweg.
+
+=== API-Erweiterungen
+
+[options="header"]
+|===
+|Endpoint |Methode |Beschreibung |Auth
+
+|/api/characters
+|CRUD
+|Figuren/Rollen je Show
+|Regie/Produktion
+
+|/api/scenes/:id/breakdown
+|GET/PUT
+|Breakdown-Items je Szene lesen/aktualisieren
+|Kostüm/Requisite/Technik/Regie
+
+|/api/callsheets
+|CRUD
+|Call Sheets erstellen, Szenen zuordnen, PDF-Export
+|Produktion/Regie
+
+|/api/scenes/search
+|GET
+|Filter nach Ort/Tageszeit/Abteilung/Belegung
+|Produktion/Regie
+|===
+
+=== UI/UX-Ergänzungen
+- Szenenliste mit Chips: Ort, Tageszeit, INT/EXT, Dauer, beteiligte Figuren.
+- Szenendetail: Tabs „Figuren“, „Breakdown“, „Kontinuität“, „Anhänge“.
+- Abteilungsmodus: Checklisten-UI und Status (offen/erledigt/nachfragen) pro Breakdown-Item.
+- Call Sheet Generator: aus Probe/Selektion; Vorschau und Export (PDF/Print Styles).
+- Filter/Reports: Welche Szenen sind mit aktuellen Zusagen probebereit? Was fehlt pro Abteilung?
+
+=== Benennungen/Migration (sinnvolle Bereinigung)
+- `SceneRole` → `SceneCharacter` umbenennen; neues `Character`-Modell statt RBAC‑`Role`.
+- `RoleAssignment` nach Einsatzzweck splitten: `CrewAssignment` (Abteilung/Team) vs. `CharacterCasting` (Figur ↔ Nutzer*in).
+- `Scene` um optionale Felder erweitern (Ort/Tageszeit/INT‑EXT), keine Breaking Changes nötig.
 
 == API- & Integrationsdesign
 
@@ -505,34 +764,189 @@ Integrationen:
 * *Bühnenbauplan*: Kartenansicht mit Versionen, Download-Links, Verantwortlichen. Möglichkeit zur Kommentierung (evtl. via Task-Comments).
 * *Öffentliche Seite*: Hero bleibt, darunter Countdown (Auto-Update per client component), Abschnitt "Reservieren" mit Formular (Modal oder separate Seite), monatliche Tipps als Timeline.
 
+=== Designsystem & Bibliotheken
+
+- UI-Stack: Tailwind CSS (vorhanden) + shadcn/ui (Buttons, Dialog, Drawer, Tabs, Table, Toast, Dropdown, Badge, Tooltip)
+- Formulare: react-hook-form + zod (Schema-Validierung, Fehlermeldungen konsistent)
+- Datum/Zeit: date-fns (de-Locale), `@internationalized/date` optional für komplexere Kalenderlogik
+- Drag & Drop: `@dnd-kit/core` (leichtgewichtig, aktiv gepflegt)
+- Icons: `lucide-react` (kompatibel zu shadcn/ui)
+- Daten-Fetching: Server Actions wo möglich; klientenseitig `swr` für einfache GETs (Revalidate on focus), ansonsten direkte Route-Handler
+- Diagramme: Recharts für Balken/Linien + einfache Heatmap; bei Spezialfällen visx
+- Kalender: FullCalendar React (dayGrid/timeGrid, gute Interaktion, Ressourcen- und Mehrtagesansichten). Alternative: react-big-calendar (leichter, weniger Features)
+- PDF/Print: `react-to-print` + Print‑Styles; optional serverseitig `puppeteer` für stabile Callsheet‑PDFs
+- E‑Mail: Resend oder nodemailer (Queue/Outbox für Retries)
+
+=== Color Map (Status, Attendance, Abteilungen)
+
+- Rehearsal Lifecycle
+  - draft: slate-300 border-slate-400 text-slate-700
+  - proposed: sky-200 border-sky-400 text-sky-800
+  - confirmed/final: emerald-200 border-emerald-500 text-emerald-800
+  - completed: teal-200 border-teal-500 text-teal-800
+  - cancelled: rose-200 border-rose-500 text-rose-800
+- Attendance
+  - planned (default): neutral badge (z. B. zinc-200) + outline
+  - yes: green (emerald-500) + Icon „Check“
+  - maybe: amber-500 + Icon „HelpCircle“
+  - no: red (rose-500) + Icon „X“
+- Abteilungen (Kostüm/Requisite/Technik/Licht/Ton/FX)
+  - costume: fuchsia-500, prop: amber-600, tech: cyan-600, light: yellow-500, sound: indigo-500, fx: purple-600
+- Exhaustion (Heatmap)
+  - 0–1 Einsätze: green-200 → green-400
+  - 2 Einsätze: amber-300 → amber-500
+  - ≥3 Einsätze: rose-400 → rose-600
+
+Hinweise
+- Farbcodierung immer mit zweitem Merkmal kombinieren (Icon, Badge‑Label), Kontrast AA beachten.
+- Dark‑Mode: gleiche Hues, aber dunklere Tints/Foregrounds (Tailwind `dark:` Variants).
+
+==== Visuelle Vorschau
+
+Rehearsal Lifecycle
+
+[options="header",cols="2,1,4"]
+|===
+|Status | Farbe | Swatch
+|draft | slate-300/slate-400 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#cbd5e1;border:1px solid #94a3b8;border-radius:3px"></span>]
+|proposed | sky-200/sky-400 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#bae6fd;border:1px solid #38bdf8;border-radius:3px"></span>]
+|confirmed/final | emerald-200/emerald-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#a7f3d0;border:1px solid #10b981;border-radius:3px"></span>]
+|completed | teal-200/teal-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#99f6e4;border:1px solid #14b8a6;border-radius:3px"></span>]
+|cancelled | rose-200/rose-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#fecdd3;border:1px solid #f43f5e;border-radius:3px"></span>]
+|===
+
+Attendance
+
+[options="header",cols="2,1,4"]
+|===
+|Status | Farbe | Swatch
+|planned | zinc-200 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#e4e4e7;border:1px solid #d4d4d8;border-radius:3px"></span>]
+|yes | emerald-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#10b981;border:1px solid #047857;border-radius:3px"></span>]
+|maybe | amber-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#f59e0b;border:1px solid #b45309;border-radius:3px"></span>]
+|no | rose-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#f43f5e;border:1px solid #be123c;border-radius:3px"></span>]
+|===
+
+Abteilungen
+
+[options="header",cols="2,1,4"]
+|===
+|Bereich | Farbe | Swatch
+|costume | fuchsia-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#d946ef;border:1px solid #a21caf;border-radius:3px"></span>]
+|prop | amber-600 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#d97706;border:1px solid #92400e;border-radius:3px"></span>]
+|tech | cyan-600 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#0891b2;border:1px solid #0e7490;border-radius:3px"></span>]
+|light | yellow-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#eab308;border:1px solid #a16207;border-radius:3px"></span>]
+|sound | indigo-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#6366f1;border:1px solid #4338ca;border-radius:3px"></span>]
+|fx | purple-600 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#7c3aed;border:1px solid #5b21b6;border-radius:3px"></span>]
+|===
+
+Exhaustion Heatmap (Beispiel‑Skala)
+
+[cols="1,4"]
+|===
+|Einsätze Fr–So | Swatch
+|0–1 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#bbf7d0;border:1px solid #34d399;border-radius:3px"></span> <span style="display:inline-block;width:1.1em;height:1.1em;background:#4ade80;border:1px solid #22c55e;border-radius:3px"></span>]
+|2 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#fcd34d;border:1px solid #f59e0b;border-radius:3px"></span> <span style="display:inline-block;width:1.1em;height:1.1em;background:#f59e0b;border:1px solid #d97706;border-radius:3px"></span>]
+|≥3 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#fb7185;border:1px solid #f43f5e;border-radius:3px"></span> <span style="display:inline-block;width:1.1em;height:1.1em;background:#e11d48;border:1px solid #be123c;border-radius:3px"></span>]
+|===
+
+=== Komponenten & Patterns
+
+- Datenlisten: shadcn DataTable (Sort, Filter, Pagination), Zeilen‑Actions als Dropdown
+- Detailseiten: Tabs (z. B. Szenen: Figuren | Breakdown | Kontinuität | Anhänge)
+- Kalenderkarten: Tooltip mit Calltimes, Status, eigener Zusagestatus
+- Dialoge: Confirm für „Emergency/Absage“, Drawer für Calltimes‑Edit
+- Toaster: Statusfeedback bei Zusage/Absage/Planungsaktionen
+
+=== Accessibility & Internationalisierung
+
+- Tastaturnavigation und ARIA für interaktive Widgets (Drag‑Handle, Dialog, Tabs)
+- Form‑Errors mit `aria-describedby` binden; Fokusmanagement in Dialogen/Drawern
+- de‑Locale für Datum/Zeit, 24h‑Format, Wochentag (Mo–So)
+- i18n optional: `next-intl`/`next-i18next` bei zukünftigem Mehrsprachbedarf
+
+=== Print/PDF (Callsheet)
+
+- Print‑Styles: A4‑optimiert, Kopf/Fuß mit Datum/Version, Seitenumbrüche via CSS
+- Export: `react-to-print`; optional serverseitiger Export via `puppeteer` für Archiv/Sharing
+
 == Roadmap & Umsetzungsschritte
 
-. Grundlagen (Sprint 1)
-** Datenmodell-Erweiterungen (Profile, Allergien, Reservierungen, StagePlan, neue Rehearsal-/Scene-Tabellen).
-** Migrationen & Seed-Anpassungen, erste API-Skelette mit Auth-Gates.
-** Einführung von `MemberLoadSnapshot`-Jobs für Exhaustion-Berechnung.
+=== Sprint 1 – Attendance-Flow Grundlagen
 
-. Mitglieder-Erweiterungen (Sprint 2)
-** Profil-UI & Formulare.
-** Verfügbarkeitskalender (Blocker, Drag-&-Drop), Zusage-Flow inkl. Logging.
-** Kalender-Visualisierung mit Lifecycle-Farbcodes und Calltimes.
+- [ ] Prisma: `RehearsalAttendanceLog` (rehearsalId, userId, previous, next, comment, changedAt, changedBy)
+- [ ] API: `PUT /api/rehearsals/[id]/attendance` schreibt Log + aktuellen Status
+- [ ] UI: Zusage/Absage/Maybe mit optionalem Kommentar
+- [ ] Kalender: Standard „geplant“ visualisieren (ohne Reaktion = eingeplant)
+- [ ] Seed/Service: robuste Default-Logik (implizit oder Initial-Records)
+- [ ] Tests: Attendance-Update, Log-Erzeugung, Rechte
 
-. Szenen- & Statistik-Fokus (Sprint 3)
-** Szenen- und Rollenverwaltung, Board-UI für Probenplanung.
-** Nachbereitungs-Workflow für Rehearsal-Logs, automatische Statistik-Updates.
-** Exhaustion-Warnungen im Dashboard integrieren.
+Akzeptanzkriterien
+- [ ] „Keine Reaktion“ wird als „geplant“ berücksichtigt
+- [ ] Jede Statusänderung erzeugt einen Logeintrag
+- [ ] Kalender hebt eigene geplante/zugesagte Proben sichtbar hervor
 
-. Organisation & Kommunikation (Sprint 4)
-** Benachrichtigungssystem (Mail + optional Slack).
-** Bühne/Essensplan-Module inkl. Aufgabenintegration.
-** Archiv/Dateiablage (ggf. mit Upload-Lösung).
+=== Sprint 2 – Calltimes & Finalisierung
 
-. Öffentliche Features (Sprint 5)
-** Countdown, Hinweise, Mystery-Verbesserungen.
-** Reservierungssystem mit Bestätigungs-Mail & Admin-Übersicht.
+- [ ] Prisma: `RehearsalCalltime(rehearsalId, userId?, roleId?, callAt, note)`
+- [ ] API: `PUT /api/rehearsals/[id]/calltimes` (Upsert Liste) + Rückgabe in Rehearsal-GET
+- [ ] UI: Calltimes anzeigen und für Planer*innen editieren (Table/Drawer)
+- [ ] Finalisierung: Statuswechsel „Final“ löst Benachrichtigungen aus
+- [ ] Tests: Validierung, Rechte (nur Produktion/Regie editieren)
 
-. Feinschliff & Qualität (laufend)
-** Accessibility-Checks, Performance-Optimierungen, Monitoring (z. B. Sentry).
+Akzeptanzkriterien
+- [ ] Final markierte Proben zeigen Calltimes für jede betroffene Person
+- [ ] Änderungen an Calltimes sind nachvollziehbar und rollen-gesichert
+
+=== Sprint 3 – Szenen & Probierbarkeit
+
+- [ ] Prisma: `Character`, `Scene`, `SceneCharacter`, `CharacterCasting`
+- [ ] API: `CRUD /api/characters`, `CRUD /api/scenes`
+- [ ] API: `GET /api/rehearsals/[id]/scenes/probierbar` (basierend auf Anwesenheiten)
+- [ ] UI: Szenenliste mit Chips (Figuren, Dauer), Filter „heute probierbar“
+- [ ] Seed: Beispiel-Szenen/Figuren für aktuelle Show
+
+Akzeptanzkriterien
+- [ ] Probierbare Szenen reflektieren Abwesenheiten korrekt
+- [ ] Mehrfachbesetzungen/Understudy werden berücksichtigt
+
+=== Sprint 4 – Nachbereitung & Statistik
+
+- [ ] Prisma: `RehearsalScenePlan`, `RehearsalSceneStatistic`, `RehearsalStatisticAttendee`
+- [ ] API: `PUT /api/rehearsals/[id]/scenes` (Plan) | `POST /api/rehearsals/[id]/statistics` (Ist)
+- [ ] UI: Nachbereitungs-Form (Dauer, Anwesende, Notizen) + Statistik-Panel
+- [ ] Reports: Minuten je Szene/Person, letzte Probe
+
+Akzeptanzkriterien
+- [ ] Statistik aktualisiert sich nach Nachbereitung
+- [ ] Planungssicht zeigt kumulierte Minuten und letzte Probe je Szene/Person
+
+=== Sprint 5 – Exhaustion & Planungswarnungen
+
+- [ ] Endpoint: `GET /api/rehearsals/load?window=weekend` (Fr–So) je Person
+- [ ] Heuristik: Grenzwerte und einfache Fatigue-Scores
+- [ ] UI: Warnungen/Badges im Planungsview + Filter
+- [ ] Optional: `MemberLoadSnapshot` Job zur Voraggregation
+
+Akzeptanzkriterien
+- [ ] Überlastungen werden im Wochenende verlässlich erkannt und angezeigt
+
+=== Sprint 6 – Abteilungen, Breakdown & Callsheet (optional)
+
+- [ ] Prisma: `SceneBreakdownItem`, `SetLocation`, `Callsheet`, `CallsheetScene`
+- [ ] API: Breakdown je Szene, Callsheet-CRUD + Publish
+- [ ] UI: Abteilungsmodus (Kostüm/Requisite/Technik) mit Checklisten
+- [ ] Export: Callsheet Print/PDF Styles
+
+Akzeptanzkriterien
+- [ ] Abteilungs-Checklisten sind filterbar und änderbar mit Status
+- [ ] Call Sheet kann erstellt, veröffentlicht und gedruckt werden
+
+=== Laufend – Qualität & Betrieb
+
+- [ ] Benachrichtigungen (Mail, optional Slack), Idempotenz/Retries
+- [ ] Access-Scopes für PII (Maße/Allergien), Audit-Logs
+- [ ] Caching/Revalidierung für Listenansichten, Indizes prüfen
+- [ ] Monitoring/Tracing (Sentry), strukturierte Logs
 
 == Offene Fragen & Risiken
 
