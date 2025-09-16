@@ -1064,37 +1064,55 @@ Emerald/Amber/Rose/Sky (Tailwind‑kompatible Hues)
 
 Light Theme
 
-| Token      | Hex      | Swatch                                                                                                                            |
-|------------|----------|-----------------------------------------------------------------------------------------------------------------------------------|
-| primary    | \#7C3AED | <span style="display:inline-block;width:1.1em;height:1.1em;background:#7C3AED;border:1px solid #5B21B6;border-radius:3px"></span> |
-| secondary  | \#F59E0B | <span style="display:inline-block;width:1.1em;height:1.1em;background:#F59E0B;border:1px solid #B45309;border-radius:3px"></span> |
-| accent     | \#14B8A6 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#14B8A6;border:1px solid #0F766E;border-radius:3px"></span> |
-| background | \#FFFFFF | <span style="display:inline-block;width:1.1em;height:1.1em;background:#FFFFFF;border:1px solid #E5E7EB;border-radius:3px"></span> |
-| foreground | \#0F172A | <span style="display:inline-block;width:1.1em;height:1.1em;background:#0F172A;border:1px solid #0B1220;border-radius:3px"></span> |
-| muted      | \#E5E7EB | <span style="display:inline-block;width:1.1em;height:1.1em;background:#E5E7EB;border:1px solid #CBD5E1;border-radius:3px"></span> |
-| border     | \#E5E7EB | <span style="display:inline-block;width:1.1em;height:1.1em;background:#E5E7EB;border:1px solid #CBD5E1;border-radius:3px"></span> |
-| ring       | \#7C3AED | <span style="display:inline-block;width:1.1em;height:1.1em;background:#7C3AED;border:1px solid #5B21B6;border-radius:3px"></span> |
-| success    | \#10B981 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#10B981;border:1px solid #047857;border-radius:3px"></span> |
-| warning    | \#F59E0B | <span style="display:inline-block;width:1.1em;height:1.1em;background:#F59E0B;border:1px solid #B45309;border-radius:3px"></span> |
-| danger     | \#EF4444 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#EF4444;border:1px solid #B91C1C;border-radius:3px"></span> |
-| info       | \#38BDF8 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#38BDF8;border:1px solid #0284C7;border-radius:3px"></span> |
+<table>
+  <thead>
+    <tr>
+      <th>Token</th>
+      <th>Hex</th>
+      <th>Swatch</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>primary</td><td>#7C3AED</td><td><img src="swatches/purple-600.svg" width="12" height="12" /></td></tr>
+    <tr><td>secondary</td><td>#F59E0B</td><td><img src="swatches/amber-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>accent</td><td>#14B8A6</td><td><img src="swatches/teal-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>background</td><td>#FFFFFF</td><td><img src="swatches/white.svg" width="12" height="12" /></td></tr>
+    <tr><td>foreground</td><td>#0F172A</td><td><img src="swatches/slate-900.svg" width="12" height="12" /></td></tr>
+    <tr><td>muted</td><td>#E5E7EB</td><td><img src="swatches/zinc-200.svg" width="12" height="12" /></td></tr>
+    <tr><td>border</td><td>#E5E7EB</td><td><img src="swatches/zinc-200.svg" width="12" height="12" /></td></tr>
+    <tr><td>ring</td><td>#7C3AED</td><td><img src="swatches/purple-600.svg" width="12" height="12" /></td></tr>
+    <tr><td>success</td><td>#10B981</td><td><img src="swatches/emerald-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>warning</td><td>#F59E0B</td><td><img src="swatches/amber-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>danger</td><td>#EF4444</td><td><img src="swatches/red-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>info</td><td>#38BDF8</td><td><img src="swatches/sky-400.svg" width="12" height="12" /></td></tr>
+  </tbody>
+  </table>
 
 Dark Theme
 
-| Token      | Hex      | Swatch                                                                                                                            |
-|------------|----------|-----------------------------------------------------------------------------------------------------------------------------------|
-| primary    | \#8B5CF6 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#8B5CF6;border:1px solid #6D28D9;border-radius:3px"></span> |
-| secondary  | \#FBBF24 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#FBBF24;border:1px solid #B45309;border-radius:3px"></span> |
-| accent     | \#2DD4BF | <span style="display:inline-block;width:1.1em;height:1.1em;background:#2DD4BF;border:1px solid #0D9488;border-radius:3px"></span> |
-| background | \#0B0F16 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#0B0F16;border:1px solid #111827;border-radius:3px"></span> |
-| foreground | \#E2E8F0 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#E2E8F0;border:1px solid #94A3B8;border-radius:3px"></span> |
-| muted      | \#1F2937 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#1F2937;border:1px solid #374151;border-radius:3px"></span> |
-| border     | \#334155 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#334155;border:1px solid #475569;border-radius:3px"></span> |
-| ring       | \#8B5CF6 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#8B5CF6;border:1px solid #6D28D9;border-radius:3px"></span> |
-| success    | \#10B981 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#10B981;border:1px solid #065F46;border-radius:3px"></span> |
-| warning    | \#F59E0B | <span style="display:inline-block;width:1.1em;height:1.1em;background:#F59E0B;border:1px solid #B45309;border-radius:3px"></span> |
-| danger     | \#F87171 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#F87171;border:1px solid #B91C1C;border-radius:3px"></span> |
-| info       | \#38BDF8 | <span style="display:inline-block;width:1.1em;height:1.1em;background:#38BDF8;border:1px solid #0369A1;border-radius:3px"></span> |
+<table>
+  <thead>
+    <tr>
+      <th>Token</th>
+      <th>Hex</th>
+      <th>Swatch</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>primary</td><td>#8B5CF6</td><td><img src="swatches/purple-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>secondary</td><td>#FBBF24</td><td><img src="swatches/amber-400.svg" width="12" height="12" /></td></tr>
+    <tr><td>accent</td><td>#2DD4BF</td><td><img src="swatches/teal-400.svg" width="12" height="12" /></td></tr>
+    <tr><td>background</td><td>#0B0F16</td><td><img src="swatches/background-dark.svg" width="12" height="12" /></td></tr>
+    <tr><td>foreground</td><td>#E2E8F0</td><td><img src="swatches/slate-200.svg" width="12" height="12" /></td></tr>
+    <tr><td>muted</td><td>#1F2937</td><td><img src="swatches/slate-800.svg" width="12" height="12" /></td></tr>
+    <tr><td>border</td><td>#334155</td><td><img src="swatches/slate-700.svg" width="12" height="12" /></td></tr>
+    <tr><td>ring</td><td>#8B5CF6</td><td><img src="swatches/purple-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>success</td><td>#10B981</td><td><img src="swatches/emerald-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>warning</td><td>#F59E0B</td><td><img src="swatches/amber-500.svg" width="12" height="12" /></td></tr>
+    <tr><td>danger</td><td>#F87171</td><td><img src="swatches/red-400.svg" width="12" height="12" /></td></tr>
+    <tr><td>info</td><td>#38BDF8</td><td><img src="swatches/sky-400.svg" width="12" height="12" /></td></tr>
+  </tbody>
+</table>
 
 CSS‑Variablen (Beispiel)
 
@@ -1333,4 +1351,3 @@ gedruckt werden
 - Authentifizierung & RBAC: `src/lib/auth.ts`, `src/lib/rbac.ts`
 
 - Datenmodell-Ausgangsbasis: `prisma/schema.prisma`
-

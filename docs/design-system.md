@@ -1,6 +1,6 @@
 # Designsystem und Farben
 
-Diese Markdown-Variante dient der GitHub‑freundlichen Darstellung von Farbswatches (per SVG‑Bilder). Die Haupt‑Analyse bleibt in `entwurf-und-analyse.adoc`. Diese Datei fokussiert auf UI/Color‑Themen, die in Markdown mit Bildern zuverlässiger sichtbar sind.
+Diese Markdown-Variante dient der GitHub‑freundlichen Darstellung von Farbswatches (per SVG‑Bilder). Die Haupt‑Analyse liegt in `entwurf-und-analyse.md`. Diese Datei fokussiert auf UI/Color‑Themen, die in Markdown mit Bildern zuverlässig sichtbar sind.
 
 <details>
 <summary><strong>Inhaltsverzeichnis</strong></summary>
@@ -173,4 +173,3 @@ export default {
   }
 }
 ```
-
