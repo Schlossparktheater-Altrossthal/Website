@@ -7,7 +7,7 @@ export default async function AvailabilityPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireAuth();
+  const session = await requireAuth(["board", "admin"]);
   const userId = (session.user as any).id as string;
   const now = new Date();
   const sp = await searchParams;

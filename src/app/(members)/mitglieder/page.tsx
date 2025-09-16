@@ -13,7 +13,11 @@ export default async function MitgliederPage() {
   const user = session.user as SessionUser | undefined;
   let rehearsal: Rehearsal | null = null;
   try {
-    rehearsal = await prisma.rehearsal.findFirst({ orderBy: { start: "asc" } });
+    const now = new Date();
+    rehearsal = await prisma.rehearsal.findFirst({
+      where: { start: { gte: now } },
+      orderBy: { start: "asc" },
+    });
   } catch {
     rehearsal = null;
   }
