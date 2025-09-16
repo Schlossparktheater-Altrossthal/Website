@@ -808,11 +808,11 @@ Rehearsal Lifecycle
 [options="header",cols="2,1,4"]
 |===
 |Status | Farbe | Swatch
-|draft | slate-300/slate-400 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#cbd5e1;border:1px solid #94a3b8;border-radius:3px"></span>]
-|proposed | sky-200/sky-400 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#bae6fd;border:1px solid #38bdf8;border-radius:3px"></span>]
-|confirmed/final | emerald-200/emerald-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#a7f3d0;border:1px solid #10b981;border-radius:3px"></span>]
-|completed | teal-200/teal-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#99f6e4;border:1px solid #14b8a6;border-radius:3px"></span>]
-|cancelled | rose-200/rose-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#fecdd3;border:1px solid #f43f5e;border-radius:3px"></span>]
+|draft | slate-300/slate-400 | image::swatches/slate-300.svg[width=12,height=12]
+|proposed | sky-200/sky-400 | image::swatches/sky-200.svg[width=12,height=12]
+|confirmed/final | emerald-200/emerald-500 | image::swatches/emerald-200.svg[width=12,height=12]
+|completed | teal-200/teal-500 | image::swatches/teal-200.svg[width=12,height=12]
+|cancelled | rose-200/rose-500 | image::swatches/rose-200.svg[width=12,height=12]
 |===
 
 Attendance
@@ -820,10 +820,10 @@ Attendance
 [options="header",cols="2,1,4"]
 |===
 |Status | Farbe | Swatch
-|planned | zinc-200 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#e4e4e7;border:1px solid #d4d4d8;border-radius:3px"></span>]
-|yes | emerald-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#10b981;border:1px solid #047857;border-radius:3px"></span>]
-|maybe | amber-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#f59e0b;border:1px solid #b45309;border-radius:3px"></span>]
-|no | rose-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#f43f5e;border:1px solid #be123c;border-radius:3px"></span>]
+|planned | zinc-200 | image::swatches/zinc-200.svg[width=12,height=12]
+|yes | emerald-500 | image::swatches/emerald-500.svg[width=12,height=12]
+|maybe | amber-500 | image::swatches/amber-500.svg[width=12,height=12]
+|no | rose-500 | image::swatches/rose-500.svg[width=12,height=12]
 |===
 
 Abteilungen
@@ -831,12 +831,12 @@ Abteilungen
 [options="header",cols="2,1,4"]
 |===
 |Bereich | Farbe | Swatch
-|costume | fuchsia-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#d946ef;border:1px solid #a21caf;border-radius:3px"></span>]
-|prop | amber-600 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#d97706;border:1px solid #92400e;border-radius:3px"></span>]
-|tech | cyan-600 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#0891b2;border:1px solid #0e7490;border-radius:3px"></span>]
-|light | yellow-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#eab308;border:1px solid #a16207;border-radius:3px"></span>]
-|sound | indigo-500 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#6366f1;border:1px solid #4338ca;border-radius:3px"></span>]
-|fx | purple-600 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#7c3aed;border:1px solid #5b21b6;border-radius:3px"></span>]
+|costume | fuchsia-500 | image::swatches/fuchsia-500.svg[width=12,height=12]
+|prop | amber-600 | image::swatches/amber-600.svg[width=12,height=12]
+|tech | cyan-600 | image::swatches/cyan-600.svg[width=12,height=12]
+|light | yellow-500 | image::swatches/yellow-500.svg[width=12,height=12]
+|sound | indigo-500 | image::swatches/indigo-500.svg[width=12,height=12]
+|fx | purple-600 | image::swatches/purple-600.svg[width=12,height=12]
 |===
 
 Exhaustion Heatmap (Beispiel‑Skala)
@@ -844,10 +844,120 @@ Exhaustion Heatmap (Beispiel‑Skala)
 [cols="1,4"]
 |===
 |Einsätze Fr–So | Swatch
-|0–1 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#bbf7d0;border:1px solid #34d399;border-radius:3px"></span> <span style="display:inline-block;width:1.1em;height:1.1em;background:#4ade80;border:1px solid #22c55e;border-radius:3px"></span>]
-|2 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#fcd34d;border:1px solid #f59e0b;border-radius:3px"></span> <span style="display:inline-block;width:1.1em;height:1.1em;background:#f59e0b;border:1px solid #d97706;border-radius:3px"></span>]
-|≥3 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#fb7185;border:1px solid #f43f5e;border-radius:3px"></span> <span style="display:inline-block;width:1.1em;height:1.1em;background:#e11d48;border:1px solid #be123c;border-radius:3px"></span>]
+|0–1 | image::swatches/green-200.svg[width=12,height=12] image::swatches/green-400.svg[width=12,height=12]
+|2 | image::swatches/amber-300.svg[width=12,height=12] image::swatches/amber-500.svg[width=12,height=12]
+|≥3 | image::swatches/rose-400.svg[width=12,height=12] image::swatches/rose-600.svg[width=12,height=12]
 |===
+
+=== Brandfarben & Theme
+
+Ziel: Einheitliche Markenfarben als semantische Tokens, nutzbar in Tailwind/shadcn und konsistent in Light/Dark.
+
+Vorschlag (anpassbar):
+- primary: Violet (Bühne/Spotlight)
+- secondary: Amber (Warm/Glanzeffekt)
+- accent: Teal (Interaktionen/Highlights)
+- neutral: Slate (Text/Flächen)
+- success/warn/danger/info: Emerald/Amber/Rose/Sky (Tailwind‑kompatible Hues)
+
+Light Theme
+
+[options="header",cols="2,2,5"]
+|===
+|Token | Hex | Swatch
+|primary | #7C3AED | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#7C3AED;border:1px solid #5B21B6;border-radius:3px"></span>]
+|secondary | #F59E0B | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#F59E0B;border:1px solid #B45309;border-radius:3px"></span>]
+|accent | #14B8A6 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#14B8A6;border:1px solid #0F766E;border-radius:3px"></span>]
+|background | #FFFFFF | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#FFFFFF;border:1px solid #E5E7EB;border-radius:3px"></span>]
+|foreground | #0F172A | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#0F172A;border:1px solid #0B1220;border-radius:3px"></span>]
+|muted | #E5E7EB | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#E5E7EB;border:1px solid #CBD5E1;border-radius:3px"></span>]
+|border | #E5E7EB | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#E5E7EB;border:1px solid #CBD5E1;border-radius:3px"></span>]
+|ring | #7C3AED | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#7C3AED;border:1px solid #5B21B6;border-radius:3px"></span>]
+|success | #10B981 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#10B981;border:1px solid #047857;border-radius:3px"></span>]
+|warning | #F59E0B | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#F59E0B;border:1px solid #B45309;border-radius:3px"></span>]
+|danger | #EF4444 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#EF4444;border:1px solid #B91C1C;border-radius:3px"></span>]
+|info | #38BDF8 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#38BDF8;border:1px solid #0284C7;border-radius:3px"></span>]
+|===
+
+Dark Theme
+
+[options="header",cols="2,2,5"]
+|===
+|Token | Hex | Swatch
+|primary | #8B5CF6 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#8B5CF6;border:1px solid #6D28D9;border-radius:3px"></span>]
+|secondary | #FBBF24 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#FBBF24;border:1px solid #B45309;border-radius:3px"></span>]
+|accent | #2DD4BF | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#2DD4BF;border:1px solid #0D9488;border-radius:3px"></span>]
+|background | #0B0F16 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#0B0F16;border:1px solid #111827;border-radius:3px"></span>]
+|foreground | #E2E8F0 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#E2E8F0;border:1px solid #94A3B8;border-radius:3px"></span>]
+|muted | #1F2937 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#1F2937;border:1px solid #374151;border-radius:3px"></span>]
+|border | #334155 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#334155;border:1px solid #475569;border-radius:3px"></span>]
+|ring | #8B5CF6 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#8B5CF6;border:1px solid #6D28D9;border-radius:3px"></span>]
+|success | #10B981 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#10B981;border:1px solid #065F46;border-radius:3px"></span>]
+|warning | #F59E0B | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#F59E0B;border:1px solid #B45309;border-radius:3px"></span>]
+|danger | #F87171 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#F87171;border:1px solid #B91C1C;border-radius:3px"></span>]
+|info | #38BDF8 | pass:[<span style="display:inline-block;width:1.1em;height:1.1em;background:#38BDF8;border:1px solid #0369A1;border-radius:3px"></span>]
+|===
+
+CSS‑Variablen (Beispiel)
+
+[source,css]
+----
+:root {
+  --color-primary: #7C3AED;
+  --color-secondary: #F59E0B;
+  --color-accent: #14B8A6;
+  --color-background: #FFFFFF;
+  --color-foreground: #0F172A;
+  --color-muted: #E5E7EB;
+  --color-border: #E5E7EB;
+  --color-ring: #7C3AED;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #38BDF8;
+}
+.dark {
+  --color-primary: #8B5CF6;
+  --color-secondary: #FBBF24;
+  --color-accent: #2DD4BF;
+  --color-background: #0B0F16;
+  --color-foreground: #E2E8F0;
+  --color-muted: #1F2937;
+  --color-border: #334155;
+  --color-ring: #8B5CF6;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #F87171;
+  --color-info: #38BDF8;
+}
+----
+
+Tailwind‑Anbindung (Optional, shadcn‑Style mit CSS‑Variablen)
+
+[source,js]
+----
+// tailwind.config.ts (Ausschnitt)
+export default {
+  theme: {
+    extend: {
+      colors: {
+        primary: 'var(--color-primary)',
+        secondary: 'var(--color-secondary)',
+        accent: 'var(--color-accent)',
+        background: 'var(--color-background)',
+        foreground: 'var(--color-foreground)',
+        muted: 'var(--color-muted)',
+        border: 'var(--color-border)',
+        ring: 'var(--color-ring)',
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
+        danger: 'var(--color-danger)',
+        info: 'var(--color-info)'
+      }
+    }
+  }
+}
+----
 
 === Komponenten & Patterns
 
