@@ -46,7 +46,7 @@ export default async function ProbenplanungPage() {
         <RehearsalPlanningClient 
           templates={JSON.parse(JSON.stringify(templates))}
           rehearsals={JSON.parse(JSON.stringify(rehearsals))}
-          shows={shows}
+          shows={shows.map(s => ({ ...s, title: s.title || undefined }))}
         />
       </div>
     );

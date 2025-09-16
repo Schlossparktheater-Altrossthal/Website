@@ -23,7 +23,9 @@ export function MembersNav({ role }: { role?: Role }) {
       {/* Desktop sidebar */}
       <nav className="hidden md:block space-y-1" aria-label="Mitglieder Navigation">
         {items.map((i) => {
-          const active = pathname === i.href || (i.href !== "/mitglieder" && pathname.startsWith(i.href));
+          // Exakte Übereinstimmung oder exakter Pfad-Start (verhindert /verfuegbarkeit-proben triggert /verfuegbarkeit)
+          const active = pathname === i.href || 
+            (i.href !== "/mitglieder" && pathname.startsWith(i.href + "/"));
           return (
             <Link
               key={i.href}
@@ -43,7 +45,9 @@ export function MembersNav({ role }: { role?: Role }) {
       {/* Mobile pills */}
       <nav className="md:hidden -mx-1 mb-3 flex items-center gap-2 overflow-x-auto" aria-label="Mitglieder Navigation mobil">
         {items.map((i) => {
-          const active = pathname === i.href || (i.href !== "/mitglieder" && pathname.startsWith(i.href));
+          // Exakte Übereinstimmung oder exakter Pfad-Start (verhindert /verfuegbarkeit-proben triggert /verfuegbarkeit)
+          const active = pathname === i.href || 
+            (i.href !== "/mitglieder" && pathname.startsWith(i.href + "/"));
           return (
             <Link
               key={i.href}

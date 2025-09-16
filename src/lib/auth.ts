@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
                 update: {},
                 create: { email, name: email.split("@")[0], role: roleMap[email] },
               });
-              return { id: user.id, email: user.email!, name: user.name! };
+              return { id: user.id, email: user.email!, name: user.name!, role: user.role };
             },
           }),
         ]
@@ -63,6 +63,18 @@ export const authOptions: NextAuthOptions = {
         (token as any).id = (user as any).id;
         (token as any).role = (user as any).role;
       }
+      
+      // If role is missing, refresh it from database
+      if (token.id && !(token as any).role) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true }
+        });
+        if (dbUser) {
+          (token as any).role = dbUser.role;
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {

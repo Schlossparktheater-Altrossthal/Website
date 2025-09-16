@@ -12,6 +12,9 @@ export default async function MembersLayout({ children }: { children: React.Reac
     | "finance_admin"
     | "admin"
     | undefined;
+  
+  // Debug output
+  console.log("MembersLayout Debug:", { sessionUser: session.user, role });
 
   return (
     <div className="container mx-auto grid md:grid-cols-[14rem_1fr] gap-6">

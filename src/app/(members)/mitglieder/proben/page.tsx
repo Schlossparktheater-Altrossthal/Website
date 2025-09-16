@@ -79,11 +79,11 @@ export default async function ProbenPage() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {new Date(rehearsal.start).toLocaleDateString("de-DE")}
+                          {new Date(rehearsal.start).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {new Date(rehearsal.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                          {new Date(rehearsal.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}
                         </div>
                         <div className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />

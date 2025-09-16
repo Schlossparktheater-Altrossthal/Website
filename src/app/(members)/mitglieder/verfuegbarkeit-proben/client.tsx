@@ -201,12 +201,12 @@ export function RehearsalAvailabilityClient({
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Calendar className="w-3 h-3" />
-                          {rehearsalDate.toLocaleDateString("de-DE")}
+                          {rehearsalDate.toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="w-3 h-3" />
-                          {rehearsalDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} - 
-                          {new Date(rehearsal.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                          {rehearsalDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })} - 
+                          {new Date(rehearsal.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-3 h-3" />

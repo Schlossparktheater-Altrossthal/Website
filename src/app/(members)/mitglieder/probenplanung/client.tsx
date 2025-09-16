@@ -494,12 +494,12 @@ export function RehearsalPlanningClient({
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-3 h-3" />
-                            {new Date(rehearsal.start).toLocaleDateString("de-DE")}
+                            {new Date(rehearsal.start).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock className="w-3 h-3" />
-                            {new Date(rehearsal.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} - 
-                            {new Date(rehearsal.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                            {new Date(rehearsal.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })} - 
+                            {new Date(rehearsal.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}
                           </div>
                           <div className="flex items-center gap-2">
                             <MapPin className="w-3 h-3" />
@@ -544,7 +544,7 @@ export function RehearsalPlanningClient({
                     <div>
                       <div className="font-medium">{rehearsal.title}</div>
                       <div className="text-sm text-muted-foreground">
-                        {new Date(rehearsal.start).toLocaleDateString("de-DE")} • {rehearsal.location}
+                        {new Date(rehearsal.start).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })} • {rehearsal.location}
                       </div>
                     </div>
                   </div>
