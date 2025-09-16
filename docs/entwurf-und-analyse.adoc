@@ -1,9 +1,11 @@
 = Entwurfs- und Analysephase
 
-:toc:
+:toc: macro
 :toc-title: Inhaltsverzeichnis
 :sectnums:
 :toclevels: 3
+:sectanchors:
+:ascii-ids:
 
 toc::[]
 
