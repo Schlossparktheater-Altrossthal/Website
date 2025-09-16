@@ -808,11 +808,11 @@ Rehearsal Lifecycle
 [options="header",cols="2,1,4"]
 |===
 |Status | Farbe | Swatch
-|draft | slate-300/slate-400 | image::swatches/slate-300.svg[width=12,height=12]
-|proposed | sky-200/sky-400 | image::swatches/sky-200.svg[width=12,height=12]
-|confirmed/final | emerald-200/emerald-500 | image::swatches/emerald-200.svg[width=12,height=12]
-|completed | teal-200/teal-500 | image::swatches/teal-200.svg[width=12,height=12]
-|cancelled | rose-200/rose-500 | image::swatches/rose-200.svg[width=12,height=12]
+|draft | slate-300/slate-400 | image:swatches/slate-300.svg[width=12,height=12]
+|proposed | sky-200/sky-400 | image:swatches/sky-200.svg[width=12,height=12]
+|confirmed/final | emerald-200/emerald-500 | image:swatches/emerald-200.svg[width=12,height=12]
+|completed | teal-200/teal-500 | image:swatches/teal-200.svg[width=12,height=12]
+|cancelled | rose-200/rose-500 | image:swatches/rose-200.svg[width=12,height=12]
 |===
 
 Attendance
@@ -820,10 +820,10 @@ Attendance
 [options="header",cols="2,1,4"]
 |===
 |Status | Farbe | Swatch
-|planned | zinc-200 | image::swatches/zinc-200.svg[width=12,height=12]
-|yes | emerald-500 | image::swatches/emerald-500.svg[width=12,height=12]
-|maybe | amber-500 | image::swatches/amber-500.svg[width=12,height=12]
-|no | rose-500 | image::swatches/rose-500.svg[width=12,height=12]
+|planned | zinc-200 | image:swatches/zinc-200.svg[width=12,height=12]
+|yes | emerald-500 | image:swatches/emerald-500.svg[width=12,height=12]
+|maybe | amber-500 | image:swatches/amber-500.svg[width=12,height=12]
+|no | rose-500 | image:swatches/rose-500.svg[width=12,height=12]
 |===
 
 Abteilungen
@@ -831,12 +831,12 @@ Abteilungen
 [options="header",cols="2,1,4"]
 |===
 |Bereich | Farbe | Swatch
-|costume | fuchsia-500 | image::swatches/fuchsia-500.svg[width=12,height=12]
-|prop | amber-600 | image::swatches/amber-600.svg[width=12,height=12]
-|tech | cyan-600 | image::swatches/cyan-600.svg[width=12,height=12]
-|light | yellow-500 | image::swatches/yellow-500.svg[width=12,height=12]
-|sound | indigo-500 | image::swatches/indigo-500.svg[width=12,height=12]
-|fx | purple-600 | image::swatches/purple-600.svg[width=12,height=12]
+|costume | fuchsia-500 | image:swatches/fuchsia-500.svg[width=12,height=12]
+|prop | amber-600 | image:swatches/amber-600.svg[width=12,height=12]
+|tech | cyan-600 | image:swatches/cyan-600.svg[width=12,height=12]
+|light | yellow-500 | image:swatches/yellow-500.svg[width=12,height=12]
+|sound | indigo-500 | image:swatches/indigo-500.svg[width=12,height=12]
+|fx | purple-600 | image:swatches/purple-600.svg[width=12,height=12]
 |===
 
 Exhaustion Heatmap (Beispiel‑Skala)
@@ -844,9 +844,9 @@ Exhaustion Heatmap (Beispiel‑Skala)
 [cols="1,4"]
 |===
 |Einsätze Fr–So | Swatch
-|0–1 | image::swatches/green-200.svg[width=12,height=12] image::swatches/green-400.svg[width=12,height=12]
-|2 | image::swatches/amber-300.svg[width=12,height=12] image::swatches/amber-500.svg[width=12,height=12]
-|≥3 | image::swatches/rose-400.svg[width=12,height=12] image::swatches/rose-600.svg[width=12,height=12]
+|0–1 | image:swatches/green-200.svg[width=12,height=12] image:swatches/green-400.svg[width=12,height=12]
+|2 | image:swatches/amber-300.svg[width=12,height=12] image:swatches/amber-500.svg[width=12,height=12]
+|≥3 | image:swatches/rose-400.svg[width=12,height=12] image:swatches/rose-600.svg[width=12,height=12]
 |===
 
 === Brandfarben & Theme
