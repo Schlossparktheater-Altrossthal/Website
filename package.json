@@ -11,6 +11,8 @@
     "db:migrate": "prisma migrate dev --name init",
     "db:seed": "prisma db seed",
     "swatches:gen": "node scripts/generate-swatches.mjs --json docs/swatches/palette.sample.json --out docs/swatches --size 14 --adoc docs/swatches/generated.adoc"
+    ,
+    "docs:md": "node scripts/adoc-to-md.mjs docs/entwurf-und-analyse.adoc docs/entwurf-und-analyse.md && node scripts/cleanup-md.mjs docs/entwurf-und-analyse.md"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
