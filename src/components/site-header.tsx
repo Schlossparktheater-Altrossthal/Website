@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { UserNav } from "@/components/user-nav";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -72,9 +73,10 @@ export function SiteHeader() {
           }`} href="/chronik">Chronik</Link>
         </div>
 
-        <div className="md:hidden ml-auto" />
-        <div className="hidden md:block ml-auto" />
-        <UserNav />
+        <div className="ml-auto flex items-center gap-3">
+          <NotificationBell />
+          <UserNav className="relative" />
+        </div>
 
         {/* Mobile menu button */}
         <button

@@ -4,8 +4,9 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-export function UserNav() {
+export function UserNav({ className }: { className?: string }) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
@@ -35,12 +36,17 @@ export function UserNav() {
   }, [open]);
 
   if (status === "loading") {
-    return <div className="ml-auto h-5 w-24 animate-pulse rounded bg-foreground/10" aria-hidden />;
+    return (
+      <div
+        className={cn(className ?? "ml-auto", "h-5 w-24 animate-pulse rounded bg-foreground/10")}
+        aria-hidden
+      />
+    );
   }
 
   if (!session?.user) {
     return (
-      <div className="ml-auto">
+      <div className={cn(className ?? "ml-auto")}>
         <Button asChild variant="outline">
           <Link href="/login">Login</Link>
         </Button>
@@ -67,7 +73,7 @@ export function UserNav() {
   }
 
   return (
-    <div className="ml-auto relative" aria-label="Benutzer-Navigation">
+    <div className={cn(className ?? "ml-auto", "relative")} aria-label="Benutzer-Navigation">
       <button
         ref={btnRef}
         type="button"

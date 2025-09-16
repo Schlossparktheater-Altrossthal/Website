@@ -9,9 +9,6 @@ const baseItems: Item[] = [
   { href: "/mitglieder", label: "Übersicht" },
   { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech"] },
   { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", roles: ["admin"] },
-  { href: "/mitglieder/proben", label: "Meine Proben" },
-  { href: "/mitglieder/verfuegbarkeit-proben", label: "Verfügbarkeit" },
-  { href: "/mitglieder/verfuegbarkeit", label: "Kalender", roles: ["board", "admin"] },
 ];
 
 export function MembersNav({ roles }: { roles?: Role[] }) {
