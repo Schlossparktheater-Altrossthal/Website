@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { 
+import {
   Calendar, 
   Clock, 
   MapPin, 
@@ -25,7 +25,7 @@ type Rehearsal = {
   show?: { id: string; title?: string; year: number };
   attendance: Array<{
     id: string;
-    status: "yes" | "no" | "maybe";
+    status: "yes" | "no";
   }>;
 };
 
@@ -67,12 +67,12 @@ export function RehearsalAvailabilityClient({
     }, {} as Record<string, AvailabilityDay>)
   );
 
-  const updateAttendance = async (rehearsalId: string, status: "yes" | "no" | "maybe") => {
+  const updateAttendance = async (rehearsalId: string, status: "yes" | "no") => {
     try {
-      const response = await fetch("/api/rehearsals/attendance", {
-        method: "POST",
+      const response = await fetch(`/api/rehearsals/${rehearsalId}/attendance`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rehearsalId, status })
+        body: JSON.stringify({ status })
       });
 
       if (response.ok) {
@@ -82,7 +82,7 @@ export function RehearsalAvailabilityClient({
             ? { ...r, attendance: [{ id: "temp", status }] }
             : r
         ));
-        toast.success("Zusage aktualisiert");
+        toast.success("Status aktualisiert");
       } else {
         toast.error("Fehler beim Speichern");
       }
@@ -148,11 +148,10 @@ export function RehearsalAvailabilityClient({
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
   };
 
-  const getStatusIcon = (status?: "yes" | "no" | "maybe") => {
+  const getStatusIcon = (status?: "yes" | "no") => {
     switch (status) {
       case "yes": return <CheckCircle className="w-4 h-4 text-green-500" />;
       case "no": return <XCircle className="w-4 h-4 text-red-500" />;
-      case "maybe": return <AlertCircle className="w-4 h-4 text-amber-500" />;
       default: return <User className="w-4 h-4 text-gray-400" />;
     }
   };
@@ -226,8 +225,7 @@ export function RehearsalAvailabilityClient({
                         <span className="text-sm font-medium">
                           Deine Zusage: {
                             currentAttendance === "yes" ? "Zusage" :
-                            currentAttendance === "no" ? "Absage" :
-                            currentAttendance === "maybe" ? "Vielleicht" : "Offen"
+                            currentAttendance === "no" ? "Absage" : "Geplant"
                           }
                         </span>
                       </div>
@@ -241,15 +239,6 @@ export function RehearsalAvailabilityClient({
                         >
                           <CheckCircle className="w-3 h-3" />
                           Zusage
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={currentAttendance === "maybe" ? "default" : "outline"}
-                          onClick={() => updateAttendance(rehearsal.id, "maybe")}
-                          className="gap-2"
-                        >
-                          <AlertCircle className="w-3 h-3" />
-                          Vielleicht
                         </Button>
                         <Button
                           size="sm"

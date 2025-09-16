@@ -55,7 +55,7 @@ type Rehearsal = {
   template?: RehearsalTemplate;
   attendance: Array<{
     id: string;
-    status: "yes" | "no" | "maybe";
+    status: "yes" | "no";
     user: { id: string; name?: string; email?: string };
   }>;
 };

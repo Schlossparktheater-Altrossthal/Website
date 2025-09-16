@@ -1,22 +1,23 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-type Role = "member" | "cast" | "tech" | "board" | "finance_admin" | "admin";
+import type { Role } from "@/lib/roles";
 
 type Item = { href: string; label: string; roles?: Role[] };
 
 const baseItems: Item[] = [
   { href: "/mitglieder", label: "Übersicht" },
   { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech"] },
+  { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", roles: ["admin"] },
   { href: "/mitglieder/proben", label: "Meine Proben" },
   { href: "/mitglieder/verfuegbarkeit-proben", label: "Verfügbarkeit" },
   { href: "/mitglieder/verfuegbarkeit", label: "Kalender", roles: ["board", "admin"] },
 ];
 
-export function MembersNav({ role }: { role?: Role }) {
+export function MembersNav({ roles }: { roles?: Role[] }) {
   const pathname = usePathname();
-  const items = baseItems.filter((i) => (i.roles ? i.roles.includes(role as Role) : true));
+  const roleSet = new Set(roles ?? []);
+  const items = baseItems.filter((i) => (i.roles ? i.roles.some((r) => roleSet.has(r)) : true));
 
   return (
     <>

@@ -1,13 +1,13 @@
 "use client";
-import type { Role } from "@/lib/rbac";
+import type { Role } from "@/lib/roles";
 
 export function VisibleForRole({
   role,
-  userRole,
+  userRoles,
   children,
-}: { role: Role | Role[]; userRole?: Role; children: React.ReactNode }) {
-  const roles = Array.isArray(role) ? role : [role];
-  if (!userRole || !roles.includes(userRole)) return null;
-  return <>{children}</>;
+}: { role: Role | Role[]; userRoles?: Role[]; children: React.ReactNode }) {
+  const required = Array.isArray(role) ? role : [role];
+  const owned = new Set(userRoles ?? []);
+  if (owned.size === 0) return null;
+  return required.some((r) => owned.has(r)) ? <>{children}</> : null;
 }
-

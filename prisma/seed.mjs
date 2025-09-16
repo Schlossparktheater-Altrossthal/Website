@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
@@ -86,12 +87,27 @@ async function main() {
     "admin@example.com",
   ];
   const roles = ["member", "cast", "tech", "board", "finance_admin", "admin"];
+  const defaultPasswordHash = await bcrypt.hash("password", 10);
+
   for (let i = 0; i < emails.length; i++) {
     await prisma.user.upsert({
       where: { email: emails[i] },
-      update: {},
-      create: { email: emails[i], name: emails[i].split("@")[0], role: roles[i] },
+      update: { passwordHash: defaultPasswordHash },
+      create: {
+        email: emails[i],
+        name: emails[i].split("@")[0],
+        role: roles[i],
+        passwordHash: defaultPasswordHash,
+      },
     });
+    const userRecord = await prisma.user.findUnique({ where: { email: emails[i] } });
+    if (userRecord) {
+      await prisma.userRole.upsert({
+        where: { userId_role: { userId: userRecord.id, role: roles[i] } },
+        update: {},
+        create: { userId: userRecord.id, role: roles[i] },
+      });
+    }
   }
 
   // Link a sample rehearsal to the newest chronik show (if present)
@@ -109,6 +125,33 @@ async function main() {
         requiredRoles: ["cast", "tech"],
       },
     });
+
+    const seedRehearsalId = `rehearsal-${newest.id}`;
+    const existingLogs = await prisma.rehearsalAttendanceLog.count({
+      where: { rehearsalId: seedRehearsalId },
+    });
+
+    if (existingLogs === 0) {
+      const adminUser = await prisma.user.findFirst({ where: { role: "admin" } });
+      if (adminUser) {
+        const defaultTargets = await prisma.user.findMany({
+          where: { role: { in: ["member", "cast", "tech"] } },
+          select: { id: true },
+        });
+
+        for (const target of defaultTargets) {
+          await prisma.rehearsalAttendanceLog.create({
+            data: {
+              rehearsalId: seedRehearsalId,
+              userId: target.id,
+              next: null,
+              comment: "Initial: automatisch eingeplant",
+              changedById: adminUser.id,
+            },
+          });
+        }
+      }
+    }
   }
 
   // Create default rehearsal templates

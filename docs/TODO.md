@@ -2,10 +2,11 @@
 ## Mitgliederbereich
 - [x] ~~Probenplanung mit Templates~~ ✅ **Erledigt**
 - [x] ~~Verfügbarkeitsabfrage für spezifische Proben~~ ✅ **Erledigt**
-- [x] ~~Rollenvergabe - Schauspieler, Organisation, Admin, Technik, Bühnenbau, Kostüme~~ ✅ **Erledigt**
+- [ ] ~~Rollenvergabe - Schauspieler, Organisation, Admin, Technik, Bühnenbau, Kostüme~~
 - [ ] Profil mit Größentabelle
 - [ ] Essensunverträglichkeiten
 - [ ] Probenplan Verbesserungen:
+  - [ ] 
   - [ ] Für Schauspieler nur 1 Monat im Voraus sichtbar
   - [ ] Letzte Änderung anzeigen
   - [ ] Emergency Button falls krank

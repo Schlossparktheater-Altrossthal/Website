@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.felix-hitzig.de" },
     ],
   },
+  experimental: {
+    serverComponentsExternalPackages: ["bcryptjs"],
+  },
 };
 
 export default nextConfig;

@@ -12,11 +12,15 @@ WORKDIR /app
 
 # Install deps first (better caching)
 COPY package.json pnpm-lock.yaml ./
-# In dev images, avoid frozen lockfile to allow quick dep edits
-RUN pnpm install --no-frozen-lockfile
+# In dev images, avoid frozen lockfile to allow quick dep edits. Skip Prisma
+# postinstall generate until schema is available.
+RUN SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --no-frozen-lockfile
 
 # Copy the rest
 COPY . .
+
+# Generate Prisma client now that schema exists
+RUN pnpm prisma:generate
 
 EXPOSE 3000
 

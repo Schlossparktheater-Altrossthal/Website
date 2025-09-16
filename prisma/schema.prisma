@@ -26,7 +26,7 @@ enum ClueType {
 enum AttendanceStatus {
   yes
   no
-  maybe
+  emergency
 }
 
 enum AvailabilityStatus {
@@ -34,11 +34,47 @@ enum AvailabilityStatus {
   available
 }
 
+enum RehearsalProposalStatus {
+  proposed    // Automatisch vorgeschlagen
+  approved    // Von der Regie freigegeben
+  rejected    // Von der Regie abgelehnt
+  scheduled   // Als tatsächlicher Probentermin übernommen
+}
+
 // Availability (new, per-day granular)
 enum AvailabilityKind {
   FULL_AVAILABLE
   FULL_UNAVAILABLE
   PARTIAL
+}
+
+// Einheiten für Maße
+enum MeasurementUnit {
+  CM    // Zentimeter
+  INCH  // Zoll
+  EU    // EU-Größe
+  DE    // Deutsche Größe
+}
+
+// Arten von Maßen
+enum MeasurementType {
+  HEIGHT        // Körpergröße
+  CHEST        // Brustumfang
+  WAIST        // Taillenumfang
+  HIPS         // Hüftumfang
+  INSEAM       // Innenbeinlänge
+  SHOULDER     // Schulterbreite
+  SLEEVE       // Armlänge
+  SHOE_SIZE    // Schuhgröße
+  HEAD         // Kopfumfang
+}
+
+// Schweregrad von Unverträglichkeiten
+enum AllergyLevel {
+  MILD         // Leicht (Unbehagen)
+  MODERATE     // Mittel (Allergische Reaktion)
+  SEVERE       // Schwer (Notfall möglich)
+  LETHAL       // Lebensbedrohlich
 }
 
 model AvailabilityDay {
@@ -93,6 +129,7 @@ model User {
   name      String?
   email     String?  @unique
   role      Role     @default(member)
+  passwordHash String?
   createdAt DateTime @default(now())
 
   accounts     Account[]
@@ -104,6 +141,13 @@ model User {
   // New availability relations
   availabilityDays       AvailabilityDay[]
   availabilityTemplates  AvailabilityTemplate[]
+  attendanceLogsAuthored RehearsalAttendanceLog[] @relation("AttendanceLogAuthor")
+  attendanceLogsTarget   RehearsalAttendanceLog[] @relation("AttendanceLogTarget")
+  dietaryRestrictions  DietaryRestriction[]
+  measurements           MemberMeasurement[]
+  sizes                  MemberSize[]
+  roles                  UserRole[]
+  approvedProposals      RehearsalProposal[] @relation("ProposalApprover")
 }
 
 model Account {
@@ -154,6 +198,7 @@ model Show {
   rehearsals Rehearsal[]
   finance    FinanceEntry[]
   guesses    Guess[]
+  proposals  RehearsalProposal[]
 }
 
 model Clue {
@@ -183,15 +228,16 @@ model Guess {
 }
 
 model Rehearsal {
-  id            String                @id @default(cuid())
-  showId        String?               // Optional - für allgemeine Proben
-  title         String                @default("Probe")
-  start         DateTime
-  end           DateTime
-  location      String
-  description   String?
-  requiredRoles Json
-  isFromTemplate Boolean              @default(false)
+  id                  String                @id @default(cuid())
+  showId              String?               // Optional - für allgemeine Proben
+  title               String                @default("Probe")
+  start               DateTime
+  end                 DateTime
+  location            String
+  description         String?
+  requiredRoles       Json
+  registrationDeadline DateTime?            // Deadline für An-/Abmeldungen (1 Woche vor Probe)
+  isFromTemplate      Boolean              @default(false)
   templateId    String?
   priority      RehearsalPriority     @default(NORMAL)
   status        RehearsalStatus       @default(PLANNED)
@@ -200,7 +246,9 @@ model Rehearsal {
   updatedAt     DateTime              @default(now()) @updatedAt
   show          Show?                 @relation(fields: [showId], references: [id], onDelete: Cascade)
   attendance    RehearsalAttendance[]
+  attendanceLogs RehearsalAttendanceLog[]
   template      RehearsalTemplate?    @relation(fields: [templateId], references: [id])
+  proposals     RehearsalProposal[]
 }
 
 model RehearsalTemplate {
@@ -236,14 +284,107 @@ enum RehearsalStatus {
 }
 
 model RehearsalAttendance {
-  id          String           @id @default(cuid())
-  rehearsalId String
-  userId      String
-  status      AttendanceStatus
-  rehearsal   Rehearsal        @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String           @id @default(cuid())
+  rehearsalId     String
+  userId          String
+  status          AttendanceStatus
+  emergencyReason String?         // Begründung für Emergency-Absagen
+  rehearsal       Rehearsal        @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([rehearsalId, userId], name: "rehearsalId_userId")
+}
+
+model RehearsalAttendanceLog {
+  id            String             @id @default(cuid())
+  rehearsalId   String
+  userId        String
+  previous      AttendanceStatus?
+  next          AttendanceStatus?
+  comment       String?
+  changedAt     DateTime          @default(now())
+  changedById   String
+  rehearsal     Rehearsal         @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  user          User              @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)
+  changedBy     User              @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Cascade)
+
+  @@index([rehearsalId, changedAt])
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  role   Role
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+}
+
+// Körpermaße für Kostüme etc.
+model MemberMeasurement {
+  id        String          @id @default(cuid())
+  userId    String
+  type      MeasurementType
+  value     Float
+  unit      MeasurementUnit
+  note      String?
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
+
+// Konfektionsgrößen
+model MemberSize {
+  id        String    @id @default(cuid())
+  userId    String
+  category  String    // z.B. "Oberteil", "Hose", "Schuhe"
+  size      String    // Die tatsächliche Größe
+  note      String?
+  updatedAt DateTime  @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+}
+
+// Allergien und Unverträglichkeiten
+model DietaryRestriction {
+  id          String       @id @default(cuid())
+  userId      String
+  allergen    String      // Was die Allergie/Unverträglichkeit auslöst
+  level       AllergyLevel
+  symptoms    String?     // Beschreibung der Symptome
+  treatment   String?     // Notfallbehandlung
+  note        String?
+  isActive    Boolean     @default(true)
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, allergen])
+}
+
+model RehearsalProposal {
+  id               String                 @id @default(cuid())
+  showId           String?                // Optional - für allgemeine Proben
+  title            String                 @default("Probenvorschlag")
+  date             DateTime               // Vorgeschlagenes Datum
+  startTime        Int                    // Vorgeschlagene Startzeit (Minuten seit Mitternacht)
+  endTime          Int                    // Vorgeschlagene Endzeit (Minuten seit Mitternacht)
+  location         String?
+  requiredRoles    Json                   // Benötigte Rollen für diese Probe
+  status           RehearsalProposalStatus @default(proposed)
+  createdAt        DateTime               @default(now())
+  approvedAt       DateTime?              // Wann wurde der Vorschlag freigegeben?
+  approvedBy       String?                // Wer hat den Vorschlag freigegeben?
+  rejectionReason  String?                // Optional: Grund für Ablehnung
+  rehearsalId      String?                // Referenz zur tatsächlichen Probe, wenn der Vorschlag angenommen wurde
+  
+  show             Show?                  @relation(fields: [showId], references: [id])
+  approver         User?                  @relation("ProposalApprover", fields: [approvedBy], references: [id])
+  rehearsal        Rehearsal?             @relation(fields: [rehearsalId], references: [id])
+  
+  @@index([date, status])
+  @@index([showId, status])
 }
 
 model Availability {
@@ -293,68 +434,3 @@ model Announcement {
   createdAt   DateTime @default(now())
 }
 
-// =========================
-// Flexible Maße & Größen
-// =========================
-
-enum MeasurementUnit {
-  mm
-  cm
-  inch
-}
-
-enum SizeSystem {
-  EU
-  DE
-  US
-  UK
-  FR
-  IT
-  INT // International/Generic
-}
-
-enum SizeCategory {
-  top
-  bottom
-  dress
-  suit
-  shirt
-  pants
-  jeans
-  bra
-  shoe
-  hat
-  glove
-  belt
-  ring
-  other
-}
-
-// Freie, erweiterbare Körpermaße pro Mitglied (mit Historie)
-model MemberMeasurement {
-  id        String          @id @default(cuid())
-  userId    String
-  key       String          // z. B. "chest", "waist", "hips", "inseam", "neck" …
-  value     Float
-  unit      MeasurementUnit @default(cm)
-  takenAt   DateTime        @default(now())
-  takenBy   String?
-  note      String?
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, key, takenAt])
-}
-
-// Konfektions-/Schuh-/Hutgrößen etc. als flexible Einträge
-model MemberSize {
-  id        String       @id @default(cuid())
-  userId    String
-  category  SizeCategory
-  system    SizeSystem   @default(EU)
-  value     String       // frei: z. B. "M", "38", "75B", "42-44"
-  note      String?
-  updatedAt DateTime     @default(now()) @updatedAt
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, category, system])
-}

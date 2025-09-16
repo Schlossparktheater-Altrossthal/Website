@@ -8,10 +8,12 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       role?: Role;
+      roles?: Role[];
     };
   }
   interface User {
     role?: Role;
+    roles?: Role[];
   }
 }
 
