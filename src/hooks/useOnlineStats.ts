@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRealtime } from './useRealtime';
+import type {
+  OnlineStatsUpdateEvent,
+  UserJoinedEvent,
+  UserLeftEvent,
+  RehearsalUsersListEvent,
+  UserPresenceEvent,
+  RoomType,
+} from '@/lib/realtime/types';
 
 interface OnlineStats {
   totalOnline: number;
@@ -31,34 +39,50 @@ export function useOnlineStats() {
     socket.emit('get_online_stats');
 
     // Listen for stats updates
-    socket.on('online_stats_update', (data: Omit<OnlineStats, 'lastUpdate'>) => {
-      setStats(prev => ({
-        ...data,
-        lastUpdate: new Date(),
-      }));
-    });
+    const handleStatsUpdate = (event: OnlineStatsUpdateEvent) => {
+      setStats({
+        totalOnline: event.stats.totalOnline,
+        onlineUsers: event.stats.onlineUsers.map(user => ({
+          id: user.id,
+          name: user.name ?? 'Unbekannt',
+          joinedAt: user.lastSeen ? new Date(user.lastSeen) : new Date(event.timestamp),
+        })),
+        lastUpdate: new Date(event.timestamp),
+      });
+    };
 
-    // Listen for user join/leave events
-    socket.on('user_joined', (userData: { id: string; name: string }) => {
+    const handleUserJoined = (event: UserJoinedEvent) => {
+      const joinedAt = new Date(event.timestamp);
       setStats(prev => ({
         totalOnline: prev.totalOnline + 1,
-        onlineUsers: [...prev.onlineUsers, { ...userData, joinedAt: new Date() }],
-        lastUpdate: new Date(),
+        onlineUsers: [...prev.onlineUsers, {
+          id: event.user.id,
+          name: event.user.name ?? 'Unbekannt',
+          joinedAt,
+        }],
+        lastUpdate: joinedAt,
       }));
-    });
+    };
 
-    socket.on('user_left', (userData: { id: string }) => {
+    const handleUserLeft = (event: UserLeftEvent) => {
       setStats(prev => ({
         totalOnline: Math.max(0, prev.totalOnline - 1),
-        onlineUsers: prev.onlineUsers.filter(user => user.id !== userData.id),
-        lastUpdate: new Date(),
+        onlineUsers: prev.onlineUsers.filter(user => user.id !== event.user.id),
+        lastUpdate: new Date(event.timestamp),
       }));
-    });
+    };
+
+    socket.on('online_stats_update', handleStatsUpdate);
+    socket.on('user_joined', handleUserJoined);
+    socket.on('user_left', handleUserLeft);
 
     return () => {
-      socket.off('online_stats_update');
-      socket.off('user_joined');
-      socket.off('user_left');
+      socket.off('online_stats_update', handleStatsUpdate);
+      socket.off('user_joined', handleUserJoined);
+      socket.off('user_left', handleUserLeft);
+      if (socket.connected) {
+        socket.emit('unsubscribe_online_stats');
+      }
     };
   }, [socket, isConnected]);
 
@@ -72,7 +96,7 @@ export function useOnlineStats() {
  * Hook für Rehearsal-spezifische Online-Benutzer
  */
 export function useRehearsalOnlineUsers(rehearsalId: string | null) {
-  const { socket, isConnected } = useRealtime();
+  const { socket, isConnected, joinRoom, leaveRoom } = useRealtime();
   const [onlineUsers, setOnlineUsers] = useState<Array<{
     id: string;
     name: string;
@@ -82,38 +106,48 @@ export function useRehearsalOnlineUsers(rehearsalId: string | null) {
   useEffect(() => {
     if (!socket || !isConnected || !rehearsalId) return;
 
-    // Join rehearsal room to get presence updates
-    socket.emit('join_room', `rehearsal_${rehearsalId}`);
+    const room: RoomType = `rehearsal_${rehearsalId}`;
+    joinRoom(room);
 
     // Request current online users in rehearsal
     socket.emit('get_rehearsal_users', rehearsalId);
 
     // Listen for presence updates
-    socket.on('user_presence', (event) => {
+    const handlePresence = (event: UserPresenceEvent) => {
+      if (event.room !== room) return;
+
       if (event.action === 'join') {
         setOnlineUsers(prev => {
-          // Avoid duplicates
-          if (prev.find(u => u.id === event.user.id)) return prev;
-          return [...prev, { ...event.user, joinedAt: new Date() }];
+          if (prev.some(user => user.id === event.user.id)) {
+            return prev;
+          }
+          return [...prev, { id: event.user.id, name: event.user.name, joinedAt: new Date(event.timestamp) }];
         });
       } else if (event.action === 'leave') {
-        setOnlineUsers(prev => prev.filter(u => u.id !== event.user.id));
-      }
-    });
-
-    // Handle initial user list response
-    socket.on('rehearsal_users_list', (users: Array<{ id: string; name: string }>) => {
-      setOnlineUsers(users.map(user => ({ ...user, joinedAt: new Date() })));
-    });
-
-    return () => {
-      socket.off('user_presence');
-      socket.off('rehearsal_users_list');
-      if (rehearsalId) {
-        socket.emit('leave_room', `rehearsal_${rehearsalId}`);
+        setOnlineUsers(prev => prev.filter(user => user.id !== event.user.id));
       }
     };
-  }, [socket, isConnected, rehearsalId]);
+
+    const handleInitialUsers = (event: RehearsalUsersListEvent) => {
+      if (event.rehearsalId !== rehearsalId) return;
+      const updatedAt = new Date(event.timestamp);
+      setOnlineUsers(event.users.map(user => ({
+        id: user.id,
+        name: user.name ?? 'Unbekannt',
+        joinedAt: user.lastSeen ? new Date(user.lastSeen) : updatedAt,
+      })));
+    };
+
+    socket.on('user_presence', handlePresence);
+    socket.on('rehearsal_users_list', handleInitialUsers);
+
+    return () => {
+      socket.off('user_presence', handlePresence);
+      socket.off('rehearsal_users_list', handleInitialUsers);
+      leaveRoom(room);
+      setOnlineUsers([]);
+    };
+  }, [socket, isConnected, rehearsalId, joinRoom, leaveRoom]);
 
   return {
     onlineUsers,
