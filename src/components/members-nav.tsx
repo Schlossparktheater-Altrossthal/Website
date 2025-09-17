@@ -7,6 +7,7 @@ type Item = { href: string; label: string; roles?: Role[] };
 
 const baseItems: Item[] = [
   { href: "/mitglieder", label: "Übersicht" },
+  { href: "/mitglieder/profil", label: "Profil" },
   { href: "/mitglieder/dashboard", label: "Dashboard" },
   { href: "/mitglieder/sperrliste", label: "Sperrliste" },
   { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech"] },

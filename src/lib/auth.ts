@@ -112,7 +112,7 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: { signIn: "/login" },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       const setFromList = (roles?: Role[]) => {
         if (roles && roles.length > 0) {
           const sorted = sortRoles(roles);
@@ -124,6 +124,24 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         (token as any).id = (user as any).id;
         setFromList((user as any).roles || ((user as any).role ? [(user as any).role as Role] : undefined));
+      }
+
+      if (trigger === "update") {
+        const updatedUser = (session as any)?.user ?? session;
+        if (updatedUser && typeof updatedUser === "object") {
+          const nextName = (updatedUser as any).name;
+          const nextEmail = (updatedUser as any).email;
+          if (typeof nextName === "string") {
+            (token as any).name = nextName;
+          }
+          if (typeof nextEmail === "string") {
+            (token as any).email = nextEmail;
+          }
+          const maybeRoles = (updatedUser as any).roles as Role[] | undefined;
+          if (maybeRoles && maybeRoles.length > 0) {
+            setFromList(maybeRoles);
+          }
+        }
       }
 
       const userId = (token as any).id as string | undefined;
@@ -147,6 +165,14 @@ export const authOptions: NextAuthOptions = {
         const roles = (token as any).roles as Role[] | undefined;
         if (roles) {
           session.user.roles = roles;
+        }
+        const tokenName = (token as any).name as string | undefined;
+        if (typeof tokenName === "string") {
+          session.user.name = tokenName;
+        }
+        const tokenEmail = (token as any).email as string | undefined;
+        if (typeof tokenEmail === "string") {
+          session.user.email = tokenEmail;
         }
       }
       return session;

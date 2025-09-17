@@ -118,11 +118,11 @@ export function UserNav({ className }: { className?: string }) {
             </Link>
             <Link
               role="menuitem"
-              href="/profil"
+              href="/mitglieder/profil"
               className="block px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
               onClick={() => setOpen(false)}
             >
-              Profil (bald)
+              Profil
             </Link>
             <button
               role="menuitem"
