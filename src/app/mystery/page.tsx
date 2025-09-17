@@ -18,7 +18,7 @@ export default async function MysteryPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-8 space-y-6">
+    <div className="container mx-auto px-4 sm:px-6 py-10 space-y-6">
       <h1 className="font-serif text-3xl">Das Geheimnis</h1>
       {clues.length === 0 && <p>Die Schatten sind noch still…</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

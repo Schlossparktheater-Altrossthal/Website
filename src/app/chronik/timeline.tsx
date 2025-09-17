@@ -70,24 +70,29 @@ export function ChronikTimeline({ items }: { items: ChronikItem[] }) {
     }
   };
 
+  const activeIndex = items.findIndex((item) => item.id === activeId);
+  const completion =
+    items.length > 0 && activeIndex !== -1
+      ? Math.max(8, ((items.length - activeIndex) / items.length) * 100)
+      : 100;
+
   return (
-    <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40">
-      <div className="relative bg-gradient-to-r from-black/60 via-black/70 to-black/60 backdrop-blur-xl border border-white/10 rounded-2xl px-8 py-4 shadow-2xl shadow-black/50">
-        {/* Background glow */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-2xl" />
-        
-        {/* Progress bar background */}
-        <div className="absolute top-2 left-4 right-4 h-0.5 bg-white/10 rounded-full" />
-        
-        {/* Active progress bar */}
-        <div 
-          className="absolute top-2 left-4 h-0.5 bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all duration-500 ease-out"
-          style={{ 
-            width: `${Math.max(8, (items.length - items.findIndex(item => item.id === activeId)) / items.length * 100)}%` 
-          }}
-        />
-        
-        <div className="relative flex items-center gap-4 overflow-x-auto max-w-[85vw] scrollbar-hide pt-2 px-2">
+    <div className="px-4 pb-12 sm:px-0 sm:pb-0">
+      <div className="relative w-full sm:fixed sm:bottom-8 sm:left-1/2 sm:z-40 sm:w-auto sm:-translate-x-1/2 sm:transform">
+        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/65 px-5 py-4 shadow-xl backdrop-blur-lg sm:rounded-2xl sm:px-8">
+          {/* Background glow */}
+          <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 sm:rounded-2xl" />
+
+          {/* Progress bar background */}
+          <div className="pointer-events-none absolute top-2 left-4 right-4 h-0.5 rounded-full bg-white/10" />
+
+          {/* Active progress bar */}
+          <div
+            className="pointer-events-none absolute top-2 left-4 h-0.5 rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-500 ease-out"
+            style={{ width: `${completion}%` }}
+          />
+
+          <div className="relative flex items-center gap-4 overflow-x-auto px-1 pt-3 scrollbar-hide sm:max-w-[85vw]">
           {[...items].reverse().map((item, index) => {
             const isActive = activeId === item.id;
             const originalIndex = items.findIndex(i => i.id === item.id);

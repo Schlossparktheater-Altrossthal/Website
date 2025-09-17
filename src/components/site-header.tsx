@@ -51,10 +51,13 @@ export function SiteHeader() {
         : 'bg-gradient-to-b from-black/40 via-black/25 via-black/12 to-transparent backdrop-blur-[1px]'
     }`}>
       <div className={`${!scrolled && isHomePage ? 'h-32 bg-gradient-to-b from-transparent via-transparent to-transparent absolute inset-x-0 top-full' : ''}`} />
-      <nav aria-label="Hauptnavigation" className="container mx-auto flex items-center gap-6 p-4">
-        <Link className={`font-serif text-xl transition-all duration-300 ${
+      <nav
+        aria-label="Hauptnavigation"
+        className="container mx-auto flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6 px-4 py-3 sm:px-6 sm:py-4"
+      >
+        <Link className={`font-serif text-lg sm:text-xl transition-all duration-300 ${
           scrolled || !isHomePage
-            ? 'text-primary hover:opacity-90' 
+            ? 'text-primary hover:opacity-90'
             : 'text-white hover:text-primary/90 drop-shadow-lg'
         }`} href="/">
           Sommertheater
@@ -73,32 +76,32 @@ export function SiteHeader() {
           }`} href="/chronik">Chronik</Link>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <NotificationBell />
           <UserNav className="relative" />
-        </div>
 
-        {/* Mobile menu button */}
-        <button
-          ref={btnRef}
-          type="button"
-          aria-label="Menü öffnen"
-          aria-controls="mobile-menu"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className={`md:hidden ml-2 inline-flex h-9 w-9 items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring ${
-            scrolled || !isHomePage
-              ? 'border border-border/60 hover:bg-accent/30 text-foreground' 
-              : 'border border-white/30 hover:bg-white/20 text-white drop-shadow-lg'
-          }`}
-        >
-          <span className="sr-only">Menü</span>
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
+          {/* Mobile menu button */}
+          <button
+            ref={btnRef}
+            type="button"
+            aria-label="Menü öffnen"
+            aria-controls="mobile-menu"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className={`md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring ${
+              scrolled || !isHomePage
+                ? 'border border-border/60 hover:bg-accent/30 text-foreground'
+                : 'border border-white/30 hover:bg-white/20 text-white drop-shadow-lg'
+            }`}
+          >
+            <span className="sr-only">Menü</span>
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        </div>
       </nav>
 
       {/* Mobile overlay panel */}
@@ -108,7 +111,7 @@ export function SiteHeader() {
           <div
             ref={panelRef}
             id="mobile-menu"
-            className="absolute right-0 top-0 h-screen w-64 bg-card/95 backdrop-blur-md border-l border-border/60 shadow-2xl p-6 flex flex-col gap-4 pt-20"
+            className="absolute right-0 top-0 h-screen w-64 max-w-[80vw] border-l border-border/60 bg-card/95 backdrop-blur-md p-6 pt-20 shadow-2xl flex flex-col gap-4"
           >
             <Link 
               onClick={() => setOpen(false)} 

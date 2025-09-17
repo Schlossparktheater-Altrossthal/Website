@@ -14,11 +14,15 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
   const sorted = [...items].sort((a, b) => b.year - a.year);
 
   return (
-    <div className="space-y-12 lg:space-y-16 pb-16 container mx-auto px-6">
+    <div className="space-y-12 lg:space-y-16 pb-24 container mx-auto px-4 sm:px-6">
       {sorted.map((s, idx) => {
         const meta = (s.meta || {}) as any;
         return (
-          <section key={s.id} id={s.id} className="group relative overflow-hidden rounded-3xl border border-border/30 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.02]">
+          <section
+            key={s.id}
+            id={s.id}
+            className="group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border/30 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl"
+          >
             <div className="relative h-[60vh] sm:h-[70vh] lg:h-[75vh] xl:h-[65vh] 2xl:h-[60vh] w-full max-h-[800px]">
               {s.posterUrl && (
                 <Image
@@ -35,8 +39,8 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_60rem_40rem_at_30%_70%,_color-mix(in_oklab,var(--primary)_12%,transparent),transparent_80%)]" />
 
               <div className="absolute inset-0 flex items-end">
-                <div className="w-full p-8">
-                  <div className="max-w-5xl mx-auto backdrop-blur-sm bg-black/20 rounded-2xl border border-white/10 p-6 lg:p-8 xl:p-10 shadow-2xl group-hover:bg-black/30 transition-all duration-500">
+                <div className="w-full p-6 sm:p-8">
+                  <div className="max-w-5xl mx-auto rounded-2xl border border-white/10 bg-black/20 p-5 sm:p-6 lg:p-8 xl:p-10 backdrop-blur-sm shadow-2xl transition-all duration-500 group-hover:bg-black/30">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/20 border border-primary/30 rounded-full text-sm text-primary font-medium">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />

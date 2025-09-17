@@ -47,7 +47,7 @@ export function UserNav({ className }: { className?: string }) {
   if (!session?.user) {
     return (
       <div className={cn(className ?? "ml-auto")}>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm" className="px-3">
           <Link href="/login">Login</Link>
         </Button>
       </div>
