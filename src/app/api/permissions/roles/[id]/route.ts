@@ -33,3 +33,21 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
+export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await requireAuth();
+  if (!(await hasPermission(session.user, "mitglieder.rechte"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const id = params.id;
+  const role = await prisma.appRole.findUnique({ where: { id } });
+  if (!role) return NextResponse.json({ error: "Rolle nicht gefunden" }, { status: 404 });
+  if (role.isSystem) return NextResponse.json({ error: "Systemrollen können nicht gelöscht werden" }, { status: 400 });
+
+  try {
+    await prisma.appRole.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
+  }
+}
