@@ -105,7 +105,7 @@ export const authOptions: NextAuthOptions = {
                   "cast@example.com": "cast",
                   "tech@example.com": "tech",
                   "board@example.com": "board",
-                  "finance@example.com": "finance_admin",
+                  "finance@example.com": "finance",
                   "owner@example.com": "owner",
                   "admin@example.com": "admin",
                 };

@@ -12,7 +12,7 @@ enum Role {
   cast
   tech
   board
-  finance_admin
+  finance
   owner
   admin
 }

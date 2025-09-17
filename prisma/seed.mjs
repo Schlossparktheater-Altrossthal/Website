@@ -87,7 +87,7 @@ async function main() {
     "admin@example.com",
     "owner@example.com",
   ];
-  const roles = ["member", "cast", "tech", "board", "finance_admin", "admin", "owner"];
+  const roles = ["member", "cast", "tech", "board", "finance", "admin", "owner"];
   const defaultPasswordHash = await bcrypt.hash("password", 10);
 
   for (let i = 0; i < emails.length; i++) {

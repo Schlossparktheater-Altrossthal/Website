@@ -58,7 +58,7 @@ async function runEnsureSystemRoles() {
     { role: "cast", isSystem: false },
     { role: "tech", isSystem: false },
     { role: "board", isSystem: false },
-    { role: "finance_admin", isSystem: false },
+    { role: "finance", isSystem: false },
     { role: "owner", isSystem: true },
     { role: "admin", isSystem: true },
   ];
