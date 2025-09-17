@@ -39,7 +39,6 @@ export async function PUT(request: NextRequest) {
   // Guard: Admins cannot assign or remove the owner role
   const actorRoles = new Set(session.user?.roles ?? (session.user?.role ? [session.user.role] : []));
   const actorIsOwner = actorRoles.has("owner");
-  const actorIsAdmin = actorRoles.has("admin");
   const assignsOwner = orderedRoles.includes("owner");
   if (assignsOwner && !actorIsOwner) {
     return NextResponse.json({ error: "Nur Owner dürfen Owner zuweisen" }, { status: 403 });
