@@ -96,6 +96,7 @@ export const authOptions: NextAuthOptions = {
                   "tech@example.com",
                   "board@example.com",
                   "finance@example.com",
+                  "owner@example.com",
                   "admin@example.com",
                 ];
                 if (!allowed.includes(email)) return null;
@@ -105,6 +106,7 @@ export const authOptions: NextAuthOptions = {
                   "tech@example.com": "tech",
                   "board@example.com": "board",
                   "finance@example.com": "finance_admin",
+                  "owner@example.com": "owner",
                   "admin@example.com": "admin",
                 };
                 const user = await prisma.user.upsert({

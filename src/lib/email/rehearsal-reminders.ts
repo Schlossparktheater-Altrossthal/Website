@@ -41,7 +41,10 @@ async function findUsersWithoutResponse(
   return prisma.user.findMany({
     where: {
       id: { notIn: respondedUserIds },
-      role: { not: 'admin' }, // Optional: Administratoren ausschließen
+      AND: [
+        { role: { notIn: ['admin', 'owner'] } },
+        { roles: { none: { role: { in: ['admin', 'owner'] } } } },
+      ],
     },
   });
 }

@@ -19,6 +19,9 @@ export function hasRole(user: { role?: Role; roles?: Role[] } | null | undefined
 
   if (owned.size === 0) return false;
 
+  // Owners and Admins have full access (wildcard)
+  if (owned.has("owner") || owned.has("admin")) return true;
+
   return roles.some((role) => owned.has(role));
 }
 

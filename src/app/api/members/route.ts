@@ -4,11 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { sortRoles, type Role } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
 import { Prisma } from "@prisma/client";
+import { hasPermission } from "@/lib/permissions";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest) {
-  await requireAuth(["admin"]);
+  const session = await requireAuth();
+  if (!(await hasPermission(session.user, "manage_roles"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const rawBody: unknown = await request.json().catch(() => null);
 
   if (!rawBody || typeof rawBody !== "object") {
@@ -48,6 +52,14 @@ export async function POST(request: NextRequest) {
     (role): role is Role => typeof role === "string" && (ROLES as readonly string[]).includes(role),
   );
   const roles = sortRoles(filteredRoles.length > 0 ? filteredRoles : ["member"]);
+
+  // Only owners may assign the owner role
+  const actorRoles = new Set(session.user?.roles ?? (session.user?.role ? [session.user.role] : []));
+  if (roles.includes("owner") && !actorRoles.has("owner")) {
+    return NextResponse.json({ error: "Nur Owner dürfen Owner zuweisen" }, { status: 403 });
+  }
+
+  // Keep legacy primary role field for compatibility (highest role)
   const primaryRole = roles[roles.length - 1];
 
   try {

@@ -17,15 +17,25 @@ export function RoleManager({
   email,
   name,
   initialRoles,
+  canEditOwner = false,
+  isSelf = false,
+  availableCustomRoles = [],
+  initialCustomRoleIds = [],
 }: {
   userId: string;
   email?: string | null;
   name?: string | null;
   initialRoles: Role[];
+  canEditOwner?: boolean;
+  isSelf?: boolean;
+  availableCustomRoles?: { id: string; name: string }[];
+  initialCustomRoleIds?: string[];
 }) {
   const initialSorted = useMemo(() => sortRoles(initialRoles), [initialRoles]);
   const [selected, setSelected] = useState<Role[]>(initialSorted);
   const [saved, setSaved] = useState<Role[]>(initialSorted);
+  const [selectedCustomIds, setSelectedCustomIds] = useState<string[]>([...initialCustomRoleIds]);
+  const [savedCustomIds, setSavedCustomIds] = useState<string[]>([...initialCustomRoleIds]);
   const [currentEmail, setCurrentEmail] = useState(email ?? "");
   const [currentName, setCurrentName] = useState(name ?? "");
   const [saving, setSaving] = useState(false);
@@ -39,6 +49,11 @@ export function RoleManager({
   }, [initialRoles]);
 
   useEffect(() => {
+    setSelectedCustomIds([...initialCustomRoleIds]);
+    setSavedCustomIds([...initialCustomRoleIds]);
+  }, [initialCustomRoleIds]);
+
+  useEffect(() => {
     setCurrentEmail(email ?? "");
   }, [email]);
 
@@ -46,7 +61,7 @@ export function RoleManager({
     setCurrentName(name ?? "");
   }, [name]);
 
-  const dirty = useMemo(() => selected.join("|") !== saved.join("|"), [selected, saved]);
+  const dirty = useMemo(() => selected.join("|") !== saved.join("|") || selectedCustomIds.join("|") !== savedCustomIds.join("|"), [selected, saved, selectedCustomIds, savedCustomIds]);
 
   const toggleRole = (role: Role) => {
     setError(null);
@@ -54,6 +69,7 @@ export function RoleManager({
       const isActive = prev.includes(role);
       const next = isActive ? prev.filter((r) => r !== role) : [...prev, role];
       if (next.length === 0) return prev;
+      if (role === "owner" && !canEditOwner) return prev; // Non-owners cannot change owner
       return sortRoles(next);
     });
   };
@@ -72,7 +88,7 @@ export function RoleManager({
       const response = await fetch("/api/members/roles", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, roles: selected }),
+        body: JSON.stringify({ userId, roles: selected, customRoleIds: selectedCustomIds }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -83,6 +99,11 @@ export function RoleManager({
       const updatedRoles = sortRoles((data?.roles as Role[] | undefined) ?? selected);
       setSelected(updatedRoles);
       setSaved(updatedRoles);
+      const updatedCustom: string[] = Array.isArray(data?.customRoles)
+        ? data.customRoles.map((r: { id: string }) => r.id)
+        : selectedCustomIds;
+      setSelectedCustomIds(updatedCustom);
+      setSavedCustomIds(updatedCustom);
       toast.success("Rollen aktualisiert");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unbekannter Fehler";
@@ -95,6 +116,7 @@ export function RoleManager({
 
   const handleReset = () => {
     setSelected(saved);
+    setSelectedCustomIds(savedCustomIds);
     setError(null);
   };
 
@@ -132,6 +154,7 @@ export function RoleManager({
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {ROLES.map((role) => {
           const active = selected.includes(role);
+          const disabled = role === "owner" && !canEditOwner;
           return (
             <label
               key={role}
@@ -146,12 +169,44 @@ export function RoleManager({
                 className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
                 checked={active}
                 onChange={() => toggleRole(role)}
+                disabled={disabled}
               />
               <span>{ROLE_LABELS[role] ?? role}</span>
             </label>
           );
         })}
       </div>
+
+      {availableCustomRoles.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Zusätzliche Rollen</div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {availableCustomRoles.map((r) => {
+              const active = selectedCustomIds.includes(r.id);
+              return (
+                <label
+                  key={r.id}
+                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
+                    active ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-accent/30"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
+                    checked={active}
+                    onChange={() =>
+                      setSelectedCustomIds((prev) =>
+                        prev.includes(r.id) ? prev.filter((id) => id !== r.id) : [...prev, r.id],
+                      )
+                    }
+                  />
+                  <span>{r.name}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <div className="text-xs text-muted-foreground">

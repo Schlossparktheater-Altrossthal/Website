@@ -13,8 +13,9 @@ const baseItems: Item[] = [
   { href: "/mitglieder/profil", label: "Profil" },
   { href: "/mitglieder/dashboard", label: "Dashboard" },
   { href: "/mitglieder/sperrliste", label: "Sperrliste" },
-  { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech"] },
-  { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", roles: ["admin"] },
+  { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech", "owner"] },
+  { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", roles: ["admin", "owner"] },
+  { href: "/mitglieder/rechte", label: "Rechteverwaltung", roles: ["admin", "owner"] },
 ];
 
 function isActive(pathname: string, href: string) {

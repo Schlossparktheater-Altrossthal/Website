@@ -11,7 +11,7 @@ type UpdateMemberPayload = {
 };
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  await requireAuth(["admin"]);
+  await requireAuth(["admin", "owner"]);
   const id = params.id;
   const rawBody: unknown = await request.json().catch(() => null);
 

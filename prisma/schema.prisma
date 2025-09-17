@@ -13,6 +13,7 @@ enum Role {
   tech
   board
   finance_admin
+  owner
   admin
 }
 
@@ -150,6 +151,7 @@ model User {
   approvedProposals      RehearsalProposal[] @relation("ProposalApprover")
   notifications         NotificationRecipient[]
   blockedDays            BlockedDay[]
+  appRoles               UserAppRole[]
 }
 
 model Account {
@@ -323,6 +325,44 @@ model UserRole {
   @@unique([userId, role])
 }
 
+// Permission system (matrix)
+model Permission {
+  id          String @id @default(cuid())
+  key         String @unique
+  label       String?
+  description String?
+  grants      AppRolePermission[]
+}
+
+model AppRole {
+  id         String  @id @default(cuid())
+  name       String  @unique
+  isSystem   Boolean @default(false)
+  systemRole Role?
+  grants     AppRolePermission[]
+  users      UserAppRole[]
+}
+
+model AppRolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  role         AppRole    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model UserAppRole {
+  id     String  @id @default(cuid())
+  userId String
+  roleId String
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   AppRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
 // Körpermaße für Kostüme etc.
 model MemberMeasurement {
   id        String          @id @default(cuid())
@@ -470,4 +510,3 @@ model Announcement {
   attachments Json?
   createdAt   DateTime @default(now())
 }
-

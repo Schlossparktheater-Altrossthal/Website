@@ -165,7 +165,7 @@ export default function LoginPage() {
             Dev: Schnell-Login{devNoDb ? " (ohne DB)" : ""}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {["member", "cast", "tech", "board", "finance", "admin"].map((r) => (
+            {["member", "cast", "tech", "board", "finance", "admin", "owner"].map((r) => (
               <Button key={r} variant="outline" onClick={() => testLogin(`${r}@example.com`)}>
                 {r}
               </Button>

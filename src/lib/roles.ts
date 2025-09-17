@@ -5,6 +5,7 @@ export const ROLES = [
   "board",
   "finance_admin",
   "admin",
+  "owner",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -15,6 +16,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   tech: "Technik",
   board: "Vorstand",
   finance_admin: "Finanzen",
+  owner: "Owner",
   admin: "Admin",
 };
 
@@ -24,6 +26,7 @@ export const ROLE_BADGE_VARIANTS: Record<Role, string> = {
   tech: "bg-blue-100 text-blue-700 border-blue-200",
   board: "bg-emerald-100 text-emerald-700 border-emerald-200",
   finance_admin: "bg-amber-100 text-amber-700 border-amber-200",
+  owner: "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
   admin: "bg-red-100 text-red-700 border-red-200",
 };
 

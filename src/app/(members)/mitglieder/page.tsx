@@ -30,6 +30,12 @@ export default async function MitgliederPage() {
             </Link>{" "}
             für Administratorinnen und Administratoren
           </li>
+          <li>
+            <Link className="text-primary hover:underline" href="/mitglieder/rechte">
+              Rechteverwaltung
+            </Link>{" "}
+            (nur für Admins/Owner)
+          </li>
         </ul>
       </div>
     </div>

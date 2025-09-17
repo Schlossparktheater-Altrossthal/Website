@@ -3,13 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { RoleManager } from "@/components/members/role-manager";
 import { AddMemberModal } from "@/components/members/add-member-card";
 import { sortRoles, type Role } from "@/lib/roles";
+import { hasPermission } from "@/lib/permissions";
 
 export default async function RollenVerwaltungPage() {
-  await requireAuth(["admin"]);
-  const users = await prisma.user.findMany({
+  const session = await requireAuth();
+  const allowed = await hasPermission(session.user, "manage_roles");
+  if (!allowed) {
+    return <div className="text-sm text-red-600">Kein Zugriff auf die Rollenverwaltung</div>;
+  }
+  const [users, customRoles] = await Promise.all([
+    prisma.user.findMany({
     orderBy: { email: "asc" },
-    include: { roles: true },
-  });
+    include: { roles: true, appRoles: { select: { role: { select: { id: true, name: true } } } } },
+  }),
+    prisma.appRole.findMany({ where: { isSystem: false }, orderBy: { name: "asc" } }),
+  ]);
 
   const formatted = users.map((user) => {
     const combined = sortRoles([
@@ -21,6 +29,7 @@ export default async function RollenVerwaltungPage() {
       email: user.email,
       name: user.name,
       roles: combined,
+      customRoles: user.appRoles.map((ar) => ar.role),
     };
   });
 
@@ -45,6 +54,10 @@ export default async function RollenVerwaltungPage() {
             email={user.email}
             name={user.name}
             initialRoles={user.roles}
+            canEditOwner={(session.user?.roles ?? []).includes("owner")}
+            isSelf={session.user?.id === user.id}
+            availableCustomRoles={customRoles}
+            initialCustomRoleIds={user.customRoles.map((r) => r.id)}
           />
         ))}
       </div>
