@@ -1,22 +1,30 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
+import type { Server as HTTPServer } from "http";
+import type { Socket } from "net";
+import type { Server as IOServer } from "socket.io";
 import { realtimeService } from "@/lib/realtime/service";
 
-export default function handler(
-  req: NextApiRequest,
-  res: NextApiResponse & { socket: { server: any } },
-) {
-  // Type assertion to access the server property
-  const server = (res as any).socket?.server;
-  
+type NextApiResponseWithSocket = NextApiResponse & {
+  socket: Socket & {
+    server: HTTPServer & {
+      io?: IOServer;
+    };
+  };
+};
+
+export default function handler(req: NextApiRequest, res: NextApiResponseWithSocket) {
+  const server = res.socket.server;
+
   if (!server) {
     return res.status(500).json({ error: 'Server not available' });
   }
-  
+
   if (server.io) {
     console.log("Socket.IO server already running");
   } else {
     console.log("Initializing Socket.IO server...");
-    
+
     try {
       const io = realtimeService.initialize(server);
       server.io = io;
@@ -26,7 +34,7 @@ export default function handler(
       return res.status(500).json({ error: 'Failed to initialize Socket.IO' });
     }
   }
-  
+
   res.end();
 }
 

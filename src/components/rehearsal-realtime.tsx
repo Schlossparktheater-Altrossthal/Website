@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAttendanceRealtime, usePresence } from '@/hooks/useRealtime';
 import { RealtimeStatus } from '@/components/realtime-status';
 import { toast } from 'sonner';

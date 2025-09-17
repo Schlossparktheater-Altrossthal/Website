@@ -53,6 +53,7 @@ export function MeasurementForm({ initialData, onSubmit }: MeasurementFormProps)
       await onSubmit(data)
       toast.success("Maße wurden erfolgreich gespeichert")
     } catch (error) {
+      console.error("[MeasurementForm] Failed to submit measurement", error)
       toast.error("Fehler beim Speichern der Maße")
     }
   }

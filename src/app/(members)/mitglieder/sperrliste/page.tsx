@@ -12,7 +12,7 @@ type BlockedDayDTO = {
 
 export default async function SperrlistePage() {
   const session = await requireAuth();
-  const userId = (session.user as { id?: string } | undefined)?.id;
+  const userId = session.user?.id;
 
   if (!userId) {
     throw new Error("Benutzerinformationen konnten nicht geladen werden.");

@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 
-type SessionUser = { id?: string | null };
-
 type NotificationResponse = {
   id: string;
   title: string;
@@ -21,7 +19,7 @@ type NotificationResponse = {
 export async function GET() {
   try {
     const session = await requireAuth();
-    const userId = (session.user as SessionUser | undefined)?.id;
+    const userId = session.user?.id;
     if (!userId) {
       return NextResponse.json({ notifications: [] as NotificationResponse[] });
     }

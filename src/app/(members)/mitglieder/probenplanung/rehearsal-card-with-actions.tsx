@@ -78,9 +78,10 @@ export function RehearsalCardWithActions({ rehearsal }: { rehearsal: RehearsalWi
   const yes = rehearsal.attendance.filter((entry) => entry.status === "yes");
   const no = rehearsal.attendance.filter((entry) => entry.status !== "yes");
   const respondedIds = new Set(rehearsal.attendance.map((entry) => entry.userId));
-  const pending = notification?.recipients ? 
-    notification.recipients.filter((recipient: any) => !respondedIds.has(recipient.userId)) : 
-    [];
+  type RecipientWithUser = RehearsalWithRelations["notifications"][number]["recipients"][number];
+  const pending: RecipientWithUser[] = notification
+    ? notification.recipients.filter((recipient) => !respondedIds.has(recipient.userId))
+    : [];
 
   const menuItems = [
     {
@@ -150,7 +151,7 @@ export function RehearsalCardWithActions({ rehearsal }: { rehearsal: RehearsalWi
           />
           <ResponseColumn
             title="Offen"
-            people={pending.map((recipient: any) => ({
+            people={pending.map((recipient) => ({
               id: recipient.user.id,
               name: recipient.user.name,
               email: recipient.user.email,

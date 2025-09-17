@@ -1,36 +1,47 @@
-import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-import { requireAuth } from "@/lib/rbac"
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/rbac";
 
 // GET: Hole alle Allergien eines Benutzers
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const session = await requireAuth()
-    const userId = session.user.id
+    const session = await requireAuth();
+    const userId = session.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Nicht autorisiert" },
+        { status: 401 },
+      );
+    }
 
     const allergies = await prisma.dietaryRestriction.findMany({
-      where: { 
+      where: {
         userId,
-        isActive: true 
+        isActive: true,
       },
-      orderBy: { allergen: 'asc' }
-    })
+      orderBy: { allergen: "asc" },
+    });
 
-    return NextResponse.json(allergies)
+    return NextResponse.json(allergies);
   } catch (error) {
+    console.error("[Allergies] Failed to load allergies", error);
     return NextResponse.json(
       { error: "Nicht autorisiert" },
-      { status: 401 }
-    )
+      { status: 401 },
+    );
   }
 }
 
 // POST: Füge eine neue Allergie hinzu oder aktualisiere eine bestehende
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth()
-    const userId = session.user.id
-    const data = await request.json()
+    const session = await requireAuth();
+    const userId = session.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+    }
+    const data = await request.json();
 
     const allergy = await prisma.dietaryRestriction.upsert({
       where: {
@@ -54,30 +65,34 @@ export async function POST(request: NextRequest) {
         treatment: data.treatment,
         note: data.note,
       },
-    })
+    });
 
-    return NextResponse.json(allergy)
+    return NextResponse.json(allergy);
   } catch (error) {
+    console.error("[Allergies] Failed to upsert allergy", error);
     return NextResponse.json(
       { error: "Fehler beim Speichern der Allergie" },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }
 
 // DELETE: Deaktiviere eine Allergie (soft delete)
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await requireAuth()
-    const userId = session.user.id
-    const { searchParams } = new URL(request.url)
-    const allergen = searchParams.get("allergen")
+    const session = await requireAuth();
+    const userId = session.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+    }
+    const { searchParams } = new URL(request.url);
+    const allergen = searchParams.get("allergen");
 
     if (!allergen) {
       return NextResponse.json(
         { error: "Allergen muss angegeben werden" },
-        { status: 400 }
-      )
+        { status: 400 },
+      );
     }
 
     await prisma.dietaryRestriction.update({
@@ -90,13 +105,14 @@ export async function DELETE(request: NextRequest) {
       data: {
         isActive: false,
       },
-    })
+    });
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("[Allergies] Failed to deactivate allergy", error);
     return NextResponse.json(
       { error: "Fehler beim Deaktivieren der Allergie" },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }

@@ -39,8 +39,9 @@ const createPrismaMock = (existing?: AttendanceOverride) => {
     },
   };
 
+  type TransactionCallback = (client: typeof tx) => unknown | Promise<unknown>;
   const prisma = {
-    $transaction: vi.fn(async (callback: any) => callback(tx)),
+    $transaction: vi.fn(async (callback: TransactionCallback) => callback(tx)),
   } as unknown as PrismaClient;
 
   return { prisma, tx };

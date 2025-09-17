@@ -70,8 +70,8 @@ export function AddMemberModal() {
       resetForm();
       setOpen(false);
       router.refresh();
-    } catch (err: any) {
-      const message = err?.message ?? "Unbekannter Fehler";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unbekannter Fehler";
       setError(message);
       toast.error(message);
     } finally {

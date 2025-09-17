@@ -2,14 +2,29 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+type ChronikMeta = {
+  author?: string | null;
+  director?: string | null;
+  venue?: string | null;
+  ticket_info?: string | null;
+  sources?: unknown;
+  gallery?: unknown;
+};
+
 type ChronikItem = {
   id: string;
   year: number;
   title?: string | null;
   synopsis?: string | null;
   posterUrl?: string | null;
-  meta?: Record<string, any> | null;
+  meta?: ChronikMeta | null;
 };
+
+function toStringArray(value: unknown, limit?: number) {
+  if (!Array.isArray(value)) return [] as string[];
+  const entries = value.filter((entry): entry is string => typeof entry === "string");
+  return typeof limit === "number" ? entries.slice(0, limit) : entries;
+}
 
 export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
   const sorted = useMemo(() => [...items].sort((a, b) => b.year - a.year), [items]);
@@ -93,7 +108,9 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
       {/* Fullframe sections */}
       <div className="lg:col-start-2 snap-y snap-mandatory">
         {sorted.map((s, idx) => {
-          const meta = (s.meta || {}) as any;
+          const meta: ChronikMeta = s.meta ?? {};
+          const sources = toStringArray(meta.sources, 3);
+          const gallery = toStringArray(meta.gallery, 6);
           return (
             <section
               key={s.id}
@@ -127,8 +144,7 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
                   {meta?.venue && <div className="text-sm text-foreground/80">Ort: {meta.venue}</div>}
                   {s.synopsis && <p className="mt-3 max-w-prose text-foreground/85">{s.synopsis}</p>}
                   <div className="flex flex-wrap gap-2 pt-3">
-                    {Array.isArray(meta?.sources) &&
-                      meta.sources.slice(0, 3).map((src: string, i: number) => (
+                    {sources.map((src, i) => (
                         <a
                           key={i}
                           href={src}
@@ -142,8 +158,8 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {Array.isArray(meta?.gallery) && meta.gallery.length > 0 ? (
-                    meta.gallery.slice(0, 6).map((url: string, i: number) => {
+                  {gallery.length > 0 ? (
+                    gallery.map((url, i) => {
                       const isImg = /\.(jpg|jpeg|png|webp|avif)$/i.test(url) || /picsum\.photos/.test(url);
                       return (
                         <div key={i} className="relative h-28 sm:h-32 md:h-36 rounded overflow-hidden border border-border/40">

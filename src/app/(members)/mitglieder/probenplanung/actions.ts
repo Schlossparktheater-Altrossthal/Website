@@ -28,9 +28,9 @@ export async function createRehearsalAction(input: {
   location?: string;
 }) {
   const session = await requireAuth(["board", "admin", "tech"]);
-  const user = session.user as { id?: string } | undefined;
+  const userId = session.user?.id;
 
-  if (!user?.id) {
+  if (!userId) {
     return { error: "Keine Berechtigung." } as const;
   }
 
@@ -57,16 +57,16 @@ export async function createRehearsalAction(input: {
       timeStyle: "short",
     });
 
-    const created = await prisma.$transaction(async (tx) => {
-      const rehearsal = await tx.rehearsal.create({
-        data: {
-          title,
-          start,
-          end,
-          location: location ?? "Noch offen",
-          requiredRoles: [],
-          createdBy: user.id,
-        },
+      const created = await prisma.$transaction(async (tx) => {
+        const rehearsal = await tx.rehearsal.create({
+          data: {
+            title,
+            start,
+            end,
+            location: location ?? "Noch offen",
+            requiredRoles: [],
+          createdBy: userId,
+          },
         select: {
           id: true,
           title: true,
@@ -138,7 +138,7 @@ export async function updateRehearsalAction(input: {
   location?: string;
 }) {
   const session = await requireAuth(["board", "admin", "tech"]);
-  const userId = (session.user as { id?: string } | undefined)?.id;
+  const userId = session.user?.id;
 
   if (!userId) {
     return { error: "Keine Berechtigung." } as const;

@@ -1,9 +1,8 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  describeRoles,
   ROLE_BADGE_VARIANTS,
   ROLE_LABELS,
   ROLES,
@@ -85,8 +84,8 @@ export function RoleManager({
       setSelected(updatedRoles);
       setSaved(updatedRoles);
       toast.success("Rollen aktualisiert");
-    } catch (err: any) {
-      const message = err?.message ?? "Unbekannter Fehler";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unbekannter Fehler";
       setError(message);
       toast.error(message);
     } finally {
