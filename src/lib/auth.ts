@@ -153,7 +153,7 @@ export const authOptions: NextAuthOptions = {
                 id: user.id,
                 email: user.email!,
                 name: user.name!,
-                role: combinedRoles[0],
+                role: combinedRoles[combinedRoles.length - 1],
                 roles: combinedRoles,
               };
             },
@@ -169,7 +169,7 @@ export const authOptions: NextAuthOptions = {
         if (!roles || roles.length === 0) return;
         const sorted = sortRoles(roles);
         mutableToken.roles = sorted;
-        mutableToken.role = sorted[0];
+        mutableToken.role = sorted[sorted.length - 1];
       };
 
       if (user && isRecord(user)) {

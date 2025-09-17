@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     (role): role is Role => typeof role === "string" && (ROLES as readonly string[]).includes(role),
   );
   const roles = sortRoles(filteredRoles.length > 0 ? filteredRoles : ["member"]);
-  const primaryRole = roles[0];
+  const primaryRole = roles[roles.length - 1];
 
   try {
     const user = await prisma.user.create({

@@ -27,7 +27,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const orderedRoles = sortRoles(provided);
-  const primaryRole = orderedRoles[0];
+  const primaryRole = orderedRoles[orderedRoles.length - 1];
 
   try {
     const updated = await prisma.user.update({

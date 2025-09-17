@@ -58,7 +58,7 @@ export function RoleManager({
     });
   };
 
-  const primaryRole = selected[0];
+  const primaryRole = selected[selected.length - 1];
 
   const handleSave = async () => {
     if (selected.length === 0) {
