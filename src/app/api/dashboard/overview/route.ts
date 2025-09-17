@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 
 export async function GET() {
   const session = await requireAuth();
@@ -8,6 +9,10 @@ export async function GET() {
 
   if (!userId) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+
+  if (!(await hasPermission(session.user, "mitglieder.dashboard"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const now = new Date();

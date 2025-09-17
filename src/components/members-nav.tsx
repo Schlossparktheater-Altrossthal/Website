@@ -3,19 +3,18 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { Role } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
-type Item = { href: string; label: string; roles?: Role[] };
+type Item = { href: string; label: string; permissionKey?: string };
 
 const baseItems: Item[] = [
   { href: "/mitglieder", label: "Übersicht" },
-  { href: "/mitglieder/profil", label: "Profil" },
-  { href: "/mitglieder/dashboard", label: "Dashboard" },
-  { href: "/mitglieder/sperrliste", label: "Sperrliste" },
-  { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech", "owner"] },
-  { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", roles: ["admin", "owner"] },
-  { href: "/mitglieder/rechte", label: "Rechteverwaltung", roles: ["admin", "owner"] },
+  { href: "/mitglieder/profil", label: "Profil", permissionKey: "mitglieder.profil" },
+  { href: "/mitglieder/dashboard", label: "Dashboard", permissionKey: "mitglieder.dashboard" },
+  { href: "/mitglieder/sperrliste", label: "Sperrliste", permissionKey: "mitglieder.sperrliste" },
+  { href: "/mitglieder/probenplanung", label: "Probenplanung", permissionKey: "mitglieder.probenplanung" },
+  { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", permissionKey: "mitglieder.rollenverwaltung" },
+  { href: "/mitglieder/rechte", label: "Rechteverwaltung", permissionKey: "mitglieder.rechte" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -24,17 +23,17 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(`${href}/`);
 }
 
-export function MembersNav({ roles }: { roles?: Role[] }) {
+export function MembersNav({ permissions }: { permissions?: string[] }) {
   const pathname = usePathname();
   const router = useRouter();
 
   const items = useMemo(() => {
-    if (!roles || roles.length === 0) {
-      return baseItems;
+    if (!permissions || permissions.length === 0) {
+      return baseItems.filter((item) => !item.permissionKey);
     }
-    const roleSet = new Set(roles);
-    return baseItems.filter((item) => !item.roles || item.roles.some((role) => roleSet.has(role)));
-  }, [roles]);
+    const permissionSet = new Set(permissions);
+    return baseItems.filter((item) => !item.permissionKey || permissionSet.has(item.permissionKey));
+  }, [permissions]);
 
   const activeItem = useMemo(() => items.find((item) => isActive(pathname, item.href)), [items, pathname]);
   const activeHref = activeItem?.href ?? items[0]?.href ?? "";

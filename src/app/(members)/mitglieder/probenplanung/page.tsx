@@ -1,10 +1,15 @@
 import { PageHeader } from "@/components/members/page-header";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { CreateRehearsalButton } from "./create-rehearsal-button";
 import { RehearsalCardWithActions } from "./rehearsal-card-with-actions";
 export default async function ProbenplanungPage() {
-  await requireAuth(["board", "admin", "tech"]);
+  const session = await requireAuth();
+  const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
+  if (!allowed) {
+    return <div className="text-sm text-red-600">Kein Zugriff auf die Probenplanung</div>;
+  }
 
   const rehearsals = await prisma.rehearsal.findMany({
     orderBy: { start: "asc" },

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 import {
   isoDate,
@@ -28,6 +29,10 @@ export async function GET() {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
+  if (!(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const entries = await prisma.blockedDay.findMany({
     where: { userId },
     orderBy: { date: "asc" },
@@ -42,6 +47,10 @@ export async function POST(request: Request) {
 
   if (!userId) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+
+  if (!(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   let payload: BlockDayPayload;

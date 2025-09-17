@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import {
   broadcastRehearsalCreated,
   broadcastRehearsalUpdated,
@@ -27,10 +28,10 @@ export async function createRehearsalAction(input: {
   time: string;
   location?: string;
 }) {
-  const session = await requireAuth(["board", "admin", "tech"]);
+  const session = await requireAuth();
   const userId = session.user?.id;
-
-  if (!userId) {
+  const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
+  if (!userId || !allowed) {
     return { error: "Keine Berechtigung." } as const;
   }
 
@@ -57,16 +58,16 @@ export async function createRehearsalAction(input: {
       timeStyle: "short",
     });
 
-      const created = await prisma.$transaction(async (tx) => {
-        const rehearsal = await tx.rehearsal.create({
-          data: {
-            title,
-            start,
-            end,
-            location: location ?? "Noch offen",
-            requiredRoles: [],
+    const created = await prisma.$transaction(async (tx) => {
+      const rehearsal = await tx.rehearsal.create({
+        data: {
+          title,
+          start,
+          end,
+          location: location ?? "Noch offen",
+          requiredRoles: [],
           createdBy: userId,
-          },
+        },
         select: {
           id: true,
           title: true,
@@ -137,10 +138,10 @@ export async function updateRehearsalAction(input: {
   time: string;
   location?: string;
 }) {
-  const session = await requireAuth(["board", "admin", "tech"]);
+  const session = await requireAuth();
   const userId = session.user?.id;
-
-  if (!userId) {
+  const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
+  if (!userId || !allowed) {
     return { error: "Keine Berechtigung." } as const;
   }
 
@@ -205,10 +206,10 @@ export async function updateRehearsalAction(input: {
 const deleteSchema = z.object({ id: z.string().min(1) });
 
 export async function deleteRehearsalAction(input: { id: string }) {
-  const session = await requireAuth(["board", "admin", "tech"]);
-  const userId = (session.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
+  const session = await requireAuth();
+  const userId = session.user?.id;
+  const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
+  if (!userId || !allowed) {
     return { error: "Keine Berechtigung." } as const;
   }
 

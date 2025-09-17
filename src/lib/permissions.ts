@@ -13,9 +13,11 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.sperrliste", label: "Sperrliste pflegen" },
 ];
 
-const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key));
+const DEFAULT_PERMISSION_KEYS = DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key);
+const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
 
 let ensurePermissionsPromise: Promise<void> | null = null;
+let ensureSystemRolesPromise: Promise<void> | null = null;
 
 async function runEnsurePermissionDefinitions() {
   const operations = DEFAULT_PERMISSION_DEFINITIONS.map((definition) =>
@@ -50,6 +52,38 @@ export function isKnownPermissionKey(key: string) {
   return PERMISSION_KEY_SET.has(key);
 }
 
+async function runEnsureSystemRoles() {
+  const coreRoles: { role: Role; isSystem: boolean }[] = [
+    { role: "member", isSystem: false },
+    { role: "cast", isSystem: false },
+    { role: "tech", isSystem: false },
+    { role: "board", isSystem: false },
+    { role: "finance_admin", isSystem: false },
+    { role: "owner", isSystem: true },
+    { role: "admin", isSystem: true },
+  ];
+
+  await prisma.$transaction(
+    coreRoles.map(({ role, isSystem }) =>
+      prisma.appRole.upsert({
+        where: { name: role },
+        update: { systemRole: role, isSystem },
+        create: { name: role, systemRole: role, isSystem },
+      }),
+    ),
+  );
+}
+
+export async function ensureSystemRoles() {
+  if (!ensureSystemRolesPromise) {
+    ensureSystemRolesPromise = runEnsureSystemRoles().catch((error) => {
+      ensureSystemRolesPromise = null;
+      throw error;
+    });
+  }
+  await ensureSystemRolesPromise;
+}
+
 export async function hasPermission(
   user: { id?: string; role?: Role; roles?: Role[] } | null | undefined,
   permissionKey: string,
@@ -65,6 +99,7 @@ export async function hasPermission(
 
   if (!isKnownPermissionKey(permissionKey)) return false;
 
+  await ensureSystemRoles();
   await ensurePermissionDefinitions();
 
   const systemRoles = Array.from(owned);
@@ -110,25 +145,63 @@ export async function hasPermission(
   return rolePermissions > 0;
 }
 
-export async function ensureSystemRoles() {
-  const coreRoles: { role: Role; isSystem: boolean }[] = [
-    { role: "member", isSystem: false },
-    { role: "cast", isSystem: false },
-    { role: "tech", isSystem: false },
-    { role: "board", isSystem: false },
-    { role: "finance_admin", isSystem: false },
-    { role: "owner", isSystem: true },
-    { role: "admin", isSystem: true },
-  ];
+export async function getUserPermissionKeys(
+  user: { id?: string; role?: Role; roles?: Role[] } | null | undefined,
+): Promise<string[]> {
+  if (!user?.id) return [];
 
-  await prisma.$transaction(
-    coreRoles.map(({ role, isSystem }) =>
-      prisma.appRole.upsert({
-        where: { name: role },
-        update: { systemRole: role, isSystem },
-        create: { name: role, systemRole: role, isSystem },
-      }),
-    ),
-  );
+  const owned = new Set<Role>();
+  if (user.role) owned.add(user.role);
+  if (Array.isArray(user.roles)) {
+    for (const r of user.roles) owned.add(r);
+  }
+
+  if (owned.has("owner") || owned.has("admin")) {
+    return [...DEFAULT_PERMISSION_KEYS];
+  }
+
+  await ensureSystemRoles();
+  await ensurePermissionDefinitions();
+
+  const systemRoles = Array.from(owned);
+
+  const customAssignments = await prisma.userAppRole.findMany({
+    where: { userId: user.id },
+    select: { roleId: true },
+  });
+
+  const customRoleIds = customAssignments.map((assignment) => assignment.roleId);
+
+  const roleFilters: Prisma.AppRolePermissionWhereInput[] = [];
+  if (systemRoles.length) {
+    roleFilters.push({
+      role: {
+        OR: [
+          { systemRole: { in: systemRoles } },
+          { name: { in: systemRoles } },
+        ],
+      },
+    });
+  }
+  if (customRoleIds.length) {
+    roleFilters.push({ roleId: { in: customRoleIds } });
+  }
+
+  if (!roleFilters.length) return [];
+
+  const rolePermissions = await prisma.appRolePermission.findMany({
+    where: { OR: roleFilters },
+    select: { permission: { select: { key: true } } },
+  });
+
+  const granted = new Set<string>();
+  for (const entry of rolePermissions) {
+    const key = entry.permission?.key;
+    if (key && isKnownPermissionKey(key)) {
+      granted.add(key);
+    }
+  }
+
+  return DEFAULT_PERMISSION_KEYS.filter((key) => granted.has(key));
 }
 
