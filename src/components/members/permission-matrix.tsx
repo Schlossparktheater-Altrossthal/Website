@@ -222,64 +222,6 @@ export function PermissionMatrix() {
           </tbody>
         </table>
       </div>
-        <input
-          className="border px-2 py-1 rounded"
-          placeholder="Neue Rolle"
-          value={newRoleName}
-          onChange={(e) => setNewRoleName(e.target.value)}
-        />
-        <Button size="sm" onClick={addRole}>Rolle anlegen</Button>
-      </div>
-
-      <div className="overflow-auto border rounded">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr>
-              <th className="text-left p-2 border-b">Recht</th>
-              {roles.map((r) => (
-                <th key={r.id} className="text-left p-2 border-b align-top">
-                  <button
-                    type="button"
-                    title="Zum Bearbeiten klicken"
-                    onClick={() => openEdit(r)}
-                    className="group inline-flex max-w-[14rem] items-center gap-1 truncate text-left text-sm font-medium underline-offset-2 hover:underline"
-                  >
-                    <span className="truncate">{r.name}</span>
-                    <EditIcon className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-80 text-foreground/60" aria-hidden />
-                  </button>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {perms.map((p) => (
-              <tr key={p.key}>
-                <td className="p-2 border-b align-top">
-                  <div className="font-medium">{p.label ?? p.key}</div>
-                  {p.label && p.label !== p.key ? (
-                    <div className="text-xs text-muted-foreground">{p.key}</div>
-                  ) : null}
-                  {p.description ? (
-                    <div className="text-xs text-muted-foreground">{p.description}</div>
-                  ) : null}
-                </td>
-                {roles.map((r) => {
-                  const granted = grants[r.id]?.has(p.key) ?? false;
-                  return (
-                    <td key={r.id} className="p-2 border-b">
-                      <input
-                        type="checkbox"
-                        checked={granted}
-                        onChange={(e) => toggle(r.id, p.key, e.target.checked)}
-                      />
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
       <Modal
         open={editOpen}
         onClose={closeEdit}
