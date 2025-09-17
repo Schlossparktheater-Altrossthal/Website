@@ -192,7 +192,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
             Tippe auf einen Tag, um einen Sperrtermin hinzuzufügen oder zu bearbeiten.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -222,52 +222,57 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
         </div>
       </div>
 
-      <div className="space-y-1 rounded-lg border bg-card p-2 shadow-sm">
-        <div className="grid grid-cols-7 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {weekDayLabels.map((label) => (
-            <div key={label} className="py-2">
-              {label}
+      <div className="rounded-xl border bg-card shadow-sm">
+        <div className="overflow-x-auto">
+          <div className="min-w-[560px] space-y-2 p-3 sm:p-4">
+            <div className="grid grid-cols-7 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {weekDayLabels.map((label) => (
+                <div key={label} className="py-2">
+                  {label}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1 text-sm">
-          {daysInView.map((day) => {
-            const key = format(day, DATE_FORMAT);
-            const entry = blockedByDate.get(key);
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const isCurrentDay = isToday(day);
+            <div className="grid grid-cols-7 gap-1.5 text-sm">
+              {daysInView.map((day) => {
+                const key = format(day, DATE_FORMAT);
+                const entry = blockedByDate.get(key);
+                const isCurrentMonth = isSameMonth(day, currentMonth);
+                const isCurrentDay = isToday(day);
 
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => openDay(day)}
-                className={cn(
-                  "relative flex min-h-[70px] flex-col rounded-md border bg-background p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  !isCurrentMonth && "text-muted-foreground/60",
-                  entry && "border-destructive/50 bg-destructive/10",
-                  isCurrentDay && "ring-2 ring-primary/80"
-                )}
-                aria-label={`${format(day, "EEEE, d. MMMM yyyy", { locale: de })}${
-                  entry
-                    ? `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
-                    : ", frei"
-                }`}
-              >
-                <span className="text-xs font-medium">{format(day, "d")}</span>
-                {entry ? (
-                  <span className="mt-auto flex items-center gap-1 text-xs font-semibold text-destructive">
-                    <CircleX className="h-4 w-4" />
-                    <span className="truncate" title={entry.reason ?? undefined}>
-                      {entry.reason ?? "Gesperrt"}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="mt-auto text-xs text-muted-foreground">Frei</span>
-                )}
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => openDay(day)}
+                    className={cn(
+                      "relative flex min-h-[78px] flex-col rounded-lg border bg-background p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-3",
+                      !isCurrentMonth && "text-muted-foreground/60",
+                      entry && "border-destructive/50 bg-destructive/10",
+                      isCurrentDay && "ring-2 ring-primary/80"
+                    )}
+                    aria-current={isCurrentDay ? "date" : undefined}
+                    aria-label={`${format(day, "EEEE, d. MMMM yyyy", { locale: de })}${
+                      entry
+                        ? `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
+                        : ", frei"
+                    }`}
+                  >
+                    <span className="text-xs font-medium">{format(day, "d")}</span>
+                    {entry ? (
+                      <span className="mt-auto flex items-center gap-1 text-xs font-semibold text-destructive">
+                        <CircleX className="h-4 w-4" />
+                        <span className="truncate" title={entry.reason ?? undefined}>
+                          {entry.reason ?? "Gesperrt"}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="mt-auto text-xs text-muted-foreground">Frei</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
