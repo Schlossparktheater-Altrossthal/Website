@@ -100,11 +100,11 @@ export function RehearsalCardWithActions({ rehearsal }: { rehearsal: RehearsalWi
 
   return (
     <>
-      <details className="overflow-hidden rounded-lg border border-border/60 bg-card/60">
+      <details className="overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-sm transition hover:shadow">
         <summary className="list-none cursor-pointer px-5 py-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1">
-              <h3 className="font-semibold text-lg text-foreground">{rehearsal.title}</h3>
+              <h3 className="text-lg font-semibold text-foreground">{rehearsal.title}</h3>
               <p className="text-sm text-muted-foreground">
                 {dateFormatter.format(new Date(rehearsal.start))}
                 {" · "}
@@ -114,14 +114,14 @@ export function RehearsalCardWithActions({ rehearsal }: { rehearsal: RehearsalWi
             </div>
             <div className="flex items-start gap-3">
               <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-emerald-600">
-                  ✅ {yes.length}
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/50 bg-emerald-500/10 px-2 py-1 text-emerald-600">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /> {yes.length}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-1 text-rose-600">
-                  ❌ {no.length}
+                <span className="inline-flex items-center gap-1 rounded-full border border-rose-300/50 bg-rose-500/10 px-2 py-1 text-rose-600">
+                  <span className="inline-block h-2 w-2 rounded-full bg-rose-500" /> {no.length}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-muted-foreground">
-                  … {pending.length}
+                <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted px-2 py-1 text-muted-foreground">
+                  <span className="inline-block h-2 w-2 rounded-full bg-slate-400" /> {pending.length}
                 </span>
               </div>
               <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -130,7 +130,7 @@ export function RehearsalCardWithActions({ rehearsal }: { rehearsal: RehearsalWi
             </div>
           </div>
         </summary>
-        <div className="grid gap-6 border-t border-border/60 px-5 py-4 sm:grid-cols-3">
+        <div className="grid gap-6 border-t border-border/60 px-5 py-5 sm:grid-cols-3">
           <ResponseColumn
             title="Zusagen"
             people={yes.map((entry) => ({
