@@ -61,6 +61,9 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
   const [bulkReason, setBulkReason] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
+  const [recentlyRemoved, setRecentlyRemoved] = useState<Set<string>>(new Set());
+  const [enterDir, setEnterDir] = useState<"left" | "right">("right");
 
   const dragIntentRef = useRef<SelectionIntent | null>(null);
   const draggingRef = useRef(false);
@@ -73,6 +76,38 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     }
     return map;
   }, [blockedDays]);
+
+  const markRecent = useCallback((keys: string[], type: "added" | "removed") => {
+    if (!keys.length) return;
+    if (type === "added") {
+      setRecentlyAdded((prev) => {
+        const next = new Set(prev);
+        keys.forEach((k) => next.add(k));
+        return next;
+      });
+      // Clear after delay
+      setTimeout(() => {
+        setRecentlyAdded((prev) => {
+          const next = new Set(prev);
+          keys.forEach((k) => next.delete(k));
+          return next;
+        });
+      }, 800);
+    } else {
+      setRecentlyRemoved((prev) => {
+        const next = new Set(prev);
+        keys.forEach((k) => next.add(k));
+        return next;
+      });
+      setTimeout(() => {
+        setRecentlyRemoved((prev) => {
+          const next = new Set(prev);
+          keys.forEach((k) => next.delete(k));
+          return next;
+        });
+      }, 800);
+    }
+  }, []);
 
   const monthLabel = useMemo(
     () => format(currentMonth, "MMMM yyyy", { locale: de }),
@@ -122,6 +157,13 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
   );
 
   const selectedFreeCount = selectedKeys.length - selectedBlockedCount;
+
+  // Planungsfenster: Sperrtermine erst ab einer Woche im Voraus
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const freezeUntil = addDays(startOfToday, 7);
+  const freezeUntilKey = format(freezeUntil, DATE_FORMAT);
+  const isWithinFreeze = useCallback((key: string) => key < freezeUntilKey, [freezeUntilKey]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -205,6 +247,22 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     setModalOpen(true);
   };
 
+  const goToday = () => {
+    const target = startOfMonth(new Date());
+    setEnterDir(target.getTime() >= currentMonth.getTime() ? "right" : "left");
+    setCurrentMonth(target);
+  };
+
+  const goPrevMonth = () => {
+    setEnterDir("left");
+    setCurrentMonth((prev) => addMonths(prev, -1));
+  };
+
+  const goNextMonth = () => {
+    setEnterDir("right");
+    setCurrentMonth((prev) => addMonths(prev, 1));
+  };
+
   const handleDayPointerDown = (
     event: ReactPointerEvent<HTMLButtonElement>,
     key: string
@@ -259,6 +317,11 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     setSubmitting(true);
     setError(null);
     try {
+      if (isWithinFreeze(selectedDateKey)) {
+        throw new Error(
+          `Aus Planungsgründen können Sperrtermine erst ab ${format(freezeUntil, "EEEE, d. MMMM yyyy", { locale: de })} eingetragen werden.`
+        );
+      }
       const response = await fetch("/api/block-days", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -279,6 +342,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
       setBlockedDays((prev) =>
         [...prev, data].sort((a, b) => a.date.localeCompare(b.date))
       );
+      markRecent([data.date], "added");
       toast.success("Sperrtermin eingetragen.");
       closeModal();
     } catch (err) {
@@ -338,9 +402,8 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
         );
       }
 
-      setBlockedDays((prev) =>
-        prev.filter((entry) => entry.id !== selectedEntry.id)
-      );
+      setBlockedDays((prev) => prev.filter((entry) => entry.id !== selectedEntry.id));
+      markRecent([selectedEntry.date], "removed");
       toast.success("Sperrtermin entfernt.");
       closeModal();
     } catch (err) {
@@ -358,51 +421,37 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     setBulkSubmitting(true);
     setBulkError(null);
 
-    const created: BlockedDay[] = [];
-    let errorMessage: string | null = null;
-
-    for (const key of keysToCreate) {
-      const response = await fetch("/api/block-days", {
+    try {
+      const response = await fetch("/api/block-days/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: key,
-          reason: trimmed.length > 0 ? trimmed : undefined,
-        }),
+        body: JSON.stringify({ dates: keysToCreate, reason: trimmed || undefined }),
       });
-
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        errorMessage =
-          payload?.error ??
-          `Der Sperrtermin für ${formatKeyForMessage(key)} konnte nicht gespeichert werden.`;
-        break;
+        throw new Error(payload?.error ?? "Speichern fehlgeschlagen");
       }
-
-      const data = (await response.json()) as BlockedDay;
-      created.push(data);
-    }
-
-    if (created.length > 0) {
-      setBlockedDays((prev) => {
-        const next = [...prev, ...created];
-        next.sort((a, b) => a.date.localeCompare(b.date));
-        return next;
-      });
-    }
-
-    if (errorMessage) {
-      setBulkError(errorMessage);
-    } else {
+      const payload = (await response.json()) as { created?: BlockedDay[] };
+      const created = Array.isArray(payload.created) ? payload.created : [];
+      if (created.length > 0) {
+        setBlockedDays((prev) => {
+          const next = [...prev, ...created];
+          next.sort((a, b) => a.date.localeCompare(b.date));
+          return next;
+        });
+        markRecent(created.map((c) => c.date), "added");
+      }
       toast.success(
         created.length > 1
           ? `${created.length} Sperrtermine eingetragen.`
           : "Sperrtermin eingetragen."
       );
       clearSelection();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setBulkSubmitting(false);
     }
-
-    setBulkSubmitting(false);
   };
 
   const handleBulkRemove = async () => {
@@ -415,43 +464,30 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     setBulkSubmitting(true);
     setBulkError(null);
 
-    const removedIds: string[] = [];
-    let errorMessage: string | null = null;
-
-    for (const entry of entriesToRemove) {
-      const response = await fetch(`/api/block-days/${entry.id}`, {
+    try {
+      const response = await fetch("/api/block-days/bulk", {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dates: entriesToRemove.map((e) => e.date) }),
       });
-
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        errorMessage =
-          payload?.error ??
-          `Der Sperrtermin für ${formatKeyForMessage(entry.date)} konnte nicht entfernt werden.`;
-        break;
+        throw new Error(payload?.error ?? "Löschen fehlgeschlagen");
       }
-
-      removedIds.push(entry.id);
-    }
-
-    if (removedIds.length > 0) {
-      setBlockedDays((prev) =>
-        prev.filter((entry) => !removedIds.includes(entry.id))
-      );
-    }
-
-    if (errorMessage) {
-      setBulkError(errorMessage);
-    } else {
+      const { deleted } = (await response.json()) as { deleted?: number };
+      if ((deleted ?? 0) > 0) {
+        setBlockedDays((prev) => prev.filter((entry) => !entriesToRemove.some((e) => e.id === entry.id)));
+        markRecent(entriesToRemove.map((e) => e.date), "removed");
+      }
       toast.success(
-        removedIds.length > 1
-          ? `${removedIds.length} Sperrtermine entfernt.`
-          : "Sperrtermin entfernt."
+        (deleted ?? 0) > 1 ? `${deleted} Sperrtermine entfernt.` : "Sperrtermin entfernt."
       );
       clearSelection();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setBulkSubmitting(false);
     }
-
-    setBulkSubmitting(false);
   };
 
   return (
@@ -469,14 +505,14 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setCurrentMonth(startOfMonth(new Date()))}
+              onClick={goToday}
             >
               Heute
             </Button>
             <div className="flex items-center rounded-md border">
               <button
                 type="button"
-                onClick={() => setCurrentMonth((prev) => addMonths(prev, -1))}
+                onClick={goPrevMonth}
                 className="p-2 text-sm text-muted-foreground transition hover:text-foreground"
                 aria-label="Vorheriger Monat"
               >
@@ -484,7 +520,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
               </button>
               <button
                 type="button"
-                onClick={() => setCurrentMonth((prev) => addMonths(prev, 1))}
+                onClick={goNextMonth}
                 className="p-2 text-sm text-muted-foreground transition hover:text-foreground"
                 aria-label="Nächster Monat"
               >
@@ -511,7 +547,13 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
                 </div>
               ))}
             </div>
-            <div className="space-y-1.5 text-sm">
+            <div
+              key={format(currentMonth, "yyyy-MM")}
+              className={cn(
+                "space-y-1.5 text-sm month-enter",
+                enterDir === "right" ? "month-from-right" : "month-from-left"
+              )}
+            >
               {weeksInView.map((week) => (
                 <div
                   key={week.weekStart.toISOString()}
@@ -526,6 +568,8 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
                     const isCurrentMonth = isSameMonth(day, currentMonth);
                     const isCurrentDay = isToday(day);
                     const isSelected = selectedDayKeys.has(key);
+                    const wasAdded = recentlyAdded.has(key);
+                    const wasRemoved = recentlyRemoved.has(key);
 
                     return (
                       <button
@@ -535,11 +579,14 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
                         onPointerDown={(event) => handleDayPointerDown(event, key)}
                         onPointerEnter={(event) => handleDayPointerEnter(event, key)}
                         className={cn(
-                          "relative flex min-h-[78px] flex-col rounded-lg border bg-background p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-3",
+                          "block-cell relative flex min-h-[78px] flex-col overflow-hidden rounded-lg border bg-background p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-3",
                           !isCurrentMonth && "text-muted-foreground/60",
                           entry && "border-destructive/50 bg-destructive/10",
                           isCurrentDay && !isSelected && "ring-2 ring-primary/80",
-                          isSelected && "border-primary ring-2 ring-primary/60"
+                          isSelected && "border-primary ring-2 ring-primary/60",
+                          "hover:shadow-sm hover:translate-y-[-1px]",
+                          wasAdded && "added-anim",
+                          wasRemoved && "removed-anim"
                         )}
                         aria-current={isCurrentDay ? "date" : undefined}
                         aria-pressed={selectionMode ? isSelected : undefined}
@@ -551,7 +598,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
                       >
                         <span className="text-xs font-medium">{format(day, "d")}</span>
                         {entry ? (
-                          <span className="mt-auto flex items-center gap-1 text-xs font-semibold text-destructive">
+                          <span className="mt-auto flex items-center gap-1 text-xs font-semibold text-destructive transition-opacity duration-300">
                             <CircleX className="h-4 w-4" />
                             <span className="truncate" title={entry.reason ?? undefined}>
                               {entry.reason ?? "Gesperrt"}
@@ -733,6 +780,31 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
           </div>
         </div>
       </Modal>
+      <style jsx global>{`
+        @keyframes cellPop { 0% { transform: scale(0.96); } 100% { transform: scale(1); } }
+        @keyframes addedFlash { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); } 100% { box-shadow: 0 0 0 12px rgba(34,197,94,0); } }
+        @keyframes removedFlash { 0% { background-color: rgba(239,68,68,.15); } 100% { background-color: transparent; } }
+        @keyframes hoverGlow { 0% { box-shadow: 0 0 0 rgba(99,102,241,0); } 50% { box-shadow: 0 0 18px rgba(99,102,241,.35); } 100% { box-shadow: 0 0 0 rgba(99,102,241,0); } }
+        @keyframes sheenSlide { 0% { transform: translateX(-150%) skewX(-20deg);} 100% { transform: translateX(150%) skewX(-20deg);} }
+        @keyframes monthInRight { 0% { opacity: 0; transform: translateX(24px);} 100% { opacity: 1; transform: translateX(0);} }
+        @keyframes monthInLeft { 0% { opacity: 0; transform: translateX(-24px);} 100% { opacity: 1; transform: translateX(0);} }
+        .block-cell { position: relative; }
+        .block-cell.added-anim { animation: cellPop .22s ease-out, addedFlash .6s ease-out; }
+        .block-cell.removed-anim { animation: removedFlash .6s ease-out; }
+        .block-cell::before { content: ""; position:absolute; inset:-2px; border-radius: inherit; pointer-events:none; opacity:0; }
+        .block-cell::after { content:""; position:absolute; top:0; left:0; width:60%; height:100%; pointer-events:none; opacity:0; background: linear-gradient(120deg, rgba(255,255,255,0), rgba(255,255,255,.11), rgba(255,255,255,0)); transform: translateX(-150%) skewX(-20deg); }
+        .block-cell:hover { border-color: rgba(99,102,241,.45); background-image: radial-gradient(100% 60% at 50% 0%, rgba(99,102,241,.10), transparent 60%); }
+        @media (prefers-reduced-motion: no-preference) {
+          .block-cell:hover::before { opacity:1; animation: hoverGlow 1.2s ease-in-out infinite; }
+          .block-cell:hover::after { opacity:1; animation: sheenSlide 900ms ease-out; }
+        }
+        .dark .block-cell:hover { border-color: rgba(129,140,248,.55); background-image: radial-gradient(100% 60% at 50% 0%, rgba(129,140,248,.14), transparent 65%); }
+        .month-enter { will-change: transform, opacity; }
+        @media (prefers-reduced-motion: no-preference) {
+          .month-enter.month-from-right { animation: monthInRight .32s ease-out; }
+          .month-enter.month-from-left  { animation: monthInLeft  .32s ease-out; }
+        }
+      `}</style>
     </div>
   );
 }

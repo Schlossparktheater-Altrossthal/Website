@@ -204,4 +204,3 @@ export async function getUserPermissionKeys(
 
   return DEFAULT_PERMISSION_KEYS.filter((key) => granted.has(key));
 }
-
