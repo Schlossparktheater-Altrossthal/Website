@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 type Role = { id: string; name: string; isSystem: boolean; systemRole?: string | null };
-type Permission = { id: string; key: string; label?: string | null };
+type Permission = { id: string; key: string; label?: string | null; description?: string | null };
 
 export function PermissionMatrix() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -12,7 +12,6 @@ export function PermissionMatrix() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newRoleName, setNewRoleName] = useState("");
-  const [newPermKey, setNewPermKey] = useState("");
 
   async function load() {
     setLoading(true);
@@ -21,8 +20,12 @@ export function PermissionMatrix() {
       const res = await fetch("/api/permissions/definitions");
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Laden fehlgeschlagen");
-      setRoles(data.roles);
-      setPerms(data.permissions);
+      const fetchedRoles = Array.isArray(data.roles) ? (data.roles as Role[]) : [];
+      setRoles(fetchedRoles.filter((role) => !role.isSystem));
+      const fetchedPermissions = Array.isArray(data.permissions)
+        ? (data.permissions as Permission[])
+        : [];
+      setPerms(fetchedPermissions);
       const m: Record<string, Set<string>> = {};
       for (const r of data.roles as Role[]) m[r.id] = new Set<string>();
       for (const roleId of Object.keys(data.grants || {})) m[roleId] = new Set<string>(data.grants[roleId]);
@@ -66,29 +69,21 @@ export function PermissionMatrix() {
     }
   };
 
-  const addPerm = async () => {
-    if (!newPermKey.trim()) return;
-    const res = await fetch("/api/permissions/definitions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: newPermKey.trim() }),
-    });
-    if (res.ok) {
-      setNewPermKey("");
-      await load();
-    }
-  };
-
   if (loading) return <div>Laden…</div>;
   if (error) return <div className="text-red-600">{error}</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <input className="border px-2 py-1 rounded" placeholder="Neue Rolle" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} />
-        <Button size="sm" onClick={addRole}>Rolle anlegen</Button>
-        <input className="border px-2 py-1 rounded ml-6" placeholder="Neues Recht (key)" value={newPermKey} onChange={(e) => setNewPermKey(e.target.value)} />
-        <Button size="sm" onClick={addPerm}>Recht anlegen</Button>
+        <input
+          className="border px-2 py-1 rounded"
+          placeholder="Neue Rolle"
+          value={newRoleName}
+          onChange={(e) => setNewRoleName(e.target.value)}
+        />
+        <Button size="sm" onClick={addRole}>
+          Rolle anlegen
+        </Button>
       </div>
 
       <div className="overflow-auto border rounded">
@@ -98,21 +93,32 @@ export function PermissionMatrix() {
               <th className="text-left p-2 border-b">Recht</th>
               {roles.map((r) => (
                 <th key={r.id} className="text-left p-2 border-b">
-                  {r.name}{r.systemRole ? " (System)" : ""}
+                  {r.name}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {perms.map((p) => (
-              <tr key={p.id}>
-                <td className="p-2 border-b font-medium">{p.key}</td>
+              <tr key={p.key}>
+                <td className="p-2 border-b align-top">
+                  <div className="font-medium">{p.label ?? p.key}</div>
+                  {p.label && p.label !== p.key ? (
+                    <div className="text-xs text-muted-foreground">{p.key}</div>
+                  ) : null}
+                  {p.description ? (
+                    <div className="text-xs text-muted-foreground">{p.description}</div>
+                  ) : null}
+                </td>
                 {roles.map((r) => {
                   const granted = grants[r.id]?.has(p.key) ?? false;
-                  const disabled = r.systemRole === "owner" || r.systemRole === "admin";
                   return (
                     <td key={r.id} className="p-2 border-b">
-                      <input type="checkbox" checked={granted} disabled={disabled} onChange={(e) => toggle(r.id, p.key, e.target.checked)} />
+                      <input
+                        type="checkbox"
+                        checked={granted}
+                        onChange={(e) => toggle(r.id, p.key, e.target.checked)}
+                      />
                     </td>
                   );
                 })}

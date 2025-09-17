@@ -5,10 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+import { hasPermission } from "@/lib/permissions";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
 
 export default async function ProfilePage() {
   const session = await requireAuth();
+  const allowed = await hasPermission(session.user, "mitglieder.profil");
+  if (!allowed) {
+    return <div className="text-sm text-red-600">Kein Zugriff auf den Profilbereich</div>;
+  }
   const userId = session.user?.id;
 
   if (!userId) {

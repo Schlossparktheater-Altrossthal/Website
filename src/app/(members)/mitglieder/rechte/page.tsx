@@ -1,11 +1,11 @@
 import { requireAuth } from "@/lib/rbac";
-import { hasPermission, ensureSystemRoles } from "@/lib/permissions";
+import { ensurePermissionDefinitions, ensureSystemRoles, hasPermission } from "@/lib/permissions";
 import { PermissionMatrix } from "@/components/members/permission-matrix";
 
 export default async function RechteVerwaltungPage() {
   const session = await requireAuth();
-  await ensureSystemRoles();
-  const allowed = await hasPermission(session.user, "manage_permissions");
+  await Promise.all([ensureSystemRoles(), ensurePermissionDefinitions()]);
+  const allowed = await hasPermission(session.user, "mitglieder.rechte");
   if (!allowed) {
     // Next.js server components cannot return 403 easily; show message
     return <div className="text-sm text-red-600">Kein Zugriff auf die Rechteverwaltung</div>;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 import { normaliseReason, reasonSchema, toResponse } from "../utils";
 
@@ -24,6 +25,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   if (!userId) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+
+  if (!(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   let payload: UpdatePayload;
@@ -60,6 +65,10 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
   if (!userId) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+
+  if (!(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const result = await prisma.blockedDay.deleteMany({

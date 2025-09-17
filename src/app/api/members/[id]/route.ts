@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { Prisma } from "@prisma/client";
+import { hasPermission } from "@/lib/permissions";
 
 type UpdateMemberPayload = {
   email?: unknown;
@@ -11,7 +12,10 @@ type UpdateMemberPayload = {
 };
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  await requireAuth(["admin", "owner"]);
+  const session = await requireAuth();
+  if (!(await hasPermission(session.user, "mitglieder.rollenverwaltung"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const id = params.id;
   const rawBody: unknown = await request.json().catch(() => null);
 
