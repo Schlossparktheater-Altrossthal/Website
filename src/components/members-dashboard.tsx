@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   useRealtime,
@@ -9,6 +10,7 @@ import {
 } from "@/hooks/useRealtime";
 import { useOnlineStats } from "@/hooks/useOnlineStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Users,
@@ -269,6 +271,40 @@ export function MembersDashboard() {
           )}
         </div>
       </div>
+
+      {/* Willkommen/Quick Actions */}
+      <Card className="bg-gradient-to-br from-accent/20 to-transparent">
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <div className="text-sm text-muted-foreground">Willkommen zurück</div>
+              <h2 className="text-xl font-semibold">
+                {session?.user?.name || session?.user?.email || "Mitglied"}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Hier findest du aktuelle Aktivitäten und schnelle Aktionen.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(() => {
+                const userRoles = (session?.user?.roles as string[] | undefined) ?? (session?.user?.role ? [session.user.role] : []);
+                const roleSet = new Set(userRoles);
+                const links = [
+                  { href: "/mitglieder/profil", label: "Profil öffnen" },
+                  { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech", "owner"] },
+                  { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", roles: ["admin", "owner"] },
+                  { href: "/mitglieder/rechte", label: "Rechteverwaltung", roles: ["admin", "owner"] },
+                ].filter((l: { href: string; label: string; roles?: string[] }) => !l.roles || l.roles.some((r) => roleSet.has(r)));
+                return links.map((l) => (
+                  <Button asChild key={l.href} variant="outline" size="sm">
+                    <Link href={l.href}>{l.label}</Link>
+                  </Button>
+                ));
+              })()}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>

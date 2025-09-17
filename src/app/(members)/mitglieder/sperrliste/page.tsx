@@ -1,7 +1,8 @@
 import { PageHeader } from "@/components/members/page-header";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
+import { de } from "date-fns/locale/de";
 import { BlockCalendar } from "./block-calendar";
 
 type BlockedDayDTO = {
@@ -29,12 +30,19 @@ export default async function SperrlistePage() {
     reason: entry.reason,
   }));
 
+  const freezeUntil = addDays(new Date(), 7);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Sperrliste"
         description="Markiere Tage, an denen du nicht verfügbar bist, damit das Team die Planung im Blick behält."
       />
+      <div className="rounded-md border p-3 text-sm
+        border-amber-300 bg-amber-50 text-amber-900
+        dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">
+        Hinweis: Aus Planungsgründen können Sperrtermine erst ab {format(freezeUntil, "EEEE, d. MMMM yyyy", { locale: de })} eingetragen werden.
+      </div>
       <BlockCalendar initialBlockedDays={initialBlockedDays} />
     </div>
   );

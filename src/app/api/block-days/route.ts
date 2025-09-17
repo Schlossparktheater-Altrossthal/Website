@@ -63,6 +63,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ungültiges Datum" }, { status: 400 });
   }
 
+  // Planning window: no blocks within next 7 days including today
+  try {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const today = toDateOnly(todayKey);
+    const cutoff = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    if (blockDate.getTime() < cutoff.getTime()) {
+      return NextResponse.json(
+        { error: "Aus Planungsgründen können Sperrtermine erst ab einer Woche im Voraus eingetragen werden." },
+        { status: 400 }
+      );
+    }
+  } catch {}
+
   try {
     const entry = await prisma.blockedDay.create({
       data: {
