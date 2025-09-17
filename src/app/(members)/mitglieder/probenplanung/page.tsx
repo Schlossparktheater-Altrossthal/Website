@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { CreateRehearsalButton } from "./create-rehearsal-button";
-import { RehearsalCardWithActions } from "./rehearsal-card-with-actions";
+import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
 import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
 export default async function ProbenplanungPage() {
@@ -35,15 +35,6 @@ export default async function ProbenplanungPage() {
     },
   });
 
-  // Group rehearsals by month for a clearer overview
-  const groups = new Map<string, typeof rehearsals>();
-  for (const r of rehearsals) {
-    const key = format(r.start, "yyyy-MM");
-    const arr = groups.get(key) ?? [];
-    arr.push(r);
-    groups.set(key, arr);
-  }
-
   const total = rehearsals.length;
   const upcoming = rehearsals.filter((r) => new Date(r.start) >= new Date()).length;
 
@@ -73,22 +64,16 @@ export default async function ProbenplanungPage() {
       </div>
 
       {rehearsals.length ? (
-        <div className="space-y-6">
-          {Array.from(groups.entries())
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([key, list]) => (
-              <section key={key} className="space-y-3">
-                <h2 className="sticky top-24 z-10 -mx-1 bg-background/70 px-1 text-lg font-semibold backdrop-blur supports-[backdrop-filter]:bg-background/50">
-                  {format(new Date(key + "-01T00:00:00"), "MMMM yyyy", { locale: de })}
-                </h2>
-                <div className="space-y-4">
-                  {list.map((rehearsal) => (
-                    <RehearsalCardWithActions key={rehearsal.id} rehearsal={rehearsal} />
-                  ))}
-                </div>
-              </section>
-            ))}
-        </div>
+        <RehearsalList
+          initial={rehearsals.map((r) => ({
+            id: r.id,
+            title: r.title,
+            start: r.start.toISOString(),
+            location: r.location,
+            attendance: r.attendance.map((a) => ({ status: a.status, user: a.user })),
+            notifications: r.notifications.map((n) => ({ recipients: n.recipients.map((x) => ({ user: x.user })) })),
+          })) as RehearsalLite[]}
+        />
       ) : (
         <p className="text-sm text-muted-foreground">Es sind aktuell keine Proben geplant.</p>
       )}

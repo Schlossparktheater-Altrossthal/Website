@@ -70,7 +70,7 @@ function ResponseColumn({
   );
 }
 
-export function RehearsalCardWithActions({ rehearsal }: { rehearsal: RehearsalWithRelations }) {
+export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: RehearsalWithRelations; forceOpen?: boolean }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -100,7 +100,7 @@ export function RehearsalCardWithActions({ rehearsal }: { rehearsal: RehearsalWi
 
   return (
     <>
-      <details className="overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-sm transition hover:shadow">
+      <details className="overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-sm transition hover:shadow" open={forceOpen ? true : undefined}>
         <summary className="list-none cursor-pointer px-5 py-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1">
