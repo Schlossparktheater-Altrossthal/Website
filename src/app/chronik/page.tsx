@@ -17,7 +17,7 @@ export default async function ChronikPage() {
 
   if (shows.length === 0) {
     return (
-      <div className="container mx-auto px-6 py-16">
+      <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16">
         <div className="max-w-2xl mx-auto text-center space-y-6">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
             <svg className="w-12 h-12 text-primary/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +45,7 @@ export default async function ChronikPage() {
   return (
     <div className="relative">
       {/* Header Section */}
-      <div className="container mx-auto px-6 py-16 text-center space-y-6">
+      <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center space-y-6">
         <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-white [text-shadow:_0_0_10px_rgba(0,0,0,0.9),_2px_2px_6px_rgba(0,0,0,0.8)]">
           Chronik vergangener Sommer
         </h1>

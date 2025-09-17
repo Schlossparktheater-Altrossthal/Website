@@ -11,9 +11,9 @@ export default function Home() {
   return (
     <div>
       <Hero images={heroImages} />
-      <div className="container mx-auto px-6">
-        <div className="space-y-8 py-16">
-          <section className="text-center py-6">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="space-y-8 py-12 sm:py-16">
+          <section className="text-center py-6 sm:py-8">
             <div className="mt-2 opacity-80">Ein einziges Wochenende. Ein Sommer. Ein Stück.</div>
             <div className="mt-4 text-xl">Countdown: bald verfügbar…</div>
           </section>
