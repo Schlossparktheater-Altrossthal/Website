@@ -10,7 +10,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "manage_roles"))) {
+  if (!(await hasPermission(session.user, "mitglieder.rollenverwaltung"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const rawBody: unknown = await request.json().catch(() => null);

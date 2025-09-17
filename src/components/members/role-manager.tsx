@@ -18,7 +18,6 @@ export function RoleManager({
   name,
   initialRoles,
   canEditOwner = false,
-  isSelf = false,
   availableCustomRoles = [],
   initialCustomRoleIds = [],
 }: {
@@ -27,7 +26,6 @@ export function RoleManager({
   name?: string | null;
   initialRoles: Role[];
   canEditOwner?: boolean;
-  isSelf?: boolean;
   availableCustomRoles?: { id: string; name: string }[];
   initialCustomRoleIds?: string[];
 }) {
@@ -73,8 +71,6 @@ export function RoleManager({
       return sortRoles(next);
     });
   };
-
-  const primaryRole = selected[selected.length - 1];
 
   const handleSave = async () => {
     if (selected.length === 0) {
@@ -208,10 +204,7 @@ export function RoleManager({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <div className="text-xs text-muted-foreground">
-          Primäre Rolle: {primaryRole ? ROLE_LABELS[primaryRole] ?? primaryRole : "–"}
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
         <div className="flex items-center gap-2">
           <Button
             type="button"

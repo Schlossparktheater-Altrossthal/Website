@@ -7,16 +7,16 @@ import { hasPermission } from "@/lib/permissions";
 
 export default async function RollenVerwaltungPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "manage_roles");
+  const allowed = await hasPermission(session.user, "mitglieder.rollenverwaltung");
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Rollenverwaltung</div>;
   }
   const [users, customRoles] = await Promise.all([
     prisma.user.findMany({
-    orderBy: { email: "asc" },
-    include: { roles: true, appRoles: { select: { role: { select: { id: true, name: true } } } } },
-  }),
-    prisma.appRole.findMany({ where: { isSystem: false }, orderBy: { name: "asc" } }),
+      orderBy: { email: "asc" },
+      include: { roles: true, appRoles: { select: { role: { select: { id: true, name: true } } } } },
+    }),
+    prisma.appRole.findMany({ where: { isSystem: false, systemRole: null }, orderBy: { name: "asc" } }),
   ]);
 
   const formatted = users.map((user) => {
@@ -55,7 +55,6 @@ export default async function RollenVerwaltungPage() {
             name={user.name}
             initialRoles={user.roles}
             canEditOwner={(session.user?.roles ?? []).includes("owner")}
-            isSelf={session.user?.id === user.id}
             availableCustomRoles={customRoles}
             initialCustomRoleIds={user.customRoles.map((r) => r.id)}
           />
