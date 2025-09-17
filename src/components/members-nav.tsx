@@ -1,7 +1,10 @@
 "use client";
+
+import { useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { Role } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 
 type Item = { href: string; label: string; roles?: Role[] };
 
@@ -14,54 +17,73 @@ const baseItems: Item[] = [
   { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", roles: ["admin"] },
 ];
 
+function isActive(pathname: string, href: string) {
+  if (pathname === href) return true;
+  if (href === "/mitglieder") return false;
+  return pathname.startsWith(`${href}/`);
+}
+
 export function MembersNav({ roles }: { roles?: Role[] }) {
   const pathname = usePathname();
-  const roleSet = new Set(roles ?? []);
-  const items = baseItems.filter((i) => (i.roles ? i.roles.some((r) => roleSet.has(r)) : true));
+  const router = useRouter();
+
+  const items = useMemo(() => {
+    if (!roles || roles.length === 0) {
+      return baseItems;
+    }
+    const roleSet = new Set(roles);
+    return baseItems.filter((item) => !item.roles || item.roles.some((role) => roleSet.has(role)));
+  }, [roles]);
+
+  const activeItem = useMemo(() => items.find((item) => isActive(pathname, item.href)), [items, pathname]);
+  const activeHref = activeItem?.href ?? items[0]?.href ?? "";
 
   return (
-    <>
-      {/* Desktop sidebar */}
-      <nav className="hidden md:block space-y-1" aria-label="Mitglieder Navigation">
-        {items.map((i) => {
-          // Exakte Übereinstimmung oder exakter Pfad-Start (verhindert /verfuegbarkeit-proben triggert /verfuegbarkeit)
-          const active = pathname === i.href || 
-            (i.href !== "/mitglieder" && pathname.startsWith(i.href + "/"));
-          return (
-            <Link
-              key={i.href}
-              href={i.href}
-              className={`block rounded-md px-3 py-2 text-sm transition-colors border ${
-                active
-                  ? "bg-accent/30 border-border/60 text-foreground"
-                  : "border-transparent hover:bg-accent/20 text-foreground/90"
-              }`}
-            >
-              {i.label}
-            </Link>
-          );
-        })}
-      </nav>
+    <div className="flex flex-col gap-4">
+      <div className="lg:hidden">
+        <label htmlFor="members-navigation" className="sr-only">
+          Bereich im Mitgliederbereich wählen
+        </label>
+        <select
+          id="members-navigation"
+          value={activeHref}
+          onChange={(event) => {
+            const next = event.target.value;
+            if (next && next !== pathname) {
+              router.push(next);
+            }
+          }}
+          className="block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Mitgliederbereich"
+          disabled={items.length === 0}
+        >
+          {items.map((item) => (
+            <option key={item.href} value={item.href}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {/* Mobile pills */}
-      <nav className="md:hidden -mx-1 mb-3 flex items-center gap-2 overflow-x-auto" aria-label="Mitglieder Navigation mobil">
-        {items.map((i) => {
-          // Exakte Übereinstimmung oder exakter Pfad-Start (verhindert /verfuegbarkeit-proben triggert /verfuegbarkeit)
-          const active = pathname === i.href || 
-            (i.href !== "/mitglieder" && pathname.startsWith(i.href + "/"));
+      <nav className="hidden lg:flex flex-col gap-1" aria-label="Mitglieder Navigation">
+        {items.map((item) => {
+          const active = isActive(pathname, item.href);
           return (
             <Link
-              key={i.href}
-              href={i.href}
-              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm ${
-                active ? "bg-accent/30 border-border/60" : "border-border/50 hover:bg-accent/20"
-              }`}
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "border-border bg-accent/40 text-foreground shadow-sm"
+                  : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-accent/20 hover:text-foreground"
+              )}
             >
-              {i.label}
+              {item.label}
             </Link>
           );
         })}
       </nav>
-    </>
+    </div>
   );
 }
