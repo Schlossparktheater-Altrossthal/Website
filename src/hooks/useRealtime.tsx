@@ -21,6 +21,8 @@ import type {
 
 const MAX_RECONNECT_ATTEMPTS = 5;
 const PING_INTERVAL_MS = 30_000;
+const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL;
+const REALTIME_PATH = process.env.NEXT_PUBLIC_REALTIME_PATH || '/socket.io';
 
 type SocketInstance = Socket<ServerToClientEvents, ClientToServerEvents>;
 type AttendanceUpdateMessage = Parameters<ServerToClientEvents['attendance_updated']>[0];
@@ -80,10 +82,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       socketRef.current.disconnect();
     }
 
-    const instance: SocketInstance = io({
-      path: '/api/socket',
-      addTrailingSlash: false,
-      transports: ['websocket', 'polling'],
+    const options = {
+      path: REALTIME_PATH,
+      transports: ['websocket', 'polling'] as const,
       forceNew: true,
       reconnection: true,
       reconnectionDelay: 1000,
@@ -93,7 +94,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         userId,
         userName,
       },
-    });
+    };
+
+    const instance: SocketInstance = REALTIME_URL
+      ? io(REALTIME_URL, options)
+      : io(options);
 
     socketRef.current = instance;
     setSocket(instance);

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Bell, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useNotificationRealtime } from "@/hooks/useRealtime";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "short",
@@ -60,31 +61,36 @@ export function NotificationBell({ className }: { className?: string }) {
     };
   }, [open]);
 
-  useEffect(() => {
+  const loadNotifications = useCallback(async () => {
     if (status !== "authenticated") {
       setNotifications([]);
       return;
     }
-    let active = true;
+
     setLoading(true);
-    fetch("/api/notifications")
-      .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((data: { notifications?: NotificationItem[] }) => {
-        if (!active) return;
-        setNotifications(data.notifications ?? []);
-      })
-      .catch(() => {
-        if (active) {
-          toast.error("Benachrichtigungen konnten nicht geladen werden.");
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    try {
+      const response = await fetch("/api/notifications", { cache: "no-store" });
+      if (!response.ok) throw new Error("Request failed");
+      const data: { notifications?: NotificationItem[] } = await response.json();
+      setNotifications(data.notifications ?? []);
+    } catch (error) {
+      console.error("[NotificationBell] loadNotifications failed", error);
+      toast.error("Benachrichtigungen konnten nicht geladen werden.");
+    } finally {
+      setLoading(false);
+    }
   }, [status]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  useNotificationRealtime((event) => {
+    toast.info(event.notification.title, {
+      description: event.notification.body ?? undefined,
+    });
+    loadNotifications();
+  });
 
   useEffect(() => {
     if (!open) return;

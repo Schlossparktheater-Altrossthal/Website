@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import {
+  broadcastRehearsalCreated,
+  sendNotification,
+} from "@/lib/realtime/triggers";
 
 const rehearsalSchema = z.object({
   title: z.string().min(3, "Titel ist zu kurz").max(120, "Titel ist zu lang"),
@@ -42,7 +46,7 @@ export async function createRehearsalAction(input: { title: string; date: string
       timeStyle: "short",
     });
 
-    await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx) => {
       const rehearsal = await tx.rehearsal.create({
         data: {
           title,
@@ -51,6 +55,13 @@ export async function createRehearsalAction(input: { title: string; date: string
           location: "Noch offen",
           requiredRoles: [],
           createdBy: user.id,
+        },
+        select: {
+          id: true,
+          title: true,
+          start: true,
+          end: true,
+          location: true,
         },
       });
 
@@ -65,7 +76,36 @@ export async function createRehearsalAction(input: { title: string; date: string
           },
         },
       });
+
+      return rehearsal;
     });
+
+    if (created) {
+      await broadcastRehearsalCreated({
+        rehearsal: {
+          id: created.id,
+          title: created.title,
+          start: created.start.toISOString(),
+          end: created.end.toISOString(),
+          location: created.location ?? "Noch offen",
+        },
+        targetUserIds: users.map((entry) => entry.id),
+      });
+
+      await Promise.all(
+        users.map((recipient) =>
+          sendNotification({
+            targetUserId: recipient.id,
+            title: `Neue Probe: ${title}`,
+            body: `Am ${formatter.format(start)}`,
+            type: "info",
+            metadata: {
+              rehearsalId: created.id,
+            },
+          }),
+        ),
+      );
+    }
 
     revalidatePath("/mitglieder/probenplanung");
     return { success: true } as const;

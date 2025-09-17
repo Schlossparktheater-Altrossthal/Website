@@ -37,6 +37,9 @@ services:
       AUTH_SECRET: dev-secret-change-me
       AUTH_DEV_NO_DB: "0" # DB-backed sessions (NextAuth Prisma Adapter)
       NEXT_PUBLIC_AUTH_DEV_NO_DB: "0" # mirror to client to avoid hydration mismatch
+      NEXT_PUBLIC_REALTIME_URL: http://localhost:4001
+      REALTIME_SERVER_URL: http://realtime:4001
+      REALTIME_AUTH_TOKEN: dev-realtime-secret
       DATABASE_URL: postgresql://postgres:postgres@db:5432/theater?schema=public
       EMAIL_SERVER: smtp://mailpit:1025
       EMAIL_FROM: noreply@example.com
@@ -49,6 +52,17 @@ services:
       # Omit .next bind to ensure full rebuilds pick up server code changes
     command: >-
       sh -c "pnpm -s prisma:generate && pnpm -s exec prisma db push && pnpm -s db:seed || true && pnpm -s dev --turbo -p 3000 -H 0.0.0.0"
+
+  realtime:
+    build: ./realtime-server
+    restart: unless-stopped
+    environment:
+      PORT: 4001
+      SOCKET_PATH: /socket.io
+      CORS_ORIGIN: http://localhost:3000
+      REALTIME_AUTH_TOKEN: dev-realtime-secret
+    ports:
+      - "4001:4001"
 
 volumes:
   pgdata:

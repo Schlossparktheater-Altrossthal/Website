@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRealtime, usePresence, useNotificationRealtime } from '@/hooks/useRealtime';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  Activity, 
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import {
+  useRealtime,
+  useNotificationRealtime,
+  useRehearsalRealtime,
+} from "@/hooks/useRealtime";
+import { useOnlineStats } from "@/hooks/useOnlineStats";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Users,
+  Activity,
   Calendar,
   Clock,
   Wifi,
@@ -15,132 +20,158 @@ import {
   Bell,
   CheckCircle2,
   XCircle,
-  AlertTriangle
-} from 'lucide-react';
-
-interface OnlineUser {
-  id: string;
-  name: string;
-  status: 'online' | 'idle' | 'away';
-  lastSeen: Date;
-}
+  AlertTriangle,
+} from "lucide-react";
 
 interface RecentActivity {
   id: string;
-  type: 'attendance' | 'rehearsal' | 'notification';
+  type: "notification" | "rehearsal" | "attendance";
   message: string;
   timestamp: Date;
-  userId?: string;
-  userName?: string;
 }
+
+interface DashboardStats {
+  totalOnline: number;
+  totalMembers: number;
+  todayRehearsals: number;
+  unreadNotifications: number;
+}
+
+const INITIAL_STATS: DashboardStats = {
+  totalOnline: 0,
+  totalMembers: 0,
+  todayRehearsals: 0,
+  unreadNotifications: 0,
+};
 
 export function MembersDashboard() {
   const { data: session } = useSession();
   const { connectionStatus, isConnected } = useRealtime();
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const {
+    totalOnline: liveOnline,
+    onlineUsers,
+    isLoading: onlineLoading,
+  } = useOnlineStats();
+
+  const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [stats, setStats] = useState({
-    totalOnline: 0,
-    totalMembers: 0,
-    todayRehearsals: 0,
-    unreadNotifications: 0,
-  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for demonstration (replace with real API calls)
   useEffect(() => {
-    // Simulate fetching member statistics
-    setStats({
-      totalOnline: Math.floor(Math.random() * 15) + 1,
-      totalMembers: 42,
-      todayRehearsals: 2,
-      unreadNotifications: 3,
-    });
+    setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
+  }, [liveOnline]);
 
-    // Simulate online users
-    const mockUsers: OnlineUser[] = [
-      { id: '1', name: 'Anna Müller', status: 'online', lastSeen: new Date() },
-      { id: '2', name: 'Thomas Weber', status: 'online', lastSeen: new Date() },
-      { id: '3', name: 'Sarah Schmidt', status: 'idle', lastSeen: new Date(Date.now() - 5 * 60 * 1000) },
-      { id: '4', name: 'Michael Fischer', status: 'online', lastSeen: new Date() },
-    ];
-    setOnlineUsers(mockUsers);
+  useEffect(() => {
+    let cancelled = false;
 
-    // Simulate recent activities
-    const mockActivities: RecentActivity[] = [
-      {
-        id: '1',
-        type: 'attendance',
-        message: 'Anna Müller hat für die Probe "Romeo & Julia" zugesagt',
-        timestamp: new Date(Date.now() - 2 * 60 * 1000),
-        userId: '1',
-        userName: 'Anna Müller'
-      },
-      {
-        id: '2',
-        type: 'rehearsal',
-        message: 'Neue Probe "Hamlet Akt 3" wurde erstellt',
-        timestamp: new Date(Date.now() - 10 * 60 * 1000),
-      },
-      {
-        id: '3',
-        type: 'attendance',
-        message: 'Thomas Weber hat für die Probe "Macbeth" abgesagt',
-        timestamp: new Date(Date.now() - 15 * 60 * 1000),
-        userId: '2',
-        userName: 'Thomas Weber'
-      },
-    ];
-    setRecentActivities(mockActivities);
+    async function load() {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/dashboard/overview", { cache: "no-store" });
+        if (!response.ok) {
+          console.error("[Dashboard] Failed to load overview", response.status);
+          return;
+        }
+        const data = await response.json();
+        if (cancelled) return;
+
+        setStats((prev) => ({
+          ...prev,
+          totalMembers: data?.stats?.totalMembers ?? prev.totalMembers,
+          todayRehearsals: data?.stats?.todayRehearsals ?? prev.todayRehearsals,
+          unreadNotifications: data?.stats?.unreadNotifications ?? prev.unreadNotifications,
+        }));
+
+        const activities: RecentActivity[] = Array.isArray(data?.recentActivities)
+          ? data.recentActivities
+              .map((activity: any) => ({
+                id: String(activity.id ?? activity.timestamp ?? Math.random()),
+                type: (activity.type ?? "notification") as RecentActivity["type"],
+                message: String(activity.message ?? "Aktualisierung"),
+                timestamp: activity.timestamp ? new Date(activity.timestamp) : new Date(),
+              }))
+              .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+          : [];
+
+        setRecentActivities(activities.slice(0, 10));
+      } catch (error) {
+        console.error("[Dashboard] Error loading overview", error);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Listen to real-time notifications
+  const addActivity = useCallback((activity: RecentActivity) => {
+    setRecentActivities((prev) => {
+      const filtered = prev.filter((entry) => entry.id !== activity.id);
+      return [activity, ...filtered].slice(0, 10);
+    });
+  }, []);
+
   useNotificationRealtime((event) => {
-    const newActivity: RecentActivity = {
-      id: `notif_${Date.now()}`,
-      type: 'notification',
+    const activity: RecentActivity = {
+      id: event.notification.id ?? `notification_${Date.now()}`,
+      type: "notification",
       message: event.notification.title,
-      timestamp: new Date(),
+      timestamp: new Date(event.timestamp ?? Date.now()),
     };
-    
-    setRecentActivities(prev => [newActivity, ...prev].slice(0, 10));
-    setStats(prev => ({ ...prev, unreadNotifications: prev.unreadNotifications + 1 }));
+
+    addActivity(activity);
+    setStats((prev) => ({ ...prev, unreadNotifications: prev.unreadNotifications + 1 }));
   });
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'online':
-        return <div className="w-2 h-2 bg-green-500 rounded-full" />;
-      case 'idle':
-        return <div className="w-2 h-2 bg-yellow-500 rounded-full" />;
-      case 'away':
-        return <div className="w-2 h-2 bg-gray-400 rounded-full" />;
-      default:
-        return <div className="w-2 h-2 bg-gray-300 rounded-full" />;
-    }
-  };
+  useRehearsalRealtime(
+    (event) => {
+      const activity: RecentActivity = {
+        id: `rehearsal_${event.rehearsal.id}_${Date.now()}`,
+        type: "rehearsal",
+        message: `Neue Probe: ${event.rehearsal.title}`,
+        timestamp: new Date(event.timestamp ?? Date.now()),
+      };
+      addActivity(activity);
+    },
+    (event) => {
+      const activity: RecentActivity = {
+        id: `rehearsal_update_${event.rehearsalId}_${Date.now()}`,
+        type: "rehearsal",
+        message: `Probe aktualisiert: ${event.rehearsalId}`,
+        timestamp: new Date(event.timestamp ?? Date.now()),
+      };
+      addActivity(activity);
+    },
+  );
 
-  const getActivityIcon = (type: string) => {
+  const getActivityIcon = useCallback((type: RecentActivity["type"]) => {
     switch (type) {
-      case 'attendance':
+      case "attendance":
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      case 'rehearsal':
+      case "rehearsal":
         return <Calendar className="h-4 w-4 text-blue-500" />;
-      case 'notification':
-        return <Bell className="h-4 w-4 text-purple-500" />;
+      case "notification":
       default:
-        return <Activity className="h-4 w-4 text-gray-500" />;
+        return <Bell className="h-4 w-4 text-purple-500" />;
     }
-  };
+  }, []);
 
-  const formatTimeAgo = (date: Date) => {
+  const formatTimeAgo = useCallback((date: Date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) return 'gerade eben';
+
+    if (diffInSeconds < 60) return "gerade eben";
     if (diffInSeconds < 3600) return `vor ${Math.floor(diffInSeconds / 60)} Min`;
     if (diffInSeconds < 86400) return `vor ${Math.floor(diffInSeconds / 3600)} Std`;
     return `vor ${Math.floor(diffInSeconds / 86400)} Tag(en)`;
-  };
+  }, []);
+
+  const onlineList = useMemo(() => onlineUsers.slice(0, 6), [onlineUsers]);
 
   if (!session?.user) {
     return (
@@ -161,7 +192,7 @@ export function MembersDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Mitglieder-Dashboard</h1>
         <div className="flex items-center gap-2">
-          {isConnected ? (
+          {connectionStatus === "connected" ? (
             <>
               <Wifi className="h-5 w-5 text-green-500" />
               <Badge variant="secondary" className="bg-green-100 text-green-700">
@@ -171,13 +202,12 @@ export function MembersDashboard() {
           ) : (
             <>
               <WifiOff className="h-5 w-5 text-red-500" />
-              <Badge variant="destructive">Offline</Badge>
+              <Badge variant="destructive">{connectionStatus === "error" ? "Verbindungsfehler" : "Offline"}</Badge>
             </>
           )}
         </div>
       </div>
 
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -185,10 +215,23 @@ export function MembersDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.totalOnline}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.totalOnline}
+            </div>
             <p className="text-xs text-muted-foreground">
-              von {stats.totalMembers} Mitgliedern
+              Aktualisiert {onlineLoading ? "…" : `vor ${formatTimeAgo(new Date())}`}
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Mitglieder gesamt</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalMembers}</div>
+            <p className="text-xs text-muted-foreground">inkl. Ensemble und Technik</p>
           </CardContent>
         </Card>
 
@@ -199,146 +242,83 @@ export function MembersDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.todayRehearsals}</div>
-            <p className="text-xs text-muted-foreground">
-              geplante Termine
-            </p>
+            <p className="text-xs text-muted-foreground">Termine zwischen 00:00 und 23:59 Uhr</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ungelesene Nachrichten</CardTitle>
+            <CardTitle className="text-sm font-medium">Ungelesene Benachrichtigungen</CardTitle>
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.unreadNotifications}</div>
-            <p className="text-xs text-muted-foreground">
-              neue Benachrichtigungen
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Verbindungsstatus</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {connectionStatus === 'connected' ? 'Online' : 'Offline'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Real-time Updates
-            </p>
+            <p className="text-xs text-muted-foreground">Wer zuerst liest, ist informiert</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Online Users */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Online Mitglieder ({onlineUsers.length})
-            </CardTitle>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle>Aktive Mitglieder</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Wer ist gerade online? Live-Ansicht aktualisiert über WebSockets.
+            </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {onlineUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Keine anderen Mitglieder online
-                </p>
-              ) : (
-                onlineUsers.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(user.status)}
-                      <div>
-                        <p className="font-medium text-sm">{user.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {user.status === 'online' ? 'Aktiv' : `Zuletzt gesehen: ${formatTimeAgo(user.lastSeen)}`}
-                        </p>
-                      </div>
+            {onlineList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {onlineList.map((user) => (
+                  <li key={`${user.id}-${user.joinedAt.getTime()}`} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                      <span className="text-sm font-medium">{user.name}</span>
                     </div>
-                    <Badge variant={user.status === 'online' ? 'default' : 'secondary'} className="text-xs">
-                      {user.status === 'online' ? 'Online' : 'Inaktiv'}
-                    </Badge>
-                  </div>
-                ))
-              )}
-            </div>
+                    <span className="text-xs text-muted-foreground">
+                      {formatTimeAgo(user.joinedAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
-        {/* Recent Activities */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Aktuelle Aktivitäten
-            </CardTitle>
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle>Aktivitäten</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Neueste Proben, Zusagen und Benachrichtigungen.
+            </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {recentActivities.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Keine aktuellen Aktivitäten
-                </p>
-              ) : (
-                recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg bg-gray-50">
-                    {getActivityIcon(activity.type)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">{activity.message}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">
-                          {formatTimeAgo(activity.timestamp)}
-                        </p>
-                      </div>
+            {isLoading && recentActivities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Lade Aktivitäten …</p>
+            ) : recentActivities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Noch keine Aktivitäten erfasst.</p>
+            ) : (
+              <ul className="space-y-3">
+                {recentActivities.map((activity) => (
+                  <li key={`${activity.id}-${activity.timestamp.getTime()}`} className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                      {getActivityIcon(activity.type)}
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Schnellzugriff</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <Calendar className="h-6 w-6 mb-2 text-blue-500" />
-              <p className="font-medium text-sm">Probenkalender</p>
-              <p className="text-xs text-muted-foreground">Termine anzeigen</p>
-            </button>
-            
-            <button className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <Users className="h-6 w-6 mb-2 text-green-500" />
-              <p className="font-medium text-sm">Mitgliederliste</p>
-              <p className="text-xs text-muted-foreground">Alle Mitglieder</p>
-            </button>
-            
-            <button className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <Bell className="h-6 w-6 mb-2 text-purple-500" />
-              <p className="font-medium text-sm">Nachrichten</p>
-              <p className="text-xs text-muted-foreground">Benachrichtigungen</p>
-            </button>
-            
-            <button className="p-4 border rounded-lg hover:bg-gray-50 transition-colors text-left">
-              <Activity className="h-6 w-6 mb-2 text-orange-500" />
-              <p className="font-medium text-sm">Statistiken</p>
-              <p className="text-xs text-muted-foreground">Aktivitätsübersicht</p>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -1,0 +1,12 @@
+{
+  "name": "realtime-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}
