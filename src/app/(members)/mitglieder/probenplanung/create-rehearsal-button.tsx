@@ -21,18 +21,21 @@ export function CreateRehearsalButton() {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(() => formatDate(now));
   const [time, setTime] = useState(() => formatTime(now));
+  const [location, setLocation] = useState("Noch offen");
   const [isPending, startTransition] = useTransition();
 
   const resetState = () => {
     setTitle("");
-    setDate(formatDate(new Date()));
-    setTime(formatTime(new Date()));
+    const next = new Date();
+    setDate(formatDate(next));
+    setTime(formatTime(next));
+    setLocation("Noch offen");
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     startTransition(() => {
-      createRehearsalAction({ title, date, time })
+      createRehearsalAction({ title, date, time, location })
         .then((result) => {
           if (result?.success) {
             toast.success("Probe erstellt. Die Benachrichtigungen wurden versendet.");
@@ -74,6 +77,20 @@ export function CreateRehearsalButton() {
               placeholder="z. B. Leseprobe im Probenraum"
               required
               minLength={3}
+              maxLength={120}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="rehearsal-location">
+              Ort
+            </label>
+            <Input
+              id="rehearsal-location"
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+              placeholder="z. B. Probenraum, Bühne, Außenlocation"
+              minLength={2}
               maxLength={120}
             />
           </div>
