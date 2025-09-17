@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/lib/roles";
+import { Prisma } from "@prisma/client";
 
 export async function hasPermission(
   user: { id?: string; role?: Role; roles?: Role[] } | null | undefined,
@@ -15,20 +16,39 @@ export async function hasPermission(
 
   // Map system roles to AppRole ids
   const systemRoles = Array.from(owned);
-  if (!systemRoles.length) return false;
 
-  // Ensure permission exists
-  const perm = await prisma.permission.findUnique({ where: { key: permissionKey } });
+  const [perm, customAssignments] = await Promise.all([
+    prisma.permission.findUnique({ where: { key: permissionKey } }),
+    prisma.userAppRole.findMany({
+      where: { userId: user.id },
+      select: { roleId: true },
+    }),
+  ]);
+
   if (!perm) return false;
 
-  const rolePermissions = await prisma.appRolePermission.findMany({
+  const customRoleIds = customAssignments.map((assignment) => assignment.roleId);
+
+  if (!systemRoles.length && !customRoleIds.length) return false;
+
+  const roleFilters: Prisma.AppRolePermissionWhereInput[] = [];
+  if (systemRoles.length) {
+    roleFilters.push({ role: { systemRole: { in: systemRoles } } });
+  }
+  if (customRoleIds.length) {
+    roleFilters.push({ roleId: { in: customRoleIds } });
+  }
+
+  if (!roleFilters.length) return false;
+
+  const rolePermissions = await prisma.appRolePermission.count({
     where: {
-      role: { systemRole: { in: systemRoles } },
       permissionId: perm.id,
+      OR: roleFilters,
     },
-    select: { id: true },
   });
-  return rolePermissions.length > 0;
+
+  return rolePermissions > 0;
 }
 
 export async function ensureSystemRoles() {

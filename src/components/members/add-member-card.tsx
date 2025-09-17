@@ -168,7 +168,7 @@ export function AddMemberModal() {
               })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Primäre Rolle: {describeRoles([roles[0]])}
+              Zugewiesene Rollen: {describeRoles(roles)}
             </p>
           </div>
 

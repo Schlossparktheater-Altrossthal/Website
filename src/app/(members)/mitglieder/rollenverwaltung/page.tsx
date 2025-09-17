@@ -55,7 +55,6 @@ export default async function RollenVerwaltungPage() {
             name={user.name}
             initialRoles={user.roles}
             canEditOwner={(session.user?.roles ?? []).includes("owner")}
-            isSelf={session.user?.id === user.id}
             availableCustomRoles={customRoles}
             initialCustomRoleIds={user.customRoles.map((r) => r.id)}
           />
