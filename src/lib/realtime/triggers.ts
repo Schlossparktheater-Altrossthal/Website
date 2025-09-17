@@ -22,29 +22,16 @@ export class RealtimeTriggers {
     comment?: string;
     actorUserId: string;
   }) {
-    const io = realtimeService.getIO();
-    if (!io) {
-      console.warn('Socket.IO not initialized, skipping attendance broadcast');
-      return;
-    }
-
-    const event: AttendanceUpdatedEvent = {
+    const event: Omit<AttendanceUpdatedEvent, 'timestamp'> = {
       type: 'attendance_updated',
       rehearsalId: data.rehearsalId,
       targetUserId: data.targetUserId,
-      status: data.status as any, // Type assertion for now
+      status: data.status as AttendanceUpdatedEvent['status'],
       comment: data.comment,
       actorUserId: data.actorUserId,
-      timestamp: new Date().toISOString(),
     };
 
-    // Broadcast to rehearsal room
-    io.to(`rehearsal_${data.rehearsalId}`).emit('attendance_updated', event);
-    
-    // Also send to target user's personal room
-    io.to(`user_${data.targetUserId}`).emit('attendance_updated', event);
-
-    console.log(`Broadcasted attendance update for user ${data.targetUserId}: ${data.status}`);
+    realtimeService.broadcastAttendanceUpdate(event);
   }
 
   /**
@@ -60,23 +47,13 @@ export class RealtimeTriggers {
     };
     targetUserIds: string[];
   }) {
-    const io = realtimeService.getIO();
-    if (!io) {
-      console.warn('Socket.IO not initialized, skipping rehearsal broadcast');
-      return;
-    }
-
-    const event: RehearsalCreatedEvent = {
+    const event: Omit<RehearsalCreatedEvent, 'timestamp'> = {
       type: 'rehearsal_created',
       rehearsal: data.rehearsal,
       targetUserIds: data.targetUserIds,
-      timestamp: new Date().toISOString(),
     };
 
-    // Broadcast to all members
-    io.to('members').emit('rehearsal_created', event);
-
-    console.log(`Broadcasted rehearsal creation: ${data.rehearsal.title}`);
+    realtimeService.broadcastRehearsalCreated(event);
   }
 
   /**
@@ -93,27 +70,14 @@ export class RealtimeTriggers {
     };
     targetUserIds: string[];
   }) {
-    const io = realtimeService.getIO();
-    if (!io) {
-      console.warn('Socket.IO not initialized, skipping rehearsal update broadcast');
-      return;
-    }
-
-    const event: RehearsalUpdatedEvent = {
+    const event: Omit<RehearsalUpdatedEvent, 'timestamp'> = {
       type: 'rehearsal_updated',
       rehearsalId: data.rehearsalId,
       changes: data.changes,
       targetUserIds: data.targetUserIds,
-      timestamp: new Date().toISOString(),
     };
 
-    // Broadcast to rehearsal room and affected users
-    io.to(`rehearsal_${data.rehearsalId}`).emit('rehearsal_updated', event);
-    data.targetUserIds.forEach(userId => {
-      io.to(`user_${userId}`).emit('rehearsal_updated', event);
-    });
-
-    console.log(`Broadcasted rehearsal update for ${data.rehearsalId}`);
+    realtimeService.broadcastRehearsalUpdated(event);
   }
 
   /**
@@ -125,33 +89,23 @@ export class RealtimeTriggers {
     body?: string;
     type?: 'info' | 'warning' | 'success' | 'error';
     actionUrl?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }) {
-    const io = realtimeService.getIO();
-    if (!io) {
-      console.warn('Socket.IO not initialized, skipping notification');
-      return;
-    }
-
-    const event: NotificationCreatedEvent = {
+    const event: Omit<NotificationCreatedEvent, 'timestamp'> = {
       type: 'notification_created',
       notification: {
         id: `notif_${Date.now()}`,
         title: data.title,
         body: data.body,
-        type: data.type || 'info',
+        rehearsalId: data.metadata?.rehearsalId,
+        type: data.type,
         actionUrl: data.actionUrl,
-        read: false,
         metadata: data.metadata,
       },
       targetUserId: data.targetUserId,
-      timestamp: new Date().toISOString(),
     };
 
-    // Send to user's personal room
-    io.to(`user_${data.targetUserId}`).emit('notification_created', event);
-
-    console.log(`Sent notification to user ${data.targetUserId}: ${data.title}`);
+    realtimeService.sendNotification(event);
   }
 
   /**

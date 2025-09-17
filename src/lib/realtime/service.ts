@@ -1,23 +1,37 @@
-import { Server as SocketIOServer } from "socket.io";
+import { Server as SocketIOServer, Socket } from "socket.io";
 import type { Server as HTTPServer } from "http";
-import { 
-  RealtimeEvent, 
-  RoomType,
+import {
   AttendanceUpdatedEvent,
+  ClientToServerEvents,
+  InterServerEvents,
+  NotificationCreatedEvent,
+  OnlineStatsSnapshot,
+  RealtimeEvent,
   RehearsalCreatedEvent,
   RehearsalUpdatedEvent,
-  NotificationCreatedEvent,
-  UserPresenceEvent,
-  ClientToServerEvents,
+  RoomType,
   ServerToClientEvents,
-  InterServerEvents,
-  SocketData
+  SocketData,
+  UserPresenceEvent,
+  UserJoinedEvent,
+  UserLeftEvent,
 } from "./types";
+
+type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
+type EventTypeMap = {
+  [K in RealtimeEvent['type']]: Extract<RealtimeEvent, { type: K }>;
+};
+
+interface ConnectedUser {
+  sockets: Set<string>;
+  name?: string;
+}
 
 export class RealtimeService {
   private static instance: RealtimeService;
   private io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData> | null = null;
-  private connectedUsers = new Map<string, Set<string>>(); // userId -> Set of socketIds
+  private connectedUsers = new Map<string, ConnectedUser>();
+  private onlineStatsSubscribers = new Set<string>();
 
   private constructor() {}
 
@@ -36,9 +50,9 @@ export class RealtimeService {
     this.io = new SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(server, {
       cors: {
         origin: process.env.NODE_ENV === "production" ? false : "*",
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
       },
-      transports: ['websocket', 'polling']
+      transports: ["websocket", "polling"],
     });
 
     this.setupEventHandlers();
@@ -52,211 +66,348 @@ export class RealtimeService {
   private setupEventHandlers(): void {
     if (!this.io) return;
 
-    this.io.on('connection', (socket) => {
-      console.log(`Socket connected: ${socket.id}`);
+    this.io.on("connection", (socket) => {
+      const client = socket as IOSocket;
+      console.log(`[Realtime] socket connected: ${client.id}`);
 
-      // Initialize socket data
-      socket.data.rooms = new Set();
+      client.data.rooms = new Set<RoomType>();
 
-      // Handle room joining
-      socket.on('join_room', (room: RoomType) => {
-        socket.join(room);
-        socket.data.rooms.add(room);
-        
-        // Track user presence
-        if (room.startsWith('user_')) {
-          const userId = room.substring(5); // Remove 'user_' prefix
-          socket.data.userId = userId;
-          this.addUserConnection(userId, socket.id);
+      const { userId, userName } = this.extractUserFromHandshake(client);
+
+      if (userId) {
+        client.data.userId = userId;
+        if (userName) {
+          client.data.userName = userName;
         }
 
-        // Emit presence event for rehearsal rooms
-        if (room.startsWith('rehearsal_') && socket.data.userId && socket.data.userName) {
-          const presenceEvent: UserPresenceEvent = {
-            type: 'user_presence',
-            action: 'join',
-            room,
-            user: {
-              id: socket.data.userId,
-              name: socket.data.userName
-            },
-            timestamp: new Date().toISOString()
-          };
-          socket.to(room).emit('user_presence', presenceEvent);
+        const userRoom: RoomType = `user_${userId}`;
+        client.join(userRoom);
+        client.data.rooms.add(userRoom);
+
+        const isFirstConnection = this.addUserConnection(userId, client.id, userName);
+        if (isFirstConnection) {
+          this.notifyUserJoined(userId, userName);
         }
 
-        console.log(`Socket ${socket.id} joined room: ${room}`);
-      });
+        this.emitOnlineStatsUpdate();
+      }
 
-      // Handle room leaving
-      socket.on('leave_room', (room: RoomType) => {
-        socket.leave(room);
-        socket.data.rooms.delete(room);
-        
-        // Emit presence event for rehearsal rooms
-        if (room.startsWith('rehearsal_') && socket.data.userId && socket.data.userName) {
-          const presenceEvent: UserPresenceEvent = {
-            type: 'user_presence',
-            action: 'leave',
-            room,
-            user: {
-              id: socket.data.userId,
-              name: socket.data.userName
-            },
-            timestamp: new Date().toISOString()
-          };
-          socket.to(room).emit('user_presence', presenceEvent);
-        }
-      });
+      client.join("global");
+      client.data.rooms.add("global");
 
-      // Handle ping/pong for connection monitoring
-      socket.on('ping', () => {
-        socket.emit('pong');
-      });
-
-      // Handle disconnection
-      socket.on('disconnect', (reason) => {
-        console.log(`Socket disconnected: ${socket.id}, reason: ${reason}`);
-        
-        if (socket.data.userId) {
-          this.removeUserConnection(socket.data.userId, socket.id);
-          
-          // Emit leave presence for all rehearsal rooms
-          socket.data.rooms.forEach(room => {
-            if (room.startsWith('rehearsal_') && socket.data.userName) {
-              const presenceEvent: UserPresenceEvent = {
-                type: 'user_presence',
-                action: 'leave',
-                room,
-                user: {
-                  id: socket.data.userId!,
-                  name: socket.data.userName
-                },
-                timestamp: new Date().toISOString()
-              };
-              socket.to(room).emit('user_presence', presenceEvent);
-            }
-          });
-        }
-      });
+      this.registerCoreListeners(client);
     });
   }
 
-  // User connection tracking
-  private addUserConnection(userId: string, socketId: string): void {
-    if (!this.connectedUsers.has(userId)) {
-      this.connectedUsers.set(userId, new Set());
-    }
-    this.connectedUsers.get(userId)!.add(socketId);
+  private extractUserFromHandshake(socket: IOSocket): { userId?: string; userName?: string } {
+    const auth = socket.handshake?.auth ?? {};
+    const userId = typeof auth.userId === "string" ? auth.userId : undefined;
+    const userName = typeof auth.userName === "string" ? auth.userName : undefined;
+    return { userId, userName };
   }
 
-  private removeUserConnection(userId: string, socketId: string): void {
-    const userSockets = this.connectedUsers.get(userId);
-    if (userSockets) {
-      userSockets.delete(socketId);
-      if (userSockets.size === 0) {
-        this.connectedUsers.delete(userId);
+  private registerCoreListeners(socket: IOSocket): void {
+    socket.on("join_room", (room: RoomType) => {
+      socket.join(room);
+      socket.data.rooms.add(room);
+
+      if (room.startsWith("user_")) {
+        const userId = room.substring(5);
+        socket.data.userId = userId;
+        const becameOnline = this.addUserConnection(userId, socket.id, socket.data.userName);
+        if (becameOnline) {
+          this.notifyUserJoined(userId, socket.data.userName);
+          this.emitOnlineStatsUpdate();
+        }
       }
+
+      this.emitRehearsalPresence(socket, room, "join");
+      console.log(`[Realtime] ${socket.id} joined room ${room}`);
+    });
+
+    socket.on("leave_room", (room: RoomType) => {
+      socket.leave(room);
+      socket.data.rooms.delete(room);
+
+      this.emitRehearsalPresence(socket, room, "leave");
+    });
+
+    socket.on("ping", () => {
+      socket.emit("pong");
+    });
+
+    socket.on("get_online_stats", () => {
+      this.onlineStatsSubscribers.add(socket.id);
+      this.emitOnlineStatsUpdate(socket);
+    });
+
+    socket.on("unsubscribe_online_stats", () => {
+      this.onlineStatsSubscribers.delete(socket.id);
+    });
+
+    socket.on("get_rehearsal_users", (rehearsalId: string) => {
+      this.respondWithRehearsalUsers(socket, rehearsalId);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`[Realtime] socket disconnected: ${socket.id}, reason: ${reason}`);
+
+      this.onlineStatsSubscribers.delete(socket.id);
+
+      if (socket.data.rooms) {
+        socket.data.rooms.forEach((room) => {
+          this.emitRehearsalPresence(socket, room, "leave");
+        });
+      }
+
+      if (socket.data.userId) {
+        const becameOffline = this.removeUserConnection(socket.data.userId, socket.id);
+        if (becameOffline) {
+          this.notifyUserLeft(socket.data.userId, socket.data.userName);
+          this.emitOnlineStatsUpdate();
+        }
+      }
+    });
+  }
+
+  private emitRehearsalPresence(socket: IOSocket, room: RoomType, action: "join" | "leave"): void {
+    if (!room.startsWith("rehearsal_") || !socket.data.userId || !socket.data.userName) {
+      return;
     }
+
+    const presenceEvent: UserPresenceEvent = {
+      type: "user_presence",
+      action,
+      room,
+      user: {
+        id: socket.data.userId,
+        name: socket.data.userName,
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    socket.to(room).emit("user_presence", presenceEvent);
+  }
+
+  private respondWithRehearsalUsers(socket: IOSocket, rehearsalId: string): void {
+    if (!this.io) return;
+
+    const roomName: RoomType = `rehearsal_${rehearsalId}`;
+    const room = this.io.sockets.adapter.rooms.get(roomName);
+
+    const users = room
+      ? Array.from(room).flatMap((socketId) => {
+          const participant = this.io!.sockets.sockets.get(socketId) as IOSocket | undefined;
+          if (!participant?.data.userId) {
+            return [];
+          }
+          return [
+            {
+              id: participant.data.userId,
+              name: participant.data.userName,
+            },
+          ];
+        })
+      : [];
+
+    socket.emit("rehearsal_users_list", {
+      type: "rehearsal_users_list",
+      rehearsalId,
+      users,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  private addUserConnection(userId: string, socketId: string, userName?: string): boolean {
+    const existing = this.connectedUsers.get(userId);
+    if (!existing) {
+      this.connectedUsers.set(userId, {
+        sockets: new Set([socketId]),
+        name: userName,
+      });
+      return true;
+    }
+
+    existing.sockets.add(socketId);
+    if (userName) {
+      existing.name = userName;
+    }
+    return false;
+  }
+
+  private removeUserConnection(userId: string, socketId: string): boolean {
+    const entry = this.connectedUsers.get(userId);
+    if (!entry) {
+      return false;
+    }
+
+    entry.sockets.delete(socketId);
+    if (entry.sockets.size === 0) {
+      this.connectedUsers.delete(userId);
+      return true;
+    }
+
+    return false;
+  }
+
+  private notifyUserJoined(userId: string, userName?: string): void {
+    const event: UserJoinedEvent = {
+      type: "user_joined",
+      timestamp: new Date().toISOString(),
+      user: {
+        id: userId,
+        name: userName,
+      },
+    };
+
+    this.emitToOnlineStatsSubscribers("user_joined", event);
+  }
+
+  private notifyUserLeft(userId: string, userName?: string): void {
+    const event: UserLeftEvent = {
+      type: "user_left",
+      timestamp: new Date().toISOString(),
+      user: {
+        id: userId,
+        name: userName,
+      },
+    };
+
+    this.emitToOnlineStatsSubscribers("user_left", event);
+  }
+
+  private emitOnlineStatsUpdate(targetSocket?: IOSocket): void {
+    const payload = {
+      type: "online_stats_update" as const,
+      timestamp: new Date().toISOString(),
+      stats: this.getOnlineStatsSnapshot(),
+    };
+
+    if (targetSocket) {
+      targetSocket.emit("online_stats_update", payload);
+      return;
+    }
+
+    this.emitToOnlineStatsSubscribers("online_stats_update", payload);
+  }
+
+  private getOnlineStatsSnapshot(): OnlineStatsSnapshot {
+    return {
+      totalOnline: this.connectedUsers.size,
+      onlineUsers: Array.from(this.connectedUsers.entries()).map(([id, info]) => ({
+        id,
+        name: info.name,
+      })),
+    };
+  }
+
+  private emitToOnlineStatsSubscribers<E extends keyof ServerToClientEvents>(
+    event: E,
+    payload: Parameters<ServerToClientEvents[E]>[0],
+  ): void {
+    if (!this.io) return;
+
+    this.onlineStatsSubscribers.forEach((socketId) => {
+      const subscriber = this.io!.sockets.sockets.get(socketId) as IOSocket | undefined;
+      if (subscriber) {
+        subscriber.emit(event, payload);
+      } else {
+        this.onlineStatsSubscribers.delete(socketId);
+      }
+    });
   }
 
   public isUserOnline(userId: string): boolean {
-    return this.connectedUsers.has(userId) && this.connectedUsers.get(userId)!.size > 0;
+    return this.connectedUsers.has(userId);
   }
 
   public getOnlineUsers(): string[] {
     return Array.from(this.connectedUsers.keys());
   }
 
-  // Event Broadcasting Methods
-  public broadcastAttendanceUpdate(event: Omit<AttendanceUpdatedEvent, 'timestamp'>): void {
-    if (!this.io) return;
+  public broadcastAttendanceUpdate(event: Omit<AttendanceUpdatedEvent, "timestamp">): void {
+    const io = this.io;
+    if (!io) return;
 
     const fullEvent: AttendanceUpdatedEvent = {
       ...event,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
-    // Broadcast to rehearsal room and affected users
-    this.io.to(`rehearsal_${event.rehearsalId}`).emit('attendance_updated', fullEvent);
-    this.io.to(`user_${event.targetUserId}`).emit('attendance_updated', fullEvent);
-    
-    console.log(`Broadcasted attendance update: ${event.rehearsalId} - ${event.status}`);
+    io.to(`rehearsal_${event.rehearsalId}`).emit("attendance_updated", fullEvent);
+    io.to(`user_${event.targetUserId}`).emit("attendance_updated", fullEvent);
+
+    console.log(`[Realtime] broadcast attendance update for rehearsal ${event.rehearsalId}`);
   }
 
-  public broadcastRehearsalCreated(event: Omit<RehearsalCreatedEvent, 'timestamp'>): void {
-    if (!this.io) return;
+  public broadcastRehearsalCreated(event: Omit<RehearsalCreatedEvent, "timestamp">): void {
+    const io = this.io;
+    if (!io) return;
 
     const fullEvent: RehearsalCreatedEvent = {
       ...event,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
-    // Send to specific users
-    event.targetUserIds.forEach(userId => {
-      this.io!.to(`user_${userId}`).emit('rehearsal_created', fullEvent);
+    event.targetUserIds.forEach((userId) => {
+      io.to(`user_${userId}`).emit("rehearsal_created", fullEvent);
     });
 
-    console.log(`Broadcasted rehearsal created: ${event.rehearsal.id}`);
+    console.log(`[Realtime] broadcast rehearsal created ${event.rehearsal.id}`);
   }
 
-  public broadcastRehearsalUpdated(event: Omit<RehearsalUpdatedEvent, 'timestamp'>): void {
-    if (!this.io) return;
+  public broadcastRehearsalUpdated(event: Omit<RehearsalUpdatedEvent, "timestamp">): void {
+    const io = this.io;
+    if (!io) return;
 
     const fullEvent: RehearsalUpdatedEvent = {
       ...event,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
-    // Broadcast to rehearsal room and affected users
-    this.io.to(`rehearsal_${event.rehearsalId}`).emit('rehearsal_updated', fullEvent);
-    event.targetUserIds.forEach(userId => {
-      this.io!.to(`user_${userId}`).emit('rehearsal_updated', fullEvent);
+    io.to(`rehearsal_${event.rehearsalId}`).emit("rehearsal_updated", fullEvent);
+    event.targetUserIds.forEach((userId) => {
+      io.to(`user_${userId}`).emit("rehearsal_updated", fullEvent);
     });
 
-    console.log(`Broadcasted rehearsal updated: ${event.rehearsalId}`);
+    console.log(`[Realtime] broadcast rehearsal updated ${event.rehearsalId}`);
   }
 
-  public sendNotification(event: Omit<NotificationCreatedEvent, 'timestamp'>): void {
-    if (!this.io) return;
+  public sendNotification(event: Omit<NotificationCreatedEvent, "timestamp">): void {
+    const io = this.io;
+    if (!io) return;
 
     const fullEvent: NotificationCreatedEvent = {
       ...event,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
-    this.io.to(`user_${event.targetUserId}`).emit('notification_created', fullEvent);
-    
-    console.log(`Sent notification to user: ${event.targetUserId}`);
+    io.to(`user_${event.targetUserId}`).emit("notification_created", fullEvent);
+
+    console.log(`[Realtime] sent notification to user ${event.targetUserId}`);
   }
 
-  // Generic broadcast method for extensibility
-  public broadcast<T extends RealtimeEvent>(
-    event: T, 
-    rooms: RoomType[] | RoomType, 
-    excludeSocket?: string
-  ): void {
-    if (!this.io) return;
+  public broadcast<T extends RealtimeEvent>(event: T, rooms: RoomType[] | RoomType, excludeSocket?: string): void {
+    const io = this.io;
+    if (!io) return;
 
     const roomArray = Array.isArray(rooms) ? rooms : [rooms];
-    
-    roomArray.forEach(room => {
-      const emitter = excludeSocket 
-        ? this.io!.to(room).except(excludeSocket)
-        : this.io!.to(room);
-      
-      emitter.emit(event.type as keyof ServerToClientEvents, event as any);
+    const eventName = event.type as keyof EventTypeMap & keyof ServerToClientEvents;
+    const payload = event as EventTypeMap[typeof eventName];
+
+    roomArray.forEach((room) => {
+      const emitter = excludeSocket ? io.to(room).except(excludeSocket) : io.to(room);
+      emitter.emit(eventName, payload);
     });
   }
 
-  // Admin methods for monitoring
   public getRoomInfo(): Record<string, number> {
-    if (!this.io) return {};
+    const io = this.io;
+    if (!io) return {};
 
     const rooms: Record<string, number> = {};
-    this.io.sockets.adapter.rooms.forEach((sockets, room) => {
-      // Skip socket IDs (they are also in rooms map)
-      if (!this.io!.sockets.sockets.has(room)) {
+    io.sockets.adapter.rooms.forEach((sockets, room) => {
+      if (!io.sockets.sockets.has(room)) {
         rooms[room] = sockets.size;
       }
     });
@@ -264,5 +415,4 @@ export class RealtimeService {
   }
 }
 
-// Singleton instance
 export const realtimeService = RealtimeService.getInstance();

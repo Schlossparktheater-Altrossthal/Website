@@ -49,6 +49,9 @@ export interface NotificationCreatedEvent extends BaseRealtimeEvent {
     title: string;
     body?: string;
     rehearsalId?: string;
+    type?: 'info' | 'warning' | 'success' | 'error';
+    actionUrl?: string;
+    metadata?: Record<string, unknown>;
   };
   targetUserId: string;
 }
@@ -63,16 +66,59 @@ export interface UserPresenceEvent extends BaseRealtimeEvent {
   };
 }
 
+export interface OnlineStatsSnapshot {
+  totalOnline: number;
+  onlineUsers: Array<{
+    id: string;
+    name?: string;
+    lastSeen?: string;
+  }>;
+}
+
+export interface OnlineStatsUpdateEvent extends BaseRealtimeEvent {
+  type: 'online_stats_update';
+  stats: OnlineStatsSnapshot;
+}
+
+export interface UserJoinedEvent extends BaseRealtimeEvent {
+  type: 'user_joined';
+  user: {
+    id: string;
+    name?: string;
+  };
+}
+
+export interface UserLeftEvent extends BaseRealtimeEvent {
+  type: 'user_left';
+  user: {
+    id: string;
+    name?: string;
+  };
+}
+
+export interface RehearsalUsersListEvent extends BaseRealtimeEvent {
+  type: 'rehearsal_users_list';
+  rehearsalId: string;
+  users: Array<{
+    id: string;
+    name?: string;
+  }>;
+}
+
 // Union Type for all events
-export type RealtimeEvent = 
+export type RealtimeEvent =
   | AttendanceUpdatedEvent
   | RehearsalCreatedEvent
   | RehearsalUpdatedEvent
   | NotificationCreatedEvent
-  | UserPresenceEvent;
+  | UserPresenceEvent
+  | OnlineStatsUpdateEvent
+  | UserJoinedEvent
+  | UserLeftEvent
+  | RehearsalUsersListEvent;
 
 // Room Types
-export type RoomType = 
+export type RoomType =
   | `user_${string}`           // User-specific room
   | `rehearsal_${string}`      // Rehearsal-specific room
   | `show_${string}`           // Show-specific room
@@ -83,22 +129,27 @@ export interface ClientToServerEvents {
   join_room: (room: RoomType) => void;
   leave_room: (room: RoomType) => void;
   ping: () => void;
+  get_online_stats: () => void;
+  unsubscribe_online_stats: () => void;
+  get_rehearsal_users: (rehearsalId: string) => void;
 }
 
-// Server to Client Events  
+// Server to Client Events
 export interface ServerToClientEvents {
   attendance_updated: (event: AttendanceUpdatedEvent) => void;
   rehearsal_created: (event: RehearsalCreatedEvent) => void;
   rehearsal_updated: (event: RehearsalUpdatedEvent) => void;
   notification_created: (event: NotificationCreatedEvent) => void;
   user_presence: (event: UserPresenceEvent) => void;
+  online_stats_update: (event: OnlineStatsUpdateEvent) => void;
+  user_joined: (event: UserJoinedEvent) => void;
+  user_left: (event: UserLeftEvent) => void;
+  rehearsal_users_list: (event: RehearsalUsersListEvent) => void;
   pong: () => void;
 }
 
 // Socket Data
-export interface InterServerEvents {
-  // For multi-server scaling (later)
-}
+export type InterServerEvents = Record<string, never>;
 
 export interface SocketData {
   userId?: string;
