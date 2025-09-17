@@ -81,9 +81,7 @@ export function PermissionMatrix() {
           value={newRoleName}
           onChange={(e) => setNewRoleName(e.target.value)}
         />
-        <Button size="sm" onClick={addRole}>
-          Rolle anlegen
-        </Button>
+        <Button size="sm" onClick={addRole}>Rolle anlegen</Button>
       </div>
 
       <div className="overflow-auto border rounded">
@@ -130,4 +128,3 @@ export function PermissionMatrix() {
     </div>
   );
 }
-
