@@ -2,10 +2,61 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { NextAuthOptions } from "next-auth";
 import type { Role } from "@prisma/client";
+import type { AdapterUser } from "next-auth/adapters";
+import type { JWT } from "next-auth/jwt";
 import EmailProvider from "next-auth/providers/email";
 import Credentials from "next-auth/providers/credentials";
-import { sortRoles } from "@/lib/roles";
+import { sortRoles, ROLES } from "@/lib/roles";
 import { verifyPassword } from "@/lib/password";
+
+type MutableToken = JWT & {
+  id?: string;
+  role?: Role;
+  roles?: Role[];
+  name?: string;
+  email?: string;
+};
+
+type RoleSource = { role?: unknown; roles?: unknown };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+const isRole = (value: unknown): value is Role =>
+  typeof value === "string" && (ROLES as readonly string[]).includes(value);
+
+function extractString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function extractRoles(value: unknown): Role[] | undefined {
+  if (Array.isArray(value)) {
+    const roles = value
+      .map((entry) => {
+        if (isRole(entry)) return entry;
+        if (isRecord(entry) && isRole(entry.role)) return entry.role;
+        return undefined;
+      })
+      .filter((role): role is Role => Boolean(role));
+    return roles.length ? sortRoles(roles) : undefined;
+  }
+
+  if (isRecord(value) && isRole(value.role)) {
+    return [value.role];
+  }
+
+  if (isRole(value)) {
+    return [value];
+  }
+
+  return undefined;
+}
+
+function extractRolesFromSource(source: RoleSource | undefined): Role[] | undefined {
+  if (!source) return undefined;
+  return extractRoles(source.roles) ?? extractRoles(source.role);
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -113,66 +164,73 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/login" },
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      const setFromList = (roles?: Role[]) => {
-        if (roles && roles.length > 0) {
-          const sorted = sortRoles(roles);
-          (token as any).roles = sorted;
-          (token as any).role = sorted[0];
-        }
+      const mutableToken = token as MutableToken;
+      const applyRoles = (roles?: Role[]) => {
+        if (!roles || roles.length === 0) return;
+        const sorted = sortRoles(roles);
+        mutableToken.roles = sorted;
+        mutableToken.role = sorted[0];
       };
 
-      if (user) {
-        (token as any).id = (user as any).id;
-        setFromList((user as any).roles || ((user as any).role ? [(user as any).role as Role] : undefined));
+      if (user && isRecord(user)) {
+        const id = extractString(user.id);
+        if (id) mutableToken.id = id;
+        const name = extractString(user.name);
+        if (name) mutableToken.name = name;
+        const email = extractString(user.email);
+        if (email) mutableToken.email = email;
+        const userRoles = extractRolesFromSource(user as AdapterUser & RoleSource);
+        if (userRoles) applyRoles(userRoles);
       }
 
       if (trigger === "update") {
-        const updatedUser = (session as any)?.user ?? session;
-        if (updatedUser && typeof updatedUser === "object") {
-          const nextName = (updatedUser as any).name;
-          const nextEmail = (updatedUser as any).email;
-          if (typeof nextName === "string") {
-            (token as any).name = nextName;
-          }
-          if (typeof nextEmail === "string") {
-            (token as any).email = nextEmail;
-          }
-          const maybeRoles = (updatedUser as any).roles as Role[] | undefined;
-          if (maybeRoles && maybeRoles.length > 0) {
-            setFromList(maybeRoles);
-          }
+        const updateSource = isRecord(session)
+          ? (isRecord(session.user) ? session.user : session)
+          : undefined;
+
+        if (isRecord(updateSource)) {
+          const nextName = extractString(updateSource.name);
+          if (nextName) mutableToken.name = nextName;
+          const nextEmail = extractString(updateSource.email);
+          if (nextEmail) mutableToken.email = nextEmail;
+          const updatedRoles = extractRolesFromSource(updateSource as RoleSource);
+          if (updatedRoles) applyRoles(updatedRoles);
         }
       }
 
-      const userId = (token as any).id as string | undefined;
-      if (userId && !(token as any).roles) {
+      if (mutableToken.id && !mutableToken.roles) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: userId },
+          where: { id: mutableToken.id },
           select: { role: true, roles: { select: { role: true } } },
         });
         if (dbUser) {
-          const combined = [dbUser.role, ...dbUser.roles.map((r) => r.role)];
-          setFromList(combined as Role[]);
+          const combined = sortRoles([
+            dbUser.role as Role,
+            ...dbUser.roles.map((r) => r.role as Role),
+          ]);
+          applyRoles(combined);
         }
       }
 
-      return token;
+      return mutableToken;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = (token as any).id as string;
-        session.user.role = (token as any).role as Role | undefined;
-        const roles = (token as any).roles as Role[] | undefined;
-        if (roles) {
-          session.user.roles = roles;
+        const mutableToken = token as MutableToken;
+        if (mutableToken.id) {
+          session.user.id = mutableToken.id;
         }
-        const tokenName = (token as any).name as string | undefined;
-        if (typeof tokenName === "string") {
-          session.user.name = tokenName;
+        if (mutableToken.role) {
+          session.user.role = mutableToken.role;
         }
-        const tokenEmail = (token as any).email as string | undefined;
-        if (typeof tokenEmail === "string") {
-          session.user.email = tokenEmail;
+        if (mutableToken.roles) {
+          session.user.roles = mutableToken.roles;
+        }
+        if (mutableToken.name) {
+          session.user.name = mutableToken.name;
+        }
+        if (mutableToken.email) {
+          session.user.email = mutableToken.email;
         }
       }
       return session;

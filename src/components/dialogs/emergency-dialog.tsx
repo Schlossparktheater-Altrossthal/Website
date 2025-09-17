@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
@@ -35,6 +34,7 @@ export function EmergencyDialog({ isOpen, onClose, onSubmit }: EmergencyDialogPr
       toast.success("Emergency-Absage wurde erfolgreich registriert")
       onClose()
     } catch (error) {
+      console.error("[EmergencyDialog] Failed to submit emergency reason", error)
       toast.error("Fehler beim Registrieren der Emergency-Absage")
     } finally {
       setIsSubmitting(false)

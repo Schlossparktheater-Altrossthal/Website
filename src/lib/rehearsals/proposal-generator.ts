@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { addDays, isFriday, isSaturday, isSunday, setHours, setMinutes } from 'date-fns';
+import { addDays, isFriday, isSaturday, isSunday } from 'date-fns';
 
-const DEFAULT_REHEARSAL_DURATION = 180; // 3 Stunden in Minuten
 const MIN_PARTICIPANTS_AVAILABLE = 0.8; // 80% der benötigten Besetzung muss verfügbar sein
 
 type TimeSlot = {
@@ -24,41 +23,106 @@ const WEEKEND_TIME_SLOTS: TimeSlot[] = [
 ];
 
 export async function generateRehearsalProposals(prisma: PrismaClient) {
-  // Hole alle aktiven Shows
   const activeShows = await prisma.show.findMany({
-    where: {
-      // Hier können weitere Kriterien für "aktive" Shows hinzugefügt werden
-    },
+    where: {},
     include: {
-      roles: true
-    }
+      roles: true,
+    },
   });
 
-  for (const show of activeShows) {
-    await generateProposalsForShow(prisma, show);
-  }
-}
+  type ShowWithRoles = (typeof activeShows)[number];
 
-async function generateProposalsForShow(prisma: PrismaClient, show: any) {
   const nextTwoWeeks = getNextTwoWeekendDays();
-  
-  for (const date of nextTwoWeeks) {
-    const availableSlots = await findAvailableTimeSlots(prisma, date, show);
-    
-    for (const slot of availableSlots) {
-      // Erstelle einen Probenvorschlag für jeden verfügbaren Zeitslot
-      await prisma.rehearsalProposal.create({
-        data: {
-          showId: show.id,
-          date: date,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          requiredRoles: show.roles, // JSON mit benötigten Rollen
-          status: 'proposed'
-        }
-      });
+
+  async function generateProposalsForShow(show: ShowWithRoles) {
+    for (const date of nextTwoWeeks) {
+      const availableSlots = await findAvailableTimeSlots(date, show);
+
+      for (const slot of availableSlots) {
+        await prisma.rehearsalProposal.create({
+          data: {
+            showId: show.id,
+            date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            requiredRoles: show.roles,
+            status: 'proposed',
+          },
+        });
+      }
     }
   }
+
+  async function findAvailableTimeSlots(date: Date, show: ShowWithRoles): Promise<TimeSlot[]> {
+    const availableSlots: TimeSlot[] = [];
+    for (const slot of WEEKEND_TIME_SLOTS) {
+      const isSlotAvailable = await checkSlotAvailability(date, slot, show);
+      if (isSlotAvailable) {
+        availableSlots.push(slot);
+      }
+    }
+    return availableSlots;
+  }
+
+  async function checkSlotAvailability(date: Date, slot: TimeSlot, show: ShowWithRoles): Promise<boolean> {
+    const existingRehearsals = await prisma.rehearsal.findMany({
+      where: {
+        date: {
+          equals: date,
+        },
+        startTime: {
+          equals: slot.startTime,
+        },
+      },
+    });
+
+    if (existingRehearsals.length > 0) {
+      return false;
+    }
+
+    const existingProposals = await prisma.rehearsalProposal.findMany({
+      where: {
+        date: {
+          equals: date,
+        },
+        startTime: {
+          equals: slot.startTime,
+        },
+        status: {
+          in: ['proposed', 'approved'],
+        },
+      },
+    });
+
+    if (existingProposals.length > 0) {
+      return false;
+    }
+
+    const availableParticipants = await prisma.availabilityDay.count({
+      where: {
+        date: {
+          equals: date,
+        },
+        kind: 'FULL_AVAILABLE',
+        user: {
+          roles: {
+            some: {
+              role: {
+                in: show.roles,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const requiredParticipants = show.roles.length;
+    const availabilityRatio = requiredParticipants > 0 ? availableParticipants / requiredParticipants : 0;
+
+    return availabilityRatio >= MIN_PARTICIPANTS_AVAILABLE;
+  }
+
+  await Promise.all(activeShows.map((show) => generateProposalsForShow(show)));
 }
 
 function getNextTwoWeekendDays(): Date[] {
@@ -77,93 +141,4 @@ function getNextTwoWeekendDays(): Date[] {
 
 function isWeekendDay(date: Date): boolean {
   return isFriday(date) || isSaturday(date) || isSunday(date);
-}
-
-async function findAvailableTimeSlots(
-  prisma: PrismaClient, 
-  date: Date, 
-  show: any
-): Promise<TimeSlot[]> {
-  const availableSlots: TimeSlot[] = [];
-  const appropriateSlots = WEEKEND_TIME_SLOTS;
-
-  for (const slot of appropriateSlots) {
-    const isSlotAvailable = await checkSlotAvailability(
-      prisma,
-      date,
-      slot,
-      show
-    );
-
-    if (isSlotAvailable) {
-      availableSlots.push(slot);
-    }
-  }
-
-  return availableSlots;
-}
-
-async function checkSlotAvailability(
-  prisma: PrismaClient,
-  date: Date,
-  slot: TimeSlot,
-  show: any
-): Promise<boolean> {
-  // Prüfe ob es bereits eine Probe oder einen Vorschlag für diesen Zeitslot gibt
-  const existingRehearsals = await prisma.rehearsal.findMany({
-    where: {
-      date: {
-        equals: date
-      },
-      startTime: {
-        equals: slot.startTime
-      }
-    }
-  });
-
-  if (existingRehearsals.length > 0) {
-    return false;
-  }
-
-  const existingProposals = await prisma.rehearsalProposal.findMany({
-    where: {
-      date: {
-        equals: date
-      },
-      startTime: {
-        equals: slot.startTime
-      },
-      status: {
-        in: ['proposed', 'approved']
-      }
-    }
-  });
-
-  if (existingProposals.length > 0) {
-    return false;
-  }
-
-  // Prüfe die Verfügbarkeit der benötigten Besetzung
-  const availableParticipants = await prisma.availabilityDay.count({
-    where: {
-      date: {
-        equals: date
-      },
-      kind: 'FULL_AVAILABLE',
-      user: {
-        roles: {
-          some: {
-            role: {
-              in: show.roles
-            }
-          }
-        }
-      }
-    }
-  });
-
-  const requiredParticipants = show.roles.length;
-  const availabilityRatio = availableParticipants / requiredParticipants;
-
-  return availabilityRatio >= MIN_PARTICIPANTS_AVAILABLE;
 }

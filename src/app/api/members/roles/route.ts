@@ -2,16 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { sortRoles, type Role } from "@/lib/roles";
+import { Prisma } from "@prisma/client";
 
 export async function PUT(request: NextRequest) {
   await requireAuth(["admin"]);
-  const body = await request.json().catch(() => null);
+  const rawBody: unknown = await request.json().catch(() => null);
 
-  if (!body || typeof body.userId !== "string" || !Array.isArray(body.roles)) {
+  if (!rawBody || typeof rawBody !== "object") {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
-  const provided = Array.from(new Set(body.roles)).filter(
+  const { userId, roles } = rawBody as { userId?: unknown; roles?: unknown };
+
+  if (typeof userId !== "string" || !Array.isArray(roles)) {
+    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+  }
+
+  const provided = Array.from(new Set(roles)).filter(
     (role): role is Role => typeof role === "string" && (ROLES as readonly string[]).includes(role),
   );
 
@@ -24,7 +31,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const updated = await prisma.user.update({
-      where: { id: body.userId },
+      where: { id: userId },
       data: {
         role: primaryRole,
         roles: {
@@ -53,7 +60,11 @@ export async function PUT(request: NextRequest) {
       },
       roles: allRoles,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message ?? "Aktualisierung fehlgeschlagen" }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Benutzer wurde nicht gefunden" }, { status: 404 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

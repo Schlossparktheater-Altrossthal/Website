@@ -55,7 +55,7 @@ export function UserNav({ className }: { className?: string }) {
   }
 
   const name = session.user.name ?? session.user.email ?? "";
-  const role = (session.user as any).role as string | undefined;
+  const role = session.user.role;
   const initials = (name || "?")
     .split(/\s|@/)
     .filter(Boolean)

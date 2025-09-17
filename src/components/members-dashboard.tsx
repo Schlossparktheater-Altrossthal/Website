@@ -14,13 +14,10 @@ import {
   Users,
   Activity,
   Calendar,
-  Clock,
   Wifi,
   WifiOff,
   Bell,
   CheckCircle2,
-  XCircle,
-  AlertTriangle,
 } from "lucide-react";
 
 interface RecentActivity {
@@ -44,9 +41,70 @@ const INITIAL_STATS: DashboardStats = {
   unreadNotifications: 0,
 };
 
+type OverviewStatsPayload = {
+  totalMembers?: unknown;
+  todayRehearsals?: unknown;
+  unreadNotifications?: unknown;
+};
+
+type OverviewResponse = {
+  stats?: OverviewStatsPayload;
+  recentActivities?: unknown;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseRecentActivities(value: unknown): RecentActivity[] {
+  if (!Array.isArray(value)) return [];
+
+  const fallbackTimestamp = () => new Date();
+
+  return value
+    .map((entry) => {
+      if (!isRecord(entry)) return null;
+
+      const rawId = entry.id;
+      const rawType = entry.type;
+      const rawMessage = entry.message;
+      const rawTimestamp = entry.timestamp;
+
+      const timestampCandidate =
+        typeof rawTimestamp === "string" || rawTimestamp instanceof Date
+          ? new Date(rawTimestamp)
+          : fallbackTimestamp();
+      const timestamp = Number.isNaN(timestampCandidate.getTime())
+        ? fallbackTimestamp()
+        : timestampCandidate;
+
+      let id: string;
+      if (typeof rawId === "string" && rawId.trim()) {
+        id = rawId;
+      } else if (typeof rawId === "number" && Number.isFinite(rawId)) {
+        id = String(rawId);
+      } else {
+        id = `activity_${timestamp.getTime()}`;
+      }
+
+      const message = typeof rawMessage === "string" && rawMessage.trim()
+        ? rawMessage
+        : "Aktualisierung";
+
+      const type: RecentActivity["type"] =
+        rawType === "rehearsal" || rawType === "attendance" || rawType === "notification"
+          ? rawType
+          : "notification";
+
+      return { id, type, message, timestamp } satisfies RecentActivity;
+    })
+    .filter((entry): entry is RecentActivity => entry !== null)
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+}
+
 export function MembersDashboard() {
   const { data: session } = useSession();
-  const { connectionStatus, isConnected } = useRealtime();
+  const { connectionStatus } = useRealtime();
   const {
     totalOnline: liveOnline,
     onlineUsers,
@@ -72,26 +130,30 @@ export function MembersDashboard() {
           console.error("[Dashboard] Failed to load overview", response.status);
           return;
         }
-        const data = await response.json();
+        const payload = (await response.json()) as OverviewResponse;
         if (cancelled) return;
 
-        setStats((prev) => ({
-          ...prev,
-          totalMembers: data?.stats?.totalMembers ?? prev.totalMembers,
-          todayRehearsals: data?.stats?.todayRehearsals ?? prev.todayRehearsals,
-          unreadNotifications: data?.stats?.unreadNotifications ?? prev.unreadNotifications,
-        }));
+        setStats((prev) => {
+          const statsPayload = isRecord(payload?.stats) ? payload.stats : {};
+          const next: DashboardStats = {
+            totalOnline: prev.totalOnline,
+            totalMembers:
+              typeof statsPayload.totalMembers === "number"
+                ? statsPayload.totalMembers
+                : prev.totalMembers,
+            todayRehearsals:
+              typeof statsPayload.todayRehearsals === "number"
+                ? statsPayload.todayRehearsals
+                : prev.todayRehearsals,
+            unreadNotifications:
+              typeof statsPayload.unreadNotifications === "number"
+                ? statsPayload.unreadNotifications
+                : prev.unreadNotifications,
+          };
+          return next;
+        });
 
-        const activities: RecentActivity[] = Array.isArray(data?.recentActivities)
-          ? data.recentActivities
-              .map((activity: any) => ({
-                id: String(activity.id ?? activity.timestamp ?? Math.random()),
-                type: (activity.type ?? "notification") as RecentActivity["type"],
-                message: String(activity.message ?? "Aktualisierung"),
-                timestamp: activity.timestamp ? new Date(activity.timestamp) : new Date(),
-              }))
-              .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-          : [];
+        const activities = parseRecentActivities(payload?.recentActivities);
 
         setRecentActivities(activities.slice(0, 10));
       } catch (error) {

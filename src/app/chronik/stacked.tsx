@@ -1,14 +1,27 @@
 "use client";
 import Image from "next/image";
 
+type ChronikMeta = {
+  author?: string | null;
+  director?: string | null;
+  venue?: string | null;
+  ticket_info?: string | null;
+  sources?: unknown;
+  gallery?: unknown;
+};
+
 type ChronikItem = {
   id: string;
   year: number;
   title?: string | null;
   synopsis?: string | null;
   posterUrl?: string | null;
-  meta?: Record<string, any> | null;
+  meta?: ChronikMeta | null;
 };
+
+function toStringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+}
 
 export function ChronikStacked({ items }: { items: ChronikItem[] }) {
   const sorted = [...items].sort((a, b) => b.year - a.year);
@@ -16,7 +29,8 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
   return (
     <div className="space-y-12 lg:space-y-16 pb-24 container mx-auto px-4 sm:px-6">
       {sorted.map((s, idx) => {
-        const meta = (s.meta || {}) as any;
+        const meta: ChronikMeta = s.meta ?? {};
+        const sources = toStringArray(meta.sources);
         return (
           <section
             key={s.id}
@@ -92,9 +106,9 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
                         {s.synopsis}
                       </p>
                     )}
-                    {Array.isArray(meta?.sources) && meta.sources.length > 0 && (
+                    {sources.length > 0 && (
                       <div className="mt-8 flex flex-wrap gap-3">
-                        {meta.sources.slice(0, 3).map((src: string, i: number) => (
+                        {sources.slice(0, 3).map((src, i) => (
                           <a
                             key={i}
                             href={src}

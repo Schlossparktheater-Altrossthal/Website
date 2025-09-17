@@ -1,7 +1,36 @@
 import { prisma } from "@/lib/prisma";
-import type { Show } from "@prisma/client";
+import type { Prisma, Show } from "@prisma/client";
 import { ChronikStacked } from "./stacked";
 import { ChronikTimeline } from "./timeline";
+
+type ShowMeta = {
+  author?: string | null;
+  director?: string | null;
+  venue?: string | null;
+  ticket_info?: string | null;
+  sources?: string[] | null;
+  gallery?: string[] | null;
+};
+
+function parseShowMeta(meta: Prisma.JsonValue | null | undefined): ShowMeta | null {
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+    return null;
+  }
+
+  const record = meta as Record<string, unknown>;
+  const stringOrNull = (value: unknown) => (typeof value === "string" ? value : null);
+  const stringArrayOrNull = (value: unknown) =>
+    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : null;
+
+  return {
+    author: stringOrNull(record.author),
+    director: stringOrNull(record.director),
+    venue: stringOrNull(record.venue),
+    ticket_info: stringOrNull(record.ticket_info),
+    sources: stringArrayOrNull(record.sources),
+    gallery: stringArrayOrNull(record.gallery),
+  };
+}
 
 export default async function ChronikPage() {
   const now = new Date();
@@ -39,7 +68,7 @@ export default async function ChronikPage() {
     title: s.title,
     synopsis: s.synopsis ?? null,
     posterUrl: s.posterUrl ?? null,
-    meta: (s as any).meta ?? null,
+    meta: parseShowMeta(s.meta),
   }));
   
   return (
@@ -55,7 +84,7 @@ export default async function ChronikPage() {
       </div>
 
       {/* Gallery Content */}
-      <ChronikStacked items={items as any} />
+      <ChronikStacked items={items} />
       
       {/* Animated Bottom Timeline */}
       <ChronikTimeline items={items} />

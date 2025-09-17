@@ -27,10 +27,18 @@ export interface ButtonProps
 export function Button({ className, variant, size, asChild, children, ...rest }: ButtonProps) {
   const classes = cn(buttonVariants({ variant, size }), className);
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement, {
+    const child = children as React.ReactElement<{ className?: string }>;
+    return React.cloneElement(child, {
       ...rest,
-      className: cn(classes, (children as any).props?.className),
+      className: cn(classes, child.props?.className),
     });
+  }
+  if (asChild) {
+    return (
+      <button className={classes} {...rest}>
+        {children}
+      </button>
+    );
   }
   return (
     <button className={classes} {...rest}>

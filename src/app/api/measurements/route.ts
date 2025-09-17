@@ -1,33 +1,44 @@
-import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-import { requireAuth } from "@/lib/rbac"
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/rbac";
 
 // GET: Hole alle Maße eines Benutzers
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const session = await requireAuth()
-    const userId = session.user.id
+    const session = await requireAuth();
+    const userId = session.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Nicht autorisiert" },
+        { status: 401 },
+      );
+    }
 
     const measurements = await prisma.memberMeasurement.findMany({
       where: { userId },
-      orderBy: { type: 'asc' }
-    })
+      orderBy: { type: "asc" },
+    });
 
-    return NextResponse.json(measurements)
+    return NextResponse.json(measurements);
   } catch (error) {
+    console.error("[Measurements] Failed to load measurements", error);
     return NextResponse.json(
       { error: "Nicht autorisiert" },
-      { status: 401 }
-    )
+      { status: 401 },
+    );
   }
 }
 
 // POST: Füge ein neues Maß hinzu oder aktualisiere ein bestehendes
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth()
-    const userId = session.user.id
-    const data = await request.json()
+    const session = await requireAuth();
+    const userId = session.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+    }
+    const data = await request.json();
 
     const measurement = await prisma.memberMeasurement.upsert({
       where: {
@@ -48,13 +59,14 @@ export async function POST(request: NextRequest) {
         unit: data.unit,
         note: data.note,
       },
-    })
+    });
 
-    return NextResponse.json(measurement)
+    return NextResponse.json(measurement);
   } catch (error) {
+    console.error("[Measurements] Failed to save measurement", error);
     return NextResponse.json(
       { error: "Fehler beim Speichern der Maße" },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }

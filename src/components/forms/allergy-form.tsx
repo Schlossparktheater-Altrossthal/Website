@@ -55,6 +55,7 @@ export function AllergyForm({ initialData, onSubmit }: AllergyFormProps) {
       await onSubmit(data)
       toast.success("Allergie/Unverträglichkeit wurde erfolgreich gespeichert")
     } catch (error) {
+      console.error("[AllergyForm] Failed to submit allergy", error)
       toast.error("Fehler beim Speichern der Allergie/Unverträglichkeit")
     }
   }

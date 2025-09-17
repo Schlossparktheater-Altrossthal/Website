@@ -91,8 +91,8 @@ export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditM
       });
       onOpenChange(false);
       resetState();
-    } catch (err: any) {
-      const message = err?.message ?? "Aktualisierung fehlgeschlagen";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
       setError(message);
       toast.error(message);
     } finally {

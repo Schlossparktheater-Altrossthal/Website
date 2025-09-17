@@ -1,7 +1,25 @@
 import { prisma } from "@/lib/prisma";
-import type { Clue } from "@prisma/client";
+import type { Clue, Prisma } from "@prisma/client";
 import Image from "next/image";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+
+type ClueContent = {
+  text?: string;
+  url?: string;
+  alt?: string;
+};
+
+function parseClueContent(content: Prisma.JsonValue | null | undefined): ClueContent {
+  if (!content || typeof content !== "object" || Array.isArray(content)) {
+    return {};
+  }
+  const record = content as Record<string, unknown>;
+  return {
+    text: typeof record.text === "string" ? record.text : undefined,
+    url: typeof record.url === "string" ? record.url : undefined,
+    alt: typeof record.alt === "string" ? record.alt : undefined,
+  };
+}
 
 export const revalidate = 30;
 
@@ -23,7 +41,7 @@ export default async function MysteryPage() {
       {clues.length === 0 && <p>Die Schatten sind noch still…</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {clues.map((c) => {
-          const content = c.content as unknown as { text?: string; url?: string; alt?: string };
+          const content = parseClueContent(c.content);
           return (
             <Card key={c.id}>
               <CardTitle className="p-4">

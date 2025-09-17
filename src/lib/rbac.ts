@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { ROLES, type Role } from "@/lib/roles";
+import type { Role } from "@/lib/roles";
 
 export { ROLES, type Role } from "@/lib/roles";
 
@@ -11,9 +11,10 @@ export function hasRole(user: { role?: Role; roles?: Role[] } | null | undefined
 
   const owned = new Set<Role>();
   if (user.role) owned.add(user.role);
-  const additional = (user as any)?.roles;
-  if (Array.isArray(additional)) {
-    for (const r of additional) owned.add(r as Role);
+  if (Array.isArray(user.roles)) {
+    for (const role of user.roles) {
+      owned.add(role);
+    }
   }
 
   if (owned.size === 0) return false;
