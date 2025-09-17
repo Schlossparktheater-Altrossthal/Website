@@ -12,6 +12,8 @@ export function PermissionMatrix() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newRoleName, setNewRoleName] = useState("");
+  const [editRoleId, setEditRoleId] = useState<string | null>(null);
+  const [editRoleName, setEditRoleName] = useState<string>("");
 
   async function load() {
     setLoading(true);
@@ -69,6 +71,35 @@ export function PermissionMatrix() {
     }
   };
 
+  const startEdit = (role: Role) => {
+    setEditRoleId(role.id);
+    setEditRoleName(role.name);
+  };
+
+  const cancelEdit = () => {
+    setEditRoleId(null);
+    setEditRoleName("");
+  };
+
+  const saveEdit = async () => {
+    if (!editRoleId) return;
+    const name = editRoleName.trim();
+    if (!name) return;
+    const res = await fetch(`/api/permissions/roles/${editRoleId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const updated = data?.role as Role | undefined;
+      if (updated) {
+        setRoles((prev) => prev.map((r) => (r.id === updated.id ? { ...r, name: updated.name } : r)));
+      }
+      cancelEdit();
+    }
+  };
+
   if (loading) return <div>Laden…</div>;
   if (error) return <div className="text-red-600">{error}</div>;
 
@@ -90,8 +121,24 @@ export function PermissionMatrix() {
             <tr>
               <th className="text-left p-2 border-b">Recht</th>
               {roles.map((r) => (
-                <th key={r.id} className="text-left p-2 border-b">
-                  {r.name}
+                <th key={r.id} className="text-left p-2 border-b align-top">
+                  {editRoleId === r.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="w-36 rounded border px-2 py-1 text-sm"
+                        value={editRoleName}
+                        onChange={(e) => setEditRoleName(e.target.value)}
+                        autoFocus
+                      />
+                      <Button size="xs" onClick={saveEdit}>Speichern</Button>
+                      <Button size="xs" variant="ghost" onClick={cancelEdit}>Abbrechen</Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span>{r.name}</span>
+                      <Button size="xs" variant="ghost" onClick={() => startEdit(r)}>Bearbeiten</Button>
+                    </div>
+                  )}
                 </th>
               ))}
             </tr>

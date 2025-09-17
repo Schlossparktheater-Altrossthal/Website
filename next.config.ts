@@ -16,9 +16,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.felix-hitzig.de" },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ["bcryptjs"],
-  },
+  // Next.js 15+: serverComponentsExternalPackages moved to serverExternalPackages
+  serverExternalPackages: ["bcryptjs"],
 };
 
 export default nextConfig;
