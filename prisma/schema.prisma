@@ -149,6 +149,7 @@ model User {
   roles                  UserRole[]
   approvedProposals      RehearsalProposal[] @relation("ProposalApprover")
   notifications         NotificationRecipient[]
+  blockedDays            BlockedDay[]
 }
 
 model Account {
@@ -396,6 +397,18 @@ model Availability {
   end    DateTime
   status AvailabilityStatus
   user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BlockedDay {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
 }
 
 model Task {
