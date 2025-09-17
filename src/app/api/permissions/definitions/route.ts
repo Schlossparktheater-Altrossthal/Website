@@ -69,11 +69,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Owner/Admin sind nicht editierbar" }, { status: 400 });
   }
 
-  // Only allow toggling known, code-defined permissions (no dynamic creation)
-  if (!isKnownPermissionKey(body.permissionKey)) {
-    return NextResponse.json({ error: "Unbekanntes Recht. Rechte sind fest im Code definiert." }, { status: 400 });
-  }
-  await ensurePermissionDefinitions();
   const perm = await prisma.permission.findUnique({ where: { key: body.permissionKey } });
   if (!perm) {
     return NextResponse.json({ error: "Recht nicht initialisiert" }, { status: 500 });
@@ -92,10 +87,6 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-// No POST: permissions are defined in source. Return 405 for creation attempts.
-export async function POST() {
-  return NextResponse.json({ error: "Rechte sind im Code definiert und können nicht angelegt werden." }, { status: 405 });
-}
 // No POST: permissions are defined in source. Return 405 for creation attempts.
 export async function POST() {
   return NextResponse.json({ error: "Rechte sind im Code definiert und können nicht angelegt werden." }, { status: 405 });
