@@ -252,10 +252,10 @@ export function MembersDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-4 sm:p-6 lg:space-y-8 lg:p-0 lg:pt-2 lg:pb-10">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="text-3xl font-bold">Mitglieder-Dashboard</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {connectionStatus === "connected" ? (
             <>
               <Wifi className="h-5 w-5 text-green-500" />
@@ -272,10 +272,10 @@ export function MembersDashboard() {
         </div>
       </div>
 
-      {/* Willkommen/Quick Actions */}
-      <Card className="bg-gradient-to-br from-accent/20 to-transparent">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)] xl:items-stretch">
+        {/* Willkommen/Quick Actions */}
+        <Card className="h-full bg-gradient-to-br from-accent/20 to-transparent">
+          <CardContent className="flex h-full flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between xl:gap-6">
             <div>
               <div className="text-sm text-muted-foreground">Willkommen zurück</div>
               <h2 className="text-xl font-semibold">
@@ -302,69 +302,69 @@ export function MembersDashboard() {
                 ));
               })()}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Online Mitglieder</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.totalOnline}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Aktualisiert {onlineLoading ? "…" : `vor ${formatTimeAgo(new Date())}`}
-            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mitglieder gesamt</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalMembers}</div>
-            <p className="text-xs text-muted-foreground">inkl. Ensemble und Technik</p>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:auto-rows-fr xl:grid-cols-2">
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Online Mitglieder</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {stats.totalOnline}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Aktualisiert {onlineLoading ? "…" : `vor ${formatTimeAgo(new Date())}`}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Heutige Proben</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.todayRehearsals}</div>
-            <p className="text-xs text-muted-foreground">Termine zwischen 00:00 und 23:59 Uhr</p>
-          </CardContent>
-        </Card>
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Mitglieder gesamt</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalMembers}</div>
+              <p className="text-xs text-muted-foreground">inkl. Ensemble und Technik</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ungelesene Benachrichtigungen</CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.unreadNotifications}</div>
-            <p className="text-xs text-muted-foreground">Wer zuerst liest, ist informiert</p>
-          </CardContent>
-        </Card>
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Heutige Proben</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.todayRehearsals}</div>
+              <p className="text-xs text-muted-foreground">Termine zwischen 00:00 und 23:59 Uhr</p>
+            </CardContent>
+          </Card>
+
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Ungelesene Benachrichtigungen</CardTitle>
+              <Bell className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.unreadNotifications}</div>
+              <p className="text-xs text-muted-foreground">Wer zuerst liest, ist informiert</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] xl:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] xl:gap-6">
+        <Card className="h-full">
           <CardHeader className="pb-3">
             <CardTitle>Aktive Mitglieder</CardTitle>
             <p className="text-sm text-muted-foreground">
               Wer ist gerade online? Live-Ansicht aktualisiert über WebSockets.
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
             {onlineList.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
@@ -387,14 +387,14 @@ export function MembersDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="h-full">
           <CardHeader className="pb-3">
             <CardTitle>Aktivitäten</CardTitle>
             <p className="text-sm text-muted-foreground">
               Neueste Proben, Zusagen und Benachrichtigungen.
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex h-full flex-col">
             {isLoading && recentActivities.length === 0 ? (
               <p className="text-sm text-muted-foreground">Lade Aktivitäten …</p>
             ) : recentActivities.length === 0 ? (
