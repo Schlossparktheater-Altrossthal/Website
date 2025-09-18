@@ -291,6 +291,7 @@ export function MembersDashboard() {
                 const roleSet = new Set(userRoles);
                 const links = [
                   { href: "/mitglieder/profil", label: "Profil öffnen" },
+                  { href: "/mitglieder/meine-proben", label: "Meine Proben" },
                   { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech", "owner"] },
                   { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", roles: ["admin", "owner"] },
                   { href: "/mitglieder/rechte", label: "Rechteverwaltung", roles: ["admin", "owner"] },
