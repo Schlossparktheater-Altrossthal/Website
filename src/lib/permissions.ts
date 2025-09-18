@@ -7,6 +7,11 @@ type PermissionDefinition = { key: string; label: string; description?: string }
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen" },
   { key: "mitglieder.profil", label: "Profilbereich aufrufen" },
+  {
+    key: "mitglieder.meine-proben",
+    label: "Eigene Probentermine einsehen",
+    description: "Zugang zum Bereich \"Meine Proben\" mit persönlichen Terminen und Fristen.",
+  },
   { key: "mitglieder.probenplanung", label: "Probenplanung verwalten" },
   { key: "mitglieder.rollenverwaltung", label: "Mitgliederverwaltung öffnen" },
   { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen" },
