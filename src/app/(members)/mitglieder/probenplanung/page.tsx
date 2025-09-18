@@ -4,8 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { CreateRehearsalButton } from "./create-rehearsal-button";
 import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
-import { format } from "date-fns";
-import { de } from "date-fns/locale/de";
 export default async function ProbenplanungPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
@@ -70,8 +68,17 @@ export default async function ProbenplanungPage() {
             title: r.title,
             start: r.start.toISOString(),
             location: r.location,
-            attendance: r.attendance.map((a) => ({ status: a.status, user: a.user })),
-            notifications: r.notifications.map((n) => ({ recipients: n.recipients.map((x) => ({ user: x.user })) })),
+            attendance: r.attendance.map((a) => ({
+              status: a.status,
+              userId: a.userId,
+              user: a.user,
+            })),
+            notifications: r.notifications.map((n) => ({
+              recipients: n.recipients.map((x) => ({
+                userId: x.userId,
+                user: x.user,
+              })),
+            })),
           })) as RehearsalLite[]}
         />
       ) : (

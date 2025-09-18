@@ -1,31 +1,11 @@
 "use client";
 
-import * as React from "react";
-import { useState } from "react";
-import type { Prisma } from "@prisma/client";
+import { useMemo, useState } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { EditRehearsalModal } from "./edit-rehearsal-modal";
 import { DeleteRehearsalConfirm } from "./delete-rehearsal-confirm";
-
-type RehearsalWithRelations = Prisma.RehearsalGetPayload<{
-  include: {
-    attendance: {
-      include: {
-        user: { select: { id: true; name: true; email: true } };
-      };
-    };
-    notifications: {
-      include: {
-        recipients: {
-          include: {
-            user: { select: { id: true; name: true; email: true } };
-          };
-        };
-      };
-    };
-  };
-}>;
+import type { RehearsalLite } from "./rehearsal-list";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "full",
@@ -70,16 +50,20 @@ function ResponseColumn({
   );
 }
 
-export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: RehearsalWithRelations; forceOpen?: boolean }) {
+export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: RehearsalLite; forceOpen?: boolean }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const startDate = useMemo(() => new Date(rehearsal.start), [rehearsal.start]);
   const notification = rehearsal.notifications[0];
   const yes = rehearsal.attendance.filter((entry) => entry.status === "yes");
   const no = rehearsal.attendance.filter((entry) => entry.status !== "yes");
-  const respondedIds = new Set(rehearsal.attendance.map((entry) => entry.userId));
-  type RecipientWithUser = RehearsalWithRelations["notifications"][number]["recipients"][number];
-  const pending: RecipientWithUser[] = notification
+  const respondedIds = useMemo(
+    () => new Set(rehearsal.attendance.map((entry) => entry.userId)),
+    [rehearsal.attendance]
+  );
+  type RecipientLite = RehearsalLite["notifications"][number]["recipients"][number];
+  const pending: RecipientLite[] = notification
     ? notification.recipients.filter((recipient) => !respondedIds.has(recipient.userId))
     : [];
 
@@ -106,9 +90,9 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-foreground">{rehearsal.title}</h3>
               <p className="text-sm text-muted-foreground">
-                {dateFormatter.format(new Date(rehearsal.start))}
+                {dateFormatter.format(startDate)}
                 {" · "}
-                {timeFormatter.format(new Date(rehearsal.start))}
+                {timeFormatter.format(startDate)}
               </p>
               <p className="text-xs text-muted-foreground/80">Ort: {rehearsal.location}</p>
             </div>
@@ -166,7 +150,7 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
         rehearsal={{
           id: rehearsal.id,
           title: rehearsal.title,
-          start: new Date(rehearsal.start),
+          start: startDate,
           location: rehearsal.location,
         }}
         isOpen={showEditModal}
@@ -178,7 +162,7 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
         rehearsal={{
           id: rehearsal.id,
           title: rehearsal.title,
-          start: new Date(rehearsal.start),
+          start: startDate,
         }}
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
