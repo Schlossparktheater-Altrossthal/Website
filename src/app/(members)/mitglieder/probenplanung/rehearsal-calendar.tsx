@@ -158,19 +158,22 @@ export function RehearsalCalendar({
     memberCount > 0
       ? `${selectedDayBlocked.length} / ${memberCount} blockiert`
       : `${selectedDayBlocked.length} blockiert`;
+  const selectedAvailableCount = Math.max(0, memberCount - selectedDayBlocked.length);
+  const selectedAvailableRatio = memberCount > 0 ? selectedAvailableCount / memberCount : 0;
+  const selectedAvailablePercent = Math.round(
+    Math.max(0, Math.min(1, selectedAvailableRatio)) * 100,
+  );
+  const selectedAvailableLabel =
+    memberCount > 0
+      ? `${selectedAvailableCount} / ${memberCount} verfügbar`
+      : `${selectedAvailableCount} verfügbar`;
   const selectedRehearsalLabel = `${selectedDayRehearsals.length} ${
     selectedDayRehearsals.length === 1 ? "Probe" : "Proben"
   } geplant`;
   const selectedSummary =
     selectedDayKey != null
-      ? [selectedBlockedLabel, selectedRehearsalLabel].join(" · ")
+      ? [selectedAvailableLabel, selectedRehearsalLabel].join(" · ")
       : null;
-  const selectedBlockedCount = selectedDayBlocked.length;
-  const selectedBlockedRatio =
-    memberCount > 0 ? selectedBlockedCount / memberCount : 0;
-  const selectedBlockedPercent = Math.round(
-    Math.max(0, Math.min(1, selectedBlockedRatio)) * 100
-  );
 
   const handleSelectDayByKey = (dayKey: string) => {
     const parsed = startOfDay(parseISO(dayKey));
@@ -275,19 +278,19 @@ export function RehearsalCalendar({
             <div className="flex w-full flex-col gap-3 sm:max-w-sm">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Verfügbarkeit</span>
-                <span>{selectedBlockedLabel}</span>
+                <span>{selectedAvailableLabel}</span>
               </div>
               <div className="relative h-3 overflow-hidden rounded-full bg-muted">
                 <span
                   className={cn(
                     "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
-                    selectedBlockedRatio >= 0.5
+                    selectedAvailableRatio <= 0.5
                       ? "bg-destructive/80"
-                      : selectedBlockedRatio >= 0.25
+                      : selectedAvailableRatio <= 0.75
                       ? "bg-amber-400"
-                      : "bg-primary/70"
+                      : "bg-primary/70",
                   )}
-                  style={{ width: `${selectedBlockedPercent}%` }}
+                  style={{ width: `${selectedAvailablePercent}%` }}
                   aria-hidden
                 />
               </div>
@@ -398,24 +401,24 @@ export function RehearsalCalendar({
 
             <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex w-full flex-col gap-3 sm:max-w-sm">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Verfügbarkeit</span>
-                  <span>{selectedBlockedLabel}</span>
-                </div>
-                <div className="relative h-3 overflow-hidden rounded-full bg-muted">
-                  <span
-                    className={cn(
-                      "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
-                      selectedBlockedRatio >= 0.5
-                        ? "bg-destructive/80"
-                        : selectedBlockedRatio >= 0.25
-                        ? "bg-amber-400"
-                        : "bg-primary/70"
-                    )}
-                    style={{ width: `${selectedBlockedPercent}%` }}
-                    aria-hidden
-                  />
-                </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Verfügbarkeit</span>
+                <span>{selectedAvailableLabel}</span>
+              </div>
+              <div className="relative h-3 overflow-hidden rounded-full bg-muted">
+                <span
+                  className={cn(
+                    "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
+                    selectedAvailableRatio <= 0.5
+                      ? "bg-destructive/80"
+                      : selectedAvailableRatio <= 0.75
+                      ? "bg-amber-400"
+                      : "bg-primary/70",
+                  )}
+                  style={{ width: `${selectedAvailablePercent}%` }}
+                  aria-hidden
+                />
+              </div>
               </div>
               <Button
                 onClick={handlePlanRehearsalForSelectedDay}
@@ -540,13 +543,13 @@ export function RehearsalCalendar({
               const dayBlocked = blockedByDay.get(day.key) ?? [];
               const dayRehearsals = rehearsalsByDay.get(day.key) ?? [];
               const blockedCount = dayBlocked.length;
-              const ratio =
-                memberCount > 0 ? blockedCount / memberCount : 0;
-              const ratioClamped = Math.max(0, Math.min(1, ratio));
-              const blockedLabel =
+              const availableCount = Math.max(0, memberCount - blockedCount);
+              const availRatio = memberCount > 0 ? availableCount / memberCount : 0;
+              const availClamped = Math.max(0, Math.min(1, availRatio));
+              const availableLabel =
                 memberCount > 0
-                  ? `${blockedCount} / ${memberCount} blockiert`
-                  : `${blockedCount} blockiert`;
+                  ? `${availableCount} / ${memberCount} verfügbar`
+                  : `${availableCount} verfügbar`;
               const rehearsalSummary = dayRehearsals.length
                 ? `${dayRehearsals.length} ${
                     dayRehearsals.length === 1 ? "Probe" : "Proben"
@@ -569,11 +572,9 @@ export function RehearsalCalendar({
                 ariaLabelParts.push("Wochenendtag");
               }
               ariaLabelParts.push(
-                blockedCount
-                  ? memberCount > 0
-                    ? `${blockedCount} von ${memberCount} Mitgliedern gesperrt`
-                    : `${blockedCount} blockierte Mitglieder`
-                  : "Keine Sperrungen eingetragen"
+                memberCount > 0
+                  ? `${availableCount} von ${memberCount} Mitgliedern verfügbar`
+                  : `${availableCount} verfügbar`
               );
               ariaLabelParts.push(
                 dayRehearsals.length
@@ -589,9 +590,8 @@ export function RehearsalCalendar({
                   "transition",
                   dayRehearsals.length > 0 &&
                     "border-primary/50 bg-primary/5 shadow-[0_0_0_1px_rgba(129,140,248,0.25)]",
-                  ratio >= 0.5 && "border-destructive/60 bg-destructive/10",
-                  ratio >= 0.25 &&
-                    ratio < 0.5 &&
+                  availRatio <= 0.5 && "border-destructive/60 bg-destructive/10",
+                  availRatio > 0.5 && availRatio <= 0.75 &&
                     "border-amber-400/60 bg-amber-100/30 dark:border-amber-400/40 dark:bg-amber-500/10",
                   isWeekend &&
                     "bg-gradient-to-br from-primary/5 via-background to-background dark:from-primary/10",
@@ -607,9 +607,7 @@ export function RehearsalCalendar({
                         <p className="font-semibold leading-tight text-foreground">
                           {rehearsalSummary}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {blockedLabel}
-                        </p>
+                        <p className="text-[10px] text-muted-foreground">{availableLabel}</p>
                       </div>
                       {isWeekend ? (
                         <Badge className="rounded-full px-2 py-0 text-[9px] font-semibold uppercase tracking-wide">
@@ -654,19 +652,17 @@ export function RehearsalCalendar({
                         <span
                           className={cn(
                             "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
-                            ratio >= 0.5
+                            availRatio <= 0.5
                               ? "bg-destructive/80"
-                              : ratio >= 0.25
+                              : availRatio <= 0.75
                               ? "bg-amber-400"
                               : "bg-primary/70"
                           )}
-                          style={{ width: `${ratioClamped * 100}%` }}
+                          style={{ width: `${availClamped * 100}%` }}
                           aria-hidden
                         />
                       </div>
-                      <span className="text-[10px] font-medium text-muted-foreground">
-                        {Math.round(ratioClamped * 100)}%
-                      </span>
+                      <span className="text-[10px] font-medium text-muted-foreground">{Math.round(availClamped * 100)}%</span>
                     </div>
                   </div>
                 ),
@@ -681,15 +677,15 @@ export function RehearsalCalendar({
                   >
                     <span className="absolute inset-y-0 left-0 w-2/3 rounded-full bg-primary/70" />
                   </span>
-                  <span>Balken = Anteil blockierter Mitglieder</span>
+                  <span>Balken = Anteil verfügbarer Mitglieder</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-amber-400" />
-                  <span>25&nbsp;–&nbsp;49&nbsp;% blockiert</span>
+                  <span>51&nbsp;–&nbsp;75&nbsp;% verfügbar</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-destructive/70" />
-                  <span>Ab 50&nbsp;% blockiert</span>
+                  <span>Bis 50&nbsp;% verfügbar</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-gradient-to-br from-primary/60 via-primary/20 to-transparent" />
