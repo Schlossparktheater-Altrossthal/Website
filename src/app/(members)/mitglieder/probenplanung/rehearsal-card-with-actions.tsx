@@ -9,10 +9,12 @@ import type { RehearsalLite } from "./rehearsal-list";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "full",
+  timeZone: "Europe/Berlin",
 });
 
 const timeFormatter = new Intl.DateTimeFormat("de-DE", {
   timeStyle: "short",
+  timeZone: "Europe/Berlin",
 });
 
 function displayName(user?: { name: string | null; email: string | null }) {

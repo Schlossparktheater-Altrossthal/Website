@@ -8,6 +8,7 @@ type NotificationResponse = {
   body?: string | null;
   createdAt: string;
   readAt: string | null;
+  type?: string | null;
   rehearsal: {
     id: string;
     title: string;
@@ -56,6 +57,7 @@ export async function GET() {
       body: record.notification.body,
       createdAt: record.notification.createdAt.toISOString(),
       readAt: record.readAt ? record.readAt.toISOString() : null,
+      type: record.notification.type ?? null,
       rehearsal: record.notification.rehearsal
         ? {
             id: record.notification.rehearsal.id,

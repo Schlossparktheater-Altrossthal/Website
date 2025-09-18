@@ -91,6 +91,14 @@ export function RehearsalCalendar({
   const [currentMonth, setCurrentMonth] = useState<Date>(() =>
     startOfMonth(initialSelection.date)
   );
+  // Use a fixed timezone for time-only rendering to avoid SSR/CSR hydration mismatches
+  const timeFormatter = new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Berlin",
+  });
+  const fmtTime = (d: Date) => timeFormatter.format(d);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDefaults, setCreateDefaults] = useState<{
     date: string;
@@ -290,6 +298,7 @@ export function RehearsalCalendar({
                   <span>Verfügbarkeit</span>
                   <span>{selectedBlockedLabel}</span>
                 </div>
+<<<<<<< HEAD
                 <div className="relative h-2 overflow-hidden rounded-full bg-muted">
                   <span
                     className={cn(
@@ -320,10 +329,8 @@ export function RehearsalCalendar({
                   {selectedDayRehearsals.map((entry) => {
                     const startDate = parseISO(entry.start);
                     const endDate = entry.end ? parseISO(entry.end) : null;
-                    const startLabel = format(startDate, "HH:mm", { locale: de });
-                    const endLabel = endDate
-                      ? format(endDate, "HH:mm", { locale: de })
-                      : null;
+                    const startLabel = fmtTime(startDate);
+                    const endLabel = endDate ? fmtTime(endDate) : null;
                     const timeChip = endLabel
                       ? `${startLabel} – ${endLabel}`
                       : `Start ${startLabel}`;
@@ -342,6 +349,50 @@ export function RehearsalCalendar({
                         <article className="rounded-2xl border border-border/60 bg-background/90 p-4 shadow-sm">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <h4 className="text-sm font-semibold text-foreground">{entry.title}</h4>
+=======
+                <div className="flex flex-col gap-1 sm:hidden">
+                  {dayRehearsals.length ? (
+                    <ul className="flex flex-col gap-1">
+                      {mobileRehearsals.map((entry) => {
+                        const startDate = parseISO(entry.start);
+                        const endDate = entry.end ? parseISO(entry.end) : null;
+                        const timeLabel = endDate ? `${fmtTime(startDate)} – ${fmtTime(endDate)}` : fmtTime(startDate);
+                        return (
+                          <li
+                            key={entry.id}
+                            className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1"
+                          >
+                            <span className="text-[10px] font-semibold text-primary">{timeLabel}</span>
+                            <span className="flex-1 truncate text-[10px] font-medium text-foreground">
+                              {entry.title}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground">Keine Probe geplant</span>
+                  )}
+                  {remainingCount > 0 ? (
+                    <span className="text-[11px] text-muted-foreground">
+                      +{remainingCount} weitere {remainingCount === 1 ? "Probe" : "Proben"}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="hidden flex-col gap-1 sm:flex">
+                  {dayRehearsals.length ? (
+                    dayRehearsals.map((entry) => {
+                      const startDate = parseISO(entry.start);
+                      const endDate = entry.end ? parseISO(entry.end) : null;
+                      const timeLabel = endDate ? `${fmtTime(startDate)} – ${fmtTime(endDate)}` : fmtTime(startDate);
+                      return (
+                        <div
+                          key={entry.id}
+                          className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-primary">
+                            <span>{timeLabel}</span>
+>>>>>>> b017292 (Notifications: cleanup API + UI actions; highlight update unread when responded; fix clearRead wiring\nCalendar: fix hydration by forcing Europe/Berlin timezone for time formatting)
                             {entry.location ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
                                 <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
@@ -514,12 +565,8 @@ export function RehearsalCalendar({
                             ? parseISO(entry.end)
                             : null;
                           const timeLabel = endDate
-                            ? `${format(startDate, "HH:mm", {
-                                locale: de,
-                              })} – ${format(endDate, "HH:mm", {
-                                locale: de,
-                              })}`
-                            : format(startDate, "HH:mm", { locale: de });
+                            ? `${fmtTime(startDate)} – ${fmtTime(endDate)}`
+                            : fmtTime(startDate);
                           return (
                             <li
                               key={entry.id}
@@ -625,12 +672,8 @@ export function RehearsalCalendar({
                         const endDate = firstRehearsal.end
                           ? parseISO(firstRehearsal.end)
                           : null;
-                        const startLabel = format(startDate, "HH:mm", {
-                          locale: de,
-                        });
-                        const endLabel = endDate
-                          ? format(endDate, "HH:mm", { locale: de })
-                          : null;
+                        const startLabel = fmtTime(startDate);
+                        const endLabel = endDate ? fmtTime(endDate) : null;
                         return endLabel ? `${startLabel} – ${endLabel}` : `Start ${startLabel}`;
                       })()
                     : null;

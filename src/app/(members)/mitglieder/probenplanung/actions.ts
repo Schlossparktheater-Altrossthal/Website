@@ -184,6 +184,63 @@ export async function updateRehearsalAction(input: {
       });
     });
 
+    // Prepare formatted content for notifications
+    const formatter = new Intl.DateTimeFormat("de-DE", {
+      dateStyle: "full",
+      timeStyle: "short",
+    });
+    const updatedTitle = `Probe aktualisiert: ${rehearsal.title}`;
+    const updatedBody = `Neuer Termin: ${formatter.format(rehearsal.start)}${
+      rehearsal.location ? ` · Ort: ${rehearsal.location}` : ""
+    }`;
+
+    // Update existing unread notifications' text; create new for those already read
+    try {
+      await prisma.$transaction(async (tx) => {
+        const baseNotification = await tx.notification.findFirst({
+          where: { rehearsalId: rehearsal.id },
+          orderBy: { createdAt: "asc" },
+          include: { recipients: { select: { id: true, userId: true, readAt: true } } },
+        });
+
+        if (baseNotification) {
+          // Update text on the original notification (affects all recipients)
+          await tx.notification.update({
+            where: { id: baseNotification.id },
+            data: { title: updatedTitle, body: updatedBody },
+          });
+
+          const readRecipients = baseNotification.recipients.filter((r) => r.readAt != null);
+          if (readRecipients.length > 0) {
+            await tx.notification.create({
+              data: {
+                title: updatedTitle,
+                body: updatedBody,
+                type: "rehearsal-update",
+                rehearsalId: rehearsal.id,
+                recipients: {
+                  create: readRecipients.map((r) => ({ userId: r.userId })),
+                },
+              },
+            });
+          }
+        } else {
+          // No existing notification found — create an update notification for all
+          await tx.notification.create({
+            data: {
+              title: updatedTitle,
+              body: updatedBody,
+              type: "rehearsal-update",
+              rehearsalId: rehearsal.id,
+              recipients: { create: users.map((u) => ({ userId: u.id })) },
+            },
+          });
+        }
+      });
+    } catch (e) {
+      console.warn("Failed to update/create rehearsal notifications on update", e);
+    }
+
     await broadcastRehearsalUpdated({
       rehearsalId: rehearsal.id,
       changes: {

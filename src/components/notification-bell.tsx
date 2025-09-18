@@ -13,6 +13,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "short",
   timeStyle: "short",
+  timeZone: "Europe/Berlin",
 });
 
 type NotificationItem = {
@@ -21,6 +22,7 @@ type NotificationItem = {
   body?: string | null;
   createdAt: string;
   readAt: string | null;
+  type?: string | null;
   rehearsal?: {
     id: string;
     title: string;
@@ -108,9 +110,36 @@ export function NotificationBell({ className }: { className?: string }) {
     }
   }, [status]);
 
+  const clearRead = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear_read" }),
+      });
+      if (!res.ok) throw new Error("cleanup failed");
+      setNotifications((prev) => prev.filter((n) => !n.readAt));
+      toast.success("Gelesene Benachrichtigungen entfernt.");
+    } catch (e) {
+      console.error("[NotificationBell] clearRead failed", e);
+      toast.error("Konnte gelesene Benachrichtigungen nicht entfernen.");
+    }
+  }, []);
+
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
+
+  // keep list in sync when a single item gets removed via UI
+  useEffect(() => {
+    function onRemoved(e: Event) {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (!detail?.id) return;
+      setNotifications((prev) => prev.filter((n) => n.id !== detail.id));
+    }
+    window.addEventListener("notification-removed", onRemoved as EventListener);
+    return () => window.removeEventListener("notification-removed", onRemoved as EventListener);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -204,6 +233,7 @@ export function NotificationBell({ className }: { className?: string }) {
       respondingId={respondingId}
       onRespond={respond}
       scrollAreaClassName={scrollAreaClassName}
+      onClearRead={clearRead}
     />
   );
 
@@ -259,6 +289,7 @@ type NotificationContentProps = {
   respondingId: string | null;
   onRespond: (notificationId: string, response: AttendanceResponse) => void;
   scrollAreaClassName?: string;
+  onClearRead: () => void;
 };
 
 function NotificationContent({
@@ -267,12 +298,20 @@ function NotificationContent({
   respondingId,
   onRespond,
   scrollAreaClassName,
+  onClearRead,
 }: NotificationContentProps) {
   return (
     <div className="space-y-3 text-sm">
       <header className="flex items-center justify-between text-xs text-muted-foreground" aria-live="polite">
         <span>Benachrichtigungen</span>
-        {loading && <span>Aktualisiere…</span>}
+        <span className="flex items-center gap-2">
+          {loading && <span>Aktualisiere…</span>}
+          {!loading && notifications.some((n) => n.readAt) && (
+            <Button type="button" size="sm" variant="outline" onClick={onClearRead}>
+              Gelesene löschen
+            </Button>
+          )}
+        </span>
       </header>
       {notifications.length === 0 ? (
         <p className="text-xs text-muted-foreground">Keine Benachrichtigungen vorhanden.</p>
@@ -317,13 +356,31 @@ function NotificationEntry({ item, respondingId, onRespond }: NotificationEntryP
   const hasResponse = item.attendanceStatus === "yes" || item.attendanceStatus === "no";
   const startDate = item.rehearsal ? new Date(item.rehearsal.start) : null;
   const createdAt = new Date(item.createdAt);
+  const isUpdate = (item.type ?? "") === "rehearsal-update";
+  // Hervorhebung nur solange die Aktualisierung noch ungelesen ist
+  const highlight = isUpdate && hasResponse && !item.readAt;
+  const canRemoveSingle = Boolean(item.readAt);
 
   return (
-    <li className="rounded-lg border border-border/40 bg-background/85 p-3 shadow-sm">
+    <li
+      className={cn(
+        "rounded-lg border p-3 shadow-sm",
+        highlight
+          ? "border-primary/60 bg-primary/10 shadow-[0_0_0_1px_rgba(129,140,248,0.25)]"
+          : "border-border/40 bg-background/85",
+      )}
+    >
       <article className="space-y-3">
         <header className="flex items-start justify-between gap-2">
           <div className="min-w-0 space-y-1">
-            <h3 className="text-sm font-medium text-foreground break-words">{item.title}</h3>
+            <h3 className="text-sm font-medium text-foreground break-words flex items-center gap-2">
+              <span>{item.title}</span>
+              {highlight && (
+                <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[0.7rem] font-medium text-primary">
+                  Aktualisiert
+                </span>
+              )}
+            </h3>
             {item.body && (
               <p className="text-xs text-muted-foreground leading-snug break-words">{item.body}</p>
             )}
@@ -338,19 +395,45 @@ function NotificationEntry({ item, respondingId, onRespond }: NotificationEntryP
               )}
             </div>
           </div>
-          {hasResponse && (
-            <span
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.7rem] font-medium",
-                item.attendanceStatus === "yes"
-                  ? "bg-emerald-500/20 text-emerald-200"
-                  : "bg-rose-500/20 text-rose-200",
-              )}
-            >
-              {item.attendanceStatus === "yes" ? <Check size={12} /> : <X size={12} />}
-              {item.attendanceStatus === "yes" ? "Zusage" : "Absage"}
-            </span>
-          )}
+          <div className="flex shrink-0 items-start gap-2">
+            {hasResponse && (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.7rem] font-medium",
+                  item.attendanceStatus === "yes"
+                    ? "bg-emerald-500/20 text-emerald-200"
+                    : "bg-rose-500/20 text-rose-200",
+                )}
+              >
+                {item.attendanceStatus === "yes" ? <Check size={12} /> : <X size={12} />}
+                {item.attendanceStatus === "yes" ? "Zusage" : "Absage"}
+              </span>
+            )}
+            {canRemoveSingle && (
+              <button
+                type="button"
+                className="rounded-md border border-border/40 px-2 py-1 text-[0.7rem] text-muted-foreground hover:bg-accent/30"
+                onClick={async () => {
+                  try {
+                    await fetch("/api/notifications/cleanup", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "delete_ids", ids: [item.id] }),
+                    });
+                    // remove locally
+                    const li = document.querySelector(`[data-notification-id=\"${item.id}\"]`);
+                    // fall back to state update via custom event
+                    const ev = new CustomEvent("notification-removed", { detail: { id: item.id } });
+                    window.dispatchEvent(ev);
+                  } catch (e) {
+                    toast.error("Benachrichtigung konnte nicht entfernt werden");
+                  }
+                }}
+              >
+                Entfernen
+              </button>
+            )}
+          </div>
         </header>
 
         {!hasResponse && item.rehearsal ? (
