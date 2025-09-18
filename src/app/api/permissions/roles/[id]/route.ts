@@ -47,7 +47,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
   try {
     await prisma.appRole.delete({ where: { id } });
     return NextResponse.json({ ok: true });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
   }
 }

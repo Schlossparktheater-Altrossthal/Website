@@ -3,9 +3,12 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { CreateRehearsalButton } from "./create-rehearsal-button";
+import {
+  RehearsalCalendar,
+  type CalendarBlockedDay,
+  type CalendarRehearsal,
+} from "./rehearsal-calendar";
 import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
-import { format } from "date-fns";
-import { de } from "date-fns/locale/de";
 export default async function ProbenplanungPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
@@ -13,26 +16,63 @@ export default async function ProbenplanungPage() {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Probenplanung</div>;
   }
 
-  const rehearsals = await prisma.rehearsal.findMany({
-    orderBy: { start: "asc" },
-    include: {
-      attendance: {
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-        },
-      },
-      notifications: {
-        include: {
-          recipients: {
-            include: {
-              user: { select: { id: true, name: true, email: true } },
-            },
+  const [rehearsals, blockedDays, memberCount] = await Promise.all([
+    prisma.rehearsal.findMany({
+      orderBy: { start: "asc" },
+      include: {
+        attendance: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
           },
         },
-        orderBy: { createdAt: "desc" },
-        take: 1,
+        notifications: {
+          include: {
+            recipients: {
+              include: {
+                user: { select: { id: true, name: true, email: true } },
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
-    },
+    }),
+    prisma.blockedDay.findMany({
+      orderBy: { date: "asc" },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+    }),
+    prisma.user.count(),
+  ]);
+
+  const calendarBlockedDays: CalendarBlockedDay[] = blockedDays.map((entry) => {
+    const iso = entry.date.toISOString();
+    return {
+      id: entry.id,
+      date: iso,
+      dateKey: iso.slice(0, 10),
+      reason: entry.reason,
+      user: {
+        id: entry.user.id,
+        name: entry.user.name,
+        email: entry.user.email,
+      },
+    };
+  });
+
+  const calendarRehearsals: CalendarRehearsal[] = rehearsals.map((r) => {
+    const startIso = r.start.toISOString();
+    const endIso = r.end ? r.end.toISOString() : null;
+    return {
+      id: r.id,
+      title: r.title,
+      start: startIso,
+      end: endIso,
+      dateKey: startIso.slice(0, 10),
+      location: r.location,
+    };
   });
 
   const total = rehearsals.length;
@@ -63,6 +103,12 @@ export default async function ProbenplanungPage() {
         </div>
       </div>
 
+      <RehearsalCalendar
+        blockedDays={calendarBlockedDays}
+        rehearsals={calendarRehearsals}
+        memberCount={memberCount}
+      />
+
       {rehearsals.length ? (
         <RehearsalList
           initial={rehearsals.map((r) => ({
@@ -70,8 +116,17 @@ export default async function ProbenplanungPage() {
             title: r.title,
             start: r.start.toISOString(),
             location: r.location,
-            attendance: r.attendance.map((a) => ({ status: a.status, user: a.user })),
-            notifications: r.notifications.map((n) => ({ recipients: n.recipients.map((x) => ({ user: x.user })) })),
+            attendance: r.attendance.map((a) => ({
+              status: a.status,
+              userId: a.userId,
+              user: a.user,
+            })),
+            notifications: r.notifications.map((n) => ({
+              recipients: n.recipients.map((x) => ({
+                userId: x.userId,
+                user: x.user,
+              })),
+            })),
           })) as RehearsalLite[]}
         />
       ) : (

@@ -111,15 +111,15 @@ export function PermissionMatrix() {
       body: JSON.stringify({ name }),
     });
     if (res.ok) {
-      const data = await res.json().catch(() => ({}));
-      const updated = data?.role as Role | undefined;
+      const data = (await res.json().catch(() => ({}))) as { role?: Role };
+      const updated = data?.role;
       if (updated) {
         setRoles((prev) => prev.map((r) => (r.id === updated.id ? { ...r, name: updated.name } : r)));
       }
       closeEdit();
     } else {
-      const payload = await res.json().catch(() => ({} as any));
-      setEditError(payload?.error || "Aktualisierung fehlgeschlagen");
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      setEditError(payload?.error ?? "Aktualisierung fehlgeschlagen");
     }
     setSaving(false);
   };
@@ -139,8 +139,8 @@ export function PermissionMatrix() {
       });
       closeEdit();
     } else {
-      const payload = await res.json().catch(() => ({} as any));
-      setEditError(payload?.error || "Löschen fehlgeschlagen");
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      setEditError(payload?.error ?? "Löschen fehlgeschlagen");
     }
     setDeleting(false);
   };
