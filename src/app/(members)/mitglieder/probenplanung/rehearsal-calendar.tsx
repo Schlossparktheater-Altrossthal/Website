@@ -20,6 +20,7 @@ import {
 } from "@/components/calendar/month-calendar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 
 import { CreateRehearsalDialog } from "./create-rehearsal-button";
@@ -104,6 +105,7 @@ export function RehearsalCalendar({
     date: string;
     time: string;
   } | null>(null);
+  const [planOpen, setPlanOpen] = useState(false);
 
   const blockedByDay = useMemo(() => {
     const map = new Map<string, CalendarBlockedDay[]>();
@@ -188,6 +190,7 @@ export function RehearsalCalendar({
     if (monthStart.getTime() !== currentMonth.getTime()) {
       setCurrentMonth(monthStart);
     }
+    setPlanOpen(true);
   };
 
   const openCreateForDay = (
@@ -256,7 +259,108 @@ export function RehearsalCalendar({
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
+      {/* Planungs-Modal: Tagesplan + Blockierte Mitglieder zum ausgewählten Tag */}
+      <Modal
+        open={planOpen && !!selectedDate}
+        onClose={() => setPlanOpen(false)}
+        title={
+          selectedDate
+            ? format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })
+            : "Tagesplan"
+        }
+        description={selectedSummary ?? undefined}
+      >
+        <div className="space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex w-full flex-col gap-3 sm:max-w-sm">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Verfügbarkeit</span>
+                <span>{selectedBlockedLabel}</span>
+              </div>
+              <div className="relative h-3 overflow-hidden rounded-full bg-muted">
+                <span
+                  className={cn(
+                    "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
+                    selectedBlockedRatio >= 0.5
+                      ? "bg-destructive/80"
+                      : selectedBlockedRatio >= 0.25
+                      ? "bg-amber-400"
+                      : "bg-primary/70"
+                  )}
+                  style={{ width: `${selectedBlockedPercent}%` }}
+                  aria-hidden
+                />
+              </div>
+            </div>
+            <Button
+              onClick={handlePlanRehearsalForSelectedDay}
+              disabled={!selectedDayKey}
+              className="w-full sm:w-auto px-5 py-2.5"
+            >
+              Probe am ausgewählten Tag planen
+            </Button>
+          </div>
+
+          <section className="space-y-3">
+            <h4 className="text-sm font-semibold">Geplante Proben</h4>
+            {selectedDayRehearsals.length ? (
+              <ul className="space-y-3">
+                {selectedDayRehearsals.map((entry) => {
+                  const startDate = parseISO(entry.start);
+                  const endDate = entry.end ? parseISO(entry.end) : null;
+                  const startLabel = fmtTime(startDate);
+                  const endLabel = endDate ? fmtTime(endDate) : null;
+                  const timeChip = endLabel
+                    ? `${startLabel} – ${endLabel}`
+                    : `Start ${startLabel}`;
+                  return (
+                    <li key={entry.id} className="rounded-2xl border border-border/60 bg-background/90 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <h5 className="text-sm font-semibold text-foreground">{entry.title}</h5>
+                        {entry.location ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                            {entry.location}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                        {timeChip}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">Für diesen Tag sind noch keine Proben geplant.</p>
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-sm font-semibold">Blockierte Mitglieder</h4>
+            {selectedDayBlocked.length ? (
+              <ul className="space-y-2">
+                {selectedDayBlocked.map((entry) => {
+                  const displayName = entry.user.name ?? entry.user.email ?? "Mitglied";
+                  return (
+                    <li key={entry.id} className="rounded-2xl border border-border/60 bg-card/70 px-3 py-2">
+                      <div className="text-sm font-medium text-foreground">{displayName}</div>
+                      {entry.reason ? (
+                        <p className="text-xs text-muted-foreground">{entry.reason}</p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">Es sind keine Sperrungen eingetragen.</p>
+            )}
+          </section>
+        </div>
+      </Modal>
+
+      <div className="space-y-8">
+        {false && (
         <div className="order-2 space-y-8 lg:order-1">
           <div className="rounded-3xl border border-border/60 bg-card/90 p-6 shadow-sm">
             <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
@@ -413,6 +517,7 @@ export function RehearsalCalendar({
             )}
           </div>
         </div>
+        )}
 
         <div className="order-1 space-y-8 lg:order-2">
           <MonthCalendar
