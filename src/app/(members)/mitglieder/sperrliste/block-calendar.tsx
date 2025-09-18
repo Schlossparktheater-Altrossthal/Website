@@ -312,6 +312,80 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     ]
   );
 
+  // Bulk handlers must be defined before JSX references
+  const handleBulkCreate = async () => {
+    const keysToCreate = selectedKeys.filter((key) => !blockedByDate.has(key));
+    if (keysToCreate.length === 0) return;
+
+    const trimmed = bulkReason.trim();
+    setBulkSubmitting(true);
+    setBulkError(null);
+
+    try {
+      const response = await fetch("/api/block-days/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dates: keysToCreate, reason: trimmed || undefined }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? "Speichern fehlgeschlagen");
+      }
+      const payload = (await response.json()) as { created?: BlockedDay[] };
+      const created = Array.isArray(payload.created) ? payload.created : [];
+      if (created.length > 0) {
+        setBlockedDays((prev) => {
+          const next = [...prev, ...created];
+          next.sort((a, b) => a.date.localeCompare(b.date));
+          return next;
+        });
+        markRecent(created.map((c) => c.date), "added");
+      }
+      toast.success(
+        created.length > 1 ? `${created.length} Sperrtermine eingetragen.` : "Sperrtermin eingetragen.",
+      );
+      clearSelection();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
+
+  const handleBulkRemove = async () => {
+    const entriesToRemove = selectedKeys
+      .map((key) => blockedByDate.get(key))
+      .filter((entry): entry is BlockedDay => Boolean(entry));
+
+    if (entriesToRemove.length === 0) return;
+
+    setBulkSubmitting(true);
+    setBulkError(null);
+
+    try {
+      const response = await fetch("/api/block-days/bulk", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dates: entriesToRemove.map((e) => e.date) }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? "Löschen fehlgeschlagen");
+      }
+      const { deleted } = (await response.json()) as { deleted?: number };
+      if ((deleted ?? 0) > 0) {
+        setBlockedDays((prev) => prev.filter((entry) => !entriesToRemove.some((e) => e.id === entry.id)));
+        markRecent(entriesToRemove.map((e) => e.date), "removed");
+      }
+      toast.success((deleted ?? 0) > 1 ? `${deleted} Sperrtermine entfernt.` : "Sperrtermin entfernt.");
+      clearSelection();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
+
   const selectionPanel = selectionMode ? (
     <div className="space-y-3 rounded-lg border border-dashed bg-muted/30 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -511,82 +585,6 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     }
   };
 
-  const handleBulkCreate = async () => {
-    const keysToCreate = selectedKeys.filter((key) => !blockedByDate.has(key));
-    if (keysToCreate.length === 0) return;
-
-    const trimmed = bulkReason.trim();
-    setBulkSubmitting(true);
-    setBulkError(null);
-
-    try {
-      const response = await fetch("/api/block-days/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dates: keysToCreate, reason: trimmed || undefined }),
-      });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error ?? "Speichern fehlgeschlagen");
-      }
-      const payload = (await response.json()) as { created?: BlockedDay[] };
-      const created = Array.isArray(payload.created) ? payload.created : [];
-      if (created.length > 0) {
-        setBlockedDays((prev) => {
-          const next = [...prev, ...created];
-          next.sort((a, b) => a.date.localeCompare(b.date));
-          return next;
-        });
-        markRecent(created.map((c) => c.date), "added");
-      }
-      toast.success(
-        created.length > 1
-          ? `${created.length} Sperrtermine eingetragen.`
-          : "Sperrtermin eingetragen."
-      );
-      clearSelection();
-    } catch (err) {
-      setBulkError(err instanceof Error ? err.message : "Unbekannter Fehler");
-    } finally {
-      setBulkSubmitting(false);
-    }
-  };
-
-  const handleBulkRemove = async () => {
-    const entriesToRemove = selectedKeys
-      .map((key) => blockedByDate.get(key))
-      .filter((entry): entry is BlockedDay => Boolean(entry));
-
-    if (entriesToRemove.length === 0) return;
-
-    setBulkSubmitting(true);
-    setBulkError(null);
-
-    try {
-      const response = await fetch("/api/block-days/bulk", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dates: entriesToRemove.map((e) => e.date) }),
-      });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error ?? "Löschen fehlgeschlagen");
-      }
-      const { deleted } = (await response.json()) as { deleted?: number };
-      if ((deleted ?? 0) > 0) {
-        setBlockedDays((prev) => prev.filter((entry) => !entriesToRemove.some((e) => e.id === entry.id)));
-        markRecent(entriesToRemove.map((e) => e.date), "removed");
-      }
-      toast.success(
-        (deleted ?? 0) > 1 ? `${deleted} Sperrtermine entfernt.` : "Sperrtermin entfernt."
-      );
-      clearSelection();
-    } catch (err) {
-      setBulkError(err instanceof Error ? err.message : "Unbekannter Fehler");
-    } finally {
-      setBulkSubmitting(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
