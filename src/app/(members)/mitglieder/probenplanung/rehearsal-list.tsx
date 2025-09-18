@@ -7,8 +7,8 @@ import { de } from "date-fns/locale/de";
 import { Button } from "@/components/ui/button";
 
 type UserLite = { id: string; name: string | null; email: string | null };
-type AttendanceLite = { status: string; user: UserLite };
-type RecipientLite = { user: UserLite };
+type AttendanceLite = { status: string; userId: string; user: UserLite };
+type RecipientLite = { userId: string; user: UserLite };
 type NotificationLite = { recipients: RecipientLite[] };
 
 export type RehearsalLite = {
@@ -100,10 +100,7 @@ export function RehearsalList({ initial }: { initial: RehearsalLite[] }) {
               {list.map((r) => (
                 <RehearsalCardWithActions
                   key={`${r.id}-${resetKey}`}
-                  rehearsal={{
-                    ...r,
-                    start: new Date(r.start) as any,
-                  } as any}
+                  rehearsal={r}
                   forceOpen={expandAll}
                 />
               ))}
