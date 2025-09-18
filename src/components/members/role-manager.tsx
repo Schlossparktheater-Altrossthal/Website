@@ -20,6 +20,8 @@ export function RoleManager({
   canEditOwner = false,
   availableCustomRoles = [],
   initialCustomRoleIds = [],
+  onSaved,
+  onUserUpdated,
 }: {
   userId: string;
   email?: string | null;
@@ -28,6 +30,8 @@ export function RoleManager({
   canEditOwner?: boolean;
   availableCustomRoles?: { id: string; name: string }[];
   initialCustomRoleIds?: string[];
+  onSaved?: (payload: { roles: Role[]; customRoleIds: string[] }) => void;
+  onUserUpdated?: (payload: { email?: string | null; name?: string | null }) => void;
 }) {
   const initialSorted = useMemo(() => sortRoles(initialRoles), [initialRoles]);
   const [selected, setSelected] = useState<Role[]>(initialSorted);
@@ -100,6 +104,7 @@ export function RoleManager({
         : selectedCustomIds;
       setSelectedCustomIds(updatedCustom);
       setSavedCustomIds(updatedCustom);
+      onSaved?.({ roles: updatedRoles, customRoleIds: updatedCustom });
       toast.success("Rollen aktualisiert");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unbekannter Fehler";
@@ -237,6 +242,7 @@ export function RoleManager({
         onUpdated={(updated) => {
           setCurrentEmail(updated.email ?? "");
           setCurrentName(updated.name ?? "");
+          onUserUpdated?.({ email: updated.email, name: updated.name });
         }}
       />
     </Card>

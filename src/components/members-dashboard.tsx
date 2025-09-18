@@ -292,7 +292,7 @@ export function MembersDashboard() {
                 const links = [
                   { href: "/mitglieder/profil", label: "Profil öffnen" },
                   { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech", "owner"] },
-                  { href: "/mitglieder/rollenverwaltung", label: "Rollenverwaltung", roles: ["admin", "owner"] },
+                  { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", roles: ["admin", "owner"] },
                   { href: "/mitglieder/rechte", label: "Rechteverwaltung", roles: ["admin", "owner"] },
                 ].filter((l: { href: string; label: string; roles?: string[] }) => !l.roles || l.roles.some((r) => roleSet.has(r)));
                 return links.map((l) => (

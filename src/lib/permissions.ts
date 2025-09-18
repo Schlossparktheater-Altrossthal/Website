@@ -8,7 +8,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen" },
   { key: "mitglieder.profil", label: "Profilbereich aufrufen" },
   { key: "mitglieder.probenplanung", label: "Probenplanung verwalten" },
-  { key: "mitglieder.rollenverwaltung", label: "Rollenverwaltung öffnen" },
+  { key: "mitglieder.rollenverwaltung", label: "Mitgliederverwaltung öffnen" },
   { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen" },
   { key: "mitglieder.sperrliste", label: "Sperrliste pflegen" },
 ];

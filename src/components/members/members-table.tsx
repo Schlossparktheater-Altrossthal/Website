@@ -1,0 +1,127 @@
+"use client";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
+import { RoleManager } from "@/components/members/role-manager";
+
+export type MembersTableUser = {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  roles: Role[];
+  customRoles: { id: string; name: string }[];
+};
+
+export function MembersTable({
+  users,
+  canEditOwner,
+  availableCustomRoles,
+}: {
+  users: MembersTableUser[];
+  canEditOwner: boolean;
+  availableCustomRoles: { id: string; name: string }[];
+}) {
+  const [openFor, setOpenFor] = useState<string | null>(null);
+  const [rows, setRows] = useState<MembersTableUser[]>(users);
+
+  // keep local rows in sync when server re-fetches
+  React.useEffect(() => {
+    setRows(users);
+  }, [users]);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b bg-muted/30 text-left">
+            <th className="px-3 py-2 font-medium">Name</th>
+            <th className="px-3 py-2 font-medium">E-Mail</th>
+            <th className="px-3 py-2 font-medium">Rollen</th>
+            <th className="px-3 py-2 font-medium">Zusätzliche Rollen</th>
+            <th className="px-3 py-2 font-medium text-right">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((u) => {
+            const sorted = sortRoles(u.roles);
+            return (
+              <tr key={u.id} className="border-b hover:bg-accent/10">
+                <td className="px-3 py-2 whitespace-nowrap">{u.name || "—"}</td>
+                <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{u.email || "—"}</td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-wrap gap-1">
+                    {sorted.map((r) => (
+                      <span key={r} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[r]}`}>
+                        {ROLE_LABELS[r] ?? r}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-3 py-2">
+                  {u.customRoles.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {u.customRoles.map((cr) => (
+                        <Badge key={cr.id} variant="secondary">{cr.name}</Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setOpenFor(u.id)}>
+                    Bearbeiten
+                  </Button>
+                  <Modal
+                    open={openFor === u.id}
+                    title={u.name || u.email || "Mitglied"}
+                    description="Rollen und Daten bearbeiten"
+                    onClose={() => setOpenFor(null)}
+                  >
+                    <RoleManager
+                      userId={u.id}
+                      email={u.email}
+                      name={u.name}
+                      initialRoles={u.roles}
+                      canEditOwner={canEditOwner}
+                      availableCustomRoles={availableCustomRoles}
+                      initialCustomRoleIds={u.customRoles.map((r) => r.id)}
+                      onSaved={({ roles, customRoleIds }) => {
+                        setRows((prev) =>
+                          prev.map((row) =>
+                            row.id === u.id
+                              ? {
+                                  ...row,
+                                  roles,
+                                  customRoles: availableCustomRoles.filter((cr) => customRoleIds.includes(cr.id)),
+                                }
+                              : row,
+                          ),
+                        );
+                      }}
+                      onUserUpdated={({ email, name }) => {
+                        setRows((prev) =>
+                          prev.map((row) =>
+                            row.id === u.id
+                              ? {
+                                  ...row,
+                                  email: email ?? row.email,
+                                  name: name ?? row.name,
+                                }
+                              : row,
+                          ),
+                        );
+                      }}
+                    />
+                  </Modal>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
