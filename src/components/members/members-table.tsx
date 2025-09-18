@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -27,7 +27,7 @@ export function MembersTable({
   const [rows, setRows] = useState<MembersTableUser[]>(users);
 
   // keep local rows in sync when server re-fetches
-  React.useEffect(() => {
+  useEffect(() => {
     setRows(users);
   }, [users]);
 

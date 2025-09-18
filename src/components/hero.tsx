@@ -19,7 +19,7 @@ export function Hero({ images }: { images: string[] }) {
     <section className="relative w-full h-screen min-h-[100dvh] sm:min-h-[90vh] lg:min-h-[100vh] overflow-hidden -mt-16 sm:-mt-20">
       {/* Full-screen background images */}
       <div 
-        className="absolute inset-0 w-full h-full hero-bg"
+        className="absolute inset-0 w-full h-full hero-bg z-0 pointer-events-none"
         style={{
           transform: `translateY(${scrollY * 0.5}px) scale(${1 + scrollY * 0.0005})`,
           filter: `blur(${Math.min(scrollY * 0.02, 8)}px)`,
@@ -29,12 +29,12 @@ export function Hero({ images }: { images: string[] }) {
       </div>
       
       {/* Lighter overlays for better image visibility */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-b from-transparent via-transparent to-background/80 pointer-events-none" />
       
       {/* Subtle mystical color overlays */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60rem_30rem_at_30%_70%,_color-mix(in_oklab,var(--primary)_8%,transparent),transparent_80%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_40rem_20rem_at_70%_30%,_color-mix(in_oklab,var(--primary)_12%,transparent),transparent_75%)] mix-blend-screen opacity-40" />
+      <div className="absolute inset-0 z-10 bg-[radial-gradient(ellipse_60rem_30rem_at_30%_70%,_color-mix(in_oklab,var(--primary)_8%,transparent),transparent_80%)] pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-[radial-gradient(ellipse_40rem_20rem_at_70%_30%,_color-mix(in_oklab,var(--primary)_12%,transparent),transparent_75%)] mix-blend-screen opacity-40 pointer-events-none" />
       
       {/* Content container */}
       <div 
@@ -62,12 +62,12 @@ export function Hero({ images }: { images: string[] }) {
                 Ein Sommer. Ein Wochenende. Ein einziges Stück – verborgen zwischen Licht und Laub.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2 sm:pt-4 px-4 sm:px-0">
+              <div className="relative z-[200] isolate pointer-events-auto flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2 sm:pt-4 px-4 sm:px-0">
                 <Button asChild size="lg" className="text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-primary hover:bg-primary/90 shadow-xl">
-                  <Link href="/mystery">Das Geheimnis entdecken</Link>
+                  <Link className="pointer-events-auto" href="/mystery">Das Geheimnis entdecken</Link>
                 </Button>
                 <Button variant="outline" asChild size="lg" className="text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 border-white/30 text-white hover:bg-white/10 hover:border-white/50 shadow-xl backdrop-blur-sm">
-                  <Link href="/chronik">Chronik</Link>
+                  <Link className="pointer-events-auto" href="/chronik">Chronik</Link>
                 </Button>
               </div>
             </div>

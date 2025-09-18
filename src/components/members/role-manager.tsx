@@ -11,6 +11,7 @@ import {
 } from "@/lib/roles";
 import { toast } from "sonner";
 import { UserEditModal } from "@/components/members/user-edit-modal";
+import { RolePicker } from "@/components/members/role-picker";
 
 export function RoleManager({
   userId,
@@ -152,31 +153,19 @@ export function RoleManager({
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {ROLES.map((role) => {
-          const active = selected.includes(role);
-          const disabled = role === "owner" && !canEditOwner;
-          return (
-            <label
-              key={role}
-              className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
-                active
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:bg-accent/30"
-              }`}
-            >
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
-                checked={active}
-                onChange={() => toggleRole(role)}
-                disabled={disabled}
-              />
-              <span>{ROLE_LABELS[role] ?? role}</span>
-            </label>
-          );
-        })}
-      </div>
+      <RolePicker
+        value={selected}
+        canEditOwner={canEditOwner}
+        onChange={(next) => {
+          // prevent empty selection and enforce owner guard
+          const nextSet = new Set<Role>(next);
+          if (!canEditOwner) nextSet.delete("owner");
+          if (nextSet.size === 0) return; // keep at least one role
+          const arr = sortRoles(Array.from(nextSet));
+          setSelected(arr);
+          setError(null);
+        }}
+      />
 
       {availableCustomRoles.length > 0 && (
         <div className="space-y-2">
