@@ -1,14 +1,11 @@
 "use client";
-
-"use client";
-import * as React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { MoreVerticalIcon } from "./icons";
 
 interface DropdownMenuItem {
   label: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   onClick: () => void;
   variant?: "default" | "destructive";
 }
@@ -59,11 +56,11 @@ export function DropdownMenu({ items, align = "right", className = "" }: Dropdow
       setCoords({ top, left });
     };
     update();
-    const opts: AddEventListenerOptions = { passive: true, capture: true } as any;
+    const opts: AddEventListenerOptions = { passive: true, capture: true };
     window.addEventListener("scroll", update, opts);
     window.addEventListener("resize", update);
     return () => {
-      window.removeEventListener("scroll", update, opts as any);
+      window.removeEventListener("scroll", update, opts);
       window.removeEventListener("resize", update);
     };
   }, [isOpen, align]);
