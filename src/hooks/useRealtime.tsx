@@ -19,7 +19,8 @@ import type {
   UserPresenceEvent,
 } from '@/lib/realtime/types';
 
-const MAX_RECONNECT_ATTEMPTS = 5;
+// Allow essentially unlimited reconnects; avoid noisy hard-fail in production
+const MAX_RECONNECT_ATTEMPTS: number = Number.POSITIVE_INFINITY;
 const PING_INTERVAL_MS = 30_000;
 const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL;
 const REALTIME_PATH = process.env.NEXT_PUBLIC_REALTIME_PATH || '/socket.io';
@@ -82,6 +83,23 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       socketRef.current.disconnect();
     }
 
+    // Resolve realtime URL; fall back to current host if env points to localhost and user is remote
+    const resolveRealtimeUrl = (): string | undefined => {
+      if (typeof window === 'undefined') return REALTIME_URL;
+      if (!REALTIME_URL) return undefined;
+      try {
+        const url = new URL(REALTIME_URL);
+        const hostIsLocal = ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
+        const browserHostIsLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+        if (hostIsLocal && !browserHostIsLocal) {
+          return `${window.location.protocol}//${window.location.hostname}:${url.port || '4001'}`;
+        }
+        return REALTIME_URL;
+      } catch {
+        return REALTIME_URL;
+      }
+    };
+
     const options = {
       path: REALTIME_PATH,
       transports: ['websocket', 'polling'] as const,
@@ -96,8 +114,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       },
     };
 
-    const instance: SocketInstance = REALTIME_URL
-      ? io(REALTIME_URL, options)
+    const target = resolveRealtimeUrl();
+    const instance: SocketInstance = target
+      ? io(target, options)
       : io(options);
 
     socketRef.current = instance;
@@ -124,14 +143,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     });
 
     instance.on('connect_error', (error: Error) => {
-      console.error('Socket.IO connection error:', error);
+      console.warn('Socket.IO connection error:', error?.message || error);
       setConnectionStatus('error');
       reconnectAttempts.current += 1;
-
-      if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
-        console.error('Max reconnection attempts reached');
-        instance.disconnect();
-      }
+      // With infinite attempts configured, let socket.io keep trying with backoff
     });
 
     instance.on('pong', () => {

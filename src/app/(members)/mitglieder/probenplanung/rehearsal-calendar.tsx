@@ -247,7 +247,7 @@ export function RehearsalCalendar({
 
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-8">
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Kalenderübersicht</h2>
         <p className="text-sm text-muted-foreground">
@@ -256,10 +256,10 @@ export function RehearsalCalendar({
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,3.5fr)_minmax(0,2.5fr)] xl:items-start">
-        <div className="order-2 space-y-6 xl:order-1">
-          <div className="rounded-3xl border border-border/60 bg-card/90 p-5 shadow-sm">
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
+        <div className="order-2 space-y-8 lg:order-1">
+          <div className="rounded-3xl border border-border/60 bg-card/90 p-6 shadow-sm">
+            <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1.5">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Tagesplan
@@ -292,14 +292,13 @@ export function RehearsalCalendar({
               </div>
             </header>
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex w-full flex-col gap-2 sm:max-w-xs">
+            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex w-full flex-col gap-3 sm:max-w-sm">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Verfügbarkeit</span>
                   <span>{selectedBlockedLabel}</span>
                 </div>
-<<<<<<< HEAD
-                <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                <div className="relative h-3 overflow-hidden rounded-full bg-muted">
                   <span
                     className={cn(
                       "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
@@ -317,15 +316,15 @@ export function RehearsalCalendar({
               <Button
                 onClick={handlePlanRehearsalForSelectedDay}
                 disabled={!selectedDayKey}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto px-5 py-2.5"
               >
                 Probe am ausgewählten Tag planen
               </Button>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-7">
               {selectedDayRehearsals.length ? (
-                <ul className="space-y-6 border-l border-border/60 pl-6">
+                <ul className="space-y-7 border-l border-border/60 pl-8">
                   {selectedDayRehearsals.map((entry) => {
                     const startDate = parseISO(entry.start);
                     const endDate = entry.end ? parseISO(entry.end) : null;
@@ -346,53 +345,9 @@ export function RehearsalCalendar({
                         <time className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {startLabel}
                         </time>
-                        <article className="rounded-2xl border border-border/60 bg-background/90 p-4 shadow-sm">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
+                        <article className="rounded-2xl border border-border/60 bg-background/90 p-5 shadow-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
                             <h4 className="text-sm font-semibold text-foreground">{entry.title}</h4>
-=======
-                <div className="flex flex-col gap-1 sm:hidden">
-                  {dayRehearsals.length ? (
-                    <ul className="flex flex-col gap-1">
-                      {mobileRehearsals.map((entry) => {
-                        const startDate = parseISO(entry.start);
-                        const endDate = entry.end ? parseISO(entry.end) : null;
-                        const timeLabel = endDate ? `${fmtTime(startDate)} – ${fmtTime(endDate)}` : fmtTime(startDate);
-                        return (
-                          <li
-                            key={entry.id}
-                            className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1"
-                          >
-                            <span className="text-[10px] font-semibold text-primary">{timeLabel}</span>
-                            <span className="flex-1 truncate text-[10px] font-medium text-foreground">
-                              {entry.title}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <span className="text-[11px] text-muted-foreground">Keine Probe geplant</span>
-                  )}
-                  {remainingCount > 0 ? (
-                    <span className="text-[11px] text-muted-foreground">
-                      +{remainingCount} weitere {remainingCount === 1 ? "Probe" : "Proben"}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="hidden flex-col gap-1 sm:flex">
-                  {dayRehearsals.length ? (
-                    dayRehearsals.map((entry) => {
-                      const startDate = parseISO(entry.start);
-                      const endDate = entry.end ? parseISO(entry.end) : null;
-                      const timeLabel = endDate ? `${fmtTime(startDate)} – ${fmtTime(endDate)}` : fmtTime(startDate);
-                      return (
-                        <div
-                          key={entry.id}
-                          className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1.5"
-                        >
-                          <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-primary">
-                            <span>{timeLabel}</span>
->>>>>>> b017292 (Notifications: cleanup API + UI actions; highlight update unread when responded; fix clearRead wiring\nCalendar: fix hydration by forcing Europe/Berlin timezone for time formatting)
                             {entry.location ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
                                 <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
@@ -400,7 +355,7 @@ export function RehearsalCalendar({
                               </span>
                             ) : null}
                           </div>
-                          <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
                             {timeChip}
                           </div>
                         </article>
@@ -409,7 +364,7 @@ export function RehearsalCalendar({
                   })}
                 </ul>
               ) : (
-                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-5 text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-6 text-sm text-muted-foreground">
                   Für diesen Tag sind noch keine Proben geplant. Nutze die Schaltfläche oben, um eine Probe anzulegen.
                   {selectedIsWeekend
                     ? " Wochenenden sind besonders beliebt – sichere dir frühzeitig einen Slot."
@@ -459,19 +414,19 @@ export function RehearsalCalendar({
           </div>
         </div>
 
-        <div className="order-1 space-y-6 xl:order-2">
+        <div className="order-1 space-y-8 lg:order-2">
           <MonthCalendar
             month={currentMonth}
             onMonthChange={setCurrentMonth}
             title="Monatsansicht"
             subtitle="Split-Ansicht mit Wochenendfokus"
-            className="rounded-3xl border border-border/60 bg-card/80 shadow-sm"
+            className="rounded-3xl border border-border/60 bg-card/80 p-2 shadow-sm sm:p-3"
             headerActions={
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handlePlanNextWeekend}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto px-4"
               >
                 Probe fürs Wochenende planen
               </Button>
@@ -541,8 +496,8 @@ export function RehearsalCalendar({
                 "aria-label": ariaLabelParts.join(". "),
                 "aria-pressed": isSelected,
                 content: (
-                  <div className="flex h-full flex-col justify-between gap-2 text-[11px] sm:text-xs">
-                    <div className="flex items-start justify-between gap-2">
+                  <div className="flex h-full flex-col justify-between gap-2.5 text-[11px] sm:text-xs">
+                    <div className="flex items-start justify-between gap-2.5">
                       <div className="space-y-0.5">
                         <p className="font-semibold leading-tight text-foreground">
                           {rehearsalSummary}
@@ -558,7 +513,7 @@ export function RehearsalCalendar({
                       ) : null}
                     </div>
                     {dayRehearsals.length ? (
-                      <ul className="space-y-1">
+                      <ul className="space-y-1.5">
                         {displayedRehearsals.map((entry) => {
                           const startDate = parseISO(entry.start);
                           const endDate = entry.end
@@ -568,14 +523,11 @@ export function RehearsalCalendar({
                             ? `${fmtTime(startDate)} – ${fmtTime(endDate)}`
                             : fmtTime(startDate);
                           return (
-                            <li
-                              key={entry.id}
-                              className="flex items-center gap-1"
-                            >
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            <li key={entry.id} className="flex items-center gap-1.5">
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-primary">
                                 {timeLabel}
                               </span>
-                              <span className="truncate text-[10px] text-muted-foreground">
+                              <span className="truncate text-[10px] leading-snug text-muted-foreground">
                                 {entry.title}
                               </span>
                             </li>
@@ -592,7 +544,7 @@ export function RehearsalCalendar({
                         Keine Proben geplant
                       </span>
                     )}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                         <span
                           className={cn(
@@ -650,7 +602,7 @@ export function RehearsalCalendar({
                   Freitag bis Sonntag immer im Blick. Tippe auf eine Karte, um den Tagesplan links zu öffnen.
                 </p>
               </div>
-              <div className="mt-4 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] sm:grid sm:auto-rows-fr sm:grid-cols-2 sm:gap-4 xl:flex xl:overflow-visible">
+              <div className="mt-4 flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] sm:grid sm:auto-rows-fr sm:grid-cols-2 sm:gap-5 lg:flex lg:overflow-visible">
                 {weekendFocusDays.map((entry) => {
                   const dayBlocked = blockedByDay.get(entry.key) ?? [];
                   const dayRehearsals =
@@ -687,7 +639,7 @@ export function RehearsalCalendar({
                       type="button"
                       onClick={() => handleSelectDayByKey(entry.key)}
                       className={cn(
-                        "group relative min-w-[180px] snap-start rounded-2xl border border-border/60 bg-card/70 p-4 text-left transition hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-w-0",
+                        "group relative min-w-[200px] snap-start rounded-2xl border border-border/60 bg-card/70 p-5 text-left transition hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-w-0",
                         isSelected &&
                           "border-primary/60 bg-primary/10 shadow-lg"
                       )}
@@ -701,7 +653,7 @@ export function RehearsalCalendar({
                       <div className="mt-2 text-sm font-semibold text-foreground">
                         {summary}
                       </div>
-                      <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <div className="mt-2 flex items-center gap-2.5 text-[10px] text-muted-foreground">
                         <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                           <span
                             className={cn(
@@ -722,7 +674,7 @@ export function RehearsalCalendar({
                         </span>
                       </div>
                       {timePreview ? (
-                        <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                        <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-muted px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground">
                           <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
                           {timePreview}
                         </div>
