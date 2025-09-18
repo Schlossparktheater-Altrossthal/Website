@@ -297,7 +297,7 @@ export function RehearsalCalendar({
               disabled={!selectedDayKey}
               className="w-full sm:w-auto px-5 py-2.5"
             >
-              Probe am ausgewählten Tag planen
+              Probe planen
             </Button>
           </div>
 
@@ -422,7 +422,7 @@ export function RehearsalCalendar({
                 disabled={!selectedDayKey}
                 className="w-full sm:w-auto px-5 py-2.5"
               >
-                Probe am ausgewählten Tag planen
+                Probe planen
               </Button>
             </div>
 
