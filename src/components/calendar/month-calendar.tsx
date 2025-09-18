@@ -79,6 +79,8 @@ export interface MonthCalendarProps {
 const DEFAULT_WEEKDAY_FORMAT = "EEE";
 const DEFAULT_MONTH_LABEL_FORMAT = "MMMM yyyy";
 
+const WEEKEND_DAY_INDICES = new Set<number>([5, 6, 0]);
+
 export function MonthCalendar({
   month,
   defaultMonth,
@@ -144,14 +146,20 @@ export function MonthCalendar({
     [displayedMonth, locale, monthLabelFormat]
   );
 
-  const weekDayLabels = useMemo(() => {
+  const weekDayMeta = useMemo(() => {
     const start = startOfWeek(displayedMonth, { weekStartsOn });
     return Array.from({ length: 7 }, (_, index) => {
       const date = addDays(start, index);
-      if (renderWeekdayLabel) {
-        return renderWeekdayLabel(date, index);
-      }
-      return format(date, weekdayFormat, { locale });
+      const label = renderWeekdayLabel
+        ? renderWeekdayLabel(date, index)
+        : format(date, weekdayFormat, { locale });
+      const weekday = date.getDay();
+      return {
+        date,
+        label,
+        weekday,
+        isWeekend: WEEKEND_DAY_INDICES.has(weekday),
+      };
     });
   }, [displayedMonth, locale, renderWeekdayLabel, weekStartsOn, weekdayFormat]);
 
@@ -271,8 +279,13 @@ export function MonthCalendar({
             {showWeekNumbers ? (
               <div className="hidden py-2 text-[11px] sm:block">KW</div>
             ) : null}
-            {weekDayLabels.map((label, index) => (
-              <div key={index} className="py-2">
+            {weekDayMeta.map(({ label, weekday, isWeekend }, index) => (
+              <div
+                key={index}
+                className="calendar-weekday rounded-lg px-2 py-2"
+                data-weekday={weekday}
+                data-weekend={isWeekend ? "true" : undefined}
+              >
                 {label}
               </div>
             ))}
@@ -296,6 +309,8 @@ export function MonthCalendar({
                 {week.days.map((day) => {
                   const key = format(day, CALENDAR_DATE_FORMAT);
                   const isCurrentMonth = isSameMonth(day, displayedMonth);
+                  const weekday = day.getDay();
+                  const isWeekend = WEEKEND_DAY_INDICES.has(weekday);
                   const dayInfo: CalendarDay = {
                     date: day,
                     key,
@@ -336,6 +351,8 @@ export function MonthCalendar({
                       data-date={key}
                       data-today={dayInfo.isToday ? "true" : undefined}
                       data-current-month={dayInfo.isCurrentMonth ? "true" : undefined}
+                      data-weekday={weekday}
+                      data-weekend={isWeekend ? "true" : undefined}
                     >
                       <span className="text-[11px] font-medium sm:text-xs">{dayNumberContent}</span>
                       {content}
@@ -356,7 +373,21 @@ export function MonthCalendar({
         @keyframes calendarSheenSlide { 0% { transform: translateX(-150%) skewX(-20deg);} 100% { transform: translateX(150%) skewX(-20deg);} }
         @keyframes calendarMonthInRight { 0% { opacity: 0; transform: translateX(24px);} 100% { opacity: 1; transform: translateX(0);} }
         @keyframes calendarMonthInLeft { 0% { opacity: 0; transform: translateX(-24px);} 100% { opacity: 1; transform: translateX(0);} }
+        .calendar-weekday[data-weekend="true"] {
+          background: linear-gradient(120deg, rgba(129,140,248,.14), rgba(129,140,248,.04));
+          color: rgba(67,56,202,.9);
+        }
+        .dark .calendar-weekday[data-weekend="true"] {
+          background: linear-gradient(120deg, rgba(129,140,248,.22), rgba(99,102,241,.08));
+          color: rgba(224,231,255,.92);
+        }
         .calendar-cell { position: relative; }
+        .calendar-cell[data-weekend="true"] {
+          background-image: linear-gradient(135deg, rgba(129,140,248,.12), rgba(129,140,248,0));
+        }
+        .dark .calendar-cell[data-weekend="true"] {
+          background-image: linear-gradient(135deg, rgba(99,102,241,.18), rgba(129,140,248,.06));
+        }
         .calendar-cell.added-anim { animation: calendarCellPop .22s ease-out, calendarAddedFlash .6s ease-out; }
         .calendar-cell.removed-anim { animation: calendarRemovedFlash .6s ease-out; }
         .calendar-cell::before { content: ""; position:absolute; inset:-2px; border-radius: inherit; pointer-events:none; opacity:0; }

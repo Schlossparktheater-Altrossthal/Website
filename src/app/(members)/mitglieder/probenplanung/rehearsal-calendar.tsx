@@ -593,8 +593,6 @@ export function RehearsalCalendar({
                   availRatio <= 0.5 && "border-destructive/60 bg-destructive/10",
                   availRatio > 0.5 && availRatio <= 0.75 &&
                     "border-amber-400/60 bg-amber-100/30 dark:border-amber-400/40 dark:bg-amber-500/10",
-                  isWeekend &&
-                    "bg-gradient-to-br from-primary/5 via-background to-background dark:from-primary/10",
                   isSelected &&
                     "border-primary/70 bg-primary/10 shadow-[0_12px_30px_rgba(129,140,248,0.25)]"
                 ),
@@ -609,11 +607,6 @@ export function RehearsalCalendar({
                         </p>
                         <p className="text-[10px] text-muted-foreground">{availableLabel}</p>
                       </div>
-                      {isWeekend ? (
-                        <Badge className="rounded-full px-2 py-0 text-[9px] font-semibold uppercase tracking-wide">
-                          Wochenende
-                        </Badge>
-                      ) : null}
                     </div>
                     {dayRehearsals.length ? (
                       <ul className="space-y-1.5">
