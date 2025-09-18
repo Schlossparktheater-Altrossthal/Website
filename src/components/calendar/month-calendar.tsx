@@ -100,7 +100,7 @@ export function MonthCalendar({
   showWeekNumbers = true,
   className,
   contentClassName,
-  minGridWidthClassName = "min-w-[640px]",
+  minGridWidthClassName = "min-w-full sm:min-w-[640px]",
   dayClassName,
   additionalContent,
 }: MonthCalendarProps) {
@@ -207,15 +207,15 @@ export function MonthCalendar({
   const headerTitle = title ?? monthLabel;
 
   const weekdayHeaderClass = showWeekNumbers
-    ? "grid grid-cols-[64px_repeat(7,minmax(0,1fr))]"
-    : "grid grid-cols-[repeat(7,minmax(0,1fr))]";
+    ? "grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1 sm:grid-cols-[64px_repeat(7,minmax(0,1fr))] sm:gap-1.5"
+    : "grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1 sm:gap-1.5";
 
   const weekRowClass = showWeekNumbers
-    ? "grid grid-cols-[64px_repeat(7,minmax(0,1fr))] gap-1.5"
-    : "grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1.5";
+    ? "grid grid-cols-7 gap-1 sm:grid-cols-[64px_repeat(7,minmax(0,1fr))] sm:gap-1.5"
+    : "grid grid-cols-7 gap-1 sm:gap-1.5";
 
   return (
-    <div className={cn("rounded-xl border bg-card shadow-sm", className)}>
+    <div className={cn("w-full rounded-xl border bg-card shadow-sm", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-4 py-3">
         <div className="space-y-1">
           {typeof headerTitle === "string" ? (
@@ -258,17 +258,19 @@ export function MonthCalendar({
         <div
           className={cn(
             minGridWidthClassName,
-            "space-y-3 p-3 sm:p-4",
+            "space-y-3 p-2.5 sm:p-4",
             contentClassName
           )}
         >
           <div
             className={cn(
               weekdayHeaderClass,
-              "text-center text-xs font-medium uppercase tracking-wide text-muted-foreground"
+              "text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs"
             )}
           >
-            {showWeekNumbers ? <div className="py-2">KW</div> : null}
+            {showWeekNumbers ? (
+              <div className="hidden py-2 text-[11px] sm:block">KW</div>
+            ) : null}
             {weekDayLabels.map((label, index) => (
               <div key={index} className="py-2">
                 {label}
@@ -287,7 +289,7 @@ export function MonthCalendar({
             {weeksInView.map((week) => (
               <div key={week.weekStart.toISOString()} className={weekRowClass}>
                 {showWeekNumbers ? (
-                  <div className="flex items-center justify-center rounded-lg bg-muted/40 px-2 py-2 text-xs font-semibold text-muted-foreground">
+                  <div className="hidden items-center justify-center rounded-lg bg-muted/40 px-2 py-2 text-[11px] font-semibold text-muted-foreground sm:flex">
                     {renderWeekNumber ? renderWeekNumber(week) : <>KW {week.weekNumber}</>}
                   </div>
                 ) : null}
@@ -318,7 +320,7 @@ export function MonthCalendar({
                     ? renderDayNumber(dayInfo)
                     : format(day, "d", { locale });
                   const finalClassName = cn(
-                    "calendar-cell relative flex min-h-[78px] flex-col overflow-hidden rounded-lg border bg-background p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-3",
+                    "calendar-cell relative flex min-h-[68px] flex-col gap-1 overflow-hidden rounded-lg border bg-background p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-[96px] sm:p-3",
                     !isCurrentMonth && "text-muted-foreground/60",
                     dayClassName,
                     daySpecificClass
@@ -335,7 +337,7 @@ export function MonthCalendar({
                       data-today={dayInfo.isToday ? "true" : undefined}
                       data-current-month={dayInfo.isCurrentMonth ? "true" : undefined}
                     >
-                      <span className="text-xs font-medium">{dayNumberContent}</span>
+                      <span className="text-[11px] font-medium sm:text-xs">{dayNumberContent}</span>
                       {content}
                     </button>
                   );

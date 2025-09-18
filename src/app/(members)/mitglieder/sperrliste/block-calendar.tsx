@@ -351,6 +351,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
             size="sm"
             onClick={clearSelection}
             disabled={bulkSubmitting || selectedKeys.length === 0}
+            className="w-full sm:w-auto"
           >
             Auswahl leeren
           </Button>
@@ -377,7 +378,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
           </div>
           <Button
             type="button"
-            className="sm:w-auto"
+            className="w-full sm:w-auto"
             disabled={bulkSubmitting}
             onClick={handleBulkCreate}
           >
@@ -395,6 +396,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
             variant="outline"
             disabled={bulkSubmitting}
             onClick={handleBulkRemove}
+            className="w-full sm:w-auto"
           >
             {selectedBlockedCount > 1
               ? `${selectedBlockedCount} Sperrtermine aufheben`
@@ -599,6 +601,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
             variant={selectionMode ? "default" : "outline"}
             size="sm"
             onClick={handleToggleSelectionMode}
+            className="w-full sm:w-auto"
           >
             {selectionMode ? "Auswahl beenden" : "Mehrfachauswahl"}
           </Button>
