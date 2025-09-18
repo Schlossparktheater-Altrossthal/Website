@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/members/page-header";
+export const dynamic = "force-dynamic";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";

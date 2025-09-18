@@ -55,16 +55,46 @@ export function CreateRehearsalDialog({
     event.preventDefault();
     startTransition(() => {
       createRehearsalAction({ title, date, time, location })
-        .then((result) => {
+        .then(async (result) => {
           if (result?.success) {
             toast.success("Probe erstellt. Die Benachrichtigungen wurden versendet.");
             onOpenChange(false);
             onSuccess?.();
           } else {
+            // Fallback: API Route nutzen (z. B. wenn Server Action ID stale ist)
+            const res = await fetch("/api/rehearsals", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title, date, time, location }),
+            }).catch(() => null);
+            if (res && res.ok) {
+              const data = await res.json().catch(() => null);
+              if (data?.success) {
+                toast.success("Probe erstellt. Die Benachrichtigungen wurden versendet.");
+                onOpenChange(false);
+                onSuccess?.();
+                return;
+              }
+            }
             toast.error(result?.error ?? "Speichern fehlgeschlagen.");
           }
         })
-        .catch(() => {
+        .catch(async () => {
+          // Fallback bei 404/Action-ID Mismatch
+          const res = await fetch("/api/rehearsals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, date, time, location }),
+          }).catch(() => null);
+          if (res && res.ok) {
+            const data = await res.json().catch(() => null);
+            if (data?.success) {
+              toast.success("Probe erstellt. Die Benachrichtigungen wurden versendet.");
+              onOpenChange(false);
+              onSuccess?.();
+              return;
+            }
+          }
           toast.error("Speichern fehlgeschlagen.");
         });
     });
