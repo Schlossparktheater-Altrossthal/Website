@@ -143,22 +143,39 @@ async function fetchInviteeIds(tx: Prisma.TransactionClient, rehearsalId: string
   return entries.map((entry) => entry.userId);
 }
 
-export async function createRehearsalDraftAction() {
+export async function createRehearsalDraftAction(input?: {
+  title?: string;
+  date?: string;
+  time?: string;
+  location?: string;
+}) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
     return { error: auth.error } as const;
   }
 
   const now = new Date();
-  const start = new Date(now);
+  let start = new Date(now);
   start.setMinutes(0, 0, 0);
   start.setHours(start.getHours() + 1);
-  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
+  if (input?.date) {
+    try {
+      const desired = parseStart(input.date, input.time ?? "19:00");
+      start = desired;
+    } catch (error) {
+      console.warn("Invalid draft start provided", error);
+    }
+  }
+
+  const end = computeEnd(start);
+  const normalizedTitle = input?.title?.trim() || "Neue Probe";
+  const normalizedLocation = input?.location?.trim() || "Noch offen";
 
   const rehearsal = await prisma.rehearsal.create({
     data: {
-      title: "Neue Probe",
-      location: "Noch offen",
+      title: normalizedTitle,
+      location: normalizedLocation,
       start,
       end,
       description: null,

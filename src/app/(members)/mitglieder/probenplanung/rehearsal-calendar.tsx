@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   addDays,
   addMonths,
@@ -24,7 +25,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
+import { createRehearsalDraftAction } from "./actions";
 import { CreateRehearsalDialog } from "./create-rehearsal-dialog";
 
 const DEFAULT_NEW_REHEARSAL_TIME = "19:00";
@@ -81,6 +84,8 @@ export function RehearsalCalendar({
   rehearsals,
   memberCount,
 }: RehearsalCalendarProps) {
+  const router = useRouter();
+  const [isCreating, startCreating] = useTransition();
   const initialSelection = useMemo(
     () => createSelection(findUpcomingWeekendDay(new Date())),
     []
@@ -164,6 +169,9 @@ export function RehearsalCalendar({
     memberCount > 0
       ? `${selectedDayBlocked.length} / ${memberCount} blockiert`
       : `${selectedDayBlocked.length} blockiert`;
+  const selectedBlockedPercent = memberCount > 0
+    ? Math.round((selectedDayBlocked.length / memberCount) * 100)
+    : 0;
   const selectedAvailableCount = Math.max(0, memberCount - selectedDayBlocked.length);
   const selectedAvailableRatio = memberCount > 0 ? selectedAvailableCount / memberCount : 0;
   const selectedAvailablePercent = Math.round(
@@ -322,7 +330,7 @@ export function RehearsalCalendar({
         onClose={() => setPlanOpen(false)}
         title={
           selectedDate
-            ? format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })
+            ? format(selectedDate as Date, "EEEE, d. MMMM yyyy", { locale: de })
             : "Tagesplan"
         }
         description={selectedSummary ?? undefined}
@@ -427,7 +435,7 @@ export function RehearsalCalendar({
                 </span>
                 <h3 className="text-xl font-semibold text-foreground">
                   {selectedDate
-                    ? format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })
+                    ? format(selectedDate as Date, "EEEE, d. MMMM yyyy", { locale: de })
                     : "Kein Tag ausgewählt"}
                 </h3>
                 {selectedSummary ? (
@@ -541,7 +549,7 @@ export function RehearsalCalendar({
                 <h4 className="text-sm font-semibold text-foreground">Blockierte Mitglieder</h4>
                 <p className="text-xs text-muted-foreground">
                   {selectedDate
-                    ? `Für ${format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })}`
+                    ? `Für ${format(selectedDate as Date, "EEEE, d. MMMM yyyy", { locale: de })}`
                     : "Wähle einen Tag, um Sperrungen zu sehen."}
                 </p>
               </div>
