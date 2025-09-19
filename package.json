@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/run-prisma-migrate.mjs",
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
+    "prestart": "node scripts/run-prisma-migrate.mjs",
     "postinstall": "node -e \"if(!process.env.SKIP_PRISMA_POSTINSTALL){require('child_process').execSync('pnpm prisma:generate',{stdio:'inherit'})}\"",
     "start": "next start",
     "lint": "eslint",
