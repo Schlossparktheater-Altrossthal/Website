@@ -84,7 +84,7 @@ export function RehearsalCalendar({
   memberCount,
 }: RehearsalCalendarProps) {
   const router = useRouter();
-  const [isCreating, startCreating] = useTransition();
+  const [, startCreating] = useTransition();
   const initialSelection = useMemo(
     () => createSelection(findUpcomingWeekendDay(new Date())),
     []

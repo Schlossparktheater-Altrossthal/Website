@@ -116,7 +116,7 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
               key={s.id}
               id={s.id}
               data-id={s.id}
-              ref={(el) => (sectionRefs.current[s.id] = el)}
+              ref={(el) => { sectionRefs.current[s.id] = el; }}
               className="relative min-h-screen grid place-items-stretch overflow-hidden snap-start"
             >
               {/* Background image */}

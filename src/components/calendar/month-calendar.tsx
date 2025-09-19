@@ -46,7 +46,7 @@ export interface CalendarWeek {
 }
 
 export interface CalendarDayRenderResult
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "content"> {
   content?: ReactNode;
 }
 

@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
 import { prisma } from "@/lib/prisma";
