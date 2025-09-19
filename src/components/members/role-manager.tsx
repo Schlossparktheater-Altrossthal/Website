@@ -122,7 +122,7 @@ export function RoleManager({
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               {/* Avatar */}
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200 text-lg font-bold text-slate-700 shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-semibold text-muted-foreground shadow-sm">
                 {getInitials(currentName, currentEmail)}
               </div>
               
@@ -152,7 +152,7 @@ export function RoleManager({
             {/* Action Buttons */}
             <div className="flex flex-col items-end gap-2 ml-4">
               {dirty && (
-                <div className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                <div className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full border border-amber-200">
                   <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
                   Nicht gespeichert
                 </div>
@@ -198,13 +198,13 @@ export function RoleManager({
                       key={r.id}
                       className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-all ${
                         active 
-                          ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20" 
-                          : "border-border hover:bg-accent/50 hover:border-accent-foreground/20"
+                          ? "border-primary bg-primary/10 text-primary" 
+                          : "border-border hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                        className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         checked={active}
                         onChange={() =>
                           setSelectedCustomIds((prev) =>
@@ -221,8 +221,8 @@ export function RoleManager({
           )}
 
           {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-              <p className="text-sm text-red-700 font-medium">{error}</p>
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+              <p className="text-sm text-destructive font-medium">{error}</p>
             </div>
           )}
 
