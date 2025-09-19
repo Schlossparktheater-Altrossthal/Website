@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { getGravatarUrl } from "@/lib/gravatar";
 import { cn } from "@/lib/utils";
 import type { CSSProperties } from "react";
@@ -74,9 +75,21 @@ export function UserAvatar({
   previewUrl,
 }: UserAvatarProps) {
   const displaySize = Math.max(1, Math.round(size));
-  const label = name?.trim() || email?.trim() || undefined;
+  const trimmedName = name?.trim() || undefined;
+  const trimmedEmail = email?.trim() || undefined;
+  const label = trimmedName || trimmedEmail || undefined;
   const normalized = normalizeSource(avatarSource);
-  const effectiveSource = normalized ?? (previewUrl ? "UPLOAD" : email ? "GRAVATAR" : "INITIALS");
+
+  const [gravatarFailed, setGravatarFailed] = useState(false);
+
+  useEffect(() => {
+    setGravatarFailed(false);
+  }, [normalized, trimmedEmail]);
+
+  let effectiveSource = normalized ?? (previewUrl ? "UPLOAD" : trimmedEmail ? "GRAVATAR" : "INITIALS");
+  if (effectiveSource === "GRAVATAR" && !trimmedEmail) {
+    effectiveSource = "INITIALS";
+  }
   const version = getVersionKey(avatarUpdatedAt);
   const sharedStyle: CSSProperties = { width: displaySize, height: displaySize, ...style };
 
@@ -99,9 +112,9 @@ export function UserAvatar({
     }
   }
 
-  if (effectiveSource === "GRAVATAR") {
+  if (effectiveSource === "GRAVATAR" && trimmedEmail && !gravatarFailed) {
     const gravatarSize = Math.max(32, Math.min(2048, displaySize * 2));
-    const src = getGravatarUrl(email, { size: gravatarSize });
+    const src = getGravatarUrl(trimmedEmail, { size: gravatarSize, defaultImage: "404" });
     return (
       <Image
         src={src}
@@ -115,6 +128,7 @@ export function UserAvatar({
         className={cn("inline-block rounded-full bg-muted object-cover", className)}
         style={sharedStyle}
         draggable={false}
+        onError={() => setGravatarFailed(true)}
       />
     );
   }
