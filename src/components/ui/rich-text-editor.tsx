@@ -112,7 +112,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   return (
     <div
       className={cn(
-        "rich-text-editor relative overflow-hidden rounded-2xl border border-border/60 bg-muted/40 shadow-lg",
+        "rich-text-editor group relative overflow-hidden rounded-[28px]",
         className,
       )}
     >
