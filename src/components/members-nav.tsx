@@ -25,6 +25,12 @@ const groupedConfig: Group[] = [
     ],
   },
   {
+    label: "Produktion",
+    items: [
+      { href: "/mitglieder/produktionen", label: "Produktionen", permissionKey: "mitglieder.produktionen" },
+    ],
+  },
+  {
     label: "Verwaltung",
     items: [
       { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", permissionKey: "mitglieder.rollenverwaltung" },
@@ -79,6 +85,15 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" />
           <path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+      );
+    case "/mitglieder/produktionen":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 4h18v4H3z" />
+          <path d="M5 8v12h14V8" />
+          <path d="M9 12h6" />
+          <path d="M9 16h6" />
         </svg>
       );
     case "/mitglieder/mitgliederverwaltung":

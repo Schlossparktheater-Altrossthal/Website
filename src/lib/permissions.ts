@@ -15,6 +15,12 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     description: "Zugang zum Bereich \"Meine Proben\" mit persönlichen Terminen und Fristen.",
   },
   { key: "mitglieder.probenplanung", label: "Probenplanung verwalten" },
+  {
+    key: "mitglieder.produktionen",
+    label: "Produktionsplanung öffnen",
+    description:
+      "Bereich zur Verwaltung von Gewerken, Besetzungen, Szenen und Breakdown-Aufgaben im Produktionsmanagement.",
+  },
   { key: "mitglieder.rollenverwaltung", label: "Mitgliederverwaltung öffnen" },
   { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen" },
   { key: "mitglieder.sperrliste", label: "Sperrliste pflegen" },
