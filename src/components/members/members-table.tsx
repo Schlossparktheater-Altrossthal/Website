@@ -63,7 +63,47 @@ export function MembersTable({
         </div>
         <div className="text-sm text-muted-foreground">{filteredRows.length} von {rows.length} Mitgliedern</div>
       </div>
-      <table className="w-full border-collapse text-sm">
+      {/* Mobile: card list */}
+      <div className="space-y-2 sm:hidden">
+        {filteredRows.map((u) => {
+          const sorted = sortRoles(u.roles);
+          return (
+            <div key={u.id} className="rounded-md border bg-card p-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                    {initials(u.name, u.email)}
+                  </div>
+                  <div>
+                    <div className="font-medium">{u.name || "—"}</div>
+                    <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {sorted.map((r) => (
+                        <span key={r} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[r]}`}>
+                          {ROLE_LABELS[r] ?? r}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setOpenFor(u.id)}>
+                      Bearbeiten
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => alert('Löschen noch nicht implementiert')}>
+                      Löschen
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b bg-muted/30 text-left">
             <th className="px-3 py-2 font-medium">Name</th>
