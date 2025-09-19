@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { Bell, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -374,7 +375,16 @@ function NotificationEntry({ item, respondingId, onRespond }: NotificationEntryP
         <header className="flex items-start justify-between gap-2">
           <div className="min-w-0 space-y-1">
             <h3 className="text-sm font-medium text-foreground break-words flex items-center gap-2">
-              <span>{item.title}</span>
+              {item.rehearsal ? (
+                <Link 
+                  href={`/mitglieder/proben/${item.rehearsal.id}`}
+                  className="text-primary hover:underline"
+                >
+                  {item.title}
+                </Link>
+              ) : (
+                <span>{item.title}</span>
+              )}
               {highlight && (
                 <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[0.7rem] font-medium text-primary">
                   Aktualisiert
@@ -388,10 +398,15 @@ function NotificationEntry({ item, respondingId, onRespond }: NotificationEntryP
               <time dateTime={createdAt.toISOString()} className="block">
                 Erhalten: {dateTimeFormatter.format(createdAt)}
               </time>
-              {startDate && (
-                <time dateTime={startDate.toISOString()} className="block">
-                  Probe: {dateTimeFormatter.format(startDate)}
-                </time>
+              {startDate && item.rehearsal && (
+                <Link 
+                  href={`/mitglieder/proben/${item.rehearsal.id}`}
+                  className="block text-primary hover:underline"
+                >
+                  <time dateTime={startDate.toISOString()}>
+                    Probe: {dateTimeFormatter.format(startDate)}
+                  </time>
+                </Link>
               )}
             </div>
           </div>
