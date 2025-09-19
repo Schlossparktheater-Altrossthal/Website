@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 
 type PermissionDefinition = { key: string; label: string; description?: string };
 
+type UserLike = { id?: string; role?: Role; roles?: Role[] } | null | undefined;
+
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen" },
   { key: "mitglieder.profil", label: "Profilbereich aufrufen" },
@@ -20,6 +22,15 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
 
 const DEFAULT_PERMISSION_KEYS = DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key);
 const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
+
+// Baseline permissions that every authenticated user should retain even when no
+// explicit grants exist yet (e.g. on a fresh installation before the matrix is
+// configured). This prevents core pages like the dashboard from responding with
+// 403 errors for regular members.
+const BASELINE_PERMISSION_KEYS = new Set([
+  "mitglieder.dashboard",
+  "mitglieder.profil",
+] satisfies PermissionDefinition["key"][]);
 
 let ensurePermissionsPromise: Promise<void> | null = null;
 let ensureSystemRolesPromise: Promise<void> | null = null;
@@ -89,20 +100,40 @@ export async function ensureSystemRoles() {
   await ensureSystemRolesPromise;
 }
 
-export async function hasPermission(
-  user: { id?: string; role?: Role; roles?: Role[] } | null | undefined,
-  permissionKey: string,
-): Promise<boolean> {
-  if (!user?.id) return false;
-
+function collectOwnedRoles(user: UserLike) {
   const owned = new Set<Role>();
+  if (!user) return owned;
   if (user.role) owned.add(user.role);
   if (Array.isArray(user.roles)) {
     for (const r of user.roles) owned.add(r);
   }
+  return owned;
+}
+
+function getBaselinePermissions(user: UserLike) {
+  const granted = new Set<string>();
+  if (!user?.id) return granted;
+
+  for (const key of BASELINE_PERMISSION_KEYS) {
+    if (PERMISSION_KEY_SET.has(key)) {
+      granted.add(key);
+    }
+  }
+
+  return granted;
+}
+
+export async function hasPermission(user: UserLike, permissionKey: string): Promise<boolean> {
+  if (!user?.id) return false;
+  if (!isKnownPermissionKey(permissionKey)) return false;
+
+  const owned = collectOwnedRoles(user);
+
   if (owned.has("owner") || owned.has("admin")) return true;
 
-  if (!isKnownPermissionKey(permissionKey)) return false;
+  if (getBaselinePermissions(user).has(permissionKey)) {
+    return true;
+  }
 
   await ensureSystemRoles();
   await ensurePermissionDefinitions();
@@ -150,20 +181,16 @@ export async function hasPermission(
   return rolePermissions > 0;
 }
 
-export async function getUserPermissionKeys(
-  user: { id?: string; role?: Role; roles?: Role[] } | null | undefined,
-): Promise<string[]> {
+export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   if (!user?.id) return [];
 
-  const owned = new Set<Role>();
-  if (user.role) owned.add(user.role);
-  if (Array.isArray(user.roles)) {
-    for (const r of user.roles) owned.add(r);
-  }
+  const owned = collectOwnedRoles(user);
 
   if (owned.has("owner") || owned.has("admin")) {
     return [...DEFAULT_PERMISSION_KEYS];
   }
+
+  const granted = getBaselinePermissions(user);
 
   await ensureSystemRoles();
   await ensurePermissionDefinitions();
@@ -192,14 +219,15 @@ export async function getUserPermissionKeys(
     roleFilters.push({ roleId: { in: customRoleIds } });
   }
 
-  if (!roleFilters.length) return [];
+  if (!roleFilters.length) {
+    return DEFAULT_PERMISSION_KEYS.filter((key) => granted.has(key));
+  }
 
   const rolePermissions = await prisma.appRolePermission.findMany({
     where: { OR: roleFilters },
     select: { permission: { select: { key: true } } },
   });
 
-  const granted = new Set<string>();
   for (const entry of rolePermissions) {
     const key = entry.permission?.key;
     if (key && isKnownPermissionKey(key)) {
