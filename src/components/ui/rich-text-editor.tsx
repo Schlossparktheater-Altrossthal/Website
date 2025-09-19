@@ -60,7 +60,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   return (
     <div
       className={cn(
-        "rich-text-editor overflow-hidden rounded-lg border border-border/30 shadow-sm bg-background/95 backdrop-blur-sm",
+        "rich-text-editor overflow-hidden rounded-lg border border-border bg-card shadow-sm",
         className,
       )}
     >
@@ -68,7 +68,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         theme="snow"
         value={value || ""}
         onChange={handleChange}
-        placeholder={placeholder}
+        placeholder={placeholder || "Beschreibung eingeben..."}
         modules={modules}
         formats={formats}
       />
