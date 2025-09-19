@@ -32,20 +32,20 @@ interface RecentActivity {
 interface DashboardStats {
   totalOnline: number;
   totalMembers: number;
-  todayRehearsals: number;
+  rehearsalsThisWeek: number;
   unreadNotifications: number;
 }
 
 const INITIAL_STATS: DashboardStats = {
   totalOnline: 0,
   totalMembers: 0,
-  todayRehearsals: 0,
+  rehearsalsThisWeek: 0,
   unreadNotifications: 0,
 };
 
 type OverviewStatsPayload = {
   totalMembers?: unknown;
-  todayRehearsals?: unknown;
+  rehearsalsThisWeek?: unknown;
   unreadNotifications?: unknown;
 };
 
@@ -143,10 +143,10 @@ export function MembersDashboard() {
               typeof statsPayload.totalMembers === "number"
                 ? statsPayload.totalMembers
                 : prev.totalMembers,
-            todayRehearsals:
-              typeof statsPayload.todayRehearsals === "number"
-                ? statsPayload.todayRehearsals
-                : prev.todayRehearsals,
+            rehearsalsThisWeek:
+              typeof statsPayload.rehearsalsThisWeek === "number"
+                ? statsPayload.rehearsalsThisWeek
+                : prev.rehearsalsThisWeek,
             unreadNotifications:
               typeof statsPayload.unreadNotifications === "number"
                 ? statsPayload.unreadNotifications
@@ -335,12 +335,12 @@ export function MembersDashboard() {
 
           <Card className="h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Heutige Proben</CardTitle>
+              <CardTitle className="text-sm font-medium">Proben diese Woche</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.todayRehearsals}</div>
-              <p className="text-xs text-muted-foreground">Termine zwischen 00:00 und 23:59 Uhr</p>
+              <div className="text-2xl font-bold">{stats.rehearsalsThisWeek}</div>
+              <p className="text-xs text-muted-foreground">Termine der laufenden Kalenderwoche</p>
             </CardContent>
           </Card>
 
