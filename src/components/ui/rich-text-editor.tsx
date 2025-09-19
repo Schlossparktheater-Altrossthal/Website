@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import { useCallback, useMemo } from "react";
 import type { ComponentType } from "react";
-import type { ReactQuillProps } from "react-quill";
 
 import { cn } from "@/lib/utils";
 
@@ -25,7 +24,7 @@ const TOOLBAR_OPTIONS = [
 const BASE_MODULES = {
   toolbar: TOOLBAR_OPTIONS,
   clipboard: { matchVisual: false },
-} satisfies NonNullable<ReactQuillProps["modules"]>;
+};
 
 const BASE_FORMATS = [
   "header",
@@ -33,19 +32,18 @@ const BASE_FORMATS = [
   "italic",
   "underline",
   "list",
-  "bullet",
   "blockquote",
   "link",
-] satisfies NonNullable<ReactQuillProps["formats"]>;
+];
 
-const ReactQuill = dynamic(async () => import("react-quill"), {
+const ReactQuill = dynamic(async () => import("react-quill-new"), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-[160px] items-center justify-center px-3 py-3 text-sm text-muted-foreground/70">
       Editor wird geladen…
     </div>
   ),
-}) as ComponentType<ReactQuillProps>;
+}) as ComponentType<any>;
 
 export function RichTextEditor({ value, onChange, placeholder, className }: RichTextEditorProps) {
   const modules = useMemo(() => BASE_MODULES, []);
