@@ -12,6 +12,7 @@ import { useOnlineStats } from "@/hooks/useOnlineStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import {
   Users,
   Activity,
@@ -418,6 +419,8 @@ export function MembersDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <PhotoConsentCard />
     </div>
   );
 }

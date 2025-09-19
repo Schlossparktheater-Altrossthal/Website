@@ -29,6 +29,7 @@ export default async function ProfilePage() {
       roles: { select: { role: true } },
       avatarSource: true,
       avatarImageUpdatedAt: true,
+      dateOfBirth: true,
     },
   });
 
@@ -80,6 +81,7 @@ export default async function ProfilePage() {
               initialEmail={user.email}
               initialAvatarSource={user.avatarSource}
               initialAvatarUpdatedAt={user.avatarImageUpdatedAt?.toISOString() ?? null}
+              initialDateOfBirth={user.dateOfBirth?.toISOString() ?? null}
             />
           </CardContent>
         </Card>

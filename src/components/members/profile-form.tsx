@@ -15,6 +15,7 @@ interface ProfileFormProps {
   userId: string;
   initialAvatarSource?: AvatarSource | null;
   initialAvatarUpdatedAt?: string | null;
+  initialDateOfBirth?: string | null;
 }
 
 const AVATAR_CHOICES = ["GRAVATAR", "UPLOAD", "INITIALS"] as const;
@@ -28,6 +29,16 @@ function normalizeAvatarChoice(value?: AvatarSource | string | null): AvatarChoi
   return "GRAVATAR";
 }
 
+function toDateInputValue(value?: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
@@ -37,6 +48,7 @@ export function ProfileForm({
   initialEmail,
   initialAvatarSource,
   initialAvatarUpdatedAt,
+  initialDateOfBirth,
 }: ProfileFormProps) {
   const { update } = useSession();
   const [baseline, setBaseline] = useState({
@@ -44,9 +56,11 @@ export function ProfileForm({
     email: initialEmail ?? "",
     avatarSource: normalizeAvatarChoice(initialAvatarSource),
     avatarUpdatedAt: initialAvatarUpdatedAt ?? null,
+    dateOfBirth: toDateInputValue(initialDateOfBirth),
   });
   const [name, setName] = useState(baseline.name);
   const [email, setEmail] = useState(baseline.email);
+  const [dateOfBirth, setDateOfBirth] = useState(baseline.dateOfBirth);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -71,6 +85,7 @@ export function ProfileForm({
   const resetForm = () => {
     setName(baseline.name);
     setEmail(baseline.email);
+    setDateOfBirth(baseline.dateOfBirth);
     setPassword("");
     setConfirmPassword("");
     setError(null);
@@ -162,6 +177,7 @@ export function ProfileForm({
     const formData = new FormData();
     formData.append("email", trimmedEmail);
     formData.append("name", trimmedName);
+    formData.append("dateOfBirth", dateOfBirth ?? "");
     if (password) {
       formData.append("password", password);
     }
@@ -198,15 +214,19 @@ export function ProfileForm({
       const updatedEmail = (data?.user?.email as string | null | undefined) ?? null;
       const updatedAvatarSource = normalizeAvatarChoice(data?.user?.avatarSource as string | null | undefined);
       const updatedAvatarTimestamp = (data?.user?.avatarUpdatedAt as string | null | undefined) ?? null;
+      const updatedDateOfBirthIso = (data?.user?.dateOfBirth as string | null | undefined) ?? null;
+      const updatedDateOfBirth = toDateInputValue(data?.user?.dateOfBirth as string | null | undefined);
 
       setBaseline({
         name: updatedName ?? "",
         email: updatedEmail ?? "",
         avatarSource: updatedAvatarSource,
         avatarUpdatedAt: updatedAvatarTimestamp,
+        dateOfBirth: updatedDateOfBirth,
       });
       setName(updatedName ?? "");
       setEmail(updatedEmail ?? "");
+      setDateOfBirth(updatedDateOfBirth);
       setPassword("");
       setConfirmPassword("");
       setAvatarSource(updatedAvatarSource);
@@ -228,6 +248,7 @@ export function ProfileForm({
             email: updatedEmail ?? null,
             avatarSource: updatedAvatarSource,
             avatarUpdatedAt: updatedAvatarTimestamp,
+            dateOfBirth: updatedDateOfBirthIso,
           },
         });
       } catch (sessionError) {
@@ -381,6 +402,23 @@ export function ProfileForm({
             autoComplete="new-password"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-date-of-birth">
+          Geburtsdatum
+        </label>
+        <Input
+          id="profile-date-of-birth"
+          type="date"
+          value={dateOfBirth}
+          onChange={(event) => setDateOfBirth(event.target.value)}
+          autoComplete="bday"
+          max={toDateInputValue(new Date().toISOString())}
+        />
+        <p className="text-xs text-foreground/70">
+          Das Geburtsdatum hilft uns, notwendige Einverständniserklärungen korrekt zu verwalten.
+        </p>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

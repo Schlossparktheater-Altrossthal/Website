@@ -139,6 +139,7 @@ model User {
   role      Role     @default(member)
   passwordHash String?
   createdAt DateTime @default(now())
+  dateOfBirth DateTime?
   avatarSource        AvatarSource @default(GRAVATAR)
   avatarImage         Bytes?
   avatarImageMime     String?
@@ -164,6 +165,8 @@ model User {
   blockedDays            BlockedDay[]
   appRoles               UserAppRole[]
   rehearsalInvites       RehearsalInvitee[]
+  photoConsent           PhotoConsent?
+  approvedPhotoConsents  PhotoConsent[] @relation("PhotoConsentApprover")
 }
 
 model Account {
@@ -525,6 +528,31 @@ model NotificationRecipient {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([notificationId, userId])
+}
+
+enum PhotoConsentStatus {
+  pending
+  approved
+  rejected
+}
+
+model PhotoConsent {
+  id               String              @id @default(cuid())
+  userId           String              @unique
+  status           PhotoConsentStatus  @default(pending)
+  consentGiven     Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  approvedAt       DateTime?
+  approvedById     String?
+  rejectionReason  String?
+  documentName     String?
+  documentMime     String?
+  documentSize     Int?
+  documentUploadedAt DateTime?
+  documentData     Bytes?
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy       User?               @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
 }
 
 model Announcement {
