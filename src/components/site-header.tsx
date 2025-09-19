@@ -64,16 +64,36 @@ export function SiteHeader() {
         </Link>
 
         <div className="hidden md:flex items-center gap-6">
-          <Link className={`transition-all duration-300 ${
-            scrolled || !isHomePage
-              ? 'text-foreground/90 hover:text-primary' 
-              : 'text-white/90 hover:text-white drop-shadow-lg'
-          }`} href="/mystery">Das Geheimnis</Link>
-          <Link className={`transition-all duration-300 ${
-            scrolled || !isHomePage
-              ? 'text-foreground/90 hover:text-primary' 
-              : 'text-white/90 hover:text-white drop-shadow-lg'
-          }`} href="/chronik">Chronik</Link>
+          <Link
+            className={`transition-all duration-300 ${
+              scrolled || !isHomePage
+                ? 'text-foreground/90 hover:text-primary'
+                : 'text-white/90 hover:text-white drop-shadow-lg'
+            }`}
+            href="/ueber-uns"
+          >
+            Über uns
+          </Link>
+          <Link
+            className={`transition-all duration-300 ${
+              scrolled || !isHomePage
+                ? 'text-foreground/90 hover:text-primary'
+                : 'text-white/90 hover:text-white drop-shadow-lg'
+            }`}
+            href="/mystery"
+          >
+            Das Geheimnis
+          </Link>
+          <Link
+            className={`transition-all duration-300 ${
+              scrolled || !isHomePage
+                ? 'text-foreground/90 hover:text-primary'
+                : 'text-white/90 hover:text-white drop-shadow-lg'
+            }`}
+            href="/chronik"
+          >
+            Chronik
+          </Link>
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
@@ -113,9 +133,16 @@ export function SiteHeader() {
             id="mobile-menu"
             className="absolute right-0 top-0 h-screen w-64 max-w-[80vw] border-l border-border/60 bg-card/95 backdrop-blur-md p-6 pt-20 shadow-2xl flex flex-col gap-4"
           >
-            <Link 
-              onClick={() => setOpen(false)} 
-              className="block px-4 py-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 text-foreground/90 hover:text-foreground font-medium" 
+            <Link
+              onClick={() => setOpen(false)}
+              className="block px-4 py-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 text-foreground/90 hover:text-foreground font-medium"
+              href="/ueber-uns"
+            >
+              Über uns
+            </Link>
+            <Link
+              onClick={() => setOpen(false)}
+              className="block px-4 py-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 text-foreground/90 hover:text-foreground font-medium"
               href="/mystery"
             >
               Das Geheimnis
