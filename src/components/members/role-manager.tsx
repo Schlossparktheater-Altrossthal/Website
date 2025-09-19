@@ -107,19 +107,15 @@ export function RoleManager({
 
   return (
     <Card className="p-5 space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold">{currentName || currentEmail || "Unbekannte Person"}</h3>
-          <p className="text-sm text-muted-foreground">
-            {currentEmail || "Keine E-Mail hinterlegt"}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1">
+          <p className="text-sm text-muted-foreground">{currentEmail || "Keine E-Mail hinterlegt"}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
             {saved.map((role) => (
               <span
                 key={role}
-                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${
-                  ROLE_BADGE_VARIANTS[role]
-                }`}
+                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${ROLE_BADGE_VARIANTS[role]}`}
               >
                 {ROLE_LABELS[role] ?? role}
               </span>
@@ -127,11 +123,9 @@ export function RoleManager({
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          {dirty && (
-            <span className="text-xs font-medium text-amber-600">Änderungen nicht gespeichert</span>
-          )}
+          {dirty && <span className="text-xs font-medium text-amber-600">Änderungen nicht gespeichert</span>}
           <Button type="button" variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            Bearbeiten
+            Profil bearbeiten
           </Button>
         </div>
       </div>
@@ -181,26 +175,13 @@ export function RoleManager({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            disabled={!dirty || saving}
-          >
-            Zurücksetzen
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleSave}
-            disabled={!dirty || saving || selected.length === 0}
-          >
-            {saving ? "Speichern…" : "Speichern"}
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-3">
+        <Button type="button" variant="ghost" size="sm" onClick={handleReset} disabled={!dirty || saving}>
+          Zurücksetzen
+        </Button>
+        <Button type="button" size="sm" onClick={handleSave} disabled={!dirty || saving || selected.length === 0}>
+          {saving ? "Speichern…" : "Speichern"}
+        </Button>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

@@ -108,49 +108,63 @@ export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditM
       description="Passe Kontaktinformationen und Zugangsdaten an"
     >
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <label className="block text-sm">
-            <span>E-Mail</span>
-            <Input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              required
-            />
-          </label>
-          <label className="block text-sm">
-            <span>Name (optional)</span>
-            <Input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Vorname Nachname"
-            />
-          </label>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-lg font-semibold text-slate-700">
+              {((user.name && user.name.split(/\s+/).map(s=>s[0]).slice(0,2).join('')) || (user.email && user.email.split('@')[0].slice(0,2)) || '?').toUpperCase()}
+            </div>
+            <div>
+              <div className="text-sm font-medium">{user.name ?? user.email}</div>
+              <div className="text-xs text-muted-foreground">ID: {user.id}</div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm">
+              <span>E-Mail</span>
+              <Input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                required
+              />
+            </label>
+            <label className="block text-sm">
+              <span>Name (optional)</span>
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Vorname Nachname"
+              />
+            </label>
+          </div>
         </div>
 
         <div className="space-y-2">
           <span className="text-sm font-medium">Neues Passwort (optional)</span>
-          <label className="block text-sm">
-            <span>Passwort</span>
-            <Input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Leer lassen, um das Passwort zu behalten"
-              autoComplete="new-password"
-            />
-          </label>
-          <label className="block text-sm">
-            <span>Passwort bestätigen</span>
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Nur bei Änderung erforderlich"
-              autoComplete="new-password"
-            />
-          </label>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block text-sm">
+              <span>Passwort</span>
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Leer lassen, um das Passwort zu behalten"
+                autoComplete="new-password"
+              />
+            </label>
+            <label className="block text-sm">
+              <span>Passwort bestätigen</span>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Nur bei Änderung erforderlich"
+                autoComplete="new-password"
+              />
+            </label>
+          </div>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
