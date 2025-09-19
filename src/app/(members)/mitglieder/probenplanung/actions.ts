@@ -558,7 +558,15 @@ export async function updateRehearsalAction(input: {
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.rehearsal.findUnique({
         where: { id },
-        select: { start: true, end: true, location: true, description: true, status: true },
+        select: {
+          title: true,
+          start: true,
+          end: true,
+          location: true,
+          description: true,
+          status: true,
+          registrationDeadline: true,
+        },
       });
       if (!existing) {
         throw new Error("not-found");
@@ -570,6 +578,7 @@ export async function updateRehearsalAction(input: {
         ? location.trim()
         : existing.location ?? "Noch offen";
 
+      let sanitizedDescription: string | null | undefined;
       const updateData: Prisma.RehearsalUpdateInput = {
         title,
         start,
@@ -578,7 +587,8 @@ export async function updateRehearsalAction(input: {
       };
 
       if (description !== undefined) {
-        updateData.description = sanitizeDescription(description);
+        sanitizedDescription = sanitizeDescription(description);
+        updateData.description = sanitizedDescription;
       }
 
       if (registrationDeadlineOption) {
@@ -599,18 +609,69 @@ export async function updateRehearsalAction(input: {
       const rehearsal = await tx.rehearsal.update({
         where: { id },
         data: updateData,
-        select: { id: true, title: true, start: true, end: true, location: true },
+        select: {
+          id: true,
+          title: true,
+          start: true,
+          end: true,
+          location: true,
+          registrationDeadline: true,
+        },
       });
 
-      return { rehearsal, targetInvitees };
+      const descriptionChanged =
+        sanitizedDescription !== undefined
+          ? (sanitizedDescription ?? null) !== (existing.description ?? null)
+          : false;
+
+      return { rehearsal, targetInvitees, previous: existing, descriptionChanged };
     });
 
-    const { rehearsal, targetInvitees } = result;
+    const { rehearsal, targetInvitees, previous, descriptionChanged } = result;
     const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
     const updatedTitle = `Probe aktualisiert: ${rehearsal.title}`;
-    const updatedBody = `Neuer Termin: ${formatter.format(rehearsal.start)}${
-      rehearsal.location ? ` · Ort: ${rehearsal.location}` : ""
-    }`;
+
+    const updates: string[] = [];
+
+    if (previous.title !== rehearsal.title) {
+      updates.push(`Titel: „${previous.title}“ → „${rehearsal.title}“`);
+    }
+
+    if (previous.start.getTime() !== rehearsal.start.getTime()) {
+      updates.push(
+        `Datum & Zeit: ${formatter.format(previous.start)} → ${formatter.format(rehearsal.start)}`,
+      );
+    }
+
+    const previousLocation = previous.location?.trim() || "Noch offen";
+    const newLocation = rehearsal.location?.trim() || "Noch offen";
+    if (previousLocation !== newLocation) {
+      updates.push(`Ort: ${previousLocation} → ${newLocation}`);
+    }
+
+    if (descriptionChanged) {
+      updates.push("Beschreibung aktualisiert.");
+    }
+
+    const previousDeadline = previous.registrationDeadline;
+    const newDeadline = rehearsal.registrationDeadline;
+    const previousDeadlineMs = previousDeadline?.getTime();
+    const newDeadlineMs = newDeadline?.getTime();
+    if ((previousDeadlineMs ?? null) !== (newDeadlineMs ?? null)) {
+      if (previousDeadline && newDeadline) {
+        updates.push(
+          `Rückmeldefrist: ${formatter.format(previousDeadline)} → ${formatter.format(newDeadline)}`,
+        );
+      } else if (!previousDeadline && newDeadline) {
+        updates.push(`Neue Rückmeldefrist: ${formatter.format(newDeadline)}`);
+      } else if (previousDeadline && !newDeadline) {
+        updates.push("Rückmeldefrist entfernt.");
+      }
+    }
+
+    const updatedBody = updates.length
+      ? updates.map((entry) => `• ${entry}`).join("\n")
+      : "Details der Probe wurden aktualisiert.";
 
     if (targetInvitees.length) {
       await prisma.notification.create({
