@@ -102,7 +102,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     const options = {
       path: REALTIME_PATH,
-      transports: ['websocket', 'polling'] as const,
+      transports: ['websocket', 'polling'],
       forceNew: true,
       reconnection: true,
       reconnectionDelay: 1000,

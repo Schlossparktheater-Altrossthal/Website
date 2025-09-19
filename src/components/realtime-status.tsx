@@ -15,6 +15,23 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const STATUS_TEXT: Record<string, string> = {
+  yes: 'Zusage',
+  no: 'Absage',
+  emergency: 'Notfall',
+};
+
+function getStatusText(status: string | null | undefined): string {
+  if (!status) {
+    return 'Unbekannt';
+  }
+  return STATUS_TEXT[status] ?? status;
+}
+
+function formatUserId(userId?: string | null): string {
+  return userId ? `Mitglied ${userId}` : 'Ein Mitglied';
+}
+
 interface RealtimeStatusProps {
   rehearsalId?: string;
   showPresence?: boolean;
@@ -28,12 +45,22 @@ export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeSta
   useAttendanceRealtime(
     rehearsalId || null,
     (event) => {
-      setLastUpdate(new Date());
+      const occurredAt = event.timestamp ? new Date(event.timestamp) : new Date();
+      setLastUpdate(occurredAt);
+
+      const statusLabel = getStatusText(event.status);
+      const actorLabel = formatUserId(event.actorUserId);
+      const targetLabel = event.targetUserId ? ` für ${formatUserId(event.targetUserId)}` : '';
+      const descriptionParts = [
+        event.rehearsalId ? `Probe: ${event.rehearsalId}` : null,
+        event.comment ? `Kommentar: ${event.comment}` : null,
+      ].filter(Boolean) as string[];
+
       toast.info(
-        `${event.userName} hat Anwesenheit auf "${event.status}" geändert`,
-        { 
-          description: `Probe: ${event.rehearsalTitle}`,
-          duration: 3000 
+        `${actorLabel} hat die Anwesenheit${targetLabel} auf „${statusLabel}“ gesetzt`,
+        {
+          description: descriptionParts.length ? descriptionParts.join(' · ') : undefined,
+          duration: 3000,
         }
       );
     }
@@ -156,23 +183,30 @@ interface AttendanceUpdatesProps {
 export function AttendanceUpdates({ rehearsalId }: AttendanceUpdatesProps) {
   const [recentUpdates, setRecentUpdates] = useState<Array<{
     id: string;
-    userName: string;
-    status: string;
+    actorUserId?: string;
+    targetUserId: string;
+    status: string | null;
     timestamp: Date;
-    rehearsalTitle: string;
+    rehearsalId: string;
+    comment?: string | null;
   }>>([]);
 
   useAttendanceRealtime(rehearsalId, (event) => {
-    setRecentUpdates(prev => [{
-      id: `${event.userId}-${Date.now()}`,
-      userName: event.userName,
-      status: event.status,
-      timestamp: new Date(),
-      rehearsalTitle: event.rehearsalTitle,
-    }, ...prev].slice(0, 10)); // Keep only last 10 updates
+    setRecentUpdates((prev) => [
+      {
+        id: `${event.rehearsalId}-${event.timestamp}`,
+        actorUserId: event.actorUserId,
+        targetUserId: event.targetUserId,
+        status: event.status ?? null,
+        timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
+        rehearsalId: event.rehearsalId,
+        comment: event.comment,
+      },
+      ...prev,
+    ].slice(0, 10));
   });
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string | null) => {
     switch (status) {
       case 'yes':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
@@ -182,15 +216,6 @@ export function AttendanceUpdates({ rehearsalId }: AttendanceUpdatesProps) {
         return <AlertCircle className="h-4 w-4 text-amber-500" />;
       default:
         return null;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'yes': return 'Zusage';
-      case 'no': return 'Absage';
-      case 'emergency': return 'Notfall';
-      default: return status;
     }
   };
 
@@ -216,20 +241,29 @@ export function AttendanceUpdates({ rehearsalId }: AttendanceUpdatesProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         {recentUpdates.map((update) => (
-          <div key={update.id} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+          <div key={update.id} className="flex items-start gap-2 rounded-lg bg-gray-50 p-2">
             {getStatusIcon(update.status)}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 space-y-1">
               <p className="text-sm">
-                <span className="font-medium">{update.userName}</span>
-                {' → '}
-                <span className="font-medium">{getStatusText(update.status)}</span>
+                <span className="font-medium">{formatUserId(update.actorUserId)}</span>{' '}
+                hat die Anwesenheit
+                {update.targetUserId ? (
+                  <>
+                    {' '}für <span className="font-medium">{formatUserId(update.targetUserId)}</span>
+                  </>
+                ) : null}{' '}
+                auf <span className="font-medium">{getStatusText(update.status)}</span> gesetzt
               </p>
               <p className="text-xs text-muted-foreground">
                 {update.timestamp.toLocaleTimeString('de-DE', {
                   hour: '2-digit',
-                  minute: '2-digit'
+                  minute: '2-digit',
                 })}
+                {update.rehearsalId ? ` · Probe ${update.rehearsalId}` : ''}
               </p>
+              {update.comment ? (
+                <p className="text-xs text-muted-foreground">Kommentar: {update.comment}</p>
+              ) : null}
             </div>
           </div>
         ))}

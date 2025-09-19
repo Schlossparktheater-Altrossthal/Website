@@ -20,13 +20,17 @@ export function useMediaQuery(query: string): boolean {
 
     setMatches(mediaQueryList.matches);
 
-    if ("addEventListener" in mediaQueryList) {
+    if (typeof mediaQueryList.addEventListener === "function") {
       mediaQueryList.addEventListener("change", handleChange);
       return () => mediaQueryList.removeEventListener("change", handleChange);
     }
 
-    mediaQueryList.addListener(handleChange);
-    return () => mediaQueryList.removeListener(handleChange);
+    if (typeof mediaQueryList.addListener === "function") {
+      mediaQueryList.addListener(handleChange);
+      return () => mediaQueryList.removeListener(handleChange);
+    }
+
+    return undefined;
   }, [query]);
 
   return matches;

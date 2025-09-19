@@ -53,18 +53,23 @@ async function sendRemindersForRehearsal(
   rehearsal: Rehearsal,
   users: User[]
 ): Promise<void> {
+  const registrationDeadline = rehearsal.registrationDeadline;
+  if (!registrationDeadline) {
+    return;
+  }
+
   for (const user of users) {
     if (!user.email) continue;
 
     const registrationLink = `${process.env.NEXT_PUBLIC_BASE_URL}/proben/${rehearsal.id}`;
-    
-    const emailHtml = render(
+
+    const emailHtml = await render(
       RehearsalReminderEmail({
         userName: user.name || 'Theatermitglied',
         rehearsalTitle: rehearsal.title,
         rehearsalDate: rehearsal.start,
         rehearsalLocation: rehearsal.location,
-        registrationDeadline: rehearsal.registrationDeadline,
+        registrationDeadline,
         registrationLink,
       })
     );

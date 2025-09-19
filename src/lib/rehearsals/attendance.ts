@@ -1,7 +1,11 @@
 import { AttendanceStatus, PrismaClient, RehearsalAttendance } from "@prisma/client";
 import { hasRole, Role } from "@/lib/rbac";
 
-export const ATTENDANCE_STATUSES: readonly AttendanceStatus[] = ["yes", "no", "maybe"];
+export const ATTENDANCE_STATUSES: readonly AttendanceStatus[] = [
+  "yes",
+  "no",
+  "emergency",
+];
 
 export function normalizeStatus(value: unknown): AttendanceStatus | null {
   if (typeof value !== "string") return null;

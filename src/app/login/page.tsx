@@ -6,7 +6,7 @@ import { signIn, type SignInResponse } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const magicSchema = z.object({ email: z.string().email() });
@@ -16,6 +16,14 @@ const passwordSchema = z.object({
 });
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   // Use only NEXT_PUBLIC_ var to keep SSR/CSR consistent and avoid hydration mismatches
   const devNoDb = process.env.NEXT_PUBLIC_AUTH_DEV_NO_DB === "1";
   const [loading, setLoading] = useState(false);

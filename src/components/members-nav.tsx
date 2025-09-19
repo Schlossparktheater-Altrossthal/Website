@@ -104,7 +104,7 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
 }
 
 export function MembersNav({ permissions }: { permissions?: string[] }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const router = useRouter();
 
   const { groups, flat } = useMemo(() => {

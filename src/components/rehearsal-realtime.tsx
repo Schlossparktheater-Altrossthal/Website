@@ -5,6 +5,14 @@ import { useAttendanceRealtime, usePresence } from '@/hooks/useRealtime';
 import { RealtimeStatus } from '@/components/realtime-status';
 import { toast } from 'sonner';
 
+const ATTENDANCE_STATUS_MESSAGES: Record<string, string> = {
+  yes: 'zugesagt',
+  no: 'abgesagt',
+  emergency: 'einen Notfall gemeldet',
+};
+
+const formatUserId = (userId?: string | null): string => (userId ? `Mitglied ${userId}` : 'Ein Mitglied');
+
 interface RehearsalRealtimeProps {
   rehearsalId: string;
   rehearsalTitle: string;
@@ -22,18 +30,22 @@ export function RehearsalRealtime({
 
   // Handle real-time attendance updates
   useAttendanceRealtime(rehearsalId, (event) => {
-    setLastActivity(new Date());
-    
-    // Only show notifications for other users' changes
-    if (event.userId !== currentUserId) {
-      const statusText = {
-        yes: 'zugesagt',
-        no: 'abgesagt', 
-        emergency: 'Notfall gemeldet'
-      }[event.status] || event.status;
+    const occurredAt = event.timestamp ? new Date(event.timestamp) : new Date();
+    setLastActivity(occurredAt);
 
-      toast.info(`${event.userName} hat ${statusText}`, {
-        description: `Probe: ${rehearsalTitle}`,
+    // Only show notifications for other users' changes
+    if (event.actorUserId !== currentUserId) {
+      const statusMessage = event.status
+        ? ATTENDANCE_STATUS_MESSAGES[event.status] ?? `den Status auf ${event.status} gesetzt`
+        : 'die Anwesenheit aktualisiert';
+      const targetLabel = event.targetUserId ? ` für ${formatUserId(event.targetUserId)}` : '';
+      const descriptionParts = [
+        `Probe: ${rehearsalTitle}`,
+        event.comment ? `Kommentar: ${event.comment}` : null,
+      ].filter(Boolean) as string[];
+
+      toast.info(`${formatUserId(event.actorUserId)} hat${targetLabel} ${statusMessage}`, {
+        description: descriptionParts.join(' · ') || undefined,
         duration: 4000,
       });
     }

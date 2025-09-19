@@ -303,14 +303,14 @@ export class RealtimeService {
 
   private emitToOnlineStatsSubscribers<E extends keyof ServerToClientEvents>(
     event: E,
-    payload: Parameters<ServerToClientEvents[E]>[0],
+    ...payload: Parameters<ServerToClientEvents[E]>
   ): void {
     if (!this.io) return;
 
     this.onlineStatsSubscribers.forEach((socketId) => {
       const subscriber = this.io!.sockets.sockets.get(socketId) as IOSocket | undefined;
       if (subscriber) {
-        subscriber.emit(event, payload);
+        subscriber.emit(event, ...payload);
       } else {
         this.onlineStatsSubscribers.delete(socketId);
       }
@@ -394,10 +394,11 @@ export class RealtimeService {
     const roomArray = Array.isArray(rooms) ? rooms : [rooms];
     const eventName = event.type as keyof EventTypeMap & keyof ServerToClientEvents;
     const payload = event as EventTypeMap[typeof eventName];
+    const args = [payload] as Parameters<ServerToClientEvents[typeof eventName]>;
 
     roomArray.forEach((room) => {
       const emitter = excludeSocket ? io.to(room).except(excludeSocket) : io.to(room);
-      emitter.emit(eventName, payload);
+      emitter.emit(eventName, ...args);
     });
   }
 
