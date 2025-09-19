@@ -50,19 +50,21 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-lg bg-background shadow-xl"
+        className="w-full max-w-2xl rounded-xl bg-background shadow-2xl border border-border/50 overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b px-5 py-3">
+        <div className="flex items-center justify-between border-b px-6 py-4 bg-slate-50/50">
           <div>
-            <h2 className="text-lg font-semibold">{title}</h2>
-            {description && <p className="text-sm text-muted-foreground">{description}</p>}
+            <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+            {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
           </div>
-          <Button type="button" variant="ghost" onClick={onClose} aria-label="Schließen">
-            ×
+          <Button type="button" variant="ghost" onClick={onClose} aria-label="Schließen" className="h-8 w-8 p-0 hover:bg-slate-100">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </Button>
         </div>
-        <div className="px-5 py-4 space-y-4">{children}</div>
+        <div className="px-6 py-5">{children}</div>
       </div>
     </div>,
     document.body,
