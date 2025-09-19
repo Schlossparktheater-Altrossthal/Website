@@ -142,7 +142,7 @@
     --word-page-border: rgba(148, 163, 184, 0.24);
     --word-page-shadow: 0 28px 58px rgba(5, 8, 20, 0.7);
     --word-text: #e2e8f0;
-    --word-muted: rgba(148, 163, 184, 0.72);
+    --word-muted: rgba(226, 232, 240, 0.88);
     --word-selection: rgba(59, 130, 246, 0.28);
     --word-accent: #3b82f6;
     position: relative;
@@ -382,6 +382,7 @@
     color: var(--word-muted);
     font-style: normal;
     font-weight: 500;
+    text-shadow: 0 1px 2px rgba(2, 6, 23, 0.55);
     left: 3rem;
     right: 3rem;
   }
@@ -588,6 +589,52 @@
   .ql-snow .ql-tooltip a.ql-action,
   .ql-snow .ql-tooltip a.ql-remove {
     color: rgba(147, 197, 253, 0.95);
+  }
+
+  @media (max-width: 768px) {
+    .rich-text-editor {
+      border-radius: 20px;
+    }
+
+    .rich-text-editor::before {
+      inset: -45% -25% auto -25%;
+      height: 40%;
+      opacity: 0.35;
+    }
+
+    .rich-text-editor .ql-toolbar.ql-snow {
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .rich-text-editor .ql-toolbar.ql-snow .ql-formats {
+      margin-right: 1rem;
+      padding-right: 1rem;
+    }
+
+    .rich-text-editor .ql-toolbar.ql-snow button,
+    .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label {
+      height: 34px;
+      min-width: 34px;
+      padding: 0 0.75rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+    }
+
+    .rich-text-editor .ql-container.ql-snow {
+      padding: 1.5rem 1rem 2.25rem;
+    }
+
+    .rich-text-editor .ql-editor {
+      min-height: 18rem;
+      padding: 2rem 1.5rem 2.25rem;
+      border-radius: 18px;
+    }
+
+    .rich-text-editor .ql-editor.ql-blank::before {
+      left: 1.5rem;
+      right: 1.5rem;
+    }
   }
   }
 
