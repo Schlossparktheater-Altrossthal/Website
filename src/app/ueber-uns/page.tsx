@@ -1,0 +1,326 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import {
+  CalendarHeart,
+  Drama,
+  HeartHandshake,
+  MapPin,
+  Sparkles,
+  Trees,
+  Users,
+} from "lucide-react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const metadata: Metadata = {
+  title: "Über uns",
+  description:
+    "Lerne das Sommertheater Altrossthal kennen – unser Ensemble, unsere Werte und die Menschen, die jeden Sommer magische Abende im Schlosspark schaffen.",
+  alternates: {
+    canonical: "/ueber-uns",
+  },
+  openGraph: {
+    title: "Über uns | Sommertheater Altrossthal",
+    description:
+      "Unser Ensemble, unsere Geschichte und unsere Mission: Sommertheater Altrossthal im Portrait.",
+    url: "/ueber-uns",
+    type: "website",
+  },
+};
+
+const highlights = [
+  {
+    label: "Gründung",
+    value: "2011",
+    detail: "Erste Sommerinszenierung im Schlosspark Altrossthal",
+  },
+  {
+    label: "Ensemble",
+    value: "45+",
+    detail: "Darstellende, Musiker:innen und helfende Hände",
+  },
+  {
+    label: "Publikum",
+    value: "3.200",
+    detail: "begeisterte Gäste pro Saison",
+  },
+];
+
+const signature = [
+  {
+    icon: Drama,
+    title: "Freiluftbühne im Schlosspark",
+    description:
+      "Wir verwandeln historische Mauern und alte Baumkronen in eine Bühne voller Atmosphären, Licht und Klang.",
+  },
+  {
+    icon: Sparkles,
+    title: "Storytelling mit Tiefgang",
+    description:
+      "Jedes Stück entsteht eigens für Altrossthal – poetisch, geheimnisvoll und nah an den Menschen, die uns umgeben.",
+  },
+  {
+    icon: Trees,
+    title: "Nachhaltig gedacht",
+    description:
+      "Requisiten und Kulissen werden liebevoll upgecycelt, lokale Partner:innen liefern Strom aus erneuerbaren Quellen.",
+  },
+];
+
+const values = [
+  {
+    icon: HeartHandshake,
+    title: "Gemeinschaft",
+    description:
+      "Im Ensemble wirken Generationen zusammen. Ehrenamt, Professionalität und Nachbarschaft greifen ineinander.",
+  },
+  {
+    icon: Users,
+    title: "Offenheit",
+    description:
+      "Wir schaffen Räume, in denen neue Stimmen hörbar werden – auf der Bühne genauso wie im Publikum.",
+  },
+  {
+    icon: CalendarHeart,
+    title: "Sorgfalt",
+    description:
+      "Jedes Detail zählt: von der Dramaturgie über die Kostüme bis zur letzten Bankreihe im Park.",
+  },
+];
+
+const milestones = [
+  {
+    year: "2011",
+    title: "Der Anfang",
+    description:
+      "Premiere des ersten Sommertheater-Wochenendes mit 400 Besucher:innen – der Grundstein für eine Tradition.",
+  },
+  {
+    year: "2015",
+    title: "Die Schlosspark-Lichter",
+    description:
+      "Einführung der illuminierte Abendführung, die heute zu jedem Aufführungsabend dazugehört.",
+  },
+  {
+    year: "2019",
+    title: "Neue Stimmen",
+    description:
+      "Start des Nachwuchsprogramms für junge Talente aus der Region Altrossthal und Umgebung.",
+  },
+  {
+    year: "2023",
+    title: "Digital verbunden",
+    description:
+      "Livestreams für Menschen, die nicht vor Ort sein können, und ein hybrides Probenformat für unser Ensemble.",
+  },
+];
+
+const engagement = [
+  {
+    title: "Mitmachen",
+    description:
+      "Ob Schauspiel, Kostüm, Technik oder Gästebetreuung – wir freuen uns über neue Gesichter, die mit uns die Sommertheater-Momente gestalten.",
+    action: {
+      label: "Schreib uns",
+      href: "mailto:ensemble@sommertheater-altrossthal.de",
+    },
+  },
+  {
+    title: "Fördern",
+    description:
+      "Als Partner:in oder Sponsor:in stärkst du kulturelle Angebote in der Region und ermöglichst faire Gagen für unser Kreativteam.",
+    action: {
+      label: "Kontakt aufnehmen",
+      href: "mailto:foerderkreis@sommertheater-altrossthal.de",
+    },
+  },
+];
+
+export default function AboutPage() {
+  const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "PerformingGroup",
+    name: "Sommertheater Altrossthal",
+    description:
+      "Ein gemeinnütziges Sommertheater-Ensemble, das jedes Jahr immersive Freiluftinszenierungen im Schlosspark Altrossthal zeigt.",
+    url: `${baseUrl}/ueber-uns`,
+    foundingDate: "2011",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Altrossthal",
+      addressRegion: "Schleswig-Holstein",
+      addressCountry: "DE",
+    },
+    sameAs: [`${baseUrl}/chronik`, `${baseUrl}/mystery`],
+  } as const;
+
+  return (
+    <div className="relative isolate">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/70 to-background" aria-hidden />
+        <div
+          className="absolute left-1/2 top-[-10%] h-[28rem] w-[120vw] -translate-x-1/2 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent blur-3xl opacity-60"
+          aria-hidden
+        />
+        <div
+          className="absolute right-[-10%] bottom-[-20%] h-[22rem] w-[90vw] bg-gradient-to-br from-primary/25 via-primary/5 to-transparent blur-3xl opacity-50"
+          aria-hidden
+        />
+      </div>
+
+      <section className="container mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-12">
+        <div className="max-w-3xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary/80">Sommertheater Altrossthal</p>
+          <h1 className="mt-4 font-serif text-4xl tracking-tight sm:text-5xl">Über uns</h1>
+          <p className="mt-6 text-lg text-muted-foreground">
+            Wir erzählen Geschichten für laue Sommernächte. Unser Ensemble verbindet professionelle Theaterarbeit mit ehrenamtlichem Herzblut – mitten im
+            Schlosspark Altrossthal.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          {highlights.map((item) => (
+            <Card key={item.label} className="bg-card/70">
+              <CardHeader>
+                <p className="text-sm uppercase tracking-wide text-muted-foreground/80">{item.label}</p>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold text-primary">{item.value}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+        <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="space-y-6">
+            <h2 className="font-serif text-3xl sm:text-4xl">Unsere Handschrift</h2>
+            <p className="text-lg text-muted-foreground">
+              Die Sommerproduktionen entstehen über Monate hinweg – von der ersten Idee bis zur letzten Generalprobe. Dabei verbinden wir poetische Stoffe mit
+              immersiven Erlebnissen, die nur unter freiem Himmel möglich sind.
+            </p>
+            <div className="space-y-5">
+              {signature.map(({ icon: Icon, title, description }) => (
+                <div
+                  key={title}
+                  className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
+                >
+                  <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                    <Icon className="h-6 w-6" aria-hidden />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">{title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-primary/10 via-background to-background p-8 shadow-lg">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,223,150,0.18),_transparent_60%)]" aria-hidden />
+            <div className="relative space-y-4">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary/80">Atmosphäre</p>
+              <p className="font-serif text-2xl">
+                Wenn die Sonne hinter den Baumwipfeln verschwindet, beginnt unser Bühnenraum zu leben: leuchtende Pfade, flüsternde Bäume und ein Ensemble, das
+                das Publikum mitnimmt in eine andere Welt.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Jedes Szenenbild wird speziell für den Schlosspark entwickelt. Lichtinstallationen und räumlicher Klang lassen die Besucher:innen mitten in der
+                Geschichte stehen.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+        <div className="max-w-2xl">
+          <h2 className="font-serif text-3xl sm:text-4xl">Werte, die wir leben</h2>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Ensemblearbeit bedeutet Vertrauen. Unsere Werte spiegeln sich in jeder Probe, jedem Ehrenamt und jedem Gast wider, der den Weg nach Altrossthal findet.
+          </p>
+        </div>
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {values.map(({ icon: Icon, title, description }) => (
+            <Card key={title} className="relative overflow-hidden bg-card/70">
+              <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
+              <CardHeader>
+                <Icon className="h-8 w-8 text-primary" aria-hidden />
+              </CardHeader>
+              <CardContent>
+                <CardTitle className="text-xl">{title}</CardTitle>
+                <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+        <div className="grid gap-10 lg:grid-cols-2">
+          <div>
+            <h2 className="font-serif text-3xl sm:text-4xl">Meilensteine</h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Wir wachsen organisch und mit viel Leidenschaft. Ein paar Stationen auf unserem Weg:
+            </p>
+          </div>
+          <div className="relative">
+            <div className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" aria-hidden />
+            <ul className="space-y-8">
+              {milestones.map((milestone) => (
+                <li key={milestone.year} className="relative pl-12">
+                  <div className="absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-primary/20 text-primary">
+                    <span className="text-xs font-semibold">{milestone.year}</span>
+                  </div>
+                  <h3 className="text-lg font-semibold">{milestone.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{milestone.description}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
+        <div className="rounded-3xl border border-border/40 bg-card/60 p-8 sm:p-12">
+          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div className="space-y-5">
+              <h2 className="font-serif text-3xl sm:text-4xl">Engagement rund um das Ensemble</h2>
+              <p className="text-lg text-muted-foreground">
+                Unser Sommertheater lebt von Menschen, die ihre Zeit und ihr Können einbringen. Wir begleiten neue Mitglieder mit Mentoring-Formaten und bieten
+                Fortbildungen für Licht, Ton und Bühnenbild an.
+              </p>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <MapPin className="h-5 w-5 text-primary" aria-hidden />
+                <span>Schlosspark Altrossthal · Probenscheune im Alten Forsthaus</span>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {engagement.map((item) => (
+                <div key={item.title} className="rounded-2xl border border-border/40 bg-background/70 p-5">
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+                  <Link
+                    href={item.action.href}
+                    className="mt-4 inline-flex items-center text-sm font-medium text-primary hover:text-primary/80"
+                  >
+                    {item.action.label}
+                    <span className="ml-2 text-lg" aria-hidden>
+                      →
+                    </span>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+    </div>
+  );
+}
