@@ -5,7 +5,31 @@ import { prisma } from "@/lib/prisma";
 type CleanupRequest =
   | { action: "clear_read" }
   | { action: "delete_ids"; ids: string[] }
-  | { action: "clear_older_than"; days: number };
+  | { action: "clear_older_than"; days: number | string };
+
+const isCleanupRequest = (value: unknown): value is CleanupRequest => {
+  if (!value || typeof value !== "object" || !("action" in value)) {
+    return false;
+  }
+
+  const { action } = value as { action?: unknown };
+
+  if (action === "clear_read") {
+    return true;
+  }
+
+  if (action === "delete_ids") {
+    const { ids } = value as { ids?: unknown };
+    return Array.isArray(ids);
+  }
+
+  if (action === "clear_older_than") {
+    const { days } = value as { days?: unknown };
+    return typeof days === "number" || typeof days === "string";
+  }
+
+  return false;
+};
 
 export async function POST(request: Request) {
   try {
@@ -13,8 +37,8 @@ export async function POST(request: Request) {
     const userId = session.user?.id;
     if (!userId) return NextResponse.json({ ok: true });
 
-    const body = (await request.json().catch(() => null)) as CleanupRequest | null;
-    if (!body || typeof body !== "object" || !("action" in body)) {
+    const body = await request.json().catch(() => null);
+    if (!isCleanupRequest(body)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
@@ -26,14 +50,16 @@ export async function POST(request: Request) {
       });
       deleted = res.count;
     } else if (body.action === "delete_ids") {
-      const ids = Array.isArray((body as any).ids) ? (body as any).ids.filter((x: unknown) => typeof x === "string") : [];
+      const ids = Array.isArray(body.ids)
+        ? body.ids.filter((value): value is string => typeof value === "string")
+        : [];
       if (!ids.length) return NextResponse.json({ ok: true, deleted: 0 });
       const res = await prisma.notificationRecipient.deleteMany({
         where: { userId, id: { in: ids } },
       });
       deleted = res.count;
     } else if (body.action === "clear_older_than") {
-      const days = Number((body as any).days);
+      const days = Number(body.days);
       if (!Number.isFinite(days) || days <= 0) return NextResponse.json({ error: "Invalid days" }, { status: 400 });
       const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       const res = await prisma.notificationRecipient.deleteMany({

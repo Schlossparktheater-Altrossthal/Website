@@ -2,13 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  ROLE_BADGE_VARIANTS,
-  ROLE_LABELS,
-  ROLES,
-  sortRoles,
-  type Role,
-} from "@/lib/roles";
+import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
 import { toast } from "sonner";
 import { UserEditModal } from "@/components/members/user-edit-modal";
 import { RolePicker } from "@/components/members/role-picker";
@@ -65,17 +59,6 @@ export function RoleManager({
   }, [name]);
 
   const dirty = useMemo(() => selected.join("|") !== saved.join("|") || selectedCustomIds.join("|") !== savedCustomIds.join("|"), [selected, saved, selectedCustomIds, savedCustomIds]);
-
-  const toggleRole = (role: Role) => {
-    setError(null);
-    setSelected((prev) => {
-      const isActive = prev.includes(role);
-      const next = isActive ? prev.filter((r) => r !== role) : [...prev, role];
-      if (next.length === 0) return prev;
-      if (role === "owner" && !canEditOwner) return prev; // Non-owners cannot change owner
-      return sortRoles(next);
-    });
-  };
 
   const handleSave = async () => {
     if (selected.length === 0) {

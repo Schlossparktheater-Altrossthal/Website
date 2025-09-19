@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, formatDistanceToNow, differenceInHours } from "date-fns";
 import { de } from "date-fns/locale/de";
@@ -88,7 +89,7 @@ export default async function MeineProbenPage() {
 
   const [upcomingRaw, historyRaw] = await Promise.all([
     prisma.rehearsal.findMany({
-      where: { start: { gte: now } },
+      where: { start: { gte: now }, status: { not: "DRAFT" } },
       orderBy: { start: "asc" },
       take: 8,
       include: {
@@ -100,7 +101,7 @@ export default async function MeineProbenPage() {
     prisma.rehearsalAttendance.findMany({
       where: {
         userId,
-        rehearsal: { start: { lt: now } },
+        rehearsal: { start: { lt: now }, status: { not: "DRAFT" } },
       },
       orderBy: { rehearsal: { start: "desc" } },
       take: 5,
@@ -224,7 +225,12 @@ export default async function MeineProbenPage() {
                   <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold text-foreground">{nextRehearsal.title}</h3>
+                        <Link
+                          href={`/mitglieder/proben/${nextRehearsal.id}`}
+                          className="text-lg font-semibold text-primary hover:underline"
+                        >
+                          {nextRehearsal.title}
+                        </Link>
                         <p className="text-sm text-muted-foreground">{formatDateTime(nextRehearsal.start)}</p>
                         <p className="text-xs text-muted-foreground/80">Ort: {nextRehearsal.location}</p>
                       </div>
@@ -318,7 +324,12 @@ export default async function MeineProbenPage() {
                       <li key={item.id} className="rounded-lg border border-border/60 bg-background/60 p-3">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                            <Link
+                              href={`/mitglieder/proben/${item.id}`}
+                              className="text-sm font-semibold text-primary hover:underline"
+                            >
+                              {item.title}
+                            </Link>
                             <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
                             <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
                           </div>
@@ -377,7 +388,12 @@ export default async function MeineProbenPage() {
                     <li key={entry.id} className="rounded-lg border border-border/60 bg-background/60 p-3">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-sm font-medium text-foreground">{entry.rehearsal.title}</p>
+                          <Link
+                            href={`/mitglieder/proben/${entry.rehearsal.id}`}
+                            className="text-sm font-medium text-primary hover:underline"
+                          >
+                            {entry.rehearsal.title}
+                          </Link>
                           <p className="text-xs text-muted-foreground">{formatDateTime(entry.rehearsal.start)}</p>
                           {entry.rehearsal.location ? (
                             <p className="text-xs text-muted-foreground/80">Ort: {entry.rehearsal.location}</p>

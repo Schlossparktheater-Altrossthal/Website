@@ -152,6 +152,7 @@ model User {
   notifications         NotificationRecipient[]
   blockedDays            BlockedDay[]
   appRoles               UserAppRole[]
+  rehearsalInvites       RehearsalInvitee[]
 }
 
 model Account {
@@ -249,11 +250,22 @@ model Rehearsal {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @default(now()) @updatedAt
   show          Show?                 @relation(fields: [showId], references: [id], onDelete: Cascade)
-  attendance    RehearsalAttendance[]
+  attendance     RehearsalAttendance[]
   attendanceLogs RehearsalAttendanceLog[]
-  template      RehearsalTemplate?    @relation(fields: [templateId], references: [id])
-  proposals     RehearsalProposal[]
-  notifications Notification[]
+  template       RehearsalTemplate?    @relation(fields: [templateId], references: [id])
+  proposals      RehearsalProposal[]
+  notifications  Notification[]
+  invitees       RehearsalInvitee[]
+}
+
+model RehearsalInvitee {
+  id          String    @id @default(cuid())
+  rehearsalId String
+  userId      String
+  rehearsal   Rehearsal @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([rehearsalId, userId])
 }
 
 model RehearsalTemplate {
@@ -282,6 +294,7 @@ enum RehearsalPriority {
 }
 
 enum RehearsalStatus {
+  DRAFT
   PLANNED
   CONFIRMED
   CANCELLED
