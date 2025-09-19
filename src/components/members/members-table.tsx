@@ -1,4 +1,5 @@
 "use client";
+"use client";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -161,7 +162,7 @@ export function MembersTable({
                   </div>
                   <Modal
                     open={openFor === u.id}
-                    title={u.name || u.email || "Mitglied"}
+
                     description="Rollen und Daten bearbeiten"
                     onClose={() => setOpenFor(null)}
                   >
