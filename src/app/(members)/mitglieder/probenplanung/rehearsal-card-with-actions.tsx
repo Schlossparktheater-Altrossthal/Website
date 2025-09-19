@@ -161,8 +161,8 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
           start: startDate,
           location: rehearsal.location,
         }}
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
       />
 
       {/* Delete Confirmation */}
@@ -172,8 +172,8 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
           title: rehearsal.title,
           start: startDate,
         }}
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
       />
     </>
   );

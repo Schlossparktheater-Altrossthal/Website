@@ -1,157 +1,164 @@
 "use client";
 
-"use client";
-import * as React from "react";
-import { useState, useTransition } from "react";
-import { updateRehearsalAction } from "./actions";
-import { EditIcon } from "@/components/ui/icons";
+import { useEffect, useState, useTransition } from "react";
+import { toast } from "sonner";
 
-interface EditRehearsalModalProps {
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+
+import { updateRehearsalAction } from "./actions";
+
+function formatDate(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function formatTime(value: Date) {
+  return value.toISOString().slice(11, 16);
+}
+
+export interface EditRehearsalModalProps {
   rehearsal: {
     id: string;
     title: string;
     start: Date;
     location: string | null;
   };
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export function EditRehearsalModal({ rehearsal, isOpen, onClose }: EditRehearsalModalProps) {
+export function EditRehearsalModal({
+  rehearsal,
+  open,
+  onOpenChange,
+  onSuccess,
+}: EditRehearsalModalProps) {
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [location, setLocation] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string>("");
 
-  const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0];
-  };
+  useEffect(() => {
+    if (!open) return;
+    setTitle(rehearsal.title);
+    setDate(formatDate(rehearsal.start));
+    setTime(formatTime(rehearsal.start));
+    setLocation(rehearsal.location || "");
+  }, [open, rehearsal]);
 
-  const formatTime = (date: Date) => {
-    return date.toTimeString().split(' ')[0].substring(0, 5);
-  };
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    
-    startTransition(async () => {
-      const result = await updateRehearsalAction({
+    startTransition(() => {
+      updateRehearsalAction({
         id: rehearsal.id,
-        title: formData.get("title") as string,
-        date: formData.get("date") as string,
-        time: formData.get("time") as string,
-        location: formData.get("location") as string || undefined,
-      });
+        title,
+        date,
+        time,
+        location: location || undefined,
+      })
+        .then(async (result) => {
+          if (result?.error) {
+            toast.error(result.error);
+            return;
+          }
 
-      if (result.error) {
-        setError(result.error);
-      } else {
-        onClose();
-        setError("");
-      }
+          toast.success("Probe aktualisiert. Die Änderungen wurden gespeichert.");
+          onOpenChange(false);
+          onSuccess?.();
+        })
+        .catch(() => {
+          toast.error("Aktualisierung fehlgeschlagen.");
+        });
     });
-  }
-
-  if (!isOpen) return null;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg bg-card border border-border shadow-lg">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <EditIcon className="w-5 h-5" />
-            Probe bearbeiten
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Schließen"
-          >
-            ✕
-          </button>
+    <Modal
+      open={open}
+      onClose={() => {
+        if (!isPending) onOpenChange(false);
+      }}
+      title="Probe bearbeiten"
+      description="Bearbeite die Details deiner geplanten Probe."
+    >
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="space-y-2">
+          <label className="text-sm font-medium" htmlFor="edit-rehearsal-title">
+            Titel
+          </label>
+          <Input
+            id="edit-rehearsal-title"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="z. B. Leseprobe im Probenraum"
+            required
+            minLength={3}
+            maxLength={120}
+          />
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-          
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium" htmlFor="edit-rehearsal-location">
+            Ort
+          </label>
+          <Input
+            id="edit-rehearsal-location"
+            value={location}
+            onChange={(event) => setLocation(event.target.value)}
+            placeholder="z. B. Probenraum, Bühne, Außenlocation"
+            minLength={0}
+            maxLength={120}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <label htmlFor="edit-title" className="text-sm font-medium">
-              Titel
+            <label className="text-sm font-medium" htmlFor="edit-rehearsal-date">
+              Datum
             </label>
-            <input
-              id="edit-title"
-              name="title"
-              type="text"
-              defaultValue={rehearsal.title}
+            <Input
+              id="edit-rehearsal-date"
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
               required
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="edit-date" className="text-sm font-medium">
-                Datum
-              </label>
-              <input
-                id="edit-date"
-                name="date"
-                type="date"
-                defaultValue={formatDate(rehearsal.start)}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="edit-time" className="text-sm font-medium">
-                Uhrzeit
-              </label>
-              <input
-                id="edit-time"
-                name="time"
-                type="time"
-                defaultValue={formatTime(rehearsal.start)}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <label htmlFor="edit-location" className="text-sm font-medium">
-              Ort
+            <label className="text-sm font-medium" htmlFor="edit-rehearsal-time">
+              Uhrzeit
             </label>
-            <input
-              id="edit-location"
-              name="location"
-              type="text"
-              defaultValue={rehearsal.location || ""}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            <Input
+              id="edit-rehearsal-time"
+              type="time"
+              value={time}
+              onChange={(event) => setTime(event.target.value)}
+              required
             />
           </div>
+        </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isPending ? "Speichern..." : "Speichern"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!isPending) {
+                onOpenChange(false);
+              }
+            }}
+            disabled={isPending}
+          >
+            Abbrechen
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Speichern..." : "Änderungen speichern"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

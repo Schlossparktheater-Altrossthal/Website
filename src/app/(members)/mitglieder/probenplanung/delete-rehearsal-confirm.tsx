@@ -1,108 +1,105 @@
 "use client";
 
-"use client";
-import * as React from "react";
 import { useState, useTransition } from "react";
-import { deleteRehearsalAction } from "./actions";
-import { TrashIcon } from "@/components/ui/icons";
+import { toast } from "sonner";
 
-interface DeleteRehearsalConfirmProps {
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+
+import { deleteRehearsalAction } from "./actions";
+
+export interface DeleteRehearsalConfirmProps {
   rehearsal: {
     id: string;
     title: string;
     start: Date;
   };
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export function DeleteRehearsalConfirm({ rehearsal, isOpen, onClose }: DeleteRehearsalConfirmProps) {
+export function DeleteRehearsalConfirm({
+  rehearsal,
+  open,
+  onOpenChange,
+  onSuccess,
+}: DeleteRehearsalConfirmProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string>("");
 
   const dateFormatter = new Intl.DateTimeFormat("de-DE", {
     dateStyle: "full",
     timeStyle: "short",
   });
 
-  async function handleDelete() {
-    startTransition(async () => {
-      const result = await deleteRehearsalAction({ id: rehearsal.id });
+  const handleDelete = () => {
+    startTransition(() => {
+      deleteRehearsalAction({ id: rehearsal.id })
+        .then(async (result) => {
+          if (result?.error) {
+            toast.error(result.error);
+            return;
+          }
 
-      if (result.error) {
-        setError(result.error);
-      } else {
-        onClose();
-        setError("");
-      }
+          toast.success("Probe gelöscht. Alle Beteiligten wurden benachrichtigt.");
+          onOpenChange(false);
+          onSuccess?.();
+        })
+        .catch(() => {
+          toast.error("Löschen fehlgeschlagen.");
+        });
     });
-  }
-
-  if (!isOpen) return null;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg bg-card border border-border shadow-lg">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold flex items-center gap-2 text-destructive">
-            <TrashIcon className="w-5 h-5" />
-            Probe löschen
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Schließen"
-          >
-            ✕
-          </button>
+    <Modal
+      open={open}
+      onClose={() => {
+        if (!isPending) onOpenChange(false);
+      }}
+      title="Probe löschen"
+      description="Bist du sicher, dass du diese Probe löschen möchtest?"
+    >
+      <div className="space-y-4">
+        <div className="rounded-lg bg-muted/50 border p-4">
+          <h3 className="font-medium text-foreground">{rehearsal.title}</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {dateFormatter.format(rehearsal.start)}
+          </p>
         </div>
         
-        <div className="p-4 space-y-4">
-          {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-          
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Bist du sicher, dass du diese Probe löschen möchtest?
-            </p>
-            
-            <div className="rounded-lg bg-muted/50 border border-border p-3">
-              <h3 className="font-medium text-foreground">{rehearsal.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                {dateFormatter.format(rehearsal.start)}
-              </p>
-            </div>
-            
-            <p className="text-sm text-destructive font-medium">
-              ⚠️ Diese Aktion kann nicht rückgängig gemacht werden.
-            </p>
-            
-            <p className="text-xs text-muted-foreground">
-              Alle damit verbundenen Zusagen, Absagen und Benachrichtigungen werden ebenfalls gelöscht.
-            </p>
-          </div>
+        <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+          <p className="text-sm text-destructive font-medium">
+            ⚠️ Diese Aktion kann nicht rückgängig gemacht werden.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Alle damit verbundenen Zusagen, Absagen und Benachrichtigungen werden ebenfalls gelöscht.
+          </p>
+        </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              Abbrechen
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={isPending}
-              className="flex-1 rounded-md bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isPending ? "Löschen..." : "Probe löschen"}
-            </button>
-          </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!isPending) {
+                onOpenChange(false);
+              }
+            }}
+            disabled={isPending}
+          >
+            Abbrechen
+          </Button>
+          <Button
+            type="button"
+            onClick={handleDelete}
+            disabled={isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isPending ? "Löschen..." : "Probe löschen"}
+          </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
