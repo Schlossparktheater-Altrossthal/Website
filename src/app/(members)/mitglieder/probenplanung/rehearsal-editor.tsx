@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ROLE_LABELS, ROLES } from "@/lib/roles";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,12 @@ import {
   updateRehearsalDraftAction,
   updateRehearsalAction,
 } from "./actions";
+import {
+  REGISTRATION_DEADLINE_OPTIONS,
+  REGISTRATION_DEADLINE_OFFSETS,
+  type RegistrationDeadlineOption,
+  computeRegistrationDeadline,
+} from "./registration-deadline-options";
 
 type MemberOption = {
   id: string;
@@ -36,6 +43,7 @@ type RehearsalEditorProps = {
     location: string;
     description: string | null;
     inviteeIds: string[];
+    registrationDeadline: string | null;
   };
   members: MemberOption[];
   initialBlockedUserIds: string[];
@@ -55,6 +63,55 @@ function toTimeString(iso: string) {
   return iso.slice(11, 16);
 }
 
+function detectRegistrationDeadlineOption(
+  startIso: string,
+  deadlineIso: string | null,
+): RegistrationDeadlineOption {
+  if (!deadlineIso) {
+    return "none";
+  }
+
+  const start = new Date(startIso);
+  const deadline = new Date(deadlineIso);
+  const startMs = start.getTime();
+  const deadlineMs = deadline.getTime();
+
+  if (Number.isNaN(startMs) || Number.isNaN(deadlineMs)) {
+    return "1w";
+  }
+
+  const diff = startMs - deadlineMs;
+  if (diff <= 0) {
+    return "none";
+  }
+
+  let closestOption: RegistrationDeadlineOption = "1w";
+  let smallestDelta = Number.POSITIVE_INFINITY;
+
+  for (const option of REGISTRATION_DEADLINE_OPTIONS) {
+    const offset = REGISTRATION_DEADLINE_OFFSETS[option.value];
+    if (!offset) continue;
+    const delta = Math.abs(diff - offset);
+    if (delta < smallestDelta) {
+      smallestDelta = delta;
+      closestOption = option.value;
+    }
+  }
+
+  return closestOption;
+}
+
+function parseLocalDateTime(date: string, time: string) {
+  if (!date || !time) {
+    return null;
+  }
+  const result = new Date(`${date}T${time}`);
+  if (Number.isNaN(result.getTime())) {
+    return null;
+  }
+  return result;
+}
+
 export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: RehearsalEditorProps) {
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
@@ -65,12 +122,33 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
   const [location, setLocation] = useState(rehearsal.location);
   const [description, setDescription] = useState(rehearsal.description ?? "");
   const [selectedInvitees, setSelectedInvitees] = useState<string[]>(() => Array.from(new Set(rehearsal.inviteeIds)));
+  const [deadlineOption, setDeadlineOption] = useState<RegistrationDeadlineOption>(() =>
+    detectRegistrationDeadlineOption(rehearsal.start, rehearsal.registrationDeadline),
+  );
   const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(() => new Set(initialBlockedUserIds));
   const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isPublishing, startPublish] = useTransition();
   const [isDiscarding, startDiscard] = useTransition();
+
+  const startDateTime = useMemo(() => parseLocalDateTime(date, time), [date, time]);
+  const deadlinePreviewDate = useMemo(() => {
+    if (!startDateTime) {
+      return null;
+    }
+    return computeRegistrationDeadline(startDateTime, deadlineOption);
+  }, [startDateTime, deadlineOption]);
+  const deadlineFormatter = useMemo(
+    () => new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" }),
+    [],
+  );
+  const deadlinePreviewText = useMemo(() => {
+    if (!deadlinePreviewDate) {
+      return "Es wird keine Rückmeldefrist gesetzt.";
+    }
+    return `Frist endet am ${deadlineFormatter.format(deadlinePreviewDate)}.`;
+  }, [deadlineFormatter, deadlinePreviewDate]);
 
   const groupedMembers = useMemo(() => {
     const map = new Map<string, MemberOption[]>();
@@ -98,6 +176,10 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
       }
       return Array.from(set);
     });
+  }, []);
+
+  const handleDeadlineChange = useCallback((value: RegistrationDeadlineOption) => {
+    setDeadlineOption(value);
   }, []);
 
   const fetchBlockedForDate = useCallback(
@@ -143,6 +225,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
         location,
         description,
         invitees: selectedInvitees,
+        registrationDeadlineOption: deadlineOption,
       };
 
       updateAction(actionParams)
@@ -171,7 +254,17 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
     }, 800);
 
     return () => clearTimeout(handle);
-  }, [description, date, time, title, location, selectedInvitees, rehearsal.id, isDraft]);
+  }, [
+    description,
+    date,
+    time,
+    title,
+    location,
+    selectedInvitees,
+    deadlineOption,
+    rehearsal.id,
+    isDraft,
+  ]);
 
   const handlePublish = () => {
     startPublish(() => {
@@ -183,6 +276,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
         location,
         description,
         invitees: selectedInvitees,
+        registrationDeadlineOption: deadlineOption,
       })
         .then((result) => {
           if (result?.success && result.id) {
@@ -294,6 +388,28 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="rehearsal-deadline">
+                Rückmeldefrist
+              </label>
+              <Select
+                value={deadlineOption}
+                onValueChange={(value) => handleDeadlineChange(value as RegistrationDeadlineOption)}
+              >
+                <SelectTrigger id="rehearsal-deadline">
+                  <SelectValue placeholder="Rückmeldefrist wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REGISTRATION_DEADLINE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{deadlinePreviewText}</p>
             </div>
 
             <div className="space-y-2">
