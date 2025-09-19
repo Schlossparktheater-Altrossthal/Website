@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { createRehearsalDraftAction } from "./actions";
-import { CreateRehearsalDialog } from "./create-rehearsal-dialog";
 
 const DEFAULT_NEW_REHEARSAL_TIME = "19:00";
 
@@ -111,11 +110,7 @@ export function RehearsalCalendar({
     timeZone: "Europe/Berlin",
   });
   const fmtTime = (d: Date) => timeFormatter.format(d);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createDefaults, setCreateDefaults] = useState<{
-    date: string;
-    time: string;
-  } | null>(null);
+  // Removed createOpen and createDefaults - using direct draft creation instead
   const [planOpen, setPlanOpen] = useState(false);
 
   const blockedByDay = useMemo(() => {
@@ -210,30 +205,40 @@ export function RehearsalCalendar({
     setPlanOpen(true);
   };
 
-  const openCreateForDay = (
+  const createDraftForDay = (
     dayKey: string,
     defaultTime = DEFAULT_NEW_REHEARSAL_TIME
   ) => {
-    setCreateDefaults({ date: dayKey, time: defaultTime });
-    setCreateOpen(true);
+    startCreating(() => {
+      createRehearsalDraftAction({
+        date: dayKey,
+        time: defaultTime,
+        title: "Neue Probe",
+        location: "Noch offen"
+      })
+        .then((result) => {
+          if (result?.success && result.id) {
+            toast.success("Entwurf erstellt. Du kannst die Details jetzt ausfüllen.");
+            router.push(`/mitglieder/probenplanung/proben/${result.id}`);
+          } else {
+            toast.error(result?.error ?? "Der Entwurf konnte nicht erstellt werden.");
+          }
+        })
+        .catch(() => {
+          toast.error("Der Entwurf konnte nicht erstellt werden.");
+        });
+    });
   };
 
   const handlePlanRehearsalForSelectedDay = () => {
     if (!selectedDayKey) return;
-    openCreateForDay(selectedDayKey);
-  };
-
-  const handleCreateOpenChange = (next: boolean) => {
-    setCreateOpen(next);
-    if (!next) {
-      setCreateDefaults(null);
-    }
+    createDraftForDay(selectedDayKey);
   };
 
   const handlePlanNextWeekend = () => {
     const target = createSelection(findUpcomingWeekendDay(new Date()));
     handleSelectDayByKey(target.key);
-    openCreateForDay(target.key);
+    createDraftForDay(target.key);
   };
 
   const weekendFocusDays = useMemo(() => {
@@ -861,12 +866,7 @@ export function RehearsalCalendar({
         </div>
       </div>
 
-      <CreateRehearsalDialog
-        open={createOpen}
-        onOpenChange={handleCreateOpenChange}
-        initialDate={createDefaults?.date}
-        initialTime={createDefaults?.time}
-      />
+      {/* Migration completed: All calendar interactions now use draft-based system */}
     </section>
   );
 }

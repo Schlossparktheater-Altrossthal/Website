@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
-import { EditRehearsalModal } from "./edit-rehearsal-modal";
-import { DeleteRehearsalConfirm } from "./delete-rehearsal-confirm";
+import { toast } from "sonner";
+import { createRehearsalDraftAction, deleteRehearsalAction } from "./actions";
 import type { RehearsalLite } from "./rehearsal-list";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", {
@@ -54,8 +55,9 @@ function ResponseColumn({
 }
 
 export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: RehearsalLite; forceOpen?: boolean }) {
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const router = useRouter();
+  const [isEditingTransition, startEditingTransition] = useTransition();
+  const [isDeletingTransition, startDeletingTransition] = useTransition();
 
   const startDate = useMemo(() => new Date(rehearsal.start), [rehearsal.start]);
   const notification = rehearsal.notifications[0];
@@ -70,18 +72,63 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
     ? notification.recipients.filter((recipient) => !respondedIds.has(recipient.userId))
     : [];
 
+  const handleEdit = () => {
+    startEditingTransition(() => {
+      createRehearsalDraftAction({
+        title: rehearsal.title,
+        date: startDate.toISOString().slice(0, 10),
+        time: startDate.toISOString().slice(11, 16),
+        location: rehearsal.location || "Noch offen"
+      })
+        .then((result) => {
+          if (result?.success && result.id) {
+            toast.success("Entwurf für Bearbeitung erstellt.");
+            router.push(`/mitglieder/probenplanung/proben/${result.id}`);
+          } else {
+            toast.error(result?.error ?? "Entwurf konnte nicht erstellt werden.");
+          }
+        })
+        .catch(() => {
+          toast.error("Entwurf konnte nicht erstellt werden.");
+        });
+    });
+  };
+
+  const handleDelete = () => {
+    if (!confirm(`Probe "${rehearsal.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) {
+      return;
+    }
+    
+    startDeletingTransition(() => {
+      deleteRehearsalAction({ id: rehearsal.id })
+        .then((result) => {
+          if (result?.success) {
+            toast.success("Probe gelöscht. Alle Beteiligten wurden benachrichtigt.");
+            router.refresh();
+          } else {
+            toast.error(result?.error ?? "Löschen fehlgeschlagen.");
+          }
+        })
+        .catch(() => {
+          toast.error("Löschen fehlgeschlagen.");
+        });
+    });
+  };
+
   const menuItems = [
     {
-      label: "Bearbeiten",
+      label: isEditingTransition ? "Wird vorbereitet..." : "Bearbeiten",
       icon: <EditIcon className="w-4 h-4" />,
-      onClick: () => setShowEditModal(true),
+      onClick: handleEdit,
       variant: "default" as const,
+      disabled: isEditingTransition,
     },
     {
-      label: "Löschen",
+      label: isDeletingTransition ? "Wird gelöscht..." : "Löschen",
       icon: <TrashIcon className="w-4 h-4" />,
-      onClick: () => setShowDeleteConfirm(true),
+      onClick: handleDelete,
       variant: "destructive" as const,
+      disabled: isDeletingTransition,
     },
   ];
 
@@ -153,28 +200,7 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
         </div>
       </details>
 
-      {/* Edit Modal */}
-      <EditRehearsalModal
-        rehearsal={{
-          id: rehearsal.id,
-          title: rehearsal.title,
-          start: startDate,
-          location: rehearsal.location,
-        }}
-        open={showEditModal}
-        onOpenChange={setShowEditModal}
-      />
-
-      {/* Delete Confirmation */}
-      <DeleteRehearsalConfirm
-        rehearsal={{
-          id: rehearsal.id,
-          title: rehearsal.title,
-          start: startDate,
-        }}
-        open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
-      />
+      {/* Migration completed: All actions now use draft-based system */}
     </>
   );
 }
