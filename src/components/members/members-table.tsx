@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
 import { RoleManager } from "@/components/members/role-manager";
 import { UserAvatar } from "@/components/user-avatar";
-import type { AvatarSource } from "@prisma/client";
+import type { AvatarSource } from "@/components/user-avatar";
 
 export type MembersTableUser = {
   id: string;

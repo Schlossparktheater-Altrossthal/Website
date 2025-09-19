@@ -1,5 +1,4 @@
 "use client";
-"use client";
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/user-avatar";
-import type { AvatarSource } from "@prisma/client";
+import type { AvatarSource } from "@/components/user-avatar";
 
 export type EditableUser = {
   id: string;

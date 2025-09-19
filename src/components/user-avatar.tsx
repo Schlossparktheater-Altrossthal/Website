@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { getGravatarUrl } from "@/lib/gravatar";
 import { cn } from "@/lib/utils";
 import type { CSSProperties } from "react";
-import type { AvatarSource } from "@prisma/client";
+
+export type AvatarSource = "GRAVATAR" | "UPLOAD" | "INITIALS";
 
 type NormalizedSource = "GRAVATAR" | "UPLOAD" | "INITIALS";
 
@@ -62,11 +63,11 @@ export type UserAvatarProps = {
   previewUrl?: string | null;
 };
 
-export function UserAvatar({
+export default function UserAvatar({
   userId,
   email,
   name,
-  size = 32,
+  size = 40,
   className,
   loading = "lazy",
   style,
@@ -104,7 +105,7 @@ export function UserAvatar({
           width={displaySize}
           height={displaySize}
           loading={loading}
-          className={cn("inline-block rounded-full bg-muted object-cover", className)}
+          className={cn("inline-block rounded-full border border-border bg-muted object-cover", className)}
           style={sharedStyle}
           draggable={false}
         />
@@ -125,7 +126,7 @@ export function UserAvatar({
         loading={loading}
         priority={loading === "eager"}
         sizes={`${displaySize}px`}
-        className={cn("inline-block rounded-full bg-muted object-cover", className)}
+        className={cn("inline-block rounded-full border border-border bg-muted object-cover", className)}
         style={sharedStyle}
         draggable={false}
         onError={() => setGravatarFailed(true)}
@@ -133,24 +134,21 @@ export function UserAvatar({
     );
   }
 
+  // Default to initials (or when Gravatar failed or no source available)
   const initials = computeInitials(name, email);
   return (
     <div
-      role="img"
+      className={cn("inline-flex items-center justify-center rounded-full border border-border bg-muted", className)}
+      style={{ width: displaySize, height: displaySize, fontSize: Math.max(10, displaySize * 0.4), ...style }}
       aria-label={label ? `Avatar von ${label}` : "Avatar"}
       title={label}
-      className={cn(
-        "inline-flex items-center justify-center rounded-full bg-muted text-foreground/80",
-        "font-medium uppercase",
-        className,
-      )}
-      style={{
-        ...sharedStyle,
-        fontSize: Math.max(12, Math.round(displaySize * 0.45)),
-        letterSpacing: "0.05em",
-      }}
+      draggable={false}
     >
       {initials}
     </div>
   );
 }
+
+// Zusätzlich zum Default-Export auch als benannten Export verfügbar machen,
+// damit `import { UserAvatar } from "@/components/user-avatar"` funktioniert.
+export { UserAvatar };
