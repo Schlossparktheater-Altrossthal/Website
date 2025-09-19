@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/user-avatar";
 
 export function UserNav({ className }: { className?: string }) {
   const { data: session, status } = useSession();
@@ -56,13 +57,6 @@ export function UserNav({ className }: { className?: string }) {
 
   const name = session.user.name ?? session.user.email ?? "";
   const role = session.user.role;
-  const initials = (name || "?")
-    .split(/\s|@/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase())
-    .join("");
-
   async function onLogout() {
     try {
       await signOut({ callbackUrl: "/" });
@@ -82,9 +76,16 @@ export function UserNav({ className }: { className?: string }) {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="inline-flex h-7 w-7 select-none items-center justify-center rounded-full bg-primary/20 text-primary font-semibold">
-          {initials}
-        </span>
+        <UserAvatar
+          userId={session.user.id}
+          email={session.user.email}
+          name={session.user.name}
+          size={28}
+          className="h-7 w-7 select-none"
+          avatarSource={session.user.avatarSource}
+          avatarUpdatedAt={session.user.avatarUpdatedAt}
+          loading="eager"
+        />
         <span className="hidden sm:inline text-foreground/90">
           {name}
           {role ? ` (${role})` : ""}

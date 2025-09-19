@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { AvatarSource, Role } from "@prisma/client";
 // augment next-auth types for session.user
 
 declare module "next-auth" {
@@ -9,11 +9,15 @@ declare module "next-auth" {
       email?: string | null;
       role?: Role;
       roles?: Role[];
+      avatarSource?: AvatarSource | null;
+      avatarUpdatedAt?: string | null;
     };
   }
   interface User {
     role?: Role;
     roles?: Role[];
+    avatarSource?: AvatarSource | null;
+    avatarUpdatedAt?: string | null;
   }
 }
 

@@ -15,9 +15,15 @@ export default async function MitgliederVerwaltungPage() {
   const [users, customRoles] = await Promise.all([
     prisma.user.findMany({
       orderBy: { email: "asc" },
-      include: {
-        roles: true,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        roles: { select: { role: true } },
         appRoles: { select: { role: { select: { id: true, name: true } } } },
+        avatarSource: true,
+        avatarImageUpdatedAt: true,
       },
     }),
     prisma.appRole.findMany({ where: { isSystem: false, systemRole: null }, orderBy: { name: "asc" } }),
@@ -34,6 +40,8 @@ export default async function MitgliederVerwaltungPage() {
       name: user.name,
       roles: combined,
       customRoles: user.appRoles.map((ar) => ar.role),
+      avatarSource: user.avatarSource,
+      avatarUpdatedAt: user.avatarImageUpdatedAt?.toISOString() ?? null,
     };
   });
 

@@ -17,6 +17,12 @@ enum Role {
   admin
 }
 
+enum AvatarSource {
+  GRAVATAR
+  UPLOAD
+  INITIALS
+}
+
 enum ClueType {
   text
   image
@@ -132,6 +138,10 @@ model User {
   role      Role     @default(member)
   passwordHash String?
   createdAt DateTime @default(now())
+  avatarSource        AvatarSource @default(GRAVATAR)
+  avatarImage         Bytes?
+  avatarImageMime     String?
+  avatarImageUpdatedAt DateTime?
 
   accounts     Account[]
   sessions     Session[]
