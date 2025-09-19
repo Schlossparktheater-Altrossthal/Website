@@ -91,7 +91,7 @@ export default async function ProduktionsGewerkePage() {
           </p>
         </CardHeader>
         <CardContent>
-          <form action={createDepartmentAction} className="grid gap-4 md:grid-cols-2" method="post">
+          <form action={createDepartmentAction} className="grid gap-4 md:grid-cols-2">
             <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
             <div className="space-y-1">
               <label className="text-sm font-medium">Name</label>
@@ -145,7 +145,7 @@ export default async function ProduktionsGewerkePage() {
                       ) : null}
                     </div>
                   </div>
-                  <form action={deleteDepartmentAction} method="post">
+                  <form action={deleteDepartmentAction}>
                     <input type="hidden" name="id" value={department.id} />
                     <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
                     <Button type="submit" variant="ghost" size="sm">
@@ -158,7 +158,6 @@ export default async function ProduktionsGewerkePage() {
               <CardContent className="space-y-6">
                 <form
                   action={updateDepartmentAction}
-                  method="post"
                   className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4"
                 >
                   <input type="hidden" name="id" value={department.id} />
@@ -228,7 +227,7 @@ export default async function ProduktionsGewerkePage() {
                                 <p className="text-xs text-muted-foreground">Notiz: {membership.note}</p>
                               ) : null}
                             </div>
-                            <form action={removeDepartmentMemberAction} method="post">
+                            <form action={removeDepartmentMemberAction}>
                               <input type="hidden" name="membershipId" value={membership.id} />
                               <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
                               <Button type="submit" variant="ghost" size="sm">
@@ -238,7 +237,6 @@ export default async function ProduktionsGewerkePage() {
                           </div>
                           <form
                             action={updateDepartmentMemberAction}
-                            method="post"
                             className="mt-3 grid gap-2 rounded-md border border-border/50 bg-background/70 p-3 md:grid-cols-3"
                           >
                             <input type="hidden" name="membershipId" value={membership.id} />
@@ -280,7 +278,7 @@ export default async function ProduktionsGewerkePage() {
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Mitglied hinzufügen
                     </h4>
-                    <form className="mt-3 grid gap-3 md:grid-cols-3" action={addDepartmentMemberAction} method="post">
+                    <form className="mt-3 grid gap-3 md:grid-cols-3" action={addDepartmentMemberAction}>
                       <input type="hidden" name="departmentId" value={department.id} />
                       <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
                       <div className="space-y-1 md:col-span-1">
