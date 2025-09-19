@@ -127,8 +127,6 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
   const skipInitialSave = useRef(true);
 
   useEffect(() => {
-    if (!isDraft) return;
-
     if (skipInitialSave.current) {
       skipInitialSave.current = false;
       return;
@@ -146,7 +144,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
         description,
         invitees: selectedInvitees,
       };
-      
+
       updateAction(actionParams)
         .then((result) => {
           if (result?.success) {
@@ -157,7 +155,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
             }
           } else {
             setSaveStatus("error");
-            const errorMessage = isDraft 
+            const errorMessage = isDraft
               ? "Entwurf konnte nicht gespeichert werden."
               : "Probe konnte nicht aktualisiert werden.";
             toast.error(result?.error ?? errorMessage);
@@ -165,7 +163,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
         })
         .catch(() => {
           setSaveStatus("error");
-          const errorMessage = isDraft 
+          const errorMessage = isDraft
             ? "Entwurf konnte nicht gespeichert werden."
             : "Probe konnte nicht aktualisiert werden.";
           toast.error(errorMessage);
@@ -221,15 +219,30 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
   };
 
   const saveLabel = useMemo(() => {
+    const formattedTime = lastSavedAt?.toLocaleTimeString("de-DE");
+
+    if (isDraft) {
+      switch (saveStatus) {
+        case "saving":
+          return "Speichert…";
+        case "saved":
+          return formattedTime ? `Entwurf gespeichert (${formattedTime})` : "Entwurf gespeichert";
+        case "error":
+          return "Speichern fehlgeschlagen";
+        default:
+          return "Bereit";
+      }
+    }
+
     switch (saveStatus) {
       case "saving":
-        return "Speichert…";
+        return "Speichert Änderungen…";
       case "saved":
-        return lastSavedAt ? `Entwurf gespeichert (${lastSavedAt.toLocaleTimeString("de-DE")})` : "Entwurf gespeichert";
+        return formattedTime ? `Änderungen gespeichert (${formattedTime})` : "Änderungen gespeichert";
       case "error":
         return "Speichern fehlgeschlagen";
       default:
-        return isDraft ? "Bereit" : "Änderungen werden sofort übernommen";
+        return "Änderungen werden automatisch gespeichert.";
     }
   }, [saveStatus, lastSavedAt, isDraft]);
 
