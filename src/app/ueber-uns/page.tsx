@@ -31,8 +31,8 @@ export const metadata: Metadata = {
 const highlights = [
   {
     label: "Gründung",
-    value: "2011",
-    detail: "Erste Sommerinszenierung im Schlosspark Altrossthal",
+    value: "2009",
+    detail: "Premiere mit \"Die lustigen Weiber von Windsor\" im Schlosspark",
   },
   {
     label: "Ensemble",
@@ -61,9 +61,9 @@ const signature = [
   },
   {
     icon: Trees,
-    title: "Nachhaltig gedacht",
+    title: "Campus voller Gewerke",
     description:
-      "Requisiten und Kulissen werden liebevoll upgecycelt, lokale Partner:innen liefern Strom aus erneuerbaren Quellen.",
+      "Schüler:innen des BSZ Altroßthal bringen Floristik, Holz- und Metallbau ein – so wachsen Bühne, Kostüm und Szenografie Hand in Hand.",
   },
 ];
 
@@ -78,7 +78,7 @@ const values = [
     icon: Users,
     title: "Offenheit",
     description:
-      "Wir schaffen Räume, in denen neue Stimmen hörbar werden – auf der Bühne genauso wie im Publikum.",
+      "Wir schaffen Räume, in denen neue Stimmen hörbar werden – auf der Bühne, in den Werkstätten und beim Ausprobieren neuer Gewerke.",
   },
   {
     icon: CalendarHeart,
@@ -90,22 +90,22 @@ const values = [
 
 const milestones = [
   {
-    year: "2011",
-    title: "Der Anfang",
+    year: "2009",
+    title: "Die erste Inszenierung",
     description:
-      "Premiere des ersten Sommertheater-Wochenendes mit 400 Besucher:innen – der Grundstein für eine Tradition.",
+      "Toni Burghard Friedrich initiiert das Sommertheater mit \"Die lustigen Weiber von Windsor\" und schafft einen neuen Ort für Schüler:innen des BSZ.",
   },
   {
-    year: "2015",
-    title: "Die Schlosspark-Lichter",
+    year: "2012",
+    title: "Floristik trifft Bühne",
     description:
-      "Einführung der illuminierte Abendführung, die heute zu jedem Aufführungsabend dazugehört.",
+      "Florist:innen gestalten erstmals lebendige Bühnenbilder aus regionalen Pflanzen und geben dem Park seine ikonischen Duftinseln.",
   },
   {
-    year: "2019",
-    title: "Neue Stimmen",
+    year: "2017",
+    title: "Werkstatt-Ateliers",
     description:
-      "Start des Nachwuchsprogramms für junge Talente aus der Region Altrossthal und Umgebung.",
+      "Neue Workshops ermöglichen Schüler:innen, sich in Lichttechnik, Metallbau und Kostümhandwerk auszuprobieren und Verantwortung zu übernehmen.",
   },
   {
     year: "2023",
@@ -119,7 +119,7 @@ const engagement = [
   {
     title: "Mitmachen",
     description:
-      "Ob Schauspiel, Kostüm, Technik oder Gästebetreuung – wir freuen uns über neue Gesichter, die mit uns die Sommertheater-Momente gestalten.",
+      "Ob Schauspiel, Kostüm, Floristik, Metallwerkstatt oder Gästebetreuung – wir freuen uns über neue Gesichter, die mit uns die Sommertheater-Momente gestalten.",
     action: {
       label: "Schreib uns",
       href: "mailto:ensemble@sommertheater-altrossthal.de",
@@ -145,7 +145,11 @@ export default function AboutPage() {
     description:
       "Ein gemeinnütziges Sommertheater-Ensemble, das jedes Jahr immersive Freiluftinszenierungen im Schlosspark Altrossthal zeigt.",
     url: `${baseUrl}/ueber-uns`,
-    foundingDate: "2011",
+    foundingDate: "2009",
+    founder: {
+      "@type": "Person",
+      name: "Toni Burghard Friedrich",
+    },
     address: {
       "@type": "PostalAddress",
       addressLocality: "Altrossthal",
@@ -177,6 +181,10 @@ export default function AboutPage() {
             Wir erzählen Geschichten für laue Sommernächte. Unser Ensemble verbindet professionelle Theaterarbeit mit ehrenamtlichem Herzblut – mitten im
             Schlosspark Altrossthal.
           </p>
+          <p className="mt-4 text-base text-muted-foreground">
+            Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Lernende, Alumni und Freund:innen des
+            BSZ Altroßthal, um eine Bühne zu schaffen, die weit über klassischen Unterricht hinausgeht.
+          </p>
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
@@ -200,7 +208,8 @@ export default function AboutPage() {
             <h2 className="font-serif text-3xl sm:text-4xl">Unsere Handschrift</h2>
             <p className="text-lg text-muted-foreground">
               Die Sommerproduktionen entstehen über Monate hinweg – von der ersten Idee bis zur letzten Generalprobe. Dabei verbinden wir poetische Stoffe mit
-              immersiven Erlebnissen, die nur unter freiem Himmel möglich sind.
+              immersiven Erlebnissen, die nur unter freiem Himmel möglich sind. Werkstätten für Floristik, Holz- und Metallgestaltung sowie Maskenbild des
+              Berufsschulzentrums fließen direkt in Bühnenwelten ein.
             </p>
             <div className="space-y-5">
               {signature.map(({ icon: Icon, title, description }) => (
@@ -291,8 +300,8 @@ export default function AboutPage() {
             <div className="space-y-5">
               <h2 className="font-serif text-3xl sm:text-4xl">Engagement rund um das Ensemble</h2>
               <p className="text-lg text-muted-foreground">
-                Unser Sommertheater lebt von Menschen, die ihre Zeit und ihr Können einbringen. Wir begleiten neue Mitglieder mit Mentoring-Formaten und bieten
-                Fortbildungen für Licht, Ton und Bühnenbild an.
+                Unser Sommertheater lebt von Menschen, die ihre Zeit und ihr Können einbringen. Wir begleiten neue Mitglieder mit Mentoring-Formaten, öffnen die
+                Werkstätten des BSZ Altroßthal für Floristik, Holz und Metall und bieten Fortbildungen für Licht, Ton und Bühnenbild an.
               </p>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <MapPin className="h-5 w-5 text-primary" aria-hidden />
