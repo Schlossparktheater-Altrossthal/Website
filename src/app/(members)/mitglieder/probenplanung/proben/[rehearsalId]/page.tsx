@@ -33,9 +33,8 @@ export default async function RehearsalEditorPage({ params }: { params: { rehear
     notFound();
   }
 
-  if (rehearsal.status !== "DRAFT") {
-    redirect(`/mitglieder/proben/${rehearsal.id}`);
-  }
+  // Allow editing both DRAFT and published rehearsals
+  // Drafts use updateRehearsalDraftAction, published use updateRehearsalAction
 
   const membersRaw = await prisma.user.findMany({
     orderBy: [{ name: "asc" }, { email: "asc" }],
@@ -74,7 +73,11 @@ export default async function RehearsalEditorPage({ params }: { params: { rehear
     <div className="space-y-6">
       <PageHeader
         title="Probe bearbeiten"
-        description="Passe Titel, Termine, Beschreibung und Teilnehmer deines Entwurfs an."
+        description={
+          rehearsal.status === "DRAFT"
+            ? "Passe Titel, Termine, Beschreibung und Teilnehmer deines Entwurfs an."
+            : "Bearbeite diese veröffentlichte Probe. Alle Teilnehmer erhalten eine Benachrichtigung über Änderungen."
+        }
       />
 
       <RehearsalEditor

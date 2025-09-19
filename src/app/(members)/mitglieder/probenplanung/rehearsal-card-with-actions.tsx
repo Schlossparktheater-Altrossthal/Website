@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { toast } from "sonner";
-import { createRehearsalDraftAction, deleteRehearsalAction } from "./actions";
+import { deleteRehearsalAction } from "./actions";
 import type { RehearsalLite } from "./rehearsal-list";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", {
@@ -56,7 +56,6 @@ function ResponseColumn({
 
 export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: RehearsalLite; forceOpen?: boolean }) {
   const router = useRouter();
-  const [isEditingTransition, startEditingTransition] = useTransition();
   const [isDeletingTransition, startDeletingTransition] = useTransition();
 
   const startDate = useMemo(() => new Date(rehearsal.start), [rehearsal.start]);
@@ -73,25 +72,9 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
     : [];
 
   const handleEdit = () => {
-    startEditingTransition(() => {
-      createRehearsalDraftAction({
-        title: rehearsal.title,
-        date: startDate.toISOString().slice(0, 10),
-        time: startDate.toISOString().slice(11, 16),
-        location: rehearsal.location || "Noch offen"
-      })
-        .then((result) => {
-          if (result?.success && result.id) {
-            toast.success("Entwurf für Bearbeitung erstellt.");
-            router.push(`/mitglieder/probenplanung/proben/${result.id}`);
-          } else {
-            toast.error(result?.error ?? "Entwurf konnte nicht erstellt werden.");
-          }
-        })
-        .catch(() => {
-          toast.error("Entwurf konnte nicht erstellt werden.");
-        });
-    });
+    // Directly navigate to the rehearsal editor page
+    // Both drafts and published rehearsals can now be edited directly
+    router.push(`/mitglieder/probenplanung/proben/${rehearsal.id}`);
   };
 
   const handleDelete = () => {
@@ -117,11 +100,11 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
 
   const menuItems = [
     {
-      label: isEditingTransition ? "Wird vorbereitet..." : "Bearbeiten",
+      label: "Bearbeiten",
       icon: <EditIcon className="w-4 h-4" />,
       onClick: handleEdit,
       variant: "default" as const,
-      disabled: isEditingTransition,
+      disabled: false,
     },
     {
       label: isDeletingTransition ? "Wird gelöscht..." : "Löschen",

@@ -16,6 +16,7 @@ import {
   discardRehearsalDraftAction,
   publishRehearsalAction,
   updateRehearsalDraftAction,
+  updateRehearsalAction,
 } from "./actions";
 
 type MemberOption = {
@@ -135,7 +136,8 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
 
     setSaveStatus("saving");
     const handle = setTimeout(() => {
-      updateRehearsalDraftAction({
+      const updateAction = isDraft ? updateRehearsalDraftAction : updateRehearsalAction;
+      const actionParams = {
         id: rehearsal.id,
         title,
         date,
@@ -143,19 +145,30 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
         location,
         description,
         invitees: selectedInvitees,
-      })
+      };
+      
+      updateAction(actionParams)
         .then((result) => {
           if (result?.success) {
             setSaveStatus("saved");
             setLastSavedAt(new Date());
+            if (!isDraft) {
+              toast.success("Probe aktualisiert. Alle Teilnehmer wurden benachrichtigt.");
+            }
           } else {
             setSaveStatus("error");
-            toast.error(result?.error ?? "Entwurf konnte nicht gespeichert werden.");
+            const errorMessage = isDraft 
+              ? "Entwurf konnte nicht gespeichert werden."
+              : "Probe konnte nicht aktualisiert werden.";
+            toast.error(result?.error ?? errorMessage);
           }
         })
         .catch(() => {
           setSaveStatus("error");
-          toast.error("Entwurf konnte nicht gespeichert werden.");
+          const errorMessage = isDraft 
+            ? "Entwurf konnte nicht gespeichert werden."
+            : "Probe konnte nicht aktualisiert werden.";
+          toast.error(errorMessage);
         });
     }, 800);
 
@@ -358,21 +371,31 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
       </Card>
 
       <div className="flex flex-col-reverse gap-3 md:flex-row md:items-center md:justify-between">
-        <Button type="button" variant="outline" onClick={handleDiscard} disabled={isDiscarding || !isDraft}>
-          {isDiscarding ? "Verwerfe Entwurf…" : "Entwurf verwerfen"}
-        </Button>
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-          <div className="text-xs text-muted-foreground">
-            Du kannst die Probe veröffentlichen, sobald alle Informationen vollständig sind.
+        {isDraft ? (
+          <>
+            <Button type="button" variant="outline" onClick={handleDiscard} disabled={isDiscarding}>
+              {isDiscarding ? "Verwerfe Entwurf…" : "Entwurf verwerfen"}
+            </Button>
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+              <div className="text-xs text-muted-foreground">
+                Du kannst die Probe veröffentlichen, sobald alle Informationen vollständig sind.
+              </div>
+              <Button
+                type="button"
+                onClick={handlePublish}
+                disabled={isPublishing || !selectedInvitees.length}
+              >
+                {isPublishing ? "Veröffentliche…" : "Probe veröffentlichen"}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3 md:ml-auto">
+            <div className="text-xs text-muted-foreground">
+              Änderungen werden automatisch gespeichert. Alle Teilnehmer erhalten Benachrichtigungen über Updates.
+            </div>
           </div>
-          <Button
-            type="button"
-            onClick={handlePublish}
-            disabled={isPublishing || !selectedInvitees.length || !isDraft}
-          >
-            {isPublishing ? "Veröffentliche…" : "Probe veröffentlichen"}
-          </Button>
-        </div>
+        )}
       </div>
     </div>
   );
