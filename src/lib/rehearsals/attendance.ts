@@ -5,6 +5,7 @@ export const ATTENDANCE_STATUSES: readonly AttendanceStatus[] = [
   "yes",
   "no",
   "emergency",
+  "maybe",
 ];
 
 export function normalizeStatus(value: unknown): AttendanceStatus | null {
