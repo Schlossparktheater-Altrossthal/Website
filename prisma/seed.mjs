@@ -1,4 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import {
+  PrismaClient,
+  DepartmentMembershipRole,
+  CharacterCastingType,
+  BreakdownStatus,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
@@ -111,6 +116,138 @@ async function main() {
     }
   }
 
+  const departmentSeeds = [
+    {
+      slug: "schauspiel",
+      name: "Schauspiel",
+      color: "#9333ea",
+      description: "Ensemble, Rollenplanung und Probenteilnehmer.",
+    },
+    {
+      slug: "buehnenbild",
+      name: "Bühnenbild",
+      color: "#0ea5e9",
+      description: "Kulissen, Aufbauten und Umbauten.",
+    },
+    {
+      slug: "technik",
+      name: "Technik",
+      color: "#1d4ed8",
+      description: "Gesamtkoordination für Licht, Ton und Bühne.",
+    },
+    {
+      slug: "maske",
+      name: "Maske",
+      color: "#f97316",
+      description: "Make-up, Haare und Spezialeffekte.",
+    },
+    {
+      slug: "kostuem",
+      name: "Kostüm",
+      color: "#f59e0b",
+      description: "Kostümplanung, Anproben und Pflege.",
+    },
+    {
+      slug: "licht",
+      name: "Licht",
+      color: "#22d3ee",
+      description: "Lichtdesign, Einleuchten und Cues.",
+    },
+    {
+      slug: "ton",
+      name: "Ton",
+      color: "#6366f1",
+      description: "Sounddesign, Einspielungen und Mikrofonierung.",
+    },
+    {
+      slug: "requisite",
+      name: "Requisite",
+      color: "#16a34a",
+      description: "Requisitenbeschaffung, Vorbereitung und Pflege.",
+    },
+  ];
+
+  for (const dept of departmentSeeds) {
+    await prisma.department.upsert({
+      where: { slug: dept.slug },
+      update: {
+        name: dept.name,
+        description: dept.description ?? null,
+        color: dept.color ?? null,
+        isCore: true,
+      },
+      create: {
+        slug: dept.slug,
+        name: dept.name,
+        description: dept.description ?? null,
+        color: dept.color ?? null,
+        isCore: true,
+      },
+    });
+  }
+
+  const membershipSeeds = [
+    {
+      departmentSlug: "schauspiel",
+      email: "cast@example.com",
+      role: DepartmentMembershipRole.lead,
+      title: "Spielleitung",
+    },
+    {
+      departmentSlug: "technik",
+      email: "tech@example.com",
+      role: DepartmentMembershipRole.lead,
+      title: "Technische Leitung",
+    },
+    {
+      departmentSlug: "licht",
+      email: "tech@example.com",
+      role: DepartmentMembershipRole.member,
+    },
+    {
+      departmentSlug: "ton",
+      email: "tech@example.com",
+      role: DepartmentMembershipRole.member,
+    },
+    {
+      departmentSlug: "buehnenbild",
+      email: "board@example.com",
+      role: DepartmentMembershipRole.lead,
+    },
+    {
+      departmentSlug: "kostuem",
+      email: "member@example.com",
+      role: DepartmentMembershipRole.member,
+    },
+    {
+      departmentSlug: "maske",
+      email: "member@example.com",
+      role: DepartmentMembershipRole.member,
+    },
+  ];
+
+  for (const membership of membershipSeeds) {
+    const department = await prisma.department.findUnique({ where: { slug: membership.departmentSlug } });
+    const user = await prisma.user.findUnique({ where: { email: membership.email } });
+    if (!department || !user) continue;
+
+    await prisma.departmentMembership.upsert({
+      where: { departmentId_userId: { departmentId: department.id, userId: user.id } },
+      update: {
+        role: membership.role,
+        title: membership.title ?? null,
+        note: membership.note ?? null,
+      },
+      create: {
+        departmentId: department.id,
+        userId: user.id,
+        role: membership.role,
+        title: membership.title ?? null,
+        note: membership.note ?? null,
+      },
+    });
+  }
+
   // Link a sample rehearsal to the newest chronik show (if present)
   const newest = await prisma.show.findFirst({ orderBy: { year: "desc" } });
   if (newest) {
@@ -152,6 +289,305 @@ async function main() {
           });
         }
       }
+    }
+
+    const [primaryCast, coverCast, techLead] = await Promise.all([
+      prisma.user.findUnique({ where: { email: "cast@example.com" }, select: { id: true } }),
+      prisma.user.findUnique({ where: { email: "member@example.com" }, select: { id: true } }),
+      prisma.user.findUnique({ where: { email: "tech@example.com" }, select: { id: true } }),
+    ]);
+
+    const characterSeeds = [
+      {
+        id: `${newest.id}-char-protagonist`,
+        name: "Protagonist:in",
+        shortName: "Prota",
+        description: "Hauptfigur, steht im Zentrum der Handlung.",
+        color: "#7c3aed",
+        order: 1,
+      },
+      {
+        id: `${newest.id}-char-mentor`,
+        name: "Mentor:in",
+        shortName: "Mentor",
+        description: "Unterstützt die Hauptfigur und liefert Exposition.",
+        color: "#2563eb",
+        order: 2,
+      },
+    ];
+
+    for (const character of characterSeeds) {
+      await prisma.character.upsert({
+        where: { id: character.id },
+        update: {
+          name: character.name,
+          shortName: character.shortName ?? null,
+          description: character.description ?? null,
+          notes: character.notes ?? null,
+          color: character.color ?? null,
+          order: character.order ?? 0,
+        },
+        create: {
+          id: character.id,
+          showId: newest.id,
+          name: character.name,
+          shortName: character.shortName ?? null,
+          description: character.description ?? null,
+          notes: character.notes ?? null,
+          color: character.color ?? null,
+          order: character.order ?? 0,
+        },
+      });
+    }
+
+    if (primaryCast) {
+      await prisma.characterCasting.upsert({
+        where: {
+          characterId_userId_type: {
+            characterId: `${newest.id}-char-protagonist`,
+            userId: primaryCast.id,
+            type: CharacterCastingType.primary,
+          },
+        },
+        update: { notes: "Primärbesetzung" },
+        create: {
+          characterId: `${newest.id}-char-protagonist`,
+          userId: primaryCast.id,
+          type: CharacterCastingType.primary,
+          notes: "Primärbesetzung",
+        },
+      });
+    }
+
+    if (coverCast) {
+      await prisma.characterCasting.upsert({
+        where: {
+          characterId_userId_type: {
+            characterId: `${newest.id}-char-protagonist`,
+            userId: coverCast.id,
+            type: CharacterCastingType.cover,
+          },
+        },
+        update: { notes: "Zweitbesetzung" },
+        create: {
+          characterId: `${newest.id}-char-protagonist`,
+          userId: coverCast.id,
+          type: CharacterCastingType.cover,
+          notes: "Zweitbesetzung",
+        },
+      });
+
+      await prisma.characterCasting.upsert({
+        where: {
+          characterId_userId_type: {
+            characterId: `${newest.id}-char-mentor`,
+            userId: coverCast.id,
+            type: CharacterCastingType.primary,
+          },
+        },
+        update: { notes: "Primärbesetzung" },
+        create: {
+          characterId: `${newest.id}-char-mentor`,
+          userId: coverCast.id,
+          type: CharacterCastingType.primary,
+          notes: "Primärbesetzung",
+        },
+      });
+    }
+
+    if (techLead) {
+      await prisma.characterCasting.upsert({
+        where: {
+          characterId_userId_type: {
+            characterId: `${newest.id}-char-mentor`,
+            userId: techLead.id,
+            type: CharacterCastingType.cameo,
+          },
+        },
+        update: { notes: "Cameo-Auftritt Technik" },
+        create: {
+          characterId: `${newest.id}-char-mentor`,
+          userId: techLead.id,
+          type: CharacterCastingType.cameo,
+          notes: "Cameo-Auftritt Technik",
+        },
+      });
+    }
+
+    const sceneSeeds = [
+      {
+        id: `${newest.id}-scene-1`,
+        identifier: "1",
+        title: "Ankunft im Schlosspark",
+        summary: "Die Figuren treffen sich zum Auftakt der Probe.",
+        location: "Schlosspark",
+        timeOfDay: "Abend",
+        sequence: 1,
+        durationMinutes: 8,
+      },
+      {
+        id: `${newest.id}-scene-2`,
+        identifier: "2",
+        title: "Das geheime Labor",
+        summary: "Ein Technik- und Bühnenbild-Setup mit Spezialeffekten.",
+        location: "Labor",
+        timeOfDay: "Nacht",
+        sequence: 2,
+        durationMinutes: 12,
+      },
+    ];
+
+    for (const scene of sceneSeeds) {
+      const base = (scene.identifier ?? scene.title ?? scene.id).toString();
+      const slugCandidate = base
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60);
+      const slug = slugCandidate || `${scene.id}-scene`;
+
+      await prisma.scene.upsert({
+        where: { id: scene.id },
+        update: {
+          identifier: scene.identifier ?? null,
+          title: scene.title ?? null,
+          summary: scene.summary ?? null,
+          location: scene.location ?? null,
+          timeOfDay: scene.timeOfDay ?? null,
+          sequence: scene.sequence ?? 0,
+          durationMinutes: scene.durationMinutes ?? null,
+          slug,
+        },
+        create: {
+          id: scene.id,
+          showId: newest.id,
+          identifier: scene.identifier ?? null,
+          title: scene.title ?? null,
+          summary: scene.summary ?? null,
+          location: scene.location ?? null,
+          timeOfDay: scene.timeOfDay ?? null,
+          sequence: scene.sequence ?? 0,
+          durationMinutes: scene.durationMinutes ?? null,
+          slug,
+        },
+      });
+    }
+
+    const sceneAssignments = [
+      {
+        sceneId: `${newest.id}-scene-1`,
+        characterId: `${newest.id}-char-protagonist`,
+        isFeatured: true,
+        order: 1,
+      },
+      {
+        sceneId: `${newest.id}-scene-1`,
+        characterId: `${newest.id}-char-mentor`,
+        isFeatured: false,
+        order: 2,
+      },
+      {
+        sceneId: `${newest.id}-scene-2`,
+        characterId: `${newest.id}-char-protagonist`,
+        isFeatured: true,
+        order: 1,
+      },
+      {
+        sceneId: `${newest.id}-scene-2`,
+        characterId: `${newest.id}-char-mentor`,
+        isFeatured: true,
+        order: 2,
+      },
+    ];
+
+    for (const assignment of sceneAssignments) {
+      await prisma.sceneCharacter.upsert({
+        where: {
+          sceneId_characterId: {
+            sceneId: assignment.sceneId,
+            characterId: assignment.characterId,
+          },
+        },
+        update: {
+          isFeatured: assignment.isFeatured ?? false,
+          order: assignment.order ?? 0,
+        },
+        create: {
+          sceneId: assignment.sceneId,
+          characterId: assignment.characterId,
+          isFeatured: assignment.isFeatured ?? false,
+          order: assignment.order ?? 0,
+        },
+      });
+    }
+
+    const breakdownDepartments = await prisma.department.findMany({
+      where: { slug: { in: ["buehnenbild", "technik", "licht", "maske"] } },
+      select: { id: true, slug: true },
+    });
+    const breakdownMap = new Map(breakdownDepartments.map((entry) => [entry.slug, entry.id]));
+
+    const breakdownSeeds = [
+      {
+        id: `${newest.id}-scene-1-set`,
+        sceneId: `${newest.id}-scene-1`,
+        departmentSlug: "buehnenbild",
+        title: "Parkbank und Laternen aufbauen",
+        description: "Eine Holzbank, zwei LED-Laternen, Moosteppich.",
+        status: BreakdownStatus.planned,
+      },
+      {
+        id: `${newest.id}-scene-1-light`,
+        sceneId: `${newest.id}-scene-1`,
+        departmentSlug: "licht",
+        title: "Warmton-Einleuchten",
+        description: "Stufenlinsen 2×, Amber-Folie, sanfter Fade-in.",
+        status: BreakdownStatus.ready,
+        assignedToId: techLead?.id ?? null,
+      },
+      {
+        id: `${newest.id}-scene-2-props`,
+        sceneId: `${newest.id}-scene-2`,
+        departmentSlug: "technik",
+        title: "Nebelmaschine vorbereiten",
+        description: "Fluid prüfen, Funkempfänger testen.",
+        status: BreakdownStatus.in_progress,
+        assignedToId: techLead?.id ?? null,
+      },
+      {
+        id: `${newest.id}-scene-2-makeup`,
+        sceneId: `${newest.id}-scene-2`,
+        departmentSlug: "maske",
+        title: "Schminken Mentor",
+        description: "Leichte Alterungsschminke, silberne Haarsträhne.",
+        status: BreakdownStatus.planned,
+      },
+    ];
+
+    for (const item of breakdownSeeds) {
+      const departmentId = breakdownMap.get(item.departmentSlug);
+      if (!departmentId) continue;
+
+      await prisma.sceneBreakdownItem.upsert({
+        where: { id: item.id },
+        update: {
+          title: item.title,
+          description: item.description ?? null,
+          status: item.status ?? BreakdownStatus.planned,
+          assignedToId: item.assignedToId ?? null,
+        },
+        create: {
+          id: item.id,
+          sceneId: item.sceneId,
+          departmentId,
+          title: item.title,
+          description: item.description ?? null,
+          status: item.status ?? BreakdownStatus.planned,
+          assignedToId: item.assignedToId ?? null,
+        },
+      });
     }
   }
 
