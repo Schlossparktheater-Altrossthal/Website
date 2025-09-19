@@ -42,7 +42,7 @@ if (!existsSync(prismaExecutable)) {
 
 try {
   console.log("[prisma-migrate] Ensuring database schema is up to date (prisma migrate deploy)...");
-  execFileSync(prismaExecutable, ["migrate", "deploy", "--skip-generate"], {
+  execFileSync(prismaExecutable, ["migrate", "deploy"], {
     stdio: "inherit",
     env: process.env,
   });
