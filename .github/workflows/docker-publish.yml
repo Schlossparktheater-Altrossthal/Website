@@ -38,11 +38,13 @@ jobs:
             type=raw,value=dev
             type=sha
 
-      - name: Build and push Docker image
+      - name: Build and push dev Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.prod
+          file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_ENV=development

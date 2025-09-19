@@ -1,9 +1,12 @@
 # Dev Dockerfile for Next.js app
 FROM node:20-slim
 
+ARG NODE_ENV=development
+
 ENV PNPM_HOME=/root/.local/share/pnpm \
     PATH=/root/.local/share/pnpm:$PATH \
-    NEXT_TELEMETRY_DISABLED=1
+    NEXT_TELEMETRY_DISABLED=1 \
+    NODE_ENV=${NODE_ENV}
 
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/* \
     && corepack enable
