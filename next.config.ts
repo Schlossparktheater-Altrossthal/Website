@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.dresden.de" },
       { protocol: "https", hostname: "radiodresden.de" },
       { protocol: "https", hostname: "www.felix-hitzig.de" },
+      { protocol: "https", hostname: "www.gravatar.com" },
     ],
   },
   // Next.js 15+: serverComponentsExternalPackages moved to serverExternalPackages
