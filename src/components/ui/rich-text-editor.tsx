@@ -59,7 +59,7 @@ const BASE_FORMATS = [
   "bold", "italic", "underline", "strike",
   "color", "background",
   "script",
-  "list", "bullet", "indent",
+  "list", "indent",
   "align",
   "blockquote", "code-block",
   "link", "image", "video"
