@@ -127,21 +127,21 @@
 @layer components {
   /* Enhanced Rich Text Editor */
   .rich-text-editor {
-    @apply relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-slate-50 via-white to-slate-100 shadow-lg transition-shadow duration-200;
+    @apply relative overflow-visible rounded-2xl border border-border/60 bg-card/60 shadow-lg transition-shadow duration-200;
   }
 
   .rich-text-editor:focus-within {
-    @apply ring-2 ring-primary/25 ring-offset-2 ring-offset-white shadow-xl;
+    @apply ring-2 ring-primary/15 ring-offset-2 ring-offset-background shadow-xl;
   }
 
   /* Toolbar */
   .rich-text-editor .ql-toolbar.ql-snow {
-    @apply flex flex-wrap items-center gap-x-4 gap-y-2 border-0 border-b border-border/60 bg-gradient-to-b from-white via-slate-50 to-slate-100 px-4 py-3 shadow-inner;
+    @apply flex flex-wrap items-center gap-x-3 gap-y-2 border-0 border-b border-border/60 bg-card/80 px-3 py-2 shadow-inner backdrop-blur;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-formats {
     @apply mr-4 flex items-center gap-1 pr-4 last:mr-0 last:border-r-0 last:pr-0;
-    border-right: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+    border-right: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-formats:last-child {
@@ -150,19 +150,20 @@
 
   .rich-text-editor .ql-toolbar.ql-snow button,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label {
-    @apply flex h-9 min-w-9 items-center justify-center rounded-md border border-transparent bg-white/80 px-2 text-[13px] font-medium text-foreground/70 transition-all duration-150 ease-out;
-    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
+    @apply flex h-9 min-w-9 items-center justify-center rounded-md border bg-muted/25 px-2 text-[13px] font-medium text-foreground/90 transition-all duration-150 ease-out;
+    @apply border-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--border) 22%, transparent);
   }
 
   .rich-text-editor .ql-toolbar.ql-snow button:hover,
   .rich-text-editor .ql-toolbar.ql-snow button:focus-visible,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:hover,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:focus-visible {
-    @apply border-border/70 bg-white text-foreground shadow-sm outline-none;
+    @apply border-border/70 bg-muted/35 text-foreground shadow-sm outline-none;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label {
-    @apply w-auto px-3 text-[13px] font-semibold tracking-wide;
+    @apply w-auto px-3 text-[13px] font-semibold tracking-wide text-foreground/90;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker {
@@ -171,7 +172,7 @@
 
   .rich-text-editor .ql-toolbar.ql-snow button.ql-active,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label.ql-active {
-    @apply border-primary bg-primary/10 text-primary shadow-sm;
+    @apply border-primary bg-primary/25 text-primary shadow-sm;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow button svg,
@@ -188,8 +189,26 @@
   }
 
   /* Dropdowns */
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker {
+    position: relative;
+  }
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options {
     @apply mt-2 rounded-xl border border-border bg-popover p-2 shadow-xl;
+    z-index: 50;
+    background: var(--popover) !important;
+    color: var(--popover-foreground) !important;
+    border-color: color-mix(in oklab, var(--border) 80%, transparent) !important;
+    width: max-content;
+    min-width: 10rem;
+    max-height: 18rem;
+    overflow: auto;
+  }
+  .rich-text-editor .ql-snow .ql-picker.ql-expanded .ql-picker-options {
+    background: var(--popover) !important;
+    color: var(--popover-foreground) !important;
+  }
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item {
+    color: var(--popover-foreground) !important;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item {
@@ -252,15 +271,28 @@
 
   /* Editor Surface */
   .rich-text-editor .ql-container.ql-snow {
-    @apply border-0 bg-slate-100/70 px-6 pb-6;
+    @apply border-0 bg-muted/40 px-6 pb-6;
   }
 
   .rich-text-editor .ql-editor {
-    @apply min-h-[260px] rounded-xl border border-border/40 bg-white px-8 py-8 text-[15px] leading-relaxed text-foreground shadow-sm;
+    @apply min-h-[260px] rounded-xl border border-border/50 bg-card px-8 py-8 text-[15px] leading-relaxed text-foreground shadow-sm;
+    caret-color: var(--primary);
+  }
+  .rich-text-editor .ql-editor,
+  .rich-text-editor .ql-editor p,
+  .rich-text-editor .ql-editor li,
+  .rich-text-editor .ql-editor h1,
+  .rich-text-editor .ql-editor h2,
+  .rich-text-editor .ql-editor h3,
+  .rich-text-editor .ql-editor h4,
+  .rich-text-editor .ql-editor h5,
+  .rich-text-editor .ql-editor h6 {
+    color: var(--foreground);
   }
 
   .rich-text-editor .ql-editor.ql-blank::before {
-    @apply text-sm text-muted-foreground not-italic;
+    @apply text-sm not-italic;
+    color: color-mix(in oklab, var(--muted-foreground) 92%, transparent);
   }
 
   .rich-text-editor .ql-editor h1 {
@@ -292,11 +324,85 @@
   }
 
   .rich-text-editor .ql-editor .ql-code-block-container {
-    @apply my-5 rounded-xl border border-border bg-muted/50 p-4 font-mono text-sm shadow-inner;
+    @apply my-5 rounded-xl border border-border bg-muted/30 p-4 font-mono text-sm shadow-inner;
   }
 
   .rich-text-editor .ql-editor pre.ql-syntax {
-    @apply my-5 overflow-x-auto rounded-xl border border-border bg-muted/60 p-4 font-mono text-sm shadow-inner;
+    @apply my-5 overflow-x-auto rounded-xl border border-border bg-muted/40 p-4 font-mono text-sm shadow-inner;
+  }
+
+  /* Textauswahl im Editor (besser sichtbarer Markierungs-Hintergrund) */
+  .rich-text-editor .ql-editor ::selection {
+    background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+
+  /* Dark mode refinements */
+  .dark .rich-text-editor {
+    @apply bg-card/50 shadow-lg;
+  }
+
+  .dark .rich-text-editor .ql-toolbar.ql-snow {
+    @apply bg-card/70 border-border/60 shadow-inner;
+  }
+
+  .dark .rich-text-editor .ql-toolbar.ql-snow .ql-formats {
+    border-right: 1px solid color-mix(in oklab, var(--border) 35%, transparent);
+  }
+
+  .dark .rich-text-editor .ql-toolbar.ql-snow button,
+  .dark .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label {
+    @apply bg-muted/25 text-foreground/90;
+  }
+  .dark .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label,
+  .dark .rich-text-editor .ql-toolbar.ql-snow .ql-picker-item {
+    color: var(--foreground);
+  }
+  .dark .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item:hover {
+    @apply bg-accent text-accent-foreground;
+  }
+  .dark .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item.ql-selected {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .dark .rich-text-editor .ql-toolbar.ql-snow button:hover,
+  .dark .rich-text-editor .ql-toolbar.ql-snow button:focus-visible,
+  .dark .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:hover,
+  .dark .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:focus-visible {
+    @apply bg-secondary/30 text-foreground;
+  }
+
+  .dark .rich-text-editor .ql-container.ql-snow {
+    @apply bg-muted/10;
+  }
+
+  .dark .rich-text-editor .ql-editor {
+    @apply bg-card;
+  }
+
+  .dark .rich-text-editor .ql-editor .ql-code-block-container,
+  .dark .rich-text-editor .ql-editor pre.ql-syntax {
+    @apply bg-muted/20;
+  }
+
+  /* Quill Tooltip (Link/Embed Dialog) im Dark Mode anpassen */
+  .dark .ql-snow .ql-tooltip {
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    box-shadow: 0 10px 24px rgba(0,0,0,.28);
+  }
+  .dark .ql-snow .ql-tooltip input {
+    background: color-mix(in oklab, var(--background) 12%, transparent);
+    color: var(--foreground);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+  .dark .ql-snow .ql-tooltip a.ql-action,
+  .dark .ql-snow .ql-tooltip a.ql-remove {
+    color: var(--primary);
+  }
+
+  .dark .rich-text-editor .ql-editor.ql-blank::before {
+    color: color-mix(in oklab, var(--muted-foreground) 96%, transparent);
   }
 
   .rich-text-editor .ql-editor ul {
