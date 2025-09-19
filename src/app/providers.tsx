@@ -12,7 +12,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={client}>
         <RealtimeProvider>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster 
+            richColors 
+            position="top-right" 
+            expand={true}
+            visibleToasts={5}
+            gap={8}
+          />
         </RealtimeProvider>
       </QueryClientProvider>
     </SessionProvider>
