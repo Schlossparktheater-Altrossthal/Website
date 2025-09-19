@@ -1,37 +1,25 @@
 import Link from "next/link";
-import { DepartmentMembershipRole } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { getActiveProduction } from "@/lib/active-production";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 import {
-  createDepartmentAction,
-  updateDepartmentAction,
-  deleteDepartmentAction,
-  addDepartmentMemberAction,
-  updateDepartmentMemberAction,
-  removeDepartmentMemberAction,
+  clearActiveProductionAction,
+  setActiveProductionAction,
 } from "./actions";
 
-const ROLE_LABELS: Record<DepartmentMembershipRole, string> = {
-  lead: "Leitung",
-  member: "Mitglied",
-  deputy: "Vertretung",
-  guest: "Gast",
-};
-
-function formatUserName(user: { name: string | null; email: string | null }) {
-  if (user.name && user.name.trim()) return user.name;
-  if (user.email) return user.email;
-  return "Unbekannt";
+function formatShowTitle(show: { title: string | null; year: number }) {
+  if (show.title && show.title.trim()) {
+    return show.title;
+  }
+  return `Produktion ${show.year}`;
 }
-
-const selectClassName =
-  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export default async function ProduktionenPage() {
   const session = await requireAuth();
@@ -44,299 +32,223 @@ export default async function ProduktionenPage() {
     );
   }
 
-  const [departments, users, shows] = await Promise.all([
-    prisma.department.findMany({
-      orderBy: { name: "asc" },
-      include: {
-        memberships: {
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-          orderBy: { createdAt: "asc" },
-        },
-      },
+  const [shows, activeProduction] = await Promise.all([
+    prisma.show.findMany({
+      orderBy: { year: "desc" },
+      select: { id: true, year: true, title: true, synopsis: true },
     }),
-    prisma.user.findMany({
-      orderBy: [
-        { name: "asc" },
-        { email: "asc" },
-      ],
-      select: { id: true, name: true, email: true },
-    }),
-    prisma.show.findMany({ orderBy: { year: "desc" }, select: { id: true, year: true, title: true } }),
+    getActiveProduction(),
   ]);
 
+  const activeShowId = activeProduction?.id ?? null;
+
+  let activeStats: { characters: number; scenes: number; breakdownItems: number } | null = null;
+  if (activeShowId) {
+    const [characters, scenes, breakdownItems] = await Promise.all([
+      prisma.character.count({ where: { showId: activeShowId } }),
+      prisma.scene.count({ where: { showId: activeShowId } }),
+      prisma.sceneBreakdownItem.count({ where: { scene: { showId: activeShowId } } }),
+    ]);
+    activeStats = { characters, scenes, breakdownItems };
+  }
+
   return (
-    <div className="space-y-12">
-      <div>
-        <h1 className="text-2xl font-semibold">Produktionsplanung</h1>
-        <p className="text-sm text-muted-foreground">
-          Verwalte Gewerke, Zuständigkeiten und wähle eine Produktion für Rollen-, Szenen- und Breakdown-Details aus.
-        </p>
-      </div>
-
-      <section className="space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold">Gewerke &amp; Zuständigkeiten</h2>
-          <p className="text-sm text-muted-foreground">
-            Lege neue Gewerke an, pflege Farben und Beschreibungen und ordne Teammitglieder mit klaren Verantwortlichkeiten zu.
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-border/70 bg-background/60 p-6">
-          <h3 className="text-lg font-medium">Neues Gewerk anlegen</h3>
-          <form action={createDepartmentAction} className="mt-4 grid gap-4 md:grid-cols-2" method="post">
-            <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Name</label>
-              <Input name="name" placeholder="z.B. Maske" required minLength={2} maxLength={80} />
+    <div className="space-y-10">
+      <section className="overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-primary/5 via-background to-background p-8 shadow-lg">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-4">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+              Produktionsplanung
+            </span>
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold text-foreground md:text-4xl">
+                Moderne Oberfläche für deine Produktionen
+              </h1>
+              <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
+                Koordiniere Teams, Besetzungen und Szenen mit einer klaren Navigation. Wähle eine aktive Produktion, um fokussiert
+                zu arbeiten und behalte gleichzeitig alle Gewerke im Blick.
+              </p>
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Slug (optional)</label>
-              <Input name="slug" placeholder="maske" maxLength={80} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Farbe</label>
-              <input
-                type="color"
-                name="color"
-                defaultValue="#9333ea"
-                className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-sm font-medium">Beschreibung</label>
-              <Textarea name="description" rows={2} maxLength={2000} placeholder="Kurzbeschreibung für das Gewerk" />
-            </div>
-            <div className="md:col-span-2">
-              <Button type="submit">Gewerk speichern</Button>
-            </div>
-          </form>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          {departments.map((department) => {
-            const memberIds = new Set(department.memberships.map((membership) => membership.user.id));
-            const availableUsers = users.filter((user) => !memberIds.has(user.id));
-            return (
-              <div key={department.id} className="flex flex-col gap-4 rounded-lg border border-border/70 bg-background/60 p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-block h-3 w-3 rounded-full border border-border/80"
-                        style={{ backgroundColor: department.color ?? "#94a3b8" }}
-                      />
-                      <h3 className="text-lg font-semibold">{department.name}</h3>
-                    </div>
-                    {department.description ? (
-                      <p className="mt-1 text-sm text-muted-foreground">{department.description}</p>
-                    ) : null}
-                  </div>
-                  <form action={deleteDepartmentAction} method="post">
-                    <input type="hidden" name="id" value={department.id} />
-                    <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-                    <Button type="submit" variant="ghost" size="sm">
-                      Entfernen
-                    </Button>
-                  </form>
-                </div>
-
-                <form
-                  action={updateDepartmentAction}
-                  method="post"
-                  className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4"
-                >
-                  <input type="hidden" name="id" value={department.id} />
-                  <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
-                      <Input name="name" defaultValue={department.name} minLength={2} maxLength={80} required />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Slug</label>
-                      <Input name="slug" defaultValue={department.slug} maxLength={80} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Farbe</label>
-                      <input
-                        type="color"
-                        name="color"
-                        defaultValue={department.color ?? "#94a3b8"}
-                        className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-                      />
-                    </div>
-                    <div className="space-y-1 md:col-span-2">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Beschreibung
-                      </label>
-                      <Textarea
-                        name="description"
-                        rows={2}
-                        maxLength={2000}
-                        defaultValue={department.description ?? ""}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button type="submit" variant="outline" size="sm">
-                      Aktualisieren
-                    </Button>
-                  </div>
-                </form>
-
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold">Mitglieder</h4>
-                  <div className="space-y-3">
-                    {department.memberships.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Noch keine Mitglieder zugeordnet.</p>
-                    ) : (
-                      department.memberships.map((membership) => (
-                        <div
-                          key={membership.id}
-                          className="rounded-md border border-border/60 bg-background/80 p-3 text-sm"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                              <p className="font-medium">{formatUserName(membership.user)}</p>
-                              <p className="text-xs text-muted-foreground">{ROLE_LABELS[membership.role]}</p>
-                              {membership.title ? (
-                                <p className="text-xs text-muted-foreground">{membership.title}</p>
-                              ) : null}
-                              {membership.note ? (
-                                <p className="text-xs text-muted-foreground">Notiz: {membership.note}</p>
-                              ) : null}
-                            </div>
-                            <form action={removeDepartmentMemberAction} method="post">
-                              <input type="hidden" name="membershipId" value={membership.id} />
-                              <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-                              <Button type="submit" variant="ghost" size="sm">
-                                Entfernen
-                              </Button>
-                            </form>
-                          </div>
-                          <form
-                            action={updateDepartmentMemberAction}
-                            method="post"
-                            className="mt-3 grid gap-2 md:grid-cols-3"
-                          >
-                            <input type="hidden" name="membershipId" value={membership.id} />
-                            <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Funktion
-                              </label>
-                              <select
-                                name="role"
-                                defaultValue={membership.role}
-                                className={selectClassName}
-                              >
-                                {Object.values(DepartmentMembershipRole).map((role) => (
-                                  <option key={role} value={role}>
-                                    {ROLE_LABELS[role]}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Bezeichnung
-                              </label>
-                              <Input name="title" defaultValue={membership.title ?? ""} maxLength={120} />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Notiz
-                              </label>
-                              <Input name="note" defaultValue={membership.note ?? ""} maxLength={200} />
-                            </div>
-                            <div className="md:col-span-3 flex justify-end">
-                              <Button type="submit" variant="outline" size="sm">
-                                Speichern
-                              </Button>
-                            </div>
-                          </form>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="rounded-md border border-dashed border-border/60 bg-background/60 p-3">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Mitglied hinzufügen
-                    </h5>
-                    <form className="mt-2 grid gap-2 md:grid-cols-3" action={addDepartmentMemberAction} method="post">
-                      <input type="hidden" name="departmentId" value={department.id} />
-                      <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-                      <div className="space-y-1 md:col-span-1">
-                        <label className="text-xs font-medium text-muted-foreground">Mitglied</label>
-                        <select name="userId" className={selectClassName} required>
-                          <option value="">Mitglied auswählen</option>
-                          {availableUsers.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {formatUserName(user)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Funktion</label>
-                        <select name="role" className={selectClassName} defaultValue={DepartmentMembershipRole.member}>
-                          {Object.values(DepartmentMembershipRole).map((role) => (
-                            <option key={role} value={role}>
-                              {ROLE_LABELS[role]}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Bezeichnung</label>
-                        <Input name="title" maxLength={120} placeholder="z.B. Leitung" />
-                      </div>
-                      <div className="space-y-1 md:col-span-3">
-                        <label className="text-xs font-medium text-muted-foreground">Notiz</label>
-                        <Input name="note" maxLength={200} placeholder="optionale Notiz" />
-                      </div>
-                      <div className="md:col-span-3 flex justify-end">
-                        <Button type="submit" size="sm">
-                          Mitglied zuordnen
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          </div>
+          <div className="flex flex-col gap-2 text-sm text-muted-foreground md:max-w-xs md:text-right">
+            <span>Nutze die neuen Menüpunkte für Gewerke, Besetzungen und Szenen für eine klare Arbeitsaufteilung.</span>
+            <span className="font-medium text-foreground">Starte mit der Auswahl deiner Produktion.</span>
+          </div>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold">Produktionen</h2>
-          <p className="text-sm text-muted-foreground">
-            Wähle eine Produktion aus, um Rollen, Szenen und Breakdowns detailliert zu verwalten.
-          </p>
+      {activeProduction ? (
+        <section>
+          <Card className="border-primary/40 bg-primary/5">
+            <CardHeader className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wide text-primary">
+                    Aktive Produktion
+                  </CardTitle>
+                  <h2 className="mt-1 text-2xl font-semibold text-foreground md:text-3xl">
+                    {formatShowTitle(activeProduction)}
+                  </h2>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Jahrgang {activeProduction.year}</p>
+                </div>
+                <Badge>Aktiv</Badge>
+              </div>
+              {activeProduction.synopsis ? (
+                <p className="max-w-3xl text-sm text-muted-foreground">{activeProduction.synopsis}</p>
+              ) : null}
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {activeStats ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-lg border border-border/60 bg-background/70 p-4">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Rollen</div>
+                    <div className="mt-2 text-2xl font-semibold text-foreground">{activeStats.characters}</div>
+                    <p className="text-xs text-muted-foreground">Angelegte Figuren in dieser Produktion</p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/70 p-4">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Szenen</div>
+                    <div className="mt-2 text-2xl font-semibold text-foreground">{activeStats.scenes}</div>
+                    <p className="text-xs text-muted-foreground">Erfasste Szenen inklusive Reihenfolge</p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/70 p-4">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Breakdowns</div>
+                    <div className="mt-2 text-2xl font-semibold text-foreground">{activeStats.breakdownItems}</div>
+                    <p className="text-xs text-muted-foreground">Offene Aufgaben über alle Gewerke</p>
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button asChild>
+                  <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzung öffnen</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/mitglieder/produktionen/szenen">Szenen &amp; Breakdowns öffnen</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams verwalten</Link>
+                </Button>
+                <form action={clearActiveProductionAction} className="ml-auto flex-shrink-0">
+                  <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
+                  <Button type="submit" variant="ghost" size="sm">
+                    Aktive Auswahl zurücksetzen
+                  </Button>
+                </form>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      ) : (
+        <section>
+          <Card className="border-dashed border-border/70">
+            <CardHeader className="space-y-2">
+              <CardTitle className="text-lg font-semibold">Noch keine aktive Produktion ausgewählt</CardTitle>
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                Wähle unten eine Produktion aus, um Rollen, Szenen und Breakdowns mit der neuen Oberfläche zu bearbeiten. Du kannst
+                die Auswahl jederzeit wieder ändern.
+              </p>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              <Button asChild>
+                <Link href="#produktionen">Produktion auswählen</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams aufrufen</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-lg font-semibold">Gewerke &amp; Teams</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Pflege Farben, Beschreibungen und Zuständigkeiten deiner Produktionsgewerke in einem dedizierten Arbeitsbereich.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button asChild size="sm">
+              <Link href="/mitglieder/produktionen/gewerke">Zum Team-Workspace</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-lg font-semibold">Strukturierte Arbeitsabläufe</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Nutze die neuen Navigationspunkte für Rollen sowie Szenen &amp; Breakdowns, um fokussiert an deiner Produktion zu
+              arbeiten.
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/mitglieder/produktionen/besetzung">Rollenbereich öffnen</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/mitglieder/produktionen/szenen">Szenenbereich öffnen</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section id="produktionen" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Produktionen auswählen</h2>
+            <p className="text-sm text-muted-foreground">
+              Setze eine Produktion als aktiv, um Rollen, Szenen und Breakdown-Aufgaben gezielt zu bearbeiten.
+            </p>
+          </div>
+          {shows.length > 0 ? (
+            <Badge variant="outline">{shows.length} Eintr{shows.length === 1 ? "ag" : "äge"}</Badge>
+          ) : null}
         </div>
         {shows.length === 0 ? (
           <p className="text-sm text-muted-foreground">Keine Produktionen vorhanden.</p>
         ) : (
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {shows.map((show) => (
-              <li key={show.id}>
-                <Link
-                  href={`/mitglieder/produktionen/${show.id}`}
-                  className="flex h-full flex-col justify-between rounded-lg border border-border/70 bg-background/60 p-4 transition hover:border-primary/60 hover:shadow-sm"
-                >
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{show.year}</p>
-                    <h3 className="mt-1 text-lg font-semibold">{show.title ?? `Produktion ${show.year}`}</h3>
-                  </div>
-                  <span className="mt-4 text-sm font-medium text-primary">Details anzeigen</span>
-                </Link>
-              </li>
-            ))}
+            {shows.map((show) => {
+              const isActive = show.id === activeShowId;
+              const title = formatShowTitle(show);
+              return (
+                <li key={show.id}>
+                  <Card
+                    className={cn(
+                      "flex h-full flex-col justify-between border-border/60 bg-background/70 transition hover:border-primary/50 hover:shadow-md",
+                      isActive && "border-primary/60 bg-primary/5 shadow-md"
+                    )}
+                  >
+                    <CardHeader className="space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Jahrgang {show.year}</p>
+                          <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
+                        </div>
+                        {isActive ? <Badge>Aktiv</Badge> : null}
+                      </div>
+                      {show.synopsis ? (
+                        <p className="text-sm text-muted-foreground">{show.synopsis}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Keine Kurzbeschreibung hinterlegt.</p>
+                      )}
+                    </CardHeader>
+                    <CardContent className="mt-auto flex flex-wrap items-center gap-2">
+                      <form action={setActiveProductionAction} className="flex-shrink-0">
+                        <input type="hidden" name="showId" value={show.id} />
+                        <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
+                        <Button type="submit" size="sm" disabled={isActive}>
+                          {isActive ? "Aktiv ausgewählt" : "Als aktiv setzen"}
+                        </Button>
+                      </form>
+                      <Button asChild size="sm" variant="outline" className="flex-shrink-0">
+                        <Link href={`/mitglieder/produktionen/${show.id}`}>Details anzeigen</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

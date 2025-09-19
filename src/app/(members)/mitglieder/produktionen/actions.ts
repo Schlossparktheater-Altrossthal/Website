@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import {
   Prisma,
   DepartmentMembershipRole,
@@ -11,6 +12,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { ACTIVE_PRODUCTION_COOKIE } from "@/lib/active-production";
 
 type ActionResult = { success: true } | { error: string };
 
@@ -40,6 +42,62 @@ function readOptionalString(formData: FormData, key: string, options?: ReadOptio
     );
   }
   return trimmed;
+}
+
+export async function setActiveProductionAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const session = await requireAuth();
+    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    if (!allowed) {
+      return { error: "Du hast keinen Zugriff auf die Produktionsplanung." };
+    }
+
+    const showId = readString(formData, "showId", { label: "Produktion" });
+    const redirectPath = readOptionalString(formData, "redirectPath");
+
+    const show = await prisma.show.findUnique({ where: { id: showId }, select: { id: true } });
+    if (!show) {
+      return { error: "Produktion wurde nicht gefunden." };
+    }
+
+    cookies().set(ACTIVE_PRODUCTION_COOKIE, show.id, {
+      maxAge: 60 * 60 * 24 * 180,
+      sameSite: "lax",
+      path: "/",
+    });
+
+    revalidatePath("/mitglieder", "layout");
+    if (redirectPath) {
+      revalidatePath(redirectPath);
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Aktive Produktion konnte nicht gesetzt werden." };
+  }
+}
+
+export async function clearActiveProductionAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const session = await requireAuth();
+    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    if (!allowed) {
+      return { error: "Du hast keinen Zugriff auf die Produktionsplanung." };
+    }
+
+    const redirectPath = readOptionalString(formData, "redirectPath");
+
+    cookies().delete(ACTIVE_PRODUCTION_COOKIE, { path: "/" });
+
+    revalidatePath("/mitglieder", "layout");
+    if (redirectPath) {
+      revalidatePath(redirectPath);
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Aktive Produktion konnte nicht entfernt werden." };
+  }
 }
 
 function readString(formData: FormData, key: string, options?: ReadOptions): string {

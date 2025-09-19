@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 type Item = { href: string; label: string; permissionKey?: string };
 type Group = { label: string; items: Item[] };
+type ActiveProductionNavInfo = { id: string; title: string | null; year: number };
 
 const groupedConfig: Group[] = [
   {
@@ -27,7 +28,18 @@ const groupedConfig: Group[] = [
   {
     label: "Produktion",
     items: [
-      { href: "/mitglieder/produktionen", label: "Produktionen", permissionKey: "mitglieder.produktionen" },
+      { href: "/mitglieder/produktionen", label: "Übersicht", permissionKey: "mitglieder.produktionen" },
+      { href: "/mitglieder/produktionen/gewerke", label: "Gewerke & Teams", permissionKey: "mitglieder.produktionen" },
+      {
+        href: "/mitglieder/produktionen/besetzung",
+        label: "Rollen & Besetzung",
+        permissionKey: "mitglieder.produktionen",
+      },
+      {
+        href: "/mitglieder/produktionen/szenen",
+        label: "Szenen & Breakdowns",
+        permissionKey: "mitglieder.produktionen",
+      },
     ],
   },
   {
@@ -96,6 +108,36 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
           <path d="M9 16h6" />
         </svg>
       );
+    case "/mitglieder/produktionen/gewerke":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="7" cy="7" r="2.5" />
+          <circle cx="17" cy="7" r="2.5" />
+          <circle cx="12" cy="17" r="2.5" />
+          <path d="M9.5 7h5" />
+          <path d="M9.4 8.6L12 12" />
+          <path d="M14.6 8.6 12 12" />
+          <path d="M12 14.5V12" />
+        </svg>
+      );
+    case "/mitglieder/produktionen/besetzung":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="9" cy="8" r="3" />
+          <path d="M4 20c0-3 2.239-5.5 5-5.5S14 17 14 20" />
+          <path d="M17 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+          <path d="M20.5 20c0-2.485-2.015-4.5-4.5-4.5" />
+        </svg>
+      );
+    case "/mitglieder/produktionen/szenen":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <path d="M3 9l2.5-5h5L8 9" />
+          <path d="M8 9l2.5-5h5L13 9" />
+          <path d="M3 13h18" />
+        </svg>
+      );
     case "/mitglieder/mitgliederverwaltung":
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -126,7 +168,13 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
   }
 }
 
-export function MembersNav({ permissions }: { permissions?: string[] }) {
+export function MembersNav({
+  permissions,
+  activeProduction,
+}: {
+  permissions?: string[];
+  activeProduction?: ActiveProductionNavInfo;
+}) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
 
@@ -145,8 +193,40 @@ export function MembersNav({ permissions }: { permissions?: string[] }) {
   const activeItem = useMemo(() => flat.find((item) => isActive(pathname, item.href)), [flat, pathname]);
   const activeHref = activeItem?.href ?? flat[0]?.href ?? "";
 
+  const activeProductionTitle = activeProduction
+    ? activeProduction.title && activeProduction.title.trim()
+      ? activeProduction.title
+      : `Produktion ${activeProduction.year}`
+    : null;
+
   return (
     <div className="flex flex-col gap-4">
+      <div className="rounded-lg border border-border/50 bg-background/60 p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground/50">
+              Aktive Produktion
+            </div>
+            {activeProduction && activeProductionTitle ? (
+              <>
+                <div className="mt-1 text-sm font-semibold text-foreground">{activeProductionTitle}</div>
+                <div className="text-xs text-muted-foreground">Jahrgang {activeProduction.year}</div>
+              </>
+            ) : (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Noch keine Produktion ausgewählt. Wähle in der Übersicht eine aktive Produktion aus.
+              </p>
+            )}
+          </div>
+          <Link
+            href="/mitglieder/produktionen"
+            className="text-xs font-medium text-primary transition hover:text-primary/80"
+          >
+            Übersicht öffnen
+          </Link>
+        </div>
+      </div>
+
       <div className="lg:hidden">
         <label htmlFor="members-navigation" className="sr-only">
           Bereich im Mitgliederbereich wählen
