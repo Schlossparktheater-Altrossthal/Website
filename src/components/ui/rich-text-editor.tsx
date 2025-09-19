@@ -14,15 +14,28 @@ type RichTextEditorProps = {
 };
 
 const TOOLBAR_OPTIONS = [
-  [{ header: [false, 1, 2, 3, 4, 5, 6] }],
-  [{ size: ["small", false, "large", "huge"] }],
-  ["bold", "italic", "underline", "strike"],
-  [{ color: [] }, { background: [] }],
-  [{ script: "sub" }, { script: "super" }],
-  [{ list: "ordered" }, { list: "bullet" }, { indent: "-1" }, { indent: "+1" }],
-  [{ align: [] }],
-  ["blockquote", "code-block"],
-  ["link", "image", "video"],
+  [
+    { header: [false, 1, 2, 3, 4, 5, 6] },
+    { size: ["small", false, "large", "huge"] },
+  ],
+  [
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    { color: [] },
+    { background: [] },
+  ],
+  [
+    { script: "sub" },
+    { script: "super" },
+    { list: "ordered" },
+    { list: "bullet" },
+    { indent: "-1" },
+    { indent: "+1" },
+    { align: [] },
+  ],
+  ["blockquote", "code-block", "link", "image", "video"],
   ["clean"],
 ] as const;
 
@@ -99,7 +112,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   return (
     <div
       className={cn(
-        "rich-text-editor overflow-hidden rounded-lg border border-border bg-card shadow-sm",
+        "rich-text-editor relative overflow-hidden rounded-2xl border border-border/60 bg-muted/40 shadow-lg",
         className,
       )}
     >
