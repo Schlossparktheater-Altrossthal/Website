@@ -1,8 +1,13 @@
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { de } from "date-fns/locale/de";
+
 import { PageHeader } from "@/components/members/page-header";
 export const dynamic = "force-dynamic";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateRehearsalButton } from "./create-rehearsal-button";
 import {
   RehearsalCalendar,
@@ -17,8 +22,9 @@ export default async function ProbenplanungPage() {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Probenplanung</div>;
   }
 
-  const [rehearsals, blockedDays, memberCount] = await Promise.all([
+  const [publishedRehearsals, blockedDays, memberCount, drafts] = await Promise.all([
     prisma.rehearsal.findMany({
+      where: { status: { not: "DRAFT" } },
       orderBy: { start: "asc" },
       include: {
         attendance: {
@@ -46,6 +52,17 @@ export default async function ProbenplanungPage() {
       },
     }),
     prisma.user.count(),
+    prisma.rehearsal.findMany({
+      where: { status: "DRAFT" },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        start: true,
+        updatedAt: true,
+        location: true,
+      },
+    }),
   ]);
 
   const calendarBlockedDays: CalendarBlockedDay[] = blockedDays.map((entry) => {
@@ -63,7 +80,7 @@ export default async function ProbenplanungPage() {
     };
   });
 
-  const calendarRehearsals: CalendarRehearsal[] = rehearsals.map((r) => {
+  const calendarRehearsals: CalendarRehearsal[] = publishedRehearsals.map((r) => {
     const startIso = r.start.toISOString();
     const endIso = r.end ? r.end.toISOString() : null;
     return {
@@ -76,8 +93,13 @@ export default async function ProbenplanungPage() {
     };
   });
 
-  const total = rehearsals.length;
-  const upcoming = rehearsals.filter((r) => new Date(r.start) >= new Date()).length;
+  const draftDateFormatter = new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "full",
+    timeStyle: "short",
+  });
+  const now = new Date();
+  const total = publishedRehearsals.length;
+  const upcoming = publishedRehearsals.filter((r) => r.start >= now).length;
 
   return (
     <div className="space-y-6">
@@ -104,15 +126,62 @@ export default async function ProbenplanungPage() {
         </div>
       </div>
 
+      {drafts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Offene Entwürfe</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Entwürfe werden automatisch gespeichert. Du kannst sie hier weiterbearbeiten oder veröffentlichen.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3">
+              {drafts.map((draft) => (
+                <li
+                  key={draft.id}
+                  className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/70 p-3 shadow-sm"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <Link
+                        href={`/mitglieder/probenplanung/proben/${draft.id}`}
+                        className="text-sm font-semibold text-primary hover:underline"
+                      >
+                        {draft.title || "Unbenannter Entwurf"}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        Geplanter Termin: {draftDateFormatter.format(draft.start)}
+                      </p>
+                      {draft.location ? (
+                        <p className="text-xs text-muted-foreground/80">Ort: {draft.location}</p>
+                      ) : null}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      Zuletzt bearbeitet {formatDistanceToNow(draft.updatedAt, { locale: de, addSuffix: true })}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/mitglieder/probenplanung/proben/${draft.id}`}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Entwurf öffnen
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
       <RehearsalCalendar
         blockedDays={calendarBlockedDays}
         rehearsals={calendarRehearsals}
         memberCount={memberCount}
       />
 
-      {rehearsals.length ? (
+      {publishedRehearsals.length ? (
         <RehearsalList
-          initial={rehearsals.map((r) => ({
+          initial={publishedRehearsals.map((r) => ({
             id: r.id,
             title: r.title,
             start: r.start.toISOString(),

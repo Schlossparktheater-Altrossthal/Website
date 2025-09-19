@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
@@ -90,7 +91,12 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
         <summary className="list-none cursor-pointer px-5 py-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-foreground">{rehearsal.title}</h3>
+              <Link
+                href={`/mitglieder/proben/${rehearsal.id}`}
+                className="text-lg font-semibold text-primary hover:underline"
+              >
+                {rehearsal.title}
+              </Link>
               <p className="text-sm text-muted-foreground">
                 {dateFormatter.format(startDate)}
                 {" · "}

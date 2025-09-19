@@ -421,11 +421,12 @@ function NotificationEntry({ item, respondingId, onRespond }: NotificationEntryP
                       body: JSON.stringify({ action: "delete_ids", ids: [item.id] }),
                     });
                     // remove locally
-                    const li = document.querySelector(`[data-notification-id=\"${item.id}\"]`);
                     // fall back to state update via custom event
-                    const ev = new CustomEvent("notification-removed", { detail: { id: item.id } });
-                    window.dispatchEvent(ev);
-                  } catch (e) {
+                    window.dispatchEvent(
+                      new CustomEvent("notification-removed", { detail: { id: item.id } }),
+                    );
+                  } catch (error) {
+                    console.error("[NotificationBell] remove notification failed", error);
                     toast.error("Benachrichtigung konnte nicht entfernt werden");
                   }
                 }}
