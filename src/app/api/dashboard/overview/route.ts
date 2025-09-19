@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { endOfWeek, startOfWeek } from "date-fns";
+
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
@@ -18,17 +20,17 @@ export async function GET() {
     }
 
     const now = new Date();
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfCurrentWeek = startOfWeek(now, { weekStartsOn: 1 });
+    startOfCurrentWeek.setHours(0, 0, 0, 0);
+    const endOfCurrentWeek = endOfWeek(now, { weekStartsOn: 1 });
+    endOfCurrentWeek.setHours(23, 59, 59, 999);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     endOfMonth.setHours(23, 59, 59, 999);
 
     const [
       totalMembers,
-      todayRehearsals,
+      rehearsalsThisWeek,
       unreadNotifications,
       recentNotifications,
       recentRehearsals,
@@ -39,8 +41,8 @@ export async function GET() {
       prisma.rehearsal.count({
         where: {
           start: {
-            gte: startOfDay,
-            lte: endOfDay,
+            gte: startOfCurrentWeek,
+            lte: endOfCurrentWeek,
           },
         },
       }),
@@ -112,7 +114,7 @@ export async function GET() {
     return NextResponse.json({
       stats: {
         totalMembers,
-        todayRehearsals,
+        rehearsalsThisWeek,
         unreadNotifications,
         totalRehearsalsThisMonth,
       },
