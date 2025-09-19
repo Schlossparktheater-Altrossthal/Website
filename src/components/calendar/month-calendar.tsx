@@ -369,8 +369,6 @@ export function MonthCalendar({
         @keyframes calendarCellPop { 0% { transform: scale(0.96); } 100% { transform: scale(1); } }
         @keyframes calendarAddedFlash { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); } 100% { box-shadow: 0 0 0 12px rgba(34,197,94,0); } }
         @keyframes calendarRemovedFlash { 0% { background-color: rgba(239,68,68,.15); } 100% { background-color: transparent; } }
-        @keyframes calendarHoverGlow { 0% { box-shadow: 0 0 0 rgba(99,102,241,0); } 50% { box-shadow: 0 0 18px rgba(99,102,241,.35); } 100% { box-shadow: 0 0 0 rgba(99,102,241,0); } }
-        @keyframes calendarSheenSlide { 0% { transform: translateX(-150%) skewX(-20deg);} 100% { transform: translateX(150%) skewX(-20deg);} }
         @keyframes calendarMonthInRight { 0% { opacity: 0; transform: translateX(24px);} 100% { opacity: 1; transform: translateX(0);} }
         @keyframes calendarMonthInLeft { 0% { opacity: 0; transform: translateX(-24px);} 100% { opacity: 1; transform: translateX(0);} }
         .calendar-weekday[data-weekend="true"] {
@@ -381,23 +379,15 @@ export function MonthCalendar({
           background: linear-gradient(120deg, rgba(129,140,248,.22), rgba(99,102,241,.08));
           color: rgba(224,231,255,.92);
         }
-        .calendar-cell { position: relative; }
+        .calendar-cell { position: relative; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
         .calendar-cell[data-weekend="true"] {
           background-image: linear-gradient(135deg, rgba(129,140,248,.12), rgba(129,140,248,0));
         }
         .dark .calendar-cell[data-weekend="true"] {
           background-image: linear-gradient(135deg, rgba(99,102,241,.18), rgba(129,140,248,.06));
         }
-        .calendar-cell.added-anim { animation: calendarCellPop .22s ease-out, calendarAddedFlash .6s ease-out; }
-        .calendar-cell.removed-anim { animation: calendarRemovedFlash .6s ease-out; }
-        .calendar-cell::before { content: ""; position:absolute; inset:-2px; border-radius: inherit; pointer-events:none; opacity:0; }
-        .calendar-cell::after { content:""; position:absolute; top:0; left:0; width:60%; height:100%; pointer-events:none; opacity:0; background: linear-gradient(120deg, rgba(255,255,255,0), rgba(255,255,255,.11), rgba(255,255,255,0)); transform: translateX(-150%) skewX(-20deg); }
-        .calendar-cell:hover { border-color: rgba(99,102,241,.45); background-image: radial-gradient(100% 60% at 50% 0%, rgba(99,102,241,.10), transparent 60%); }
-        @media (prefers-reduced-motion: no-preference) {
-          .calendar-cell:hover::before { opacity:1; animation: calendarHoverGlow 1.2s ease-in-out infinite; }
-          .calendar-cell:hover::after { opacity:1; animation: calendarSheenSlide 900ms ease-out; }
-        }
-        .dark .calendar-cell:hover { border-color: rgba(129,140,248,.55); background-image: radial-gradient(100% 60% at 50% 0%, rgba(129,140,248,.14), transparent 65%); }
+        .calendar-cell:hover { border-color: rgba(99,102,241,.55); transform: translateY(-2px) scale(1.01); box-shadow: 0 16px 28px -18px rgba(79,70,229,.65); }
+        .dark .calendar-cell:hover { border-color: rgba(165,180,252,.75); box-shadow: 0 16px 32px -16px rgba(30,64,175,.65); }
         .calendar-month-enter { will-change: transform, opacity; }
         @media (prefers-reduced-motion: no-preference) {
           .calendar-month-enter.calendar-month-from-right { animation: calendarMonthInRight .32s ease-out; }

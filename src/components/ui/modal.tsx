@@ -3,6 +3,9 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 
+let openModalCount = 0;
+let savedBodyOverflow: string | null = null;
+
 export function Modal({
   open,
   title,
@@ -18,14 +21,21 @@ export function Modal({
 }) {
   useEffect(() => {
     if (!open) return;
-    const original = document.body.style.overflow;
+    if (openModalCount === 0) {
+      savedBodyOverflow = document.body.style.overflow;
+    }
+    openModalCount += 1;
     document.body.style.overflow = "hidden";
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKey);
     return () => {
-      document.body.style.overflow = original;
+      openModalCount = Math.max(0, openModalCount - 1);
+      if (openModalCount === 0) {
+        document.body.style.overflow = savedBodyOverflow ?? "";
+        savedBodyOverflow = null;
+      }
       window.removeEventListener("keydown", handleKey);
     };
   }, [open, onClose]);
