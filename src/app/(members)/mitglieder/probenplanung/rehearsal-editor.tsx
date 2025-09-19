@@ -233,9 +233,6 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
           if (result?.success) {
             setSaveStatus("saved");
             setLastSavedAt(new Date());
-            if (!isDraft) {
-              toast.success("Probe aktualisiert. Alle Teilnehmer wurden benachrichtigt.");
-            }
           } else {
             setSaveStatus("error");
             const errorMessage = isDraft
