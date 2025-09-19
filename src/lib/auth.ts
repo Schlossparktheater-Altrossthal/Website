@@ -1,7 +1,7 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { NextAuthOptions } from "next-auth";
-import type { Role } from "@prisma/client";
+import type { AvatarSource, Role } from "@prisma/client";
 import type { AdapterUser } from "next-auth/adapters";
 import type { JWT } from "next-auth/jwt";
 import EmailProvider from "next-auth/providers/email";
@@ -15,6 +15,8 @@ type MutableToken = JWT & {
   roles?: Role[];
   name?: string;
   email?: string;
+  avatarSource?: AvatarSource;
+  avatarUpdatedAt?: string | null;
 };
 
 type RoleSource = { role?: unknown; roles?: unknown };
@@ -25,6 +27,57 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const isRole = (value: unknown): value is Role =>
   typeof value === "string" && (ROLES as readonly string[]).includes(value);
+
+const AVATAR_SOURCE_VALUES = ["GRAVATAR", "UPLOAD", "INITIALS"] as const;
+
+const isAvatarSource = (value: unknown): value is AvatarSource =>
+  typeof value === "string" && (AVATAR_SOURCE_VALUES as readonly string[]).includes(value);
+
+function extractAvatarSource(value: unknown): AvatarSource | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toUpperCase();
+  return isAvatarSource(normalized) ? (normalized as AvatarSource) : undefined;
+}
+
+function extractIsoDate(value: unknown): string | undefined {
+  if (value instanceof Date && !Number.isNaN(value.valueOf())) {
+    return value.toISOString();
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.valueOf())) {
+      return parsed.toISOString();
+    }
+  }
+  return undefined;
+}
+
+function applyAvatarFields(target: MutableToken, source: Record<string, unknown>) {
+  if ("avatarSource" in source) {
+    const raw = (source as { avatarSource?: unknown }).avatarSource;
+    const parsed = extractAvatarSource(raw);
+    if (parsed) {
+      target.avatarSource = parsed;
+    }
+  }
+
+  const updatedRaw = "avatarUpdatedAt" in source
+    ? (source as { avatarUpdatedAt?: unknown }).avatarUpdatedAt
+    : "avatarImageUpdatedAt" in source
+    ? (source as { avatarImageUpdatedAt?: unknown }).avatarImageUpdatedAt
+    : undefined;
+
+  if (updatedRaw === null) {
+    target.avatarUpdatedAt = null;
+  } else {
+    const parsedDate = extractIsoDate(updatedRaw);
+    if (parsedDate !== undefined) {
+      target.avatarUpdatedAt = parsedDate;
+    }
+  }
+}
 
 function extractString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
@@ -125,6 +178,8 @@ export const authOptions: NextAuthOptions = {
                   name: user.name!,
                   role: user.role,
                   roles: [user.role],
+                  avatarSource: user.avatarSource,
+                  avatarImageUpdatedAt: user.avatarImageUpdatedAt,
                 };
               }
 
@@ -157,6 +212,8 @@ export const authOptions: NextAuthOptions = {
                 name: user.name!,
                 role: combinedRoles[combinedRoles.length - 1],
                 roles: combinedRoles,
+                avatarSource: user.avatarSource,
+                avatarImageUpdatedAt: user.avatarImageUpdatedAt,
               };
             },
           }),
@@ -183,6 +240,7 @@ export const authOptions: NextAuthOptions = {
         if (email) mutableToken.email = email;
         const userRoles = extractRolesFromSource(user as AdapterUser & RoleSource);
         if (userRoles) applyRoles(userRoles);
+        applyAvatarFields(mutableToken, user);
       }
 
       if (trigger === "update") {
@@ -197,13 +255,19 @@ export const authOptions: NextAuthOptions = {
           if (nextEmail) mutableToken.email = nextEmail;
           const updatedRoles = extractRolesFromSource(updateSource as RoleSource);
           if (updatedRoles) applyRoles(updatedRoles);
+          applyAvatarFields(mutableToken, updateSource);
         }
       }
 
       if (mutableToken.id && !mutableToken.roles) {
         const dbUser = await prisma.user.findUnique({
           where: { id: mutableToken.id },
-          select: { role: true, roles: { select: { role: true } } },
+          select: {
+            role: true,
+            roles: { select: { role: true } },
+            avatarSource: true,
+            avatarImageUpdatedAt: true,
+          },
         });
         if (dbUser) {
           const combined = sortRoles([
@@ -211,6 +275,7 @@ export const authOptions: NextAuthOptions = {
             ...dbUser.roles.map((r) => r.role as Role),
           ]);
           applyRoles(combined);
+          applyAvatarFields(mutableToken, dbUser as unknown as Record<string, unknown>);
         }
       }
 
@@ -234,6 +299,8 @@ export const authOptions: NextAuthOptions = {
         if (mutableToken.email) {
           session.user.email = mutableToken.email;
         }
+        session.user.avatarSource = mutableToken.avatarSource ?? null;
+        session.user.avatarUpdatedAt = mutableToken.avatarUpdatedAt ?? null;
       }
       return session;
     },

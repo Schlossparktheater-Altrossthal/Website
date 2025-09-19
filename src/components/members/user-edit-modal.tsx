@@ -6,11 +6,15 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { UserAvatar } from "@/components/user-avatar";
+import type { AvatarSource } from "@prisma/client";
 
 export type EditableUser = {
   id: string;
   email?: string | null;
   name?: string | null;
+  avatarSource?: AvatarSource | null;
+  avatarUpdatedAt?: string | null;
 };
 
 type UserEditModalProps = {
@@ -111,9 +115,15 @@ export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditM
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-lg font-semibold text-slate-700">
-              {((user.name && user.name.split(/\s+/).map(s=>s[0]).slice(0,2).join('')) || (user.email && user.email.split('@')[0].slice(0,2)) || '?').toUpperCase()}
-            </div>
+            <UserAvatar
+              userId={user.id}
+              email={email}
+              name={name}
+              size={64}
+              className="h-16 w-16 text-lg"
+              avatarSource={user.avatarSource}
+              avatarUpdatedAt={user.avatarUpdatedAt}
+            />
             <div>
               <div className="text-sm font-medium">{user.name ?? user.email}</div>
               <div className="text-xs text-muted-foreground">ID: {user.id}</div>

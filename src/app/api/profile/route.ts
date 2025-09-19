@@ -3,8 +3,29 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { sortRoles, type Role } from "@/lib/roles";
+import type { AvatarSource } from "@prisma/client";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
+const AVATAR_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const AVATAR_SOURCE_VALUES = ["GRAVATAR", "UPLOAD", "INITIALS"] as const;
+
+const isAvatarSource = (value: string): value is AvatarSource =>
+  (AVATAR_SOURCE_VALUES as readonly string[]).includes(value);
+
+function parseAvatarSource(value: unknown): AvatarSource | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  return isAvatarSource(normalized) ? (normalized as AvatarSource) : null;
+}
+
+function parseBooleanFlag(value: unknown): boolean {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  }
+  return value === true;
+}
 
 export async function GET() {
   const session = await requireAuth();
@@ -22,6 +43,8 @@ export async function GET() {
       email: true,
       role: true,
       roles: { select: { role: true } },
+      avatarSource: true,
+      avatarImageUpdatedAt: true,
     },
   });
 
@@ -36,6 +59,8 @@ export async function GET() {
     name: user.name,
     email: user.email,
     roles,
+    avatarSource: user.avatarSource,
+    avatarUpdatedAt: user.avatarImageUpdatedAt?.toISOString() ?? null,
   });
 }
 
@@ -47,14 +72,36 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  const rawBody = await request.json().catch(() => null);
+  const contentType = request.headers.get("content-type") ?? "";
+  let body: Record<string, unknown> | null = null;
+  let avatarFile: File | undefined;
 
-  if (!rawBody || typeof rawBody !== "object") {
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const formBody: Record<string, unknown> = {};
+    formData.forEach((value, key) => {
+      if (value instanceof File) {
+        if (key === "avatarFile" && value.size > 0) {
+          avatarFile = value;
+        }
+      } else {
+        formBody[key] = value;
+      }
+    });
+    body = formBody;
+  } else {
+    const rawJson = await request.json().catch(() => null);
+    if (rawJson && typeof rawJson === "object") {
+      body = rawJson as Record<string, unknown>;
+    }
+  }
+
+  if (!body) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
-  const body = rawBody as Record<string, unknown>;
   const updates: Record<string, unknown> = {};
+  let parsedAvatarSource: AvatarSource | null = null;
 
   if ("name" in body) {
     const name = body.name;
@@ -87,6 +134,67 @@ export async function PUT(request: NextRequest) {
     updates.passwordHash = await hashPassword(passwordValue);
   }
 
+  if ("avatarSource" in body) {
+    const source = body.avatarSource;
+    if (typeof source === "string") {
+      const parsed = parseAvatarSource(source);
+      if (!parsed) {
+        return NextResponse.json({ error: "Ungültige Avatar-Quelle" }, { status: 400 });
+      }
+      parsedAvatarSource = parsed;
+      updates.avatarSource = parsed;
+    } else if (source !== undefined) {
+      return NextResponse.json({ error: "Ungültige Avatar-Quelle" }, { status: 400 });
+    }
+  }
+
+  const removeAvatar = "removeAvatar" in body ? parseBooleanFlag(body.removeAvatar) : false;
+
+  let avatarBuffer: Buffer | undefined;
+  let avatarMime: string | undefined;
+
+  if (avatarFile) {
+    if (avatarFile.size > MAX_AVATAR_BYTES) {
+      return NextResponse.json({ error: "Bild darf maximal 2 MB groß sein" }, { status: 400 });
+    }
+    const mime = avatarFile.type?.toLowerCase() ?? "";
+    if (!AVATAR_MIME_TYPES.has(mime)) {
+      return NextResponse.json({ error: "Nur JPG, PNG oder WebP werden unterstützt" }, { status: 400 });
+    }
+    const arrayBuffer = await avatarFile.arrayBuffer();
+    avatarBuffer = Buffer.from(arrayBuffer);
+    avatarMime = mime;
+  }
+
+  if (removeAvatar && !avatarBuffer) {
+    updates.avatarImage = null;
+    updates.avatarImageMime = null;
+    updates.avatarImageUpdatedAt = null;
+  }
+
+  if (avatarBuffer) {
+    updates.avatarImage = avatarBuffer;
+    updates.avatarImageMime = avatarMime;
+    updates.avatarImageUpdatedAt = new Date();
+    if (!parsedAvatarSource) {
+      parsedAvatarSource = "UPLOAD";
+      updates.avatarSource = "UPLOAD";
+    }
+  }
+
+  if (parsedAvatarSource === "UPLOAD" && !avatarBuffer && !removeAvatar) {
+    const existing = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarImageUpdatedAt: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+    }
+    if (!existing.avatarImageUpdatedAt) {
+      return NextResponse.json({ error: "Bitte lade zuerst ein eigenes Bild hoch" }, { status: 400 });
+    }
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Keine Änderungen übermittelt" }, { status: 400 });
   }
@@ -101,6 +209,8 @@ export async function PUT(request: NextRequest) {
         email: true,
         role: true,
         roles: { select: { role: true } },
+        avatarSource: true,
+        avatarImageUpdatedAt: true,
       },
     });
 
@@ -113,6 +223,8 @@ export async function PUT(request: NextRequest) {
         name: updated.name,
         email: updated.email,
         roles,
+        avatarSource: updated.avatarSource,
+        avatarUpdatedAt: updated.avatarImageUpdatedAt?.toISOString() ?? null,
       },
     });
   } catch (error: unknown) {

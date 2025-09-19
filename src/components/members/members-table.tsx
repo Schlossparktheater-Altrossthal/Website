@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
 import { RoleManager } from "@/components/members/role-manager";
 import { UserAvatar } from "@/components/user-avatar";
+import type { AvatarSource } from "@prisma/client";
 
 export type MembersTableUser = {
   id: string;
@@ -14,6 +15,8 @@ export type MembersTableUser = {
   name?: string | null;
   roles: Role[];
   customRoles: { id: string; name: string }[];
+  avatarSource?: AvatarSource | null;
+  avatarUpdatedAt?: Date | null;
 };
 
 export function MembersTable({
@@ -65,7 +68,15 @@ export function MembersTable({
             <div key={u.id} className="rounded-md border bg-card p-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <UserAvatar email={u.email} name={u.name} size={40} className="h-10 w-10" />
+                  <UserAvatar
+                    userId={u.id}
+                    email={u.email}
+                    name={u.name}
+                    size={40}
+                    className="h-10 w-10"
+                    avatarSource={u.avatarSource}
+                    avatarUpdatedAt={u.avatarUpdatedAt}
+                  />
                   <div>
                     <div className="font-medium">{u.name || "—"}</div>
                     <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
@@ -112,7 +123,15 @@ export function MembersTable({
               <tr key={u.id} className="border-b hover:bg-accent/10">
                 <td className="px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center gap-3">
-                    <UserAvatar email={u.email} name={u.name} size={32} className="h-8 w-8" />
+                    <UserAvatar
+                      userId={u.id}
+                      email={u.email}
+                      name={u.name}
+                      size={32}
+                      className="h-8 w-8"
+                      avatarSource={u.avatarSource}
+                      avatarUpdatedAt={u.avatarUpdatedAt}
+                    />
                     <div>
                       <div className="font-medium">{u.name || "—"}</div>
                       <div className="text-xs text-muted-foreground">{u.email || "—"}</div>

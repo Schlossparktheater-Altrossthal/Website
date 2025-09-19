@@ -77,10 +77,13 @@ export function UserNav({ className }: { className?: string }) {
         onClick={() => setOpen((v) => !v)}
       >
         <UserAvatar
+          userId={session.user.id}
           email={session.user.email}
           name={session.user.name}
           size={28}
           className="h-7 w-7 select-none"
+          avatarSource={session.user.avatarSource}
+          avatarUpdatedAt={session.user.avatarUpdatedAt}
           loading="eager"
         />
         <span className="hidden sm:inline text-foreground/90">
