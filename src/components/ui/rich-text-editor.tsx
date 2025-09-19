@@ -60,7 +60,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   return (
     <div
       className={cn(
-        "rich-text-editor overflow-hidden rounded-lg border border-border/60 bg-background/80",
+        "rich-text-editor overflow-hidden rounded-lg border border-border/30 shadow-sm bg-background/95 backdrop-blur-sm",
         className,
       )}
     >

@@ -125,42 +125,119 @@
 }
 
 @layer components {
+  /* Rich Text Editor - Toolbar Styling */
   .rich-text-editor .ql-toolbar.ql-snow {
-    @apply flex flex-wrap items-center gap-1 border-0 border-b border-border/60 bg-muted/60 px-2 py-1.5;
+    @apply flex flex-wrap items-center gap-2 border-0 border-b border-border/40 bg-card/80 backdrop-blur-sm px-3 py-2 rounded-t-lg;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-formats {
     @apply flex items-center gap-1;
   }
 
+  .rich-text-editor .ql-toolbar.ql-snow .ql-formats:not(:last-child)::after {
+    content: "";
+    @apply w-px h-5 bg-border/60 ml-2;
+  }
+
+  /* Toolbar Buttons */
   .rich-text-editor .ql-toolbar.ql-snow button,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label {
+    @apply h-8 w-8 flex items-center justify-center rounded-md text-sm text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-accent-foreground;
+  }
+
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker {
-    @apply h-8 rounded-md px-2 text-sm text-foreground/80;
+    @apply text-sm;
   }
 
-  .rich-text-editor .ql-toolbar.ql-snow button:hover,
-  .rich-text-editor .ql-toolbar.ql-snow button:focus {
-    @apply bg-accent/60 text-foreground;
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label {
+    @apply w-auto px-2 border-0;
   }
 
+  /* Active States */
   .rich-text-editor .ql-toolbar.ql-snow button.ql-active,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label.ql-active,
-  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:hover,
-  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item:hover,
+  .rich-text-editor .ql-toolbar.ql-snow button:hover,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:hover {
+    @apply bg-primary/10 text-primary border-0;
+  }
+
+  /* Dropdown Styling */
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options {
+    @apply bg-popover border border-border rounded-lg shadow-lg mt-1 p-1;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item {
+    @apply px-2 py-1 text-sm text-popover-foreground rounded-md hover:bg-accent hover:text-accent-foreground;
+  }
+
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item.ql-selected {
-    @apply text-foreground;
+    @apply bg-primary text-primary-foreground;
   }
 
+  /* Editor Container */
   .rich-text-editor .ql-container.ql-snow {
-    @apply border-0 bg-transparent;
+    @apply border-0 bg-card/50 backdrop-blur-sm rounded-b-lg;
   }
 
+  /* Editor Content Area */
   .rich-text-editor .ql-editor {
-    @apply min-h-[160px] whitespace-pre-wrap px-3 py-3 text-sm;
+    @apply min-h-[160px] whitespace-pre-wrap px-4 py-3 text-sm text-foreground leading-relaxed;
+    font-family: ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   }
 
   .rich-text-editor .ql-editor.ql-blank::before {
-    @apply text-muted-foreground/70;
+    @apply text-muted-foreground/60 italic;
+  }
+
+  /* Content Styling */
+  .rich-text-editor .ql-editor h2 {
+    @apply text-lg font-semibold text-foreground mt-4 mb-2;
+  }
+
+  .rich-text-editor .ql-editor h3 {
+    @apply text-base font-medium text-foreground mt-3 mb-2;
+  }
+
+  .rich-text-editor .ql-editor strong {
+    @apply font-semibold text-foreground;
+  }
+
+  .rich-text-editor .ql-editor em {
+    @apply italic text-foreground/90;
+  }
+
+  .rich-text-editor .ql-editor u {
+    @apply underline text-foreground;
+  }
+
+  .rich-text-editor .ql-editor blockquote {
+    @apply border-l-4 border-primary/30 pl-4 py-2 bg-muted/30 rounded-r-md text-foreground/90 italic;
+  }
+
+  .rich-text-editor .ql-editor ul,
+  .rich-text-editor .ql-editor ol {
+    @apply ml-4 space-y-1;
+  }
+
+  .rich-text-editor .ql-editor li {
+    @apply text-foreground;
+  }
+
+  .rich-text-editor .ql-editor a {
+    @apply text-primary hover:text-primary/80 underline;
+  }
+
+  /* Dark Mode Enhancements */
+  .dark .rich-text-editor .ql-toolbar.ql-snow {
+    @apply bg-card/90 border-border/30;
+  }
+
+  .dark .rich-text-editor .ql-container.ql-snow {
+    @apply bg-card/60;
+  }
+
+  .dark .rich-text-editor .ql-editor {
+    @apply text-foreground;
   }
 }
 
