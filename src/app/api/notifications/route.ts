@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 
+// Lokaler Typ synchron zu prisma.schema (AttendanceStatus: yes | no | emergency | maybe)
+type AttendanceStatus = "yes" | "no" | "emergency" | "maybe";
+
 type NotificationResponse = {
   id: string;
   title: string;
@@ -15,7 +18,7 @@ type NotificationResponse = {
     start: string;
     registrationDeadline: string | null;
   } | null;
-  attendanceStatus: "yes" | "no" | "emergency" | null;
+  attendanceStatus: AttendanceStatus | null;
 };
 
 export async function GET() {
@@ -26,7 +29,28 @@ export async function GET() {
       return NextResponse.json({ notifications: [] as NotificationResponse[] });
     }
 
-    const records = await prisma.notificationRecipient.findMany({
+    type RecipientRecord = {
+      id: string;
+      readAt: Date | null;
+      notification: {
+        id: string;
+        title: string;
+        body: string | null;
+        type: string | null;
+        createdAt: Date;
+        rehearsalId: string | null;
+        rehearsal:
+          | {
+              id: string;
+              title: string;
+              start: Date;
+              registrationDeadline: Date | null;
+            }
+          | null;
+      };
+    };
+
+    const records: RecipientRecord[] = await prisma.notificationRecipient.findMany({
       where: { userId },
       include: {
         notification: {
@@ -43,16 +67,18 @@ export async function GET() {
       .map((record) => record.notification.rehearsalId)
       .filter((id): id is string => Boolean(id));
 
-    const attendance = rehearsalIds.length
+    const attendance: { rehearsalId: string; status: AttendanceStatus }[] = rehearsalIds.length
       ? await prisma.rehearsalAttendance.findMany({
           where: { userId, rehearsalId: { in: rehearsalIds } },
           select: { rehearsalId: true, status: true },
         })
       : [];
 
-    const attendanceMap = new Map(attendance.map((entry) => [entry.rehearsalId, entry.status]));
+    const attendanceMap = new Map<string, AttendanceStatus>(
+      attendance.map((entry) => [entry.rehearsalId, entry.status])
+    );
 
-    const notifications: NotificationResponse[] = records.map((record) => ({
+    const notifications: NotificationResponse[] = records.map((record: RecipientRecord) => ({
       id: record.id,
       title: record.notification.title,
       body: record.notification.body,
@@ -70,8 +96,8 @@ export async function GET() {
           }
         : null,
       attendanceStatus: record.notification.rehearsalId
-        ? ((attendanceMap.get(record.notification.rehearsalId) as "yes" | "no" | "emergency" | null) ?? null)
-        : null,
+  ? ((attendanceMap.get(record.notification.rehearsalId) as AttendanceStatus | null) ?? null)
+  : null,
     }));
 
     return NextResponse.json({ notifications });

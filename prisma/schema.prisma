@@ -34,6 +34,7 @@ enum AttendanceStatus {
   yes
   no
   emergency
+  maybe
 }
 
 enum AvailabilityStatus {
