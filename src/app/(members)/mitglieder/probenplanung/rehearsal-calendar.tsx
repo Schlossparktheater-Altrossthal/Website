@@ -27,7 +27,7 @@ import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-import { createRehearsalDraftAction } from "./actions";
+import { createRehearsalDraftAction, deleteRehearsalAction } from "./actions";
 
 const DEFAULT_NEW_REHEARSAL_TIME = "19:00";
 
@@ -112,6 +112,8 @@ export function RehearsalCalendar({
   const fmtTime = (d: Date) => timeFormatter.format(d);
   // Removed createOpen and createDefaults - using direct draft creation instead
   const [planOpen, setPlanOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, startDeleting] = useTransition();
 
   const blockedByDay = useMemo(() => {
     const map = new Map<string, CalendarBlockedDay[]>();
@@ -233,6 +235,40 @@ export function RehearsalCalendar({
   const handlePlanRehearsalForSelectedDay = () => {
     if (!selectedDayKey) return;
     createDraftForDay(selectedDayKey);
+  };
+
+  const handleEditRehearsal = (rehearsalId: string) => {
+    setPlanOpen(false);
+    router.push(`/mitglieder/probenplanung/proben/${rehearsalId}`);
+  };
+
+  const handleDeleteRehearsal = (rehearsalId: string, title: string) => {
+    if (
+      !confirm(
+        `Probe "${title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(rehearsalId);
+    startDeleting(() => {
+      deleteRehearsalAction({ id: rehearsalId })
+        .then((result) => {
+          if (result?.success) {
+            toast.success("Probe gelöscht. Alle Beteiligten wurden benachrichtigt.");
+            router.refresh();
+          } else {
+            toast.error(result?.error ?? "Löschen fehlgeschlagen.");
+          }
+        })
+        .catch(() => {
+          toast.error("Löschen fehlgeschlagen.");
+        })
+        .finally(() => {
+          setDeletingId((current) => (current === rehearsalId ? null : current));
+        });
+    });
   };
 
   const handlePlanNextWeekend = () => {
@@ -396,6 +432,25 @@ export function RehearsalCalendar({
                       </div>
                       <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
                         {timeChip}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditRehearsal(entry.id)}
+                        >
+                          Bearbeiten
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteRehearsal(entry.id, entry.title)}
+                          disabled={isDeleting && deletingId === entry.id}
+                        >
+                          {isDeleting && deletingId === entry.id
+                            ? "Wird gelöscht..."
+                            : "Entfernen"}
+                        </Button>
                       </div>
                     </li>
                   );
