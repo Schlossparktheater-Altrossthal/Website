@@ -134,7 +134,7 @@ export function useRehearsalOnlineUsers(rehearsalId: string | null) {
       setOnlineUsers(event.users.map(user => ({
         id: user.id,
         name: user.name ?? 'Unbekannt',
-        joinedAt: user.lastSeen ? new Date(user.lastSeen) : updatedAt,
+        joinedAt: updatedAt,
       })));
     };
 

@@ -11,7 +11,7 @@ export function HeroParallax({ src, alt = "Hero" }: { src: string; alt?: string 
     const el = ref.current;
     if (!el) return;
     let enabled = false;
-    const mq = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)");
+    const mq = typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)") : undefined;
     const check = () => (enabled = mq ? mq.matches : false);
     check();
     mq?.addEventListener?.("change", check);
