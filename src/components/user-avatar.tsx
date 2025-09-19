@@ -84,15 +84,13 @@ export function UserAvatar({
     const uploadSrc = previewUrl ?? (userId ? `/api/users/${userId}/avatar${version ? `?v=${version}` : ""}` : undefined);
     if (uploadSrc) {
       return (
-        <Image
+        <img
           src={uploadSrc}
           alt={label ? `Avatar von ${label}` : "Avatar"}
           title={label}
           width={displaySize}
           height={displaySize}
           loading={loading}
-          priority={loading === "eager"}
-          sizes={`${displaySize}px`}
           className={cn("inline-block rounded-full bg-muted object-cover", className)}
           style={sharedStyle}
           draggable={false}

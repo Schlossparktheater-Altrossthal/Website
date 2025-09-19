@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireAuth();
-  const id = params.id;
+  const { id } = await params;
   if (!id) {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
