@@ -392,7 +392,9 @@ function NotificationEntry({ item, respondingId, onRespond }: NotificationEntryP
               )}
             </h3>
             {item.body && (
-              <p className="text-xs text-muted-foreground leading-snug break-words">{item.body}</p>
+              <p className="text-xs text-muted-foreground leading-snug break-words whitespace-pre-line">
+                {item.body}
+              </p>
             )}
             <div className="space-y-0.5 text-[0.7rem] text-muted-foreground">
               <time dateTime={createdAt.toISOString()} className="block">
