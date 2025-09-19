@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useMemo } from "react";
+import type { ComponentType } from "react";
+import type { ReactQuillProps } from "react-quill";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type RichTextEditorProps = {
@@ -12,77 +14,66 @@ type RichTextEditorProps = {
   className?: string;
 };
 
+const TOOLBAR_OPTIONS = [
+  [{ header: [false, 2, 3] }],
+  ["bold", "italic", "underline"],
+  [{ list: "ordered" }, { list: "bullet" }],
+  ["blockquote", "link"],
+  ["clean"],
+] as const;
+
+const BASE_MODULES = {
+  toolbar: TOOLBAR_OPTIONS,
+  clipboard: { matchVisual: false },
+} satisfies NonNullable<ReactQuillProps["modules"]>;
+
+const BASE_FORMATS = [
+  "header",
+  "bold",
+  "italic",
+  "underline",
+  "list",
+  "bullet",
+  "blockquote",
+  "link",
+] satisfies NonNullable<ReactQuillProps["formats"]>;
+
+const ReactQuill = dynamic(async () => import("react-quill"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-[160px] items-center justify-center px-3 py-3 text-sm text-muted-foreground/70">
+      Editor wird geladen…
+    </div>
+  ),
+}) as ComponentType<ReactQuillProps>;
+
 export function RichTextEditor({ value, onChange, placeholder, className }: RichTextEditorProps) {
-  const editorRef = useRef<HTMLDivElement | null>(null);
-  const lastValueRef = useRef<string>("");
+  const modules = useMemo(() => BASE_MODULES, []);
+  const formats = useMemo(() => BASE_FORMATS, []);
 
-  useEffect(() => {
-    if (!editorRef.current) return;
-    if (lastValueRef.current === value) return;
-    editorRef.current.innerHTML = value || "";
-    lastValueRef.current = value;
-  }, [value]);
-
-  const handleInput = () => {
-    if (!editorRef.current) return;
-    const html = editorRef.current.innerHTML;
-    lastValueRef.current = html;
-    onChange(html);
-  };
-
-  const runCommand = (command: string, valueArg?: string) => {
-    document.execCommand(command, false, valueArg ?? undefined);
-    editorRef.current?.focus();
-    handleInput();
-  };
-
-  const handleCreateLink = () => {
-    const url = prompt("Link-Adresse eingeben");
-    if (url) {
-      runCommand("createLink", url);
-    }
-  };
-
-  const handleRemoveFormat = () => {
-    runCommand("removeFormat");
-  };
-
-  const isEmpty = !value || value.replace(/<[^>]+>/g, "").trim().length === 0;
+  const handleChange = useCallback(
+    (content: string) => {
+      const normalized = content === "<p><br></p>" ? "" : content;
+      onChange(normalized);
+    },
+    [onChange],
+  );
 
   return (
-    <div className={cn("rounded-lg border border-border/60 bg-background/80", className)}>
-      <div className="flex flex-wrap items-center gap-1 border-b border-border/60 bg-muted/60 px-2 py-1.5">
-        <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-sm font-semibold" onClick={() => runCommand("bold")}>
-          B
-        </Button>
-        <Button type="button" size="sm" variant="ghost" className="h-8 px-2 italic" onClick={() => runCommand("italic")}>
-          I
-        </Button>
-        <Button type="button" size="sm" variant="ghost" className="h-8 px-2 underline" onClick={() => runCommand("underline")}>
-          U
-        </Button>
-        <Button type="button" size="sm" variant="ghost" className="h-8 px-2" onClick={() => runCommand("insertUnorderedList")}>
-          • Liste
-        </Button>
-        <Button type="button" size="sm" variant="ghost" className="h-8 px-2" onClick={handleCreateLink}>
-          Link
-        </Button>
-        <Button type="button" size="sm" variant="ghost" className="h-8 px-2" onClick={handleRemoveFormat}>
-          Format löschen
-        </Button>
-      </div>
-      <div className="relative">
-        {isEmpty && placeholder ? (
-          <span className="pointer-events-none absolute left-3 top-3 text-sm text-muted-foreground/70">{placeholder}</span>
-        ) : null}
-        <div
-          ref={editorRef}
-          className="min-h-[160px] w-full whitespace-pre-wrap px-3 py-3 text-sm focus:outline-none"
-          contentEditable
-          onInput={handleInput}
-          onBlur={handleInput}
-        />
-      </div>
+    <div
+      className={cn(
+        "rich-text-editor overflow-hidden rounded-lg border border-border/60 bg-background/80",
+        className,
+      )}
+    >
+      <ReactQuill
+        theme="snow"
+        value={value || ""}
+        onChange={handleChange}
+        placeholder={placeholder}
+        modules={modules}
+        formats={formats}
+      />
     </div>
   );
 }

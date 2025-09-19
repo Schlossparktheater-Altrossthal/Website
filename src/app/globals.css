@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "react-quill/dist/quill.snow.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -120,6 +121,46 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .rich-text-editor .ql-toolbar.ql-snow {
+    @apply flex flex-wrap items-center gap-1 border-0 border-b border-border/60 bg-muted/60 px-2 py-1.5;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-formats {
+    @apply flex items-center gap-1;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow button,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker {
+    @apply h-8 rounded-md px-2 text-sm text-foreground/80;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow button:hover,
+  .rich-text-editor .ql-toolbar.ql-snow button:focus {
+    @apply bg-accent/60 text-foreground;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow button.ql-active,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label.ql-active,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:hover,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item:hover,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item.ql-selected {
+    @apply text-foreground;
+  }
+
+  .rich-text-editor .ql-container.ql-snow {
+    @apply border-0 bg-transparent;
+  }
+
+  .rich-text-editor .ql-editor {
+    @apply min-h-[160px] whitespace-pre-wrap px-3 py-3 text-sm;
+  }
+
+  .rich-text-editor .ql-editor.ql-blank::before {
+    @apply text-muted-foreground/70;
   }
 }
 
