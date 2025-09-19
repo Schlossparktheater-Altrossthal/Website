@@ -236,8 +236,8 @@ export function PhotoConsentCard() {
                 className="mt-1 h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <span>
-                Ich erkläre mich damit einverstanden, dass im Rahmen des Vereins Fotos von mir erstellt und für interne sowie
-                öffentliche Kommunikationszwecke genutzt werden dürfen.
+                Ich erkläre mich damit einverstanden, dass im Rahmen unseres Schultheaters Fotos von mir erstellt und für
+                interne sowie öffentliche Kommunikationszwecke genutzt werden dürfen.
               </span>
             </label>
 

@@ -61,7 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="main" className="pt-16 sm:pt-20 min-h-screen">{children}</main>
           <footer className="border-t bg-background/60">
             <div className="container mx-auto p-4 text-sm opacity-80">
-              © Verein Sommertheater · {" "}
+              © Schultheater „Sommertheater im Schlosspark“ · {" "}
               <Link href="/impressum" className="underline hover:no-underline">
                 Impressum
               </Link>
