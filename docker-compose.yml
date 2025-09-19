@@ -31,11 +31,11 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: development
-      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       AUTH_SECRET: dev-secret-change-me
       AUTH_DEV_NO_DB: "0" # DB-backed sessions (NextAuth Prisma Adapter)
       NEXT_PUBLIC_AUTH_DEV_NO_DB: "0" # mirror to client to avoid hydration mismatch
-      NEXT_PUBLIC_REALTIME_URL: http://localhost:4001
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:4001}
       REALTIME_SERVER_URL: http://realtime:4001
       REALTIME_AUTH_TOKEN: dev-realtime-secret
       DATABASE_URL: postgresql://postgres:postgres@db:5432/theater?schema=public
@@ -57,7 +57,7 @@ services:
     environment:
       PORT: 4001
       SOCKET_PATH: /socket.io
-      CORS_ORIGIN: http://localhost:3000
+      CORS_ORIGIN: ${NEXTAUTH_URL:-http://localhost:3000}
       REALTIME_AUTH_TOKEN: dev-realtime-secret
     ports:
       - "4001:4001"
