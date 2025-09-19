@@ -18,6 +18,11 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.rollenverwaltung", label: "Mitgliederverwaltung öffnen" },
   { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen" },
   { key: "mitglieder.sperrliste", label: "Sperrliste pflegen" },
+  {
+    key: "mitglieder.fotoerlaubnisse",
+    label: "Fotoerlaubnisse verwalten",
+    description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
+  },
 ];
 
 const DEFAULT_PERMISSION_KEYS = DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key);

@@ -45,6 +45,7 @@ export async function GET() {
       roles: { select: { role: true } },
       avatarSource: true,
       avatarImageUpdatedAt: true,
+      dateOfBirth: true,
     },
   });
 
@@ -61,6 +62,7 @@ export async function GET() {
     roles,
     avatarSource: user.avatarSource,
     avatarUpdatedAt: user.avatarImageUpdatedAt?.toISOString() ?? null,
+    dateOfBirth: user.dateOfBirth?.toISOString() ?? null,
   });
 }
 
@@ -132,6 +134,30 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Passwort muss mindestens 6 Zeichen haben" }, { status: 400 });
     }
     updates.passwordHash = await hashPassword(passwordValue);
+  }
+
+  if ("dateOfBirth" in body) {
+    const raw = body.dateOfBirth;
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        updates.dateOfBirth = null;
+      } else {
+        const parsed = new Date(trimmed);
+        if (Number.isNaN(parsed.valueOf())) {
+          return NextResponse.json({ error: "Ungültiges Geburtsdatum" }, { status: 400 });
+        }
+        const now = new Date();
+        if (parsed > now) {
+          return NextResponse.json({ error: "Geburtsdatum darf nicht in der Zukunft liegen" }, { status: 400 });
+        }
+        updates.dateOfBirth = parsed;
+      }
+    } else if (raw === null) {
+      updates.dateOfBirth = null;
+    } else {
+      return NextResponse.json({ error: "Ungültiges Geburtsdatum" }, { status: 400 });
+    }
   }
 
   if ("avatarSource" in body) {
@@ -211,6 +237,7 @@ export async function PUT(request: NextRequest) {
         roles: { select: { role: true } },
         avatarSource: true,
         avatarImageUpdatedAt: true,
+        dateOfBirth: true,
       },
     });
 
@@ -225,6 +252,7 @@ export async function PUT(request: NextRequest) {
         roles,
         avatarSource: updated.avatarSource,
         avatarUpdatedAt: updated.avatarImageUpdatedAt?.toISOString() ?? null,
+        dateOfBirth: updated.dateOfBirth?.toISOString() ?? null,
       },
     });
   } catch (error: unknown) {

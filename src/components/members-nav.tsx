@@ -29,6 +29,7 @@ const groupedConfig: Group[] = [
     items: [
       { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", permissionKey: "mitglieder.rollenverwaltung" },
       { href: "/mitglieder/rechte", label: "Rechteverwaltung", permissionKey: "mitglieder.rechte" },
+      { href: "/mitglieder/fotoerlaubnisse", label: "Fotoerlaubnisse", permissionKey: "mitglieder.fotoerlaubnisse" },
     ],
   },
 ];
@@ -92,6 +93,13 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-3 8-10V5l-8-3-8 3v7c0 7 8 10 8 10Z" />
+        </svg>
+      );
+    case "/mitglieder/fotoerlaubnisse":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l2-3h4l2 3h3a2 2 0 0 1 2 2Z" />
+          <circle cx="12" cy="14" r="3" />
         </svg>
       );
     default:

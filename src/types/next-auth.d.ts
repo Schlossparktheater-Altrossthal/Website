@@ -11,6 +11,7 @@ declare module "next-auth" {
       roles?: Role[];
       avatarSource?: AvatarSource | null;
       avatarUpdatedAt?: string | null;
+      dateOfBirth?: string | null;
     };
   }
   interface User {
@@ -18,6 +19,7 @@ declare module "next-auth" {
     roles?: Role[];
     avatarSource?: AvatarSource | null;
     avatarUpdatedAt?: string | null;
+    dateOfBirth?: string | null;
   }
 }
 
