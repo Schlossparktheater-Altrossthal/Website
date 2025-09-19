@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: ${{ coalesce(secrets.DOCKER_REGISTRY, 'ghcr.io') }}
-  IMAGE_NAME: ${{ coalesce(secrets.DOCKER_IMAGE, github.repository) }}
+  REGISTRY: ${{ secrets.DOCKER_REGISTRY || 'ghcr.io' }}
+  IMAGE_NAME: ${{ secrets.DOCKER_IMAGE || github.repository }}
 
 jobs:
   build-and-push:
@@ -27,8 +27,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ coalesce(secrets.DOCKER_USERNAME, github.actor) }}
-          password: ${{ coalesce(secrets.DOCKER_PASSWORD, secrets.GITHUB_TOKEN) }}
+          username: ${{ secrets.DOCKER_USERNAME || github.actor }}
+          password: ${{ secrets.DOCKER_PASSWORD || secrets.GITHUB_TOKEN }}
 
       - name: Extract Docker metadata
         id: meta
