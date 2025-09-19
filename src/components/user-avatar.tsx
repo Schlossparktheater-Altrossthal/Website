@@ -98,13 +98,15 @@ export default function UserAvatar({
     const uploadSrc = previewUrl ?? (userId ? `/api/users/${userId}/avatar${version ? `?v=${version}` : ""}` : undefined);
     if (uploadSrc) {
       return (
-        <img
+        <Image
+          unoptimized
           src={uploadSrc}
           alt={label ? `Avatar von ${label}` : "Avatar"}
           title={label}
           width={displaySize}
           height={displaySize}
           loading={loading}
+          sizes={`${displaySize}px`}
           className={cn("inline-block rounded-full border border-border bg-muted object-cover", className)}
           style={sharedStyle}
           draggable={false}
