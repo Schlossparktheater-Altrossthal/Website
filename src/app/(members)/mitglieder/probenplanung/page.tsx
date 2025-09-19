@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateRehearsalButton } from "./create-rehearsal-button";
+import { DiscardDraftButton } from "./discard-draft-button";
 import {
   RehearsalCalendar,
   type CalendarBlockedDay,
@@ -160,12 +161,15 @@ export default async function ProbenplanungPage() {
                       Zuletzt bearbeitet {formatDistanceToNow(draft.updatedAt, { locale: de, addSuffix: true })}
                     </span>
                   </div>
-                  <Link
-                    href={`/mitglieder/probenplanung/proben/${draft.id}`}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    Entwurf öffnen
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      href={`/mitglieder/probenplanung/proben/${draft.id}`}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Entwurf öffnen
+                    </Link>
+                    <DiscardDraftButton id={draft.id} title={draft.title} />
+                  </div>
                 </li>
               ))}
             </ul>
