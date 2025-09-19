@@ -13,6 +13,11 @@ import {
   broadcastRehearsalUpdated,
   sendNotification,
 } from "@/lib/realtime/triggers";
+import {
+  computeRegistrationDeadline,
+  registrationDeadlineOptionSchema,
+  type RegistrationDeadlineOption,
+} from "./registration-deadline-options";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIME = /^\d{2}:\d{2}$/;
@@ -24,6 +29,7 @@ const baseSchema = z.object({
   location: z.string().trim().min(2, "Ort ist zu kurz").max(120, "Ort ist zu lang").optional(),
   description: z.string().max(10_000).optional(),
   invitees: z.array(z.string().min(1)).optional(),
+  registrationDeadlineOption: registrationDeadlineOptionSchema.default("1w"),
 });
 
 const draftUpdateSchema = baseSchema.partial().extend({ id: z.string().min(1) });
@@ -59,10 +65,6 @@ function computeEnd(start: Date, previousStart?: Date | null, previousEnd?: Date
     }
   }
   return new Date(start.getTime() + 2 * 60 * 60 * 1000);
-}
-
-function computeRegistrationDeadline(start: Date) {
-  return new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000);
 }
 
 async function ensurePlanner() {
@@ -180,6 +182,7 @@ export async function createRehearsalDraftAction(input?: {
       end,
       description: null,
       requiredRoles: [],
+      registrationDeadline: computeRegistrationDeadline(start, "1w"),
       createdBy: auth.userId,
       status: "DRAFT",
     },
@@ -197,6 +200,7 @@ export async function updateRehearsalDraftAction(input: {
   location?: string;
   description?: string;
   invitees?: string[];
+  registrationDeadlineOption?: RegistrationDeadlineOption;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -208,7 +212,7 @@ export async function updateRehearsalDraftAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, location, description, invitees } = parsed.data;
+  const { id, title, date, time, location, description, invitees, registrationDeadlineOption } = parsed.data;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -235,13 +239,20 @@ export async function updateRehearsalDraftAction(input: {
         updateData.description = sanitizeDescription(description);
       }
 
+      let nextStart = existing.start;
+
       if (date || time) {
         const currentDate = existing.start.toISOString().slice(0, 10);
         const currentTime = existing.start.toISOString().slice(11, 16);
-        const nextStart = parseStart(date ?? currentDate, time ?? currentTime);
+        nextStart = parseStart(date ?? currentDate, time ?? currentTime);
         const nextEnd = computeEnd(nextStart, existing.start, existing.end);
         updateData.start = nextStart;
         updateData.end = nextEnd;
+      }
+
+      if (registrationDeadlineOption !== undefined) {
+        const deadline = computeRegistrationDeadline(nextStart, registrationDeadlineOption);
+        updateData.registrationDeadline = deadline;
       }
 
       if (invitees) {
@@ -275,6 +286,7 @@ export async function publishRehearsalAction(input: {
   location?: string;
   description?: string;
   invitees?: string[];
+  registrationDeadlineOption: RegistrationDeadlineOption;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -286,7 +298,7 @@ export async function publishRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, location, description, invitees } = parsed.data;
+  const { id, title, date, time, location, description, invitees, registrationDeadlineOption } = parsed.data;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -325,7 +337,7 @@ export async function publishRehearsalAction(input: {
           description: safeDescription,
           status: "PLANNED",
           requiredRoles: roles as unknown as Prisma.InputJsonValue,
-          registrationDeadline: computeRegistrationDeadline(start),
+          registrationDeadline: computeRegistrationDeadline(start, registrationDeadlineOption),
           createdBy: existing.createdBy ?? auth.userId,
         },
         select: { id: true, title: true, start: true, end: true, location: true },
@@ -420,6 +432,7 @@ export async function createRehearsalAction(input: {
   location?: string;
   description?: string;
   invitees?: string[];
+  registrationDeadlineOption: RegistrationDeadlineOption;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -431,7 +444,7 @@ export async function createRehearsalAction(input: {
     return { error: "Bitte Titel, Datum und Uhrzeit prüfen." } as const;
   }
 
-  const { title, date, time, location, description, invitees } = parsed.data;
+  const { title, date, time, location, description, invitees, registrationDeadlineOption } = parsed.data;
   const start = parseStart(date, time);
   const end = computeEnd(start);
   const normalizedLocation = location?.trim() ? location.trim() : "Noch offen";
@@ -460,7 +473,7 @@ export async function createRehearsalAction(input: {
           description: safeDescription,
           status: "PLANNED",
           requiredRoles: roles as unknown as Prisma.InputJsonValue,
-          registrationDeadline: computeRegistrationDeadline(start),
+          registrationDeadline: computeRegistrationDeadline(start, registrationDeadlineOption),
           createdBy: auth.userId,
         },
         select: { id: true, title: true, start: true, end: true, location: true },
@@ -527,6 +540,7 @@ export async function updateRehearsalAction(input: {
   location?: string;
   description?: string;
   invitees?: string[];
+  registrationDeadlineOption: RegistrationDeadlineOption;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -538,7 +552,7 @@ export async function updateRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, location, description, invitees } = parsed.data;
+  const { id, title, date, time, location, description, invitees, registrationDeadlineOption } = parsed.data;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -565,6 +579,11 @@ export async function updateRehearsalAction(input: {
 
       if (description !== undefined) {
         updateData.description = sanitizeDescription(description);
+      }
+
+      if (registrationDeadlineOption) {
+        const deadline = computeRegistrationDeadline(start, registrationDeadlineOption);
+        updateData.registrationDeadline = deadline;
       }
 
       let targetInvitees: string[];
