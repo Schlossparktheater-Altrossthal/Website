@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   // Surface NextAuth error from ?error=...
   useEffect(() => {
-    const err = sp.get("error");
+    const err = sp?.get("error");
     if (err) {
       const map: Record<string, string> = {
         OAuthAccountNotLinked: "Account nicht verknüpft",

@@ -16,7 +16,7 @@ export type MembersTableUser = {
   roles: Role[];
   customRoles: { id: string; name: string }[];
   avatarSource?: AvatarSource | null;
-  avatarUpdatedAt?: string | null;
+  avatarUpdatedAt?: Date | null;
 };
 
 export function MembersTable({
@@ -178,8 +178,6 @@ export function MembersTable({
                       userId={u.id}
                       email={u.email}
                       name={u.name}
-                      avatarSource={u.avatarSource}
-                      avatarUpdatedAt={u.avatarUpdatedAt}
                       initialRoles={u.roles}
                       canEditOwner={canEditOwner}
                       availableCustomRoles={availableCustomRoles}

@@ -8,14 +8,11 @@ import { toast } from "sonner";
 import { UserEditModal } from "@/components/members/user-edit-modal";
 import { RolePicker } from "@/components/members/role-picker";
 import { UserAvatar } from "@/components/user-avatar";
-import type { AvatarSource } from "@prisma/client";
 
 export function RoleManager({
   userId,
   email,
   name,
-  avatarSource,
-  avatarUpdatedAt,
   initialRoles,
   canEditOwner = false,
   availableCustomRoles = [],
@@ -26,8 +23,6 @@ export function RoleManager({
   userId: string;
   email?: string | null;
   name?: string | null;
-  avatarSource?: AvatarSource | null;
-  avatarUpdatedAt?: string | null;
   initialRoles: Role[];
   canEditOwner?: boolean;
   availableCustomRoles?: { id: string; name: string }[];
@@ -120,15 +115,7 @@ export function RoleManager({
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               {/* Avatar */}
-              <UserAvatar
-                userId={userId}
-                email={currentEmail}
-                name={currentName}
-                size={48}
-                className="h-12 w-12 text-lg"
-                avatarSource={avatarSource}
-                avatarUpdatedAt={avatarUpdatedAt}
-              />
+              <UserAvatar email={currentEmail} name={currentName} size={48} className="h-12 w-12 text-lg" />
               
               {/* User Info */}
               <div className="flex-1 min-w-0">
@@ -243,13 +230,7 @@ export function RoleManager({
       </Card>
 
       <UserEditModal
-        user={{
-          id: userId,
-          email: currentEmail,
-          name: currentName,
-          avatarSource,
-          avatarUpdatedAt,
-        }}
+        user={{ id: userId, email: currentEmail, name: currentName }}
         open={editOpen}
         onOpenChange={(open) => {
           if (!open) setEditOpen(false);

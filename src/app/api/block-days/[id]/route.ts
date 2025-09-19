@@ -8,9 +8,9 @@ import { normaliseReason, reasonSchema, toResponse } from "../utils";
 type SessionUser = { id?: string } | null | undefined;
 
 type RouteParams = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 const updateSchema = z.object({
@@ -20,6 +20,7 @@ const updateSchema = z.object({
 type UpdatePayload = z.infer<typeof updateSchema>;
 
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const { id } = await params;
   const session = await requireAuth();
   const userId = (session.user as SessionUser)?.id;
 
@@ -43,7 +44,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
   }
 
-  const existing = await prisma.blockedDay.findUnique({ where: { id: params.id } });
+  const existing = await prisma.blockedDay.findUnique({ where: { id } });
 
   if (!existing || existing.userId !== userId) {
     return NextResponse.json({ error: "Sperrtermin wurde nicht gefunden." }, { status: 404 });
@@ -60,6 +61,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_: Request, { params }: RouteParams) {
+  const { id } = await params;
   const session = await requireAuth();
   const userId = (session.user as SessionUser)?.id;
 
@@ -73,7 +75,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
 
   const result = await prisma.blockedDay.deleteMany({
     where: {
-      id: params.id,
+      id,
       userId,
     },
   });

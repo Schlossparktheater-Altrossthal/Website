@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
-import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
 
 type UpdateMemberPayload = {
@@ -11,12 +10,12 @@ type UpdateMemberPayload = {
   password?: unknown;
 };
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "mitglieder.rollenverwaltung"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const id = params.id;
+  const { id } = await params;
   const rawBody: unknown = await request.json().catch(() => null);
 
   if (!rawBody || typeof rawBody !== "object") {
@@ -66,7 +65,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     return NextResponse.json({ ok: true, user });
   } catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (error && typeof error === 'object' && 'code' in error && error.code === "P2002") {
       return NextResponse.json({ error: "E-Mail wird bereits verwendet" }, { status: 409 });
     }
     const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";

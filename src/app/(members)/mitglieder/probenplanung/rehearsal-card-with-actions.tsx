@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";

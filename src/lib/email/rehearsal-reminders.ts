@@ -1,7 +1,7 @@
-import { PrismaClient, User, Rehearsal } from '@prisma/client';
+import type { PrismaClient, User, Rehearsal } from '@prisma/client';
 import { render } from '@react-email/render';
-import { sendEmail } from '../email-service';
-import { RehearsalReminderEmail } from '../templates/rehearsal-reminder';
+import { sendEmail } from './email-service';
+import { RehearsalReminderEmail } from './templates/rehearsal-reminder';
 
 export async function sendRehearsalReminders(prisma: PrismaClient) {
   const oneWeekFromNow = new Date();

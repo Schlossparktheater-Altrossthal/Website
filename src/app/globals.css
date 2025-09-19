@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "react-quill/dist/quill.snow.css";
+@import "react-quill-new/dist/quill.snow.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -125,42 +125,244 @@
 }
 
 @layer components {
+  /* Enhanced Rich Text Editor */
+  .rich-text-editor {
+    @apply transition-shadow duration-200;
+  }
+
+  .rich-text-editor:focus-within {
+    @apply ring-2 ring-primary/20;
+  }
+
+  /* Enhanced Toolbar */
   .rich-text-editor .ql-toolbar.ql-snow {
-    @apply flex flex-wrap items-center gap-1 border-0 border-b border-border/60 bg-muted/60 px-2 py-1.5;
+    @apply bg-muted/50 border-0 border-b border-border px-3 py-2 flex flex-wrap;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-formats {
-    @apply flex items-center gap-1;
+    @apply flex items-center gap-1 mr-3 mb-1;
   }
 
+  /* Enhanced Buttons */
   .rich-text-editor .ql-toolbar.ql-snow button,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label {
+    @apply h-8 min-w-8 flex items-center justify-center rounded text-foreground/70 hover:text-foreground hover:bg-accent transition-colors;
+    border: none !important;
+    background: none !important;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label {
+    @apply w-auto px-2 text-xs;
+  }
+
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker {
-    @apply h-8 rounded-md px-2 text-sm text-foreground/80;
+    @apply text-xs;
   }
 
-  .rich-text-editor .ql-toolbar.ql-snow button:hover,
-  .rich-text-editor .ql-toolbar.ql-snow button:focus {
-    @apply bg-accent/60 text-foreground;
-  }
-
+  /* Active States */
   .rich-text-editor .ql-toolbar.ql-snow button.ql-active,
-  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label.ql-active,
-  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:hover,
-  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item:hover,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label.ql-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  /* Color Picker Enhancements */
+  .rich-text-editor .ql-toolbar.ql-snow .ql-color-picker .ql-picker-options,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-background .ql-picker-options {
+    @apply bg-popover border border-border rounded-md shadow-lg p-2 grid grid-cols-8 gap-1;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-color-picker .ql-picker-item,
+  .rich-text-editor .ql-toolbar.ql-snow .ql-background .ql-picker-item {
+    @apply w-6 h-6 rounded border border-border hover:scale-110 transition-transform;
+  }
+
+  /* Standard Dropdowns */
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options {
+    @apply bg-popover border border-border rounded-md shadow-lg p-1 z-10;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item {
+    @apply px-3 py-2 text-sm rounded hover:bg-accent transition-colors;
+  }
+
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item.ql-selected {
-    @apply text-foreground;
+    @apply bg-primary text-primary-foreground;
   }
 
+  /* Size Picker Specific */
+  .rich-text-editor .ql-toolbar.ql-snow .ql-size .ql-picker-options .ql-picker-item {
+    @apply font-medium;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-size .ql-picker-options .ql-picker-item[data-value="small"] {
+    @apply text-xs;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-size .ql-picker-options .ql-picker-item[data-value="large"] {
+    @apply text-lg;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-size .ql-picker-options .ql-picker-item[data-value="huge"] {
+    @apply text-xl;
+  }
+
+  /* Header Picker Specific */
+  .rich-text-editor .ql-toolbar.ql-snow .ql-header .ql-picker-options .ql-picker-item[data-value="1"] {
+    @apply text-2xl font-bold;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-header .ql-picker-options .ql-picker-item[data-value="2"] {
+    @apply text-xl font-bold;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-header .ql-picker-options .ql-picker-item[data-value="3"] {
+    @apply text-lg font-bold;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-header .ql-picker-options .ql-picker-item[data-value="4"] {
+    @apply text-base font-bold;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-header .ql-picker-options .ql-picker-item[data-value="5"] {
+    @apply text-sm font-bold;
+  }
+
+  .rich-text-editor .ql-toolbar.ql-snow .ql-header .ql-picker-options .ql-picker-item[data-value="6"] {
+    @apply text-xs font-bold;
+  }
+
+  /* Editor Container */
   .rich-text-editor .ql-container.ql-snow {
-    @apply border-0 bg-transparent;
+    @apply border-0 bg-background;
   }
 
+  /* Enhanced Editor Content */
   .rich-text-editor .ql-editor {
-    @apply min-h-[160px] whitespace-pre-wrap px-3 py-3 text-sm;
+    @apply min-h-[180px] px-4 py-4 text-sm text-foreground leading-relaxed;
   }
 
   .rich-text-editor .ql-editor.ql-blank::before {
-    @apply text-muted-foreground/70;
+    @apply text-muted-foreground not-italic;
+  }
+
+  /* Enhanced Content Styling */
+  .rich-text-editor .ql-editor h1 {
+    @apply text-2xl font-bold mb-4 mt-6;
+  }
+
+  .rich-text-editor .ql-editor h2 {
+    @apply text-xl font-bold mb-3 mt-5;
+  }
+
+  .rich-text-editor .ql-editor h3 {
+    @apply text-lg font-bold mb-2 mt-4;
+  }
+
+  .rich-text-editor .ql-editor h4 {
+    @apply text-base font-bold mb-2 mt-3;
+  }
+
+  .rich-text-editor .ql-editor h5 {
+    @apply text-sm font-bold mb-1 mt-2;
+  }
+
+  .rich-text-editor .ql-editor h6 {
+    @apply text-xs font-bold mb-1 mt-2;
+  }
+
+  /* Enhanced Blockquote */
+  .rich-text-editor .ql-editor blockquote {
+    @apply border-l-4 border-primary/40 pl-4 my-4 bg-muted/20 py-3 rounded-r italic text-foreground/90;
+  }
+
+  /* Code Block Styling */
+  .rich-text-editor .ql-editor .ql-code-block-container {
+    @apply bg-muted/50 rounded-lg p-4 my-4 font-mono text-sm border border-border;
+  }
+
+  .rich-text-editor .ql-editor pre.ql-syntax {
+    @apply bg-muted/50 rounded-lg p-4 my-4 font-mono text-sm border border-border overflow-x-auto;
+  }
+
+  /* Enhanced Lists with Indentation */
+  .rich-text-editor .ql-editor ul,
+  .rich-text-editor .ql-editor ol {
+    @apply ml-6 space-y-1;
+  }
+
+  .rich-text-editor .ql-editor .ql-indent-1 {
+    @apply ml-8;
+  }
+
+  .rich-text-editor .ql-editor .ql-indent-2 {
+    @apply ml-12;
+  }
+
+  .rich-text-editor .ql-editor .ql-indent-3 {
+    @apply ml-16;
+  }
+
+  .rich-text-editor .ql-editor .ql-indent-4 {
+    @apply ml-20;
+  }
+
+  .rich-text-editor .ql-editor .ql-indent-5 {
+    @apply ml-24;
+  }
+
+  /* Text Alignment */
+  .rich-text-editor .ql-editor .ql-align-center {
+    @apply text-center;
+  }
+
+  .rich-text-editor .ql-editor .ql-align-right {
+    @apply text-right;
+  }
+
+  .rich-text-editor .ql-editor .ql-align-justify {
+    @apply text-justify;
+  }
+
+  /* Font Sizes */
+  .rich-text-editor .ql-editor .ql-size-small {
+    @apply text-xs;
+  }
+
+  .rich-text-editor .ql-editor .ql-size-large {
+    @apply text-lg;
+  }
+
+  .rich-text-editor .ql-editor .ql-size-huge {
+    @apply text-xl;
+  }
+
+  /* Script (Sub/Superscript) */
+  .rich-text-editor .ql-editor sub {
+    @apply text-xs;
+  }
+
+  .rich-text-editor .ql-editor sup {
+    @apply text-xs;
+  }
+
+  /* Enhanced Links */
+  .rich-text-editor .ql-editor a {
+    @apply text-primary hover:text-primary/80 underline decoration-2 underline-offset-2 transition-colors;
+  }
+
+  /* Images */
+  .rich-text-editor .ql-editor img {
+    @apply rounded-lg shadow-sm max-w-full h-auto;
+  }
+
+  /* Videos */
+  .rich-text-editor .ql-editor iframe {
+    @apply rounded-lg shadow-sm max-w-full;
+  }
+
+  /* Strike-through */
+  .rich-text-editor .ql-editor s {
+    @apply line-through opacity-70;
   }
 }
 
