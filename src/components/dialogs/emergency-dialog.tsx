@@ -10,32 +10,41 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 interface EmergencyDialogProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (reason: string) => Promise<void>
+  rehearsalTitle?: string
 }
 
-export function EmergencyDialog({ isOpen, onClose, onSubmit }: EmergencyDialogProps) {
+export function EmergencyDialog({ isOpen, onClose, onSubmit, rehearsalTitle }: EmergencyDialogProps) {
   const [reason, setReason] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  useEffect(() => {
+    if (!isOpen) {
+      setReason("")
+      setIsSubmitting(false)
+    }
+  }, [isOpen])
+
   const handleSubmit = async () => {
-    if (!reason.trim()) {
+    const trimmed = reason.trim()
+    if (!trimmed) {
       toast.error("Bitte geben Sie einen Grund für die Emergency-Absage an")
       return
     }
 
     try {
       setIsSubmitting(true)
-      await onSubmit(reason)
-      toast.success("Emergency-Absage wurde erfolgreich registriert")
+      await onSubmit(trimmed)
+      toast.success("Notfall wurde gemeldet.")
+      setReason("")
       onClose()
     } catch (error) {
       console.error("[EmergencyDialog] Failed to submit emergency reason", error)
-      toast.error("Fehler beim Registrieren der Emergency-Absage")
     } finally {
       setIsSubmitting(false)
     }
@@ -48,6 +57,9 @@ export function EmergencyDialog({ isOpen, onClose, onSubmit }: EmergencyDialogPr
           <DialogTitle>Emergency-Absage</DialogTitle>
           <DialogDescription>
             Bitte geben Sie einen triftigen Grund für die kurzfristige Absage an.
+            {rehearsalTitle ? (
+              <span className="mt-1 block text-xs text-muted-foreground">{rehearsalTitle}</span>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -66,8 +78,8 @@ export function EmergencyDialog({ isOpen, onClose, onSubmit }: EmergencyDialogPr
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Abbrechen
           </Button>
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             onClick={handleSubmit}
             disabled={isSubmitting || !reason.trim()}
           >
