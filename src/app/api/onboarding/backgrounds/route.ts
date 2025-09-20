@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+
   const profiles = await prisma.memberOnboardingProfile.findMany({
     select: { background: true },
     where: { background: { not: null } },

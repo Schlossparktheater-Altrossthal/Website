@@ -252,34 +252,63 @@ export async function POST(request: NextRequest) {
       }
 
       if (interests.length) {
-        for (const interestName of interests) {
-          const existing = await tx.interest.findFirst({
-            where: { name: { equals: interestName, mode: "insensitive" } },
+        const normalizedInterests = Array.from(
+          new Map(interests.map((name) => [name.toLowerCase(), name])).entries(),
+        );
+
+        const filters = normalizedInterests.map(([, original]) => ({
+          name: { equals: original, mode: 'insensitive' as const },
+        }));
+
+        let interestRecords = filters.length
+          ? await tx.interest.findMany({
+              where: { OR: filters },
+            })
+          : [];
+
+        const existingNames = new Set(interestRecords.map((entry) => entry.name.toLowerCase()));
+        const toCreate = normalizedInterests
+          .filter(([normalized]) => !existingNames.has(normalized))
+          .map(([, original]) => ({ name: original, createdById: user.id }));
+
+        if (toCreate.length) {
+          await tx.interest.createMany({
+            data: toCreate,
+            skipDuplicates: true,
           });
-          const interest =
-            existing ??
-            (await tx.interest.create({
-              data: { name: interestName, createdById: user.id },
-            }));
-          await tx.userInterest.create({
-            data: { userId: user.id, interestId: interest.id },
+          interestRecords = await tx.interest.findMany({
+            where: { OR: filters },
+          });
+        }
+
+        const interestByName = new Map(
+          interestRecords.map((entry) => [entry.name.toLowerCase(), entry]),
+        );
+
+        const userInterests = normalizedInterests
+          .map(([normalized]) => interestByName.get(normalized))
+          .filter((entry): entry is (typeof interestRecords)[number] => Boolean(entry))
+          .map((entry) => ({ userId: user.id, interestId: entry.id }));
+
+        if (userInterests.length) {
+          await tx.userInterest.createMany({
+            data: userInterests,
+            skipDuplicates: true,
           });
         }
       }
 
       if (dietary.length) {
-        for (const entry of dietary) {
-          await tx.dietaryRestriction.create({
-            data: {
-              userId: user.id,
-              allergen: entry.allergen,
-              level: entry.level,
-              symptoms: entry.symptoms,
-              treatment: entry.treatment,
-              note: entry.note,
-            },
-          });
-        }
+        await tx.dietaryRestriction.createMany({
+          data: dietary.map((entry) => ({
+            userId: user.id,
+            allergen: entry.allergen,
+            level: entry.level,
+            symptoms: entry.symptoms,
+            treatment: entry.treatment,
+            note: entry.note,
+          })),
+        });
       }
 
       const shouldCreateConsent = photoConsent.consent || documentBuffer || (age !== null && age < 18);

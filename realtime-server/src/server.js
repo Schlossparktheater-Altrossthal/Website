@@ -1,11 +1,21 @@
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { URL } from 'url';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const PORT = Number(process.env.PORT || 4001);
 const SOCKET_PATH = process.env.SOCKET_PATH || '/socket.io';
 const EVENT_PATH = process.env.EVENT_PATH || '/events';
 const AUTH_TOKEN = process.env.REALTIME_AUTH_TOKEN || process.env.REALTIME_SERVER_TOKEN || '';
+const HANDSHAKE_SECRET = (process.env.REALTIME_HANDSHAKE_SECRET || AUTH_TOKEN || '').trim();
+
+if (!AUTH_TOKEN) {
+  console.warn('[Realtime] REALTIME_AUTH_TOKEN is not configured. Admin event requests without a token will be rejected.');
+}
+
+if (!HANDSHAKE_SECRET) {
+  console.warn('[Realtime] REALTIME_HANDSHAKE_SECRET/REALTIME_AUTH_TOKEN is not configured. Socket handshakes will be rejected.');
+}
 
 const rawOrigins = process.env.CORS_ORIGIN || '*';
 const allowAllOrigins = rawOrigins === '*';
@@ -23,6 +33,81 @@ function createJsonResponse(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify(payload));
+}
+
+function parseHandshakeToken(token) {
+  if (typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [issuedAtRaw, expiresAtRaw, signature] = parts;
+  const issuedAt = Number(issuedAtRaw);
+  const expiresAt = Number(expiresAtRaw);
+  if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)) return null;
+  if (!signature || typeof signature !== 'string') return null;
+  return { issuedAt, expiresAt, signature };
+}
+
+function verifyHandshake(userId, token) {
+  if (!HANDSHAKE_SECRET) {
+    return { ok: false, reason: 'Handshake secret not configured' };
+  }
+  if (typeof userId !== 'string' || !userId.trim()) {
+    return { ok: false, reason: 'Missing userId' };
+  }
+  if (typeof token !== 'string' || !token.trim()) {
+    return { ok: false, reason: 'Missing token' };
+  }
+
+  const parsed = parseHandshakeToken(token);
+  if (!parsed) {
+    return { ok: false, reason: 'Invalid token format' };
+  }
+
+  if (parsed.expiresAt < Date.now()) {
+    return { ok: false, reason: 'Token expired' };
+  }
+
+  const base = `${userId}:${parsed.issuedAt}:${parsed.expiresAt}`;
+  const expectedSignature = createHmac('sha256', HANDSHAKE_SECRET).update(base).digest('hex');
+
+  try {
+    const providedBuffer = Buffer.from(parsed.signature, 'hex');
+    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+    if (providedBuffer.length !== expectedBuffer.length) {
+      return { ok: false, reason: 'Invalid token signature' };
+    }
+    if (!timingSafeEqual(providedBuffer, expectedBuffer)) {
+      return { ok: false, reason: 'Invalid token signature' };
+    }
+  } catch {
+    return { ok: false, reason: 'Invalid token signature' };
+  }
+
+  return { ok: true, issuedAt: parsed.issuedAt, expiresAt: parsed.expiresAt };
+}
+
+function isValidRoomIdentifier(room, prefixLength) {
+  if (typeof room !== 'string') return false;
+  if (room.length > 200) return false;
+  if (prefixLength >= room.length) return false;
+  const identifier = room.slice(prefixLength);
+  return /^[A-Za-z0-9_-]+$/.test(identifier);
+}
+
+function isAllowedRoom(room, socket) {
+  if (typeof room !== 'string' || !room) return false;
+  if (room === 'global') return true;
+  if (room.startsWith('user_')) {
+    const expectedRoom = `user_${socket.data.userId}`;
+    return expectedRoom === room;
+  }
+  if (room.startsWith('rehearsal_')) {
+    return isValidRoomIdentifier(room, 'rehearsal_'.length);
+  }
+  if (room.startsWith('show_')) {
+    return isValidRoomIdentifier(room, 'show_'.length);
+  }
+  return false;
 }
 
 const httpServer = createServer((req, res) => {
@@ -49,7 +134,8 @@ const httpServer = createServer((req, res) => {
         const eventType = payload?.eventType;
         const data = payload?.payload;
 
-        if (AUTH_TOKEN && token !== AUTH_TOKEN) {
+        if (!AUTH_TOKEN || token !== AUTH_TOKEN) {
+          console.warn('[Realtime] Rejected admin event request due to missing or invalid auth token.');
           createJsonResponse(res, 401, { error: 'Unauthorized' });
           return;
         }
@@ -85,6 +171,25 @@ const io = new Server(httpServer, {
         origin: allowedOrigins,
         credentials: true,
       },
+});
+
+io.use((socket, next) => {
+  const auth = socket.handshake.auth || {};
+  const rawUserId = typeof auth.userId === 'string' ? auth.userId : null;
+  const token = typeof auth.token === 'string' ? auth.token : null;
+  const rawName = typeof auth.userName === 'string' ? auth.userName : null;
+
+  const validation = verifyHandshake(rawUserId, token);
+  if (!validation.ok) {
+    console.warn(`[Realtime] Rejected socket ${socket.id} handshake: ${validation.reason}`);
+    return next(new Error('Unauthorized'));
+  }
+
+  socket.data.userId = rawUserId;
+  socket.data.userName = rawName && rawName.trim() ? rawName : 'Unbekannt';
+  socket.data.rooms = new Set();
+
+  return next();
 });
 
 function broadcastOnlineStats() {
@@ -194,18 +299,15 @@ function unregisterUser(socket) {
 }
 
 io.on('connection', (socket) => {
-  const auth = socket.handshake.auth || {};
-  const userId = typeof auth.userId === 'string' ? auth.userId : null;
-  const userName = typeof auth.userName === 'string' ? auth.userName : 'Unbekannt';
-
+  const userId = typeof socket.data.userId === 'string' ? socket.data.userId : null;
   if (!userId) {
     socket.emit('error', { message: 'Unauthorized: missing userId' });
     return socket.disconnect(true);
   }
 
-  socket.data.userId = userId;
-  socket.data.userName = userName;
-  socket.data.rooms = new Set();
+  if (!socket.data.rooms) {
+    socket.data.rooms = new Set();
+  }
 
   registerUser(socket);
 
@@ -213,7 +315,13 @@ io.on('connection', (socket) => {
   socket.data.rooms.add('global');
 
   socket.on('join_room', (room) => {
-    if (typeof room !== 'string') return;
+    if (!isAllowedRoom(room, socket)) {
+      console.warn(`[Realtime] socket ${socket.id} attempted to join unauthorized room: ${room}`);
+      return;
+    }
+    if (socket.data.rooms.has(room)) {
+      return;
+    }
     socket.join(room);
     socket.data.rooms.add(room);
     emitUserPresence(room, socket, 'join');
@@ -226,6 +334,7 @@ io.on('connection', (socket) => {
 
   socket.on('leave_room', (room) => {
     if (typeof room !== 'string') return;
+    if (!socket.data.rooms.has(room)) return;
     socket.data.rooms.delete(room);
     socket.leave(room);
     emitUserPresence(room, socket, 'leave');
@@ -237,6 +346,10 @@ io.on('connection', (socket) => {
 
   socket.on('get_rehearsal_users', (rehearsalId) => {
     if (typeof rehearsalId !== 'string') return;
+    const roomName = `rehearsal_${rehearsalId}`;
+    if (!socket.data.rooms.has(roomName)) {
+      return;
+    }
     emitRehearsalUsersList(rehearsalId, socket);
   });
 
