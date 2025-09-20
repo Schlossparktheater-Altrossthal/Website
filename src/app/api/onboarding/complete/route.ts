@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isInviteUsable } from "@/lib/member-invites";
 import { sortRoles, ROLES, type Role } from "@/lib/roles";
+import { hashPassword } from "@/lib/password";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -32,6 +33,7 @@ const payloadSchema = z.object({
   sessionToken: z.string().min(16),
   name: z.string().min(2),
   email: z.string().email(),
+  password: z.string().min(6).max(128),
   background: z.string().min(2),
   dateOfBirth: z.string().optional().nullable(),
   focus: z.enum(["acting", "tech", "both"]),
@@ -100,6 +102,7 @@ export async function POST(request: NextRequest) {
   const email = normalizeEmail(payload.email);
   const background = payload.background.trim();
   const focus = payload.focus;
+  const password = payload.password;
   const preferences = payload.preferences.filter((pref) => pref.weight > 0);
   const interests = Array.from(
     new Set(payload.interests.map((interest) => interest.trim()).filter((interest) => interest.length > 0)),
@@ -193,6 +196,7 @@ export async function POST(request: NextRequest) {
   };
 
   try {
+    const passwordHash = await hashPassword(password);
     const result = await prisma.$transaction(async (tx) => {
       const latestInvite = await tx.memberInvite.findUnique({ where: { id: invite.id } });
       if (!latestInvite || !isInviteUsable(latestInvite)) {
@@ -205,6 +209,7 @@ export async function POST(request: NextRequest) {
           name: payload.name.trim(),
           role: primaryRole,
           dateOfBirth,
+          passwordHash,
           roles: { create: roles.map((role) => ({ role })) },
         },
         select: { id: true, email: true },

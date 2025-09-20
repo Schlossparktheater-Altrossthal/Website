@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AllergyLevel, type Role } from "@prisma/client";
+import { Sparkles, ShieldCheck, Lock, Target } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +68,33 @@ const crewOptions = [
   },
 ];
 
-const backgroundSuggestions = ["Schule", "Berufsschule", "Universität", "Ausbildung", "Beruf"];
+const BASE_BACKGROUND_SUGGESTIONS = ["Schule", "Berufsschule", "Universität", "Ausbildung", "Beruf"] as const;
+
+const allergyLevelStyles: Record<AllergyLevel, { badge: string; accent: string }> = {
+  MILD: {
+    badge: "border-emerald-400/50 bg-emerald-50 text-emerald-700",
+    accent: "from-emerald-400/70 to-emerald-500/70",
+  },
+  MODERATE: {
+    badge: "border-amber-400/50 bg-amber-50 text-amber-800",
+    accent: "from-amber-400/70 to-orange-400/70",
+  },
+  SEVERE: {
+    badge: "border-rose-400/50 bg-rose-50 text-rose-800",
+    accent: "from-rose-400/70 to-rose-500/70",
+  },
+  LETHAL: {
+    badge: "border-red-500/60 bg-red-50 text-red-800",
+    accent: "from-red-500/80 to-red-600/80",
+  },
+};
+
+const allergyLevelIntensity: Record<AllergyLevel, number> = {
+  MILD: 35,
+  MODERATE: 55,
+  SEVERE: 75,
+  LETHAL: 95,
+};
 
 const weightLabels: { threshold: number; label: string }[] = [
   { threshold: 0, label: "Nur mal reinschauen" },
@@ -76,6 +103,29 @@ const weightLabels: { threshold: number; label: string }[] = [
   { threshold: 75, label: "Sehr engagiert" },
   { threshold: 90, label: "Herzensprojekt" },
 ];
+
+const focusLabels: Record<"acting" | "tech" | "both", string> = {
+  acting: "Schauspiel",
+  tech: "Gewerke",
+  both: "Schauspiel & Gewerke",
+};
+
+const focusDescriptions: Record<"acting" | "tech" | "both", string> = {
+  acting: "Du möchtest auf der Bühne wirken und Rollen gestalten.",
+  tech: "Du möchtest hinter den Kulissen organisieren, bauen oder für Licht & Ton sorgen.",
+  both: "Du bleibst flexibel zwischen Bühne und Gewerken und entscheidest situativ.",
+};
+
+const focusBadgeStyles: Record<"acting" | "tech" | "both", string> = {
+  acting: "border-violet-400/40 bg-violet-500/10 text-violet-600",
+  tech: "border-cyan-400/40 bg-cyan-500/10 text-cyan-600",
+  both: "border-indigo-400/40 bg-indigo-500/10 text-indigo-600",
+};
+
+const preferenceAccent: Record<"acting" | "crew", string> = {
+  acting: "from-violet-500/70 to-fuchsia-500/70",
+  crew: "from-cyan-500/70 to-teal-500/70",
+};
 
 const steps = [
   { title: "Willkommen" },
@@ -97,6 +147,21 @@ type PreferenceEntry = {
   weight: number;
   enabled: boolean;
   domain: "acting" | "crew";
+  isCustom?: boolean;
+};
+
+type PreferenceSummaryEntry = {
+  code: string;
+  title: string;
+  weight: number;
+  label: string;
+  isCustom: boolean;
+  domain: "acting" | "crew";
+};
+
+type InterestSuggestion = {
+  name: string;
+  usage: number;
 };
 
 type DietaryEntry = {
@@ -158,6 +223,13 @@ function createDietaryId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function createPreferenceCode() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return `custom-${crypto.randomUUID()}`;
+  }
+  return `custom-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -165,12 +237,19 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   const [success, setSuccess] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
-  const [availableInterests, setAvailableInterests] = useState<string[]>([]);
+  const [availableInterests, setAvailableInterests] = useState<InterestSuggestion[]>([]);
   const [interestsLoading, setInterestsLoading] = useState(false);
+  const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(
+    () => [...BASE_BACKGROUND_SUGGESTIONS],
+  );
+  const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
+  const [customCrewError, setCustomCrewError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
     email: "",
+    password: "",
+    passwordConfirm: "",
     background: "",
     dateOfBirth: "",
     focus: "acting" as "acting" | "tech" | "both",
@@ -198,7 +277,24 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         const response = await fetch("/api/onboarding/interests", { cache: "no-store" });
         const data = await response.json().catch(() => null);
         if (!cancelled && Array.isArray(data?.interests)) {
-          setAvailableInterests(data.interests.map((entry: { name: string }) => entry.name).filter(Boolean));
+          const entries = data.interests
+            .map((entry: unknown) => {
+              if (typeof entry === "string") {
+                return { name: entry, usage: 0 } satisfies InterestSuggestion;
+              }
+              if (entry && typeof entry === "object") {
+                const record = entry as { name?: unknown; usage?: unknown };
+                const name = typeof record.name === "string" ? record.name : null;
+                if (!name) return null;
+                const usage = typeof record.usage === "number" && Number.isFinite(record.usage)
+                  ? record.usage
+                  : 0;
+                return { name, usage } satisfies InterestSuggestion;
+              }
+              return null;
+            })
+            .filter((entry): entry is InterestSuggestion => Boolean(entry?.name));
+          setAvailableInterests(entries);
         }
       } catch {
         if (!cancelled) {
@@ -214,13 +310,64 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadBackgrounds = async () => {
+      try {
+        const response = await fetch("/api/onboarding/backgrounds", { cache: "no-store" });
+        const data = await response.json().catch(() => null);
+        if (cancelled || !Array.isArray(data?.backgrounds)) return;
+        setBackgroundSuggestions((prev) => {
+          const seen = new Set(prev.map((entry) => entry.toLowerCase()));
+          const merged = [...prev];
+          for (const rawEntry of data.backgrounds as unknown[]) {
+            let label: string | null = null;
+            if (typeof rawEntry === "string") {
+              label = rawEntry;
+            } else if (rawEntry && typeof rawEntry === "object") {
+              const record = rawEntry as { name?: unknown };
+              label = typeof record.name === "string" ? record.name : null;
+            }
+            if (!label) continue;
+            const trimmed = label.trim();
+            if (!trimmed) continue;
+            const key = trimmed.toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            merged.push(trimmed);
+          }
+          return merged;
+        });
+      } catch {
+        // ignore optional background suggestions errors
+      }
+    };
+    void loadBackgrounds();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
   const requiresDocument = age !== null && age < 18;
 
   const availableInterestSuggestions = useMemo(() => {
     const selected = new Set(form.interests.map((item) => item.toLowerCase()));
-    return availableInterests.filter((interest) => !selected.has(interest.toLowerCase())).slice(0, 12);
+    return availableInterests
+      .filter((interest) => interest.name && !selected.has(interest.name.toLowerCase()))
+      .slice(0, 12);
   }, [availableInterests, form.interests]);
+
+  useEffect(() => {
+    if (!requiresDocument) {
+      setDocumentFile(null);
+      setDocumentError(null);
+      setForm((prev) => ({
+        ...prev,
+        photoConsent: { ...prev.photoConsent, skipDocument: false },
+      }));
+    }
+  }, [requiresDocument]);
 
   const addInterest = useCallback(
     (interest: string) => {
@@ -264,19 +411,103 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     });
   }, []);
 
+  const addCustomCrewPreference = useCallback(() => {
+    setCustomCrewError(null);
+    const title = customCrewDraft.title.trim();
+    const description = customCrewDraft.description.trim();
+    if (title.length < 2) {
+      setCustomCrewError("Bitte gib deinem Gewerk einen Namen.");
+      return;
+    }
+    let wasAdded = false;
+    setForm((prev) => {
+      const exists = prev.crewPreferences.some(
+        (pref) => pref.title.trim().toLowerCase() === title.toLowerCase(),
+      );
+      if (exists) {
+        setCustomCrewError("Dieses Gewerk hast du bereits markiert.");
+        return prev;
+      }
+      wasAdded = true;
+      return {
+        ...prev,
+        crewPreferences: [
+          ...prev.crewPreferences,
+          {
+            code: createPreferenceCode(),
+            title,
+            description: description || "Individuelle Aufgabe im Team",
+            weight: 60,
+            enabled: true,
+            domain: "crew",
+            isCustom: true,
+          },
+        ],
+      };
+    });
+    if (wasAdded) {
+      setCustomCrewDraft({ title: "", description: "" });
+    }
+  }, [customCrewDraft.description, customCrewDraft.title]);
+
+  const removeCustomCrewPreference = useCallback((code: string) => {
+    setForm((prev) => ({
+      ...prev,
+      crewPreferences: prev.crewPreferences.filter((pref) => pref.code !== code),
+    }));
+  }, []);
+
   const preferenceSummary = useMemo(() => {
     const buildLabel = (entry: PreferenceEntry) => {
       const match = [...weightLabels].reverse().find((label) => entry.weight >= label.threshold);
       return match?.label ?? "Interesse";
     };
+    const mapEntry = (entry: PreferenceEntry, domain: "acting" | "crew"): PreferenceSummaryEntry => ({
+      code: entry.code,
+      title: entry.title,
+      weight: entry.weight,
+      label: buildLabel(entry),
+      isCustom: Boolean(entry.isCustom),
+      domain,
+    });
     const acting = form.actingPreferences
       .filter((pref) => pref.enabled && pref.weight > 0)
-      .map((pref) => `${pref.title} – ${buildLabel(pref)}`);
+      .map((pref) => mapEntry(pref, "acting"));
     const crew = form.crewPreferences
       .filter((pref) => pref.enabled && pref.weight > 0)
-      .map((pref) => `${pref.title} – ${buildLabel(pref)}`);
+      .map((pref) => mapEntry(pref, "crew"));
     return { acting, crew };
   }, [form.actingPreferences, form.crewPreferences]);
+
+  const preferenceStats = useMemo(() => {
+    const compute = (entries: PreferenceSummaryEntry[]) => {
+      if (!entries.length) {
+        return { count: 0, average: 0 } as const;
+      }
+      const sum = entries.reduce((total, entry) => total + entry.weight, 0);
+      return { count: entries.length, average: Math.round(sum / entries.length) } as const;
+    };
+    return {
+      acting: compute(preferenceSummary.acting),
+      crew: compute(preferenceSummary.crew),
+    };
+  }, [preferenceSummary]);
+
+  const photoConsentMessage = useMemo(() => {
+    if (!form.photoConsent.consent) {
+      return "Bitte bestätige dein Einverständnis, damit wir dich auf Fotos zeigen dürfen.";
+    }
+    if (requiresDocument) {
+      if (form.photoConsent.skipDocument) {
+        return "Einverständnis erteilt – du reichst das Elternformular später nach.";
+      }
+      if (documentFile) {
+        return "Einverständnis erteilt – das unterschriebene Formular wird mitgeschickt.";
+      }
+      return "Einverständnis erteilt – lade das Elternformular hoch oder wähle später nachreichen.";
+    }
+    return "Einverständnis erteilt – kein Elternformular erforderlich.";
+  }, [documentFile, form.photoConsent.consent, form.photoConsent.skipDocument, requiresDocument]);
 
   const handleAddDietary = () => {
     if (!dietaryDraft.allergen.trim()) {
@@ -341,6 +572,14 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       }
       if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
         setError("Bitte nutze eine gültige E-Mail-Adresse.");
+        return;
+      }
+      if (!form.password || form.password.length < 6) {
+        setError("Bitte wähle ein Passwort mit mindestens 6 Zeichen.");
+        return;
+      }
+      if (form.password !== form.passwordConfirm) {
+        setError("Die Passwörter stimmen nicht überein.");
         return;
       }
       if (!form.background.trim()) {
@@ -414,6 +653,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         sessionToken,
         name: form.name.trim(),
         email: form.email.trim(),
+        password: form.password,
         background: form.background.trim(),
         dateOfBirth: form.dateOfBirth ? form.dateOfBirth : null,
         focus: form.focus,
@@ -543,7 +783,9 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         <Card className="border border-border/70">
           <CardHeader>
             <CardTitle>Wer bist du?</CardTitle>
-            <p className="text-sm text-muted-foreground">Wir nutzen diese Angaben, um dein Profil anzulegen und dich zu erreichen.</p>
+            <p className="text-sm text-muted-foreground">
+              Wir nutzen diese Angaben, um dein Profil anzulegen, dich zu erreichen und deinen Mitglieder-Login zu aktivieren.
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -558,6 +800,32 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   value={form.email}
                   onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
                   placeholder="du@example.com"
+                  autoComplete="email"
+                />
+              </label>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Passwort</span>
+                <Input
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                  placeholder="Mindestens 6 Zeichen"
+                  autoComplete="new-password"
+                />
+                <span className="text-xs text-muted-foreground">
+                  Damit meldest du dich später im Dashboard an. Bitte bewahre es sicher auf.
+                </span>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Passwort bestätigen</span>
+                <Input
+                  type="password"
+                  value={form.passwordConfirm}
+                  onChange={(event) => setForm((prev) => ({ ...prev, passwordConfirm: event.target.value }))}
+                  placeholder="Noch einmal eingeben"
+                  autoComplete="new-password"
                 />
               </label>
             </div>
@@ -687,6 +955,9 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
             {(form.focus === "tech" || form.focus === "both") && (
               <section className="space-y-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Gewerke & Teams</h3>
+                <p className="text-xs text-muted-foreground">
+                  Wähle bestehende Bereiche oder ergänze dein eigenes Gewerk, wenn dir noch etwas fehlt.
+                </p>
                 <div className="grid gap-4 md:grid-cols-2">
                   {form.crewPreferences.map((pref) => {
                     const active = pref.enabled;
@@ -695,22 +966,42 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                       <div
                         key={pref.code}
                         className={cn(
-                          "flex flex-col gap-4 rounded-xl border p-4 transition",
-                          active ? "border-primary bg-primary/5" : "border-border bg-background",
+                          "flex flex-col gap-4 rounded-2xl border p-4 transition",
+                          active ? "border-primary/70 bg-primary/5 shadow-sm" : "border-border bg-background/90",
                         )}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h4 className="font-medium">{pref.title}</h4>
-                            <p className="text-sm text-muted-foreground">{pref.description}</p>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{pref.title}</h4>
+                              {pref.isCustom && (
+                                <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                                  Eigenes Gewerk
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {pref.description || "Individuelle Aufgabe im Team"}
+                            </p>
                           </div>
-                          <Button
-                            size="sm"
-                            variant={active ? "default" : "outline"}
-                            onClick={() => togglePreference("crew", pref.code)}
-                          >
-                            {active ? "Ausgewählt" : "Wählen"}
-                          </Button>
+                          <div className="flex flex-col items-end gap-2">
+                            <Button
+                              size="sm"
+                              variant={active ? "default" : "outline"}
+                              onClick={() => togglePreference("crew", pref.code)}
+                            >
+                              {active ? "Ausgewählt" : "Wählen"}
+                            </Button>
+                            {pref.isCustom && (
+                              <button
+                                type="button"
+                                className="text-xs text-destructive transition hover:underline"
+                                onClick={() => removeCustomCrewPreference(pref.code)}
+                              >
+                                Entfernen
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {active && (
                           <div className="space-y-2">
@@ -732,6 +1023,48 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                       </div>
                     );
                   })}
+                  <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4 md:col-span-2">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                          <Sparkles className="h-4 w-4" />
+                          Eigenes Gewerk ergänzen
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Fehlt ein Bereich? Beschreibe kurz das Team oder Projekt, das du übernehmen möchtest.
+                        </p>
+                      </div>
+                      <Button type="button" size="sm" variant="secondary" onClick={addCustomCrewPreference}>
+                        Hinzufügen
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-1 text-sm">
+                        <span>Titel</span>
+                        <Input
+                          value={customCrewDraft.title}
+                          onChange={(event) => {
+                            setCustomCrewError(null);
+                            setCustomCrewDraft((prev) => ({ ...prev, title: event.target.value }));
+                          }}
+                          placeholder="z.B. Social Media, Podcast, Stage Crew …"
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm md:col-span-2">
+                        <span>Beschreibung (optional)</span>
+                        <Textarea
+                          value={customCrewDraft.description}
+                          onChange={(event) => {
+                            setCustomCrewError(null);
+                            setCustomCrewDraft((prev) => ({ ...prev, description: event.target.value }));
+                          }}
+                          placeholder="Was möchtest du übernehmen? Material, Organisation, besondere Idee …"
+                          rows={3}
+                        />
+                      </label>
+                    </div>
+                    {customCrewError && <p className="text-xs text-destructive">{customCrewError}</p>}
+                  </div>
                 </div>
               </section>
             )}
@@ -790,16 +1123,22 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Beliebte Tags</p>
               <div className="flex flex-wrap gap-2">
                 {interestsLoading && <span className="text-xs text-muted-foreground">Lade Vorschläge …</span>}
-                {!interestsLoading && availableInterestSuggestions.map((interest) => (
-                  <button
-                    key={interest}
-                    type="button"
-                    className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                    onClick={() => addInterest(interest)}
-                  >
-                    {interest}
-                  </button>
-                ))}
+                {!interestsLoading &&
+                  availableInterestSuggestions.map((interest) => (
+                    <button
+                      key={interest.name}
+                      type="button"
+                      className="flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
+                      onClick={() => addInterest(interest.name)}
+                    >
+                      <span>{interest.name}</span>
+                      {interest.usage > 0 && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          {interest.usage}
+                        </span>
+                      )}
+                    </button>
+                  ))}
               </div>
             </div>
           </CardContent>
@@ -857,57 +1196,100 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
               </div>
             )}
 
-            <div className="space-y-2 text-sm">
-              <label className="block font-medium">Eltern-Formular (PDF, JPG, PNG)</label>
-              <Input
-                type="file"
-                accept="application/pdf,image/jpeg,image/png"
-                onChange={(event) => handleDocumentChange(event.target.files?.[0] ?? null)}
-              />
-              <p className="text-xs text-muted-foreground">
-                {documentFile ? `Ausgewählt: ${documentFile.name}` : "Optional – wenn vorhanden, gleich hier hochladen."}
-              </p>
-              {documentError && <p className="text-xs text-destructive">{documentError}</p>}
-            </div>
+            {requiresDocument ? (
+              <div className="space-y-2 text-sm">
+                <label className="block font-medium">Eltern-Formular (PDF, JPG, PNG)</label>
+                <Input
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png"
+                  onChange={(event) => handleDocumentChange(event.target.files?.[0] ?? null)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {documentFile ? `Ausgewählt: ${documentFile.name}` : "Optional – wenn vorhanden, gleich hier hochladen."}
+                </p>
+                {documentError && <p className="text-xs text-destructive">{documentError}</p>}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
+                <p className="font-medium">Du bist volljährig</p>
+                <p>Deine Zustimmung reicht aus – ein Elternformular ist nicht erforderlich.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
       {step === 5 && (
-        <Card className="border border-border/70">
+        <Card className="border border-primary/30 bg-gradient-to-br from-primary/5 via-background to-background">
           <CardHeader>
-            <CardTitle>Essensunverträglichkeiten</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              Essensunverträglichkeiten &amp; Bedürfnisse
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Damit wir Catering, Probenverpflegung und Team-Events sicher planen können. Alles optional – teile nur, was relevant ist.
+              Sag uns, was dir guttut – so planen wir Verpflegung, Proben und Events sicher und inklusiv. Alle Angaben sind optional.
             </p>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-6">
             <div className="grid gap-4">
-              {form.dietary.map((entry) => (
-                <div key={entry.id} className="rounded-lg border border-border/70 bg-background/80 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium">{entry.allergen}</p>
-                      <p className="text-xs text-muted-foreground">{allergyLevelLabels[entry.level]}</p>
+              {form.dietary.map((entry) => {
+                const style = allergyLevelStyles[entry.level];
+                const progress = allergyLevelIntensity[entry.level];
+                return (
+                  <div key={entry.id} className="relative overflow-hidden rounded-2xl border border-border/60 bg-background/95 p-5 shadow-sm">
+                    <div className={cn("absolute inset-x-5 top-0 h-px bg-gradient-to-r", style.accent)} aria-hidden />
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-foreground">{entry.allergen}</p>
+                        <Badge className={cn("text-[11px]", style.badge)}>{allergyLevelLabels[entry.level]}</Badge>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => removeDietary(entry.id)}>
+                        Entfernen
+                      </Button>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => removeDietary(entry.id)}>
-                      Entfernen
-                    </Button>
+                    {(entry.symptoms || entry.treatment || entry.note) && (
+                      <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                        {entry.symptoms && (
+                          <p>
+                            <span className="font-medium text-foreground/80">Symptome:</span> {entry.symptoms}
+                          </p>
+                        )}
+                        {entry.treatment && (
+                          <p>
+                            <span className="font-medium text-foreground/80">Behandlung:</span> {entry.treatment}
+                          </p>
+                        )}
+                        {entry.note && (
+                          <p>
+                            <span className="font-medium text-foreground/80">Hinweis:</span> {entry.note}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-muted/50">
+                      <div
+                        className={cn("h-full rounded-full bg-gradient-to-r", style.accent)}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
                   </div>
-                  {(entry.symptoms || entry.treatment || entry.note) && (
-                    <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-                      {entry.symptoms && <li>Symptome: {entry.symptoms}</li>}
-                      {entry.treatment && <li>Behandlung: {entry.treatment}</li>}
-                      {entry.note && <li>Hinweis: {entry.note}</li>}
-                    </ul>
-                  )}
+                );
+              })}
+              {!form.dietary.length && (
+                <div className="rounded-2xl border border-dashed border-border/60 bg-background/70 p-6 text-sm text-muted-foreground">
+                  Keine Besonderheiten hinterlegt – wir planen mit einem flexiblen Menü.
                 </div>
-              ))}
-              {!form.dietary.length && <p className="text-sm text-muted-foreground">Keine Unverträglichkeiten hinterlegt.</p>}
+              )}
             </div>
 
-            <div className="space-y-3 rounded-lg border border-dashed border-border/70 p-4">
-              <p className="text-sm font-medium">Neue Unverträglichkeit hinzufügen</p>
+            <div className="space-y-4 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                <Target className="h-4 w-4" />
+                Neue Unverträglichkeit hinzufügen
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Teile nur, was relevant ist – die Informationen bleiben intern und helfen dem Orga-Team bei Notfällen.
+              </p>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="space-y-1 text-sm">
                   <span>Auslöser / Gericht</span>
@@ -923,7 +1305,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     value={dietaryDraft.level}
                     onValueChange={(value: AllergyLevel) => setDietaryDraft((prev) => ({ ...prev, level: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background/80">
                       <SelectValue placeholder="Wähle den Schweregrad" />
                     </SelectTrigger>
                     <SelectContent>
@@ -956,9 +1338,12 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   className="md:col-span-1"
                 />
               </div>
-              <Button type="button" variant="outline" onClick={handleAddDietary}>
-                Speichern
-              </Button>
+              <div className="flex flex-col gap-2 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
+                <span>Wir speichern die Angaben verschlüsselt und teilen sie nur mit dem verantwortlichen Team.</span>
+                <Button type="button" onClick={handleAddDietary}>
+                  Speichern
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -973,97 +1358,180 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            <section className="rounded-lg border border-border/70 p-4">
-              <h3 className="text-sm font-semibold uppercase text-muted-foreground">Profil</h3>
-              <dl className="mt-3 grid gap-2 text-sm">
-                <div className="grid grid-cols-3 gap-2">
-                  <dt className="text-muted-foreground">Name</dt>
-                  <dd className="col-span-2">{form.name || "–"}</dd>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <dt className="text-muted-foreground">E-Mail</dt>
-                  <dd className="col-span-2">{form.email || "–"}</dd>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <dt className="text-muted-foreground">Geburtsdatum</dt>
-                  <dd className="col-span-2">{form.dateOfBirth || "–"}</dd>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <dt className="text-muted-foreground">Kontext</dt>
-                  <dd className="col-span-2">{form.background || "–"}</dd>
-                </div>
-              </dl>
-            </section>
-
-            <section className="rounded-lg border border-border/70 p-4">
-              <h3 className="text-sm font-semibold uppercase text-muted-foreground">Fokus</h3>
-              <p className="text-sm font-medium">
-                {form.focus === "acting"
-                  ? "Schauspiel"
-                  : form.focus === "tech"
-                  ? "Gewerke & Teams"
-                  : "Schauspiel und Gewerke"}
-              </p>
-              <ul className="mt-3 space-y-2 text-sm">
-                {preferenceSummary.acting.map((item) => (
-                  <li key={`acting-${item}`}>🎭 {item}</li>
-                ))}
-                {preferenceSummary.crew.map((item) => (
-                  <li key={`crew-${item}`}>🔧 {item}</li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="rounded-lg border border-border/70 p-4">
-              <h3 className="text-sm font-semibold uppercase text-muted-foreground">Interessen</h3>
-              <div className="flex flex-wrap gap-2">
-                {form.interests.length ? (
-                  form.interests.map((interest) => (
-                    <Badge key={interest} variant="outline">
-                      {interest}
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className="rounded-2xl border border-border/70 bg-background/90 p-4">
+                <h3 className="text-sm font-semibold uppercase text-muted-foreground">Profil</h3>
+                <dl className="mt-3 grid gap-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Name</dt>
+                    <dd className="font-medium text-foreground">{form.name || "–"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">E-Mail</dt>
+                    <dd className="font-medium text-foreground">{form.email || "–"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Geburtstag</dt>
+                    <dd className="font-medium text-foreground">{form.dateOfBirth || "–"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Alter</dt>
+                    <dd className="font-medium text-foreground">{age !== null ? `${age} Jahre` : "–"}</dd>
+                  </div>
+                </dl>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Kontext</span>
+                  {form.background ? (
+                    <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                      {form.background}
                     </Badge>
-                  ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Keine Angaben</span>
+                  )}
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Fokus &amp; Intensität</h3>
+                  <span className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium",
+                    focusBadgeStyles[form.focus],
+                  )}
+                  >
+                    {focusLabels[form.focus]}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">{focusDescriptions[form.focus]}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(["acting", "crew"] as const).map((domain) => {
+                    const entries = preferenceSummary[domain];
+                    const stats = preferenceStats[domain];
+                    return (
+                      <div key={domain} className="space-y-3 rounded-xl border border-border/60 bg-background/85 p-3">
+                        <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
+                          <span>{domain === "acting" ? "Schauspiel" : "Gewerke"}</span>
+                          <span>{stats.count} Auswahl{stats.count === 1 ? "" : "en"}</span>
+                        </div>
+                        {entries.length ? (
+                          <div className="space-y-3">
+                            {entries.map((pref) => (
+                              <div key={pref.code} className="space-y-1.5">
+                                <div className="flex items-center justify-between text-sm font-medium text-foreground">
+                                  <div className="flex items-center gap-2">
+                                    <span>{pref.title}</span>
+                                    {pref.isCustom && (
+                                      <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                                        Eigenes Gewerk
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span>{pref.weight}%</span>
+                                </div>
+                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
+                                  <div
+                                    className={cn("h-full rounded-full bg-gradient-to-r", preferenceAccent[pref.domain])}
+                                    style={{ width: `${pref.weight}%` }}
+                                  />
+                                </div>
+                                <p className="text-[11px] text-muted-foreground">{pref.label}</p>
+                              </div>
+                            ))}
+                            <p className="text-[11px] text-muted-foreground">
+                              Ø Intensität: {stats.average}%
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Keine Angaben</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section className="rounded-2xl border border-border/70 bg-background/90 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Interessen</h3>
+                <p className="text-xs text-muted-foreground">Wir nutzen deine Tags für Workshops, Rollen und Teamvorschläge.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {form.interests.length ? (
+                    form.interests.map((interest) => (
+                      <Badge key={interest} variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                        {interest}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Keine Angaben</span>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-border/70 bg-background/90 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Essensunverträglichkeiten</h3>
+                {form.dietary.length ? (
+                  <div className="mt-3 space-y-3 text-sm">
+                    {form.dietary.map((entry) => {
+                      const style = allergyLevelStyles[entry.level];
+                      return (
+                        <div key={entry.id} className="space-y-1 rounded-xl border border-border/50 bg-background/80 p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">{entry.allergen}</span>
+                            <Badge className={cn("text-[10px]", style.badge)}>{allergyLevelLabels[entry.level]}</Badge>
+                          </div>
+                          {(entry.symptoms || entry.treatment || entry.note) && (
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              {entry.symptoms && <p>Symptome: {entry.symptoms}</p>}
+                              {entry.treatment && <p>Behandlung: {entry.treatment}</p>}
+                              {entry.note && <p>Hinweis: {entry.note}</p>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <span className="text-sm text-muted-foreground">Keine Angaben</span>
+                  <p className="mt-3 text-sm text-muted-foreground">Keine Angaben</p>
                 )}
+              </section>
+            </div>
+
+            <section className="space-y-4 rounded-2xl border border-border/70 bg-background/90 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sicherheit &amp; Zustimmung</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2 rounded-xl border border-border/60 bg-background p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                      Fotoerlaubnis
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={form.photoConsent.consent ? "border-emerald-400/40 bg-emerald-50 text-emerald-700" : "border-amber-400/40 bg-amber-50 text-amber-700"}
+                    >
+                      {form.photoConsent.consent ? "Erteilt" : "Offen"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{photoConsentMessage}</p>
+                </div>
+                <div className="space-y-2 rounded-xl border border-border/60 bg-background p-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Lock className="h-4 w-4 text-primary" />
+                    Passwort gesetzt
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Dein neues Passwort wird mit dem Absenden aktiviert. Du kannst dich anschließend sofort im Mitgliederbereich anmelden.
+                  </p>
+                </div>
               </div>
-            </section>
-
-            <section className="rounded-lg border border-border/70 p-4">
-              <h3 className="text-sm font-semibold uppercase text-muted-foreground">Fotoerlaubnis</h3>
-              <p className="text-sm">
-                {form.photoConsent.consent
-                  ? "Einverständnis erteilt"
-                  : "Noch keine Zustimmung erteilt"}
-                {requiresDocument && !form.photoConsent.skipDocument
-                  ? documentFile
-                    ? " – Dokument wird mitgeschickt"
-                    : " – Dokument fehlt noch"
-                  : ""}
-              </p>
-            </section>
-
-            <section className="rounded-lg border border-border/70 p-4">
-              <h3 className="text-sm font-semibold uppercase text-muted-foreground">Essensunverträglichkeiten</h3>
-              {form.dietary.length ? (
-                <ul className="mt-2 space-y-2 text-sm">
-                  {form.dietary.map((entry) => (
-                    <li key={entry.id}>
-                      <span className="font-medium">{entry.allergen}</span> – {allergyLevelLabels[entry.level]}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">Keine Angaben</p>
-              )}
             </section>
 
             {success ? (
               <div className="rounded-lg border border-emerald-300 bg-emerald-50/80 p-4 text-sm text-emerald-900">
                 <p className="font-medium">Danke, deine Angaben sind angekommen!</p>
                 <p>
-                  Wir legen jetzt dein Profil an und melden uns mit den nächsten Schritten. Du kannst dich demnächst mit deiner
-                  E-Mail auf der Mitgliederseite anmelden.
+                  Wir legen jetzt dein Profil an und melden uns mit den nächsten Schritten. Du kannst dich ab sofort mit deiner E-Mail-Adresse und deinem Passwort im Mitgliederbereich anmelden.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link href="/login">
