@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { PhotoConsentAdminEntry } from "@/types/photo-consent";
 
 const statusLabels: Record<PhotoConsentAdminEntry["status"], string> = {
@@ -18,6 +19,23 @@ const statusVariants: Record<PhotoConsentAdminEntry["status"], "default" | "seco
   pending: "secondary",
   approved: "default",
   rejected: "destructive",
+};
+
+type PhotoConsentAction = "approve" | "reject" | "reset";
+
+type PendingEntry = PhotoConsentAdminEntry & { status: "pending" };
+type ProcessedEntry = PhotoConsentAdminEntry & { status: "approved" | "rejected" };
+
+type ActionHandler = (id: string, action: PhotoConsentAction) => void | Promise<void>;
+
+const pendingHighlightClasses: Record<PendingEntry["status"], string> = {
+  pending:
+    "border-l-4 border-amber-400/80 bg-amber-400/10 dark:border-amber-300/60 dark:bg-amber-400/15",
+};
+
+const processedCardAccent: Record<ProcessedEntry["status"], string> = {
+  approved: "border-emerald-500/30 bg-emerald-500/5 dark:border-emerald-500/40 dark:bg-emerald-500/10",
+  rejected: "border-red-500/35 bg-red-500/5 dark:border-red-500/40 dark:bg-red-500/10",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
@@ -43,6 +61,14 @@ function formatDate(value: string | null | undefined) {
 
 function formatDateTime(value: string | null | undefined) {
   return formatWithFormatter(value, dateTimeFormatter);
+}
+
+function isPendingEntry(entry: PhotoConsentAdminEntry): entry is PendingEntry {
+  return entry.status === "pending";
+}
+
+function isProcessedEntry(entry: PhotoConsentAdminEntry): entry is ProcessedEntry {
+  return entry.status === "approved" || entry.status === "rejected";
 }
 
 export function PhotoConsentAdminPanel() {
@@ -73,10 +99,12 @@ export function PhotoConsentAdminPanel() {
     void load();
   }, [load]);
 
+  const pendingEntries = useMemo(() => entries.filter(isPendingEntry), [entries]);
+  const processedEntries = useMemo(() => entries.filter(isProcessedEntry), [entries]);
   const hasEntries = entries.length > 0;
 
   const handleAction = useCallback(
-    async (id: string, action: "approve" | "reject" | "reset") => {
+    async (id: string, action: PhotoConsentAction) => {
       let reason: string | undefined;
       if (action === "reject") {
         const entered = window.prompt("Bitte Ablehnungsgrund eingeben:");
@@ -123,11 +151,10 @@ export function PhotoConsentAdminPanel() {
   );
 
   const summary = useMemo(() => {
-    const pending = entries.filter((entry) => entry.status === "pending").length;
-    const rejected = entries.filter((entry) => entry.status === "rejected").length;
+    const rejected = processedEntries.filter((entry) => entry.status === "rejected").length;
     const missingBirthdays = entries.filter((entry) => entry.requiresDateOfBirth).length;
-    return { pending, rejected, missingBirthdays };
-  }, [entries]);
+    return { pending: pendingEntries.length, rejected, missingBirthdays };
+  }, [entries, pendingEntries, processedEntries]);
 
   return (
     <Card className="border border-border/70 bg-background">
@@ -157,108 +184,334 @@ export function PhotoConsentAdminPanel() {
         ) : !hasEntries ? (
           <p className="text-sm text-muted-foreground">Bisher liegen keine Fotoeinverständnisse vor.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-auto text-sm">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-foreground/60">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium">Mitglied</th>
-                  <th className="px-3 py-2 text-left font-medium">Status</th>
-                  <th className="px-3 py-2 text-left font-medium">Anforderungen</th>
-                  <th className="px-3 py-2 text-left font-medium">Zeitleiste</th>
-                  <th className="px-3 py-2 text-left font-medium">Aktionen</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {entries.map((entry) => {
-                  const statusLabel = statusLabels[entry.status];
-                  return (
-                    <tr key={entry.id} className="align-top">
-                      <td className="px-3 py-3">
-                        <div className="font-medium text-foreground">
-                          {entry.name ?? entry.email ?? "Unbekannt"}
-                        </div>
-                        {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
-                        <div className="mt-1 space-y-1 text-xs text-foreground/60">
-                          <div>
-                            Geburtsdatum: {formatDate(entry.dateOfBirth) ?? "unbekannt"}
-                            {entry.age !== null ? ` (${entry.age} Jahre)` : ""}
-                          </div>
-                          {entry.documentName && (
-                            <div>
-                              Dokument: {entry.documentName}
-                              {entry.documentUploadedAt &&
-                                ` · hochgeladen ${formatDateTime(entry.documentUploadedAt)}`}
-                              {entry.documentUrl && (
-                                <>
-                                  {" "}
-                                  <a
-                                    className="underline"
-                                    href={entry.documentUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
-                                    öffnen
-                                  </a>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
-                      </td>
-                      <td className="px-3 py-3 text-xs text-foreground/70">
-                        <ul className="space-y-1">
-                          <li>{entry.requiresDocument ? "Minderjährig" : "Volljährig"}</li>
-                          <li>{entry.requiresDateOfBirth ? "Geburtsdatum fehlt" : "Geburtsdatum vorhanden"}</li>
-                          <li>{entry.hasDocument ? "Dokument vorhanden" : "Kein Dokument"}</li>
-                        </ul>
-                      </td>
-                      <td className="px-3 py-3 text-xs text-foreground/70">
-                        <div>Eingegangen: {formatDateTime(entry.submittedAt)}</div>
-                        <div>Aktualisiert: {formatDateTime(entry.updatedAt)}</div>
-                        {entry.approvedAt && <div>Freigabe: {formatDateTime(entry.approvedAt)}</div>}
-                        {entry.approvedByName && <div>Durch: {entry.approvedByName}</div>}
-                        {entry.rejectionReason && (
-                          <div className="mt-1 text-destructive">Grund: {entry.rejectionReason}</div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => void handleAction(entry.id, "approve")}
-                            disabled={processing === entry.id}
-                          >
-                            Freigeben
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => void handleAction(entry.id, "reset")}
-                            disabled={processing === entry.id}
-                          >
-                            Zurücksetzen
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => void handleAction(entry.id, "reject")}
-                            disabled={processing === entry.id}
-                          >
-                            Ablehnen
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="space-y-8">
+            {pendingEntries.length > 0 && (
+              <section className="space-y-3">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">
+                    Offene Fotoeinverständnisse
+                  </h3>
+                  <p className="text-xs text-foreground/60">
+                    Diese Personen warten auf eine Entscheidung oder benötigen zusätzliche Unterlagen.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {pendingEntries.map((entry) => (
+                    <PendingEntryCard
+                      key={entry.id}
+                      entry={entry}
+                      onAction={handleAction}
+                      processing={processing}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="space-y-3">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">
+                  Abgeschlossene Einträge
+                </h3>
+                <p className="text-xs text-foreground/60">
+                  Kompakte Übersicht über freigegebene oder gesperrte Fotoeinverständnisse.
+                </p>
+              </div>
+
+              {processedEntries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Noch keine freigegebenen oder abgelehnten Einverständnisse vorhanden.
+                </p>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {processedEntries.map((entry) => (
+                    <ProcessedEntryCard
+                      key={entry.id}
+                      entry={entry}
+                      onAction={handleAction}
+                      processing={processing}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+type PendingEntryCardProps = {
+  entry: PendingEntry;
+  onAction: ActionHandler;
+  processing: string | null;
+};
+
+function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps) {
+  const statusLabel = statusLabels[entry.status];
+  const formattedBirthDate = formatDate(entry.dateOfBirth);
+  const submittedAt = formatDateTime(entry.submittedAt) ?? "unbekannt";
+  const updatedAt = formatDateTime(entry.updatedAt) ?? "unbekannt";
+  const documentUploadedAt = formatDateTime(entry.documentUploadedAt);
+
+  const hints: Array<{ key: string; tone: "warning" | "error"; message: string }> = [];
+  if (entry.rejectionReason) {
+    hints.push({ key: "rejection", tone: "error", message: `Letzte Ablehnung: ${entry.rejectionReason}` });
+  }
+  if (entry.requiresDateOfBirth) {
+    hints.push({ key: "dob", tone: "warning", message: "Geburtsdatum fehlt. Bitte nachreichen lassen." });
+  }
+  if (!entry.hasDocument && entry.requiresDocument) {
+    hints.push({
+      key: "document",
+      tone: "warning",
+      message: "Dokument wird benötigt, bevor freigegeben werden kann.",
+    });
+  }
+
+  const allRequirementsMet = hints.length === 0;
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border border-border/70 p-4 shadow-sm transition-shadow supports-[backdrop-filter]:backdrop-blur-sm hover:shadow-md",
+        pendingHighlightClasses[entry.status],
+      )}
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="text-sm font-semibold text-foreground">{entry.name ?? entry.email ?? "Unbekannt"}</div>
+          {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
+        </div>
+        <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+        <Badge variant="secondary" className="bg-background/70 text-foreground/80 dark:bg-background/40">
+          {entry.requiresDocument ? "Minderjährig" : "Volljährig"}
+        </Badge>
+        <Badge
+          variant="outline"
+          className={cn(
+            "border-border/60 text-foreground/70",
+            entry.hasDocument
+              ? "border-emerald-500/50 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-300"
+              : "border-amber-400/70 text-amber-700 dark:border-amber-300/80 dark:text-amber-200",
+          )}
+        >
+          {entry.hasDocument ? "Dokument vorhanden" : "Dokument fehlt"}
+        </Badge>
+        <Badge
+          variant="outline"
+          className={cn(
+            "border-border/60 text-foreground/70",
+            entry.requiresDateOfBirth
+              ? "border-amber-400/70 text-amber-700 dark:border-amber-300/80 dark:text-amber-200"
+              : "border-emerald-500/50 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-300",
+          )}
+        >
+          {entry.requiresDateOfBirth
+            ? "Geburtsdatum benötigt"
+            : `Geburtsdatum: ${formattedBirthDate ?? "vorhanden"}`}
+        </Badge>
+        {entry.age !== null && (
+          <Badge variant="outline" className="border-border/60 text-foreground/70">
+            {entry.age} Jahre
+          </Badge>
+        )}
+      </div>
+
+      <div className="mt-4 grid gap-3 text-xs text-foreground/70 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <div className="space-y-1">
+          <div>Eingegangen: {submittedAt}</div>
+          <div>Aktualisiert: {updatedAt}</div>
+          {entry.documentName && (
+            <div>
+              Dokument: {entry.documentName}
+              {documentUploadedAt && ` · hochgeladen ${documentUploadedAt}`}
+              {entry.documentUrl && (
+                <>
+                  {" "}
+                  <a className="underline" href={entry.documentUrl} target="_blank" rel="noreferrer">
+                    öffnen
+                  </a>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="space-y-2">
+          {allRequirementsMet ? (
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-600 dark:border-emerald-500/40 dark:text-emerald-200">
+              Alle Anforderungen erfüllt. Du kannst freigeben.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {hints.map((hint) => (
+                <li
+                  key={hint.key}
+                  className={cn(
+                    "rounded-md border px-3 py-2",
+                    hint.tone === "error"
+                      ? "border-destructive/40 bg-destructive/10 text-destructive"
+                      : "border-amber-400/60 bg-amber-400/10 text-amber-700 dark:border-amber-300/70 dark:text-amber-200",
+                  )}
+                >
+                  {hint.message}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => void onAction(entry.id, "approve")} disabled={processing === entry.id}>
+          Freigeben
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void onAction(entry.id, "reset")}
+          disabled={processing === entry.id}
+        >
+          Zurücksetzen
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={() => void onAction(entry.id, "reject")}
+          disabled={processing === entry.id}
+        >
+          Ablehnen
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+type ProcessedEntryCardProps = {
+  entry: ProcessedEntry;
+  onAction: ActionHandler;
+  processing: string | null;
+};
+
+function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardProps) {
+  const statusLabel = statusLabels[entry.status];
+  const formattedBirthDate = formatDate(entry.dateOfBirth);
+  const updatedAt = formatDateTime(entry.updatedAt) ?? "unbekannt";
+  const approvedAt = formatDateTime(entry.approvedAt);
+
+  const permissionBadge = entry.status === "approved"
+    ? {
+        label: "Fotos & Veröffentlichung erlaubt",
+        className:
+          "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:border-emerald-500/40 dark:text-emerald-200",
+      }
+    : {
+        label: "Keine Fotoveröffentlichung erlaubt",
+        className: "border-red-500/40 bg-red-500/10 text-red-600 dark:border-red-500/40 dark:text-red-200",
+      };
+
+  return (
+    <div
+      className={cn(
+        "flex h-full flex-col justify-between rounded-lg border border-border/60 p-4 shadow-sm transition-shadow supports-[backdrop-filter]:backdrop-blur-sm hover:shadow-md",
+        processedCardAccent[entry.status],
+      )}
+    >
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-foreground">{entry.name ?? entry.email ?? "Unbekannt"}</div>
+            {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
+          </div>
+          <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
+        </div>
+
+        <Badge variant="outline" className={cn("text-xs", permissionBadge.className)}>
+          {permissionBadge.label}
+        </Badge>
+
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Badge variant="outline" className="border-border/60 text-foreground/70">
+            {entry.requiresDocument ? "Minderjährig" : "Volljährig"}
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "border-border/60 text-foreground/70",
+              entry.hasDocument
+                ? "border-emerald-500/50 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-300"
+                : "border-amber-400/70 text-amber-700 dark:border-amber-300/80 dark:text-amber-200",
+            )}
+          >
+            {entry.hasDocument ? "Dokument vorhanden" : "Dokument fehlt"}
+          </Badge>
+          {formattedBirthDate ? (
+            <Badge variant="outline" className="border-border/60 text-foreground/70">
+              Geburtsdatum: {formattedBirthDate}
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="border-amber-400/70 text-amber-700 dark:border-amber-300/80 dark:text-amber-200"
+            >
+              Geburtsdatum fehlt
+            </Badge>
+          )}
+        </div>
+
+        <div className="space-y-1 text-xs text-foreground/70">
+          <div>Aktualisiert: {updatedAt}</div>
+          {approvedAt && <div>Freigegeben am {approvedAt}</div>}
+          {entry.approvedByName && <div>Bearbeitet durch {entry.approvedByName}</div>}
+          {entry.rejectionReason && <div className="text-destructive">Grund: {entry.rejectionReason}</div>}
+          {entry.documentName && (
+            <div>
+              Dokument: {entry.documentName}
+              {entry.documentUrl && (
+                <>
+                  {" "}
+                  <a className="underline" href={entry.documentUrl} target="_blank" rel="noreferrer">
+                    öffnen
+                  </a>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void onAction(entry.id, "reset")}
+          disabled={processing === entry.id}
+        >
+          Zurücksetzen
+        </Button>
+        {entry.status === "approved" ? (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => void onAction(entry.id, "reject")}
+            disabled={processing === entry.id}
+          >
+            Ablehnen
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            onClick={() => void onAction(entry.id, "approve")}
+            disabled={processing === entry.id}
+          >
+            Freigeben
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
