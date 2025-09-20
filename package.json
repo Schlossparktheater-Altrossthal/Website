@@ -9,6 +9,7 @@
     "prestart": "node scripts/run-prisma-migrate.mjs",
     "postinstall": "node -e \"if(!process.env.SKIP_PRISMA_POSTINSTALL){require('child_process').execSync('pnpm prisma:generate',{stdio:'inherit'})}\"",
     "start": "next start",
+    "start:combined": "node scripts/start-combined-server.mjs",
     "lint": "eslint",
     "test": "vitest run",
     "prisma:generate": "prisma generate",
