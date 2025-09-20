@@ -53,4 +53,4 @@ COPY --from=builder /app/realtime-server ./realtime-server
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm prisma migrate deploy && node scripts/start-combined-server.mjs"]
+CMD ["sh", "-c", "node scripts/run-prisma-migrate.mjs && node scripts/start-combined-server.mjs"]
