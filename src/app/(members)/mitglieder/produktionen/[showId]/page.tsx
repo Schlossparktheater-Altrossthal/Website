@@ -45,7 +45,7 @@ export default async function ProduktionDetailPage({ params }: { params: { showI
     notFound();
   }
 
-  const activeProductionId = getActiveProductionId();
+  const activeProductionId = await getActiveProductionId();
   const isActive = activeProductionId === show.id;
   const title = formatShowTitle(show);
 

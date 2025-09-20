@@ -29,6 +29,24 @@ type UserRecord = {
   photoConsent: ConsentRecord | null;
 };
 
+type UploadedFile = {
+  name?: string | null;
+  type?: string | null;
+  size: number;
+  arrayBuffer(): Promise<ArrayBuffer>;
+};
+
+function isFileLike(value: unknown): value is UploadedFile {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const maybeFile = value as Partial<UploadedFile>;
+  return (
+    typeof maybeFile.size === "number" &&
+    typeof maybeFile.arrayBuffer === "function"
+  );
+}
+
 function calculateAge(date: Date | null | undefined): number | null {
   if (!date) return null;
   const now = new Date();
@@ -127,17 +145,17 @@ export async function POST(request: NextRequest) {
 
   const contentType = request.headers.get("content-type") ?? "";
   let body: Record<string, unknown> | null = null;
-  let documentFile: File | null = null;
+  let documentFile: UploadedFile | null = null;
 
   if (contentType.includes("multipart/form-data")) {
     const formData = await request.formData();
     const parsed: Record<string, unknown> = {};
     formData.forEach((value, key) => {
-      if (value instanceof File) {
+      if (isFileLike(value)) {
         if (key === "document" && value.size > 0) {
           documentFile = value;
         }
-      } else {
+      } else if (typeof value === "string") {
         parsed[key] = value;
       }
     });
@@ -195,19 +213,22 @@ export async function POST(request: NextRequest) {
   let documentName: string | undefined;
   let documentSize: number | undefined;
 
-  if (documentFile) {
-    if (documentFile.size > MAX_DOCUMENT_BYTES) {
+  const file: UploadedFile | null = documentFile;
+
+  if (file) {
+    const upload = file as UploadedFile;
+    if (upload.size > MAX_DOCUMENT_BYTES) {
       return NextResponse.json({ error: "Dokument darf maximal 8 MB groß sein" }, { status: 400 });
     }
-    const mime = documentFile.type?.toLowerCase() ?? "";
+    const mime = upload.type?.toLowerCase() ?? "";
     if (mime && !ALLOWED_DOCUMENT_TYPES.has(mime)) {
       return NextResponse.json({ error: "Erlaubt sind PDF oder Bilddateien (JPG, PNG)" }, { status: 400 });
     }
-    const buffer = Buffer.from(await documentFile.arrayBuffer());
+    const buffer = Buffer.from(await upload.arrayBuffer());
     documentBuffer = buffer;
     documentMime = mime || "application/octet-stream";
-    documentName = sanitizeFilename(documentFile.name || "einverstaendnis.pdf");
-    documentSize = documentFile.size;
+    documentName = sanitizeFilename(upload.name || "einverstaendnis.pdf");
+    documentSize = upload.size;
   }
 
   const now = new Date();

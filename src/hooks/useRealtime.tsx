@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { useSession } from 'next-auth/react';
 import { io, Socket } from 'socket.io-client';
+import type { ManagerOptions, SocketOptions } from 'socket.io-client';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -152,7 +153,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         if (disposed) return;
         latestAuth = handshake;
 
-        const options = {
+        const options: Partial<ManagerOptions & SocketOptions> = {
           path: REALTIME_PATH,
           transports: ['websocket', 'polling'],
           forceNew: true,
@@ -161,7 +162,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           reconnectionDelayMax: 5000,
           reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
           auth: handshake,
-        } as const;
+        };
 
         const target = resolveRealtimeUrl();
         const instance: SocketInstance = target ? io(target, options) : io(options);
@@ -170,7 +171,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           if (!auth) return;
           instance.auth = auth;
           if (instance.io?.opts) {
-            instance.io.opts.auth = auth;
+            (instance.io.opts as Partial<ManagerOptions & SocketOptions>).auth = auth;
           }
         };
 
@@ -201,7 +202,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           stopPingInterval();
         });
 
-        instance.on('reconnect_attempt', async () => {
+        const handleReconnectAttempt = async () => {
           try {
             const refreshed = await requestHandshake();
             if (disposed) return;
@@ -210,7 +211,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           } catch (error) {
             console.warn('Failed to refresh realtime auth token', error);
           }
-        });
+        };
+
+        instance.io.on('reconnect_attempt', handleReconnectAttempt);
 
         instance.on('connect_error', async (error: Error) => {
           console.warn('Socket.IO connection error:', error?.message || error);
@@ -239,6 +242,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         applyAuth(latestAuth);
 
         connectionCleanup = () => {
+          instance.io.off('reconnect_attempt', handleReconnectAttempt);
           instance.removeAllListeners();
           instance.disconnect();
         };

@@ -30,9 +30,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (updatedAt) {
     headers.set("Last-Modified", updatedAt);
   }
-  headers.set("Content-Length", String(user.avatarImage.length));
+  const avatarData = user.avatarImage as Uint8Array | ArrayBuffer;
+  const byteLength = avatarData.byteLength;
+  const body: ArrayBuffer =
+    avatarData instanceof ArrayBuffer
+      ? avatarData.slice(0)
+      : new Uint8Array(avatarData).buffer;
 
-  return new NextResponse(user.avatarImage, {
+  headers.set("Content-Length", String(byteLength));
+
+  return new NextResponse(body, {
     status: 200,
     headers,
   });
