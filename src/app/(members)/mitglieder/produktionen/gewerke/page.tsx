@@ -4,10 +4,12 @@ import { DepartmentMembershipRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { getActiveProduction } from "@/lib/active-production";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
 
 import {
   createDepartmentAction,
@@ -34,6 +36,9 @@ function formatUserName(user: { name: string | null; email: string | null }) {
 const selectClassName =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+const collapsibleClassName =
+  "group rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm transition [&_summary::-webkit-details-marker]:hidden";
+
 export default async function ProduktionsGewerkePage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
@@ -45,7 +50,7 @@ export default async function ProduktionsGewerkePage() {
     );
   }
 
-  const [departments, users] = await Promise.all([
+  const [departments, users, activeProduction] = await Promise.all([
     prisma.department.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -64,24 +69,43 @@ export default async function ProduktionsGewerkePage() {
       ],
       select: { id: true, name: true, email: true },
     }),
+    getActiveProduction(),
   ]);
+
+  const totalMemberships = departments.reduce((count, department) => count + department.memberships.length, 0);
+  const headerStats = [
+    { label: "Gewerke", value: departments.length, hint: "Definierte Teams" },
+    { label: "Zuordnungen", value: totalMemberships, hint: "Mitglieder mit Rollen" },
+  ];
+
+  const headerActions = (
+    <Button asChild variant="outline" size="sm">
+      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
+    </Button>
+  );
+
+  const summaryActions = activeProduction ? (
+    <>
+      <Button asChild size="sm">
+        <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzung</Link>
+      </Button>
+      <Button asChild size="sm" variant="outline">
+        <Link href="/mitglieder/produktionen/szenen">Szenen &amp; Breakdowns</Link>
+      </Button>
+    </>
+  ) : null;
 
   return (
     <div className="space-y-10">
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Team-Workspace</p>
-            <h1 className="text-3xl font-semibold">Gewerke &amp; Zuständigkeiten</h1>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              Strukturiere dein Produktionsteam, vergib Verantwortlichkeiten und halte Kontaktdaten zentral an einem Ort fest.
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
-          </Button>
-        </div>
-      </section>
+      <ProductionWorkspaceHeader
+        title="Gewerke &amp; Zuständigkeiten"
+        description="Strukturiere dein Produktionsteam, vergib Verantwortlichkeiten und halte Kontaktdaten zentral fest."
+        activeWorkspace="departments"
+        production={activeProduction}
+        stats={headerStats}
+        actions={headerActions}
+        summaryActions={summaryActions}
+      />
 
       <Card>
         <CardHeader className="space-y-2">
@@ -91,30 +115,35 @@ export default async function ProduktionsGewerkePage() {
           </p>
         </CardHeader>
         <CardContent>
-          <form action={createDepartmentAction} className="grid gap-4 md:grid-cols-2">
+          <form action={createDepartmentAction} className="grid gap-6">
             <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
+            <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 sm:grid-cols-2">
+              <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Basisdaten
+              </legend>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Name</label>
+                <Input name="name" placeholder="z.B. Maske" required minLength={2} maxLength={80} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Slug (optional)</label>
+                <Input name="slug" placeholder="maske" maxLength={80} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Farbe</label>
+                <input
+                  type="color"
+                  name="color"
+                  defaultValue="#9333ea"
+                  className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
+                />
+              </div>
+            </fieldset>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Name</label>
-              <Input name="name" placeholder="z.B. Maske" required minLength={2} maxLength={80} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Slug (optional)</label>
-              <Input name="slug" placeholder="maske" maxLength={80} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Farbe</label>
-              <input
-                type="color"
-                name="color"
-                defaultValue="#9333ea"
-                className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
               <label className="text-sm font-medium">Beschreibung</label>
               <Textarea name="description" rows={2} maxLength={2000} placeholder="Kurzbeschreibung für das Gewerk" />
             </div>
-            <div className="md:col-span-2">
+            <div>
               <Button type="submit">Gewerk speichern</Button>
             </div>
           </form>
@@ -156,13 +185,18 @@ export default async function ProduktionsGewerkePage() {
               </CardHeader>
 
               <CardContent className="space-y-6">
-                <form
-                  action={updateDepartmentAction}
-                  className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4"
-                >
-                  <input type="hidden" name="id" value={department.id} />
-                  <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
-                  <div className="grid gap-3 md:grid-cols-2">
+                <details className={collapsibleClassName}>
+                  <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+                    <span>Gewerk bearbeiten</span>
+                    <span className="text-xs text-muted-foreground group-open:hidden">Öffnen</span>
+                    <span className="hidden text-xs text-muted-foreground group-open:inline">Schließen</span>
+                  </summary>
+                  <form
+                    action={updateDepartmentAction}
+                    className="mt-4 grid gap-3 rounded-lg border border-border/50 bg-background/70 p-4 md:grid-cols-2"
+                  >
+                    <input type="hidden" name="id" value={department.id} />
+                    <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
                     <div className="space-y-1">
                       <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
                       <Input name="name" defaultValue={department.name} minLength={2} maxLength={80} required />
@@ -191,13 +225,13 @@ export default async function ProduktionsGewerkePage() {
                         defaultValue={department.description ?? ""}
                       />
                     </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button type="submit" variant="outline" size="sm">
-                      Gewerk aktualisieren
-                    </Button>
-                  </div>
-                </form>
+                    <div className="md:col-span-2 flex justify-end">
+                      <Button type="submit" variant="outline" size="sm">
+                        Gewerk aktualisieren
+                      </Button>
+                    </div>
+                  </form>
+                </details>
 
                 <div className="space-y-4">
                   <div>
@@ -235,40 +269,52 @@ export default async function ProduktionsGewerkePage() {
                               </Button>
                             </form>
                           </div>
-                          <form
-                            action={updateDepartmentMemberAction}
-                            className="mt-3 grid gap-2 rounded-md border border-border/50 bg-background/70 p-3 md:grid-cols-3"
+
+                          <details
+                            className="group mt-3 rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden"
                           >
-                            <input type="hidden" name="membershipId" value={membership.id} />
-                            <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Funktion
-                              </label>
-                              <select name="role" defaultValue={membership.role} className={selectClassName}>
-                                {Object.values(DepartmentMembershipRole).map((role) => (
-                                  <option key={role} value={role}>
-                                    {ROLE_LABELS[role]}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Bezeichnung
-                              </label>
-                              <Input name="title" defaultValue={membership.title ?? ""} maxLength={120} />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                              <Input name="note" defaultValue={membership.note ?? ""} maxLength={200} />
-                            </div>
-                            <div className="md:col-span-3 flex justify-end">
-                              <Button type="submit" variant="outline" size="sm">
-                                Änderungen speichern
-                              </Button>
-                            </div>
-                          </form>
+                            <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              <span>Zuweisung anpassen</span>
+                              <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
+                              <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
+                            </summary>
+                            <form
+                              action={updateDepartmentMemberAction}
+                              className="mt-3 grid gap-2 md:grid-cols-3"
+                            >
+                              <input type="hidden" name="membershipId" value={membership.id} />
+                              <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Funktion
+                                </label>
+                                <select name="role" defaultValue={membership.role} className={selectClassName}>
+                                  {Object.values(DepartmentMembershipRole).map((role) => (
+                                    <option key={role} value={role}>
+                                      {ROLE_LABELS[role]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Bezeichnung
+                                </label>
+                                <Input name="title" defaultValue={membership.title ?? ""} maxLength={120} />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Notiz
+                                </label>
+                                <Input name="note" defaultValue={membership.note ?? ""} maxLength={200} />
+                              </div>
+                              <div className="md:col-span-3 flex justify-end">
+                                <Button type="submit" variant="outline" size="sm">
+                                  Änderungen speichern
+                                </Button>
+                              </div>
+                            </form>
+                          </details>
                         </div>
                       ))
                     )}

@@ -4,11 +4,13 @@ import { BreakdownStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import { getActiveProduction, getActiveProductionId } from "@/lib/active-production";
+import { getActiveProduction } from "@/lib/active-production";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
+import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
 import {
   createSceneAction,
@@ -51,29 +53,32 @@ export default async function ProduktionsSzenenPage() {
     );
   }
 
-  const activeProductionId = await getActiveProductionId();
-  if (!activeProductionId) {
+  const activeProduction = await getActiveProduction();
+  const headerActions = (
+    <Button asChild variant="outline" size="sm">
+      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
+    </Button>
+  );
+
+  if (!activeProduction) {
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardHeader className="space-y-2">
-            <CardTitle className="text-lg font-semibold">Keine aktive Produktion ausgewählt</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Wähle in der Produktionsübersicht eine aktive Produktion aus, um Szenen und Breakdowns zu verwalten.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="space-y-10">
+        <ProductionWorkspaceHeader
+          title="Szenen &amp; Breakdowns"
+          description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
+          activeWorkspace="scenes"
+          production={null}
+          actions={headerActions}
+        />
+        <ProductionWorkspaceEmptyState
+          title="Keine aktive Produktion ausgewählt"
+          description="Wähle in der Produktionsübersicht eine aktive Produktion aus, um Szenen und Breakdowns zu verwalten."
+        />
       </div>
     );
   }
 
-  const [activeProduction, users, departments, show] = await Promise.all([
-    getActiveProduction(),
+  const [users, departments, show] = await Promise.all([
     prisma.user.findMany({
       orderBy: [
         { name: "asc" },
@@ -86,7 +91,7 @@ export default async function ProduktionsSzenenPage() {
       select: { id: true, name: true, slug: true, color: true },
     }),
     prisma.show.findUnique({
-      where: { id: activeProductionId },
+      where: { id: activeProduction.id },
       select: {
         id: true,
         title: true,
@@ -148,37 +153,37 @@ export default async function ProduktionsSzenenPage() {
 
   const currentPath = "/mitglieder/produktionen/szenen";
   const statusOptions = Object.values(BreakdownStatus);
-  const productionTitle = activeProduction?.title && activeProduction.title.trim()
-    ? activeProduction.title
-    : `Produktion ${activeProduction?.year ?? show.year}`;
+  const sceneCount = show.scenes.length;
+  const breakdownCount = show.scenes.reduce((acc, scene) => acc + scene.breakdownItems.length, 0);
+  const characterCount = show.characters.length;
+  const headerStats = [
+    { label: "Szenen", value: sceneCount, hint: "Erfasste Abläufe" },
+    { label: "Breakdowns", value: breakdownCount, hint: "Aufgaben über alle Gewerke" },
+    { label: "Rollen", value: characterCount, hint: "Verfügbare Figuren" },
+  ];
+
+  const summaryActions = (
+    <>
+      <Button asChild size="sm" variant="outline">
+        <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzungen</Link>
+      </Button>
+      <Button asChild size="sm" variant="outline">
+        <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams</Link>
+      </Button>
+    </>
+  );
 
   return (
     <div className="space-y-10">
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Aktive Produktion</p>
-            <h1 className="text-3xl font-semibold">Szenen &amp; Breakdowns</h1>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick.
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
-          </Button>
-        </div>
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-xl font-semibold">{productionTitle}</CardTitle>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Jahrgang {show.year}</p>
-          </CardHeader>
-          {show.synopsis ? (
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{show.synopsis}</p>
-            </CardContent>
-          ) : null}
-        </Card>
-      </section>
+      <ProductionWorkspaceHeader
+        title="Szenen &amp; Breakdowns"
+        description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
+        activeWorkspace="scenes"
+        production={activeProduction}
+        stats={headerStats}
+        actions={headerActions}
+        summaryActions={summaryActions}
+      />
 
       <Card>
         <CardHeader className="space-y-2">
@@ -186,46 +191,53 @@ export default async function ProduktionsSzenenPage() {
           <p className="text-sm text-muted-foreground">Erfasse Orte, Tageszeiten, Reihenfolgen und Notizen, um den Szenenplan aktuell zu halten.</p>
         </CardHeader>
         <CardContent>
-          <form action={createSceneAction} method="post" className="grid gap-4 md:grid-cols-3">
+          <form action={createSceneAction} method="post" className="grid gap-6">
             <input type="hidden" name="showId" value={show.id} />
             <input type="hidden" name="redirectPath" value={currentPath} />
+            <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-3">
+              <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Basisdaten
+              </legend>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Nummer</label>
+                <Input name="identifier" maxLength={40} placeholder="z.B. 1" />
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-sm font-medium">Titel</label>
+                <Input name="title" maxLength={160} placeholder="z.B. Ankunft im Park" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Ort</label>
+                <Input name="location" maxLength={120} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Tageszeit</label>
+                <Input name="timeOfDay" maxLength={60} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Slug</label>
+                <Input name="slug" maxLength={80} placeholder="szene-1" />
+              </div>
+            </fieldset>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Reihenfolge</label>
+                <Input type="number" name="sequence" min={0} max={9999} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Dauer (Minuten)</label>
+                <Input type="number" name="duration" min={0} max={600} />
+              </div>
+            </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Nummer</label>
-              <Input name="identifier" maxLength={40} placeholder="z.B. 1" />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-sm font-medium">Titel</label>
-              <Input name="title" maxLength={160} placeholder="z.B. Ankunft im Park" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Ort</label>
-              <Input name="location" maxLength={120} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Tageszeit</label>
-              <Input name="timeOfDay" maxLength={60} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Slug</label>
-              <Input name="slug" maxLength={80} placeholder="szene-1" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Reihenfolge</label>
-              <Input type="number" name="sequence" min={0} max={9999} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Dauer (Minuten)</label>
-              <Input type="number" name="duration" min={0} max={600} />
-            </div>
-            <div className="space-y-1 md:col-span-3">
               <label className="text-sm font-medium">Zusammenfassung</label>
               <Textarea name="summary" rows={2} maxLength={600} />
             </div>
-            <div className="space-y-1 md:col-span-3">
+            <div className="space-y-1">
               <label className="text-sm font-medium">Notizen</label>
               <Textarea name="notes" rows={2} maxLength={400} />
             </div>
-            <div className="md:col-span-3">
+            <div>
               <Button type="submit">Szene speichern</Button>
             </div>
           </form>
@@ -274,14 +286,19 @@ export default async function ProduktionsSzenenPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-6">
-                  <form
-                    action={updateSceneAction}
-                    method="post"
-                    className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4"
-                  >
-                    <input type="hidden" name="sceneId" value={scene.id} />
-                    <input type="hidden" name="redirectPath" value={currentPath} />
-                    <div className="grid gap-3 md:grid-cols-3">
+                  <details className="group rounded-lg border border-border/60 bg-background/70 p-4 [&_summary::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+                      <span>Szene bearbeiten</span>
+                      <span className="text-xs text-muted-foreground group-open:hidden">Öffnen</span>
+                      <span className="hidden text-xs text-muted-foreground group-open:inline">Schließen</span>
+                    </summary>
+                    <form
+                      action={updateSceneAction}
+                      method="post"
+                      className="mt-4 grid gap-3 rounded-md border border-border/50 bg-background/80 p-4 md:grid-cols-3"
+                    >
+                      <input type="hidden" name="sceneId" value={scene.id} />
+                      <input type="hidden" name="redirectPath" value={currentPath} />
                       <div className="space-y-1">
                         <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nummer</label>
                         <Input name="identifier" defaultValue={scene.identifier ?? ""} maxLength={40} />
@@ -318,13 +335,13 @@ export default async function ProduktionsSzenenPage() {
                         <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notizen</label>
                         <Textarea name="notes" rows={2} maxLength={400} defaultValue={scene.notes ?? ""} />
                       </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button type="submit" variant="outline" size="sm">
-                        Szene aktualisieren
-                      </Button>
-                    </div>
-                  </form>
+                      <div className="md:col-span-3 flex justify-end">
+                        <Button type="submit" variant="outline" size="sm">
+                          Szene aktualisieren
+                        </Button>
+                      </div>
+                    </form>
+                  </details>
 
                   <div className="space-y-4">
                     <div className="rounded-lg border border-border/60 bg-background/70 p-4">
@@ -436,63 +453,71 @@ export default async function ProduktionsSzenenPage() {
                                   </Button>
                                 </form>
                               </div>
-                              <form
-                                action={updateBreakdownItemAction}
-                                method="post"
-                                className="mt-3 grid gap-2 rounded-md border border-border/50 bg-background/70 p-3 md:grid-cols-4"
-                              >
-                                <input type="hidden" name="itemId" value={item.id} />
-                                <input type="hidden" name="redirectPath" value={currentPath} />
-                                <div className="space-y-1">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Gewerk</label>
-                                  <select name="departmentId" defaultValue={item.department?.id ?? ""} className={selectSmallClassName}>
-                                    <option value="">Gewerk wählen</option>
-                                    {departments.map((departmentOption) => (
-                                      <option key={departmentOption.id} value={departmentOption.id}>
-                                        {departmentOption.name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</label>
-                                  <select name="status" defaultValue={item.status} className={selectSmallClassName}>
-                                    {statusOptions.map((status) => (
-                                      <option key={status} value={status}>
-                                        {STATUS_LABELS[status]}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Benötigt bis</label>
-                                  <Input type="date" name="neededBy" defaultValue={item.neededBy ? item.neededBy.toISOString().slice(0, 10) : ""} />
-                                </div>
-                                <div className="space-y-1 md:col-span-4">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
-                                  <Textarea name="description" rows={2} maxLength={600} defaultValue={item.description ?? ""} />
-                                </div>
-                                <div className="space-y-1 md:col-span-2">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                                  <Input name="note" defaultValue={item.note ?? ""} maxLength={300} />
-                                </div>
-                                <div className="space-y-1 md:col-span-2">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Zuständig</label>
-                                  <select name="assignedToId" defaultValue={item.assignedToId ?? ""} className={selectSmallClassName}>
-                                    <option value="">(keine Zuordnung)</option>
-                                    {users.map((user) => (
-                                      <option key={user.id} value={user.id}>
-                                        {formatUserName(user)}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="md:col-span-4 flex justify-end">
-                                  <Button type="submit" variant="outline" size="sm">
-                                    Änderungen speichern
-                                  </Button>
-                                </div>
-                              </form>
+
+                              <details className="group mt-3 rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden">
+                                <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                  <span>Aufgabe aktualisieren</span>
+                                  <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
+                                  <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
+                                </summary>
+                                <form
+                                  action={updateBreakdownItemAction}
+                                  method="post"
+                                  className="mt-3 grid gap-2 md:grid-cols-4"
+                                >
+                                  <input type="hidden" name="itemId" value={item.id} />
+                                  <input type="hidden" name="redirectPath" value={currentPath} />
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Gewerk</label>
+                                    <select name="departmentId" defaultValue={item.department?.id ?? ""} className={selectSmallClassName}>
+                                      <option value="">Gewerk wählen</option>
+                                      {departments.map((departmentOption) => (
+                                        <option key={departmentOption.id} value={departmentOption.id}>
+                                          {departmentOption.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</label>
+                                    <select name="status" defaultValue={item.status} className={selectSmallClassName}>
+                                      {statusOptions.map((status) => (
+                                        <option key={status} value={status}>
+                                          {STATUS_LABELS[status]}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Benötigt bis</label>
+                                    <Input type="date" name="neededBy" defaultValue={item.neededBy ? item.neededBy.toISOString().slice(0, 10) : ""} />
+                                  </div>
+                                  <div className="space-y-1 md:col-span-4">
+                                    <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
+                                    <Textarea name="description" rows={2} maxLength={600} defaultValue={item.description ?? ""} />
+                                  </div>
+                                  <div className="space-y-1 md:col-span-2">
+                                    <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
+                                    <Input name="note" defaultValue={item.note ?? ""} maxLength={300} />
+                                  </div>
+                                  <div className="space-y-1 md:col-span-2">
+                                    <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Zuständig</label>
+                                    <select name="assignedToId" defaultValue={item.assignedToId ?? ""} className={selectSmallClassName}>
+                                      <option value="">(keine Zuordnung)</option>
+                                      {users.map((user) => (
+                                        <option key={user.id} value={user.id}>
+                                          {formatUserName(user)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="md:col-span-4 flex justify-end">
+                                    <Button type="submit" variant="outline" size="sm">
+                                      Änderungen speichern
+                                    </Button>
+                                  </div>
+                                </form>
+                              </details>
                             </div>
                           ))
                         )}
