@@ -60,10 +60,11 @@ Hub and publishes two app instances via Traefik:
 - `https://devtheater.beegreenx.de` using the `dev` tag
 - `https://prodtheater.beegreenx.de` using the `prod` tag
 
-Both services share a single Postgres container. The database init script under
-`docker/initdb/001-create-databases.sql` provisions the schemas `theater_dev` and
-`theater_prod`. The compose stack expects an external Docker network called
-`proxy` so Traefik can route traffic to the containers.
+Both services share a single Postgres container. A short-lived
+`db-bootstrap` service (part of the compose file) connects to the database and
+creates the schemas `theater_dev` and `theater_prod` on first startup, so no
+external SQL file is required. The compose stack expects an external Docker
+network called `proxy` so Traefik can route traffic to the containers.
 
 ### Run the combined server without Docker
 
