@@ -1,5 +1,5 @@
 # Development Dockerfile bundling the Next.js app and realtime server
-FROM node:20-slim
+FROM node:20-alpine
 
 ARG NODE_ENV=development
 
@@ -13,7 +13,7 @@ ENV PNPM_HOME=/root/.local/share/pnpm \
     REALTIME_SERVER_EVENT_PATH=/realtime/events \
     TURBOPACK=1
 
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/* \
+RUN apk add --no-cache openssl \
     && corepack enable
 
 WORKDIR /app
