@@ -281,7 +281,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         const data = await response.json().catch(() => null);
         if (!cancelled && Array.isArray(data?.interests)) {
           const entries = data.interests
-            .map((entry: unknown) => {
+            .map((entry: unknown): InterestSuggestion | null => {
               if (typeof entry === "string") {
                 return { name: entry, usage: 0 } satisfies InterestSuggestion;
               }
@@ -296,7 +296,9 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
               }
               return null;
             })
-            .filter((entry): entry is InterestSuggestion => Boolean(entry?.name));
+            .filter(
+              (entry: InterestSuggestion | null): entry is InterestSuggestion => Boolean(entry?.name),
+            );
           setAvailableInterests(entries);
         }
       } catch {
@@ -1053,7 +1055,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                           Fehlt ein Bereich? Beschreibe kurz das Team oder Projekt, das du übernehmen möchtest.
                         </p>
                       </div>
-                      <Button type="button" size="sm" variant="secondary" onClick={addCustomCrewPreference}>
+                      <Button type="button" size="sm" variant="outline" onClick={addCustomCrewPreference}>
                         Hinzufügen
                       </Button>
                     </div>

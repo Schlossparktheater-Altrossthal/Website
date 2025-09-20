@@ -4,14 +4,14 @@ import { prisma } from "@/lib/prisma";
 
 export const ACTIVE_PRODUCTION_COOKIE = "active-production";
 
-export function getActiveProductionId() {
-  const store = cookies();
+export async function getActiveProductionId() {
+  const store = await cookies();
   const value = store.get(ACTIVE_PRODUCTION_COOKIE)?.value;
   return value ?? null;
 }
 
 export async function getActiveProduction() {
-  const activeProductionId = getActiveProductionId();
+  const activeProductionId = await getActiveProductionId();
   if (!activeProductionId) {
     return null;
   }

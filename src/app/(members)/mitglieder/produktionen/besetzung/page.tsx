@@ -53,7 +53,7 @@ export default async function ProduktionsBesetzungPage() {
     );
   }
 
-  const activeProductionId = getActiveProductionId();
+  const activeProductionId = await getActiveProductionId();
   if (!activeProductionId) {
     return (
       <div className="space-y-4">

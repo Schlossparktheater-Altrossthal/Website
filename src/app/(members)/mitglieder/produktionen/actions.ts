@@ -14,8 +14,6 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { ACTIVE_PRODUCTION_COOKIE } from "@/lib/active-production";
 
-type ActionResult = { success: true } | { error: string };
-
 type ReadOptions = {
   minLength?: number;
   maxLength?: number;
@@ -639,9 +637,11 @@ export async function deleteCharacterAction(formData: FormData): Promise<void> {
   }
 }
 
-export async function assignCharacterCastingAction(formData: FormData): Promise<ActionResult> {
+export async function assignCharacterCastingAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const characterId = readString(formData, "characterId", { label: "Rolle" });
@@ -650,9 +650,13 @@ export async function assignCharacterCastingAction(formData: FormData): Promise<
       where: { id: characterId },
       select: { showId: true },
     });
-    if (!character) return { error: "Rolle wurde nicht gefunden." };
+    if (!character) {
+      throw new Error("Rolle wurde nicht gefunden.");
+    }
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
-    if (!user) return { error: "Mitglied wurde nicht gefunden." };
+    if (!user) {
+      throw new Error("Mitglied wurde nicht gefunden.");
+    }
 
     const type =
       parseEnumValue(CharacterCastingType, formData.get("type"), "Besetzungsart", { optional: true }) ??
@@ -677,18 +681,19 @@ export async function assignCharacterCastingAction(formData: FormData): Promise<
     });
 
     revalidateShow(character.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("assignCharacterCastingAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Besetzung konnte nicht gespeichert werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Besetzung konnte nicht gespeichert werden.";
+    throw new Error(message);
   }
 }
 
-export async function updateCharacterCastingAction(formData: FormData): Promise<ActionResult> {
+export async function updateCharacterCastingAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const castingId = readString(formData, "castingId", { label: "Besetzung" });
@@ -700,7 +705,9 @@ export async function updateCharacterCastingAction(formData: FormData): Promise<
         character: { select: { showId: true } },
       },
     });
-    if (!casting) return { error: "Besetzung wurde nicht gefunden." };
+    if (!casting) {
+      throw new Error("Besetzung wurde nicht gefunden.");
+    }
 
     const type =
       parseEnumValue(CharacterCastingType, formData.get("type"), "Besetzungsart", { optional: true }) ??
@@ -717,26 +724,25 @@ export async function updateCharacterCastingAction(formData: FormData): Promise<
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        return {
-          error: "Diese Besetzung existiert bereits in der gewählten Besetzungsart.",
-        };
+        throw new Error("Diese Besetzung existiert bereits in der gewählten Besetzungsart.");
       }
       throw error;
     }
 
     revalidateShow(casting.character.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("updateCharacterCastingAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Besetzung konnte nicht aktualisiert werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Besetzung konnte nicht aktualisiert werden.";
+    throw new Error(message);
   }
 }
 
-export async function removeCharacterCastingAction(formData: FormData): Promise<ActionResult> {
+export async function removeCharacterCastingAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const castingId = readString(formData, "castingId", { label: "Besetzung" });
@@ -744,27 +750,32 @@ export async function removeCharacterCastingAction(formData: FormData): Promise<
       where: { id: castingId },
       select: { character: { select: { showId: true } } },
     });
-    if (!casting) return { error: "Besetzung wurde nicht gefunden." };
+    if (!casting) {
+      throw new Error("Besetzung wurde nicht gefunden.");
+    }
 
     await prisma.characterCasting.delete({ where: { id: castingId } });
     revalidateShow(casting.character.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("removeCharacterCastingAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Besetzung konnte nicht entfernt werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Besetzung konnte nicht entfernt werden.";
+    throw new Error(message);
   }
 }
 
-export async function createSceneAction(formData: FormData): Promise<ActionResult> {
+export async function createSceneAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const showId = readString(formData, "showId", { label: "Produktion" });
     const show = await prisma.show.findUnique({ where: { id: showId }, select: { id: true } });
-    if (!show) return { error: "Produktion wurde nicht gefunden." };
+    if (!show) {
+      throw new Error("Produktion wurde nicht gefunden.");
+    }
 
     const identifier = readOptionalString(formData, "identifier", { label: "Nummer", maxLength: 40 });
     const title = readOptionalString(formData, "title", { label: "Titel", maxLength: 160 });
@@ -801,18 +812,18 @@ export async function createSceneAction(formData: FormData): Promise<ActionResul
     });
 
     revalidateShow(showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("createSceneAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Szene konnte nicht angelegt werden.",
-    };
+    const message = error instanceof Error ? error.message : "Szene konnte nicht angelegt werden.";
+    throw new Error(message);
   }
 }
 
-export async function updateSceneAction(formData: FormData): Promise<ActionResult> {
+export async function updateSceneAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const sceneId = readString(formData, "sceneId", { label: "Szene" });
@@ -820,7 +831,9 @@ export async function updateSceneAction(formData: FormData): Promise<ActionResul
       where: { id: sceneId },
       select: { showId: true, slug: true },
     });
-    if (!scene) return { error: "Szene wurde nicht gefunden." };
+    if (!scene) {
+      throw new Error("Szene wurde nicht gefunden.");
+    }
 
     const identifier = readOptionalString(formData, "identifier", { label: "Nummer", maxLength: 40 });
     const title = readOptionalString(formData, "title", { label: "Titel", maxLength: 160 });
@@ -857,18 +870,19 @@ export async function updateSceneAction(formData: FormData): Promise<ActionResul
     });
 
     revalidateShow(scene.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("updateSceneAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Szene konnte nicht aktualisiert werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Szene konnte nicht aktualisiert werden.";
+    throw new Error(message);
   }
 }
 
-export async function deleteSceneAction(formData: FormData): Promise<ActionResult> {
+export async function deleteSceneAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const sceneId = readString(formData, "sceneId", { label: "Szene" });
@@ -876,22 +890,24 @@ export async function deleteSceneAction(formData: FormData): Promise<ActionResul
       where: { id: sceneId },
       select: { showId: true },
     });
-    if (!scene) return { error: "Szene wurde nicht gefunden." };
+    if (!scene) {
+      throw new Error("Szene wurde nicht gefunden.");
+    }
 
     await prisma.scene.delete({ where: { id: sceneId } });
     revalidateShow(scene.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("deleteSceneAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Szene konnte nicht entfernt werden.",
-    };
+    const message = error instanceof Error ? error.message : "Szene konnte nicht entfernt werden.";
+    throw new Error(message);
   }
 }
 
-export async function addSceneCharacterAction(formData: FormData): Promise<ActionResult> {
+export async function addSceneCharacterAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const sceneId = readString(formData, "sceneId", { label: "Szene" });
@@ -901,10 +917,14 @@ export async function addSceneCharacterAction(formData: FormData): Promise<Actio
       prisma.scene.findUnique({ where: { id: sceneId }, select: { showId: true } }),
       prisma.character.findUnique({ where: { id: characterId }, select: { showId: true } }),
     ]);
-    if (!scene) return { error: "Szene wurde nicht gefunden." };
-    if (!character) return { error: "Rolle wurde nicht gefunden." };
+    if (!scene) {
+      throw new Error("Szene wurde nicht gefunden.");
+    }
+    if (!character) {
+      throw new Error("Rolle wurde nicht gefunden.");
+    }
     if (scene.showId !== character.showId) {
-      return { error: "Die Figur gehört nicht zur ausgewählten Produktion." };
+      throw new Error("Die Figur gehört nicht zur ausgewählten Produktion.");
     }
 
     const orderValue = readOptionalInt(formData, "order", { label: "Sortierung", min: 0, max: 9999 });
@@ -925,18 +945,19 @@ export async function addSceneCharacterAction(formData: FormData): Promise<Actio
     });
 
     revalidateShow(scene.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("addSceneCharacterAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Figur konnte nicht hinzugefügt werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Figur konnte nicht hinzugefügt werden.";
+    throw new Error(message);
   }
 }
 
-export async function removeSceneCharacterAction(formData: FormData): Promise<ActionResult> {
+export async function removeSceneCharacterAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const assignmentId = readString(formData, "assignmentId", { label: "Zuordnung" });
@@ -944,22 +965,25 @@ export async function removeSceneCharacterAction(formData: FormData): Promise<Ac
       where: { id: assignmentId },
       select: { scene: { select: { showId: true } } },
     });
-    if (!assignment) return { error: "Zuordnung wurde nicht gefunden." };
+    if (!assignment) {
+      throw new Error("Zuordnung wurde nicht gefunden.");
+    }
 
     await prisma.sceneCharacter.delete({ where: { id: assignmentId } });
     revalidateShow(assignment.scene.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("removeSceneCharacterAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Zuordnung konnte nicht entfernt werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Zuordnung konnte nicht entfernt werden.";
+    throw new Error(message);
   }
 }
 
-export async function createBreakdownItemAction(formData: FormData): Promise<ActionResult> {
+export async function createBreakdownItemAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const sceneId = readString(formData, "sceneId", { label: "Szene" });
@@ -974,9 +998,13 @@ export async function createBreakdownItemAction(formData: FormData): Promise<Act
     const assignedToId = readOptionalString(formData, "assignedToId", { label: "Zuständig" });
 
     const scene = await prisma.scene.findUnique({ where: { id: sceneId }, select: { showId: true } });
-    if (!scene) return { error: "Szene wurde nicht gefunden." };
+    if (!scene) {
+      throw new Error("Szene wurde nicht gefunden.");
+    }
     const department = await prisma.department.findUnique({ where: { id: departmentId } });
-    if (!department) return { error: "Gewerk wurde nicht gefunden." };
+    if (!department) {
+      throw new Error("Gewerk wurde nicht gefunden.");
+    }
 
     await prisma.sceneBreakdownItem.create({
       data: {
@@ -992,18 +1020,21 @@ export async function createBreakdownItemAction(formData: FormData): Promise<Act
     });
 
     revalidateShow(scene.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("createBreakdownItemAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Breakdown-Eintrag konnte nicht erstellt werden.",
-    };
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Breakdown-Eintrag konnte nicht erstellt werden.";
+    throw new Error(message);
   }
 }
 
-export async function updateBreakdownItemAction(formData: FormData): Promise<ActionResult> {
+export async function updateBreakdownItemAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const itemId = readString(formData, "itemId", { label: "Breakdown" });
@@ -1011,7 +1042,9 @@ export async function updateBreakdownItemAction(formData: FormData): Promise<Act
       where: { id: itemId },
       select: { scene: { select: { showId: true } } },
     });
-    if (!item) return { error: "Breakdown-Eintrag wurde nicht gefunden." };
+    if (!item) {
+      throw new Error("Breakdown-Eintrag wurde nicht gefunden.");
+    }
 
     const title = readString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
     const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 600 });
@@ -1035,18 +1068,21 @@ export async function updateBreakdownItemAction(formData: FormData): Promise<Act
     });
 
     revalidateShow(item.scene.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("updateBreakdownItemAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Breakdown-Eintrag konnte nicht aktualisiert werden.",
-    };
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Breakdown-Eintrag konnte nicht aktualisiert werden.";
+    throw new Error(message);
   }
 }
 
-export async function removeBreakdownItemAction(formData: FormData): Promise<ActionResult> {
+export async function removeBreakdownItemAction(formData: FormData): Promise<void> {
   const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) {
+    throw new Error(auth.error);
+  }
   const redirectPath = parseRedirectPath(formData);
   try {
     const itemId = readString(formData, "itemId", { label: "Breakdown" });
@@ -1054,15 +1090,18 @@ export async function removeBreakdownItemAction(formData: FormData): Promise<Act
       where: { id: itemId },
       select: { scene: { select: { showId: true } } },
     });
-    if (!item) return { error: "Breakdown-Eintrag wurde nicht gefunden." };
+    if (!item) {
+      throw new Error("Breakdown-Eintrag wurde nicht gefunden.");
+    }
 
     await prisma.sceneBreakdownItem.delete({ where: { id: itemId } });
     revalidateShow(item.scene.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("removeBreakdownItemAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Breakdown-Eintrag konnte nicht entfernt werden.",
-    };
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Breakdown-Eintrag konnte nicht entfernt werden.";
+    throw new Error(message);
   }
 }
