@@ -4,11 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
+import { Camera } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
@@ -23,9 +25,20 @@ const statusLabels: Record<PhotoConsentSummary["status"], string> = {
 
 const statusVariants: Record<PhotoConsentSummary["status"], "default" | "secondary" | "destructive" | "outline"> = {
   none: "outline",
-  pending: "secondary",
-  approved: "default",
-  rejected: "destructive",
+  pending: "outline",
+  approved: "outline",
+  rejected: "outline",
+};
+
+const statusBadgeClasses: Record<PhotoConsentSummary["status"], string> = {
+  none:
+    "border-indigo-200 bg-indigo-50/90 text-indigo-700 shadow-[0_12px_32px_rgba(99,102,241,0.18)] dark:border-indigo-400/40 dark:bg-indigo-400/15 dark:text-indigo-50",
+  pending:
+    "border-amber-200 bg-amber-50/90 text-amber-700 shadow-[0_12px_32px_rgba(245,158,11,0.18)] dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-100",
+  approved:
+    "border-emerald-200 bg-emerald-50/90 text-emerald-700 shadow-[0_12px_36px_rgba(16,185,129,0.22)] dark:border-emerald-400/40 dark:bg-emerald-400/15 dark:text-emerald-50",
+  rejected:
+    "border-rose-200 bg-rose-50/90 text-rose-700 shadow-[0_12px_32px_rgba(244,63,94,0.18)] dark:border-rose-400/40 dark:bg-rose-400/15 dark:text-rose-50",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
@@ -92,7 +105,13 @@ export function PhotoConsentCard() {
 
   const statusBadge = useMemo(() => {
     return (
-      <Badge variant={statusVariants[status]} className="whitespace-nowrap">
+      <Badge
+        variant={statusVariants[status]}
+        className={cn(
+          "whitespace-nowrap rounded-full px-4 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] transition-all duration-200 backdrop-blur-sm",
+          statusBadgeClasses[status],
+        )}
+      >
         {statusLabels[status]}
       </Badge>
     );
@@ -181,17 +200,44 @@ export function PhotoConsentCard() {
     }
   };
 
+  const showIntro = !loading && status !== "approved";
+
   return (
-    <Card className="border border-border/60 bg-background">
-      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Fotoeinverständnis</CardTitle>
-        {statusBadge}
+    <Card className="relative overflow-hidden border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background shadow-xl shadow-primary/10 dark:from-primary/20">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-20 top-0 h-40 w-40 rounded-full bg-primary/20 opacity-70 blur-3xl dark:bg-primary/30"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-16 top-16 h-36 w-36 rounded-full bg-amber-100 opacity-60 blur-3xl dark:bg-amber-300/20"
+      />
+      <CardHeader className="mb-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary shadow-inner">
+            <Camera className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold leading-tight">Darf dein Bühnenmoment sichtbar sein?</CardTitle>
+            <p className="max-w-2xl text-sm text-foreground/70">
+              Wie bei einem Cookiebanner entscheidest du hier, ob wir Fotos von Proben und Aufführungen teilen dürfen.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 self-start rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-foreground/60 shadow-sm backdrop-blur dark:border-primary/40 dark:bg-slate-900/70">
+          <span>Status</span>
+          {statusBadge}
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4 text-sm">
-        <p className="text-foreground/80">
-          Wir benötigen deine Einwilligung, um Fotos von Auftritten und Proben verwenden zu dürfen. Minderjährige Mitglieder
-          benötigen zusätzlich eine unterschriebene Zustimmung der Erziehungsberechtigten.
-        </p>
+      <CardContent className="relative space-y-5 text-sm">
+        {showIntro && (
+          <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 shadow-[0_18px_45px_rgba(59,130,246,0.12)] backdrop-blur dark:border-primary/40 dark:bg-slate-900/70">
+            <p className="font-semibold text-foreground">Mit deinem „Okay“ hilfst du unserem Auftrittsteam.</p>
+            <p className="mt-1 text-foreground/70">
+              Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim Cookiebanner am Seitenrand.
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <p className="text-muted-foreground">Lade Status …</p>
@@ -204,8 +250,7 @@ export function PhotoConsentCard() {
           </div>
         ) : requiresDateOfBirth ? (
           <div className="rounded-md border border-amber-300 bg-amber-50/60 p-3 text-amber-900">
-            Bitte hinterlege dein Geburtsdatum im <Link className="underline" href="/mitglieder/profil">Profil</Link>, damit wir
-            prüfen können, ob ein Elternformular notwendig ist.
+            Bitte hinterlege dein Geburtsdatum im <Link className="underline" href="/mitglieder/profil">Profil</Link>, damit wir prüfen können, ob ein Elternformular notwendig ist.
           </div>
         ) : status === "approved" ? (
           <div className="space-y-2 rounded-md border border-emerald-300 bg-emerald-50/70 p-3 text-emerald-900">
@@ -221,28 +266,31 @@ export function PhotoConsentCard() {
             </ul>
           </div>
         ) : (
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             {summary?.status === "rejected" && summary.rejectionReason && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
                 Ablehnungsgrund: {summary.rejectionReason}
               </div>
             )}
 
-            <label className="flex items-start gap-2">
-              <input
-                type="checkbox"
-                checked={confirm}
-                onChange={(event) => setConfirm(event.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <span>
-                Ich erkläre mich damit einverstanden, dass im Rahmen unseres Schultheaters Fotos von mir erstellt und für
-                interne sowie öffentliche Kommunikationszwecke genutzt werden dürfen.
-              </span>
-            </label>
+            <div className="rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur dark:border-primary/40 dark:bg-slate-900/70">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={confirm}
+                  onChange={(event) => setConfirm(event.target.checked)}
+                  className="mt-1 h-5 w-5 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <span className="text-foreground/80">
+                  <span className="font-semibold text-foreground">Ja, ich bin einverstanden,</span>{" "}
+                  dass im Rahmen unseres Schultheaters Fotos von mir erstellt und für interne sowie öffentliche Kommunikationszwecke genutzt werden dürfen.
+                </span>
+              </label>
+              <p className="mt-3 text-xs text-foreground/60">Du kannst dein Okay hier jederzeit widerrufen.</p>
+            </div>
 
             {requiresDocument && (
-              <div className="space-y-2">
+              <div className="space-y-3 rounded-xl border border-dashed border-primary/30 bg-background/80 p-4 shadow-sm backdrop-blur dark:border-primary/40 dark:bg-slate-900/70">
                 <div className="font-medium text-foreground">Elterliche Einwilligung (PDF oder JPG/PNG)</div>
                 <Input
                   ref={fileInputRef}
@@ -251,9 +299,7 @@ export function PhotoConsentCard() {
                   onChange={handleFileChange}
                   disabled={submitting}
                 />
-                {documentFile && (
-                  <p className="text-xs text-foreground/70">Ausgewählt: {documentFile.name}</p>
-                )}
+                {documentFile && <p className="text-xs text-foreground/70">Ausgewählt: {documentFile.name}</p>}
                 {summary?.hasDocument && !documentFile && (
                   <p className="text-xs text-foreground/60">
                     Es liegt bereits ein Dokument vor. Du kannst hier ein neues hochladen, falls eine aktualisierte Version vorliegt.
@@ -268,13 +314,15 @@ export function PhotoConsentCard() {
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="submit"
+                size="lg"
+                className="shadow-[0_20px_45px_rgba(59,130,246,0.25)] transition-shadow duration-200 hover:shadow-[0_22px_52px_rgba(59,130,246,0.32)]"
                 disabled={
                   submitting ||
                   !confirm ||
                   (requiresDocument && !documentFile && !summary?.hasDocument)
                 }
               >
-                {submitting ? "Übermittle …" : "Einverständnis senden"}
+                {submitting ? "Speichere …" : "Jetzt zustimmen"}
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={submitting}>
                 Status aktualisieren
