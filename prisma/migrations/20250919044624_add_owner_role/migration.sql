@@ -1,9 +1,6 @@
 -- AlterEnum
 ALTER TYPE "public"."Role" ADD VALUE 'owner';
 
--- AlterTable
-ALTER TABLE "public"."BlockedDay" ALTER COLUMN "updatedAt" DROP DEFAULT;
-
 -- CreateTable
 CREATE TABLE "public"."RehearsalInvitee" (
     "id" TEXT NOT NULL,
