@@ -30,6 +30,11 @@ type AttendanceUpdateMessage = Parameters<ServerToClientEvents['attendance_updat
 type NotificationMessage = Parameters<ServerToClientEvents['notification_created']>[0];
 type RehearsalCreatedMessage = Parameters<ServerToClientEvents['rehearsal_created']>[0];
 type RehearsalUpdatedMessage = Parameters<ServerToClientEvents['rehearsal_updated']>[0];
+type HandshakeAuthPayload = {
+  userId: string;
+  userName?: string;
+  token: string;
+};
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -62,9 +67,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const userId = session?.user?.id;
-    const userName = session?.user?.name ?? undefined;
+    const fallbackUserName = session?.user?.name ?? undefined;
+    const abortController = new AbortController();
+    let disposed = false;
+    let latestAuth: HandshakeAuthPayload | null = null;
 
-    if (!userId) {
+    const cleanupSocket = () => {
       stopPingInterval();
       if (socketRef.current) {
         socketRef.current.removeAllListeners();
@@ -72,18 +80,46 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         socketRef.current = null;
       }
       setSocket(null);
+    };
+
+    if (!userId) {
+      cleanupSocket();
       setConnectionStatus('disconnected');
-      return;
+      return () => {
+        disposed = true;
+        abortController.abort();
+      };
     }
 
-    setConnectionStatus('connecting');
+    const requestHandshake = async (signal?: AbortSignal): Promise<HandshakeAuthPayload> => {
+      const response = await fetch('/api/realtime/handshake', {
+        method: 'GET',
+        cache: 'no-store',
+        signal,
+      });
+      if (!response.ok) {
+        throw new Error(`Handshake request failed (${response.status})`);
+      }
+      const data = (await response.json()) as {
+        token?: unknown;
+        userId?: unknown;
+        userName?: unknown;
+      };
+      if (data?.userId && data.userId !== userId) {
+        throw new Error('Handshake user mismatch');
+      }
+      if (!data || typeof data.token !== 'string' || !data.token.trim()) {
+        throw new Error('Handshake token missing');
+      }
+      const canonicalName =
+        typeof data.userName === 'string' && data.userName.trim() ? data.userName : fallbackUserName;
+      return {
+        userId,
+        userName: canonicalName,
+        token: data.token,
+      };
+    };
 
-    if (socketRef.current) {
-      socketRef.current.removeAllListeners();
-      socketRef.current.disconnect();
-    }
-
-    // Resolve realtime URL; fall back to current host if env points to localhost and user is remote
     const resolveRealtimeUrl = (): string | undefined => {
       if (typeof window === 'undefined') return REALTIME_URL;
       if (!REALTIME_URL) return undefined;
@@ -100,67 +136,133 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const options = {
-      path: REALTIME_PATH,
-      transports: ['websocket', 'polling'],
-      forceNew: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-      auth: {
-        userId,
-        userName,
-      },
+    let connectionCleanup: (() => void) | null = null;
+
+    const establishConnection = async () => {
+      setConnectionStatus('connecting');
+
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+
+      try {
+        const handshake = await requestHandshake(abortController.signal);
+        if (disposed) return;
+        latestAuth = handshake;
+
+        const options = {
+          path: REALTIME_PATH,
+          transports: ['websocket', 'polling'],
+          forceNew: true,
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+          auth: handshake,
+        } as const;
+
+        const target = resolveRealtimeUrl();
+        const instance: SocketInstance = target ? io(target, options) : io(options);
+
+        const applyAuth = (auth: HandshakeAuthPayload | null) => {
+          if (!auth) return;
+          instance.auth = auth;
+          if (instance.io?.opts) {
+            instance.io.opts.auth = auth;
+          }
+        };
+
+        socketRef.current = instance;
+        setSocket(instance);
+
+        instance.on('connect', () => {
+          if (disposed) {
+            return;
+          }
+          setConnectionStatus('connected');
+          reconnectAttempts.current = 0;
+
+          instance.emit('join_room', `user_${userId}`);
+          instance.emit('join_room', 'global');
+
+          stopPingInterval();
+          pingIntervalRef.current = setInterval(() => {
+            if (instance.connected) {
+              instance.emit('ping');
+            }
+          }, PING_INTERVAL_MS);
+        });
+
+        instance.on('disconnect', () => {
+          if (disposed) return;
+          setConnectionStatus('disconnected');
+          stopPingInterval();
+        });
+
+        instance.on('reconnect_attempt', async () => {
+          try {
+            const refreshed = await requestHandshake();
+            if (disposed) return;
+            latestAuth = refreshed;
+            applyAuth(latestAuth);
+          } catch (error) {
+            console.warn('Failed to refresh realtime auth token', error);
+          }
+        });
+
+        instance.on('connect_error', async (error: Error) => {
+          console.warn('Socket.IO connection error:', error?.message || error);
+          setConnectionStatus('error');
+          reconnectAttempts.current += 1;
+
+          const message = String(error?.message || '').toLowerCase();
+          if (message.includes('unauthorized') || message.includes('forbidden')) {
+            try {
+              const refreshed = await requestHandshake();
+              if (disposed) return;
+              latestAuth = refreshed;
+              applyAuth(latestAuth);
+              instance.connect();
+            } catch (refreshError) {
+              console.error('Realtime handshake refresh failed', refreshError);
+            }
+          }
+          // With infinite attempts configured, let socket.io keep trying with backoff
+        });
+
+        instance.on('pong', () => {
+          // Keep connection alive acknowledgement
+        });
+
+        applyAuth(latestAuth);
+
+        connectionCleanup = () => {
+          instance.removeAllListeners();
+          instance.disconnect();
+        };
+      } catch (error) {
+        if (disposed) return;
+        console.error('Failed to establish realtime connection', error);
+        setConnectionStatus('error');
+        cleanupSocket();
+      }
     };
 
-    const target = resolveRealtimeUrl();
-    const instance: SocketInstance = target
-      ? io(target, options)
-      : io(options);
-
-    socketRef.current = instance;
-    setSocket(instance);
-
-    instance.on('connect', () => {
-      setConnectionStatus('connected');
-      reconnectAttempts.current = 0;
-
-      instance.emit('join_room', `user_${userId}`);
-      instance.emit('join_room', 'global');
-
-      stopPingInterval();
-      pingIntervalRef.current = setInterval(() => {
-        if (instance.connected) {
-          instance.emit('ping');
-        }
-      }, PING_INTERVAL_MS);
-    });
-
-    instance.on('disconnect', () => {
-      setConnectionStatus('disconnected');
-      stopPingInterval();
-    });
-
-    instance.on('connect_error', (error: Error) => {
-      console.warn('Socket.IO connection error:', error?.message || error);
-      setConnectionStatus('error');
-      reconnectAttempts.current += 1;
-      // With infinite attempts configured, let socket.io keep trying with backoff
-    });
-
-    instance.on('pong', () => {
-      // Keep connection alive acknowledgement
-    });
+    void establishConnection();
 
     return () => {
+      disposed = true;
+      abortController.abort();
       stopPingInterval();
-      instance.removeAllListeners();
-      instance.disconnect();
-      if (socketRef.current === instance) {
+      connectionCleanup?.();
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
         socketRef.current = null;
-        setSocket(null);
       }
+      setSocket(null);
     };
   }, [session?.user?.id, session?.user?.name, connectionVersion, stopPingInterval]);
 
