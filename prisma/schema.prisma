@@ -246,6 +246,13 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model OwnerSetupToken {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  consumedAt DateTime?
+}
+
 model Show {
   id         String         @id @default(cuid())
   year       Int
