@@ -18,10 +18,11 @@ unter `/realtime`.
 2. **Secrets**: Hinterlege für beide Instanzen die erforderlichen Variablen, z. B.
    `DEV_AUTH_SECRET`, `DEV_REALTIME_AUTH_TOKEN`, `PROD_AUTH_SECRET`, Mail-Setup
    usw. Die Platzhalter mit `:?set …` erzwingen, dass nichts vergessen wird.
-3. **Datenbank**: Ein einzelner Postgres-Container genügt. Das Init-SQL unter
-   `docker/initdb/001-create-databases.sql` erzeugt die Datenbanken
-   `theater_dev` und `theater_prod`, die den jeweiligen Containern über
-   `DATABASE_URL` zugewiesen werden.
+3. **Datenbank**: Ein einzelner Postgres-Container genügt. Die Compose-Datei
+   bringt einen kurzlebigen Service `db-bootstrap` mit, der sich beim Start mit
+   dem Standard-Postgres-Container verbindet und die Datenbanken
+   `theater_dev` und `theater_prod` anlegt. Zusätzliche SQL-Dateien müssen
+   nicht bereitgestellt werden.
 
 ## Deployment-Befehle
 

@@ -7,7 +7,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./docker/initdb/001-create-databases.sql:/docker-entrypoint-initdb.d/001-create-databases.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
@@ -18,12 +17,48 @@ services:
     labels:
       com.centurylinklabs.watchtower.enable: true
 
+  db-bootstrap:
+    image: postgres:16
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      set -eu
+      psql --host db --username "$POSTGRES_USER" --dbname postgres <<'SQL'
+      DO
+      $$
+      BEGIN
+          IF NOT EXISTS (
+              SELECT FROM pg_database WHERE datname = 'theater_dev'
+          ) THEN
+              EXECUTE 'CREATE DATABASE theater_dev';
+          END IF;
+
+          IF NOT EXISTS (
+              SELECT FROM pg_database WHERE datname = 'theater_prod'
+          ) THEN
+              EXECUTE 'CREATE DATABASE theater_prod';
+          END IF;
+      END
+      $$
+      ;
+      SQL
+    networks:
+      - internal
+
   app-dev:
     image: "${THEATER_WEBSITE_IMAGE:-limitlessgreen/theater_website}:${DEV_IMAGE_TAG:-dev}"
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      db-bootstrap:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/theater_dev?schema=public
@@ -63,6 +98,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db-bootstrap:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/theater_prod?schema=public
