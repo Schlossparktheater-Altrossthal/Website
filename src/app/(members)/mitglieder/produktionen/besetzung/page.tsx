@@ -4,11 +4,13 @@ import { CharacterCastingType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import { getActiveProduction, getActiveProductionId } from "@/lib/active-production";
+import { getActiveProduction } from "@/lib/active-production";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
+import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
 import {
   createCharacterAction,
@@ -53,29 +55,32 @@ export default async function ProduktionsBesetzungPage() {
     );
   }
 
-  const activeProductionId = await getActiveProductionId();
-  if (!activeProductionId) {
+  const activeProduction = await getActiveProduction();
+  const headerActions = (
+    <Button asChild variant="outline" size="sm">
+      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
+    </Button>
+  );
+
+  if (!activeProduction) {
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardHeader className="space-y-2">
-            <CardTitle className="text-lg font-semibold">Keine aktive Produktion ausgewählt</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Wähle in der Produktionsübersicht eine aktive Produktion aus, um Rollen und Besetzungen zu bearbeiten.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="space-y-10">
+        <ProductionWorkspaceHeader
+          title="Rollen &amp; Besetzungen"
+          description="Erstelle neue Figuren, pflege Beschreibungen und ordne Ensemble-Mitglieder als Primär-, Alternate- oder Cover-Besetzung zu."
+          activeWorkspace="casting"
+          production={null}
+          actions={headerActions}
+        />
+        <ProductionWorkspaceEmptyState
+          title="Keine aktive Produktion ausgewählt"
+          description="Wähle in der Produktionsübersicht eine aktive Produktion aus, um Rollen und Besetzungen zu bearbeiten."
+        />
       </div>
     );
   }
 
-  const [activeProduction, users, show] = await Promise.all([
-    getActiveProduction(),
+  const [users, show] = await Promise.all([
     prisma.user.findMany({
       orderBy: [
         { name: "asc" },
@@ -84,7 +89,7 @@ export default async function ProduktionsBesetzungPage() {
       select: { id: true, name: true, email: true },
     }),
     prisma.show.findUnique({
-      where: { id: activeProductionId },
+      where: { id: activeProduction.id },
       select: {
         id: true,
         title: true,
@@ -123,38 +128,31 @@ export default async function ProduktionsBesetzungPage() {
   }
 
   const currentPath = "/mitglieder/produktionen/besetzung";
+  const characterCount = show.characters.length;
+  const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
+  const headerStats = [
+    { label: "Rollen", value: characterCount, hint: "Angelegte Figuren" },
+    { label: "Besetzungen", value: castingCount, hint: "Zuordnungen im Ensemble" },
+    { label: "Mitglieder", value: users.length, hint: "Verfügbare Personen" },
+  ];
 
-  const productionTitle = activeProduction?.title && activeProduction.title.trim()
-    ? activeProduction.title
-    : `Produktion ${activeProduction?.year ?? show.year}`;
+  const summaryActions = (
+    <Button asChild size="sm" variant="outline">
+      <Link href="/mitglieder/produktionen/szenen">Szenen &amp; Breakdowns</Link>
+    </Button>
+  );
 
   return (
     <div className="space-y-10">
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Aktive Produktion</p>
-            <h1 className="text-3xl font-semibold">Rollen &amp; Besetzungen</h1>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              Erstelle neue Figuren, pflege Beschreibungen und ordne Ensemble-Mitglieder als Primär-, Alternate- oder Cover-Besetzung zu.
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
-          </Button>
-        </div>
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-xl font-semibold">{productionTitle}</CardTitle>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Jahrgang {show.year}</p>
-          </CardHeader>
-          {show.synopsis ? (
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{show.synopsis}</p>
-            </CardContent>
-          ) : null}
-        </Card>
-      </section>
+      <ProductionWorkspaceHeader
+        title="Rollen &amp; Besetzungen"
+        description="Erstelle neue Figuren, pflege Beschreibungen und ordne Ensemble-Mitglieder als Primär-, Alternate- oder Cover-Besetzung zu."
+        activeWorkspace="casting"
+        production={activeProduction}
+        stats={headerStats}
+        actions={headerActions}
+        summaryActions={summaryActions}
+      />
 
       <Card>
         <CardHeader className="space-y-2">
@@ -162,39 +160,46 @@ export default async function ProduktionsBesetzungPage() {
           <p className="text-sm text-muted-foreground">Füge Figuren hinzu und definiere Reihenfolge, Farbe sowie optionale Notizen.</p>
         </CardHeader>
         <CardContent>
-          <form action={createCharacterAction} method="post" className="grid gap-4 md:grid-cols-2">
+          <form action={createCharacterAction} method="post" className="grid gap-6">
             <input type="hidden" name="showId" value={show.id} />
             <input type="hidden" name="redirectPath" value={currentPath} />
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Name</label>
-              <Input name="name" placeholder="z.B. Protagonist" minLength={2} maxLength={120} required />
+            <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-2">
+              <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Basisdaten
+              </legend>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Name</label>
+                <Input name="name" placeholder="z.B. Protagonist" minLength={2} maxLength={120} required />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Kurzname</label>
+                <Input name="shortName" placeholder="Kurzlabel" maxLength={40} />
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-sm font-medium">Beschreibung</label>
+                <Textarea name="description" rows={2} maxLength={500} placeholder="Charakterbeschreibung" />
+              </div>
+            </fieldset>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Farbe</label>
+                <input
+                  type="color"
+                  name="color"
+                  defaultValue="#7c3aed"
+                  className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Sortierung</label>
+                <Input type="number" name="order" min={0} max={9999} placeholder="0" />
+              </div>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Kurzname</label>
-              <Input name="shortName" placeholder="Kurzlabel" maxLength={40} />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-sm font-medium">Beschreibung</label>
-              <Textarea name="description" rows={2} maxLength={500} placeholder="Charakterbeschreibung" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Farbe</label>
-              <input
-                type="color"
-                name="color"
-                defaultValue="#7c3aed"
-                className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Sortierung</label>
-              <Input type="number" name="order" min={0} max={9999} placeholder="0" />
-            </div>
-            <div className="space-y-1 md:col-span-2">
               <label className="text-sm font-medium">Notiz</label>
               <Textarea name="notes" rows={2} maxLength={500} placeholder="Interne Notiz" />
             </div>
-            <div className="md:col-span-2">
+            <div>
               <Button type="submit">Rolle speichern</Button>
             </div>
           </form>
@@ -243,14 +248,19 @@ export default async function ProduktionsBesetzungPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-5">
-                  <form
-                    action={updateCharacterAction}
-                    method="post"
-                    className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4"
-                  >
-                    <input type="hidden" name="characterId" value={character.id} />
-                    <input type="hidden" name="redirectPath" value={currentPath} />
-                    <div className="grid gap-3 md:grid-cols-2">
+                  <details className="group rounded-lg border border-border/60 bg-background/70 p-4 [&_summary::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+                      <span>Rolle bearbeiten</span>
+                      <span className="text-xs text-muted-foreground group-open:hidden">Öffnen</span>
+                      <span className="hidden text-xs text-muted-foreground group-open:inline">Schließen</span>
+                    </summary>
+                    <form
+                      action={updateCharacterAction}
+                      method="post"
+                      className="mt-4 grid gap-3 rounded-md border border-border/50 bg-background/80 p-4 md:grid-cols-2"
+                    >
+                      <input type="hidden" name="characterId" value={character.id} />
+                      <input type="hidden" name="redirectPath" value={currentPath} />
                       <div className="space-y-1">
                         <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
                         <Input name="name" defaultValue={character.name} minLength={2} maxLength={120} required />
@@ -280,13 +290,13 @@ export default async function ProduktionsBesetzungPage() {
                         <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
                         <Textarea name="notes" rows={2} maxLength={500} defaultValue={character.notes ?? ""} />
                       </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button type="submit" variant="outline" size="sm">
-                        Rolle aktualisieren
-                      </Button>
-                    </div>
-                  </form>
+                      <div className="md:col-span-2 flex justify-end">
+                        <Button type="submit" variant="outline" size="sm">
+                          Rolle aktualisieren
+                        </Button>
+                      </div>
+                    </form>
+                  </details>
 
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold">Besetzung</h3>
@@ -315,35 +325,43 @@ export default async function ProduktionsBesetzungPage() {
                                 </Button>
                               </form>
                             </div>
-                            <form
-                              action={updateCharacterCastingAction}
-                              method="post"
-                              className="mt-3 grid gap-2 rounded-md border border-border/50 bg-background/70 p-3 md:grid-cols-3"
-                            >
-                              <input type="hidden" name="castingId" value={casting.id} />
-                              <input type="hidden" name="redirectPath" value={currentPath} />
-                              <div className="space-y-1">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                  Besetzungsart
-                                </label>
-                                <select name="type" defaultValue={casting.type} className={selectSmallClassName}>
-                                  {CASTING_ORDER.map((type) => (
-                                    <option key={type} value={type}>
-                                      {CASTING_LABELS[type]}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="space-y-1 md:col-span-2">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                                <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
-                              </div>
-                              <div className="md:col-span-3 flex justify-end">
-                                <Button type="submit" variant="outline" size="sm">
-                                  Änderungen speichern
-                                </Button>
-                              </div>
-                            </form>
+
+                            <details className="group mt-3 rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden">
+                              <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                <span>Besetzung anpassen</span>
+                                <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
+                                <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
+                              </summary>
+                              <form
+                                action={updateCharacterCastingAction}
+                                method="post"
+                                className="mt-3 grid gap-2 md:grid-cols-3"
+                              >
+                                <input type="hidden" name="castingId" value={casting.id} />
+                                <input type="hidden" name="redirectPath" value={currentPath} />
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    Besetzungsart
+                                  </label>
+                                  <select name="type" defaultValue={casting.type} className={selectSmallClassName}>
+                                    {CASTING_ORDER.map((type) => (
+                                      <option key={type} value={type}>
+                                        {CASTING_LABELS[type]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="space-y-1 md:col-span-2">
+                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
+                                  <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
+                                </div>
+                                <div className="md:col-span-3 flex justify-end">
+                                  <Button type="submit" variant="outline" size="sm">
+                                    Änderungen speichern
+                                  </Button>
+                                </div>
+                              </form>
+                            </details>
                           </div>
                         ))
                       )}
