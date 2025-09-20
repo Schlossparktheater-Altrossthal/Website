@@ -100,6 +100,69 @@ export async function clearActiveProductionAction(formData: FormData): Promise<A
   }
 }
 
+export async function createProductionAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const session = await requireAuth();
+    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    if (!allowed) {
+      return { error: "Du hast keinen Zugriff auf die Produktionsplanung." };
+    }
+
+    const year = readInt(formData, "year", { label: "Jahr", min: 1900, max: 2200 });
+    const title = readOptionalString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
+    const synopsis = readOptionalString(formData, "synopsis", { label: "Kurzbeschreibung", minLength: 2, maxLength: 600 });
+    const startDate = parseOptionalDate(formData, "startDate", "Startdatum");
+    const endDate = parseOptionalDate(formData, "endDate", "Enddatum");
+    const revealDate = parseOptionalDate(formData, "revealDate", "Premierenankündigung");
+    const setActive = parseCheckbox(formData.get("setActive"));
+    const redirectPath = readOptionalString(formData, "redirectPath");
+
+    if (endDate && !startDate) {
+      throw new Error("Bitte gib auch ein Startdatum an, wenn du ein Enddatum festlegst.");
+    }
+    if (startDate && endDate && endDate < startDate) {
+      throw new Error("Das Enddatum darf nicht vor dem Startdatum liegen.");
+    }
+
+    const formatDateOnly = (date: Date) => date.toISOString().slice(0, 10);
+
+    const show = await prisma.show.create({
+      data: {
+        year,
+        title: title ?? null,
+        synopsis: synopsis ?? null,
+        dates:
+          startDate && endDate
+            ? `${formatDateOnly(startDate)}/${formatDateOnly(endDate)}`
+            : startDate
+              ? formatDateOnly(startDate)
+              : Prisma.JsonNull,
+        revealedAt: revealDate ?? null,
+      },
+      select: { id: true },
+    });
+
+    if (setActive) {
+      cookies().set(ACTIVE_PRODUCTION_COOKIE, show.id, {
+        maxAge: 60 * 60 * 24 * 180,
+        sameSite: "lax",
+        path: "/",
+      });
+    }
+
+    revalidatePath("/mitglieder", "layout");
+    revalidatePath("/mitglieder/produktionen");
+    if (redirectPath) {
+      revalidatePath(redirectPath);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("createProductionAction", error);
+    return { error: error instanceof Error ? error.message : "Produktion konnte nicht angelegt werden." };
+  }
+}
+
 function readString(formData: FormData, key: string, options?: ReadOptions): string {
   const value = readOptionalString(formData, key, options);
   if (value === undefined) {
@@ -124,6 +187,18 @@ function readOptionalInt(
   }
   if (options?.max !== undefined && value > options.max) {
     throw new Error(`${options?.label ?? key} darf höchstens ${options.max} sein.`);
+  }
+  return value;
+}
+
+function readInt(
+  formData: FormData,
+  key: string,
+  options?: { label?: string; min?: number; max?: number },
+) {
+  const value = readOptionalInt(formData, key, options);
+  if (value === undefined) {
+    throw new Error(`${options?.label ?? key} ist erforderlich.`);
   }
   return value;
 }

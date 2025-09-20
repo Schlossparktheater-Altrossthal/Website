@@ -8,9 +8,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import {
   clearActiveProductionAction,
+  createProductionAction,
   setActiveProductionAction,
 } from "./actions";
 
@@ -41,6 +44,10 @@ export default async function ProduktionenPage() {
   ]);
 
   const activeShowId = activeProduction?.id ?? null;
+  const currentYear = new Date().getFullYear();
+  const highestExistingYear = shows.length > 0 ? shows[0].year : currentYear - 1;
+  const suggestedYear = highestExistingYear >= currentYear ? highestExistingYear + 1 : currentYear;
+  const shouldSetActiveByDefault = !activeProduction;
 
   let activeStats: { characters: number; scenes: number; breakdownItems: number } | null = null;
   if (activeShowId) {
@@ -205,52 +212,115 @@ export default async function ProduktionenPage() {
           ) : null}
         </div>
         {shows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Keine Produktionen vorhanden.</p>
-        ) : (
-          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {shows.map((show) => {
-              const isActive = show.id === activeShowId;
-              const title = formatShowTitle(show);
-              return (
-                <li key={show.id}>
-                  <Card
-                    className={cn(
-                      "flex h-full flex-col justify-between border-border/60 bg-background/70 transition hover:border-primary/50 hover:shadow-md",
-                      isActive && "border-primary/60 bg-primary/5 shadow-md"
-                    )}
-                  >
-                    <CardHeader className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Jahrgang {show.year}</p>
-                          <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
-                        </div>
-                        {isActive ? <Badge>Aktiv</Badge> : null}
+          <p className="text-sm text-muted-foreground">
+            Noch keine Produktionen angelegt. Nutze das Formular, um deine erste Produktion anzulegen.
+          </p>
+        ) : null}
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <li>
+            <Card className="flex h-full flex-col border-dashed border-primary/50 bg-primary/5">
+              <CardHeader className="space-y-2">
+                <CardTitle className="text-base font-semibold text-primary">Neue Produktion anlegen</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Erfasse Jahrgang, optionale Beschreibung und starte direkt in den modernen Gewerke-, Rollen- und Szenen-Workflows.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <form action={createProductionAction} className="grid gap-4">
+                  <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Jahr</label>
+                      <Input type="number" name="year" min={1900} max={2200} defaultValue={suggestedYear} required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Titel</label>
+                      <Input name="title" placeholder="Titel der Produktion" maxLength={160} />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Kurzbeschreibung</label>
+                    <Textarea
+                      name="synopsis"
+                      rows={3}
+                      maxLength={600}
+                      placeholder="Optionaler Teaser, Autor*in oder kurzes Motto."
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Startdatum</label>
+                      <Input type="date" name="startDate" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Enddatum</label>
+                      <Input type="date" name="endDate" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Premierenankündigung</label>
+                    <Input type="date" name="revealDate" />
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        name="setActive"
+                        defaultChecked={shouldSetActiveByDefault}
+                        className="mt-1 h-4 w-4 rounded border border-border bg-background text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      />
+                      <span className="leading-snug">Nach dem Anlegen als aktive Produktion setzen</span>
+                    </label>
+                    <Button type="submit" className="sm:w-auto">
+                      Produktion erstellen
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </li>
+          {shows.map((show) => {
+            const isActive = show.id === activeShowId;
+            const title = formatShowTitle(show);
+            return (
+              <li key={show.id}>
+                <Card
+                  className={cn(
+                    "flex h-full flex-col justify-between border-border/60 bg-background/70 transition hover:border-primary/50 hover:shadow-md",
+                    isActive && "border-primary/60 bg-primary/5 shadow-md"
+                  )}
+                >
+                  <CardHeader className="space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Jahrgang {show.year}</p>
+                        <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
                       </div>
-                      {show.synopsis ? (
-                        <p className="text-sm text-muted-foreground">{show.synopsis}</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Keine Kurzbeschreibung hinterlegt.</p>
-                      )}
-                    </CardHeader>
-                    <CardContent className="mt-auto flex flex-wrap items-center gap-2">
-                      <form action={setActiveProductionAction} className="flex-shrink-0">
-                        <input type="hidden" name="showId" value={show.id} />
-                        <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-                        <Button type="submit" size="sm" disabled={isActive}>
-                          {isActive ? "Aktiv ausgewählt" : "Als aktiv setzen"}
-                        </Button>
-                      </form>
-                      <Button asChild size="sm" variant="outline" className="flex-shrink-0">
-                        <Link href={`/mitglieder/produktionen/${show.id}`}>Details anzeigen</Link>
+                      {isActive ? <Badge>Aktiv</Badge> : null}
+                    </div>
+                    {show.synopsis ? (
+                      <p className="text-sm text-muted-foreground">{show.synopsis}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Keine Kurzbeschreibung hinterlegt.</p>
+                    )}
+                  </CardHeader>
+                  <CardContent className="mt-auto flex flex-wrap items-center gap-2">
+                    <form action={setActiveProductionAction} className="flex-shrink-0">
+                      <input type="hidden" name="showId" value={show.id} />
+                      <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
+                      <Button type="submit" size="sm" disabled={isActive}>
+                        {isActive ? "Aktiv ausgewählt" : "Als aktiv setzen"}
                       </Button>
-                    </CardContent>
-                  </Card>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    </form>
+                    <Button asChild size="sm" variant="outline" className="flex-shrink-0">
+                      <Link href={`/mitglieder/produktionen/${show.id}`}>Details anzeigen</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </li>
+            );
+          })}
+        </ul>
       </section>
     </div>
   );
