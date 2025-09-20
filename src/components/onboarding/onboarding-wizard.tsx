@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { AllergyLevel, Role } from "@prisma/client";
+import { AllergyLevel, type Role } from "@prisma/client";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
