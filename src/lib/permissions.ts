@@ -22,12 +22,22 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
       "Bereich zur Verwaltung von Gewerken, Besetzungen, Szenen und Breakdown-Aufgaben im Produktionsmanagement.",
   },
   { key: "mitglieder.rollenverwaltung", label: "Mitgliederverwaltung öffnen" },
+  {
+    key: "mitglieder.einladungen",
+    label: "Einladungslinks verwalten",
+    description: "Mehrfach nutzbare Einladungslinks anlegen, deaktivieren und deren Status prüfen.",
+  },
   { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen" },
   { key: "mitglieder.sperrliste", label: "Sperrliste pflegen" },
   {
     key: "mitglieder.fotoerlaubnisse",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
+  },
+  {
+    key: "mitglieder.onboarding.analytics",
+    label: "Onboarding-Analytics öffnen",
+    description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
   },
 ];
 
