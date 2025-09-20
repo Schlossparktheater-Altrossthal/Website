@@ -1,85 +1,47 @@
 # Doco CD Deployment
 
-Dieses Repository stellt zwei getrennte Deployments für Doco bereit:
+Die Docker-Umgebung wurde vereinheitlicht: Website und Realtime-Server laufen
+jetzt immer gemeinsam im selben Container und exponieren die Socket.IO-Endpunkte
+unter `/realtime`.
 
-- **Entwicklungs-Stack** (`theaterdev.beegreenx.de`): basiert auf dem Entwicklungs-
-  `docker-compose.yml` und wird um Traefik-spezifische Einstellungen ergänzt.
-- **Produktiv-Stack** (`theaterprod.beegreenx.de`): baut das Production-Image und
-  versieht es ebenfalls mit Traefik-Routing.
+## Compose-Dateien
 
-Die zusätzlichen Konfigurationen liegen in separaten Compose-Dateien, so dass die
-Standardentwicklung lokal weiterhin ohne Traefik funktioniert:
-
-| Umgebung | Basis-Datei | Traefik-Overlay |
+| Zweck | Datei | Beschreibung |
 | --- | --- | --- |
-| Entwicklung | `docker-compose.yml` | `docker-compose.dev.traefik.yml` |
-| Produktion | `docker-compose.prod.yml` | `docker-compose.prod.traefik.yml` |
+| Lokale Entwicklung | `docker-compose.yml` | Baut das Dev-Image aus dem Quellcode, startet Postgres (`theater_dev`) und Mailpit. |
+| Hosting via Registry | `docker-compose.hosting.yml` | Nutzt die aus GitHub Actions gepushten Images und veröffentlicht sie per Traefik unter `devtheater.beegreenx.de` und `prodtheater.beegreenx.de`. |
 
-## Vorbereitung
+## Vorbereitung für Doco
 
-1. **Traefik-Netzwerk**: Die Overlays erwarten ein externes Docker-Netzwerk mit dem
-   Namen `proxy` (`docker network create proxy`).
-2. **Secrets**: Hinterlege in Doco die erforderlichen Umgebungsvariablen (z. B.
-   `AUTH_SECRET`, E-Mail-Zugangsdaten oder Production-Datenbank-URL). Für das Dev-
-   Deployment genügen die Standardwerte, für Produktion müssen echte Secrets
-   gesetzt werden.
-3. **Realtime-Endpunkt**: Beide Overlays exposen den Socket.io-Server unter dem
-   Pfad `/realtime`. Der Client nutzt `NEXT_PUBLIC_REALTIME_URL`, um denselben
-   Host zu verwenden – zusätzliche Subdomains sind nicht nötig.
+1. **Traefik-Netzwerk**: Die Hosting-Compose erwartet ein externes Netzwerk
+   `proxy` (`docker network create proxy`).
+2. **Secrets**: Hinterlege für beide Instanzen die erforderlichen Variablen, z. B.
+   `DEV_AUTH_SECRET`, `DEV_REALTIME_AUTH_TOKEN`, `PROD_AUTH_SECRET`, Mail-Setup
+   usw. Die Platzhalter mit `:?set …` erzwingen, dass nichts vergessen wird.
+3. **Datenbank**: Ein einzelner Postgres-Container genügt. Das Init-SQL unter
+   `docker/initdb/001-create-databases.sql` erzeugt die Datenbanken
+   `theater_dev` und `theater_prod`, die den jeweiligen Containern über
+   `DATABASE_URL` zugewiesen werden.
 
 ## Deployment-Befehle
 
-### Entwicklung (`theaterdev.beegreenx.de`)
+Der Hosting-Stack kann komplett gestartet werden:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.traefik.yml up -d
+docker compose -f docker-compose.hosting.yml up -d
 ```
 
-Traefik leitet anschließend `https://theaterdev.beegreenx.de` auf den Next.js Dev-
-Server weiter und stellt die Realtime-API unter `https://theaterdev.beegreenx.de/realtime`
-bereit.
+Traefik routet anschließend automatisch:
 
-### Produktion (`theaterprod.beegreenx.de`)
+- `https://devtheater.beegreenx.de` → Container `app-dev`
+- `https://prodtheater.beegreenx.de` → Container `app-prod`
 
-```bash
-docker compose -f docker-compose.prod.yml -f docker-compose.prod.traefik.yml up -d
-```
+Über `DEV_IMAGE_TAG` bzw. `PROD_IMAGE_TAG` lassen sich bei Bedarf alternative
+Tags (z. B. `sha`-basierte Builds) aus der Registry laden.
 
-Dieses Setup baut das Production-Image (Dockerfile.prod) und aktiviert ebenfalls
-TLS-Routing via Traefik. Stelle sicher, dass alle produktiven Variablen gesetzt
-sind (`AUTH_SECRET`, `REALTIME_AUTH_TOKEN`, etc.).
+## GitHub Action
 
-## Lokale Entwicklung
-
-Für lokale Tests ohne Traefik genügt weiterhin:
-
-```bash
-docker compose up
-```
-
-Die zusätzlichen Dateien greifen nur, wenn sie explizit in den Compose-Befehl
-aufgenommen werden.
-
-## Fallback-Deployment via Docker Hub und Watchtower
-
-Bis das automatische Deployment über Doco zuverlässig funktioniert, steht eine
-einfache Alternative per `docker-compose.deploy.yml` bereit. Die GitHub Action
-buildet bei jedem Push auf `main` zwei Images und legt sie auf Docker Hub ab:
-
-- `limitlessgreen/theater_website:dev`
-- `limitlessgreen/theater_website:prod`
-
-Der Compose-Stack zieht standardmäßig das `prod`-Image und startet zusätzlich
-eine Watchtower-Instanz, die Container mit dem Label
-`com.centurylinklabs.watchtower.enable=true` automatisch aktualisiert.
-
-```bash
-# optional: Tag wechseln, z. B. THEATER_WEBSITE_TAG=dev
-THEATER_WEBSITE_TAG=prod docker compose -f docker-compose.deploy.yml up -d
-```
-
-Wichtige Umgebungsvariablen können wie gewohnt über eine `.env`-Datei gesetzt
-werden (z. B. `AUTH_SECRET`, `DATABASE_URL`, Mail- und Realtime-Konfiguration).
-Watchtower lässt sich über `WATCHTOWER_INTERVAL` oder weitere Variablen
-konfigurieren, wenn abweichende Update-Intervalle oder Benachrichtigungen
-gewünscht sind.
+Die Workflow-Datei `.github/workflows/docker-publish.yml` baut jetzt nur noch
+zwei Images (`Dockerfile.dev` → Tag `dev`, `Dockerfile.prod` → Tag `prod`) und
+pusht sie nach `limitlessgreen/theater_website`. Damit können Doco und weitere
+Umgebungen auf denselben Artefakten basieren.

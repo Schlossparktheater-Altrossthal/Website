@@ -1,0 +1,97 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/initdb/001-create-databases.sql:/docker-entrypoint-initdb.d/001-create-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  app-dev:
+    image: "${THEATER_WEBSITE_IMAGE:-limitlessgreen/theater_website}:${DEV_IMAGE_TAG:-dev}"
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/theater_dev?schema=public
+      NEXTAUTH_URL: https://${DEV_HOST:-devtheater.beegreenx.de}
+      REALTIME_BASE_PATH: /realtime
+      REALTIME_PUBLIC_ORIGIN: https://${DEV_HOST:-devtheater.beegreenx.de}
+      NEXT_PUBLIC_REALTIME_URL: https://${DEV_HOST:-devtheater.beegreenx.de}/realtime
+      AUTH_SECRET: ${DEV_AUTH_SECRET:?set DEV_AUTH_SECRET}
+      REALTIME_AUTH_TOKEN: ${DEV_REALTIME_AUTH_TOKEN:?set DEV_REALTIME_AUTH_TOKEN}
+      REALTIME_HANDSHAKE_SECRET: ${DEV_REALTIME_HANDSHAKE_SECRET:-${DEV_REALTIME_AUTH_TOKEN}}
+      EMAIL_SERVER: ${DEV_EMAIL_SERVER:-}
+      EMAIL_FROM: ${DEV_EMAIL_FROM:-noreply@example.com}
+    networks:
+      - internal
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.devtheater.entrypoints: web
+      traefik.http.routers.devtheater.rule: Host(`${DEV_HOST:-devtheater.beegreenx.de}`)
+      traefik.http.routers.devtheater.middlewares: devtheater-https-redirect
+      traefik.http.routers.devtheater.service: devtheater
+      traefik.http.middlewares.devtheater-https-redirect.redirectscheme.scheme: https
+      traefik.http.routers.devtheater-secure.entrypoints: websecure
+      traefik.http.routers.devtheater-secure.rule: Host(`${DEV_HOST:-devtheater.beegreenx.de}`)
+      traefik.http.routers.devtheater-secure.tls: "true"
+      traefik.http.routers.devtheater-secure.tls.certresolver: myresolver
+      traefik.http.routers.devtheater-secure.service: devtheater
+      traefik.http.services.devtheater.loadbalancer.server.port: 3000
+      traefik.docker.network: proxy
+
+  app-prod:
+    image: "${THEATER_WEBSITE_IMAGE:-limitlessgreen/theater_website}:${PROD_IMAGE_TAG:-prod}"
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/theater_prod?schema=public
+      NEXTAUTH_URL: https://${PROD_HOST:-prodtheater.beegreenx.de}
+      REALTIME_BASE_PATH: /realtime
+      REALTIME_PUBLIC_ORIGIN: https://${PROD_HOST:-prodtheater.beegreenx.de}
+      NEXT_PUBLIC_REALTIME_URL: https://${PROD_HOST:-prodtheater.beegreenx.de}/realtime
+      AUTH_SECRET: ${PROD_AUTH_SECRET:?set PROD_AUTH_SECRET}
+      REALTIME_AUTH_TOKEN: ${PROD_REALTIME_AUTH_TOKEN:?set PROD_REALTIME_AUTH_TOKEN}
+      REALTIME_HANDSHAKE_SECRET: ${PROD_REALTIME_HANDSHAKE_SECRET:-${PROD_REALTIME_AUTH_TOKEN}}
+      EMAIL_SERVER: ${PROD_EMAIL_SERVER:-}
+      EMAIL_FROM: ${PROD_EMAIL_FROM:-noreply@example.com}
+    networks:
+      - internal
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.prodtheater.entrypoints: web
+      traefik.http.routers.prodtheater.rule: Host(`${PROD_HOST:-prodtheater.beegreenx.de}`)
+      traefik.http.routers.prodtheater.middlewares: prodtheater-https-redirect
+      traefik.http.routers.prodtheater.service: prodtheater
+      traefik.http.middlewares.prodtheater-https-redirect.redirectscheme.scheme: https
+      traefik.http.routers.prodtheater-secure.entrypoints: websecure
+      traefik.http.routers.prodtheater-secure.rule: Host(`${PROD_HOST:-prodtheater.beegreenx.de}`)
+      traefik.http.routers.prodtheater-secure.tls: "true"
+      traefik.http.routers.prodtheater-secure.tls.certresolver: myresolver
+      traefik.http.routers.prodtheater-secure.service: prodtheater
+      traefik.http.services.prodtheater.loadbalancer.server.port: 3000
+      traefik.docker.network: proxy
+
+networks:
+  internal:
+  proxy:
+    external: true
+
+volumes:
+  pgdata:
