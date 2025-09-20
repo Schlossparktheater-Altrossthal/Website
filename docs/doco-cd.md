@@ -59,3 +59,27 @@ docker compose up
 
 Die zusätzlichen Dateien greifen nur, wenn sie explizit in den Compose-Befehl
 aufgenommen werden.
+
+## Fallback-Deployment via Docker Hub und Watchtower
+
+Bis das automatische Deployment über Doco zuverlässig funktioniert, steht eine
+einfache Alternative per `docker-compose.deploy.yml` bereit. Die GitHub Action
+buildet bei jedem Push auf `main` zwei Images und legt sie auf Docker Hub ab:
+
+- `limitlessgreen/theater_website:dev`
+- `limitlessgreen/theater_website:prod`
+
+Der Compose-Stack zieht standardmäßig das `prod`-Image und startet zusätzlich
+eine Watchtower-Instanz, die Container mit dem Label
+`com.centurylinklabs.watchtower.enable=true` automatisch aktualisiert.
+
+```bash
+# optional: Tag wechseln, z. B. THEATER_WEBSITE_TAG=dev
+THEATER_WEBSITE_TAG=prod docker compose -f docker-compose.deploy.yml up -d
+```
+
+Wichtige Umgebungsvariablen können wie gewohnt über eine `.env`-Datei gesetzt
+werden (z. B. `AUTH_SECRET`, `DATABASE_URL`, Mail- und Realtime-Konfiguration).
+Watchtower lässt sich über `WATCHTOWER_INTERVAL` oder weitere Variablen
+konfigurieren, wenn abweichende Update-Intervalle oder Benachrichtigungen
+gewünscht sind.

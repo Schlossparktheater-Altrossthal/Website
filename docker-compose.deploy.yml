@@ -1,0 +1,63 @@
+# Docker Compose stack for manual deployments using prebuilt images from Docker Hub
+# Images are expected at limitlessgreen/theater_website with tags like `dev` or `prod`.
+services:
+  app:
+    image: "${THEATER_WEBSITE_IMAGE:-limitlessgreen/theater_website}:${THEATER_WEBSITE_TAG:-prod}"
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      realtime:
+        condition: service_started
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://example.com}
+      AUTH_SECRET: ${AUTH_SECRET}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/theater?schema=public}
+      EMAIL_SERVER: ${EMAIL_SERVER:-smtp://user:pass@smtp.example.com:587}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
+      REALTIME_SERVER_URL: http://realtime:4001
+      REALTIME_AUTH_TOKEN: ${REALTIME_AUTH_TOKEN:-change-me}
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-https://example.com/realtime}
+      NEXT_PUBLIC_REALTIME_PATH: ${NEXT_PUBLIC_REALTIME_PATH:-/socket.io}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: "theater-website"
+
+  realtime:
+    build: ./realtime-server
+    restart: unless-stopped
+    environment:
+      PORT: 4001
+      SOCKET_PATH: ${NEXT_PUBLIC_REALTIME_PATH:-/socket.io}
+      CORS_ORIGIN: ${REALTIME_CORS_ORIGIN:-https://example.com}
+      REALTIME_AUTH_TOKEN: ${REALTIME_AUTH_TOKEN:-change-me}
+    ports:
+      - "${REALTIME_PORT:-4001}:4001"
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-theater}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --label-enable --scope theater-website --cleanup --interval ${WATCHTOWER_INTERVAL:-300}
+
+volumes:
+  pgdata:
