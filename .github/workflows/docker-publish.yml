@@ -4,6 +4,26 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '.github/workflows/docker-publish.yml'
+      - 'Dockerfile.dev'
+      - 'Dockerfile.prod'
+      - 'docker-compose*.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'pnpm-lock.yaml'
+      - 'next.config.ts'
+      - 'tsconfig.json'
+      - 'postcss.config.mjs'
+      - 'tailwind.config.js'
+      - 'eslint.config.mjs'
+      - 'vitest.config.ts'
+      - 'components.json'
+      - 'src/**'
+      - 'public/**'
+      - 'prisma/**'
+      - 'realtime-server/**'
+      - 'scripts/**'
   workflow_dispatch:
 
 env:
