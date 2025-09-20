@@ -29,6 +29,12 @@
 - Vor Abgabe immer `pnpm lint`, `pnpm test` und `pnpm build` ausführen; Fehler müssen behoben werden.
 - Änderungen am Realtime-Server lokal über `npm start` (oder `node src/server.js`) überprüfen; halte die Server-Logs im Blick.
 
+### Ausnahmen vom Standardprozedere
+- Reine Dokumentations- oder Organisationsänderungen (z. B. Updates an `README.md`, Dateien in `docs/`, `AGENTS.md` oder ähnlichen Markdown-Notizen) dürfen ohne `pnpm lint`, `pnpm test` und `pnpm build` abgeschlossen werden. Weise im Abschlussbericht ausdrücklich darauf hin, dass nur redaktionelle Inhalte angepasst wurden.
+- Für Aufgaben, die ausschließlich Assets unter `docs/swatches` oder anderen statischen Download-Ressourcen betreffen, sind ebenfalls keine Build- oder Testläufe nötig.
+- Wenn die Arbeit ausschließlich den eigenständigen Socket.io-Dienst im Ordner `realtime-server` betrifft und keinerlei Code im Next.js-Frontend geändert wurde, musst du lediglich die für diesen Dienst relevanten Checks ausführen (z. B. vorhandene npm-Skripte); die Next.js-Pipeline kann entfallen.
+- Sollten lokale Gegebenheiten (fehlende Binärabhängigkeiten, Zugriffsrechte o. Ä.) das Ausführen der genannten Tools unmöglich machen, dokumentiere die Blockade im finalen Bericht und liefere – sofern möglich – alternative Nachweise (z. B. statische Analyse, manuelle Tests).
+
 ## Dokumentation & Kommunikation
 - Aktualisiere bei relevanten Änderungen README, Docs oder ENV-Beispiele.
 - Notiere Design- oder Architekturentscheidungen im passenden Dokument im `docs/`-Ordner.
