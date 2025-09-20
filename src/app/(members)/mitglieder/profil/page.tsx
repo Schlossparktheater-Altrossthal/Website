@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/members/page-header";
+import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import { ProfileForm } from "@/components/members/profile-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,8 @@ export default async function ProfilePage() {
         title="Mein Profil"
         description="Pflege deine Kontaktdaten und behalte den Überblick über deine Berechtigungsrollen."
       />
+
+      <PhotoConsentCard />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,1fr)]">
         <Card>
