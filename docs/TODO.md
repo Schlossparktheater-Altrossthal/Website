@@ -23,6 +23,7 @@
 - [ ] ToDo-Listen für Rollen
 - [ ] ToDo-Listen pro Gewerk (Technik, Kostüm, Bühnenbau, Requisite, etc.)
 - [ ] Inventarverwaltung für Kostüme, Technik, Requisiten & Material (Bestände, Aus- und Rückgaben)
+- [ ] Inventarisierung mit individuellen Kabelaufklebern für Tracking & optionalem Offline-Modus
 - [ ] Dateiablage für Organisation
 - [ ] Finanzen
 - [ ] Dienstplan
