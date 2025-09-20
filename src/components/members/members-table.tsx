@@ -16,7 +16,7 @@ export type MembersTableUser = {
   roles: Role[];
   customRoles: { id: string; name: string }[];
   avatarSource?: AvatarSource | null;
-  avatarUpdatedAt?: Date | null;
+  avatarUpdatedAt?: string | number | Date | null;
 };
 
 export function MembersTable({

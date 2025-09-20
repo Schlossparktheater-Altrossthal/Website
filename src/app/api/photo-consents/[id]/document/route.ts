@@ -8,12 +8,16 @@ function sanitizeForHeader(value: string): string {
   return value.replace(/"/g, "").replace(/\r|\n/g, "");
 }
 
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "mitglieder.fotoerlaubnisse"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const params = await context.params;
   const id = params.id?.trim();
   if (!id) {
     return NextResponse.json({ error: "Fehlende ID" }, { status: 400 });

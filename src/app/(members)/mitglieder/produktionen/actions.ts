@@ -44,12 +44,12 @@ function readOptionalString(formData: FormData, key: string, options?: ReadOptio
   return trimmed;
 }
 
-export async function setActiveProductionAction(formData: FormData): Promise<ActionResult> {
+export async function setActiveProductionAction(formData: FormData): Promise<void> {
   try {
     const session = await requireAuth();
     const allowed = await hasPermission(session.user, "mitglieder.produktionen");
     if (!allowed) {
-      return { error: "Du hast keinen Zugriff auf die Produktionsplanung." };
+      throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
 
     const showId = readString(formData, "showId", { label: "Produktion" });
@@ -57,10 +57,11 @@ export async function setActiveProductionAction(formData: FormData): Promise<Act
 
     const show = await prisma.show.findUnique({ where: { id: showId }, select: { id: true } });
     if (!show) {
-      return { error: "Produktion wurde nicht gefunden." };
+      throw new Error("Produktion wurde nicht gefunden.");
     }
 
-    cookies().set(ACTIVE_PRODUCTION_COOKIE, show.id, {
+    const cookieStore = await cookies();
+    cookieStore.set(ACTIVE_PRODUCTION_COOKIE, show.id, {
       maxAge: 60 * 60 * 24 * 180,
       sameSite: "lax",
       path: "/",
@@ -70,42 +71,45 @@ export async function setActiveProductionAction(formData: FormData): Promise<Act
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
-
-    return { success: true };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Aktive Produktion konnte nicht gesetzt werden." };
+    const message =
+      error instanceof Error ? error.message : "Aktive Produktion konnte nicht gesetzt werden.";
+    throw new Error(message);
   }
 }
 
-export async function clearActiveProductionAction(formData: FormData): Promise<ActionResult> {
+export async function clearActiveProductionAction(formData: FormData): Promise<void> {
   try {
     const session = await requireAuth();
     const allowed = await hasPermission(session.user, "mitglieder.produktionen");
     if (!allowed) {
-      return { error: "Du hast keinen Zugriff auf die Produktionsplanung." };
+      throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
 
     const redirectPath = readOptionalString(formData, "redirectPath");
 
-    cookies().delete(ACTIVE_PRODUCTION_COOKIE, { path: "/" });
+    const cookieStore = await cookies();
+    cookieStore.delete(ACTIVE_PRODUCTION_COOKIE);
 
     revalidatePath("/mitglieder", "layout");
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
-
-    return { success: true };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Aktive Produktion konnte nicht entfernt werden." };
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Aktive Produktion konnte nicht entfernt werden.";
+    throw new Error(message);
   }
 }
 
-export async function createProductionAction(formData: FormData): Promise<ActionResult> {
+export async function createProductionAction(formData: FormData): Promise<void> {
   try {
     const session = await requireAuth();
     const allowed = await hasPermission(session.user, "mitglieder.produktionen");
     if (!allowed) {
-      return { error: "Du hast keinen Zugriff auf die Produktionsplanung." };
+      throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
 
     const year = readInt(formData, "year", { label: "Jahr", min: 1900, max: 2200 });
@@ -135,15 +139,16 @@ export async function createProductionAction(formData: FormData): Promise<Action
           startDate && endDate
             ? `${formatDateOnly(startDate)}/${formatDateOnly(endDate)}`
             : startDate
-              ? formatDateOnly(startDate)
-              : Prisma.JsonNull,
+                ? formatDateOnly(startDate)
+                : Prisma.JsonNull,
         revealedAt: revealDate ?? null,
       },
       select: { id: true },
     });
 
     if (setActive) {
-      cookies().set(ACTIVE_PRODUCTION_COOKIE, show.id, {
+      const cookieStore = await cookies();
+      cookieStore.set(ACTIVE_PRODUCTION_COOKIE, show.id, {
         maxAge: 60 * 60 * 24 * 180,
         sameSite: "lax",
         path: "/",
@@ -155,11 +160,11 @@ export async function createProductionAction(formData: FormData): Promise<Action
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
-
-    return { success: true };
   } catch (error) {
     console.error("createProductionAction", error);
-    return { error: error instanceof Error ? error.message : "Produktion konnte nicht angelegt werden." };
+    const message =
+      error instanceof Error ? error.message : "Produktion konnte nicht angelegt werden.";
+    throw new Error(message);
   }
 }
 
@@ -301,17 +306,27 @@ function parseRedirectPath(formData: FormData) {
   return trimmed;
 }
 
-async function ensureProductionManager() {
+async function requireProductionManager() {
   const session = await requireAuth();
   const userId = session.user?.id;
   if (!userId) {
-    return { ok: false as const, error: "Keine Berechtigung." };
+    throw new Error("Keine Berechtigung.");
   }
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
-    return { ok: false as const, error: "Keine Berechtigung." };
+    throw new Error("Keine Berechtigung.");
   }
-  return { ok: true as const, userId };
+  return { userId };
+}
+
+async function ensureProductionManager() {
+  try {
+    const { userId } = await requireProductionManager();
+    return { ok: true as const, userId };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Keine Berechtigung.";
+    return { ok: false as const, error: message };
+  }
 }
 
 function revalidateDepartments(redirectPath?: string) {
@@ -332,9 +347,8 @@ function revalidateShow(showId: string, redirectPath?: string, includeList = fal
   }
 }
 
-export async function createDepartmentAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function createDepartmentAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const name = readString(formData, "name", { label: "Name", minLength: 2, maxLength: 80 });
@@ -357,24 +371,22 @@ export async function createDepartmentAction(formData: FormData): Promise<Action
     });
 
     revalidateDepartments(redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("createDepartmentAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Gewerk konnte nicht angelegt werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Gewerk konnte nicht angelegt werden.";
+    throw new Error(message);
   }
 }
 
-export async function updateDepartmentAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function updateDepartmentAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const id = readString(formData, "id", { label: "Gewerk" });
     const department = await prisma.department.findUnique({ where: { id } });
     if (!department) {
-      return { error: "Gewerk wurde nicht gefunden." };
+      throw new Error("Gewerk wurde nicht gefunden.");
     }
     const name = readString(formData, "name", { label: "Name", minLength: 2, maxLength: 80 });
     const slugInput = readOptionalString(formData, "slug", { label: "Slug", maxLength: 80 });
@@ -401,37 +413,33 @@ export async function updateDepartmentAction(formData: FormData): Promise<Action
     });
 
     revalidateDepartments(redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("updateDepartmentAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Gewerk konnte nicht aktualisiert werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Gewerk konnte nicht aktualisiert werden.";
+    throw new Error(message);
   }
 }
 
-export async function deleteDepartmentAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function deleteDepartmentAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const id = readString(formData, "id", { label: "Gewerk" });
     await prisma.department.delete({ where: { id } });
     revalidateDepartments(redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("deleteDepartmentAction", error);
-    return {
-      error: error instanceof Error
+    const message =
+      error instanceof Error
         ? error.message
-        : "Gewerk konnte nicht gelöscht werden (ggf. bereits verwendet).",
-    };
+        : "Gewerk konnte nicht gelöscht werden (ggf. bereits verwendet).";
+    throw new Error(message);
   }
 }
 
-export async function addDepartmentMemberAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function addDepartmentMemberAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const departmentId = readString(formData, "departmentId", { label: "Gewerk" });
@@ -446,8 +454,8 @@ export async function addDepartmentMemberAction(formData: FormData): Promise<Act
       prisma.department.findUnique({ where: { id: departmentId } }),
       prisma.user.findUnique({ where: { id: userId } }),
     ]);
-    if (!department) return { error: "Gewerk wurde nicht gefunden." };
-    if (!user) return { error: "Mitglied wurde nicht gefunden." };
+    if (!department) throw new Error("Gewerk wurde nicht gefunden.");
+    if (!user) throw new Error("Mitglied wurde nicht gefunden.");
 
     await prisma.departmentMembership.upsert({
       where: { departmentId_userId: { departmentId, userId } },
@@ -466,18 +474,16 @@ export async function addDepartmentMemberAction(formData: FormData): Promise<Act
     });
 
     revalidateDepartments(redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("addDepartmentMemberAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Mitglied konnte nicht hinzugefügt werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Mitglied konnte nicht hinzugefügt werden.";
+    throw new Error(message);
   }
 }
 
-export async function updateDepartmentMemberAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function updateDepartmentMemberAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const membershipId = readString(formData, "membershipId", { label: "Mitgliedschaft" });
@@ -485,7 +491,7 @@ export async function updateDepartmentMemberAction(formData: FormData): Promise<
       where: { id: membershipId },
     });
     if (!membership) {
-      return { error: "Mitgliedschaft wurde nicht gefunden." };
+      throw new Error("Mitgliedschaft wurde nicht gefunden.");
     }
 
     const role =
@@ -504,40 +510,44 @@ export async function updateDepartmentMemberAction(formData: FormData): Promise<
     });
 
     revalidateDepartments(redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("updateDepartmentMemberAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Mitglied konnte nicht aktualisiert werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Mitglied konnte nicht aktualisiert werden.";
+    throw new Error(message);
   }
 }
 
-export async function removeDepartmentMemberAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function removeDepartmentMemberAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const membershipId = readString(formData, "membershipId", { label: "Mitgliedschaft" });
+    const membership = await prisma.departmentMembership.findUnique({
+      where: { id: membershipId },
+      select: { id: true },
+    });
+    if (!membership) {
+      throw new Error("Mitgliedschaft wurde nicht gefunden.");
+    }
+
     await prisma.departmentMembership.delete({ where: { id: membershipId } });
     revalidateDepartments(redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("removeDepartmentMemberAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Mitglied konnte nicht entfernt werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Mitglied konnte nicht entfernt werden.";
+    throw new Error(message);
   }
 }
 
-export async function createCharacterAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function createCharacterAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const showId = readString(formData, "showId", { label: "Produktion" });
     const show = await prisma.show.findUnique({ where: { id: showId }, select: { id: true } });
-    if (!show) return { error: "Produktion wurde nicht gefunden." };
+    if (!show) throw new Error("Produktion wurde nicht gefunden.");
 
     const name = readString(formData, "name", { label: "Name", minLength: 2, maxLength: 120 });
     const shortName = readOptionalString(formData, "shortName", { label: "Kurzname", maxLength: 40 });
@@ -561,18 +571,16 @@ export async function createCharacterAction(formData: FormData): Promise<ActionR
     });
 
     revalidateShow(showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("createCharacterAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Rolle konnte nicht angelegt werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Rolle konnte nicht angelegt werden.";
+    throw new Error(message);
   }
 }
 
-export async function updateCharacterAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function updateCharacterAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const characterId = readString(formData, "characterId", { label: "Rolle" });
@@ -580,7 +588,7 @@ export async function updateCharacterAction(formData: FormData): Promise<ActionR
       where: { id: characterId },
       select: { showId: true },
     });
-    if (!character) return { error: "Rolle wurde nicht gefunden." };
+    if (!character) throw new Error("Rolle wurde nicht gefunden.");
 
     const name = readString(formData, "name", { label: "Name", minLength: 2, maxLength: 120 });
     const shortName = readOptionalString(formData, "shortName", { label: "Kurzname", maxLength: 40 });
@@ -602,18 +610,16 @@ export async function updateCharacterAction(formData: FormData): Promise<ActionR
     });
 
     revalidateShow(character.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("updateCharacterAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Rolle konnte nicht aktualisiert werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Rolle konnte nicht aktualisiert werden.";
+    throw new Error(message);
   }
 }
 
-export async function deleteCharacterAction(formData: FormData): Promise<ActionResult> {
-  const auth = await ensureProductionManager();
-  if (!auth.ok) return { error: auth.error };
+export async function deleteCharacterAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const characterId = readString(formData, "characterId", { label: "Rolle" });
@@ -621,16 +627,15 @@ export async function deleteCharacterAction(formData: FormData): Promise<ActionR
       where: { id: characterId },
       select: { showId: true },
     });
-    if (!character) return { error: "Rolle wurde nicht gefunden." };
+    if (!character) throw new Error("Rolle wurde nicht gefunden.");
 
     await prisma.character.delete({ where: { id: characterId } });
     revalidateShow(character.showId, redirectPath);
-    return { success: true };
   } catch (error) {
     console.error("deleteCharacterAction", error);
-    return {
-      error: error instanceof Error ? error.message : "Rolle konnte nicht entfernt werden.",
-    };
+    const message =
+      error instanceof Error ? error.message : "Rolle konnte nicht entfernt werden.";
+    throw new Error(message);
   }
 }
 
