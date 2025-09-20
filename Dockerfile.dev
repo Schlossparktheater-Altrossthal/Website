@@ -30,4 +30,4 @@ RUN pnpm prisma:generate
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm -s prisma:generate && pnpm -s prisma migrate deploy && (pnpm -s db:seed || true) && pnpm -s start:combined"]
+CMD ["sh", "-c", "pnpm -s prisma:generate && node scripts/run-prisma-migrate.mjs && (pnpm -s db:seed || true) && pnpm -s start:combined"]
