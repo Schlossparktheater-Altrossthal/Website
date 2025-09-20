@@ -64,6 +64,17 @@ enum AvailabilityStatus {
   available
 }
 
+enum OnboardingFocus {
+  acting
+  tech
+  both
+}
+
+enum RolePreferenceDomain {
+  acting
+  crew
+}
+
 enum RehearsalProposalStatus {
   proposed    // Automatisch vorgeschlagen
   approved    // Von der Regie freigegeben
@@ -192,6 +203,12 @@ model User {
   departmentMemberships  DepartmentMembership[]
   characterCastings      CharacterCasting[]
   breakdownAssignments   SceneBreakdownItem[] @relation("BreakdownAssignee")
+  inviteLinksCreated     MemberInvite[]       @relation("MemberInvitesCreated")
+  inviteRedemptions      MemberInviteRedemption[]
+  onboardingProfile      MemberOnboardingProfile?
+  interests              UserInterest[]
+  rolePreferences        MemberRolePreference[]
+  interestsAuthored      Interest[]             @relation("InterestCreatedBy")
 }
 
 model Account {
@@ -695,6 +712,94 @@ model PhotoConsent {
   documentData     Bytes?
   user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   approvedBy       User?               @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
+}
+
+model MemberInvite {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique
+  label       String?
+  note        String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  maxUses     Int?
+  usageCount  Int      @default(0)
+  roles       Role[]
+  isDisabled  Boolean  @default(false)
+  createdById String
+
+  createdBy   User     @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  redemptions MemberInviteRedemption[]
+  onboardings MemberOnboardingProfile[]
+}
+
+model MemberInviteRedemption {
+  id           String    @id @default(cuid())
+  inviteId     String
+  sessionToken String    @unique
+  email        String?
+  userId       String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+  payload      Json?
+
+  invite   MemberInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  user     User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  profile  MemberOnboardingProfile? @relation("OnboardingProfileRedemption")
+
+  @@index([inviteId])
+}
+
+model Interest {
+  id           String          @id @default(cuid())
+  name         String          @unique
+  createdAt    DateTime        @default(now())
+  createdById  String?
+
+  createdBy    User?           @relation("InterestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  userInterest UserInterest[]
+}
+
+model UserInterest {
+  id         String   @id @default(cuid())
+  userId     String
+  interestId String
+  createdAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interest  Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, interestId])
+}
+
+model MemberRolePreference {
+  id        String               @id @default(cuid())
+  userId    String
+  code      String
+  domain    RolePreferenceDomain
+  weight    Int
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, code])
+}
+
+model MemberOnboardingProfile {
+  id           String           @id @default(cuid())
+  userId       String           @unique
+  inviteId     String?
+  redemptionId String?         @unique
+  focus        OnboardingFocus
+  background   String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invite     MemberInvite?            @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+  redemption MemberInviteRedemption?  @relation("OnboardingProfileRedemption", fields: [redemptionId], references: [id], onDelete: SetNull)
+
+  @@index([inviteId])
 }
 
 model Announcement {

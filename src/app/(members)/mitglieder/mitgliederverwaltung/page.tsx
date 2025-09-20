@@ -4,6 +4,7 @@ import { AddMemberModal } from "@/components/members/add-member-card";
 import { sortRoles, type Role } from "@/lib/roles";
 import { hasPermission } from "@/lib/permissions";
 import { MembersTable } from "@/components/members/members-table";
+import { MemberInviteManager } from "@/components/members/member-invite-manager";
 
 export default async function MitgliederVerwaltungPage() {
   const session = await requireAuth();
@@ -11,6 +12,9 @@ export default async function MitgliederVerwaltungPage() {
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Mitgliederverwaltung</div>;
   }
+
+  const canManageInvites =
+    (await hasPermission(session.user, "mitglieder.einladungen")) || allowed;
 
   const [users, customRoles] = await Promise.all([
     prisma.user.findMany({
@@ -53,6 +57,8 @@ export default async function MitgliederVerwaltungPage() {
           Erstelle neue Mitgliederprofile und verwalte Rollen für bestehende Nutzer in einer Tabelle.
         </p>
       </div>
+
+      {canManageInvites && <MemberInviteManager />}
 
       <div className="flex justify-end">
         <AddMemberModal />

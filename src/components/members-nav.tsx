@@ -46,6 +46,7 @@ const groupedConfig: Group[] = [
     label: "Verwaltung",
     items: [
       { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", permissionKey: "mitglieder.rollenverwaltung" },
+      { href: "/mitglieder/onboarding-analytics", label: "Onboarding Analytics", permissionKey: "mitglieder.onboarding.analytics" },
       { href: "/mitglieder/rechte", label: "Rechteverwaltung", permissionKey: "mitglieder.rechte" },
       { href: "/mitglieder/fotoerlaubnisse", label: "Fotoerlaubnisse", permissionKey: "mitglieder.fotoerlaubnisse" },
     ],
