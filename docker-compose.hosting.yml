@@ -15,6 +15,8 @@ services:
       retries: 10
     networks:
       - internal
+    labels:
+      com.centurylinklabs.watchtower.enable: true
 
   app-dev:
     image: "${THEATER_WEBSITE_IMAGE:-limitlessgreen/theater_website}:${DEV_IMAGE_TAG:-dev}"
@@ -52,6 +54,9 @@ services:
       traefik.http.services.devtheater.loadbalancer.server.port: 3000
       traefik.docker.network: proxy
 
+      com.centurylinklabs.watchtower.enable: true
+
+
   app-prod:
     image: "${THEATER_WEBSITE_IMAGE:-limitlessgreen/theater_website}:${PROD_IMAGE_TAG:-prod}"
     restart: unless-stopped
@@ -87,6 +92,8 @@ services:
       traefik.http.routers.prodtheater-secure.service: prodtheater
       traefik.http.services.prodtheater.loadbalancer.server.port: 3000
       traefik.docker.network: proxy
+
+      com.centurylinklabs.watchtower.enable: true
 
 networks:
   internal:
