@@ -1,10 +1,12 @@
 FROM node:20-slim
 
-ENV NODE_ENV=production
+ARG NODE_ENV=production
+
+ENV NODE_ENV=${NODE_ENV}
 WORKDIR /app
 
 COPY package.json ./
-RUN npm install --production
+RUN if [ "$NODE_ENV" = "production" ]; then npm install --omit=dev; else npm install; fi
 
 COPY src ./src
 
