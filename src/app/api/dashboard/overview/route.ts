@@ -36,6 +36,13 @@ export async function GET() {
       recentRehearsals,
       upcomingRehearsals,
       totalRehearsalsThisMonth,
+      onboardingProfile,
+      rolePreferences,
+      interestCount,
+      recentInterests,
+      dietaryRestrictions,
+      photoConsent,
+      userRecord,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.rehearsal.count({
@@ -92,6 +99,33 @@ export async function GET() {
           },
         },
       }),
+      prisma.memberOnboardingProfile.findUnique({
+        where: { userId },
+        select: { focus: true, background: true, createdAt: true, updatedAt: true },
+      }),
+      prisma.memberRolePreference.findMany({
+        where: { userId },
+        select: { domain: true, weight: true },
+      }),
+      prisma.userInterest.count({ where: { userId } }),
+      prisma.userInterest.findMany({
+        where: { userId },
+        include: { interest: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+      }),
+      prisma.dietaryRestriction.findMany({
+        where: { userId },
+        select: { allergen: true, level: true },
+      }),
+      prisma.photoConsent.findUnique({
+        where: { userId },
+        select: { status: true, consentGiven: true, documentUploadedAt: true, updatedAt: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { passwordHash: true },
+      }),
     ]);
 
     const activities = [
@@ -111,6 +145,48 @@ export async function GET() {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 10);
 
+    const actingPreferences = rolePreferences.filter((pref) => pref.domain === "acting");
+    const crewPreferences = rolePreferences.filter((pref) => pref.domain === "crew");
+    const averageWeight = (entries: typeof rolePreferences) =>
+      entries.length ? Math.round(entries.reduce((sum, pref) => sum + pref.weight, 0) / entries.length) : 0;
+
+    const interestNames: string[] = [];
+    const seenInterests = new Set<string>();
+    for (const entry of recentInterests) {
+      const name = entry.interest?.name?.trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seenInterests.has(key)) continue;
+      seenInterests.add(key);
+      interestNames.push(name);
+      if (interestNames.length >= 6) break;
+    }
+
+    const dietaryHighlights = dietaryRestrictions.slice(0, 3).map((entry) => ({
+      name: entry.allergen,
+      level: entry.level,
+    }));
+
+    const onboarding = {
+      completed: Boolean(onboardingProfile),
+      completedAt: onboardingProfile?.createdAt?.toISOString() ?? null,
+      focus: onboardingProfile?.focus ?? null,
+      background: onboardingProfile?.background ?? null,
+      stats: {
+        acting: { count: actingPreferences.length, averageWeight: averageWeight(actingPreferences) },
+        crew: { count: crewPreferences.length, averageWeight: averageWeight(crewPreferences) },
+        interests: { count: interestCount, top: interestNames },
+        dietary: { count: dietaryRestrictions.length, highlights: dietaryHighlights },
+      },
+      photoConsent: {
+        status: photoConsent?.status ?? "none",
+        consentGiven: photoConsent?.consentGiven ?? false,
+        hasDocument: Boolean(photoConsent?.documentUploadedAt),
+        updatedAt: photoConsent?.updatedAt ? photoConsent.updatedAt.toISOString() : null,
+      },
+      passwordSet: Boolean(userRecord?.passwordHash),
+    };
+
     return NextResponse.json({
       stats: {
         totalMembers,
@@ -120,6 +196,7 @@ export async function GET() {
       },
       upcomingRehearsals,
       recentActivities: activities,
+      onboarding,
     });
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {
