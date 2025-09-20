@@ -19,6 +19,7 @@
 ## Weitere Features
 - [ ] Essensplan
 - [ ] Archiv
+  - [ ] Checkliste für die Chronik (Skripte, Flyer, Bühnenbilder, Fotos usw.)
 - [ ] ToDo-Listen für Rollen
 - [ ] Dateiablage für Organisation
 - [ ] Finanzen
