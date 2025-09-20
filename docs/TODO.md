@@ -21,6 +21,8 @@
 - [ ] Archiv
   - [ ] Checkliste für die Chronik (Skripte, Flyer, Bühnenbilder, Fotos usw.)
 - [ ] ToDo-Listen für Rollen
+- [ ] ToDo-Listen pro Gewerk (Technik, Kostüm, Bühnenbau, Requisite, etc.)
+- [ ] Inventarverwaltung für Kostüme, Technik, Requisiten & Material (Bestände, Aus- und Rückgaben)
 - [ ] Dateiablage für Organisation
 - [ ] Finanzen
 - [ ] Dienstplan
