@@ -35,7 +35,7 @@ export default async function ProduktionDetailPage({ params }: { params: { showI
         title: true,
         year: true,
         synopsis: true,
-        _count: { characters: true, scenes: true },
+        _count: { select: { characters: true, scenes: true } },
       },
     }),
     prisma.sceneBreakdownItem.count({ where: { scene: { showId: params.showId } } }),

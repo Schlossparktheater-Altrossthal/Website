@@ -57,13 +57,16 @@ function parseDate(value: unknown) {
   return parsed;
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
   const session = await requireAuth();
   if (!(await canManageInvites(session.user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const id = params.id;
+  const { id } = await context.params;
   if (!id) {
     return NextResponse.json({ error: "Ungültige Einladung" }, { status: 400 });
   }
