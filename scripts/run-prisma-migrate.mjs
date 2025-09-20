@@ -26,17 +26,13 @@ async function announceOwnerSetupLink() {
       },
     });
 
-    if (ownerCount > 0) {
-      const removed = await prisma.ownerSetupToken.deleteMany({ where: { consumedAt: null } });
-      if (removed.count > 0) {
-        console.log(
-          `[owner-setup] Removed ${removed.count} unused owner setup token(s) because an owner already exists.`,
-        );
-      }
-      return;
+    const ownerAlreadyExists = ownerCount > 0;
+    const removed = await prisma.ownerSetupToken.deleteMany({ where: { consumedAt: null } });
+    if (ownerAlreadyExists && removed.count > 0) {
+      console.log(
+        `[owner-setup] Removed ${removed.count} unused owner setup token(s) because an owner already exists.`,
+      );
     }
-
-    await prisma.ownerSetupToken.deleteMany({ where: { consumedAt: null } });
 
     const rawToken = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
@@ -53,14 +49,24 @@ async function announceOwnerSetupLink() {
     const baseUrl = normalizedBase || fallbackBase;
     const link = `${baseUrl}/setup/owner/${rawToken}`;
 
-    console.log("[owner-setup] Kein Owner-Account gefunden. Bitte richte über den folgenden Link einen Owner ein:");
+    if (ownerAlreadyExists) {
+      console.log(
+        "[owner-setup] Hinweis: Es existiert bereits ein Owner. Falls du den Owner neu aufsetzen musst, entferne den bestehenden Eintrag und nutze anschließend den folgenden Link:",
+      );
+    } else {
+      console.log(
+        "[owner-setup] Kein Owner-Account gefunden. Bitte richte über den folgenden Link einen Owner ein:",
+      );
+    }
     console.log(`[owner-setup]   ${link}`);
     if (!normalizedBase) {
       console.log(
         `[owner-setup] Hinweis: Passe den Host an, falls der Server nicht unter ${fallbackBase} erreichbar ist.`,
       );
     }
-    console.log("[owner-setup] Der Link ist einmalig gültig und wird ungültig, sobald ein Owner angelegt wurde.");
+    console.log(
+      "[owner-setup] Der Link ist einmalig gültig und wird ungültig, sobald ein Owner angelegt wurde.",
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[owner-setup] Konnte Owner-Setup-Link nicht erzeugen: ${message}`);
