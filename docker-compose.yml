@@ -51,21 +51,6 @@ services:
     command: >-
       sh -c "pnpm -s prisma:generate && pnpm -s prisma migrate deploy && (pnpm -s db:seed || true) && pnpm -s dev --turbo -p 3000 -H 0.0.0.0"
 
-    networks:
-      - proxy
-      - default
-    labels:
-      traefik.enable: true
-      traefik.http.routers.theater-app.entrypoints: web
-      traefik.http.routers.theater-app.rule: Host(`devtheater.beegreenx.de`)
-      traefik.http.routers.theater-app-secure.entrypoints: websecure
-      traefik.http.routers.theater-app-secure.rule: Host(`devtheater.beegreenx.de`)
-      traefik.http.routers.theater-app-secure.tls: true
-      traefik.http.routers.theater-app-secure.tls.certresolver: myresolver
-      traefik.http.routers.theater-app-secure.service: theater-app
-      traefik.http.services.theater-app.loadbalancer.server.port: 3000
-      traefik.docker.network: proxy
-
   realtime:
     build: ./realtime-server
     restart: unless-stopped
@@ -79,8 +64,3 @@ services:
 
 volumes:
   pgdata:
-
-
-networks:
-  proxy:
-    external: true
