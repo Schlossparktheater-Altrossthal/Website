@@ -89,10 +89,12 @@ export async function GET() {
       isDisabled: invite.isDisabled,
       createdBy: invite.createdBy,
       remainingUses: status.remainingUses,
+      isActive: status.isActive,
       isExpired: status.isExpired,
       isExhausted: status.isExhausted,
       pendingSessions: pending,
       completedSessions: completed,
+      shareUrl: status.isActive ? `/onboarding/${invite.tokenHash}` : null,
     };
   });
 
@@ -155,6 +157,7 @@ export async function POST(request: NextRequest) {
       expiresAt: invite.expiresAt ? invite.expiresAt.toISOString() : null,
       token,
       inviteUrl: `/onboarding/${token}`,
+      shareUrl: `/onboarding/${invite.tokenHash}`,
     },
   });
 }

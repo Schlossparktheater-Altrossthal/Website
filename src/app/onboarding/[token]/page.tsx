@@ -17,7 +17,8 @@ export default async function OnboardingInvitePage({ params }: { params: { token
     notFound();
   }
 
-  const tokenHash = hashInviteToken(token);
+  const isHashedToken = /^[0-9a-f]{64}$/i.test(token);
+  const tokenHash = isHashedToken ? token.toLowerCase() : hashInviteToken(token);
   const invite = await prisma.memberInvite.findUnique({
     where: { tokenHash },
     include: { createdBy: { select: { name: true, email: true } } },

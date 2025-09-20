@@ -38,6 +38,8 @@ type InviteSummary = {
   pendingSessions: number;
   completedSessions: number;
   createdBy: { id: string; name: string | null; email: string | null } | null;
+  shareUrl: string | null;
+  isActive: boolean;
 };
 
 type CreateInviteState = {
@@ -48,7 +50,7 @@ type CreateInviteState = {
   roles: Role[];
 };
 
-type FreshInvite = { token: string; inviteUrl: string } | null;
+type FreshInvite = { token: string; inviteUrl: string; shareUrl: string } | null;
 
 export function MemberInviteManager() {
   const [invites, setInvites] = useState<InviteSummary[]>([]);
@@ -58,6 +60,11 @@ export function MemberInviteManager() {
   const [error, setError] = useState<string | null>(null);
   const [freshInvite, setFreshInvite] = useState<FreshInvite>(null);
   const [origin, setOrigin] = useState("");
+  const resolvedOrigin = useMemo(() => {
+    if (origin) return origin;
+    if (typeof window !== "undefined") return window.location.origin;
+    return "";
+  }, [origin]);
   const [form, setForm] = useState<CreateInviteState>({
     label: "",
     note: "",
@@ -128,11 +135,12 @@ export function MemberInviteManager() {
         throw new Error(data?.error ?? "Einladung konnte nicht erstellt werden");
       }
       if (data?.invite?.inviteUrl) {
-        setFreshInvite({ token: data.invite.token, inviteUrl: data.invite.inviteUrl });
+        const shareUrl = data.invite.shareUrl ?? data.invite.inviteUrl;
+        setFreshInvite({ token: data.invite.token, inviteUrl: data.invite.inviteUrl, shareUrl });
         try {
           const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
           if (base) {
-            await navigator.clipboard.writeText(base + data.invite.inviteUrl);
+            await navigator.clipboard.writeText(base + shareUrl);
             toast.success("Neuer Link kopiert.");
           } else {
             toast.success("Neue Einladung erstellt. Link siehe unten.");
@@ -158,7 +166,19 @@ export function MemberInviteManager() {
     try {
       const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
       if (!base) throw new Error("no-origin");
-      await navigator.clipboard.writeText(base + freshInvite.inviteUrl);
+      await navigator.clipboard.writeText(base + (freshInvite.shareUrl ?? freshInvite.inviteUrl));
+      toast.success("Link kopiert");
+    } catch {
+      toast.error("Kopieren fehlgeschlagen");
+    }
+  };
+
+  const copyInviteLink = async (url: string) => {
+    if (!url) return;
+    try {
+      const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
+      if (!base) throw new Error("no-origin");
+      await navigator.clipboard.writeText(base + url);
       toast.success("Link kopiert");
     } catch {
       toast.error("Kopieren fehlgeschlagen");
@@ -217,7 +237,10 @@ export function MemberInviteManager() {
         {freshInvite && (
           <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm text-primary">
             <p className="font-medium">Neuer Link</p>
-            <p className="break-all text-xs">{(origin ? origin : "") + freshInvite.inviteUrl}</p>
+            <p className="break-all text-xs">{(resolvedOrigin ? resolvedOrigin : "") + (freshInvite.shareUrl ?? freshInvite.inviteUrl)}</p>
+            <p className="text-[11px] text-primary/80">
+              Der Link bleibt während des aktiven Zeitraums auch unten in der Übersicht sichtbar.
+            </p>
             <div className="mt-3 flex gap-2">
               <Button size="sm" variant="outline" onClick={copyFreshInvite}>
                 Link kopieren
@@ -267,6 +290,29 @@ export function MemberInviteManager() {
                             </Badge>
                           ))}
                         </div>
+                        {invite.shareUrl && (
+                          <div className="mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary">
+                            <p className="font-medium">Aktiver Onboarding-Link</p>
+                            <p className="break-all font-mono text-[11px]">
+                              {(resolvedOrigin ? resolvedOrigin : "") + invite.shareUrl}
+                            </p>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-2 text-xs"
+                                onClick={() => copyInviteLink(invite.shareUrl!)}
+                              >
+                                Link kopieren
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" asChild>
+                                <a href={invite.shareUrl} target="_blank" rel="noopener noreferrer" className="text-primary">
+                                  Öffnen
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Badge variant={status.variant}>{status.label}</Badge>
