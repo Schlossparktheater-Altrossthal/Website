@@ -89,6 +89,20 @@ pnpm dev
 bun dev
 ```
 
+### Create the initial owner account
+
+On a fresh database the application does not contain any users yet. During the
+first server startup a one-time setup link is printed to the console, for
+example:
+
+```
+[owner-setup]   http://localhost:3000/setup/owner/<token>
+```
+
+Open the URL in a browser to create the first owner account. The link becomes
+invalid as soon as it has been used or as soon as any owner exists. Restart the
+server to generate a new link if necessary.
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
