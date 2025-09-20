@@ -1,53 +1,78 @@
 # Theater Website
 
-This project contains the Next.js based theater website and a standalone
-Socket.IO realtime server. Both services can now be deployed either as
-individual containers (see the compose files under `docker-compose*.yml`) or as
-a single "monolith" image that exposes the realtime endpoint on the same host as
-the web application.
+This project contains the Next.js based theater website together with the Socket.IO
+realtime server. Both pieces always run inside the same Node.js process and the
+realtime API is exposed under `/realtime` (websocket path `/realtime/socket.io`).
 
-## Combined Docker image
+## Docker overview
 
-The new `Dockerfile.monolith` builds a production image that bundles the
-Next.js app and the realtime server into one container. By default the realtime
-API is mounted under `/realtime`, so the browser connects via
-`https://<host>/realtime` while the websocket requests continue to use the
-standard Socket.IO path (`/realtime/socket.io`).
+- `Dockerfile.dev` builds the development image that serves the Next.js app via the
+  bundled dev server and mounts the realtime routes below `/realtime`.
+- `Dockerfile.prod` produces the production image with the statically built Next.js
+  output. The runtime launches the combined server so the realtime API stays on
+  the same host.
+
+Both images execute `scripts/start-combined-server.mjs`, which prepares Next.js
+and attaches the Socket.IO server to the same HTTP listener. The script configures
+`NEXT_PUBLIC_REALTIME_URL`, `NEXT_PUBLIC_REALTIME_PATH` and
+`REALTIME_SERVER_EVENT_PATH` automatically based on `REALTIME_BASE_PATH`
+(default `/realtime`).
+
+### Local development stack
 
 ```bash
-# Build the monolith image
-docker build -f Dockerfile.monolith -t theater-website:monolith .
+docker compose up
+```
+
+The default `docker-compose.yml` builds the development image from the current
+workspace, runs Prisma migrations/seeding and exposes the app on
+`http://localhost:3000`. Postgres (database `theater_dev`) and Mailpit are part
+of this stack. Hot reloading works because the repository is bind-mounted into
+the container.
+
+### Building the production image from source
+
+```bash
+docker build -f Dockerfile.prod -t theater-website:prod .
 
 # Run the container (make sure a Postgres instance is reachable)
 docker run --rm -p 3000:3000 \
-  -e DATABASE_URL="postgresql://postgres:postgres@db:5432/theater?schema=public" \
+  -e DATABASE_URL="postgresql://postgres:postgres@db:5432/theater_prod?schema=public" \
   -e AUTH_SECRET="replace-me" \
   -e REALTIME_AUTH_TOKEN="replace-me" \
-  theater-website:monolith
+  theater-website:prod
 ```
 
-Relevant environment variables:
+Important environment variables:
 
 - `REALTIME_BASE_PATH` (default `/realtime`) controls where the realtime API is
   mounted relative to the web app.
-- `REALTIME_INTERNAL_ORIGIN` defines how the Next.js process reaches the
-  realtime server from inside the container (defaults to
-  `http://127.0.0.1:3000`).
-- `REALTIME_PUBLIC_ORIGIN` may be set when the realtime endpoint should use an
-  absolute public URL instead of the relative `REALTIME_BASE_PATH`.
+- `REALTIME_PUBLIC_ORIGIN` overrides the public URL when the realtime endpoint
+  must use an absolute host instead of the relative `REALTIME_BASE_PATH`.
+- `REALTIME_AUTH_TOKEN` and `REALTIME_HANDSHAKE_SECRET` protect the realtime
+  handshake and admin events.
 
-The container entrypoint runs `pnpm prisma migrate deploy` before starting the
-combined server. When running the image without Docker Compose make sure the
-database is available before starting the container.
+### Hosting with images from the registry
 
-You can also start the combined server locally (without Docker) via:
+The file `docker-compose.hosting.yml` consumes the published images from Docker
+Hub and publishes two app instances via Traefik:
+
+- `https://devtheater.beegreenx.de` using the `dev` tag
+- `https://prodtheater.beegreenx.de` using the `prod` tag
+
+Both services share a single Postgres container. The database init script under
+`docker/initdb/001-create-databases.sql` provisions the schemas `theater_dev` and
+`theater_prod`. The compose stack expects an external Docker network called
+`proxy` so Traefik can route traffic to the containers.
+
+### Run the combined server without Docker
 
 ```bash
 pnpm run start:combined
 ```
 
-This executes `scripts/start-combined-server.mjs`, which shares a single HTTP
-server between Next.js and the realtime Socket.IO instance.
+This executes `scripts/start-combined-server.mjs` and is helpful when developing
+outside of containers.
 
 ## Getting Started
 
