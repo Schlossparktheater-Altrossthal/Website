@@ -64,8 +64,8 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/theater_dev?schema=public
       NEXTAUTH_URL: https://${DEV_HOST:-devtheater.beegreenx.de}
       REALTIME_BASE_PATH: /realtime
-      REALTIME_PUBLIC_ORIGIN: https://${DEV_HOST:-devtheater.beegreenx.de}
-      NEXT_PUBLIC_REALTIME_URL: https://${DEV_HOST:-devtheater.beegreenx.de}/realtime
+      REALTIME_PUBLIC_ORIGIN: https://${DEV_SOCKET_HOST:-devsocket.beegreenx.de}
+      NEXT_PUBLIC_REALTIME_URL: https://${DEV_SOCKET_HOST:-devsocket.beegreenx.de}/realtime
       AUTH_SECRET: ${DEV_AUTH_SECRET:?set DEV_AUTH_SECRET}
       REALTIME_AUTH_TOKEN: ${DEV_REALTIME_AUTH_TOKEN:?set DEV_REALTIME_AUTH_TOKEN}
       REALTIME_HANDSHAKE_SECRET: ${DEV_REALTIME_HANDSHAKE_SECRET:-${DEV_REALTIME_AUTH_TOKEN}}
@@ -86,6 +86,15 @@ services:
       traefik.http.routers.devtheater-secure.tls: "true"
       traefik.http.routers.devtheater-secure.tls.certresolver: myresolver
       traefik.http.routers.devtheater-secure.service: devtheater
+      traefik.http.routers.devsocket.entrypoints: web
+      traefik.http.routers.devsocket.rule: Host(`${DEV_SOCKET_HOST:-devsocket.beegreenx.de}`)
+      traefik.http.routers.devsocket.middlewares: devtheater-https-redirect
+      traefik.http.routers.devsocket.service: devtheater
+      traefik.http.routers.devsocket-secure.entrypoints: websecure
+      traefik.http.routers.devsocket-secure.rule: Host(`${DEV_SOCKET_HOST:-devsocket.beegreenx.de}`)
+      traefik.http.routers.devsocket-secure.tls: "true"
+      traefik.http.routers.devsocket-secure.tls.certresolver: myresolver
+      traefik.http.routers.devsocket-secure.service: devtheater
       traefik.http.services.devtheater.loadbalancer.server.port: 3000
       traefik.docker.network: proxy
 
@@ -105,8 +114,8 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/theater_prod?schema=public
       NEXTAUTH_URL: https://${PROD_HOST:-prodtheater.beegreenx.de}
       REALTIME_BASE_PATH: /realtime
-      REALTIME_PUBLIC_ORIGIN: https://${PROD_HOST:-prodtheater.beegreenx.de}
-      NEXT_PUBLIC_REALTIME_URL: https://${PROD_HOST:-prodtheater.beegreenx.de}/realtime
+      REALTIME_PUBLIC_ORIGIN: https://${PROD_SOCKET_HOST:-prodsocket.beegreenx.de}
+      NEXT_PUBLIC_REALTIME_URL: https://${PROD_SOCKET_HOST:-prodsocket.beegreenx.de}/realtime
       AUTH_SECRET: ${PROD_AUTH_SECRET:?set PROD_AUTH_SECRET}
       REALTIME_AUTH_TOKEN: ${PROD_REALTIME_AUTH_TOKEN:?set PROD_REALTIME_AUTH_TOKEN}
       REALTIME_HANDSHAKE_SECRET: ${PROD_REALTIME_HANDSHAKE_SECRET:-${PROD_REALTIME_AUTH_TOKEN}}
@@ -127,6 +136,15 @@ services:
       traefik.http.routers.prodtheater-secure.tls: "true"
       traefik.http.routers.prodtheater-secure.tls.certresolver: myresolver
       traefik.http.routers.prodtheater-secure.service: prodtheater
+      traefik.http.routers.prodsocket.entrypoints: web
+      traefik.http.routers.prodsocket.rule: Host(`${PROD_SOCKET_HOST:-prodsocket.beegreenx.de}`)
+      traefik.http.routers.prodsocket.middlewares: prodtheater-https-redirect
+      traefik.http.routers.prodsocket.service: prodtheater
+      traefik.http.routers.prodsocket-secure.entrypoints: websecure
+      traefik.http.routers.prodsocket-secure.rule: Host(`${PROD_SOCKET_HOST:-prodsocket.beegreenx.de}`)
+      traefik.http.routers.prodsocket-secure.tls: "true"
+      traefik.http.routers.prodsocket-secure.tls.certresolver: myresolver
+      traefik.http.routers.prodsocket-secure.service: prodtheater
       traefik.http.services.prodtheater.loadbalancer.server.port: 3000
       traefik.docker.network: proxy
 
