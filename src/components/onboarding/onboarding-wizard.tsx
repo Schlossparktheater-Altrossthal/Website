@@ -636,6 +636,15 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     setStep((prev) => Math.max(0, prev - 1));
   };
 
+  const goToStep = useCallback(
+    (target: number) => {
+      if (target >= step) return;
+      setError(null);
+      setStep(target);
+    },
+    [setError, setStep, step],
+  );
+
   const handleSubmit = async () => {
     setError(null);
     if (loading) return;
@@ -766,19 +775,43 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         {steps.map((item, index) => {
           const isActive = index === step;
           const isComplete = index < step;
+          const isFuture = index > step;
           return (
             <div key={item.title} className="flex items-center gap-2">
-              <div
+              <button
+                type="button"
+                onClick={() => goToStep(index)}
+                disabled={isFuture}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium",
-                  isActive && "border-primary bg-primary text-primary-foreground",
-                  isComplete && !isActive && "border-primary bg-primary/20 text-primary",
-                  !isActive && !isComplete && "border-border text-muted-foreground",
+                  "group flex items-center gap-2 rounded-full bg-transparent p-0 text-left focus-visible:outline-none",
+                  isComplete ? "cursor-pointer" : "cursor-default",
                 )}
+                aria-current={isActive ? "step" : undefined}
+                aria-label={
+                  isComplete
+                    ? `Zurück zu Schritt ${index + 1}: ${item.title}`
+                    : `Schritt ${index + 1}: ${item.title}`
+                }
               >
-                {index + 1}
-              </div>
-              <span className={cn("text-sm font-medium", isActive ? "text-foreground" : "text-muted-foreground")}>{item.title}</span>
+                <span
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium transition-colors",
+                    isActive && "border-primary bg-primary text-primary-foreground",
+                    isComplete && !isActive && "border-primary bg-primary/20 text-primary",
+                    !isActive && !isComplete && "border-border text-muted-foreground",
+                    "group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
+                  )}
+                  aria-hidden
+                >
+                  {index + 1}
+                </span>
+                <span
+                  className={cn("text-sm font-medium", isActive ? "text-foreground" : "text-muted-foreground")}
+                  aria-hidden
+                >
+                  {item.title}
+                </span>
+              </button>
               {index < steps.length - 1 && <div className="h-px w-10 bg-border" aria-hidden />}
             </div>
           );
