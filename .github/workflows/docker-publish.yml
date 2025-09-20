@@ -29,14 +29,14 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}   # z.B. dein Docker Hub Username
           password: ${{ secrets.DOCKER_PAT }}        # Docker Hub Access Token (kein GitHub PAT!)
 
-      - name: Extract Docker metadata
-        id: meta
+      - name: Extract Docker metadata (dev)
+        id: meta-dev
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=dev
-            type=sha
+            type=sha,prefix=dev-
 
       - name: Build and push dev Docker image
         uses: docker/build-push-action@v5
@@ -44,7 +44,25 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-dev.outputs.tags }}
+          labels: ${{ steps.meta-dev.outputs.labels }}
           build-args: |
             NODE_ENV=development
+
+      - name: Extract Docker metadata (prod)
+        id: meta-prod
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=prod
+            type=sha,prefix=prod-
+
+      - name: Build and push prod Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.prod
+          push: true
+          tags: ${{ steps.meta-prod.outputs.tags }}
+          labels: ${{ steps.meta-prod.outputs.labels }}
