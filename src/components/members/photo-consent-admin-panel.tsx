@@ -20,16 +20,29 @@ const statusVariants: Record<PhotoConsentAdminEntry["status"], "default" | "seco
   rejected: "destructive",
 };
 
-const dateFormatter = new Intl.DateTimeFormat("de-DE", {
+const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+
+const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
 });
 
-function formatDate(value: string | null | undefined) {
+function formatWithFormatter(
+  value: string | null | undefined,
+  formatter: Intl.DateTimeFormat,
+) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return null;
-  return dateFormatter.format(date);
+  return formatter.format(date);
+}
+
+function formatDate(value: string | null | undefined) {
+  return formatWithFormatter(value, dateFormatter);
+}
+
+function formatDateTime(value: string | null | undefined) {
+  return formatWithFormatter(value, dateTimeFormatter);
 }
 
 export function PhotoConsentAdminPanel() {
@@ -173,7 +186,8 @@ export function PhotoConsentAdminPanel() {
                           {entry.documentName && (
                             <div>
                               Dokument: {entry.documentName}
-                              {entry.documentUploadedAt && ` · hochgeladen ${formatDate(entry.documentUploadedAt)}`}
+                              {entry.documentUploadedAt &&
+                                ` · hochgeladen ${formatDateTime(entry.documentUploadedAt)}`}
                               {entry.documentUrl && (
                                 <>
                                   {" "}
@@ -202,9 +216,9 @@ export function PhotoConsentAdminPanel() {
                         </ul>
                       </td>
                       <td className="px-3 py-3 text-xs text-foreground/70">
-                        <div>Eingegangen: {formatDate(entry.submittedAt)}</div>
-                        <div>Aktualisiert: {formatDate(entry.updatedAt)}</div>
-                        {entry.approvedAt && <div>Freigabe: {formatDate(entry.approvedAt)}</div>}
+                        <div>Eingegangen: {formatDateTime(entry.submittedAt)}</div>
+                        <div>Aktualisiert: {formatDateTime(entry.updatedAt)}</div>
+                        {entry.approvedAt && <div>Freigabe: {formatDateTime(entry.approvedAt)}</div>}
                         {entry.approvedByName && <div>Durch: {entry.approvedByName}</div>}
                         {entry.rejectionReason && (
                           <div className="mt-1 text-destructive">Grund: {entry.rejectionReason}</div>
