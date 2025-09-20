@@ -15,6 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      matrix:
+        include:
+          - environment: dev
+            dockerfile: Dockerfile
+            build_args: NODE_ENV=development
+            metadata_tags: |
+              type=raw,value=dev
+              type=sha,prefix=dev-
+          - environment: prod
+            dockerfile: Dockerfile.prod
+            build_args: NODE_ENV=production
+            metadata_tags: |
+              type=raw,value=prod
+              type=sha,prefix=prod-
+    name: Build and Push Docker Image (${{ matrix.environment }})
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,40 +45,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}   # z.B. dein Docker Hub Username
           password: ${{ secrets.DOCKER_PAT }}        # Docker Hub Access Token (kein GitHub PAT!)
 
-      - name: Extract Docker metadata (dev)
-        id: meta-dev
+      - name: Extract Docker metadata (${{ matrix.environment }})
+        id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=dev
-            type=sha,prefix=dev-
+          tags: ${{ matrix.metadata_tags }}
 
-      - name: Build and push dev Docker image
+      - name: Build and push ${{ matrix.environment }} Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: true
-          tags: ${{ steps.meta-dev.outputs.tags }}
-          labels: ${{ steps.meta-dev.outputs.labels }}
-          build-args: |
-            NODE_ENV=development
-
-      - name: Extract Docker metadata (prod)
-        id: meta-prod
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=prod
-            type=sha,prefix=prod-
-
-      - name: Build and push prod Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.prod
-          push: true
-          tags: ${{ steps.meta-prod.outputs.tags }}
-          labels: ${{ steps.meta-prod.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ matrix.build_args }}
