@@ -1,0 +1,47 @@
+services:
+  app:
+    ports: []
+    environment:
+      NEXTAUTH_URL: https://theaterdev.beegreenx.de
+      NEXT_PUBLIC_REALTIME_URL: https://theaterdev.beegreenx.de/realtime
+    networks:
+      - default
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.theater-app-dev.entrypoints: web
+      traefik.http.routers.theater-app-dev.rule: Host(`theaterdev.beegreenx.de`)
+      traefik.http.routers.theater-app-dev.middlewares: theater-app-dev-redirect
+      traefik.http.routers.theater-app-dev.service: theater-app-dev
+      traefik.http.middlewares.theater-app-dev-redirect.redirectscheme.scheme: https
+      traefik.http.routers.theater-app-dev-secure.entrypoints: websecure
+      traefik.http.routers.theater-app-dev-secure.rule: Host(`theaterdev.beegreenx.de`)
+      traefik.http.routers.theater-app-dev-secure.tls: "true"
+      traefik.http.routers.theater-app-dev-secure.tls.certresolver: myresolver
+      traefik.http.routers.theater-app-dev-secure.service: theater-app-dev
+      traefik.http.services.theater-app-dev.loadbalancer.server.port: 3000
+      traefik.docker.network: proxy
+
+  realtime:
+    ports: []
+    environment:
+      CORS_ORIGIN: https://theaterdev.beegreenx.de
+    networks:
+      - default
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.theater-realtime-dev.entrypoints: websecure
+      traefik.http.routers.theater-realtime-dev.rule: Host(`theaterdev.beegreenx.de`) && PathPrefix(`/realtime`)
+      traefik.http.routers.theater-realtime-dev.tls: "true"
+      traefik.http.routers.theater-realtime-dev.tls.certresolver: myresolver
+      traefik.http.routers.theater-realtime-dev.middlewares: theater-realtime-dev-strip
+      traefik.http.routers.theater-realtime-dev.service: theater-realtime-dev
+      traefik.http.middlewares.theater-realtime-dev-strip.stripprefix.prefixes: /realtime
+      traefik.http.services.theater-realtime-dev.loadbalancer.server.port: 4001
+      traefik.http.services.theater-realtime-dev.loadbalancer.server.scheme: http
+      traefik.docker.network: proxy
+
+networks:
+  proxy:
+    external: true
