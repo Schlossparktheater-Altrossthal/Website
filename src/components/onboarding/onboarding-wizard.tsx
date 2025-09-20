@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { AllergyLevel, type Role } from "@prisma/client";
 import { Sparkles, ShieldCheck, Lock, Target } from "lucide-react";
 import { toast } from "sonner";
@@ -231,6 +233,7 @@ function createPreferenceCode() {
 }
 
 export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps) {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -693,6 +696,22 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       }
       setSuccess(true);
       toast.success("Willkommen im Ensemble! Wir melden uns bei dir.");
+
+      const signInEmail = typeof data?.user?.email === "string" ? data.user.email : form.email.trim();
+      const signInResult = await signIn("credentials", {
+        email: signInEmail,
+        password: form.password,
+        redirect: false,
+        callbackUrl: "/mitglieder",
+      });
+
+      if (signInResult?.error) {
+        toast.error("Automatischer Login fehlgeschlagen. Du kannst dich später manuell anmelden.");
+      } else if (signInResult?.url) {
+        router.push(signInResult.url);
+      } else {
+        router.push("/mitglieder");
+      }
     } catch (err) {
       console.error("[onboarding.wizard]", err);
       setError("Netzwerkfehler – bitte versuche es erneut.");
