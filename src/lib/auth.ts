@@ -111,8 +111,13 @@ function extractRolesFromSource(source: RoleSource | undefined): Role[] | undefi
   return extractRoles(source.roles) ?? extractRoles(source.role);
 }
 
+// Force secure cookies only in production so local http development works even
+// when NEXTAUTH_URL points to an https domain (avoids login redirect loops).
+const useSecureCookies = process.env.NODE_ENV === "production";
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
+  useSecureCookies,
   // Use JWT sessions for reliability in dev (works with Credentials + Email).
   session: { strategy: "jwt" },
   providers: [
