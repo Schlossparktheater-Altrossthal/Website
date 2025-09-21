@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
     ],
   },
   // Next.js 15+: serverComponentsExternalPackages moved to serverExternalPackages
-  serverExternalPackages: ["bcryptjs"],
+  serverExternalPackages: ["bcryptjs", "pdfkit", "qrcode"],
 };
 
 export default nextConfig;

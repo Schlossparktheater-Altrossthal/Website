@@ -68,6 +68,11 @@ const crewOptions = [
     title: "Regieassistenz & Orga",
     description: "Abläufe koordinieren, Proben strukturieren, Teams im Hintergrund führen.",
   },
+  {
+    code: "crew_marketing",
+    title: "Werbung & Social Media",
+    description: "Kampagnen planen, Content erstellen und unsere Produktionen sichtbar machen.",
+  },
 ];
 
 const genderOptions = [

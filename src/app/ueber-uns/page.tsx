@@ -120,7 +120,7 @@ const engagement = [
   {
     title: "Mitmachen",
     description:
-      "Ob Schauspiel, Kostüm, Floristik, Metallwerkstatt oder Gästebetreuung – wir freuen uns über neue Gesichter, die mit uns die Sommertheater-Momente gestalten.",
+      "Ob Schauspiel, Kostüm, Floristik, Metallwerkstatt, Werbung & Social Media oder Gästebetreuung – wir freuen uns über neue Gesichter, die mit uns die Sommertheater-Momente gestalten.",
     action: {
       label: "Schreib uns",
       href: "mailto:ensemble@sommertheater-altrossthal.de",

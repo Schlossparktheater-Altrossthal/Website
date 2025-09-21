@@ -165,6 +165,12 @@ async function main() {
       color: "#16a34a",
       description: "Requisitenbeschaffung, Vorbereitung und Pflege.",
     },
+    {
+      slug: "werbung-social",
+      name: "Werbung & Social Media",
+      color: "#ec4899",
+      description: "Kommunikation, Öffentlichkeitsarbeit und Social Media.",
+    },
   ];
 
   for (const dept of departmentSeeds) {
