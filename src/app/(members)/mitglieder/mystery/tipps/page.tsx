@@ -57,7 +57,7 @@ export default async function MysteryTipsAdminPage({
     normalizedText: submission.normalizedText,
     isCorrect: submission.isCorrect,
     score: submission.score,
-    tipCount: submission.tip.count,
+    tipCount: submission.tip?.count ?? 0,
     cluePoints: submission.clue?.points ?? null,
     createdAt: submission.createdAt.toISOString(),
     updatedAt: submission.updatedAt.toISOString(),

@@ -80,7 +80,7 @@ export function MysteryTipManager({ clues, selectedClueId, submissions, scoreboa
     } else {
       params.delete("clue");
     }
-    const basePath = pathname ?? "/";
+    const basePath = pathname ?? "/mitglieder/mystery/tipps";
     const nextUrl = params.toString() ? `${basePath}?${params}` : basePath;
     router.push(nextUrl);
   }

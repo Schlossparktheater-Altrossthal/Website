@@ -10,10 +10,7 @@ const updateSchema = z.object({
   isCorrect: z.boolean(),
 });
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.mystery.tips");
   if (!allowed) {
@@ -39,8 +36,29 @@ export async function PATCH(
     const message = issue?.message ?? "Ungültige Eingabe.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
+  if (!id) {
+    return NextResponse.json({ error: "Ungültige ID." }, { status: 400 });
+  }
 
-  const submission = await prisma.mysteryTipSubmission.findUnique({
+  const submission = await (prisma as unknown as {
+    mysteryTipSubmission: {
+      findUnique: (args: {
+        where: { id: string };
+        include: { clue: { select: { points: true } }; tip: { select: { count: true } } };
+      }) => Promise<{
+        id: string;
+        playerName: string;
+        tipText: string;
+        normalizedText: string;
+        isCorrect: boolean;
+        score: number;
+        createdAt: Date;
+        updatedAt: Date;
+        clue: { points: number } | null;
+        tip: { count: number };
+      } | null>;
+    };
+  }).mysteryTipSubmission.findUnique({
     where: { id },
     include: { clue: { select: { points: true } }, tip: { select: { count: true } } },
   });
@@ -51,7 +69,29 @@ export async function PATCH(
 
   const nextScore = parsed.data.isCorrect ? submission.clue?.points ?? 1 : 0;
 
-  const updated = await prisma.mysteryTipSubmission.update({
+  const updated = await (prisma as unknown as {
+    mysteryTipSubmission: {
+      update: (args: {
+        where: { id: string };
+        data: { isCorrect: boolean; score: number };
+        include: {
+          tip: { select: { count: true } };
+          clue: { select: { id: true, index: true, points: true, releaseAt: true, published: true } };
+        };
+      }) => Promise<{
+        id: string;
+        playerName: string;
+        tipText: string;
+        normalizedText: string;
+        isCorrect: boolean;
+        score: number;
+        createdAt: Date;
+        updatedAt: Date;
+        tip: { count: number };
+        clue: { id: string; index: number; points: number; releaseAt: Date | null; published: boolean } | null;
+      }>;
+    };
+  }).mysteryTipSubmission.update({
     where: { id: submission.id },
     data: {
       isCorrect: parsed.data.isCorrect,
