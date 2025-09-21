@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, CheckCircle2, Clock, ListTodo, Sparkles, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, ListTodo, Ruler, Sparkles, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { sortMeasurements, type MeasurementType, type MeasurementUnit } from "@/data/measurements";
 
 import {
   DATE_KEY_FORMAT,
@@ -16,13 +17,14 @@ import {
   PLANNING_LOOKAHEAD_DAYS,
   type DepartmentMembershipWithDepartment,
 } from "./utils";
-import { DepartmentCard } from "./department-card";
+import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-card";
 
 type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
 
 export default async function MeineGewerkePage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
+  const canManageMeasurements = await hasPermission(session.user, "mitglieder.koerpermasse");
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>;
   }
@@ -63,6 +65,43 @@ export default async function MeineGewerkePage() {
   const memberships = membershipsRaw
     .sort((a, b) => a.department.name.localeCompare(b.department.name, "de", { sensitivity: "base" }))
     .map((membership) => membership as DepartmentMembershipWithDepartment);
+
+  let costumeMeasurementsByUser: DepartmentMeasurementsByUser | undefined;
+  const costumeMemberships = memberships.filter((membership) => membership.department.slug === "kostuem");
+
+  if (costumeMemberships.length) {
+    const costumeUserIds = new Set<string>();
+    for (const membership of costumeMemberships) {
+      for (const entry of membership.department.memberships) {
+        costumeUserIds.add(entry.userId);
+      }
+    }
+
+    if (costumeUserIds.size) {
+      const measurementRecords = await prisma.memberMeasurement.findMany({
+        where: { userId: { in: Array.from(costumeUserIds) } },
+        orderBy: { type: "asc" },
+      });
+
+      costumeMeasurementsByUser = {};
+      for (const record of measurementRecords) {
+        const existing = costumeMeasurementsByUser[record.userId] ?? [];
+        existing.push({
+          id: record.id,
+          type: record.type as MeasurementType,
+          value: record.value,
+          unit: record.unit as MeasurementUnit,
+          note: record.note,
+          updatedAt: record.updatedAt,
+        });
+        costumeMeasurementsByUser[record.userId] = existing;
+      }
+
+      for (const [userId, entries] of Object.entries(costumeMeasurementsByUser)) {
+        costumeMeasurementsByUser[userId] = sortMeasurements(entries);
+      }
+    }
+  }
 
   const memberIds = new Set<string>();
   for (const membership of memberships) {
@@ -112,6 +151,19 @@ export default async function MeineGewerkePage() {
 
   const headerActions = (
     <>
+      {canManageMeasurements ? (
+        <Button
+          asChild
+          size="sm"
+          variant="outline"
+          className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
+        >
+          <Link href="/mitglieder/koerpermasse" title="Körpermaße verwalten">
+            <Ruler aria-hidden className="h-4 w-4" />
+            <span>Körpermaße</span>
+          </Link>
+        </Button>
+      ) : null}
       <Button
         asChild
         size="sm"
@@ -259,6 +311,7 @@ export default async function MeineGewerkePage() {
               planningWindowLabel={planningWindowLabel}
               now={now}
               teamLinkHref={teamLinkHref}
+              measurementsByUser={costumeMeasurementsByUser}
             />
           );
         })}

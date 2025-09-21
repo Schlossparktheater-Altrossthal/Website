@@ -5,6 +5,7 @@ import { de } from "date-fns/locale/de";
 import { PageHeader } from "@/components/members/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
@@ -76,6 +77,7 @@ type AttendanceHistoryEntry = {
 export default async function MeineProbenPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-proben");
+  const canManageMeasurements = await hasPermission(session.user, "mitglieder.koerpermasse");
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Probenübersicht.</div>;
   }
@@ -417,6 +419,22 @@ export default async function MeineProbenPage() {
         </div>
 
         <div className="space-y-6">
+          {canManageMeasurements ? (
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle>Körpermaße für Anproben</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Pflege deine Maße zentral, damit das Kostüm-Team dich bei Anproben optimal einplanen kann.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Button asChild size="sm">
+                  <Link href="/mitglieder/koerpermasse">Körpermaße verwalten</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
+
           <Card>
             <CardHeader>
               <CardTitle>Rückmeldungsstatus</CardTitle>
