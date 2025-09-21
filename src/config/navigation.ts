@@ -16,6 +16,11 @@ export const primaryNavigation: NavigationItem[] = [
     description: "Tauche in die Welt hinter dem mystischen Vorhang ein.",
   },
   {
+    label: "Unsere Schulkatze",
+    href: "/unsere-schulkatze",
+    description: "Lerne Minna kennen – Pausenbegleiterin und Herz unseres Campus.",
+  },
+  {
     label: "Chronik",
     href: "/chronik",
     description: "Alle Meilensteine und Produktionen der vergangenen Jahre.",
