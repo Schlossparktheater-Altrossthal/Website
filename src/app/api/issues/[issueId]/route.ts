@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import { isIssueCategory, isIssuePriority, isIssueStatus } from "@/lib/issues";
+import { isIssueCategory, isIssuePriority, isIssueStatus, isIssueVisibility } from "@/lib/issues";
 import { mapIssueDetail } from "../utils";
 
 export async function GET(
@@ -11,11 +11,16 @@ export async function GET(
   { params }: { params: Promise<{ issueId: string }> },
 ) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.issues");
-  if (!allowed) {
+  const [canView, canManage] = await Promise.all([
+    hasPermission(session.user, "mitglieder.issues"),
+    hasPermission(session.user, "mitglieder.issues.manage"),
+  ]);
+
+  if (!canView) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
+  const userId = session.user?.id ?? "";
   const { issueId } = await params;
   if (!issueId) {
     return NextResponse.json({ error: "Ungültige ID" }, { status: 400 });
@@ -36,6 +41,10 @@ export async function GET(
 
   if (!issue) {
     return NextResponse.json({ error: "Anliegen nicht gefunden" }, { status: 404 });
+  }
+
+  if (issue.visibility === "private" && !canManage && issue.createdById !== userId) {
+    return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
   return NextResponse.json({ issue: mapIssueDetail(issue) });
@@ -67,7 +76,7 @@ export async function PATCH(
 
   const existing = await prisma.issue.findUnique({
     where: { id: issueId },
-    select: { createdById: true, status: true, priority: true, category: true, resolvedAt: true },
+    select: { createdById: true, status: true, priority: true, category: true, resolvedAt: true, visibility: true },
   });
 
   if (!existing) {
@@ -130,6 +139,21 @@ export async function PATCH(
     }
     if (body.category !== existing.category) {
       updateData.category = body.category;
+      updateData.updatedBy = { connect: { id: userId } };
+      updateData.lastActivityAt = now;
+      touched = true;
+    }
+  }
+
+  if (body.visibility !== undefined) {
+    if (typeof body.visibility !== "string" || !isIssueVisibility(body.visibility)) {
+      return NextResponse.json({ error: "Ungültige Sichtbarkeit" }, { status: 400 });
+    }
+    if (!canUpdate) {
+      return NextResponse.json({ error: "Keine Berechtigung zur Sichtbarkeitsänderung" }, { status: 403 });
+    }
+    if (body.visibility !== existing.visibility) {
+      updateData.visibility = body.visibility;
       updateData.updatedBy = { connect: { id: userId } };
       updateData.lastActivityAt = now;
       touched = true;
