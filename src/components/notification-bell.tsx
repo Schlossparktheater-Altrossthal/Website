@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useNotificationRealtime } from "@/hooks/useRealtime";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { EmergencyDialog } from "@/components/dialogs/emergency-dialog";
+import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "short",
@@ -67,6 +68,14 @@ export function NotificationBell({ className }: { className?: string }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery("(max-width: 640px)");
   const panelId = useId();
+  const [permissionRequestPending, setPermissionRequestPending] = useState(false);
+
+  const {
+    isSupported: browserNotificationsSupported,
+    permission: browserNotificationPermission,
+    requestPermission: requestBrowserNotificationPermission,
+    showNotification: showBrowserNotification,
+  } = useBrowserNotifications();
 
   const unreadCount = useMemo(
     () => notifications.reduce((count, item) => count + (item.readAt ? 0 : 1), 0),
@@ -197,12 +206,54 @@ export function NotificationBell({ className }: { className?: string }) {
           toast.info(event.notification.title, { description });
       }
 
+      if (browserNotificationsSupported) {
+        void showBrowserNotification({
+          title: event.notification.title,
+          body: description,
+          tag: event.notification.id,
+          data: { url: "/mitglieder" },
+        });
+      }
+
       void loadNotifications();
     },
-    [status, loadNotifications],
+    [status, loadNotifications, browserNotificationsSupported, showBrowserNotification],
   );
 
   useNotificationRealtime(handleRealtimeNotification);
+
+  const handleEnableBrowserNotifications = useCallback(async () => {
+    if (!browserNotificationsSupported) {
+      toast.error("Browser-Benachrichtigungen werden von diesem Gerät nicht unterstützt.");
+      return;
+    }
+
+    if (browserNotificationPermission === "granted") {
+      toast.info("Browser-Benachrichtigungen sind bereits aktiviert.");
+      return;
+    }
+
+    setPermissionRequestPending(true);
+    try {
+      const result = await requestBrowserNotificationPermission();
+      if (result === "granted") {
+        toast.success("Browser-Benachrichtigungen aktiviert.");
+      } else if (result === "denied") {
+        toast.error("Browser-Benachrichtigungen wurden blockiert.");
+      } else {
+        toast.info("Browser-Benachrichtigungen wurden nicht aktiviert.");
+      }
+    } catch (error) {
+      console.error("[NotificationBell] enabling browser notifications failed", error);
+      toast.error("Browser-Benachrichtigungen konnten nicht aktiviert werden.");
+    } finally {
+      setPermissionRequestPending(false);
+    }
+  }, [
+    browserNotificationsSupported,
+    browserNotificationPermission,
+    requestBrowserNotificationPermission,
+  ]);
 
   const respond = useCallback(
     async (
@@ -326,6 +377,10 @@ export function NotificationBell({ className }: { className?: string }) {
       scrollAreaClassName={scrollAreaClassName}
       onClearRead={clearRead}
       onRequestEmergency={openEmergencyDialog}
+      browserNotificationsSupported={browserNotificationsSupported}
+      browserPermission={browserNotificationsSupported ? browserNotificationPermission : null}
+      onEnableBrowserNotifications={handleEnableBrowserNotifications}
+      permissionRequestPending={permissionRequestPending}
     />
   );
 
@@ -399,6 +454,10 @@ type NotificationContentProps = {
   scrollAreaClassName?: string;
   onClearRead: () => void;
   onRequestEmergency: (notificationId: string) => void;
+  browserNotificationsSupported: boolean;
+  browserPermission: NotificationPermission | null;
+  onEnableBrowserNotifications: () => void;
+  permissionRequestPending: boolean;
 };
 
 function NotificationContent({
@@ -409,6 +468,10 @@ function NotificationContent({
   scrollAreaClassName,
   onClearRead,
   onRequestEmergency,
+  browserNotificationsSupported,
+  browserPermission,
+  onEnableBrowserNotifications,
+  permissionRequestPending,
 }: NotificationContentProps) {
   return (
     <div className="space-y-3 text-sm">
@@ -423,6 +486,13 @@ function NotificationContent({
           )}
         </span>
       </header>
+      {browserNotificationsSupported && browserPermission && browserPermission !== "granted" && (
+        <BrowserNotificationCallout
+          permission={browserPermission}
+          onEnable={onEnableBrowserNotifications}
+          pending={permissionRequestPending}
+        />
+      )}
       {notifications.length === 0 ? (
         <p className="text-xs text-muted-foreground">Keine Benachrichtigungen vorhanden.</p>
       ) : (
@@ -436,6 +506,37 @@ function NotificationContent({
         </div>
       )}
     </div>
+  );
+}
+
+type BrowserNotificationCalloutProps = {
+  permission: NotificationPermission;
+  onEnable: () => void;
+  pending: boolean;
+};
+
+function BrowserNotificationCallout({ permission, onEnable, pending }: BrowserNotificationCalloutProps) {
+  if (permission === "granted") {
+    return null;
+  }
+
+  const isBlocked = permission === "denied";
+
+  return (
+    <section className="rounded-lg border border-dashed border-primary/50 bg-primary/10 p-3 text-xs">
+      <p className="mb-2 leading-relaxed text-muted-foreground">
+        Aktiviere Browser-Benachrichtigungen, um auch außerhalb der Website sofort informiert zu bleiben.
+      </p>
+      {isBlocked ? (
+        <p className="text-xs font-medium text-amber-700">
+          Browser-Benachrichtigungen wurden blockiert. Bitte erlaube sie in den Browser-Einstellungen.
+        </p>
+      ) : (
+        <Button type="button" size="sm" onClick={onEnable} disabled={pending}>
+          {pending ? "Aktiviere…" : "Browser-Benachrichtigungen aktivieren"}
+        </Button>
+      )}
+    </section>
   );
 }
 
