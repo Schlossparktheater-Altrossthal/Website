@@ -1025,6 +1025,7 @@ model MemberOnboardingProfile {
   redemptionId String?         @unique
   focus        OnboardingFocus
   background   String?
+  notes        String?
   gender       String?
   memberSinceYear Int?
   dietaryPreference String?

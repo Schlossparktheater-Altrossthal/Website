@@ -108,6 +108,7 @@ const payloadSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6).max(128),
   background: z.string().min(2),
+  notes: z.string().max(1000).optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
   gender: genderSchema,
   memberSinceYear: z.number().int().min(1900).max(CURRENT_YEAR).optional().nullable(),
@@ -180,6 +181,7 @@ export async function POST(request: NextRequest) {
   const lastName = payload.lastName.trim();
   const fullName = combineNameParts(firstName, lastName) ?? null;
   const background = payload.background.trim();
+  const notes = normalizeString(payload.notes);
   const focus = payload.focus;
   const password = payload.password;
   const preferences = payload.preferences.filter((pref) => pref.weight > 0);
@@ -301,6 +303,7 @@ export async function POST(request: NextRequest) {
     email,
     focus,
     background,
+    notes,
     dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
     gender: {
       option: genderOption,
@@ -369,6 +372,7 @@ export async function POST(request: NextRequest) {
           redemptionId: redemption.id,
           focus,
           background,
+          notes: notes ?? undefined,
           gender: genderDisplay,
           memberSinceYear: memberSinceYear ?? undefined,
           dietaryPreference: dietaryStyleDisplay,
