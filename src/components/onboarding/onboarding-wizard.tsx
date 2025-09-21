@@ -852,18 +852,18 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   }, [invite.expiresAt]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <Card className="border border-border/70 bg-gradient-to-br from-background to-background/70">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-2xl font-semibold">Dein Einstieg ins Theater</CardTitle>
+            <CardTitle className="text-xl font-semibold sm:text-2xl">Dein Einstieg ins Theater</CardTitle>
             <p className="text-sm text-muted-foreground">
               Einladung erstellt {inviteCreatedAt ? `am ${inviteCreatedAt}` : "vor Kurzem"}
               {invite.createdBy ? ` von ${invite.createdBy}` : ""}.
               {inviteExpiresAt ? ` Gültig bis ${inviteExpiresAt}.` : ""}
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:flex-nowrap">
             <Badge variant="outline">Link-ID gesichert</Badge>
             {invite.remainingUses !== null ? (
               <span>{invite.remainingUses} von {invite.remainingUses + invite.usageCount} Plätzen frei</span>
@@ -878,7 +878,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         aria-label="Onboarding-Fortschritt"
         className="max-w-full overflow-x-auto rounded-xl border border-border/60 bg-background/80 px-3 py-2 shadow-sm sm:overflow-visible sm:border-none sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none"
       >
-        <ol className="flex min-w-max list-none items-center gap-3 sm:min-w-0 sm:flex-wrap">
+        <ol className="flex list-none flex-wrap items-center gap-3 md:flex-nowrap">
           {steps.map((item, index) => {
             const isActive = index === step;
             const isComplete = index < step;
@@ -890,7 +890,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   onClick={() => goToStep(index)}
                   disabled={isFuture}
                   className={cn(
-                    "group flex shrink-0 flex-col items-center gap-1 rounded-lg bg-transparent px-2 py-1 text-center focus-visible:outline-none sm:flex-row sm:items-center sm:gap-2 sm:px-0 sm:py-0 sm:text-left",
+                    "group flex shrink-0 flex-col items-center gap-1 rounded-lg bg-transparent px-2 py-1 text-center focus-visible:outline-none md:flex-row md:items-center md:gap-2 md:px-0 md:py-0 md:text-left",
                     isComplete ? "cursor-pointer" : "cursor-default",
                   )}
                   aria-current={isActive ? "step" : undefined}
@@ -914,7 +914,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   </span>
                   <span
                     className={cn(
-                      "text-xs font-medium sm:text-sm",
+                      "text-xs font-medium md:text-sm",
                       isActive ? "text-foreground" : "text-muted-foreground",
                     )}
                     aria-hidden
@@ -923,7 +923,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   </span>
                 </button>
                 {index < steps.length - 1 && (
-                  <div className="hidden h-px w-10 shrink-0 bg-border sm:block" aria-hidden />
+                  <div className="hidden h-px w-10 shrink-0 bg-border md:block" aria-hidden />
                 )}
               </li>
             );
@@ -933,9 +933,9 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
 
       {step === 0 && (
         <Card className="border border-border/70 bg-background/80 shadow-xl">
-          <CardContent className="space-y-6 p-8 text-center">
-            <h2 className="text-3xl font-semibold">Willkommen im Zukunftstheater</h2>
-            <p className="text-muted-foreground">
+          <CardContent className="space-y-5 px-5 py-6 text-center sm:space-y-6 sm:px-8 sm:py-8">
+            <h2 className="text-2xl font-semibold sm:text-3xl">Willkommen im Zukunftstheater</h2>
+            <p className="text-sm text-muted-foreground sm:text-base">
               Schön, dass du da bist! Nimm dir 10 Minuten Zeit, such dir einen ruhigen Ort und lass uns gemeinsam herausfinden, wie du
               dich auf der Bühne oder hinter den Kulissen einbringen möchtest.
             </p>
