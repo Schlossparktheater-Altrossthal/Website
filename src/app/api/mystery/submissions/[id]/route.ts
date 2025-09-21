@@ -10,10 +10,7 @@ const updateSchema = z.object({
   isCorrect: z.boolean(),
 });
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.mystery.tips");
   if (!allowed) {
