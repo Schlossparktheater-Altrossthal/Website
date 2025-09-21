@@ -42,8 +42,13 @@ const highlights = [
   },
   {
     label: "Publikum",
-    value: "3.200",
-    detail: "begeisterte Gäste pro Saison",
+    value: "400+",
+    detail: "Gäste pro Aufführung",
+  },
+  {
+    label: "Aufführungen",
+    value: "4",
+    detail: "pro Saison",
   },
 ];
 
