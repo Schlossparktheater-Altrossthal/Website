@@ -47,13 +47,33 @@ export function Hero({ images }: { images: string[] }) {
             }}
           >
             <div className="flex flex-col items-center gap-8 md:gap-10">
-              <Heading
-                level="display"
-                weight="bold"
-                className="font-serif text-balance leading-[0.92] text-white drop-shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
-              >
-                <span className="block">Das Geheimnis</span>
-                <span className="block">im Schlosspark</span>
+              <Heading level="display" weight="bold" className="font-serif text-balance text-white">
+                <span className="relative inline-flex flex-col items-center">
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -top-14 left-1/2 hidden h-32 w-64 -translate-x-1/2 -skew-x-6 rounded-full border border-white/10 bg-white/10 opacity-60 blur-3xl sm:block -z-10"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -left-14 top-1/2 hidden h-24 w-24 -translate-y-1/2 rounded-full border border-white/20 bg-[color-mix(in_oklab,var(--primary)_55%,transparent)] opacity-70 blur-2xl md:block -z-10"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-16 top-1/2 hidden h-28 w-28 -translate-y-1/2 rounded-full border border-white/10 bg-[color-mix(in_oklab,var(--primary)_35%,transparent)] opacity-75 blur-[90px] lg:block -z-10"
+                  />
+                  <span className="relative inline-flex flex-col items-center gap-5 rounded-[3rem] border border-white/40 bg-white/10 px-8 py-7 text-center shadow-[0_30px_90px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:px-14 sm:py-10">
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 rounded-[3rem] bg-[linear-gradient(135deg,rgba(255,255,255,0.25),rgba(255,255,255,0.05))] opacity-70 [mask-image:radial-gradient(circle_at_center,black,transparent_75%)] -z-10"
+                    />
+                    <span className="relative text-[clamp(2.5rem,6vw,4.9rem)] uppercase tracking-[0.18em] leading-[0.9] text-white drop-shadow-[0_18px_45px_rgba(0,0,0,0.55)]">
+                      Das Geheimnis
+                    </span>
+                    <span className="relative text-[clamp(2.2rem,5vw,4.3rem)] uppercase tracking-[0.32em] leading-[0.9] text-white/90 drop-shadow-[0_18px_45px_rgba(0,0,0,0.55)]">
+                      im Schlosspark
+                    </span>
+                  </span>
+                </span>
               </Heading>
               <Text
                 variant="lead"
