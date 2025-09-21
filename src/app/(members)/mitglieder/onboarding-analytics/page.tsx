@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/rbac";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const percentFormat = new Intl.NumberFormat("de-DE", { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
 export default async function OnboardingAnalyticsPage() {
   const session = await requireAuth();
@@ -166,6 +167,165 @@ export default async function OnboardingAnalyticsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Card className="border border-border/70">
+        <CardHeader>
+          <CardTitle>Talentprofile &amp; Matching</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Individuelle Onboarding-Antworten, um Rollen nach Interessen und Präferenzen zu besetzen.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {analytics.talentProfiles.length ? (
+            <div className="space-y-4">
+              {analytics.talentProfiles.map((profile) => {
+                const name = profile.name ?? profile.email ?? "Unbekannte Person";
+                const completionLabel = profile.completedAt
+                  ? `Abschluss: ${dateFormat.format(new Date(profile.completedAt))}`
+                  : `Erstellt: ${dateFormat.format(new Date(profile.createdAt))}`;
+                const topPreferences = profile.preferences.slice(0, 3);
+                const remainingPreferences = Math.max(profile.preferences.length - topPreferences.length, 0);
+                const interestPreview = profile.interests.slice(0, 5);
+                const remainingInterests = Math.max(profile.interests.length - interestPreview.length, 0);
+                const allergyPreview = profile.dietaryRestrictions.slice(0, 3);
+                const remainingAllergies = Math.max(profile.dietaryRestrictions.length - allergyPreview.length, 0);
+                const gender =
+                  profile.gender && profile.gender.toLowerCase() !== "keine angabe" ? profile.gender : null;
+                const showDietaryPreference =
+                  profile.dietaryPreference && profile.dietaryPreference !== "Keine besondere Ernährung";
+                const dietaryStrictness =
+                  profile.dietaryPreferenceStrictness && profile.dietaryPreferenceStrictness !== "Nicht relevant"
+                    ? profile.dietaryPreferenceStrictness
+                    : null;
+
+                return (
+                  <div key={profile.userId} className="rounded-lg border border-border/60 p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-foreground">{name}</p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {profile.email && <span>{profile.email}</span>}
+                          <span>{completionLabel}</span>
+                          {profile.inviteLabel && <span>Einladung: {profile.inviteLabel}</span>}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="secondary">{focusLabel(profile.focus)}</Badge>
+                        {gender && <Badge variant="ghost">{gender}</Badge>}
+                        {typeof profile.age === "number" && <Badge variant="ghost">{profile.age} Jahre</Badge>}
+                        {profile.memberSinceYear && (
+                          <Badge variant="outline">Mitglied seit {profile.memberSinceYear}</Badge>
+                        )}
+                        {profile.hasPendingPhotoConsent && (
+                          <Badge variant="warning" className="uppercase tracking-wide">
+                            Foto-Einverständnis offen
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {profile.background && (
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{profile.background}</p>
+                    )}
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Präferenzen</p>
+                        {topPreferences.length ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {topPreferences.map((pref) => (
+                              <Badge
+                                key={`${profile.userId}-${pref.code}`}
+                                variant="outline"
+                                className="justify-start"
+                              >
+                                <span className="font-medium">{humanizePreference(pref.code)}</span>
+                                <span className="text-[10px] uppercase text-muted-foreground">
+                                  {pref.domain === "acting" ? "Schauspiel" : "Gewerke"} · {pref.weight}
+                                </span>
+                              </Badge>
+                            ))}
+                            {remainingPreferences > 0 && (
+                              <Badge variant="ghost" className="text-xs text-muted-foreground">
+                                +{remainingPreferences} weitere
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm text-muted-foreground">Keine Präferenzen hinterlegt.</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Interessen</p>
+                        {interestPreview.length ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {interestPreview.map((interest) => (
+                              <Badge
+                                key={`${profile.userId}-${interest}`}
+                                variant="muted"
+                                className="justify-start"
+                              >
+                                {interest}
+                              </Badge>
+                            ))}
+                            {remainingInterests > 0 && (
+                              <Badge variant="ghost" className="text-xs text-muted-foreground">
+                                +{remainingInterests} weitere
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm text-muted-foreground">Keine Interessen angegeben.</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Ernährung &amp; Allergien</p>
+                        {showDietaryPreference || dietaryStrictness || allergyPreview.length ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {showDietaryPreference && (
+                              <Badge variant="muted" className="justify-start">
+                                {profile.dietaryPreference}
+                              </Badge>
+                            )}
+                            {dietaryStrictness && (
+                              <Badge variant="ghost" className="justify-start text-xs text-muted-foreground">
+                                {dietaryStrictness}
+                              </Badge>
+                            )}
+                            {allergyPreview.map((entry) => (
+                              <Badge
+                                key={`${profile.userId}-${entry.allergen}`}
+                                variant="warning"
+                                className="justify-start"
+                              >
+                                <span className="font-medium">{entry.allergen}</span>
+                                <span className="text-[10px] uppercase text-muted-foreground">
+                                  {dietaryLabel(entry.level)}
+                                </span>
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm text-muted-foreground">Keine Besonderheiten gemeldet.</p>
+                        )}
+                        {remainingAllergies > 0 && (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            +{remainingAllergies} weitere Allergien
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Noch keine abgeschlossenen Onboardings vorhanden.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -209,5 +369,18 @@ function dietaryLabel(level: string) {
       return "Kritisch";
     default:
       return level;
+  }
+}
+
+function focusLabel(focus: string) {
+  switch (focus) {
+    case "acting":
+      return "Schauspiel";
+    case "tech":
+      return "Gewerke";
+    case "both":
+      return "Hybrid";
+    default:
+      return focus;
   }
 }
