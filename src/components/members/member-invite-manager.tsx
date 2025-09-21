@@ -55,6 +55,22 @@ type FreshInvite = {
   token: string;
   inviteUrl: string;
   shareUrl: string | null;
+  label: string | null;
+  note: string | null;
+  expiresAt: string | null;
+  maxUses: number | null;
+  roles: Role[];
+};
+
+type InviteForPdf = {
+  id: string;
+  label: string | null;
+  note: string | null;
+  shareUrl: string | null;
+  inviteUrl?: string | null;
+  expiresAt: string | null;
+  maxUses: number | null;
+  roles: Role[];
 };
 
 export function MemberInviteManager() {
@@ -66,11 +82,108 @@ export function MemberInviteManager() {
   const [freshInvite, setFreshInvite] = useState<FreshInvite | null>(null);
   const [origin, setOrigin] = useState("");
   const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
+  const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
   const resolvedOrigin = useMemo(() => {
     if (origin) return origin;
     if (typeof window !== "undefined") return window.location.origin;
     return "";
   }, [origin]);
+  const buildAbsoluteUrl = useCallback(
+    (path: string | null | undefined) => {
+      if (!path) return null;
+      if (/^https?:\/\//i.test(path)) return path;
+      const base = resolvedOrigin || (typeof window !== "undefined" ? window.location.origin : "");
+      if (!base) return null;
+      if (path.startsWith("/")) return `${base}${path}`;
+      return `${base}/${path}`;
+    },
+    [resolvedOrigin],
+  );
+
+  const extractFilenameFromDisposition = (disposition: string | null) => {
+    if (!disposition) return null;
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return utf8Match[1];
+      }
+    }
+    const quotedMatch = disposition.match(/filename="([^"\\]*(?:\\.[^"\\]*)*)"/i);
+    if (quotedMatch?.[1]) {
+      return quotedMatch[1].replace(/\\"/g, "").replace(/\\/g, "").trim();
+    }
+    const simpleMatch = disposition.match(/filename=([^;]+)/i);
+    if (simpleMatch?.[1]) {
+      return simpleMatch[1].replace(/"/g, "").trim();
+    }
+    return null;
+  };
+
+  const requestInvitePdf = useCallback(
+    async (invite: InviteForPdf) => {
+      const urlCandidate = invite.shareUrl ?? invite.inviteUrl ?? null;
+      if (!urlCandidate) {
+        toast.error("Für diesen Link steht keine öffentliche URL zur Verfügung.");
+        return;
+      }
+
+      const absoluteUrl = buildAbsoluteUrl(urlCandidate);
+      if (!absoluteUrl) {
+        toast.error("PDF kann nur im Browser generiert werden.");
+        return;
+      }
+
+      setDownloadingPdfFor(invite.id);
+      try {
+        const response = await fetch("/api/pdfs/onboarding-invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            link: absoluteUrl,
+            headline: invite.label,
+            inviteLabel: invite.label,
+            note: invite.note,
+            expiresAt: invite.expiresAt,
+            maxUses: invite.maxUses,
+            roles: invite.roles,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorPayload = await response.json().catch(() => null);
+          throw new Error(errorPayload?.error ?? "PDF konnte nicht erstellt werden");
+        }
+
+        const blob = await response.blob();
+        const disposition = response.headers.get("content-disposition");
+        const filenameFromHeader = extractFilenameFromDisposition(disposition);
+        let filename = filenameFromHeader?.trim() || "onboarding-link.pdf";
+        filename = filename.replace(/[/\\]/g, "_");
+        if (!filename.toLowerCase().endsWith(".pdf")) {
+          filename = `${filename}.pdf`;
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = downloadUrl;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(downloadUrl);
+        toast.success("PDF wurde heruntergeladen.");
+      } catch (err) {
+        console.error("[MemberInviteManager] pdf", err);
+        const message = err instanceof Error ? err.message : "PDF konnte nicht erstellt werden";
+        toast.error(message);
+      } finally {
+        setDownloadingPdfFor(null);
+      }
+    },
+    [buildAbsoluteUrl],
+  );
   const [form, setForm] = useState<CreateInviteState>({
     label: "",
     note: "",
@@ -150,6 +263,11 @@ export function MemberInviteManager() {
           token: data.invite.token,
           inviteUrl: data.invite.inviteUrl,
           shareUrl: data.invite.shareUrl ?? null,
+          label: data.invite.label ?? null,
+          note: data.invite.note ?? null,
+          expiresAt: data.invite.expiresAt ?? null,
+          maxUses: typeof data.invite.maxUses === "number" ? data.invite.maxUses : null,
+          roles: Array.isArray(data.invite.roles) ? data.invite.roles : [],
         });
         try {
           const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
@@ -310,6 +428,27 @@ export function MemberInviteManager() {
               </Button>
               <Button
                 size="sm"
+                variant="outline"
+                className="border-primary/60 text-primary hover:bg-primary/20"
+                onClick={() => {
+                  if (!freshInvite) return;
+                  void requestInvitePdf({
+                    id: freshInvite.id,
+                    label: freshInvite.label,
+                    note: freshInvite.note,
+                    shareUrl: freshInvite.shareUrl,
+                    inviteUrl: freshInvite.inviteUrl,
+                    expiresAt: freshInvite.expiresAt,
+                    maxUses: freshInvite.maxUses,
+                    roles: freshInvite.roles,
+                  });
+                }}
+                disabled={downloadingPdfFor === freshInvite.id}
+              >
+                {downloadingPdfFor === freshInvite.id ? "PDF wird erstellt …" : "PDF generieren"}
+              </Button>
+              <Button
+                size="sm"
                 variant="ghost"
                 className="text-foreground hover:bg-primary/10"
                 onClick={() => setFreshInvite(null)}
@@ -384,6 +523,25 @@ export function MemberInviteManager() {
                                 onClick={() => copyInviteLink(invite.shareUrl!)}
                               >
                                 Link kopieren
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-3 text-xs text-foreground hover:bg-muted/60"
+                                onClick={() => {
+                                  void requestInvitePdf({
+                                    id: invite.id,
+                                    label: invite.label,
+                                    note: invite.note,
+                                    shareUrl: invite.shareUrl,
+                                    expiresAt: invite.expiresAt,
+                                    maxUses: invite.maxUses,
+                                    roles: invite.roles,
+                                  });
+                                }}
+                                disabled={downloadingPdfFor === invite.id}
+                              >
+                                {downloadingPdfFor === invite.id ? "PDF wird erstellt …" : "PDF generieren"}
                               </Button>
                               <Button
                                 size="sm"
