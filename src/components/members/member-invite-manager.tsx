@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Role } from "@prisma/client";
+import { ChevronDown, ChevronUp, Copy, Download, ExternalLink, Power, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS, ROLES, sortRoles } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +85,13 @@ export function MemberInviteManager() {
   const [origin, setOrigin] = useState("");
   const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
   const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
+  const [expandedInviteId, setExpandedInviteId] = useState<string | null>(null);
+  const freshInviteId = freshInvite?.id ?? null;
+  useEffect(() => {
+    if (freshInviteId) {
+      setExpandedInviteId(freshInviteId);
+    }
+  }, [freshInviteId]);
   const resolvedOrigin = useMemo(() => {
     if (origin) return origin;
     if (typeof window !== "undefined") return window.location.origin;
@@ -402,70 +411,79 @@ export function MemberInviteManager() {
       </CardHeader>
       <CardContent className="space-y-6">
         {freshInvite && (
-          <div className="rounded-xl border border-primary/60 bg-primary/20 p-4 text-sm text-foreground shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="rounded-lg border border-primary/50 bg-primary/10 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
-                <p className="text-base font-semibold text-foreground">Neuer Onboarding-Link erstellt</p>
-                <p className="text-xs text-foreground/80 sm:text-sm">
+                <p className="text-sm font-semibold text-foreground">Neuer Onboarding-Link erstellt</p>
+                <p className="text-xs text-muted-foreground sm:text-sm">
                   Kopiere den Link für den Versand oder öffne ihn direkt in einem neuen Tab.
                 </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-2 border-primary/50 px-3 text-xs text-primary hover:bg-primary/10"
+                  onClick={copyFreshInvite}
+                >
+                  <Copy className="h-4 w-4" />
+                  Link kopieren
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-2 border-primary/50 px-3 text-xs text-primary hover:bg-primary/10"
+                  onClick={() => {
+                    if (!freshInvite) return;
+                    void requestInvitePdf({
+                      id: freshInvite.id,
+                      label: freshInvite.label,
+                      note: freshInvite.note,
+                      shareUrl: freshInvite.shareUrl,
+                      inviteUrl: freshInvite.inviteUrl,
+                      expiresAt: freshInvite.expiresAt,
+                      maxUses: freshInvite.maxUses,
+                      roles: freshInvite.roles,
+                    });
+                  }}
+                  disabled={downloadingPdfFor === freshInvite.id}
+                >
+                  {downloadingPdfFor === freshInvite.id ? (
+                    "PDF wird erstellt …"
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      PDF generieren
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 gap-2 px-3 text-xs text-primary hover:bg-primary/15"
+                  asChild
+                >
+                  <a href={freshInvite.shareUrl ?? freshInvite.inviteUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                    Öffnen
+                  </a>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 gap-2 px-3 text-xs text-primary hover:bg-primary/15"
+                  onClick={() => setFreshInvite(null)}
+                >
+                  Ausblenden
+                </Button>
               </div>
             </div>
             <code className="mt-3 block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
               {(resolvedOrigin ? resolvedOrigin : "") + (freshInvite.shareUrl ?? freshInvite.inviteUrl)}
             </code>
-            <p className="mt-2 text-xs text-foreground/80">
-              Der Link bleibt während des aktiven Zeitraums auch unten in der Übersicht sichtbar.
+            <p className="mt-2 text-xs text-muted-foreground">
+              Der Link ist zusätzlich in der Übersicht hervorgehoben.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-primary/60 text-primary hover:bg-primary/20"
-                onClick={copyFreshInvite}
-              >
-                Link kopieren
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-primary/60 text-primary hover:bg-primary/20"
-                onClick={() => {
-                  if (!freshInvite) return;
-                  void requestInvitePdf({
-                    id: freshInvite.id,
-                    label: freshInvite.label,
-                    note: freshInvite.note,
-                    shareUrl: freshInvite.shareUrl,
-                    inviteUrl: freshInvite.inviteUrl,
-                    expiresAt: freshInvite.expiresAt,
-                    maxUses: freshInvite.maxUses,
-                    roles: freshInvite.roles,
-                  });
-                }}
-                disabled={downloadingPdfFor === freshInvite.id}
-              >
-                {downloadingPdfFor === freshInvite.id ? "PDF wird erstellt …" : "PDF generieren"}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-foreground hover:bg-primary/10"
-                onClick={() => setFreshInvite(null)}
-              >
-                Ausblenden
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-foreground hover:bg-primary/10"
-                asChild
-              >
-                <a href={freshInvite.shareUrl ?? freshInvite.inviteUrl} target="_blank" rel="noopener noreferrer">
-                  Öffnen
-                </a>
-              </Button>
-            </div>
           </div>
         )}
 
@@ -479,106 +497,227 @@ export function MemberInviteManager() {
               {sortedInvites.map((invite) => {
                 const status = statusForInvite(invite);
                 const isFresh = freshInvite?.id === invite.id;
+                const isExpanded = expandedInviteId === invite.id;
+                const sharePath = invite.shareUrl ?? null;
+                const isProcessing = processingInviteId === invite.id;
+                const isDownloading = downloadingPdfFor === invite.id;
+                const metaItems = [`Erstellt am ${formatDate(invite.createdAt)}`];
+                if (invite.expiresAt) {
+                  metaItems.push(`Gültig bis ${formatDate(invite.expiresAt)}`);
+                }
+                if (invite.maxUses !== null) {
+                  metaItems.push(`${invite.usageCount} / ${invite.maxUses} genutzt`);
+                } else {
+                  metaItems.push(`${invite.usageCount} Nutzungen`);
+                }
+                const menuItems = [
+                  ...(sharePath
+                    ? [
+                        {
+                          label: "Link kopieren",
+                          icon: <Copy className="h-4 w-4" />,
+                          onClick: () => {
+                            void copyInviteLink(sharePath);
+                          },
+                        },
+                        {
+                          label: isDownloading ? "PDF wird erstellt …" : "PDF generieren",
+                          icon: <Download className="h-4 w-4" />,
+                          onClick: () => {
+                            if (isDownloading) return;
+                            void requestInvitePdf({
+                              id: invite.id,
+                              label: invite.label,
+                              note: invite.note,
+                              shareUrl: invite.shareUrl,
+                              expiresAt: invite.expiresAt,
+                              maxUses: invite.maxUses,
+                              roles: invite.roles,
+                            });
+                          },
+                        },
+                        {
+                          label: "Im neuen Tab öffnen",
+                          icon: <ExternalLink className="h-4 w-4" />,
+                          onClick: () => {
+                            const absolute = buildAbsoluteUrl(sharePath);
+                            if (absolute && typeof window !== "undefined") {
+                              window.open(absolute, "_blank", "noopener,noreferrer");
+                            } else {
+                              toast.error("Link kann aktuell nicht geöffnet werden.");
+                            }
+                          },
+                        },
+                      ]
+                    : []),
+                  {
+                    label: invite.isDisabled ? "Einladung aktivieren" : "Einladung deaktivieren",
+                    icon: <Power className="h-4 w-4" />,
+                    onClick: () => {
+                      if (isProcessing) return;
+                      void toggleInvite(invite);
+                    },
+                  },
+                  {
+                    label: "Einladung löschen",
+                    icon: <Trash2 className="h-4 w-4" />,
+                    onClick: () => {
+                      if (isProcessing) return;
+                      void deleteInvite(invite);
+                    },
+                    variant: "destructive" as const,
+                  },
+                ];
                 return (
                   <div
                     key={invite.id}
                     className={cn(
-                      "rounded-lg border border-border/70 bg-card/80 p-4 shadow-sm transition-colors",
-                      isFresh && "border-primary/60 bg-primary/20",
+                      "rounded-lg border border-border/70 bg-card/70 p-4 shadow-sm transition-colors",
+                      (isFresh || isExpanded) && "border-primary/60 bg-primary/10",
                     )}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <h3 className="text-sm font-semibold">
-                          {invite.label?.trim() || "Allgemeiner Link"}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          <span>Erstellt am {formatDate(invite.createdAt)}</span>
-                          {invite.expiresAt && <span>• Gültig bis {formatDate(invite.expiresAt)}</span>}
-                          {invite.maxUses !== null && (
-                            <span>
-                              • {invite.usageCount} / {invite.maxUses} genutzt
-                            </span>
-                          )}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold text-foreground">
+                            {invite.label?.trim() || "Allgemeiner Link"}
+                          </h3>
+                          <Badge variant={status.variant} className="px-2 py-0.5 text-[0.65rem] font-medium uppercase">
+                            {status.label}
+                          </Badge>
                         </div>
-                        {invite.note && <p className="text-xs text-muted-foreground">{invite.note}</p>}
-                        <div className="flex flex-wrap gap-2 pt-2 text-xs">
-                          {invite.roles.map((role) => (
-                            <Badge key={role} variant="outline">
-                              {ROLE_LABELS[role] ?? role}
-                            </Badge>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {metaItems.map((item, index) => (
+                            <span key={`${invite.id}-meta-${index}`} className="flex items-center gap-1">
+                              {index > 0 && <span aria-hidden>•</span>}
+                              <span>{item}</span>
+                            </span>
                           ))}
                         </div>
-                        {invite.shareUrl && !isFresh && (
-                          <div className="mt-3 space-y-2 rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-foreground shadow-sm">
-                            <p className="text-sm font-medium text-foreground">Aktiver Onboarding-Link</p>
-                            <code className="block break-all rounded bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
-                              {(resolvedOrigin ? resolvedOrigin : "") + invite.shareUrl}
-                            </code>
-                            <div className="flex flex-wrap gap-2 pt-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 px-3 text-xs text-foreground hover:bg-muted/60"
-                                onClick={() => copyInviteLink(invite.shareUrl!)}
-                              >
-                                Link kopieren
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 px-3 text-xs text-foreground hover:bg-muted/60"
-                                onClick={() => {
-                                  void requestInvitePdf({
-                                    id: invite.id,
-                                    label: invite.label,
-                                    note: invite.note,
-                                    shareUrl: invite.shareUrl,
-                                    expiresAt: invite.expiresAt,
-                                    maxUses: invite.maxUses,
-                                    roles: invite.roles,
-                                  });
-                                }}
-                                disabled={downloadingPdfFor === invite.id}
-                              >
-                                {downloadingPdfFor === invite.id ? "PDF wird erstellt …" : "PDF generieren"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-3 text-xs text-foreground hover:bg-muted/50"
-                                asChild
-                              >
-                                <a href={invite.shareUrl} target="_blank" rel="noopener noreferrer">
-                                  Öffnen
-                                </a>
-                              </Button>
-                            </div>
-                          </div>
-                        )}
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge variant={status.variant}>{status.label}</Badge>
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => toggleInvite(invite)}
-                            disabled={processingInviteId === invite.id}
-                          >
-                            {invite.isDisabled ? "Aktivieren" : "Deaktivieren"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteInvite(invite)}
-                            disabled={processingInviteId === invite.id}
-                          >
-                            Löschen
-                          </Button>
-                        </div>
+                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 gap-2 px-3 text-xs"
+                          onClick={() =>
+                            setExpandedInviteId((current) => (current === invite.id ? null : invite.id))
+                          }
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronUp className="h-4 w-4" />
+                              Details verbergen
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-4 w-4" />
+                              Details anzeigen
+                            </>
+                          )}
+                        </Button>
+                        <DropdownMenu items={menuItems} className="h-8" />
                       </div>
                     </div>
+                    {isExpanded && (
+                      <div className="mt-4 space-y-4 border-t border-border/60 pt-4">
+                        {invite.note && (
+                          <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground sm:text-sm">
+                            {invite.note}
+                          </div>
+                        )}
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium uppercase text-muted-foreground">Onboarding-Link</p>
+                            {sharePath ? (
+                              <>
+                                <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
+                                  {(resolvedOrigin ? resolvedOrigin : "") + sharePath}
+                                </code>
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 gap-2 px-3 text-xs"
+                                    onClick={() => copyInviteLink(sharePath)}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                    Link kopieren
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 gap-2 px-3 text-xs"
+                                    onClick={() => {
+                                      if (isDownloading) return;
+                                      void requestInvitePdf({
+                                        id: invite.id,
+                                        label: invite.label,
+                                        note: invite.note,
+                                        shareUrl: invite.shareUrl,
+                                        expiresAt: invite.expiresAt,
+                                        maxUses: invite.maxUses,
+                                        roles: invite.roles,
+                                      });
+                                    }}
+                                    disabled={isDownloading}
+                                  >
+                                    {isDownloading ? (
+                                      "PDF wird erstellt …"
+                                    ) : (
+                                      <>
+                                        <Download className="h-4 w-4" />
+                                        PDF generieren
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 gap-2 px-3 text-xs"
+                                    asChild
+                                  >
+                                    <a href={sharePath} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="h-4 w-4" />
+                                      Öffnen
+                                    </a>
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                Für diese Einladung ist kein öffentlicher Link freigegeben.
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium uppercase text-muted-foreground">Rollen</p>
+                              <div className="flex flex-wrap gap-2">
+                                {invite.roles.map((role) => (
+                                  <Badge key={role} variant="outline">
+                                    {ROLE_LABELS[role] ?? role}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium uppercase text-muted-foreground">Nutzungsübersicht</p>
+                              <p className="text-sm text-foreground">
+                                {invite.maxUses !== null
+                                  ? `${invite.usageCount} / ${invite.maxUses} genutzt`
+                                  : `${invite.usageCount} Nutzungen`}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {invite.completedSessions > 0 || invite.pendingSessions > 0
+                                  ? `${invite.completedSessions} abgeschlossen · ${invite.pendingSessions} offen`
+                                  : "Noch keine Sitzungen registriert."}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
