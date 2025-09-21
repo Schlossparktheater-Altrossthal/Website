@@ -1,5 +1,6 @@
-import { MeasurementType, MeasurementUnit } from "@prisma/client"
-import { Button } from "@/components/ui/button"
+"use client";
+
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -8,55 +9,63 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { toast } from "sonner"
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
-const measurementSchema = z.object({
-  type: z.nativeEnum(MeasurementType),
-  value: z.number().min(0),
-  unit: z.nativeEnum(MeasurementUnit),
-  note: z.string().optional(),
-})
-
-type MeasurementFormData = z.infer<typeof measurementSchema>
+import {
+  MEASUREMENT_TYPE_LABELS,
+  measurementSchema,
+  measurementTypeEnum,
+  measurementUnitEnum,
+  type MeasurementFormData,
+  type MeasurementType,
+} from "@/data/measurements";
 
 interface MeasurementFormProps {
-  initialData?: MeasurementFormData
-  onSubmit: (data: MeasurementFormData) => Promise<void>
+  initialData?: Partial<MeasurementFormData>;
+  onSubmit: (data: MeasurementFormData) => Promise<void>;
+  disableTypeSelection?: boolean;
 }
 
-export function MeasurementForm({ initialData, onSubmit }: MeasurementFormProps) {
+export function MeasurementForm({
+  initialData,
+  onSubmit,
+  disableTypeSelection = false,
+}: MeasurementFormProps) {
   const form = useForm<MeasurementFormData>({
     resolver: zodResolver(measurementSchema),
     defaultValues: initialData || {
       type: undefined,
       value: undefined,
-      unit: MeasurementUnit.CM,
+      unit: "CM",
       note: "",
     },
-  })
+  });
 
   const handleSubmit = async (data: MeasurementFormData) => {
     try {
-      await onSubmit(data)
-      toast.success("Maße wurden erfolgreich gespeichert")
+      const cleaned: MeasurementFormData = {
+        ...data,
+        note: data.note && data.note.trim().length > 0 ? data.note.trim() : undefined,
+      };
+      await onSubmit(cleaned);
+      toast.success("Maße wurden erfolgreich gespeichert");
     } catch (error) {
-      console.error("[MeasurementForm] Failed to submit measurement", error)
-      toast.error("Fehler beim Speichern der Maße")
+      console.error("[MeasurementForm] Failed to submit measurement", error);
+      toast.error("Fehler beim Speichern der Maße");
     }
-  }
+  };
 
   return (
     <Form {...form}>
@@ -67,9 +76,10 @@ export function MeasurementForm({ initialData, onSubmit }: MeasurementFormProps)
           render={({ field }) => (
             <FormItem>
               <FormLabel>Art des Maßes</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
+              <Select
+                onValueChange={field.onChange}
                 defaultValue={field.value}
+                disabled={disableTypeSelection}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -77,7 +87,7 @@ export function MeasurementForm({ initialData, onSubmit }: MeasurementFormProps)
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {Object.values(MeasurementType).map((type) => (
+                  {measurementTypeEnum.options.map((type) => (
                     <SelectItem key={type} value={type}>
                       {getMeasurementTypeLabel(type)}
                     </SelectItem>
@@ -97,11 +107,11 @@ export function MeasurementForm({ initialData, onSubmit }: MeasurementFormProps)
               <FormItem>
                 <FormLabel>Wert</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     step="0.1"
                     {...field}
-                    onChange={e => field.onChange(parseFloat(e.target.value))}
+                    onChange={(event) => field.onChange(parseFloat(event.target.value))}
                   />
                 </FormControl>
                 <FormMessage />
@@ -125,7 +135,7 @@ export function MeasurementForm({ initialData, onSubmit }: MeasurementFormProps)
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {Object.values(MeasurementUnit).map((unit) => (
+                    {measurementUnitEnum.options.map((unit) => (
                       <SelectItem key={unit} value={unit}>
                         {unit}
                       </SelectItem>
@@ -160,20 +170,9 @@ export function MeasurementForm({ initialData, onSubmit }: MeasurementFormProps)
         </Button>
       </form>
     </Form>
-  )
+  );
 }
 
 function getMeasurementTypeLabel(type: MeasurementType): string {
-  const labels: Record<MeasurementType, string> = {
-    HEIGHT: "Körpergröße",
-    CHEST: "Brustumfang",
-    WAIST: "Taillenumfang",
-    HIPS: "Hüftumfang",
-    INSEAM: "Innenbeinlänge",
-    SHOULDER: "Schulterbreite",
-    SLEEVE: "Armlänge",
-    SHOE_SIZE: "Schuhgröße",
-    HEAD: "Kopfumfang",
-  }
-  return labels[type] || type
+  return MEASUREMENT_TYPE_LABELS[type] ?? type;
 }

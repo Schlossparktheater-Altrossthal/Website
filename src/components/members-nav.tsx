@@ -20,6 +20,7 @@ const GENERAL_ITEMS: Item[] = [
 const ASSIGNMENT_ITEMS: Item[] = [
   { href: "/mitglieder/meine-proben", label: "Meine Proben", permissionKey: "mitglieder.meine-proben" },
   { href: "/mitglieder/meine-gewerke", label: "Meine Gewerke", permissionKey: "mitglieder.meine-gewerke" },
+  { href: "/mitglieder/koerpermasse", label: "Körpermaße", permissionKey: "mitglieder.koerpermasse" },
   { href: "/mitglieder/probenplanung", label: "Probenplanung", permissionKey: "mitglieder.probenplanung" },
 ];
 
@@ -120,6 +121,20 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
           <path d="M8 14h8" />
           <path d="M8 18h5" />
           <path d="m6 15 1.8 1.8L10 14" />
+        </svg>
+      );
+    case "/mitglieder/koerpermasse":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M6 10h.01" />
+          <path d="M9 10h.01" />
+          <path d="M12 10h.01" />
+          <path d="M15 10h.01" />
+          <path d="M18 10h.01" />
+          <path d="M6 14h6" />
+          <path d="M6 18v2" />
+          <path d="M18 18v2" />
         </svg>
       );
     case "/mitglieder/sperrliste":

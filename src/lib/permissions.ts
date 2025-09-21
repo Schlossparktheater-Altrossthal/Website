@@ -25,6 +25,12 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Eigene Gewerke einsehen",
     description: "Zugang zum Bereich \"Meine Gewerke\" mit Aufgabenübersicht und Terminvorschlägen.",
   },
+  {
+    key: "mitglieder.koerpermasse",
+    label: "Körpermaße pflegen",
+    description:
+      "Ermöglicht das Pflegen eigener Maße für Anproben und blendet den Menüpunkt \"Körpermaße\" in Proben & Gewerken ein, damit das Kostüm-Team die Angaben sieht.",
+  },
   { key: "mitglieder.probenplanung", label: "Probenplanung verwalten" },
   {
     key: "mitglieder.produktionen",
@@ -104,6 +110,16 @@ const FINANCE_BOARD_PERMISSION_KEYS = [
   "mitglieder.finanzen.export",
 ] as const satisfies PermissionDefinition["key"][];
 
+const MEASUREMENT_PERMISSION_KEY = "mitglieder.koerpermasse" as const satisfies PermissionDefinition["key"];
+
+const MEASUREMENT_DEFAULT_ROLE_NAMES = [
+  "member",
+  "cast",
+  "tech",
+  "board",
+  "finance",
+] as const satisfies readonly Role[];
+
 // Baseline permissions that every authenticated user should retain even when no
 // explicit grants exist yet (e.g. on a fresh installation before the matrix is
 // configured). This prevents core pages like the dashboard from responding with
@@ -135,6 +151,7 @@ async function runEnsurePermissionDefinitions() {
   await prisma.$transaction(operations);
   await prisma.permission.deleteMany({ where: { key: { notIn: Array.from(PERMISSION_KEY_SET) } } });
   await ensureFinanceRoleDefaultAssignments();
+  await ensureMeasurementRoleDefaultAssignments();
 }
 
 export async function ensurePermissionDefinitions() {
@@ -229,6 +246,31 @@ async function ensureFinanceRoleDefaultAssignments() {
       );
     }
   }
+
+  if (operations.length) {
+    await prisma.$transaction(operations);
+  }
+}
+
+async function ensureMeasurementRoleDefaultAssignments() {
+  await ensureSystemRoles();
+
+  const [permission, roles] = await Promise.all([
+    prisma.permission.findUnique({ where: { key: MEASUREMENT_PERMISSION_KEY } }),
+    prisma.appRole.findMany({ where: { name: { in: Array.from(MEASUREMENT_DEFAULT_ROLE_NAMES) } } }),
+  ]);
+
+  if (!permission || roles.length === 0) {
+    return;
+  }
+
+  const operations: Prisma.PrismaPromise<unknown>[] = roles.map((role) =>
+    prisma.appRolePermission.upsert({
+      where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
+      update: {},
+      create: { roleId: role.id, permissionId: permission.id },
+    }),
+  );
 
   if (operations.length) {
     await prisma.$transaction(operations);

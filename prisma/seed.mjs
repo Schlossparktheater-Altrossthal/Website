@@ -232,6 +232,34 @@ async function main() {
     });
   }
 
+  const measurementPermission = await prisma.permission.upsert({
+    where: { key: "mitglieder.koerpermasse" },
+    update: {
+      label: "Körpermaße pflegen",
+      description:
+        "Ermöglicht das Pflegen eigener Maße für Anproben und blendet den Menüpunkt \"Körpermaße\" in Proben & Gewerken ein, damit das Kostüm-Team die Angaben sieht.",
+    },
+    create: {
+      key: "mitglieder.koerpermasse",
+      label: "Körpermaße pflegen",
+      description:
+        "Ermöglicht das Pflegen eigener Maße für Anproben und blendet den Menüpunkt \"Körpermaße\" in Proben & Gewerken ein, damit das Kostüm-Team die Angaben sieht.",
+    },
+  });
+
+  const measurementRoleNames = ["member", "cast", "tech", "board", "finance"];
+  const measurementRoles = await prisma.appRole.findMany({
+    where: { name: { in: measurementRoleNames } },
+  });
+
+  for (const role of measurementRoles) {
+    await prisma.appRolePermission.upsert({
+      where: { roleId_permissionId: { roleId: role.id, permissionId: measurementPermission.id } },
+      update: {},
+      create: { roleId: role.id, permissionId: measurementPermission.id },
+    });
+  }
+
   const financePermissionKeys = financePermissionSeeds.map((perm) => perm.key);
   const boardPermissionKeys = ["mitglieder.finanzen", "mitglieder.finanzen.export"];
 

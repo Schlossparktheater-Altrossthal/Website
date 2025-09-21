@@ -6,6 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  MEASUREMENT_TYPE_LABELS,
+  MEASUREMENT_UNIT_LABELS,
+  sortMeasurements,
+  type MeasurementType,
+  type MeasurementUnit,
+} from "@/data/measurements";
 
 import {
   ROLE_BADGE_VARIANTS,
@@ -21,6 +28,17 @@ import {
   hexToRgba,
 } from "./utils";
 
+export type DepartmentMeasurementEntry = {
+  id: string;
+  type: MeasurementType;
+  value: number;
+  unit: MeasurementUnit;
+  note: string | null;
+  updatedAt: Date;
+};
+
+export type DepartmentMeasurementsByUser = Record<string, DepartmentMeasurementEntry[]>;
+
 type DepartmentCardProps = {
   membership: DepartmentMembershipWithDepartment;
   userId: string;
@@ -32,6 +50,7 @@ type DepartmentCardProps = {
   now: Date;
   teamLinkHref?: string;
   teamLinkLabel?: string;
+  measurementsByUser?: DepartmentMeasurementsByUser;
 };
 
 export function DepartmentCard({
@@ -45,6 +64,7 @@ export function DepartmentCard({
   now,
   teamLinkHref,
   teamLinkLabel = "Team öffnen",
+  measurementsByUser,
 }: DepartmentCardProps) {
   const { department } = membership;
 
@@ -72,6 +92,12 @@ export function DepartmentCard({
     blockedByUser,
   );
   const blockedDatesCount = countBlockedDays(memberIdsForDepartment, blockedByUser);
+
+  const isCostumeDepartment = department.slug === "kostuem";
+  const measurementsForDepartment = isCostumeDepartment && measurementsByUser ? measurementsByUser : undefined;
+  const membersWithMeasurements = measurementsForDepartment
+    ? sortedMembers.filter((member) => (measurementsForDepartment[member.userId]?.length ?? 0) > 0).length
+    : 0;
 
   const accentStyle = {
     "--card-accent": department.color ?? "#6366f1",
@@ -224,6 +250,72 @@ export function DepartmentCard({
           </section>
         </div>
 
+        {isCostumeDepartment && measurementsForDepartment ? (
+          <section className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-foreground">Körpermaße &amp; Anprobeninfos</h3>
+              <Badge variant="muted" size="sm">
+                {membersWithMeasurements} {membersWithMeasurements === 1 ? "Person" : "Personen"} mit Angaben
+              </Badge>
+            </div>
+            <ul className="mt-4 space-y-3">
+              {sortedMembers.map((member) => {
+                const entries = measurementsForDepartment[member.userId]
+                  ? sortMeasurements(measurementsForDepartment[member.userId]!)
+                  : [];
+                if (!entries.length) {
+                  return (
+                    <li key={member.id} className="rounded-xl border border-border/60 bg-background/90 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
+                        <span className="text-[11px] text-muted-foreground">Keine Angaben</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">Noch keine Maße hinterlegt.</p>
+                    </li>
+                  );
+                }
+
+                const latestUpdate = formatMeasurementDate(entries);
+
+                return (
+                  <li key={member.id} className="space-y-2 rounded-xl border border-border/60 bg-background/90 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
+                      {latestUpdate ? (
+                        <span className="text-[11px] text-muted-foreground">Stand: {latestUpdate}</span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {entries.map((entry) => (
+                        <span
+                          key={entry.id}
+                          className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2.5 py-1"
+                        >
+                          <span className="font-semibold text-foreground/80">
+                            {MEASUREMENT_TYPE_LABELS[entry.type]}:
+                          </span>
+                          <span>{formatMeasurementValue(entry.value, entry.unit)}</span>
+                        </span>
+                      ))}
+                    </div>
+                    {entries.some((entry) => entry.note) ? (
+                      <ul className="space-y-1 text-[11px] text-muted-foreground/85">
+                        {entries
+                          .filter((entry) => entry.note)
+                          .map((entry) => (
+                            <li key={`${entry.id}-note`}>
+                              {MEASUREMENT_TYPE_LABELS[entry.type]}: {entry.note}
+                            </li>
+                          ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
+
         <section className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-foreground">Meine Aufgaben</h3>
@@ -305,4 +397,18 @@ export function DepartmentCard({
       </CardContent>
     </Card>
   );
+}
+
+function formatMeasurementValue(value: number, unit: MeasurementUnit) {
+  const formattedValue = Number.isFinite(value)
+    ? value.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 1 })
+    : "-";
+  const unitLabel = MEASUREMENT_UNIT_LABELS[unit] ?? unit;
+  return `${formattedValue} ${unitLabel}`;
+}
+
+function formatMeasurementDate(entries: DepartmentMeasurementEntry[]) {
+  if (!entries.length) return null;
+  const latest = entries.reduce((acc, entry) => (entry.updatedAt > acc ? entry.updatedAt : acc), entries[0].updatedAt);
+  return latest.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
