@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Clapperboard } from "lucide-react";
 
 import { ProductionWorkspaceNav } from "./workspace-nav";
 
@@ -92,7 +93,10 @@ export function ProductionWorkspaceHeader({
               Ohne aktive Produktion fehlen Rollen, Szenen und Aufgaben. Wähle eine Produktion aus oder lege eine neue an, um loszulegen.
             </p>
             <Button asChild size="sm" variant="outline" className="ml-auto">
-              <Link href="/mitglieder/produktionen">Produktion auswählen</Link>
+              <Link href="/mitglieder/produktionen" title="Produktion auswählen">
+                <Clapperboard aria-hidden className="h-4 w-4" />
+                <span>Produktion auswählen</span>
+              </Link>
             </Button>
           </CardContent>
         )}

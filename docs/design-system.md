@@ -80,6 +80,26 @@ Weitere Layout-Konstanten:
 - **Varianten:** `primary` (alias `default`), `secondary`, `accent`, `outline`, `ghost`, `subtle`, `link`, `destructive`, `success`, `info`.
 - **States:** Hover reduziert Deckkraft bzw. hebt Konturen hervor; `focus-visible` nutzt `ring` + Offset, `disabled` setzt `opacity-60` und deaktiviert Pointer Events.
 - **Sizes:** `xs`–`xl` plus `icon`, alle auf das 8pt-Raster abgestimmt.
+- **Icons:** Buttons besitzen standardmäßig `inline-flex` + `gap-2`. Platziere führende oder nachgestellte Icons direkt in der Button-Children-Hierarchie (z. B. `<Sparkles className="h-4 w-4" aria-hidden />`). Auf XS-Screens dürfen Labels zugunsten eines Icons mit `sr-only sm:not-sr-only` ausgeblendet werden, solange ein `title` oder das Screenreader-Label erhalten bleibt.
+
+### Symbolsprache & Icon-Buttons
+
+- **Quelle:** Alle Icons stammen aus `lucide-react`. Nutze `import type { LucideIcon }` für konfigurierbare Icon-Props.
+- **Größen:** In Buttons `size="sm"` bis `"lg"` funktionieren Icons mit `className="h-4 w-4"`. Für `size="xl"` darf `h-5 w-5` verwendet werden.
+- **Textersatz:** Für kompakte Quick-Actions oder Toolbars sind reine Icon-Buttons erlaubt (`size="icon"`). Kombiniere Icon + `span.sr-only`, um den Text nur für Screenreader bereitzustellen.
+- **Responsives Labeling:** Möchtest du Labels ab einer bestimmten Breite wiedergeben, nutze `className="sr-only sm:not-sr-only"` für den Text und vergib zusätzlich `title="…"` am Button/Link.
+- **Abstände:** Bei Buttons mit Icon und Text kein zusätzliches Padding setzen – die Komponenten bringen bereits konsistente `gap`- und Paddingwerte mit. Für Sonderfälle kann ein Wrapper-`span` die Reihenfolge oder Animationen steuern.
+- **Beispiel:**
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { CalendarCog } from "lucide-react";
+
+<Button variant="outline" size="sm" title="Probenplanung öffnen">
+  <CalendarCog aria-hidden className="h-4 w-4" />
+  <span className="sr-only sm:not-sr-only">Probenplanung</span>
+</Button>;
+```
 
 ### TextLink (`@/components/ui/text-link`)
 - Variants: `default` (primär), `subtle`, `muted`, `ghost`, `accent`, `button`.
