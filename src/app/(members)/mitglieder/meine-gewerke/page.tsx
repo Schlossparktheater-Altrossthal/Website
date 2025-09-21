@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { addDays, format, formatDistance, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
-import type { ComponentProps } from "react";
+import type { ComponentProps, CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, ListTodo, Sparkles, Users } from "lucide-react";
 
-import { PageHeader } from "@/components/members/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,30 @@ function getDueMeta(date: Date, reference: Date) {
   };
 }
 
+function hexToRgba(hex: string | null | undefined, alpha: number) {
+  if (!hex) {
+    return `rgba(99, 102, 241, ${alpha})`;
+  }
+  let normalized = hex.replace("#", "");
+  if (normalized.length === 3) {
+    normalized = normalized
+      .split("")
+      .map((char) => char + char)
+      .join("");
+  }
+  if (normalized.length !== 6) {
+    return hex;
+  }
+  const num = Number.parseInt(normalized, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 type MeetingSuggestion = { key: string; date: Date; label: string; shortLabel: string };
+
+type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
 
 function findMeetingSuggestions(
   memberIds: string[],
@@ -188,88 +212,145 @@ export default async function MeineGewerkePage() {
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
   const now = new Date();
 
+  const summaryStats: SummaryStat[] = [
+    { label: "Gewerke", value: memberships.length, hint: "Aktive Zuordnungen", icon: Users },
+    { label: "Aktive Aufgaben", value: openTaskCount, hint: "Status offen & in Arbeit", icon: ListTodo },
+    { label: "Abgeschlossen", value: taskTotals.done, hint: "Eigene erledigte Aufgaben", icon: CheckCircle2 },
+  ];
+
   const headerActions = (
     <>
-      <Button asChild size="sm" variant="outline">
-        <Link href="/mitglieder/sperrliste">Sperrliste</Link>
+      <Button
+        asChild
+        size="sm"
+        variant="outline"
+        className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
+      >
+        <Link href="/mitglieder/sperrliste" title="Sperrliste öffnen">
+          <CalendarDays aria-hidden className="h-4 w-4" />
+          <span>Sperrliste</span>
+        </Link>
       </Button>
-      <Button asChild size="sm">
-        <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams</Link>
+      <Button
+        asChild
+        size="sm"
+        variant="secondary"
+        className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground shadow-[0_18px_40px_-28px_rgba(99,102,241,0.9)] transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
+      >
+        <Link href="/mitglieder/produktionen/gewerke" title="Gewerke &amp; Teams öffnen">
+          <Users aria-hidden className="h-4 w-4" />
+          <span>Gewerke &amp; Teams</span>
+        </Link>
       </Button>
     </>
   );
 
+  const heroDescription = memberships.length
+    ? "Behalte deine Zuständigkeiten im Blick, choreografiere Aufgaben und sichere kollisionsfreie Zeitfenster für dein Team."
+    : "Sobald du einem Gewerk zugeordnet bist, findest du hier Aufgaben, Ansprechpartner:innen und Terminvorschläge.";
+
+  const hero = (
+    <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/70 p-6 shadow-[0_28px_90px_-50px_rgba(99,102,241,0.8)] sm:p-10">
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-40 -left-24 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
+        <div className="absolute -bottom-32 right-0 h-64 w-64 rounded-full bg-secondary/20 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),transparent_55%)]" />
+      </div>
+      <div className="relative flex flex-col gap-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="space-y-4">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+              <Sparkles aria-hidden className="h-4 w-4" />
+              <span className="tracking-[0.2em]">Mission Control</span>
+            </span>
+            <div className="space-y-3">
+              <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">Meine Gewerke</h1>
+              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{heroDescription}</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div>
+        </div>
+        {memberships.length ? (
+          <>
+            <dl className="grid gap-4 md:grid-cols-3">
+              {summaryStats.map((stat) => {
+                const Icon = stat.icon;
+                return (
+                  <div
+                    key={stat.label}
+                    className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
+                  >
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+                    <div className="relative flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Icon aria-hidden className="h-5 w-5" />
+                      </span>
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
+                        <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
+                        {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </dl>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:text-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
+                <Clock aria-hidden className="h-4 w-4" />
+                Planungsfenster: {freezeUntilLabel} – {planningWindowLabel}
+              </span>
+              <Link
+                href="/mitglieder/sperrliste"
+                className="inline-flex items-center gap-2 font-semibold text-primary transition hover:text-primary/80"
+              >
+                <CalendarDays aria-hidden className="h-4 w-4" />
+                Sperrliste aktualisieren
+              </Link>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+
   if (memberships.length === 0) {
     return (
-      <div className="space-y-8">
-        <PageHeader
-          title="Meine Gewerke"
-          description="Sobald du einem Gewerk zugeordnet bist, findest du hier Aufgaben, Ansprechpartner:innen und Terminvorschläge."
-          actions={headerActions}
-        />
-
-        <Card className="border border-dashed border-border/60 bg-background/60">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Noch keine Gewerke</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <p>Aktuell bist du keinem Gewerk zugeordnet. Sprich das Produktionsteam an, wenn du Verantwortung übernehmen möchtest.</p>
+      <div className="space-y-10">
+        {hero}
+        <section className="rounded-3xl border border-dashed border-primary/30 bg-background/70 p-6 text-sm text-muted-foreground shadow-inner sm:p-10 sm:text-base">
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-foreground sm:text-xl">Noch keine Gewerke</h2>
             <p>
-              Du kannst jederzeit deine <Link href="/mitglieder/sperrliste" className="text-primary underline-offset-2 hover:underline">Sperrliste</Link> aktualisieren oder in der
-              <Link href="/mitglieder/produktionen/gewerke" className="ml-1 text-primary underline-offset-2 hover:underline">Gewerkübersicht</Link> stöbern.
+              Aktuell bist du keinem Gewerk zugeordnet. Sprich das Produktionsteam an, wenn du Verantwortung übernehmen möchtest.
             </p>
             <p>
-              Terminvorschläge berücksichtigen Sperrlisten nach dem Freeze bis {freezeUntilLabel} sowie den Planungshorizont bis {planningWindowLabel}.
+              Du kannst jederzeit deine{" "}
+              <Link href="/mitglieder/sperrliste" className="font-semibold text-primary hover:text-primary/80">
+                Sperrliste
+              </Link>{" "}
+              aktualisieren oder in der{" "}
+              <Link href="/mitglieder/produktionen/gewerke" className="font-semibold text-primary hover:text-primary/80">
+                Gewerkeübersicht
+              </Link>{" "}
+              stöbern.
             </p>
-          </CardContent>
-        </Card>
+            <p>
+              Terminvorschläge berücksichtigen Sperrlisten nach dem Freeze bis {freezeUntilLabel} sowie den Planungshorizont bis
+              {" "}
+              {planningWindowLabel}.
+            </p>
+          </div>
+        </section>
       </div>
     );
   }
 
-  const summaryStats = [
-    { label: "Gewerke", value: memberships.length, hint: "Aktive Zuordnungen" },
-    { label: "Aktive Aufgaben", value: openTaskCount, hint: "Status offen & in Arbeit" },
-    { label: "Abgeschlossen", value: taskTotals.done, hint: "Eigene erledigte Aufgaben" },
-  ];
-
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Meine Gewerke"
-        description="Behalte deine Zuständigkeiten im Blick, sieh offene Aufgaben und finde passende Terminfelder für dein Team."
-        actions={headerActions}
-      />
+    <div className="space-y-10">
+      {hero}
 
-      <Card className="border border-border/60 bg-background/60">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Überblick</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Terminvorschläge berücksichtigen Sperrlisten ab dem Freeze am {freezeUntilLabel} bis zum Planungshorizont am {planningWindowLabel}.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            {summaryStats.map((stat) => (
-              <div key={stat.label} className="rounded-lg border border-border/60 bg-background/80 p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
-                <p className="mt-1 text-2xl font-semibold text-foreground">{stat.value}</p>
-                {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span>
-              Planungsfenster: {freezeUntilLabel} – {planningWindowLabel}
-            </span>
-            <Link href="/mitglieder/sperrliste" className="font-medium text-primary hover:text-primary/80">
-              Sperrliste aktualisieren
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-6">
+      <div className="space-y-8">
         {memberships.map((membership) => {
           const { department } = membership;
           const sortedMembers = [...department.memberships].sort((a, b) =>
@@ -293,24 +374,48 @@ export default async function MeineGewerkePage() {
             blockedByUser,
           );
           const blockedDatesCount = countBlockedDays(memberIdsForDepartment, blockedByUser);
+          const accentStyle = {
+            "--card-accent": department.color ?? "#6366f1",
+            "--card-accent-overlay": hexToRgba(department.color, 0.2),
+          } as CSSProperties;
 
           return (
-            <Card key={membership.id} className="space-y-6 border border-border/60 bg-background/70">
-              <CardHeader className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <span
-                      className="mt-1 inline-block h-3 w-3 rounded-full border border-border/80"
-                      style={{ backgroundColor: department.color ?? "#94a3b8" }}
-                    />
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg font-semibold">{department.name}</CardTitle>
+            <Card
+              key={membership.id}
+              className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80 shadow-[0_30px_120px_-60px_rgba(99,102,241,0.65)]"
+              style={accentStyle}
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--card-accent-overlay),_transparent_70%)]"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-10 top-0 h-px"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${hexToRgba(department.color, 0.5)}, transparent)`,
+                }}
+              />
+
+              <CardHeader className="relative z-[1] space-y-6 pb-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-border/60 bg-background/90 shadow-inner">
+                      <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: department.color ?? "#94a3b8" }} />
+                    </div>
+                    <div className="space-y-2">
+                      <CardTitle className="text-xl font-semibold text-foreground">{department.name}</CardTitle>
                       {department.description ? (
                         <p className="text-sm text-muted-foreground">{department.description}</p>
                       ) : null}
                     </div>
                   </div>
-                  <Button asChild size="sm" variant="outline">
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full border-border/60 bg-background/80 px-4 backdrop-blur hover:border-primary/40"
+                  >
                     <Link href="/mitglieder/produktionen/gewerke">Team öffnen</Link>
                   </Button>
                 </div>
@@ -319,120 +424,139 @@ export default async function MeineGewerkePage() {
                     {ROLE_LABELS[membership.role]}
                   </Badge>
                   {membership.title ? (
-                    <Badge variant="outline" size="sm">
+                    <Badge variant="outline" size="sm" className="border-border/60">
                       {membership.title}
                     </Badge>
                   ) : null}
-                  {membership.note ? <span>Notiz: {membership.note}</span> : null}
+                  {membership.note ? (
+                    <span className="rounded-full border border-border/50 bg-background/80 px-3 py-1 text-[11px]">
+                      Notiz: {membership.note}
+                    </span>
+                  ) : null}
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Teamübersicht</h3>
-                    <Badge variant="muted" size="sm">
-                      {sortedMembers.length} Personen
-                    </Badge>
-                  </div>
-                  <ul className="space-y-2">
-                    {sortedMembers.map((member) => {
-                      const isCurrentUser = member.userId === userId;
-                      return (
-                        <li
-                          key={member.id}
-                          className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/80 p-3 text-sm shadow-sm"
-                        >
-                          <div>
-                            <p className="font-medium">{formatUserName(member.user)}</p>
-                            {member.title ? (
-                              <p className="text-xs text-muted-foreground">{member.title}</p>
-                            ) : null}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={ROLE_BADGE_VARIANTS[member.role]} size="sm">
-                              {ROLE_LABELS[member.role]}
-                            </Badge>
-                            {isCurrentUser ? (
-                              <Badge variant="outline" size="sm">
-                                Du
+              <CardContent className="relative z-[1] space-y-6">
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                  <section className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">Teamübersicht</h3>
+                      <Badge variant="muted" size="sm">
+                        {sortedMembers.length} Personen
+                      </Badge>
+                    </div>
+                    <ul className="mt-4 space-y-3">
+                      {sortedMembers.map((member) => {
+                        const isCurrentUser = member.userId === userId;
+                        return (
+                          <li
+                            key={member.id}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/90 px-3 py-3 transition hover:border-primary/40"
+                          >
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
+                              {member.title ? (
+                                <p className="text-xs text-muted-foreground">{member.title}</p>
+                              ) : null}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={ROLE_BADGE_VARIANTS[member.role]} size="sm">
+                                {ROLE_LABELS[member.role]}
                               </Badge>
-                            ) : null}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-
-                <div className="space-y-3 rounded-lg border border-border/60 bg-background/80 p-4 shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold">Terminvorschläge</h3>
-                    <Badge variant="muted" size="sm">
-                      {blockedDatesCount} blockierte Tage
-                    </Badge>
-                  </div>
-                  {meetingSuggestions.length ? (
-                    <ul className="grid gap-3 sm:grid-cols-2">
-                      {meetingSuggestions.map((suggestion) => (
-                        <li
-                          key={suggestion.key}
-                          className="rounded-md border border-border/60 bg-background p-3 text-sm shadow-sm"
-                        >
-                          <p className="font-medium">{suggestion.label}</p>
-                          <p className="text-xs text-muted-foreground">Frei für alle Mitglieder</p>
-                        </li>
-                      ))}
+                              {isCurrentUser ? (
+                                <Badge variant="outline" size="sm" className="border-primary/40 text-primary">
+                                  Du
+                                </Badge>
+                              ) : null}
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Aktuell gibt es keinen Termin ohne Sperrlisten-Konflikte. Prüfe deine Sperrtage und die deines Teams.
-                    </p>
-                  )}
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span>
-                      Fenster: {freezeUntilLabel} – {planningWindowLabel}
-                    </span>
-                    <Link href="/mitglieder/sperrliste" className="font-medium text-primary hover:text-primary/80">
-                      Sperrliste öffnen
-                    </Link>
-                  </div>
+                  </section>
+
+                  <section className="space-y-4 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">Terminvorschläge</h3>
+                      <Badge variant="muted" size="sm">
+                        {blockedDatesCount} blockierte Tage
+                      </Badge>
+                    </div>
+                    {meetingSuggestions.length ? (
+                      <ul className="grid gap-3 sm:grid-cols-2">
+                        {meetingSuggestions.map((suggestion) => (
+                          <li
+                            key={suggestion.key}
+                            className="group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/90 p-3 transition hover:border-primary/50"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <CalendarDays aria-hidden className="h-5 w-5" />
+                              </span>
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-foreground">{suggestion.label}</p>
+                                <p className="text-xs text-muted-foreground">Frei für alle Mitglieder</p>
+                              </div>
+                            </div>
+                            <Badge variant="outline" size="sm" className="rounded-full border-primary/40 text-primary">
+                              {suggestion.shortLabel}
+                            </Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Aktuell gibt es keinen Termin ohne Sperrlisten-Konflikte. Prüfe deine Sperrtage und die deines Teams.
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>Fenster: {freezeUntilLabel} – {planningWindowLabel}</span>
+                      <Link
+                        href="/mitglieder/sperrliste"
+                        className="inline-flex items-center gap-1 font-semibold text-primary transition hover:text-primary/80"
+                      >
+                        <CalendarDays aria-hidden className="h-4 w-4" />
+                        Sperrliste öffnen
+                      </Link>
+                    </div>
+                  </section>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Meine Aufgaben</h3>
+                <section className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-foreground">Meine Aufgaben</h3>
                     <Badge variant="muted" size="sm">
                       {sortedTasks.length} Aufgaben
                     </Badge>
                   </div>
                   {activeTasks.length ? (
-                    <ul className="space-y-3">
+                    <ul className="mt-4 grid gap-3 md:grid-cols-2">
                       {activeTasks.map((task) => {
                         const dueMeta = task.dueAt ? getDueMeta(task.dueAt, now) : null;
                         return (
                           <li
                             key={task.id}
-                            className="rounded-lg border border-border/60 bg-background/80 p-3 text-sm shadow-sm"
+                            className="group rounded-2xl border border-border/60 bg-background/90 p-4 transition hover:border-primary/50"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="space-y-2">
-                                <p className="font-medium text-foreground">{task.title}</p>
+                                <p className="text-sm font-medium leading-6 text-foreground">{task.title}</p>
                                 {task.description ? (
-                                  <p className="text-xs text-muted-foreground">{task.description}</p>
+                                  <p className="text-sm text-muted-foreground">{task.description}</p>
                                 ) : null}
                                 {dueMeta ? (
                                   <p
                                     className={cn(
-                                      "text-xs",
+                                      "flex items-center gap-2 text-xs transition",
                                       dueMeta.isOverdue ? "text-destructive" : "text-muted-foreground",
                                     )}
                                   >
+                                    <Clock aria-hidden className="h-4 w-4" />
                                     Fällig {dueMeta.relative} ({dueMeta.absolute})
                                   </p>
                                 ) : null}
                               </div>
-                              <Badge variant={TASK_STATUS_BADGES[task.status]} size="sm">
+                              <Badge variant={TASK_STATUS_BADGES[task.status]} size="sm" className="rounded-full">
                                 {TASK_STATUS_LABELS[task.status]}
                               </Badge>
                             </div>
@@ -441,25 +565,25 @@ export default async function MeineGewerkePage() {
                       })}
                     </ul>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="mt-4 text-sm text-muted-foreground">
                       Keine offenen Aufgaben in diesem Gewerk – du bist auf dem aktuellen Stand.
                     </p>
                   )}
 
                   {completedTasks.length ? (
-                    <details className="group rounded-lg border border-border/50 bg-background/70 p-3 shadow-sm">
-                      <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <details className="group mt-4 rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition open:border-primary/40">
+                      <summary className="flex cursor-pointer items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                         <span>Abgeschlossene Aufgaben</span>
                         <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
                         <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
                       </summary>
-                      <ul className="mt-3 space-y-2 text-sm">
+                      <ul className="mt-4 space-y-3 text-sm">
                         {completedTasks.map((task) => {
                           const dueMeta = task.dueAt ? getDueMeta(task.dueAt, now) : null;
                           return (
                             <li
                               key={task.id}
-                              className="rounded-md border border-border/60 bg-background/80 p-3"
+                              className="rounded-xl border border-border/60 bg-background/90 p-3"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="space-y-1">
@@ -468,7 +592,7 @@ export default async function MeineGewerkePage() {
                                     <p className="text-xs text-muted-foreground">Fällig war {dueMeta.absolute}</p>
                                   ) : null}
                                 </div>
-                                <Badge variant={TASK_STATUS_BADGES[task.status]} size="sm">
+                                <Badge variant={TASK_STATUS_BADGES[task.status]} size="sm" className="rounded-full">
                                   {TASK_STATUS_LABELS[task.status]}
                                 </Badge>
                               </div>
@@ -478,7 +602,7 @@ export default async function MeineGewerkePage() {
                       </ul>
                     </details>
                   ) : null}
-                </div>
+                </section>
               </CardContent>
             </Card>
           );
