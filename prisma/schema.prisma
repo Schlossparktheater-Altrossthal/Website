@@ -799,6 +799,10 @@ model MemberOnboardingProfile {
   redemptionId String?         @unique
   focus        OnboardingFocus
   background   String?
+  gender       String?
+  memberSinceYear Int?
+  dietaryPreference String?
+  dietaryPreferenceStrictness String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
