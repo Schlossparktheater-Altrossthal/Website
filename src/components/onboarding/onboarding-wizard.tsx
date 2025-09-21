@@ -587,17 +587,26 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   }, [documentFile, form.photoConsent.consent, form.photoConsent.skipDocument, requiresDocument]);
 
   const handleAddDietary = () => {
-    if (!dietaryDraft.allergen.trim()) {
+    const trimmed = dietaryDraft.allergen.trim();
+    if (!trimmed) {
       setError("Bitte gib an, was du nicht verträgst.");
       return;
     }
+
+    const normalized = trimmed.toLocaleLowerCase("de-DE");
+    if (form.dietary.some((entry) => entry.allergen.trim().toLocaleLowerCase("de-DE") === normalized)) {
+      setError("Dieses Allergen hast du bereits eingetragen.");
+      return;
+    }
+
+    setError(null);
     setForm((prev) => ({
       ...prev,
       dietary: [
         ...prev.dietary,
         {
           id: createDietaryId(),
-          allergen: dietaryDraft.allergen.trim(),
+          allergen: trimmed,
           level: dietaryDraft.level,
           symptoms: dietaryDraft.symptoms.trim(),
           treatment: dietaryDraft.treatment.trim(),

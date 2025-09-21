@@ -181,13 +181,25 @@ export async function POST(request: NextRequest) {
   const interests = Array.from(
     new Set(payload.interests.map((interest) => interest.trim()).filter((interest) => interest.length > 0)),
   ).slice(0, 30);
-  const dietary = payload.dietary.map((entry) => ({
+  const dietaryRaw = payload.dietary.map((entry) => ({
     allergen: entry.allergen.trim(),
     level: entry.level,
     symptoms: normalizeString(entry.symptoms),
     treatment: normalizeString(entry.treatment),
     note: normalizeString(entry.note),
   }));
+
+  const dietary = (() => {
+    const result: typeof dietaryRaw = [];
+    const seen = new Set<string>();
+    for (const entry of dietaryRaw) {
+      const key = entry.allergen.toLocaleLowerCase("de-DE");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(entry);
+    }
+    return result;
+  })();
 
   const genderOption = payload.gender.option as GenderOption;
   const genderCustom = normalizeString(payload.gender.custom);
@@ -451,7 +463,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Einladungslink ist nicht mehr gültig" }, { status: 409 });
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return NextResponse.json({ error: "Für diese E-Mail existiert bereits ein Konto" }, { status: 409 });
+      const targetValue = error.meta?.target;
+      const target = Array.isArray(targetValue)
+        ? targetValue.map((value) => String(value).toLowerCase()).join(" ")
+        : String(targetValue ?? "").toLowerCase();
+
+      if (target.includes("allergen")) {
+        return NextResponse.json({ error: "Du hast dieses Allergen bereits eingetragen." }, { status: 409 });
+      }
+
+      if (target.includes("email")) {
+        return NextResponse.json({ error: "Für diese E-Mail existiert bereits ein Konto" }, { status: 409 });
+      }
+
+      return NextResponse.json({ error: "Daten existieren bereits" }, { status: 409 });
     }
     console.error("[onboarding.complete]", error);
     return NextResponse.json({ error: "Registrierung fehlgeschlagen" }, { status: 500 });
