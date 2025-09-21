@@ -83,6 +83,11 @@ const crewOptions = [
     title: "Requisite",
     description: "Requisiten gestalten, organisieren und für reibungslose Szenen sorgen.",
   },
+  {
+    code: "crew_marketing",
+    title: "Werbung & Social Media",
+    description: "Kampagnen planen, Content erstellen und unsere Produktionen sichtbar machen.",
+  },
 ];
 
 const genderOptions = [
