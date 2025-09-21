@@ -8,9 +8,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/user-avatar";
 import type { AvatarSource } from "@/components/user-avatar";
+import { combineNameParts, splitFullName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 
 interface ProfileFormProps {
+  initialFirstName?: string | null;
+  initialLastName?: string | null;
   initialName?: string | null;
   initialEmail?: string | null;
   userId: string;
@@ -47,6 +50,8 @@ const AVATAR_OPTION_BASE_CLASSES =
 
 export function ProfileForm({
   userId,
+  initialFirstName,
+  initialLastName,
   initialName,
   initialEmail,
   initialAvatarSource,
@@ -54,15 +59,21 @@ export function ProfileForm({
   initialDateOfBirth,
 }: ProfileFormProps) {
   const { update } = useSession();
+  const derivedNames = initialName ? splitFullName(initialName) : { firstName: null, lastName: null };
+  const initialFirst = initialFirstName ?? derivedNames.firstName ?? "";
+  const initialLast = initialLastName ?? derivedNames.lastName ?? "";
   const [baseline, setBaseline] = useState({
-    name: initialName ?? "",
+    firstName: initialFirst,
+    lastName: initialLast,
     email: initialEmail ?? "",
     avatarSource: normalizeAvatarChoice(initialAvatarSource),
     avatarUpdatedAt: initialAvatarUpdatedAt ?? null,
     dateOfBirth: toDateInputValue(initialDateOfBirth),
   });
-  const [name, setName] = useState(baseline.name);
+  const [firstName, setFirstName] = useState(baseline.firstName);
+  const [lastName, setLastName] = useState(baseline.lastName);
   const [email, setEmail] = useState(baseline.email);
+  const displayName = combineNameParts(firstName, lastName);
   const [dateOfBirth, setDateOfBirth] = useState(baseline.dateOfBirth);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -86,7 +97,8 @@ export function ProfileForm({
   }, [avatarPreview]);
 
   const resetForm = () => {
-    setName(baseline.name);
+    setFirstName(baseline.firstName);
+    setLastName(baseline.lastName);
     setEmail(baseline.email);
     setDateOfBirth(baseline.dateOfBirth);
     setPassword("");
@@ -176,10 +188,18 @@ export function ProfileForm({
       return;
     }
 
-    const trimmedName = name.trim();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    if (!trimmedFirstName) {
+      setError("Vorname darf nicht leer sein");
+      return;
+    }
+    const combinedName = combineNameParts(trimmedFirstName, trimmedLastName);
     const formData = new FormData();
     formData.append("email", trimmedEmail);
-    formData.append("name", trimmedName);
+    formData.append("firstName", trimmedFirstName);
+    formData.append("lastName", trimmedLastName);
+    formData.append("name", combinedName ?? "");
     formData.append("dateOfBirth", dateOfBirth ?? "");
     if (password) {
       formData.append("password", password);
@@ -213,7 +233,10 @@ export function ProfileForm({
         throw new Error(data?.error ?? "Aktualisierung fehlgeschlagen");
       }
 
-      const updatedName = (data?.user?.name as string | null | undefined) ?? null;
+      const updatedFirstName = (data?.user?.firstName as string | null | undefined) ?? null;
+      const updatedLastName = (data?.user?.lastName as string | null | undefined) ?? null;
+      const updatedName =
+        combineNameParts(updatedFirstName, updatedLastName) ?? ((data?.user?.name as string | null | undefined) ?? null);
       const updatedEmail = (data?.user?.email as string | null | undefined) ?? null;
       const updatedAvatarSource = normalizeAvatarChoice(data?.user?.avatarSource as string | null | undefined);
       const updatedAvatarTimestamp = (data?.user?.avatarUpdatedAt as string | null | undefined) ?? null;
@@ -221,13 +244,15 @@ export function ProfileForm({
       const updatedDateOfBirth = toDateInputValue(data?.user?.dateOfBirth as string | null | undefined);
 
       setBaseline({
-        name: updatedName ?? "",
+        firstName: updatedFirstName ?? "",
+        lastName: updatedLastName ?? "",
         email: updatedEmail ?? "",
         avatarSource: updatedAvatarSource,
         avatarUpdatedAt: updatedAvatarTimestamp,
         dateOfBirth: updatedDateOfBirth,
       });
-      setName(updatedName ?? "");
+      setFirstName(updatedFirstName ?? "");
+      setLastName(updatedLastName ?? "");
       setEmail(updatedEmail ?? "");
       setDateOfBirth(updatedDateOfBirth);
       setPassword("");
@@ -247,6 +272,8 @@ export function ProfileForm({
       try {
         await update({
           user: {
+            firstName: updatedFirstName ?? null,
+            lastName: updatedLastName ?? null,
             name: updatedName ?? null,
             email: updatedEmail ?? null,
             avatarSource: updatedAvatarSource,
@@ -270,19 +297,28 @@ export function ProfileForm({
     <form className="space-y-8" onSubmit={handleSubmit}>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-name">
-            Name
+          <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-first-name">
+            Vorname
           </label>
           <Input
-            id="profile-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Vorname Nachname"
-            autoComplete="name"
+            id="profile-first-name"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            placeholder="Vorname"
+            autoComplete="given-name"
           />
-          <p className="text-xs text-muted-foreground">
-            Der Name wird in internen Übersichten und im Mitgliederbereich angezeigt.
-          </p>
+        </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-last-name">
+            Nachname
+          </label>
+          <Input
+            id="profile-last-name"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+            placeholder="Nachname"
+            autoComplete="family-name"
+          />
         </div>
         <div className="space-y-2">
           <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-email">
@@ -329,7 +365,9 @@ export function ProfileForm({
           <UserAvatar
             userId={userId}
             email={email}
-            name={name}
+            firstName={firstName}
+            lastName={lastName}
+            name={displayName}
             size={80}
             className="h-20 w-20 text-2xl"
             avatarSource={avatarSource}

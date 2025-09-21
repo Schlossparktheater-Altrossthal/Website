@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
+import { getUserDisplayName } from "@/lib/names";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -55,10 +56,16 @@ const PLANNING_FREEZE_DAYS = 7;
 const PLANNING_LOOKAHEAD_DAYS = 60;
 const DATE_KEY_FORMAT = "yyyy-MM-dd";
 
-function formatUserName(user: { name: string | null; email: string | null }) {
-  if (user.name && user.name.trim()) return user.name;
-  if (user.email) return user.email;
-  return "Unbekannt";
+type DisplayUser = {
+  firstName?: string | null;
+  lastName?: string | null;
+  name: string | null;
+  email: string | null;
+};
+
+function formatUserName(user?: DisplayUser | null) {
+  if (!user) return "Unbekannt";
+  return getUserDisplayName(user, "Unbekannt");
 }
 
 const selectClassName =
@@ -84,7 +91,7 @@ export default async function ProduktionsGewerkePage() {
       include: {
         memberships: {
           include: {
-            user: { select: { id: true, name: true, email: true } },
+            user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
           },
           orderBy: { createdAt: "asc" },
         },
@@ -102,7 +109,7 @@ export default async function ProduktionsGewerkePage() {
         { name: "asc" },
         { email: "asc" },
       ],
-      select: { id: true, name: true, email: true },
+      select: { id: true, firstName: true, lastName: true, name: true, email: true },
     }),
     getActiveProduction(),
   ]);

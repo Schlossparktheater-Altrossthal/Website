@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import type { PhotoConsentAdminEntry } from "@/types/photo-consent";
+import { combineNameParts } from "@/lib/names";
 
 type ConsentWithUser = {
   id: string;
@@ -15,8 +16,20 @@ type ConsentWithUser = {
   documentUploadedAt: Date | null;
   documentName: string | null;
   userId: string;
-  user: { id: string; name: string | null; email: string | null; dateOfBirth: Date | null };
-  approvedBy: { id: string; name: string | null } | null;
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    name: string | null;
+    email: string | null;
+    dateOfBirth: Date | null;
+  };
+  approvedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    name: string | null;
+  } | null;
 };
 
 function calculateAge(date: Date | null | undefined): number | null {
@@ -35,16 +48,23 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
   const age = calculateAge(dateOfBirth);
   const requiresDocument = age !== null && age < 18;
   const requiresDateOfBirth = !dateOfBirth;
+  const combinedName =
+    combineNameParts(consent.user.firstName, consent.user.lastName) ??
+    (consent.user.name ?? null);
+  const approverName = consent.approvedBy
+    ? combineNameParts(consent.approvedBy.firstName, consent.approvedBy.lastName) ??
+      (consent.approvedBy.name ?? null)
+    : null;
   return {
     id: consent.id,
     userId: consent.userId,
-    name: consent.user.name,
+    name: combinedName,
     email: consent.user.email,
     status: consent.status,
     submittedAt: consent.createdAt.toISOString(),
     updatedAt: consent.updatedAt.toISOString(),
     approvedAt: consent.approvedAt ? consent.approvedAt.toISOString() : null,
-    approvedByName: consent.approvedBy?.name ?? null,
+    approvedByName: approverName,
     rejectionReason: consent.rejectionReason ?? null,
     hasDocument: Boolean(consent.documentUploadedAt),
     requiresDocument,
@@ -66,8 +86,24 @@ export async function GET() {
   const consents = await prisma.photoConsent.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      user: { select: { id: true, name: true, email: true, dateOfBirth: true } },
-      approvedBy: { select: { id: true, name: true } },
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          name: true,
+          email: true,
+          dateOfBirth: true,
+        },
+      },
+      approvedBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          name: true,
+        },
+      },
     },
   });
 
@@ -131,8 +167,24 @@ export async function PATCH(request: NextRequest) {
       where: { id },
       data: updateData,
       include: {
-        user: { select: { id: true, name: true, email: true, dateOfBirth: true } },
-        approvedBy: { select: { id: true, name: true } },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+            email: true,
+            dateOfBirth: true,
+          },
+        },
+        approvedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+          },
+        },
       },
     });
 

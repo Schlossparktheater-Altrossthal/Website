@@ -7,6 +7,38 @@ import {
 import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
+function splitFullName(value) {
+  if (!value) return { firstName: null, lastName: null };
+  const trimmed = value.trim();
+  if (!trimmed) return { firstName: null, lastName: null };
+  if (trimmed.includes(",")) {
+    const [lastPart, firstPart] = trimmed.split(",", 2);
+    return {
+      firstName: (firstPart ?? "").trim() || null,
+      lastName: (lastPart ?? "").trim() || null,
+    };
+  }
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: null, lastName: null };
+  if (parts.length === 1) return { firstName: parts[0], lastName: null };
+  const [first, ...rest] = parts;
+  return {
+    firstName: first,
+    lastName: rest.join(" ") || null,
+  };
+}
+
+function combineName(firstName, lastName) {
+  const parts = [];
+  if (typeof firstName === "string" && firstName.trim()) {
+    parts.push(firstName.trim());
+  }
+  if (typeof lastName === "string" && lastName.trim()) {
+    parts.push(lastName.trim());
+  }
+  return parts.length ? parts.join(" ") : null;
+}
+
 async function main() {
   // --- Chronik: use ONLY the provided Altroßthal data below ---
 
@@ -100,12 +132,24 @@ async function main() {
   const defaultPasswordHash = await bcrypt.hash("password", 10);
 
   for (let i = 0; i < emails.length; i++) {
+    const friendlyName = emails[i].split("@")[0] ?? "";
+    const normalizedName = friendlyName.replace(/[._-]+/g, " ");
+    const { firstName, lastName } = splitFullName(normalizedName);
+    const displayName = combineName(firstName, lastName);
+
     await prisma.user.upsert({
       where: { email: emails[i] },
-      update: { passwordHash: defaultPasswordHash },
+      update: {
+        firstName,
+        lastName,
+        name: displayName,
+        passwordHash: defaultPasswordHash,
+      },
       create: {
         email: emails[i],
-        name: emails[i].split("@")[0],
+        firstName,
+        lastName,
+        name: displayName,
         role: roles[i],
         passwordHash: defaultPasswordHash,
       },

@@ -5,6 +5,7 @@ import { sortRoles, type Role } from "@/lib/roles";
 import { hasPermission } from "@/lib/permissions";
 import { MembersTable } from "@/components/members/members-table";
 import { MemberInviteManager } from "@/components/members/member-invite-manager";
+import { combineNameParts } from "@/lib/names";
 
 export default async function MitgliederVerwaltungPage() {
   const session = await requireAuth();
@@ -22,6 +23,8 @@ export default async function MitgliederVerwaltungPage() {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         name: true,
         role: true,
         roles: { select: { role: true } },
@@ -41,7 +44,9 @@ export default async function MitgliederVerwaltungPage() {
     return {
       id: user.id,
       email: user.email,
-      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      name: combineNameParts(user.firstName, user.lastName) ?? user.name,
       roles: combined,
       customRoles: user.appRoles.map((ar) => ar.role),
       avatarSource: user.avatarSource,

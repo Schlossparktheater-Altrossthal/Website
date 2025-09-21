@@ -303,7 +303,8 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     passwordConfirm: "",
@@ -676,8 +677,12 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       return;
     }
     if (step === 1) {
-      if (!form.name.trim()) {
-        setError("Bitte gib deinen Namen ein.");
+      if (!form.firstName.trim()) {
+        setError("Bitte gib deinen Vornamen ein.");
+        return;
+      }
+      if (!form.lastName.trim()) {
+        setError("Bitte gib deinen Nachnamen ein.");
         return;
       }
       if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
@@ -791,7 +796,8 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       const memberSinceYear = Number.isFinite(parsedYear) ? parsedYear : null;
       const payload = {
         sessionToken,
-        name: form.name.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
         email: form.email.trim(),
         password: form.password,
         background: form.background.trim(),
@@ -990,10 +996,24 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1 text-sm">
-                <span className="font-medium">Name</span>
-                <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="Vorname Nachname" />
+                <span className="font-medium">Vorname</span>
+                <Input
+                  value={form.firstName}
+                  onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
+                  placeholder="Vorname"
+                  autoComplete="given-name"
+                />
               </label>
               <label className="space-y-1 text-sm">
+                <span className="font-medium">Nachname</span>
+                <Input
+                  value={form.lastName}
+                  onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
+                  placeholder="Nachname"
+                  autoComplete="family-name"
+                />
+              </label>
+              <label className="space-y-1 text-sm md:col-span-2">
                 <span className="font-medium">E-Mail</span>
                 <Input
                   type="email"
@@ -1692,7 +1712,11 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 <dl className="mt-3 grid gap-3 text-sm">
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">Name</dt>
-                    <dd className="font-medium text-foreground">{form.name || "–"}</dd>
+                    <dd className="font-medium text-foreground">
+                      {form.firstName || form.lastName
+                        ? [form.firstName, form.lastName].filter(Boolean).join(" ")
+                        : "–"}
+                    </dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">E-Mail</dt>

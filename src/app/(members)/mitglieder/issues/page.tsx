@@ -56,7 +56,8 @@ export default async function IssuesPage() {
     }),
   ]);
 
-  const counts = countsRaw.reduce((acc, entry) => {
+  type StatusCount = { status: import("@prisma/client").IssueStatus; _count: { _all: number } };
+  const counts = countsRaw.reduce<IssueStatusCounts>((acc, entry: StatusCount) => {
     if (entry.status in acc) {
       const key = entry.status as keyof IssueStatusCounts;
       acc[key] = entry._count._all;

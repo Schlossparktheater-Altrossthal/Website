@@ -8,6 +8,7 @@ import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { deleteRehearsalAction } from "./actions";
 import type { RehearsalLite } from "./rehearsal-list";
+import { combineNameParts, getUserDisplayName } from "@/lib/names";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "full",
@@ -19,9 +20,16 @@ const timeFormatter = new Intl.DateTimeFormat("de-DE", {
   timeZone: "Europe/Berlin",
 });
 
-function displayName(user?: { name: string | null; email: string | null }) {
+type DisplayUser = {
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+  email?: string | null;
+};
+
+function displayName(user?: DisplayUser | null) {
   if (!user) return "Unbekannt";
-  return user.name?.trim() || user.email?.trim() || "Unbekannt";
+  return getUserDisplayName(user, "Unbekannt");
 }
 
 function ResponseColumn({
@@ -30,7 +38,7 @@ function ResponseColumn({
   emptyText,
 }: {
   title: string;
-  people: Array<{ id: string; name: string | null; email: string | null }>;
+  people: Array<{ id: string; firstName: string | null; lastName: string | null; name: string | null; email: string | null }>;
   emptyText: string;
 }) {
   return (
@@ -157,8 +165,13 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
             title="Zusagen"
             people={yes.map((entry) => ({
               id: entry.user.id,
-              name: entry.user.name,
-              email: entry.user.email,
+              firstName: entry.user.firstName ?? null,
+              lastName: entry.user.lastName ?? null,
+              name:
+                combineNameParts(entry.user.firstName, entry.user.lastName) ??
+                entry.user.name ??
+                null,
+              email: entry.user.email ?? null,
             }))}
             emptyText="Noch keine Zusagen."
           />
@@ -166,8 +179,13 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
             title="Absagen"
             people={no.map((entry) => ({
               id: entry.user.id,
-              name: entry.user.name,
-              email: entry.user.email,
+              firstName: entry.user.firstName ?? null,
+              lastName: entry.user.lastName ?? null,
+              name:
+                combineNameParts(entry.user.firstName, entry.user.lastName) ??
+                entry.user.name ??
+                null,
+              email: entry.user.email ?? null,
             }))}
             emptyText="Noch keine Absagen."
           />
@@ -175,8 +193,13 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
             title="Offen"
             people={pending.map((recipient) => ({
               id: recipient.user.id,
-              name: recipient.user.name,
-              email: recipient.user.email,
+              firstName: recipient.user.firstName ?? null,
+              lastName: recipient.user.lastName ?? null,
+              name:
+                combineNameParts(recipient.user.firstName, recipient.user.lastName) ??
+                recipient.user.name ??
+                null,
+              email: recipient.user.email ?? null,
             }))}
             emptyText={notification ? "Alle haben reagiert." : "Es wurde noch keine Benachrichtigung verschickt."}
           />

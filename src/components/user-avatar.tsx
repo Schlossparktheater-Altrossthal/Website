@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getGravatarUrl } from "@/lib/gravatar";
 import { cn } from "@/lib/utils";
+import { getNameInitials, getUserDisplayName } from "@/lib/names";
 import type { CSSProperties } from "react";
 
 export type AvatarSource = "GRAVATAR" | "UPLOAD" | "INITIALS";
@@ -33,26 +34,11 @@ function getVersionKey(value?: string | number | Date | null): string | undefine
   return Number.isNaN(parsed) ? undefined : String(parsed);
 }
 
-function computeInitials(name?: string | null, email?: string | null): string {
-  const trimmedName = name?.trim();
-  if (trimmedName) {
-    const parts = trimmedName.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return trimmedName.slice(0, 2).toUpperCase();
-  }
-  const trimmedEmail = email?.trim();
-  if (trimmedEmail) {
-    const local = trimmedEmail.split("@")[0];
-    return local.slice(0, 2).toUpperCase() || trimmedEmail[0]?.toUpperCase() || "?";
-  }
-  return "?";
-}
-
 export type UserAvatarProps = {
   userId?: string;
   email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   name?: string | null;
   size?: number;
   className?: string;
@@ -66,6 +52,8 @@ export type UserAvatarProps = {
 export default function UserAvatar({
   userId,
   email,
+  firstName,
+  lastName,
   name,
   size = 40,
   className,
@@ -76,9 +64,8 @@ export default function UserAvatar({
   previewUrl,
 }: UserAvatarProps) {
   const displaySize = Math.max(1, Math.round(size));
-  const trimmedName = name?.trim() || undefined;
   const trimmedEmail = email?.trim() || undefined;
-  const label = trimmedName || trimmedEmail || undefined;
+  const label = getUserDisplayName({ firstName, lastName, name, email }, "") || undefined;
   const normalized = normalizeSource(avatarSource);
 
   const [gravatarFailed, setGravatarFailed] = useState(false);
@@ -137,7 +124,7 @@ export default function UserAvatar({
   }
 
   // Default to initials (or when Gravatar failed or no source available)
-  const initials = computeInitials(name, email);
+  const initials = getNameInitials({ firstName, lastName, name, email });
   return (
     <div
       className={cn("inline-flex items-center justify-center rounded-full border border-border bg-muted", className)}
