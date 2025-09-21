@@ -20,6 +20,16 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
 };
 
+export const ROLE_DESCRIPTIONS: Record<Role, string> = {
+  member: "Grundzugriff auf das Mitgliederportal und persönliche Bereiche.",
+  cast: "Schauspiel-spezifische Proben, Rollen und Szenenübersichten.",
+  tech: "Technik- und Gewerkeaufgaben inklusive Checklisten verwalten.",
+  board: "Organisation und Produktionsleitung mit erweiterten Dashboards.",
+  finance: "Finanz- und Budgetmodule inklusive Abrechnungen einsehen.",
+  owner: "Systemweite Superuser-Rechte inklusive Rollenverwaltung.",
+  admin: "Administrativer Vollzugriff ohne Besitzerrechte.",
+};
+
 export const ROLE_BADGE_VARIANTS: Record<Role, string> = {
   member: "bg-slate-100 text-slate-700 border-slate-200",
   cast: "bg-purple-100 text-purple-700 border-purple-200",

@@ -276,7 +276,7 @@ export function ProfileForm({
           placeholder="Vorname Nachname"
           autoComplete="name"
         />
-        <p className="text-xs text-foreground/70">
+        <p className="text-xs text-muted-foreground">
           Der Name wird in internen Übersichten und im Mitgliederbereich angezeigt.
         </p>
       </div>
@@ -293,7 +293,7 @@ export function ProfileForm({
           autoComplete="email"
           required
         />
-        <p className="text-xs text-foreground/70">
+        <p className="text-xs text-muted-foreground">
           Diese E-Mail dient sowohl zur Anmeldung als auch für Benachrichtigungen.
         </p>
       </div>
@@ -351,7 +351,7 @@ export function ProfileForm({
             {avatarSource === "UPLOAD" && (
               <div className="space-y-2">
                 <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarFileChange} />
-                <p className="text-xs text-foreground/70">Unterstützt JPG, PNG und WebP bis 2&nbsp;MB.</p>
+                <p className="text-xs text-muted-foreground">Unterstützt JPG, PNG und WebP bis 2&nbsp;MB.</p>
                 {hasStoredAvatar && !avatarFile && !avatarPreview && !removeAvatar && (
                   <Button type="button" variant="outline" size="sm" onClick={handleRemoveAvatar}>
                     Eigenes Bild entfernen
@@ -367,10 +367,10 @@ export function ProfileForm({
             )}
 
             {removeAvatar && (
-              <p className="text-xs text-foreground/70">Das aktuelle Upload-Bild wird nach dem Speichern entfernt.</p>
+              <p className="text-xs text-muted-foreground">Das aktuelle Upload-Bild wird nach dem Speichern entfernt.</p>
             )}
 
-            {avatarError && <p className="text-sm text-red-600">{avatarError}</p>}
+            {avatarError && <p className="text-sm text-destructive">{avatarError}</p>}
           </div>
         </div>
       </div>
@@ -416,13 +416,13 @@ export function ProfileForm({
           autoComplete="bday"
           max={toDateInputValue(new Date().toISOString())}
         />
-        <p className="text-xs text-foreground/70">
+        <p className="text-xs text-muted-foreground">
           Das Geburtsdatum hilft uns, notwendige Einverständniserklärungen korrekt zu verwalten.
         </p>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {success && <p className="text-sm text-emerald-600">{success}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {success && <p className="text-sm text-emerald-500">{success}</p>}
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button type="button" variant="outline" onClick={resetForm} disabled={saving}>
