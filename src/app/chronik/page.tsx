@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { chronikFallbackShows } from "@/data/chronik-fallback";
 import { prisma } from "@/lib/prisma";
 import type { Prisma, Show } from "@prisma/client";
 import { Heading, Text } from "@/components/ui/typography";
@@ -10,6 +11,8 @@ type ShowCastEntry = {
   role: string;
   players: string[];
 };
+
+type ChronikShowRecord = Pick<Show, "id" | "year" | "title" | "synopsis" | "posterUrl" | "meta">;
 
 type ShowMeta = {
   author?: string | null;
@@ -51,7 +54,7 @@ function sanitizePosterSources(sources: (string | null | undefined)[]) {
   return sanitized;
 }
 
-function getChronikPosterSources(show: Show) {
+function getChronikPosterSources(show: ChronikShowRecord) {
   const override = CHRONIK_POSTER_OVERRIDES[show.id];
   const baseSources = sanitizePosterSources([show.posterUrl]);
 
@@ -166,14 +169,26 @@ function applyChronikSupplements(id: string, meta: ShowMeta | null): ShowMeta | 
 
 export default async function ChronikPage() {
   const now = new Date();
-  let shows: Show[] = [];
+  let shows: ChronikShowRecord[] = [];
   try {
     shows = await prisma.show.findMany({
       where: { revealedAt: { not: null, lte: now } },
       orderBy: [{ year: "desc" }],
+      select: {
+        id: true,
+        year: true,
+        title: true,
+        synopsis: true,
+        posterUrl: true,
+        meta: true,
+      },
     });
   } catch {
     shows = [];
+  }
+
+  if (shows.length === 0) {
+    shows = [...chronikFallbackShows];
   }
 
   if (shows.length === 0) {
