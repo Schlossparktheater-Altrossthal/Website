@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -431,6 +432,19 @@ export function ProfileForm({
                 <span>Eigenes Bild</span>
               </label>
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Du nutzt Gravatar noch nicht?{" "}
+              <Link
+                href="https://gravatar.com"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Lege dir kostenlos ein Profil an
+              </Link>
+              , um dein Bild über deine E-Mail-Adresse zu steuern.
+            </p>
 
             {avatarSource === "UPLOAD" && (
               <div className="space-y-2">
