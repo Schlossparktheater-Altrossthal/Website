@@ -28,9 +28,9 @@ async function announceOwnerSetupLink() {
 
     const ownerAlreadyExists = ownerCount > 0;
     const removed = await prisma.ownerSetupToken.deleteMany({ where: { consumedAt: null } });
-    if (ownerAlreadyExists && removed.count > 0) {
+    if (removed.count > 0) {
       console.log(
-        `[owner-setup] Removed ${removed.count} unused owner setup token(s) because an owner already exists.`,
+        `[owner-setup] Removed ${removed.count} unused owner setup token(s) before generating a fresh link.`,
       );
     }
 
@@ -51,7 +51,7 @@ async function announceOwnerSetupLink() {
 
     if (ownerAlreadyExists) {
       console.log(
-        "[owner-setup] Hinweis: Es existiert bereits ein Owner. Falls du den Owner neu aufsetzen musst, entferne den bestehenden Eintrag und nutze anschließend den folgenden Link:",
+        "[owner-setup] Hinweis: Es existiert bereits mindestens ein Owner-Konto. Mit dem folgenden Link kannst du einen weiteren Owner hinzufügen oder Zugangsdaten erneuern.",
       );
     } else {
       console.log(
@@ -64,9 +64,7 @@ async function announceOwnerSetupLink() {
         `[owner-setup] Hinweis: Passe den Host an, falls der Server nicht unter ${fallbackBase} erreichbar ist.`,
       );
     }
-    console.log(
-      "[owner-setup] Der Link ist einmalig gültig und wird ungültig, sobald ein Owner angelegt wurde.",
-    );
+    console.log("[owner-setup] Der Link ist einmalig gültig und wird ungültig, sobald er verwendet wurde.");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[owner-setup] Konnte Owner-Setup-Link nicht erzeugen: ${message}`);

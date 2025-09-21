@@ -111,8 +111,8 @@ example:
 ```
 
 Open the URL in a browser to create the first owner account. The link becomes
-invalid as soon as it has been used or as soon as any owner exists. Restart the
-server to generate a new link if necessary.
+invalid as soon as it has been used. Restart the server to generate a new link
+whenever you need to add another owner.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
