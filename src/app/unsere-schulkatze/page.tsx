@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import { Cat, Fish, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
+import Image from "next/image";
 
 import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
@@ -9,14 +10,14 @@ import { Heading, Text } from "@/components/ui/typography";
 export const metadata: Metadata = {
   title: "Unsere Schulkatze",
   description:
-    "Lerne Minna, die Schulkatze des BSZ Altrossthal, kennen und erfahre, wie unser Ensemble ihren Alltag gestaltet.",
+    "Wir erinnern uns an Dieter Dennis von Altroßthal, die graug getigerte Schulkatze des BSZ Altrossthal, und erzählen seine Geschichte.",
   alternates: {
     canonical: "/unsere-schulkatze",
   },
   openGraph: {
     title: "Unsere Schulkatze | Sommertheater Altrossthal",
     description:
-      "Einblicke in Minnas Alltag auf dem Campus und wie wir gemeinsam für sie sorgen.",
+      "Porträt und Erinnerungen an Dieter, unsere graug getigerte Schulkatze, die uns über viele Jahre begleitet hat.",
     url: "/unsere-schulkatze",
     type: "website",
   },
@@ -28,7 +29,7 @@ type Highlight = {
   description: string;
 };
 
-type RoutineEntry = {
+type Memory = {
   icon: LucideIcon;
   title: string;
   detail: string;
@@ -45,69 +46,69 @@ const highlights: Highlight[] = [
     icon: Cat,
     title: "Porträt",
     description:
-      "Unsere Schulkatze Minna lebt seit 2018 im Schlosspark. Die rotgetigerte Samtpfote kennt jede Probe, jeden Lichtwechsel und findet zielsicher die sonnigsten Plätze.",
+      "Dieter Dennis von Altroßthal war unsere graug getigerte Schulkatze – verlässlich, gelassen und immer bereit für eine stille Beobachtung.",
   },
   {
     icon: MoonStar,
-    title: "Lieblingsplätze",
+    title: "Uralter Bekannter",
     description:
-      "Morgens streift sie durch den Werkstatthof, nachmittags ruht sie zwischen Requisiten und Kulissengängen. Wenn es ruhig wird, sucht sie die Lichterketten über der Tribüne.",
+      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn, zwanzig Jahren durch den Campus.",
   },
   {
     icon: Heart,
-    title: "Stimmungsmacherin",
+    title: "Teil der Gemeinschaft",
     description:
-      "Minna begrüßt Besucher:innen, begleitet Pausen und sorgt mit ihrer Gelassenheit dafür, dass Lampenfieber sich in Vorfreude verwandelt.",
+      "Ob Unterricht oder Premiere: Dieter gehörte einfach dazu und brachte eine Ruhe mit, die uns alle miteinander verband.",
   },
 ];
 
-const routine: RoutineEntry[] = [
+const memories: Memory[] = [
   {
     icon: Sun,
-    title: "Morgendliche Runde",
+    title: "Frühe Streifzüge",
     detail:
-      "Kurz nach dem ersten Klingeln begrüßt Minna das Hausteam, kontrolliert ihre Futterstelle und lässt sich von Frühaufsteher:innen behutsam kraulen.",
+      "Geschichten erzählen davon, dass Dieter morgens schon vor dem ersten Klingeln seine Runden drehte und uns mit prüfendem Blick begrüßte.",
   },
   {
     icon: PawPrint,
-    title: "Werkstattbesuche",
+    title: "Lieblingsorte",
     detail:
-      "Während der Werkstattzeiten schaut sie beim Kulissenbau und in der Floristik vorbei, beobachtet vom Regal aus das Gewusel und erinnert uns an Pausen.",
+      "Fensterbänke, Probebühnen und Parkbänke wurden zu seinen Ruhepolen – überall dort wirkte er wie ein grauer Wächter des Geländes.",
   },
   {
     icon: MoonStar,
-    title: "Abendliches Zurückziehen",
+    title: "Abende im Park",
     detail:
-      "Bei Dämmerung begleitet sie die Pflege-AG in ihr warmes Quartier. Dort hat sie Ruhe, bis der Campus am nächsten Morgen wieder erwacht.",
+      "Wenn der Tag endete, blieb er oft noch eine Weile, als wolle er sicherstellen, dass alles seinen Platz hat, bevor er in die Nacht verschwand.",
   },
 ];
 
-const supportNetwork: Supporter[] = [
+const careCircle: Supporter[] = [
   {
     icon: Users,
-    title: "Pflege-AG",
+    title: "Pflege-AG & Schülerschaft",
     description:
-      "Schüler:innen übernehmen im wöchentlichen Wechsel Fütterung, Fellpflege und ein Stimmungsprotokoll, damit alle wissen, wie es Minna geht.",
+      "In festen Diensten sorgten engagierte Schüler:innen für Futter, frisches Wasser und liebevolle Aufmerksamkeit.",
   },
   {
     icon: ShieldCheck,
-    title: "Gesundheit im Blick",
+    title: "Hausmeisterteam & Tierärztin",
     description:
-      "Hausmeisterteam und Tierärztin koordinieren Impfungen, Parasitenkuren und regelmäßige Check-ups, damit Minna fit bleibt.",
+      "Sie behielten Gesundheit und Sicherheit im Blick, koordinierten Checks und boten Dieter auch in seinen älteren Jahren Halt.",
   },
   {
     icon: Fish,
-    title: "Futterpatenschaften",
+    title: "Patenschaften & Spenden",
     description:
-      "Klassen sammeln Lieblingssnacks, stimmen sich aber vorher mit der Pflege-AG ab – so bleibt der Speiseplan ausgewogen.",
+      "Klassen und Kollegium legten zusammen, damit Futter, Medikamente und letzte Wege gemeinschaftlich getragen wurden.",
   },
 ];
 
-const guidelines: string[] = [
-  "Minna entscheidet, wann sie Kontakt möchte – sanft fragen und Hände zuerst schnuppern lassen.",
-  "Bitte keine mitgebrachten Leckerlis füttern; die Pflege-AG koordiniert eine abgestimmte Ernährung.",
-  "Werkstatttüren langsam öffnen und Ruhebereiche wie das Requisitenlager respektieren.",
-  "Bei Anzeichen von Stress oder Verletzungen sofort das Hausmeisterteam informieren.",
+const lessons: string[] = [
+  "Tiere, die unseren Campus begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
+  "Gemeinsame Rituale schaffen Vertrauen, besonders wenn ein Vierbeiner über so viele Jahre Teil der Gemeinschaft ist.",
+  "In Abschiedsmomenten hilft es, Erinnerungen zu teilen und Orte des Gedenkens zu schaffen.",
+  "Wer künftig eine Schulkatze willkommen heißt, sollte an Dieters Bedürfnisse denken: Ruhe, Respekt und Zeit.",
 ];
 
 export default function SchulkatzePage() {
@@ -129,21 +130,42 @@ export default function SchulkatzePage() {
       </div>
 
       <section className="layout-container pb-12 pt-16 sm:pt-24">
-        <div className="max-w-3xl space-y-6">
-          <Text variant="eyebrow" uppercase tone="primary">
-            Schulkultur
-          </Text>
-          <Heading level="h1" className="mt-2">
-            Unsere Schulkatze
-          </Heading>
-          <Text variant="bodyLg" tone="muted" className="mt-4">
-            Minna begleitet Unterricht, Proben und Sommerabende im Schlosspark. Sie gehört fest zur Atmosphäre des Sommertheaters
-            und erinnert uns daran, achtsam miteinander umzugehen.
-          </Text>
-          <Text tone="muted">
-            Damit Minna sich auf dem Campus wohlfühlt, wirkt ein engagiertes Team zusammen: Pflege-AG, Hausmeisterei und Ensemble.
-            Gemeinsam schaffen wir Rückzugsorte, Rituale und eine Versorgung, die ihren Bedürfnissen entspricht.
-          </Text>
+        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+          <div className="max-w-3xl space-y-6">
+            <Text variant="eyebrow" uppercase tone="primary">
+              Schulkultur
+            </Text>
+            <Heading level="h1" className="mt-2">
+              Unsere Schulkatze
+            </Heading>
+            <Text variant="bodyLg" tone="muted" className="mt-4">
+              Dieter Dennis von Altroßthal – von allen nur Dieter genannt – war unsere graug getigerte Schulkatze. Über Generationen hinweg
+              streifte er durch den Campus und wurde zum vertrauten Gesicht des BSZ Altrossthal.
+            </Text>
+            <Text tone="muted">
+              Niemand wusste genau, seit wann er da war; gefühlt waren es weit über fünfzehn Jahre. Seine stille Präsenz begleitete Unterricht,
+              Proben und Festspiele gleichermaßen.
+            </Text>
+            <Text tone="muted">
+              In diesem Jahr mussten wir uns von Dieter verabschieden. Die Erinnerungen an ihn, seine Gelassenheit und die Fürsorge der
+              Schulgemeinschaft bleiben und prägen, wie wir auch künftig füreinander da sind.
+            </Text>
+          </div>
+          <figure className="relative mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg">
+            <div className="relative aspect-[3/4]">
+              <Image
+                src="/images/katze/IMG_8370.JPEG"
+                alt="Schulkatze Dieter Dennis von Altroßthal, graug getigert, sitzt aufmerksam im Schulhof."
+                fill
+                className="object-cover"
+                sizes="(min-width: 1024px) 320px, (min-width: 768px) 40vw, 90vw"
+                priority
+              />
+            </div>
+            <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+              Dieter Dennis von Altroßthal war über viele Jahre Teil unserer Schulgemeinschaft.
+            </figcaption>
+          </figure>
         </div>
       </section>
 
@@ -177,11 +199,11 @@ export default function SchulkatzePage() {
                 <PawPrint className="h-5 w-5" aria-hidden />
               </div>
               <Text weight="semibold" className="text-base sm:text-lg">
-                Alltag mit Minna
+                Erinnerungen an Dieter
               </Text>
             </div>
             <div className="space-y-4">
-              {routine.map((entry) => (
+              {memories.map((entry) => (
                 <div key={entry.title} className="flex gap-3">
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-primary">
                     <entry.icon className="h-5 w-5" aria-hidden />
@@ -203,11 +225,11 @@ export default function SchulkatzePage() {
                 <Heart className="h-5 w-5" aria-hidden />
               </div>
               <Text weight="semibold" className="text-base sm:text-lg">
-                Wer sich kümmert
+                Wer sich gekümmert hat
               </Text>
             </div>
             <div className="space-y-3">
-              {supportNetwork.map((entry) => (
+              {careCircle.map((entry) => (
                 <div key={entry.title} className="flex gap-3">
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-primary">
                     <entry.icon className="h-5 w-5" aria-hidden />
@@ -232,19 +254,19 @@ export default function SchulkatzePage() {
               <ShieldCheck className="h-5 w-5" aria-hidden />
             </div>
             <Text weight="semibold" className="text-base sm:text-lg">
-              Gute Begegnungen für Mensch und Tier
+              Was wir aus Dieters Zeit mitnehmen
             </Text>
           </div>
           <div className="space-y-3">
             <Text variant="small" tone="muted">
-              Damit sich Minna sicher fühlt, beachten wir gemeinsam ein paar Leitlinien:
+              Dieter hat uns gezeigt, wie wichtig Achtsamkeit ist. Diese Gedanken begleiten uns auch in Zukunft:
             </Text>
             <ul className="space-y-2">
-              {guidelines.map((guideline) => (
-                <li key={guideline} className="flex items-start gap-3">
+              {lessons.map((lesson) => (
+                <li key={lesson} className="flex items-start gap-3">
                   <span className="mt-2 h-2 w-2 flex-none rounded-full bg-primary" aria-hidden />
                   <Text variant="small" tone="muted" className="leading-relaxed">
-                    {guideline}
+                    {lesson}
                   </Text>
                 </li>
               ))}
@@ -256,14 +278,14 @@ export default function SchulkatzePage() {
       <section className="layout-container pb-24">
         <div className="mx-auto max-w-3xl space-y-4 text-center">
           <Heading level="h2" align="center">
-            Gemeinsam für Minna
+            In Erinnerung an Dieter
           </Heading>
           <Text variant="bodyLg" tone="muted" align="center">
-            Ob bei Proben, Aufführungen oder im Schulalltag – Minna sorgt für Gelassenheit und verbindet Generationen.
-            Wer sie erlebt, spürt sofort den besonderen Charakter unseres Campus.
+            Dieter hat Generationen von Schüler:innen begleitet und unserem Campus ein unverwechselbares Gefühl von Heimat gegeben.
+            Seine Geschichte erinnert uns daran, wie wertvoll Fürsorge und Gemeinschaft sind.
           </Text>
           <Text tone="muted" align="center">
-            Du möchtest die Pflege-AG unterstützen oder neue Ideen einbringen? Melde dich unter{' '}
+            Wer Erinnerungen teilen oder die Arbeit der Pflege-AG weiterführen möchte, erreicht uns unter{' '}
             <TextLink href="mailto:schulkatze@sommertheater-altrossthal.de">schulkatze@sommertheater-altrossthal.de</TextLink>.
           </Text>
         </div>
