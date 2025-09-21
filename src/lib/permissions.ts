@@ -20,6 +20,11 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Eigene Probentermine einsehen",
     description: "Zugang zum Bereich \"Meine Proben\" mit persönlichen Terminen und Fristen.",
   },
+  {
+    key: "mitglieder.meine-gewerke",
+    label: "Eigene Gewerke einsehen",
+    description: "Zugang zum Bereich \"Meine Gewerke\" mit Aufgabenübersicht und Terminvorschlägen.",
+  },
   { key: "mitglieder.probenplanung", label: "Probenplanung verwalten" },
   {
     key: "mitglieder.produktionen",

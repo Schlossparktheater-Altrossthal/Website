@@ -366,6 +366,7 @@ async function ensureProductionManager() {
 
 function revalidateDepartments(redirectPath?: string) {
   revalidatePath("/mitglieder/produktionen");
+  revalidatePath("/mitglieder/meine-gewerke");
   if (redirectPath && redirectPath !== "/mitglieder/produktionen") {
     revalidatePath(redirectPath);
   }

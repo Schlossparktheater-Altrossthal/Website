@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { UserAvatar } from "@/components/user-avatar";
 import type { AvatarSource } from "@/components/user-avatar";
 import { combineNameParts, splitFullName } from "@/lib/names";
+import { cn } from "@/lib/utils";
 
 interface ProfileFormProps {
   initialFirstName?: string | null;
@@ -44,6 +45,8 @@ function toDateInputValue(value?: string | null): string {
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const AVATAR_OPTION_BASE_CLASSES =
+  "flex items-center gap-3 rounded-md border px-3 py-2 text-sm shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20";
 
 export function ProfileForm({
   userId,
@@ -291,99 +294,139 @@ export function ProfileForm({
   };
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
-      <div className="space-y-3">
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-1 text-sm" htmlFor="profile-first-name">
-            <span className="font-medium">Vorname</span>
-            <Input
-              id="profile-first-name"
-              value={firstName}
-              onChange={(event) => setFirstName(event.target.value)}
-              placeholder="Vorname"
-              autoComplete="given-name"
-            />
+    <form className="space-y-8" onSubmit={handleSubmit}>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-first-name">
+            Vorname
           </label>
-          <label className="space-y-1 text-sm" htmlFor="profile-last-name">
-            <span className="font-medium">Nachname</span>
-            <Input
-              id="profile-last-name"
-              value={lastName}
-              onChange={(event) => setLastName(event.target.value)}
-              placeholder="Nachname"
-              autoComplete="family-name"
-            />
-          </label>
+          <Input
+            id="profile-first-name"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            placeholder="Vorname"
+            autoComplete="given-name"
+          />
         </div>
-        <p className="text-xs text-muted-foreground">
-          Der Name wird in internen Übersichten und im Mitgliederbereich angezeigt.
-        </p>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-last-name">
+            Nachname
+          </label>
+          <Input
+            id="profile-last-name"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+            placeholder="Nachname"
+            autoComplete="family-name"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-email">
+            E-Mail-Adresse
+          </label>
+          <Input
+            id="profile-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            required
+          />
+          <p className="text-xs text-muted-foreground">
+            Diese E-Mail dient sowohl zur Anmeldung als auch für Benachrichtigungen.
+          </p>
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-date-of-birth">
+            Geburtsdatum
+          </label>
+          <Input
+            id="profile-date-of-birth"
+            type="date"
+            value={dateOfBirth}
+            onChange={(event) => setDateOfBirth(event.target.value)}
+            autoComplete="bday"
+            max={toDateInputValue(new Date().toISOString())}
+          />
+          <p className="text-xs text-muted-foreground">
+            Das Geburtsdatum hilft uns, notwendige Einverständniserklärungen korrekt zu verwalten.
+          </p>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-email">
-          E-Mail-Adresse
-        </label>
-        <Input
-          id="profile-email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          autoComplete="email"
-          required
-        />
-        <p className="text-xs text-muted-foreground">
-          Diese E-Mail dient sowohl zur Anmeldung als auch für Benachrichtigungen.
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <span className="block text-sm font-medium text-foreground/90">Profilbild</span>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <span className="text-sm font-medium text-foreground/90">Profilbild</span>
+          <p className="text-xs text-muted-foreground">
+            Wähle, wie dein Portrait im Portal angezeigt wird. Lade optional ein eigenes Bild hoch.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
           <UserAvatar
             userId={userId}
             email={email}
             firstName={firstName}
             lastName={lastName}
             name={displayName}
-            size={72}
-            className="h-[72px] w-[72px] text-xl"
+            size={80}
+            className="h-20 w-20 text-2xl"
             avatarSource={avatarSource}
             avatarUpdatedAt={avatarPreview ? Date.now() : avatarUpdatedAt}
             previewUrl={avatarPreview}
           />
-          <div className="space-y-3 text-sm">
-            <div className="space-y-2">
-              <label className="flex items-center gap-2">
+          <div className="space-y-4 text-sm">
+            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+              <label
+                className={cn(
+                  AVATAR_OPTION_BASE_CLASSES,
+                  avatarSource === "GRAVATAR"
+                    ? "border-primary/60 bg-primary/10 text-foreground"
+                    : "border-border/60 bg-background/70 hover:border-primary/40"
+                )}
+              >
                 <input
                   type="radio"
                   name="avatar-source"
                   value="GRAVATAR"
                   checked={avatarSource === "GRAVATAR"}
                   onChange={() => handleAvatarSourceChange("GRAVATAR")}
-                  className="h-4 w-4 border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-4 w-4 border-border text-primary focus-visible:outline-none focus-visible:ring-0"
                 />
                 <span>Gravatar (basierend auf deiner E-Mail)</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label
+                className={cn(
+                  AVATAR_OPTION_BASE_CLASSES,
+                  avatarSource === "INITIALS"
+                    ? "border-primary/60 bg-primary/10 text-foreground"
+                    : "border-border/60 bg-background/70 hover:border-primary/40"
+                )}
+              >
                 <input
                   type="radio"
                   name="avatar-source"
                   value="INITIALS"
                   checked={avatarSource === "INITIALS"}
                   onChange={() => handleAvatarSourceChange("INITIALS")}
-                  className="h-4 w-4 border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-4 w-4 border-border text-primary focus-visible:outline-none focus-visible:ring-0"
                 />
                 <span>Initialen (farbiger Platzhalter)</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label
+                className={cn(
+                  AVATAR_OPTION_BASE_CLASSES,
+                  avatarSource === "UPLOAD"
+                    ? "border-primary/60 bg-primary/10 text-foreground"
+                    : "border-border/60 bg-background/70 hover:border-primary/40"
+                )}
+              >
                 <input
                   type="radio"
                   name="avatar-source"
                   value="UPLOAD"
                   checked={avatarSource === "UPLOAD"}
                   onChange={() => handleAvatarSourceChange("UPLOAD")}
-                  className="h-4 w-4 border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-4 w-4 border-border text-primary focus-visible:outline-none focus-visible:ring-0"
                 />
                 <span>Eigenes Bild</span>
               </label>
@@ -445,27 +488,10 @@ export function ProfileForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground/90" htmlFor="profile-date-of-birth">
-          Geburtsdatum
-        </label>
-        <Input
-          id="profile-date-of-birth"
-          type="date"
-          value={dateOfBirth}
-          onChange={(event) => setDateOfBirth(event.target.value)}
-          autoComplete="bday"
-          max={toDateInputValue(new Date().toISOString())}
-        />
-        <p className="text-xs text-muted-foreground">
-          Das Geburtsdatum hilft uns, notwendige Einverständniserklärungen korrekt zu verwalten.
-        </p>
-      </div>
-
       {error && <p className="text-sm text-destructive">{error}</p>}
       {success && <p className="text-sm text-emerald-500">{success}</p>}
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border/60 pt-4">
         <Button type="button" variant="outline" onClick={resetForm} disabled={saving}>
           Zurücksetzen
         </Button>
