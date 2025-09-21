@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { hashOwnerSetupToken, ownerExists } from "@/lib/owner-setup";
+import { hashOwnerSetupToken } from "@/lib/owner-setup";
 import { hashPassword } from "@/lib/password";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -80,10 +80,6 @@ export async function POST(request: NextRequest) {
         throw new Error("TOKEN_ALREADY_USED");
       }
 
-      if (await ownerExists(tx)) {
-        throw new Error("OWNER_ALREADY_EXISTS");
-      }
-
       const created = await tx.user.create({
         data: {
           email,
@@ -107,9 +103,6 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error) {
       if (error.message === "TOKEN_ALREADY_USED") {
         return NextResponse.json({ error: "Dieser Link wurde bereits verwendet." }, { status: 410 });
-      }
-      if (error.message === "OWNER_ALREADY_EXISTS") {
-        return NextResponse.json({ error: "Es existiert bereits ein Owner." }, { status: 409 });
       }
     }
 
