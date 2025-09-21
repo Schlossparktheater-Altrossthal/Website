@@ -1,6 +1,7 @@
 "use client";
-import Image from "next/image";
 import { Heading, Text } from "@/components/ui/typography";
+
+import { PosterSlideshow } from "./poster-slideshow";
 
 type ChronikCastEntry = {
   role: string;
@@ -22,7 +23,7 @@ type ChronikItem = {
   year: number;
   title?: string | null;
   synopsis?: string | null;
-  posterUrl?: string | null;
+  posterUrl?: string | string[] | null;
   meta?: ChronikMeta | null;
 };
 
@@ -65,6 +66,17 @@ function formatPlayerName(name: string) {
   return `${firstNames} ${lastInitial}.`;
 }
 
+function toPosterSources(value: ChronikItem["posterUrl"]) {
+  if (!value) {
+    return [] as string[];
+  }
+
+  const sources = Array.isArray(value) ? value : [value];
+  return sources
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter((entry): entry is string => entry.length > 0);
+}
+
 export function ChronikStacked({ items }: { items: ChronikItem[] }) {
   const sorted = [...items].sort((a, b) => b.year - a.year);
 
@@ -74,6 +86,7 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
         const meta: ChronikMeta = s.meta ?? {};
         const sources = toStringArray(meta.sources);
         const castEntries = toCastEntries(meta.cast);
+        const posterSources = toPosterSources(s.posterUrl);
         return (
           <section
             key={s.id}
@@ -81,12 +94,10 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
             className="group relative overflow-hidden rounded-2xl border border-border/60 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl sm:rounded-3xl"
           >
             <div className="relative h-[60vh] sm:h-[70vh] lg:h-[75vh] xl:h-[65vh] 2xl:h-[60vh] w-full max-h-[800px]">
-              {s.posterUrl && (
-                <Image
-                  src={s.posterUrl}
+              {posterSources.length > 0 && (
+                <PosterSlideshow
+                  sources={posterSources}
                   alt={s.title ?? String(s.year)}
-                  fill
-                  className="object-cover"
                   priority={idx === 0}
                 />
               )}

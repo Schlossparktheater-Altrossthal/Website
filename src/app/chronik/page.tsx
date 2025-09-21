@@ -21,6 +21,53 @@ type ShowMeta = {
   cast?: ShowCastEntry[] | null;
 };
 
+type PosterOverride =
+  | { strategy: "replace"; sources: string[] }
+  | { strategy: "append"; sources: string[] };
+
+const CHRONIK_POSTER_OVERRIDES: Record<string, PosterOverride> = {
+  "altrossthal-2024": { strategy: "replace", sources: ["/images/Bunbury_Flyer.jpg"] },
+  "altrossthal-2022": { strategy: "append", sources: ["/images/Aladin_Bühne.jpg"] },
+};
+
+function sanitizePosterSources(sources: (string | null | undefined)[]) {
+  const unique = new Set<string>();
+  const sanitized: string[] = [];
+
+  for (const entry of sources) {
+    if (typeof entry !== "string") {
+      continue;
+    }
+
+    const trimmed = entry.trim();
+    if (!trimmed || unique.has(trimmed)) {
+      continue;
+    }
+
+    unique.add(trimmed);
+    sanitized.push(trimmed);
+  }
+
+  return sanitized;
+}
+
+function getChronikPosterSources(show: Show) {
+  const override = CHRONIK_POSTER_OVERRIDES[show.id];
+  const baseSources = sanitizePosterSources([show.posterUrl]);
+
+  if (!override) {
+    return baseSources;
+  }
+
+  const overrideSources = sanitizePosterSources(override.sources);
+
+  if (override.strategy === "replace") {
+    return overrideSources;
+  }
+
+  return sanitizePosterSources([...baseSources, ...overrideSources]);
+}
+
 function parseShowMeta(meta: Prisma.JsonValue | null | undefined): ShowMeta | null {
   if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
     return null;
@@ -154,7 +201,16 @@ export default async function ChronikPage() {
     year: s.year,
     title: s.title,
     synopsis: s.synopsis ?? null,
-    posterUrl: s.posterUrl ?? null,
+    posterUrl: (() => {
+      const posterSources = getChronikPosterSources(s);
+      if (posterSources.length === 0) {
+        return null;
+      }
+      if (posterSources.length === 1) {
+        return posterSources[0];
+      }
+      return posterSources;
+    })(),
     meta: applyChronikSupplements(s.id, parseShowMeta(s.meta)),
   }));
   
