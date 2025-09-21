@@ -74,6 +74,13 @@ interface OnboardingOverview {
   passwordSet: boolean;
 }
 
+interface FinalRehearsalWeekInfo {
+  showId: string;
+  title: string | null;
+  year: number;
+  startDate: Date;
+}
+
 const INITIAL_STATS: DashboardStats = {
   totalOnline: 0,
   totalMembers: 0,
@@ -129,6 +136,7 @@ type OverviewResponse = {
   stats?: OverviewStatsPayload;
   recentActivities?: unknown;
   onboarding?: unknown;
+  finalRehearsalWeek?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -278,6 +286,32 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
   };
 }
 
+function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null {
+  if (!isRecord(value)) return null;
+
+  const rawShowId = value.showId;
+  if (typeof rawShowId !== "string") return null;
+  const showId = rawShowId.trim();
+  if (!showId) return null;
+
+  const startDate = parseIsoDate(value.startDate);
+  if (!startDate) return null;
+
+  const title = typeof value.title === "string" && value.title.trim() ? value.title : null;
+  const yearRaw = value.year;
+  const year =
+    typeof yearRaw === "number" && Number.isFinite(yearRaw)
+      ? yearRaw
+      : startDate.getFullYear();
+
+  return {
+    showId,
+    title,
+    year,
+    startDate,
+  };
+}
+
 export function MembersDashboard() {
   const { data: session } = useSession();
   const { connectionStatus } = useRealtime();
@@ -292,6 +326,7 @@ export function MembersDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [onboarding, setOnboarding] = useState<OnboardingOverview | null>(null);
   const [onboardingLoaded, setOnboardingLoaded] = useState(false);
+  const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(null);
 
   useEffect(() => {
     setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
@@ -332,6 +367,7 @@ export function MembersDashboard() {
         });
 
         setOnboarding(parseOnboardingOverview(payload?.onboarding));
+        setFinalRehearsalWeek(parseFinalRehearsalWeek(payload?.finalRehearsalWeek));
         const activities = parseRecentActivities(payload?.recentActivities);
 
         setRecentActivities(activities.slice(0, 10));
@@ -446,6 +482,53 @@ export function MembersDashboard() {
       label: "Offline",
     };
   }, [connectionStatus]);
+
+  const finalRehearsalMetric = useMemo(() => {
+    if (!finalRehearsalWeek) return null;
+
+    const startDate = finalRehearsalWeek.startDate;
+    const showLabel = finalRehearsalWeek.title
+      ? finalRehearsalWeek.title
+      : `Produktion ${finalRehearsalWeek.year}`;
+    const formattedDate = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(startDate);
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const diffMs = startDay.getTime() - today.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) {
+      let tone: "info" | "warning" | "danger" = "info";
+      if (diffDays <= 3) {
+        tone = "danger";
+      } else if (diffDays <= 7) {
+        tone = "warning";
+      }
+      return {
+        label: "Tage bis Endprobenwoche",
+        value: diffDays,
+        hint: `${showLabel} · Start am ${formattedDate}`,
+        tone,
+      } as const;
+    }
+
+    if (diffDays === 0) {
+      return {
+        label: "Endprobenwoche",
+        value: "Heute",
+        hint: `${showLabel} · Start am ${formattedDate}`,
+        tone: "warning" as const,
+      };
+    }
+
+    return {
+      label: "Endprobenwoche",
+      value: "Gestartet",
+      hint: `${showLabel} · Start am ${formattedDate}`,
+      tone: "positive" as const,
+    };
+  }, [finalRehearsalWeek]);
 
   const onlineUpdatedHint = onlineLoading
     ? "Aktualisiert …"
@@ -704,6 +787,15 @@ export function MembersDashboard() {
         </div>
 
         <KeyMetricGrid>
+          {finalRehearsalMetric ? (
+            <KeyMetricCard
+              label={finalRehearsalMetric.label}
+              value={finalRehearsalMetric.value}
+              icon={<Sparkles className="h-4 w-4 text-primary" />}
+              hint={finalRehearsalMetric.hint}
+              tone={finalRehearsalMetric.tone}
+            />
+          ) : null}
           <KeyMetricCard
             label="Online Mitglieder"
             value={stats.totalOnline}

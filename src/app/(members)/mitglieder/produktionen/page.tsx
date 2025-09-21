@@ -218,15 +218,19 @@ export default async function ProduktionenPage() {
                     <label className="text-sm font-medium">Startdatum</label>
                     <Input type="date" name="startDate" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Enddatum</label>
-                    <Input type="date" name="endDate" />
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-sm font-medium">Premierenankündigung</label>
-                    <Input type="date" name="revealDate" />
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Enddatum</label>
+                  <Input type="date" name="endDate" />
                 </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-sm font-medium">Beginn der Endprobenwoche</label>
+                  <Input type="date" name="finalRehearsalWeekStart" />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-sm font-medium">Premierenankündigung</label>
+                  <Input type="date" name="revealDate" />
+                </div>
+              </div>
               </details>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -116,6 +116,11 @@ export async function createProductionAction(formData: FormData): Promise<void> 
     const startDate = parseOptionalDate(formData, "startDate", "Startdatum");
     const endDate = parseOptionalDate(formData, "endDate", "Enddatum");
     const revealDate = parseOptionalDate(formData, "revealDate", "Premierenankündigung");
+    const finalRehearsalWeekStart = parseOptionalDate(
+      formData,
+      "finalRehearsalWeekStart",
+      "Start der Endprobenwoche",
+    );
     const setActive = parseCheckbox(formData.get("setActive"));
     const redirectPath = readOptionalString(formData, "redirectPath");
 
@@ -140,6 +145,7 @@ export async function createProductionAction(formData: FormData): Promise<void> 
                 ? formatDateOnly(startDate)
                 : Prisma.JsonNull,
         revealedAt: revealDate ?? null,
+        finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
       },
       select: { id: true },
     });
@@ -162,6 +168,36 @@ export async function createProductionAction(formData: FormData): Promise<void> 
     console.error("createProductionAction", error);
     const message =
       error instanceof Error ? error.message : "Produktion konnte nicht angelegt werden.";
+    throw new Error(message);
+  }
+}
+
+export async function updateProductionTimelineAction(formData: FormData): Promise<void> {
+  const redirectPath = parseRedirectPath(formData);
+  try {
+    const session = await requireAuth();
+    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    if (!allowed) {
+      throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
+    }
+
+    const showId = readString(formData, "showId", { label: "Produktion" });
+    const finalRehearsalWeekStart = parseOptionalDate(
+      formData,
+      "finalRehearsalWeekStart",
+      "Start der Endprobenwoche",
+    );
+
+    await prisma.show.update({
+      where: { id: showId },
+      data: { finalRehearsalWeekStart: finalRehearsalWeekStart ?? null },
+    });
+
+    revalidateShow(showId, redirectPath, true);
+  } catch (error) {
+    console.error("updateProductionTimelineAction", error);
+    const message =
+      error instanceof Error ? error.message : "Produktion konnte nicht aktualisiert werden.";
     throw new Error(message);
   }
 }
