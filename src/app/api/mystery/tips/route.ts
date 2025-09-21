@@ -8,6 +8,12 @@ const tipSchema = z.object({
     .trim()
     .min(3, "Dein Tipp sollte mindestens 3 Zeichen lang sein.")
     .max(280, "Bitte kürze deinen Tipp auf höchstens 280 Zeichen."),
+  playerName: z
+    .string()
+    .trim()
+    .min(2, "Bitte gib einen Spielernamen mit mindestens 2 Zeichen an.")
+    .max(50, "Der Spielernamen darf höchstens 50 Zeichen lang sein."),
+  clueId: z.string().cuid({ message: "Bitte wähle ein gültiges Rätsel aus." }),
 });
 
 function normalizeTip(text: string) {
@@ -54,18 +60,39 @@ export async function POST(request: NextRequest) {
   }
 
   const trimmedTip = parsed.data.tip;
+  const trimmedName = parsed.data.playerName.trim();
+  const clueId = parsed.data.clueId;
   const normalizedText = normalizeTip(trimmedTip);
 
   try {
-    const savedTip = await prisma.mysteryTip.upsert({
-      where: { normalizedText },
-      update: {
-        count: { increment: 1 },
-      },
-      create: {
-        text: trimmedTip,
-        normalizedText,
-      },
+    const clue = await prisma.clue.findUnique({ where: { id: clueId } });
+    if (!clue || !clue.published) {
+      return NextResponse.json({ error: "Dieses Rätsel kann aktuell nicht ausgewählt werden." }, { status: 400 });
+    }
+
+    const savedTip = await prisma.$transaction(async (tx) => {
+      const tipRecord = await tx.mysteryTip.upsert({
+        where: { normalizedText },
+        update: {
+          count: { increment: 1 },
+        },
+        create: {
+          text: trimmedTip,
+          normalizedText,
+        },
+      });
+
+      await tx.mysteryTipSubmission.create({
+        data: {
+          tipId: tipRecord.id,
+          clueId,
+          playerName: trimmedName,
+          tipText: trimmedTip,
+          normalizedText,
+        },
+      });
+
+      return tipRecord;
     });
 
     const created = savedTip.count === 1;

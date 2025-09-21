@@ -1,13 +1,12 @@
 import { MysteryTimerManager } from "@/components/members/mystery/mystery-timer-manager";
-import { MysteryTipsTable } from "@/components/members/mystery/mystery-tips-table";
 import { Text } from "@/components/ui/typography";
 import {
   DEFAULT_MYSTERY_COUNTDOWN_ISO,
   DEFAULT_MYSTERY_EXPIRATION_MESSAGE,
+  MysterySettingsScope,
   resolveMysterySettings,
   readMysterySettings,
 } from "@/lib/mystery-settings";
-import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
@@ -37,34 +36,17 @@ export default async function MysteryTimerPage() {
     );
   }
 
-  const [settingsRecord, tipRecords] = await Promise.all([
-    readMysterySettings(),
-    prisma.mysteryTip.findMany({
-      orderBy: [
-        { count: "desc" },
-        { updatedAt: "desc" },
-        { createdAt: "asc" },
-      ],
-    }),
-  ]);
+  const scope: MysterySettingsScope = "members";
+  const settingsRecord = await readMysterySettings(scope);
 
   const resolved = resolveMysterySettings(settingsRecord);
-
-  const tips = tipRecords.map((tip) => ({
-    id: tip.id,
-    text: tip.text,
-    normalizedText: tip.normalizedText,
-    count: tip.count,
-    createdAt: tip.createdAt.toISOString(),
-    updatedAt: tip.updatedAt.toISOString(),
-  }));
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Mystery-Timer</h1>
         <p className="text-sm text-foreground/70">
-          Verwalte Countdown, Hinweistext und erhalte einen Überblick über die häufigsten Community-Tipps.
+          Verwalte Countdown und Hinweistext für interne Planungen unabhängig vom öffentlichen Countdown.
         </p>
       </div>
 
@@ -80,7 +62,6 @@ export default async function MysteryTimerPage() {
         hasCustomMessage={resolved.hasCustomMessage}
       />
 
-      <MysteryTipsTable tips={tips} />
     </div>
   );
 }

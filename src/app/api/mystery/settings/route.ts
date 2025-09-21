@@ -43,7 +43,7 @@ export async function GET() {
   }
 
   try {
-    const record = await readMysterySettings();
+    const record = await readMysterySettings("members");
     return NextResponse.json({ settings: serializeSettings(record) });
   } catch (error) {
     console.error("Failed to load mystery settings", error);
@@ -76,7 +76,7 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const saved = await saveMysterySettings({
+    const saved = await saveMysterySettings("members", {
       countdownTarget: parsed.data.countdownTarget,
       expirationMessage: parsed.data.expirationMessage,
     });

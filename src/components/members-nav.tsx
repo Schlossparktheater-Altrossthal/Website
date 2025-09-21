@@ -44,6 +44,11 @@ const MYSTERY_ITEMS: Item[] = [
     label: "Mystery-Timer",
     permissionKey: "mitglieder.mystery.timer",
   },
+  {
+    href: "/mitglieder/mystery/tipps",
+    label: "Mystery-Tipps",
+    permissionKey: "mitglieder.mystery.tips",
+  },
 ];
 
 const ADMIN_ITEMS: Item[] = [
@@ -198,6 +203,14 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
           <circle cx="12" cy="12" r="9" />
           <path d="M12 7v6l3 3" />
           <path d="M9 3h6" />
+        </svg>
+      );
+    case "/mitglieder/mystery/tipps":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m2 12 9-9 4 4-9 9-4 4z" />
+          <path d="M12.5 5.5 18 11" />
+          <path d="M4 20h7" />
         </svg>
       );
     default:

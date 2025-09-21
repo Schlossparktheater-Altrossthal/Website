@@ -5,7 +5,9 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Text } from "@/components/ui/typography";
 
@@ -35,19 +37,31 @@ function sortTips(tips: MysteryTip[]) {
   });
 }
 
-type MysteryTipsBoardProps = {
-  initialTips?: MysteryTip[];
+type ClueOption = {
+  id: string;
+  label: string;
+  points: number;
 };
 
-export function MysteryTipsBoard({ initialTips = [] }: MysteryTipsBoardProps) {
+type MysteryTipsBoardProps = {
+  initialTips?: MysteryTip[];
+  clueOptions: ClueOption[];
+  defaultClueId?: string | null;
+};
+
+export function MysteryTipsBoard({ initialTips = [], clueOptions, defaultClueId }: MysteryTipsBoardProps) {
   const [tips, setTips] = useState<MysteryTip[]>(() => sortTips(initialTips));
   const [tipText, setTipText] = useState("");
+  const [playerName, setPlayerName] = useState("");
+  const [selectedClueId, setSelectedClueId] = useState(() => defaultClueId ?? clueOptions[0]?.id ?? "");
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(initialTips.length === 0);
 
   const hasMinimumLength = useMemo(() => tipText.trim().length >= 3, [tipText]);
+  const hasValidName = useMemo(() => playerName.trim().length >= 2, [playerName]);
+  const hasSelectedClue = Boolean(selectedClueId);
 
   const refreshTips = useCallback(async () => {
     setIsLoading(true);
@@ -78,6 +92,16 @@ export function MysteryTipsBoard({ initialTips = [] }: MysteryTipsBoardProps) {
     }
   }, [initialTips, refreshTips]);
 
+  useEffect(() => {
+    if (!clueOptions.length) {
+      setSelectedClueId("");
+      return;
+    }
+    if (!clueOptions.some((clue) => clue.id === selectedClueId)) {
+      setSelectedClueId(clueOptions[0]?.id ?? "");
+    }
+  }, [clueOptions, selectedClueId]);
+
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -94,7 +118,7 @@ export function MysteryTipsBoard({ initialTips = [] }: MysteryTipsBoardProps) {
         const response = await fetch("/api/mystery/tips", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tip: trimmed }),
+          body: JSON.stringify({ tip: trimmed, playerName: playerName.trim(), clueId: selectedClueId }),
         });
         const payload = await response.json();
         if (!response.ok) {
@@ -117,6 +141,7 @@ export function MysteryTipsBoard({ initialTips = [] }: MysteryTipsBoardProps) {
           return sortTips(next);
         });
         setTipText("");
+        setPlayerName("");
       } catch (err) {
         console.error("Failed to submit mystery tip", err);
         setSubmissionError(err instanceof Error ? err.message : "Unbekannter Fehler beim Speichern.");
@@ -124,10 +149,11 @@ export function MysteryTipsBoard({ initialTips = [] }: MysteryTipsBoardProps) {
         setIsSubmitting(false);
       }
     },
-    [tipText]
+    [playerName, selectedClueId, tipText]
   );
 
   const remainingCharacters = MAX_TIP_LENGTH - tipText.length;
+  const canSubmit = hasMinimumLength && hasValidName && hasSelectedClue && !isSubmitting;
 
   return (
     <section className="space-y-6">
@@ -139,6 +165,41 @@ export function MysteryTipsBoard({ initialTips = [] }: MysteryTipsBoardProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mystery-player-name">Spielername</Label>
+                <Input
+                  id="mystery-player-name"
+                  value={playerName}
+                  onChange={(event) => setPlayerName(event.target.value)}
+                  maxLength={50}
+                  placeholder="Wie dürfen wir dich im Scoreboard nennen?"
+                  disabled={isSubmitting}
+                  aria-invalid={hasValidName ? undefined : true}
+                />
+                <Text variant="small" tone={hasValidName ? "muted" : "destructive"}>
+                  Mindestens 2 Zeichen. Dieser Name erscheint im öffentlichen Scoreboard.
+                </Text>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mystery-clue">Rätsel auswählen</Label>
+                <Select value={selectedClueId} onValueChange={setSelectedClueId} disabled={clueOptions.length === 0 || isSubmitting}>
+                  <SelectTrigger id="mystery-clue" className="w-full">
+                    <SelectValue placeholder="Rätsel wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clueOptions.map((clue) => (
+                      <SelectItem key={clue.id} value={clue.id}>
+                        {clue.label} · {clue.points} Punkte
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Text variant="small" tone={hasSelectedClue ? "muted" : "destructive"}>
+                  Ordne deinen Tipp einem konkreten Rätsel zu, um Punkte zu sammeln.
+                </Text>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="mystery-tip">Was glaubst du, welches Stück wir spielen?</Label>
                 <Textarea
@@ -162,7 +223,7 @@ export function MysteryTipsBoard({ initialTips = [] }: MysteryTipsBoardProps) {
                 </Text>
               )}
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={isSubmitting || !hasMinimumLength}>
+                <Button type="submit" disabled={!canSubmit}>
                   {isSubmitting ? "Wird gesendet…" : "Tipp abschicken"}
                 </Button>
                 <Button type="button" variant="ghost" onClick={refreshTips} disabled={isLoading}>

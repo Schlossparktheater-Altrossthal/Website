@@ -9,9 +9,11 @@ import {
 } from "@/lib/mystery-settings";
 import { prisma } from "@/lib/prisma";
 import type { Clue, MysteryTip as MysteryTipModel, Prisma } from "@prisma/client";
+import { getMysteryClueSummaries, getMysteryScoreboard } from "@/lib/mystery-tips";
 
 import { Countdown } from "./_components/countdown";
 import { MysteryTipsBoard } from "./_components/mystery-tips-board";
+import { MysteryScoreboard } from "./_components/mystery-scoreboard";
 
 type ClueContent = {
   text?: string;
@@ -58,9 +60,11 @@ export default async function MysteryPage() {
   let clues: Clue[] = [];
   let tips: MysteryTipModel[] = [];
   let settingsRecord: Awaited<ReturnType<typeof readMysterySettings>> = null;
+  let scoreboardEntries: Awaited<ReturnType<typeof getMysteryScoreboard>> = [];
+  let clueSummaries: Awaited<ReturnType<typeof getMysteryClueSummaries>> = [];
 
   if (process.env.DATABASE_URL) {
-    const [cluesResult, tipsResult, settingsResult] = await Promise.allSettled([
+    const [cluesResult, tipsResult, settingsResult, scoreboardResult, clueSummaryResult] = await Promise.allSettled([
       prisma.clue.findMany({
         where: { published: true, releaseAt: { lte: now } },
         orderBy: [{ index: "asc" }],
@@ -73,11 +77,15 @@ export default async function MysteryPage() {
         ],
       }),
       readMysterySettings(),
+      getMysteryScoreboard(10),
+      getMysteryClueSummaries(),
     ]);
 
     clues = cluesResult.status === "fulfilled" ? cluesResult.value : [];
     tips = tipsResult.status === "fulfilled" ? tipsResult.value : [];
     settingsRecord = settingsResult.status === "fulfilled" ? settingsResult.value : null;
+    scoreboardEntries = scoreboardResult.status === "fulfilled" ? scoreboardResult.value : [];
+    clueSummaries = clueSummaryResult.status === "fulfilled" ? clueSummaryResult.value : [];
   }
 
   const resolvedSettings = resolveMysterySettings(settingsRecord);
@@ -95,6 +103,21 @@ export default async function MysteryPage() {
     count: tip.count,
     createdAt: tip.createdAt.toISOString(),
     updatedAt: tip.updatedAt.toISOString(),
+  }));
+
+  const clueOptions = clueSummaries
+    .filter((clue) => clue.published)
+    .map((clue) => ({
+      id: clue.id,
+      label: `Hinweis ${clue.index}`,
+      points: clue.points,
+    }));
+
+  const scoreboardData = scoreboardEntries.map((entry) => ({
+    playerName: entry.playerName,
+    totalScore: entry.totalScore,
+    correctCount: entry.correctCount,
+    lastUpdated: entry.lastUpdated ? entry.lastUpdated.toISOString() : null,
   }));
 
   const countdownReached = resolvedSettings.effectiveCountdownTarget <= now;
@@ -160,7 +183,12 @@ export default async function MysteryPage() {
           </Card>
         </div>
       </section>
-      <MysteryTipsBoard initialTips={initialTips} />
+      <MysteryTipsBoard
+        initialTips={initialTips}
+        clueOptions={clueOptions}
+        defaultClueId={clueOptions[0]?.id}
+      />
+      <MysteryScoreboard entries={scoreboardData} />
       <section className="space-y-4">
         <Heading level="h2">Bisher enthüllte Hinweise</Heading>
         {hasAdditionalClues ? (
