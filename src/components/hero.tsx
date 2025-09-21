@@ -31,9 +31,7 @@ export function Hero({ images }: { images: string[] }) {
       </div>
       
       {/* Lighter overlays for better image visibility */}
-      <div
-        className="absolute inset-0 z-10 bg-gradient-to-t from-[color:color-mix(in_oklab,var(--foreground)_65%,transparent)] via-[color:color-mix(in_oklab,var(--foreground)_25%,transparent)] to-transparent pointer-events-none"
-      />
+      <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-transparent via-transparent to-background/80 pointer-events-none" />
       
       {/* Subtle mystical color overlays */}
@@ -53,33 +51,34 @@ export function Hero({ images }: { images: string[] }) {
               <Badge
                 variant="outline"
                 size="sm"
-                className="rounded-full border-primary/50 bg-primary/15 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-primary shadow-lg backdrop-blur"
+                className="rounded-full border-white/30 bg-black/20 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/80 shadow-lg backdrop-blur"
               >
                 Sommer 2025
               </Badge>
               <Heading
                 level="display"
-                className="text-balance text-foreground [text-shadow:_0_0_18px_rgba(0,0,0,0.55)]"
+                weight="bold"
+                className="font-serif text-balance text-white [text-shadow:_0_0_14px_rgba(0,0,0,0.85),_2px_2px_8px_rgba(0,0,0,0.65)]"
               >
                 Magische Nächte unter freiem Himmel
               </Heading>
               <Text
                 variant="lead"
-                tone="default"
-                className="mx-auto max-w-2xl text-balance text-foreground/90 [text-shadow:_0_0_14px_rgba(0,0,0,0.5)]"
+                weight="medium"
+                className="mx-auto max-w-2xl text-balance text-white/95 [text-shadow:_0_0_10px_rgba(0,0,0,0.65)]"
               >
                 Das Ensemble des Sommertheaters lädt zu einem neuen Erlebnis aus Licht, Musik und
                 Erzählung ein – nur an einem Wochenende im Schlosspark.
               </Text>
               <div className="flex flex-col items-center gap-6">
-                <ul className="grid gap-3 text-sm font-medium text-foreground/90 md:grid-cols-3 md:gap-4">
-                  <li className="rounded-full border border-border/60 bg-background/70 px-5 py-2 shadow-md backdrop-blur">
+                <ul className="grid gap-3 text-sm font-medium text-white/80 md:grid-cols-3 md:gap-4">
+                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
                     Live-Orchester &amp; Chor
                   </li>
-                  <li className="rounded-full border border-border/60 bg-background/70 px-5 py-2 shadow-md backdrop-blur">
+                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
                     Immersive Lichtinstallationen
                   </li>
-                  <li className="rounded-full border border-border/60 bg-background/70 px-5 py-2 shadow-md backdrop-blur">
+                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
                     Familienfreundliches Rahmenprogramm
                   </li>
                 </ul>
@@ -88,10 +87,10 @@ export function Hero({ images }: { images: string[] }) {
                     <Link href="/mystery">Das Geheimnis entdecken</Link>
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     asChild
                     size="lg"
-                    className="border border-border/60 bg-background/70 px-8 py-5 text-base text-foreground shadow-lg backdrop-blur hover:border-primary/60 hover:bg-background/80 md:text-lg"
+                    className="border-white/40 bg-white/10 px-8 py-5 text-base text-white shadow-lg backdrop-blur hover:border-white/60 hover:bg-white/20 md:text-lg"
                   >
                     <Link href="/chronik">Rückblick 2024</Link>
                   </Button>
