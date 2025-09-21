@@ -141,6 +141,7 @@ export function DieterEncountersSection() {
     const since = ((formData.get("since") as string | null) ?? "").trim();
     const nickname = ((formData.get("nickname") as string | null) ?? "").trim();
     const story = ((formData.get("story") as string | null) ?? "").trim();
+    const author = ((formData.get("author") as string | null) ?? "").trim();
 
     if (!since || !nickname || !story) {
       return;
@@ -156,6 +157,7 @@ export function DieterEncountersSection() {
       since,
       nickname,
       story,
+      author: author || undefined,
       createdAt,
       source: "user",
     };
@@ -207,6 +209,16 @@ export function DieterEncountersSection() {
                     autoComplete="off"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dieter-author">Wer teilt diese Begegnung? (optional)</Label>
+                <Input
+                  id="dieter-author"
+                  name="author"
+                  placeholder="Ihr Name, Ihre Klasse oder Gruppe"
+                  autoComplete="off"
+                />
               </div>
 
               <div className="space-y-2">
