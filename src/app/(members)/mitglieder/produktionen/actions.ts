@@ -7,6 +7,7 @@ import {
   DepartmentMembershipRole,
   CharacterCastingType,
   BreakdownStatus,
+  TaskStatus,
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -571,6 +572,136 @@ export async function removeDepartmentMemberAction(formData: FormData): Promise<
     console.error("removeDepartmentMemberAction", error);
     const message =
       error instanceof Error ? error.message : "Mitglied konnte nicht entfernt werden.";
+    throw new Error(message);
+  }
+}
+
+export async function createDepartmentTaskAction(formData: FormData): Promise<void> {
+  const { userId } = await requireProductionManager();
+  const redirectPath = parseRedirectPath(formData);
+  try {
+    const departmentId = readString(formData, "departmentId", { label: "Gewerk" });
+    const title = readString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
+    const description = readOptionalString(formData, "description", {
+      label: "Beschreibung",
+      maxLength: 2000,
+    });
+    const status =
+      parseEnumValue(TaskStatus, formData.get("status"), "Status", { optional: true }) ??
+      TaskStatus.todo;
+    const assigneeId = readOptionalString(formData, "assigneeId", {
+      label: "Zuständiges Mitglied",
+      maxLength: 200,
+    });
+    const dueAt = parseOptionalDate(formData, "dueAt", "Fällig bis");
+
+    if (assigneeId) {
+      const membership = await prisma.departmentMembership.findFirst({
+        where: { departmentId, userId: assigneeId },
+        select: { id: true },
+      });
+      if (!membership) {
+        throw new Error("Das gewählte Mitglied gehört nicht zu diesem Gewerk.");
+      }
+    }
+
+    await prisma.departmentTask.create({
+      data: {
+        departmentId,
+        title,
+        description: description ?? null,
+        status,
+        dueAt: dueAt ?? null,
+        assigneeId: assigneeId ?? null,
+        createdById: userId,
+      },
+    });
+
+    revalidateDepartments(redirectPath);
+  } catch (error) {
+    console.error("createDepartmentTaskAction", error);
+    const message =
+      error instanceof Error ? error.message : "Aufgabe konnte nicht erstellt werden.";
+    throw new Error(message);
+  }
+}
+
+export async function updateDepartmentTaskAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
+  const redirectPath = parseRedirectPath(formData);
+  try {
+    const taskId = readString(formData, "taskId", { label: "Aufgabe" });
+    const task = await prisma.departmentTask.findUnique({
+      where: { id: taskId },
+      select: { id: true, departmentId: true, status: true },
+    });
+    if (!task) {
+      throw new Error("Aufgabe wurde nicht gefunden.");
+    }
+
+    const title = readString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
+    const description = readOptionalString(formData, "description", {
+      label: "Beschreibung",
+      maxLength: 2000,
+    });
+    const status =
+      parseEnumValue(TaskStatus, formData.get("status"), "Status", { optional: true }) ??
+      task.status;
+    const assigneeId = readOptionalString(formData, "assigneeId", {
+      label: "Zuständiges Mitglied",
+      maxLength: 200,
+    });
+    const dueAt = parseOptionalDate(formData, "dueAt", "Fällig bis");
+
+    if (assigneeId) {
+      const membership = await prisma.departmentMembership.findFirst({
+        where: { departmentId: task.departmentId, userId: assigneeId },
+        select: { id: true },
+      });
+      if (!membership) {
+        throw new Error("Das gewählte Mitglied gehört nicht zu diesem Gewerk.");
+      }
+    }
+
+    await prisma.departmentTask.update({
+      where: { id: taskId },
+      data: {
+        title,
+        description: description ?? null,
+        status,
+        dueAt: dueAt ?? null,
+        assigneeId: assigneeId ?? null,
+      },
+    });
+
+    revalidateDepartments(redirectPath);
+  } catch (error) {
+    console.error("updateDepartmentTaskAction", error);
+    const message =
+      error instanceof Error ? error.message : "Aufgabe konnte nicht aktualisiert werden.";
+    throw new Error(message);
+  }
+}
+
+export async function deleteDepartmentTaskAction(formData: FormData): Promise<void> {
+  await requireProductionManager();
+  const redirectPath = parseRedirectPath(formData);
+  try {
+    const taskId = readString(formData, "taskId", { label: "Aufgabe" });
+    const task = await prisma.departmentTask.findUnique({
+      where: { id: taskId },
+      select: { id: true },
+    });
+    if (!task) {
+      throw new Error("Aufgabe wurde nicht gefunden.");
+    }
+
+    await prisma.departmentTask.delete({ where: { id: taskId } });
+    revalidateDepartments(redirectPath);
+  } catch (error) {
+    console.error("deleteDepartmentTaskAction", error);
+    const message =
+      error instanceof Error ? error.message : "Aufgabe konnte nicht entfernt werden.";
     throw new Error(message);
   }
 }
