@@ -35,6 +35,7 @@ import {
   CalendarCog,
   UsersRound,
   ShieldCheck,
+  Hammer,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -149,6 +150,11 @@ const QUICK_ACTION_LINKS = [
     href: "/mitglieder/meine-proben",
     label: "Meine Proben",
     icon: CalendarCheck,
+  },
+  {
+    href: "/mitglieder/meine-gewerke",
+    label: "Meine Gewerke",
+    icon: Hammer,
   },
   {
     href: "/mitglieder/probenplanung",
