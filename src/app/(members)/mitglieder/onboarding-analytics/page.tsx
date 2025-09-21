@@ -1,12 +1,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { collectOnboardingAnalytics } from "@/lib/onboarding-analytics";
+import { getMysteryScoreboard } from "@/lib/mystery-tips";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const percentFormat = new Intl.NumberFormat("de-DE", { style: "percent", minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+const dateTimeFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
 export default async function OnboardingAnalyticsPage() {
   const session = await requireAuth();
@@ -16,6 +18,7 @@ export default async function OnboardingAnalyticsPage() {
   }
 
   const analytics = await collectOnboardingAnalytics();
+  const scoreboard = await getMysteryScoreboard();
   const totalFocus = analytics.completions.total || 1;
 
   return (
@@ -65,6 +68,43 @@ export default async function OnboardingAnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border border-border/70">
+        <CardHeader>
+          <CardTitle>Mystery Scoreboard</CardTitle>
+          <p className="text-sm text-muted-foreground">Top-Spieler:innen mit Punkten für richtige Rätsel-Ideen.</p>
+        </CardHeader>
+        <CardContent>
+          {scoreboard.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine Punkte vergeben.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Spielername</th>
+                    <th className="px-3 py-2 text-left">Punkte</th>
+                    <th className="px-3 py-2 text-left">Richtige Tipps</th>
+                    <th className="px-3 py-2 text-left">Zuletzt aktualisiert</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/70">
+                  {scoreboard.map((entry) => (
+                    <tr key={entry.playerName} className="bg-background/60">
+                      <td className="px-3 py-2 font-medium">{entry.playerName}</td>
+                      <td className="px-3 py-2 font-semibold">{numberFormat.format(entry.totalScore)}</td>
+                      <td className="px-3 py-2">{entry.correctCount}</td>
+                      <td className="px-3 py-2 text-muted-foreground">
+                        {entry.lastUpdated ? dateTimeFormat.format(entry.lastUpdated) : "–"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border border-border/70">

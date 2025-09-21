@@ -44,6 +44,11 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Mystery-Timer verwalten",
     description: "Countdown und Hinweistext für das öffentliche Geheimnis pflegen.",
   },
+  {
+    key: "mitglieder.mystery.tips",
+    label: "Mystery-Tipps verwalten",
+    description: "Community-Tipps nach Rätsel auswerten und Punkte für richtige Ideen vergeben.",
+  },
   { key: "mitglieder.sperrliste", label: "Sperrliste pflegen" },
   {
     key: "mitglieder.fotoerlaubnisse",

@@ -452,6 +452,7 @@ model Clue {
   points    Int
   published Boolean  @default(false)
   show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  tipSubmissions MysteryTipSubmission[]
 
   @@unique([showId, index], name: "showId_index")
   @@index([showId, published, releaseAt])
@@ -472,6 +473,26 @@ model MysteryTip {
   count          Int      @default(1)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  submissions    MysteryTipSubmission[]
+}
+
+model MysteryTipSubmission {
+  id             String   @id @default(cuid())
+  tipId          String
+  clueId         String?
+  playerName     String
+  tipText        String
+  normalizedText String
+  isCorrect      Boolean  @default(false)
+  score          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  tip            MysteryTip @relation(fields: [tipId], references: [id], onDelete: Cascade)
+  clue           Clue?      @relation(fields: [clueId], references: [id], onDelete: SetNull)
+
+  @@index([clueId])
+  @@index([playerName])
+  @@index([tipId])
 }
 
 model Guess {
