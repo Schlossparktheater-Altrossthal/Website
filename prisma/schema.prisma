@@ -563,6 +563,7 @@ model AppRole {
   name       String  @unique
   isSystem   Boolean @default(false)
   systemRole Role?
+  sortIndex  Int     @default(0)
   grants     AppRolePermission[]
   users      UserAppRole[]
 }
