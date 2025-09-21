@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
 import { Camera } from "lucide-react";
@@ -220,7 +219,7 @@ export function PhotoConsentCard() {
           <div className="space-y-1">
             <CardTitle className="text-xl font-semibold leading-tight">Darf dein Bühnenmoment sichtbar sein?</CardTitle>
             <p className="max-w-2xl text-sm text-foreground/70">
-              Wie bei einem Cookiebanner entscheidest du hier, ob wir Fotos von Proben und Aufführungen teilen dürfen.
+              Hier legst du fest, ob wir Fotos von Proben und Aufführungen im Mitgliederbereich zeigen dürfen.
             </p>
           </div>
         </div>
@@ -234,7 +233,7 @@ export function PhotoConsentCard() {
           <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 shadow-[0_18px_45px_color-mix(in_oklab,var(--info)_18%,transparent)] backdrop-blur">
             <p className="font-semibold text-foreground">Mit deinem „Okay“ hilfst du unserem Auftrittsteam.</p>
             <p className="mt-1 text-foreground/70">
-              Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim Cookiebanner am Seitenrand.
+              Du kannst deine Entscheidung jederzeit hier im Profil anpassen, falls sich deine Präferenzen ändern.
             </p>
           </div>
         )}
@@ -250,7 +249,7 @@ export function PhotoConsentCard() {
           </div>
         ) : requiresDateOfBirth ? (
           <div className="rounded-md border border-warning/45 bg-warning/15 p-3 text-warning">
-            Bitte hinterlege dein Geburtsdatum im <Link className="underline" href="/mitglieder/profil">Profil</Link>, damit wir prüfen können, ob ein Elternformular notwendig ist.
+            Bitte hinterlege dein Geburtsdatum im Abschnitt „Profildaten“ oben auf dieser Seite, damit wir prüfen können, ob ein Elternformular notwendig ist.
           </div>
         ) : status === "approved" ? (
           <div className="space-y-2 rounded-md border border-success/45 bg-success/15 p-3 text-success">

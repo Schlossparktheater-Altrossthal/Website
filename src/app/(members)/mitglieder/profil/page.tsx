@@ -90,7 +90,7 @@ export default async function ProfilePage() {
         description="Halte deine Stammdaten aktuell und behalte im Blick, welche Rollen dir Zugriff auf die Module geben."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.48fr)_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,_0.65fr)_minmax(0,_1fr)] 2xl:grid-cols-[minmax(0,_0.7fr)_minmax(0,_1fr)]">
         <div className="space-y-6">
           <ProfileSummaryCard
             userId={userId}
