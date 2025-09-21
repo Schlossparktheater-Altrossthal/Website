@@ -315,6 +315,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     password: "",
     passwordConfirm: "",
     background: "",
+    notes: "",
     dateOfBirth: "",
     genderOption: "no_answer" as GenderOption,
     genderCustom: "",
@@ -812,6 +813,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       const trimmedYear = form.memberSinceYear.trim();
       const parsedYear = trimmedYear ? Number.parseInt(trimmedYear, 10) : Number.NaN;
       const memberSinceYear = Number.isFinite(parsedYear) ? parsedYear : null;
+      const notes = form.notes.trim();
       const payload = {
         sessionToken,
         firstName: form.firstName.trim(),
@@ -819,6 +821,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         email: form.email.trim(),
         password: form.password,
         background: form.background.trim(),
+        notes: notes || null,
         dateOfBirth: form.dateOfBirth ? form.dateOfBirth : null,
         gender: {
           option: form.genderOption,
@@ -1042,6 +1045,19 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 />
               </label>
             </div>
+            <label className="space-y-1 text-sm">
+              <span className="font-medium">Gibt es noch etwas, das wir wissen sollten?</span>
+              <Textarea
+                value={form.notes}
+                onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+                placeholder="Optional: Besondere Erfahrungen, Wünsche oder Hinweise für das Team"
+                className="min-h-[120px]"
+                maxLength={1000}
+              />
+              <span className="text-xs text-muted-foreground">
+                Dieser Freitext hilft uns, dich besser kennenzulernen. Du kannst ihn später jederzeit anpassen.
+              </span>
+            </label>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Passwort</span>
@@ -1765,6 +1781,16 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     </Badge>
                   ) : (
                     <span className="text-xs text-muted-foreground">Keine Angaben</span>
+                  )}
+                </div>
+                <div className="mt-4 space-y-2">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Freitext</span>
+                  {form.notes ? (
+                    <p className="rounded-lg border border-border/60 bg-background/80 p-3 text-sm leading-relaxed text-foreground/80">
+                      {form.notes}
+                    </p>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Keine zusätzlichen Hinweise</span>
                   )}
                 </div>
               </section>

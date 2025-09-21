@@ -9,6 +9,7 @@ export type OnboardingTalentProfile = {
   email: string | null;
   focus: OnboardingFocus;
   background: string | null;
+  notes: string | null;
   gender: string | null;
   memberSinceYear: number | null;
   inviteLabel: string | null;
@@ -223,6 +224,7 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
         email: user?.email?.trim() || null,
         focus: profile.focus,
         background: profile.background?.trim() || null,
+        notes: profile.notes?.trim() || null,
         gender: profile.gender?.trim() || null,
         memberSinceYear: profile.memberSinceYear ?? null,
         inviteLabel: profile.invite?.label?.trim() || null,

@@ -110,7 +110,7 @@ export async function GET() {
       }),
       prisma.memberOnboardingProfile.findUnique({
         where: { userId },
-        select: { focus: true, background: true, createdAt: true, updatedAt: true },
+        select: { focus: true, background: true, notes: true, createdAt: true, updatedAt: true },
       }),
       prisma.memberRolePreference.findMany({
         where: { userId },
@@ -183,6 +183,7 @@ export async function GET() {
       completedAt: onboardingProfile?.createdAt?.toISOString() ?? null,
       focus: onboardingProfile?.focus ?? null,
       background: onboardingProfile?.background ?? null,
+      notes: onboardingProfile?.notes ?? null,
       stats: {
         acting: { count: actingPreferences.length, averageWeight: averageWeight(actingPreferences) },
         crew: { count: crewPreferences.length, averageWeight: averageWeight(crewPreferences) },

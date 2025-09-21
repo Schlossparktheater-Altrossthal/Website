@@ -67,6 +67,7 @@ interface OnboardingOverview {
   completedAt: Date | null;
   focus: "acting" | "tech" | "both" | null;
   background: string | null;
+  notes: string | null;
   stats: {
     acting: OnboardingDomainStats;
     crew: OnboardingDomainStats;
@@ -281,6 +282,7 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
   const focusRaw = value.focus;
   const focus = isFocusValue(focusRaw) ? focusRaw : null;
   const background = typeof value.background === "string" && value.background.trim() ? value.background : null;
+  const notes = typeof value.notes === "string" && value.notes.trim() ? value.notes : null;
   const completedAt = parseIsoDate(value.completedAt);
 
   const statsRecord = isRecord(value.stats) ? value.stats : {};
@@ -332,6 +334,7 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
     completedAt,
     focus,
     background,
+    notes,
     stats: {
       acting: actingStats,
       crew: crewStats,
@@ -679,6 +682,9 @@ export function MembersDashboard() {
                   {onboarding.background}
                 </Badge>
               </div>
+            )}
+            {onboarding.notes && (
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{onboarding.notes}</p>
             )}
           </div>
 

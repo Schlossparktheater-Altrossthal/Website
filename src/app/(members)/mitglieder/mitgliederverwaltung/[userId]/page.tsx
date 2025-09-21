@@ -136,6 +136,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
           memberSinceYear: true,
           focus: true,
           background: true,
+          notes: true,
         },
       },
       interests: {
@@ -200,6 +201,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const onboardingFocusLabel = onboardingFocus ? ONBOARDING_FOCUS_LABELS[onboardingFocus] : "Kein Schwerpunkt hinterlegt";
 
   const onboardingBackground = member.onboardingProfile?.background?.trim() ?? null;
+  const onboardingNotes = member.onboardingProfile?.notes?.trim() ?? null;
 
   const email = member.email?.trim() ?? null;
   const dateOfBirthLabel = formatDate(member.dateOfBirth);
@@ -312,6 +314,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                 <p className="mt-2 text-sm text-muted-foreground">{onboardingFocusLabel}</p>
                 {onboardingBackground ? (
                   <p className="mt-2 text-xs text-muted-foreground">{onboardingBackground}</p>
+                ) : null}
+                {onboardingNotes ? (
+                  <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{onboardingNotes}</p>
                 ) : null}
               </div>
 
