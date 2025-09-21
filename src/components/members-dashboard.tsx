@@ -12,6 +12,14 @@ import { useOnlineStats } from "@/hooks/useOnlineStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  KeyMetricCard,
+  KeyMetricGrid,
+  PageHeader,
+  PageHeaderActions,
+  PageHeaderStatus,
+  PageHeaderTitle,
+} from "@/design-system/patterns";
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import {
   Users,
@@ -407,6 +415,42 @@ export function MembersDashboard() {
 
   const onlineList = useMemo(() => onlineUsers.slice(0, 6), [onlineUsers]);
 
+  const connectionMeta = useMemo(() => {
+    if (connectionStatus === "connected") {
+      return {
+        state: "online" as const,
+        icon: <Wifi className="h-4 w-4" />,
+        label: "Live verbunden",
+      };
+    }
+
+    if (connectionStatus === "error") {
+      return {
+        state: "error" as const,
+        icon: <WifiOff className="h-4 w-4" />,
+        label: "Verbindungsfehler",
+      };
+    }
+
+    if (connectionStatus === "connecting") {
+      return {
+        state: "warning" as const,
+        icon: <Wifi className="h-4 w-4 animate-pulse" />,
+        label: "Verbindung wird aufgebaut",
+      };
+    }
+
+    return {
+      state: "offline" as const,
+      icon: <WifiOff className="h-4 w-4" />,
+      label: "Offline",
+    };
+  }, [connectionStatus]);
+
+  const onlineUpdatedHint = onlineLoading
+    ? "Aktualisiert …"
+    : `Aktualisiert ${formatTimeAgo(new Date())}`;
+
   const onboardingCard = useMemo(() => {
     if (!onboardingLoaded) {
       return (
@@ -611,24 +655,16 @@ export function MembersDashboard() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:space-y-8 lg:p-0 lg:pt-2 lg:pb-10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-3xl font-bold">Mitglieder-Dashboard</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {connectionStatus === "connected" ? (
-            <>
-              <Wifi className="h-5 w-5 text-green-500" />
-              <Badge variant="secondary" className="bg-green-100 text-green-700">
-                Live verbunden
-              </Badge>
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-5 w-5 text-red-500" />
-              <Badge variant="destructive">{connectionStatus === "error" ? "Verbindungsfehler" : "Offline"}</Badge>
-            </>
-          )}
+      <PageHeader>
+        <div className="space-y-1.5">
+          <PageHeaderTitle>Mitglieder-Dashboard</PageHeaderTitle>
         </div>
-      </div>
+        <PageHeaderActions>
+          <PageHeaderStatus state={connectionMeta.state} icon={connectionMeta.icon}>
+            {connectionMeta.label}
+          </PageHeaderStatus>
+        </PageHeaderActions>
+      </PageHeader>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)] xl:items-start">
         <div className="space-y-4">
@@ -667,55 +703,34 @@ export function MembersDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:auto-rows-fr xl:grid-cols-2">
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Online Mitglieder</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {stats.totalOnline}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Aktualisiert {onlineLoading ? "…" : `vor ${formatTimeAgo(new Date())}`}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Mitglieder gesamt</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalMembers}</div>
-              <p className="text-xs text-muted-foreground">inkl. Ensemble und Technik</p>
-            </CardContent>
-          </Card>
-
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Proben diese Woche</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.rehearsalsThisWeek}</div>
-              <p className="text-xs text-muted-foreground">Termine der laufenden Kalenderwoche</p>
-            </CardContent>
-          </Card>
-
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ungelesene Benachrichtigungen</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.unreadNotifications}</div>
-              <p className="text-xs text-muted-foreground">Wer zuerst liest, ist informiert</p>
-            </CardContent>
-          </Card>
-        </div>
+        <KeyMetricGrid>
+          <KeyMetricCard
+            label="Online Mitglieder"
+            value={stats.totalOnline}
+            icon={<Users className="h-4 w-4" />}
+            hint={onlineUpdatedHint}
+            tone="positive"
+          />
+          <KeyMetricCard
+            label="Mitglieder gesamt"
+            value={stats.totalMembers}
+            icon={<Activity className="h-4 w-4" />}
+            hint="inkl. Ensemble und Technik"
+          />
+          <KeyMetricCard
+            label="Proben diese Woche"
+            value={stats.rehearsalsThisWeek}
+            icon={<Calendar className="h-4 w-4" />}
+            hint="Termine der laufenden Kalenderwoche"
+          />
+          <KeyMetricCard
+            label="Ungelesene Benachrichtigungen"
+            value={stats.unreadNotifications}
+            icon={<Bell className="h-4 w-4" />}
+            hint="Wer zuerst liest, ist informiert"
+            tone={stats.unreadNotifications > 0 ? "warning" : undefined}
+          />
+        </KeyMetricGrid>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] xl:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] xl:gap-6">

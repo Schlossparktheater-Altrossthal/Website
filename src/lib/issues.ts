@@ -1,6 +1,5 @@
-import type { IssueCategory, IssuePriority, IssueStatus, IssueVisibility } from "@prisma/client";
-
-export const ISSUE_STATUS_VALUES = ["open", "in_progress", "resolved", "closed"] as const satisfies readonly IssueStatus[];
+export const ISSUE_STATUS_VALUES = ["open", "in_progress", "resolved", "closed"] as const;
+export type IssueStatus = (typeof ISSUE_STATUS_VALUES)[number];
 export const ISSUE_STATUS_ORDER: readonly IssueStatus[] = ISSUE_STATUS_VALUES;
 
 export const ISSUE_CATEGORY_VALUES = [
@@ -9,12 +8,15 @@ export const ISSUE_CATEGORY_VALUES = [
   "improvement",
   "support",
   "other",
-] as const satisfies readonly IssueCategory[];
+] as const;
+export type IssueCategory = (typeof ISSUE_CATEGORY_VALUES)[number];
 
-export const ISSUE_PRIORITY_VALUES = ["low", "medium", "high", "urgent"] as const satisfies readonly IssuePriority[];
+export const ISSUE_PRIORITY_VALUES = ["low", "medium", "high", "urgent"] as const;
+export type IssuePriority = (typeof ISSUE_PRIORITY_VALUES)[number];
 export const ISSUE_PRIORITY_ORDER: readonly IssuePriority[] = ISSUE_PRIORITY_VALUES;
 
-export const ISSUE_VISIBILITY_VALUES = ["public", "private"] as const satisfies readonly IssueVisibility[];
+export const ISSUE_VISIBILITY_VALUES = ["public", "private"] as const;
+export type IssueVisibility = (typeof ISSUE_VISIBILITY_VALUES)[number];
 
 export const ISSUE_STATUS_LABELS: Record<IssueStatus, string> = {
   open: "Offen",
