@@ -22,6 +22,11 @@ proxy (default external port `3000`). During boot it configures
 `REALTIME_SERVER_EVENT_PATH` automatically based on `REALTIME_BASE_PATH`
 (default `/realtime`).
 
+> [!TIP]
+> Both Dockerfiles accept an optional build argument `GIT_COMMIT_SHA`. Providing
+> the current commit hash ensures the footer in development builds shows the
+> correct revision even when the `.git` directory is not part of the image.
+
 ### Local development stack
 
 ```bash
@@ -37,7 +42,9 @@ the container.
 ### Building the production image from source
 
 ```bash
-docker build -f Dockerfile.prod -t theater-website:prod .
+docker build -f Dockerfile.prod \
+  --build-arg GIT_COMMIT_SHA=$(git rev-parse HEAD) \
+  -t theater-website:prod .
 
 # Run the container (make sure a Postgres instance is reachable)
 docker run --rm -p 3000:3000 \
