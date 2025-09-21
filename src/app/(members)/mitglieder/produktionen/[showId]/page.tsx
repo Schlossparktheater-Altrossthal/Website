@@ -8,8 +8,9 @@ import { getActiveProductionId } from "@/lib/active-production";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
-import { setActiveProductionAction } from "../actions";
+import { setActiveProductionAction, updateProductionTimelineAction } from "../actions";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
   if (show.title && show.title.trim()) return show.title;
@@ -35,6 +36,7 @@ export default async function ProduktionDetailPage({ params }: { params: { showI
         title: true,
         year: true,
         synopsis: true,
+        finalRehearsalWeekStart: true,
         _count: { select: { characters: true, scenes: true } },
       },
     }),
@@ -48,6 +50,12 @@ export default async function ProduktionDetailPage({ params }: { params: { showI
   const activeProductionId = await getActiveProductionId();
   const isActive = activeProductionId === show.id;
   const title = formatShowTitle(show);
+  const finalRehearsalWeekStartValue = show.finalRehearsalWeekStart
+    ? show.finalRehearsalWeekStart.toISOString().slice(0, 10)
+    : "";
+  const finalRehearsalWeekStartLabel = show.finalRehearsalWeekStart
+    ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(show.finalRehearsalWeekStart)
+    : null;
 
   return (
     <div className="space-y-10">
@@ -115,6 +123,43 @@ export default async function ProduktionDetailPage({ params }: { params: { showI
               </form>
             ) : null}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-lg font-semibold">Endprobenwoche</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Hinterlege den Start der großen Endprobenwoche. Mitglieder sehen darauf basierend einen Countdown
+            im Dashboard.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form action={updateProductionTimelineAction} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <input type="hidden" name="showId" value={show.id} />
+            <input type="hidden" name="redirectPath" value={`/mitglieder/produktionen/${show.id}`} />
+            <div className="space-y-2 sm:max-w-xs">
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="finalRehearsalWeekStart">
+                  Beginn der Endprobenwoche
+                </label>
+                <Input
+                  id="finalRehearsalWeekStart"
+                  type="date"
+                  name="finalRehearsalWeekStart"
+                  defaultValue={finalRehearsalWeekStartValue}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {finalRehearsalWeekStartLabel
+                  ? `Aktueller Start: ${finalRehearsalWeekStartLabel}`
+                  : "Kein Datum hinterlegt."}
+              </p>
+            </div>
+            <Button type="submit" className="sm:w-auto">
+              Zeitplan aktualisieren
+            </Button>
+          </form>
         </CardContent>
       </Card>
 

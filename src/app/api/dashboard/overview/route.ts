@@ -5,6 +5,7 @@ import { endOfWeek, startOfWeek } from "date-fns";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { getActiveProductionId } from "@/lib/active-production";
 
 export async function GET() {
   try {
@@ -27,6 +28,14 @@ export async function GET() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     endOfMonth.setHours(23, 59, 59, 999);
+
+    const activeProductionId = await getActiveProductionId();
+    const activeProductionPromise = activeProductionId
+      ? prisma.show.findUnique({
+          where: { id: activeProductionId },
+          select: { id: true, title: true, year: true, finalRehearsalWeekStart: true },
+        })
+      : null;
 
     const [
       totalMembers,
@@ -128,6 +137,8 @@ export async function GET() {
       }),
     ]);
 
+    const activeProduction = activeProductionPromise ? await activeProductionPromise : null;
+
     const activities = [
       ...recentNotifications.map((entry) => ({
         id: entry.notificationId,
@@ -187,6 +198,15 @@ export async function GET() {
       passwordSet: Boolean(userRecord?.passwordHash),
     };
 
+    const finalRehearsalWeek = activeProduction?.finalRehearsalWeekStart
+      ? {
+          showId: activeProduction.id,
+          title: activeProduction.title,
+          year: activeProduction.year,
+          startDate: activeProduction.finalRehearsalWeekStart.toISOString(),
+        }
+      : null;
+
     return NextResponse.json({
       stats: {
         totalMembers,
@@ -197,6 +217,7 @@ export async function GET() {
       upcomingRehearsals,
       recentActivities: activities,
       onboarding,
+      finalRehearsalWeek,
     });
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {
