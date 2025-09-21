@@ -16,9 +16,9 @@ export function Hero({ images }: { images: string[] }) {
   const rotateImages = images.length > 0 ? images.slice(0, 5) : ["https://picsum.photos/id/1069/1600/900"];
   
   return (
-    <section className="relative w-full h-screen min-h-[100dvh] sm:min-h-[90vh] lg:min-h-[100vh] overflow-hidden -mt-16 sm:-mt-20">
+    <section className="hero-section relative h-screen min-h-[100dvh] w-full overflow-hidden sm:min-h-[90vh] lg:min-h-[100vh]">
       {/* Full-screen background images */}
-      <div 
+      <div
         className="absolute inset-0 w-full h-full hero-bg z-0 pointer-events-none"
         style={{
           transform: `translateY(${scrollY * 0.5}px) scale(${1 + scrollY * 0.0005})`,
@@ -37,38 +37,50 @@ export function Hero({ images }: { images: string[] }) {
       <div className="absolute inset-0 z-10 bg-[radial-gradient(ellipse_40rem_20rem_at_70%_30%,_color-mix(in_oklab,var(--primary)_12%,transparent),transparent_75%)] mix-blend-screen opacity-40 pointer-events-none" />
       
       {/* Content container */}
-      <div 
-        className="relative z-20 h-full flex items-center justify-center pt-16 pb-8 hero-content"
-        style={{
-          transform: `translateY(${scrollY * -0.3}px) translateZ(50px)`,
-          perspective: '1000px',
-        }}
-      >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div 
-            className="max-w-4xl mx-auto text-center"
+      <div className="hero-content relative z-20 flex h-full items-center justify-center pt-16 pb-10">
+        <div className="layout-container">
+          <div
+            className="mx-auto max-w-4xl text-center"
             style={{
-              transform: `rotateX(${Math.min(scrollY * 0.05, 15)}deg) translateZ(20px)`,
-              transformStyle: 'preserve-3d',
+              transform: `translateY(${scrollY * -0.3}px)`,
             }}
           >
-            <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-              <h1 className="font-serif leading-tight text-[clamp(2rem,7vw,4.5rem)] text-white [text-shadow:_0_0_10px_rgba(0,0,0,0.9),_2px_2px_6px_rgba(0,0,0,0.8),_-1px_-1px_3px_rgba(0,0,0,0.7)] font-bold">
-                <span className="block">Das Geheimnis</span>
-                <span className="block text-[0.85em] mt-1">im Schlosspark</span>
+            <div className="flex flex-col items-center gap-6 md:gap-7 lg:gap-9">
+              <span className="inline-flex items-center justify-center rounded-full border border-white/30 bg-black/20 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-white/80 shadow-lg backdrop-blur">
+                Sommer 2025
+              </span>
+              <h1 className="font-serif text-[clamp(2.4rem,6vw,4.75rem)] font-bold leading-[1.05] text-white [text-shadow:_0_0_14px_rgba(0,0,0,0.85),_2px_2px_8px_rgba(0,0,0,0.65)]">
+                Magische Nächte unter freiem Himmel
               </h1>
-              
-              <p className="text-white text-base sm:text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed px-2 [text-shadow:_0_0_8px_rgba(0,0,0,0.9),_1px_1px_4px_rgba(0,0,0,0.8),_-1px_-1px_2px_rgba(0,0,0,0.6)] font-medium">
-                Ein Sommer. Ein Wochenende. Ein einziges Stück – verborgen zwischen Licht und Laub.
+              <p className="mx-auto max-w-2xl text-balance text-base font-medium leading-relaxed text-white/95 sm:text-lg lg:text-xl [text-shadow:_0_0_10px_rgba(0,0,0,0.65)]">
+                Das Ensemble des Sommertheaters lädt zu einem neuen Erlebnis aus Licht, Musik und
+                Erzählung ein – nur an einem Wochenende im Schlosspark.
               </p>
-              
-              <div className="relative z-[200] isolate pointer-events-auto flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2 sm:pt-4 px-4 sm:px-0">
-                <Button asChild size="lg" className="text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 bg-primary hover:bg-primary/90 shadow-xl">
-                  <Link className="pointer-events-auto" href="/mystery">Das Geheimnis entdecken</Link>
-                </Button>
-                <Button variant="outline" asChild size="lg" className="text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 border-white/30 text-white hover:bg-white/10 hover:border-white/50 shadow-xl backdrop-blur-sm">
-                  <Link className="pointer-events-auto" href="/chronik">Chronik</Link>
-                </Button>
+              <div className="flex flex-col items-center gap-6">
+                <ul className="grid gap-3 text-sm font-medium text-white/80 md:grid-cols-3 md:gap-4">
+                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
+                    Live-Orchester &amp; Chor
+                  </li>
+                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
+                    Immersive Lichtinstallationen
+                  </li>
+                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
+                    Familienfreundliches Rahmenprogramm
+                  </li>
+                </ul>
+                <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
+                  <Button asChild size="lg" className="px-8 py-5 text-base md:text-lg">
+                    <Link href="/mystery">Das Geheimnis entdecken</Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    asChild
+                    size="lg"
+                    className="border-white/40 bg-white/10 px-8 py-5 text-base text-white hover:border-white/60 hover:bg-white/20 md:text-lg"
+                  >
+                    <Link href="/chronik">Rückblick 2024</Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

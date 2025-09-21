@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
-import Link from "next/link";
+import { SiteFooter } from "@/components/site-footer";
 import { MysticBackground } from "@/components/mystic-background";
 import type { Viewport } from "next";
 import { execSync } from "node:child_process";
@@ -110,42 +110,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="antialiased bg-background text-foreground">
         <Providers>
           <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-card/90 focus:px-3 focus:py-2">Zum Inhalt springen</a>
-          <MysticBackground />
-          <SiteHeader />
-          <main id="main" className="pt-16 sm:pt-20 min-h-screen">{children}</main>
-          <footer className="border-t bg-background/60">
-            <div className="container mx-auto p-4 text-sm opacity-80">
-              <div>
-                © Schultheater „Sommertheater im Schlosspark“ · {" "}
-                <Link href="/impressum" className="underline hover:no-underline">
-                  Impressum
-                </Link>
-              </div>
-              <div className="mt-1 text-xs">
-                {isDevBuild ? (
-                  <>
-                    Build
-                    {" "}
-                    {buildInfo.commit ? (
-                      <a
-                        href={`https://github.com/Schlossparktheater-Altrossthal/Website/commit/${buildInfo.commit.full}`}
-                        className="underline hover:no-underline"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        #{buildInfo.commit.short}
-                      </a>
-                    ) : (
-                      "#unbekannt"
-                    )}
-                    {" "}· Stand {buildInfo.timestamp}
-                  </>
-                ) : (
-                  <>Stand {buildInfo.timestamp}</>
-                )}
-              </div>
-            </div>
-          </footer>
+          <div className="app-shell">
+            <MysticBackground />
+            <SiteHeader />
+            <main id="main" className="site-main">
+              {children}
+            </main>
+            <SiteFooter buildInfo={buildInfo} isDevBuild={isDevBuild} />
+          </div>
         </Providers>
       </body>
     </html>
