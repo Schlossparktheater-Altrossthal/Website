@@ -4,7 +4,6 @@ import type { IssueStatusCounts, IssueSummary } from "@/components/members/issue
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import type { IssueStatus } from "@/lib/issues";
 import type { Prisma } from "@prisma/client";
 import { mapIssueSummary } from "@/app/api/issues/utils";
 
@@ -58,7 +57,10 @@ export default async function IssuesPage() {
   ]);
 
   const counts = countsRaw.reduce((acc, entry) => {
-    acc[entry.status as IssueStatus] = entry._count._all;
+    if (entry.status in acc) {
+      const key = entry.status as keyof IssueStatusCounts;
+      acc[key] = entry._count._all;
+    }
     return acc;
   }, createEmptyCounts());
 
