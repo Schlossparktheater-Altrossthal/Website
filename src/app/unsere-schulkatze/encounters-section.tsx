@@ -77,6 +77,7 @@ export function DieterEncountersSection() {
   const [userEncounters, setUserEncounters] = useState<Encounter[]>([]);
   const [hiddenEncounterIds, setHiddenEncounterIds] = useState<string[]>([]);
   const [showModerationDetails, setShowModerationDetails] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -241,6 +242,10 @@ export function DieterEncountersSection() {
     setHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
   }, []);
 
+  const toggleFormVisibility = useCallback(() => {
+    setIsFormOpen((previous) => !previous);
+  }, []);
+
   const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -279,7 +284,7 @@ export function DieterEncountersSection() {
   }, []);
 
   return (
-    <section className="relative isolate overflow-hidden bg-muted/30 pb-24 pt-24">
+    <section className="relative isolate overflow-hidden bg-muted/30 py-20 sm:py-24">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div
           className="absolute left-1/2 top-[-14rem] h-[28rem] w-[120vw] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/25 via-primary/10 to-transparent opacity-70 blur-3xl"
@@ -292,7 +297,7 @@ export function DieterEncountersSection() {
       </div>
 
       <div className="layout-container">
-        <div className="mx-auto max-w-6xl space-y-12">
+        <div className="mx-auto max-w-6xl space-y-10">
           <div className="space-y-4 text-center">
             <Heading level="h2" align="center">
               Begegnungen mit Dieter Dennis von Altroßthal
@@ -303,8 +308,8 @@ export function DieterEncountersSection() {
             </Text>
           </div>
 
-          <div className="flex flex-col gap-10 lg:gap-12">
-            <Card className="relative mx-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-border/50 bg-background/90 p-6 shadow-xl sm:p-8">
+          <div className="flex flex-col gap-8 lg:gap-10">
+            <Card className="relative mx-auto w-full max-w-3xl overflow-hidden rounded-[1.75rem] border border-border/50 bg-background/80 p-6 shadow-xl backdrop-blur-sm sm:p-7">
               <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit]">
                 <div
                   className="absolute left-1/2 top-[-5rem] h-[18rem] w-[24rem] -translate-x-1/2 rounded-full bg-primary/15 opacity-70 blur-3xl"
@@ -317,7 +322,7 @@ export function DieterEncountersSection() {
               </div>
 
               <div className="space-y-4">
-                <Badge className="w-fit rounded-full border-0 bg-primary/15 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+                <Badge className="w-fit rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
                   Erinnerung teilen
                 </Badge>
                 <div className="space-y-2">
@@ -325,61 +330,87 @@ export function DieterEncountersSection() {
                     Begegnung teilen
                   </Heading>
                   <Text variant="small" tone="muted">
-                    Ihre Angaben erscheinen nach dem Absenden in der Übersicht. Pflichtfelder helfen uns, Ihre Geschichte
+                    Ihre Angaben erscheinen nach dem Absenden sofort in der Übersicht. Pflichtfelder helfen uns, Ihre Geschichte
                     einzuordnen und den Überblick zu behalten.
                   </Text>
                 </div>
               </div>
 
-              <form className="mt-6 space-y-6" onSubmit={handleSubmit}>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="dieter-since">Seit wann kennen Sie Dieter?</Label>
-                    <Input id="dieter-since" name="since" placeholder="z. B. Frühjahr 2020" required autoComplete="off" />
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <Text variant="small" tone="muted">
+                  Ein Klick öffnet das Formular – so bleibt die Übersicht konzentriert und leicht.
+                </Text>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={isFormOpen ? "outline" : "primary"}
+                  className="rounded-full px-4"
+                  onClick={toggleFormVisibility}
+                  aria-expanded={isFormOpen}
+                  aria-controls="dieter-encounter-form"
+                >
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                  {isFormOpen ? "Formular schließen" : "Begegnung eintragen"}
+                </Button>
+              </div>
+
+              {isFormOpen ? (
+                <form
+                  id="dieter-encounter-form"
+                  className="mt-5 space-y-5 rounded-2xl border border-border/40 bg-background/70 p-4 shadow-inner sm:p-5"
+                  onSubmit={handleSubmit}
+                >
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="dieter-since">Seit wann kennen Sie Dieter?</Label>
+                      <Input id="dieter-since" name="since" placeholder="z. B. Frühjahr 2020" required autoComplete="off" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="dieter-nickname">Wie hieß sie bei Ihnen?</Label>
+                      <Input
+                        id="dieter-nickname"
+                        name="nickname"
+                        placeholder="Unser Spitzname für Dieter"
+                        required
+                        autoComplete="off"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dieter-nickname">Wie hieß sie bei Ihnen?</Label>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dieter-author">Wer teilt diese Begegnung? (optional)</Label>
                     <Input
-                      id="dieter-nickname"
-                      name="nickname"
-                      placeholder="Unser Spitzname für Dieter"
-                      required
+                      id="dieter-author"
+                      name="author"
+                      placeholder="Ihr Name, Ihre Klasse oder Gruppe"
                       autoComplete="off"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="dieter-author">Wer teilt diese Begegnung? (optional)</Label>
-                  <Input
-                    id="dieter-author"
-                    name="author"
-                    placeholder="Ihr Name, Ihre Klasse oder Gruppe"
-                    autoComplete="off"
-                  />
-                </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dieter-story">Ihre Begegnung mit Dieter</Label>
+                    <Textarea
+                      id="dieter-story"
+                      name="story"
+                      placeholder="Was haben Sie mit Dieter erlebt?"
+                      rows={5}
+                      required
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="dieter-story">Ihre Begegnung mit Dieter</Label>
-                  <Textarea
-                    id="dieter-story"
-                    name="story"
-                    placeholder="Was haben Sie mit Dieter erlebt?"
-                    rows={6}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-4">
-                  <Text variant="caption" tone="muted">
-                    Mit dem Absenden stimmen Sie einer Veröffentlichung auf dieser Seite zu.
-                  </Text>
-                  <Button type="submit">Begegnung teilen</Button>
-                </div>
-              </form>
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-3">
+                    <Text variant="caption" tone="muted" className="max-w-[24rem] text-left">
+                      Mit dem Absenden stimmen Sie einer Veröffentlichung auf dieser Seite zu.
+                    </Text>
+                    <Button type="submit" size="sm" className="rounded-full px-4">
+                      Begegnung teilen
+                    </Button>
+                  </div>
+                </form>
+              ) : null}
             </Card>
 
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
                   <Heading level="h3" className="text-lg sm:text-xl">
@@ -390,7 +421,7 @@ export function DieterEncountersSection() {
                   </Text>
                 </div>
                 {canModerate ? (
-                  <Badge className="self-start rounded-full border-0 bg-info/15 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-info">
+                  <Badge size="sm" className="self-start rounded-full border border-info/30 bg-info/10 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-info">
                     Moderation aktiv
                   </Badge>
                 ) : null}
@@ -398,11 +429,11 @@ export function DieterEncountersSection() {
 
               <div className="relative pl-2 sm:pl-3">
                 <div
-                  className="pointer-events-none absolute left-[1.25rem] top-2 bottom-6 w-px bg-gradient-to-b from-primary/30 via-border/60 to-transparent sm:left-[1.5rem]"
+                  className="pointer-events-none absolute left-[1.25rem] top-3 bottom-5 w-px bg-gradient-to-b from-primary/30 via-border/50 to-transparent sm:left-[1.5rem]"
                   aria-hidden
                 />
 
-                <ul className="space-y-6">
+                <ul className="space-y-5">
                   {visibleEncounters.length > 0 ? (
                     visibleEncounters.map((entry) => {
                       const isUserEntry = entry.source === "user";
@@ -427,9 +458,9 @@ export function DieterEncountersSection() {
                         : [];
 
                       return (
-                        <li key={entry.id} className="relative pl-12">
+                        <li key={entry.id} className="relative pl-11 sm:pl-12">
                           <span
-                            className="absolute left-0 top-1 flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background text-primary shadow-sm"
+                            className="absolute left-0 top-1 flex h-9 w-9 items-center justify-center rounded-full border border-border/50 bg-background/80 text-primary shadow-sm backdrop-blur"
                             aria-hidden
                           >
                             {isUserEntry ? (
@@ -439,7 +470,7 @@ export function DieterEncountersSection() {
                             )}
                           </span>
 
-                          <Card className="group relative space-y-3 rounded-3xl border border-border/60 bg-background/80 p-5 shadow-sm transition-shadow hover:shadow-lg sm:p-6">
+                          <Card className="group relative space-y-3 rounded-2xl border border-border/50 bg-background/75 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl sm:p-5">
                             {canModerate ? <DropdownMenu items={moderationItems} className="absolute right-4 top-4" /> : null}
 
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -448,7 +479,8 @@ export function DieterEncountersSection() {
                                   {entry.nickname}
                                 </Text>
                                 <Badge
-                                  className="rounded-full border-0 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                                  size="sm"
+                                  className="rounded-full px-3 text-[10px] font-semibold uppercase tracking-[0.18em]"
                                   variant={isUserEntry ? "info" : "muted"}
                                 >
                                   {isUserEntry ? "Community" : "Aus dem Archiv"}
@@ -462,7 +494,7 @@ export function DieterEncountersSection() {
                             <Text variant="small" tone="muted" weight="medium">
                               Seit {entry.since}
                             </Text>
-                            <Text className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">{entry.story}</Text>
+                            <Text className="whitespace-pre-line text-sm leading-7 text-foreground/90">{entry.story}</Text>
                             {entry.author ? (
                               <Text variant="small" tone="muted" className="italic">
                                 — {entry.author}
@@ -473,7 +505,7 @@ export function DieterEncountersSection() {
                               <button
                                 type="button"
                                 onClick={() => handleDeleteEncounter(entry.id)}
-                                className="text-xs font-medium text-muted-foreground underline-offset-2 transition hover:text-destructive hover:underline focus-visible:outline-none"
+                                className="text-[11px] font-medium text-muted-foreground underline-offset-2 transition hover:text-destructive hover:underline focus-visible:outline-none"
                               >
                                 Beitrag auf diesem Gerät entfernen
                               </button>
@@ -484,8 +516,10 @@ export function DieterEncountersSection() {
                     })
                   ) : (
                     <li>
-                      <Card className="rounded-3xl border border-dashed border-border/60 bg-background/70 p-6 text-center shadow-none">
-                        <Text weight="semibold">Noch keine Begegnungen</Text>
+                      <Card className="rounded-2xl border border-dashed border-border/60 bg-background/60 p-5 text-center shadow-none">
+                        <Text weight="semibold" className="text-sm">
+                          Noch keine Begegnungen
+                        </Text>
                         <Text variant="small" tone="muted">
                           Seien Sie die erste Person, die Dieter Dennis hier vorstellt.
                         </Text>
@@ -496,7 +530,7 @@ export function DieterEncountersSection() {
               </div>
 
               {canModerate && archivedEncounters.length > 0 ? (
-                <Card className="rounded-3xl border border-dashed border-primary/40 bg-primary/5 p-6">
+                <Card className="rounded-2xl border border-dashed border-primary/35 bg-primary/5 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <Text weight="semibold">Ausgeblendete Begegnungen</Text>
@@ -521,7 +555,7 @@ export function DieterEncountersSection() {
                       {archivedEncounters.map((entry) => (
                         <div
                           key={entry.id}
-                          className="flex flex-col gap-2 rounded-2xl border border-border/50 bg-background/80 p-4 sm:flex-row sm:items-center sm:justify-between"
+                          className="flex flex-col gap-2 rounded-2xl border border-border/40 bg-background/70 p-4 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div>
                             <Text weight="medium" className="text-sm">
