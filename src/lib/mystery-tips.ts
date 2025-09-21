@@ -178,3 +178,4 @@ export async function getMysterySubmissionsForClue(clueId: string): Promise<Myst
     orderBy: [{ createdAt: "desc" }],
   });
 }
+
