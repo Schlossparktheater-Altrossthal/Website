@@ -65,6 +65,7 @@ export function MemberInviteManager() {
   const [error, setError] = useState<string | null>(null);
   const [freshInvite, setFreshInvite] = useState<FreshInvite | null>(null);
   const [origin, setOrigin] = useState("");
+  const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
   const resolvedOrigin = useMemo(() => {
     if (origin) return origin;
     if (typeof window !== "undefined") return window.location.origin;
@@ -199,6 +200,7 @@ export function MemberInviteManager() {
   };
 
   const toggleInvite = async (invite: InviteSummary) => {
+    setProcessingInviteId(invite.id);
     try {
       const response = await fetch(`/api/member-invites/${invite.id}`, {
         method: "PATCH",
@@ -214,6 +216,40 @@ export function MemberInviteManager() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Aktion fehlgeschlagen";
       toast.error(message);
+    } finally {
+      setProcessingInviteId(null);
+    }
+  };
+
+  const deleteInvite = async (invite: InviteSummary) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        "Möchtest du diesen Onboarding-Link wirklich löschen? Dieser Schritt kann nicht rückgängig gemacht werden.",
+      );
+      if (!confirmed) return;
+    }
+
+    setProcessingInviteId(invite.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/member-invites/${invite.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Einladung konnte nicht gelöscht werden");
+      }
+      toast.success("Einladung gelöscht");
+      if (freshInvite?.id === invite.id) {
+        setFreshInvite(null);
+      }
+      await loadInvites();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Einladung konnte nicht gelöscht werden";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setProcessingInviteId(null);
     }
   };
 
@@ -365,9 +401,24 @@ export function MemberInviteManager() {
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Badge variant={status.variant}>{status.label}</Badge>
-                        <Button size="sm" variant="outline" onClick={() => toggleInvite(invite)}>
-                          {invite.isDisabled ? "Aktivieren" : "Deaktivieren"}
-                        </Button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleInvite(invite)}
+                            disabled={processingInviteId === invite.id}
+                          >
+                            {invite.isDisabled ? "Aktivieren" : "Deaktivieren"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteInvite(invite)}
+                            disabled={processingInviteId === invite.id}
+                          >
+                            Löschen
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

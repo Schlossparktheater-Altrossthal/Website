@@ -146,3 +146,31 @@ export async function PATCH(
     return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  const session = await requireAuth();
+  if (!(await canManageInvites(session.user))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await context.params;
+  if (!id) {
+    return NextResponse.json({ error: "Ungültige Einladung" }, { status: 400 });
+  }
+
+  try {
+    await prisma.memberInvite.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Einladung nicht gefunden" }, { status: 404 });
+    }
+    return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
+  }
+}
