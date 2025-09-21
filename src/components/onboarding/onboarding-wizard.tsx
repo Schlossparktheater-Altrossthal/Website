@@ -68,6 +68,16 @@ const crewOptions = [
     title: "Regieassistenz & Orga",
     description: "Abläufe koordinieren, Proben strukturieren, Teams im Hintergrund führen.",
   },
+  {
+    code: "crew_music",
+    title: "Musik & Klang",
+    description: "Arrangements entwickeln, Proben begleiten und Produktionen musikalisch tragen.",
+  },
+  {
+    code: "crew_props",
+    title: "Requisite",
+    description: "Requisiten gestalten, organisieren und für reibungslose Szenen sorgen.",
+  },
 ];
 
 const genderOptions = [
