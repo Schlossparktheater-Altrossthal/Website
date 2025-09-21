@@ -26,6 +26,24 @@ const PING_INTERVAL_MS = 30_000;
 const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL;
 const REALTIME_PATH = process.env.NEXT_PUBLIC_REALTIME_PATH || '/socket.io';
 
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+
+function isLocalHostname(hostname: string | undefined): boolean {
+  if (!hostname) return false;
+  return LOCAL_HOSTNAMES.has(hostname);
+}
+
+function normalizeSocketPath(path: string | undefined | null): string {
+  if (typeof path !== 'string') {
+    return '/socket.io';
+  }
+  const trimmed = path.trim();
+  if (!trimmed) {
+    return '/socket.io';
+  }
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}
+
 type SocketInstance = Socket<ServerToClientEvents, ClientToServerEvents>;
 type AttendanceUpdateMessage = Parameters<ServerToClientEvents['attendance_updated']>[0];
 type NotificationMessage = Parameters<ServerToClientEvents['notification_created']>[0];
@@ -121,19 +139,44 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       };
     };
 
-    const resolveRealtimeUrl = (): string | undefined => {
-      if (typeof window === 'undefined') return REALTIME_URL;
-      if (!REALTIME_URL) return undefined;
+    const resolveConnectionEndpoint = (): { target: string | undefined; path: string } => {
+      const normalizedPath = normalizeSocketPath(REALTIME_PATH);
+
+      if (typeof window === 'undefined') {
+        return { target: REALTIME_URL, path: normalizedPath };
+      }
+
+      if (!REALTIME_URL) {
+        return { target: undefined, path: normalizedPath };
+      }
+
       try {
-        const url = new URL(REALTIME_URL);
-        const hostIsLocal = ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
-        const browserHostIsLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-        if (hostIsLocal && !browserHostIsLocal) {
-          return `${window.location.protocol}//${window.location.hostname}:${url.port || '4001'}`;
+        const parsed = new URL(REALTIME_URL, window.location.origin);
+        const basePath = parsed.pathname.replace(/\/$/, '');
+        let resolvedPath = normalizedPath;
+        if (basePath && !resolvedPath.startsWith(basePath)) {
+          resolvedPath = `${basePath}${resolvedPath.startsWith('/') ? '' : '/'}${resolvedPath}`;
         }
-        return REALTIME_URL;
-      } catch {
-        return REALTIME_URL;
+
+        let origin = parsed.origin;
+        const hostIsLocal = isLocalHostname(parsed.hostname);
+        const browserHostIsLocal = isLocalHostname(window.location.hostname);
+        if (hostIsLocal && !browserHostIsLocal) {
+          const port = parsed.port || '4001';
+          origin = `${window.location.protocol}//${window.location.hostname}:${port}`;
+        }
+
+        return { target: origin, path: resolvedPath };
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[Realtime] Failed to parse NEXT_PUBLIC_REALTIME_URL', error);
+        }
+
+        if (REALTIME_URL.startsWith('/')) {
+          return { target: undefined, path: normalizedPath };
+        }
+
+        return { target: REALTIME_URL, path: normalizedPath };
       }
     };
 
@@ -153,8 +196,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         if (disposed) return;
         latestAuth = handshake;
 
+        const { target: connectionTarget, path: socketPath } = resolveConnectionEndpoint();
+
         const options: Partial<ManagerOptions & SocketOptions> = {
-          path: REALTIME_PATH,
+          path: socketPath,
           transports: ['websocket', 'polling'],
           forceNew: true,
           reconnection: true,
@@ -164,8 +209,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           auth: handshake,
         };
 
-        const target = resolveRealtimeUrl();
-        const instance: SocketInstance = target ? io(target, options) : io(options);
+        const instance: SocketInstance = connectionTarget ? io(connectionTarget, options) : io(options);
 
         const applyAuth = (auth: HandshakeAuthPayload | null) => {
           if (!auth) return;
