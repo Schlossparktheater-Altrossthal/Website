@@ -60,8 +60,13 @@ const crewOptions = [
   },
   {
     code: "crew_costume",
-    title: "Kostüm & Maske",
-    description: "Looks entwickeln, Nähen, Schminken und verwandeln – kreativ bis ins Detail.",
+    title: "Kostüm",
+    description: "Looks entwickeln, nähen, Fundus pflegen und Outfits anpassen.",
+  },
+  {
+    code: "crew_makeup",
+    title: "Maske & Make-up",
+    description: "Maskenbild, Styling, Perücken und schnelle Verwandlungen hinter der Bühne.",
   },
   {
     code: "crew_direction",
@@ -479,10 +484,14 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   }, []);
 
   const updatePreferenceWeight = useCallback((domain: "acting" | "crew", code: string, weight: number) => {
+    if (!Number.isFinite(weight)) {
+      return;
+    }
+    const normalizedWeight = Math.min(100, Math.max(0, Math.round(weight)));
     setForm((prev) => {
       const key = domain === "acting" ? "actingPreferences" : "crewPreferences";
       const updated = prev[key].map((pref) =>
-        pref.code === code ? { ...pref, weight } : pref,
+        pref.code === code ? { ...pref, weight: normalizedWeight } : pref,
       );
       return { ...prev, [key]: updated };
     });
@@ -1164,7 +1173,12 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                               max={100}
                               step={10}
                               value={pref.weight}
-                              onChange={(event) => updatePreferenceWeight("acting", pref.code, Number(event.target.value))}
+                              onChange={(event) =>
+                                updatePreferenceWeight("acting", pref.code, event.currentTarget.valueAsNumber)
+                              }
+                              onInput={(event) =>
+                                updatePreferenceWeight("acting", pref.code, event.currentTarget.valueAsNumber)
+                              }
                               className="w-full accent-primary"
                             />
                             <div className="flex justify-between text-xs text-muted-foreground">
@@ -1239,7 +1253,12 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                               max={100}
                               step={10}
                               value={pref.weight}
-                              onChange={(event) => updatePreferenceWeight("crew", pref.code, Number(event.target.value))}
+                              onChange={(event) =>
+                                updatePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
+                              }
+                              onInput={(event) =>
+                                updatePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
+                              }
                               className="w-full accent-primary"
                             />
                             <div className="flex justify-between text-xs text-muted-foreground">
