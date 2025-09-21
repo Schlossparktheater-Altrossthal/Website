@@ -8,51 +8,54 @@ import { cn } from "@/lib/utils";
 type Item = { href: string; label: string; permissionKey?: string };
 type Group = { label: string; items: Item[] };
 type ActiveProductionNavInfo = { id: string; title: string | null; year: number };
+export type AssignmentFocus = "none" | "rehearsals" | "departments" | "both";
 
-const groupedConfig: Group[] = [
+const GENERAL_ITEMS: Item[] = [
+  { href: "/mitglieder", label: "Dashboard", permissionKey: "mitglieder.dashboard" },
+  { href: "/mitglieder/profil", label: "Profil", permissionKey: "mitglieder.profil" },
+  { href: "/mitglieder/sperrliste", label: "Sperrliste", permissionKey: "mitglieder.sperrliste" },
+  { href: "/mitglieder/issues", label: "Feedback & Support", permissionKey: "mitglieder.issues" },
+];
+
+const ASSIGNMENT_ITEMS: Item[] = [
+  { href: "/mitglieder/meine-proben", label: "Meine Proben", permissionKey: "mitglieder.meine-proben" },
+  { href: "/mitglieder/meine-gewerke", label: "Meine Gewerke", permissionKey: "mitglieder.meine-gewerke" },
+  { href: "/mitglieder/probenplanung", label: "Probenplanung", permissionKey: "mitglieder.probenplanung" },
+];
+
+const PRODUCTION_ITEMS: Item[] = [
+  { href: "/mitglieder/produktionen", label: "Übersicht", permissionKey: "mitglieder.produktionen" },
+  { href: "/mitglieder/produktionen/gewerke", label: "Gewerke & Teams", permissionKey: "mitglieder.produktionen" },
   {
-    label: "Allgemein",
-    items: [
-      { href: "/mitglieder", label: "Dashboard", permissionKey: "mitglieder.dashboard" },
-      { href: "/mitglieder/profil", label: "Profil", permissionKey: "mitglieder.profil" },
-      { href: "/mitglieder/sperrliste", label: "Sperrliste", permissionKey: "mitglieder.sperrliste" },
-      { href: "/mitglieder/issues", label: "Feedback & Support", permissionKey: "mitglieder.issues" },
-    ],
+    href: "/mitglieder/produktionen/besetzung",
+    label: "Rollen & Besetzung",
+    permissionKey: "mitglieder.produktionen",
   },
   {
-    label: "Proben",
-    items: [
-      { href: "/mitglieder/meine-proben", label: "Meine Proben", permissionKey: "mitglieder.meine-proben" },
-      { href: "/mitglieder/probenplanung", label: "Probenplanung", permissionKey: "mitglieder.probenplanung" },
-    ],
-  },
-  {
-    label: "Produktion",
-    items: [
-      { href: "/mitglieder/produktionen", label: "Übersicht", permissionKey: "mitglieder.produktionen" },
-      { href: "/mitglieder/produktionen/gewerke", label: "Gewerke & Teams", permissionKey: "mitglieder.produktionen" },
-      {
-        href: "/mitglieder/produktionen/besetzung",
-        label: "Rollen & Besetzung",
-        permissionKey: "mitglieder.produktionen",
-      },
-      {
-        href: "/mitglieder/produktionen/szenen",
-        label: "Szenen & Breakdowns",
-        permissionKey: "mitglieder.produktionen",
-      },
-    ],
-  },
-  {
-    label: "Verwaltung",
-    items: [
-      { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", permissionKey: "mitglieder.rollenverwaltung" },
-      { href: "/mitglieder/onboarding-analytics", label: "Onboarding Analytics", permissionKey: "mitglieder.onboarding.analytics" },
-      { href: "/mitglieder/rechte", label: "Rechteverwaltung", permissionKey: "mitglieder.rechte" },
-      { href: "/mitglieder/fotoerlaubnisse", label: "Fotoerlaubnisse", permissionKey: "mitglieder.fotoerlaubnisse" },
-    ],
+    href: "/mitglieder/produktionen/szenen",
+    label: "Szenen & Breakdowns",
+    permissionKey: "mitglieder.produktionen",
   },
 ];
+
+const ADMIN_ITEMS: Item[] = [
+  { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", permissionKey: "mitglieder.rollenverwaltung" },
+  { href: "/mitglieder/onboarding-analytics", label: "Onboarding Analytics", permissionKey: "mitglieder.onboarding.analytics" },
+  { href: "/mitglieder/rechte", label: "Rechteverwaltung", permissionKey: "mitglieder.rechte" },
+  { href: "/mitglieder/fotoerlaubnisse", label: "Fotoerlaubnisse", permissionKey: "mitglieder.fotoerlaubnisse" },
+];
+
+function resolveAssignmentLabel(focus: AssignmentFocus, permissions: readonly string[] | Set<string>) {
+  if (focus === "both") return "Proben & Gewerke";
+  if (focus === "departments") return "Gewerke";
+  if (focus === "rehearsals") return "Proben";
+  const permissionSet = permissions instanceof Set ? permissions : new Set(permissions);
+  const canSeeRehearsals = permissionSet.has("mitglieder.meine-proben");
+  const canSeeDepartments = permissionSet.has("mitglieder.meine-gewerke");
+  if (canSeeRehearsals && canSeeDepartments) return "Proben & Gewerke";
+  if (canSeeDepartments) return "Gewerke";
+  return "Proben";
+}
 
 function isActive(pathname: string, href: string) {
   if (pathname === href) return true;
@@ -93,6 +96,18 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
           <path d="M4 20c0-2.761 2.239-5 5-5" />
           <path d="m15 5 2 2 4-4" />
           <path d="M14 9h6" />
+        </svg>
+      );
+    case "/mitglieder/meine-gewerke":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="4" width="14" height="16" rx="2" />
+          <path d="M9 2h6" />
+          <path d="M12 2v2" />
+          <path d="M8 10h8" />
+          <path d="M8 14h8" />
+          <path d="M8 18h5" />
+          <path d="m6 15 1.8 1.8L10 14" />
         </svg>
       );
     case "/mitglieder/sperrliste":
@@ -181,12 +196,29 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
 export function MembersNav({
   permissions,
   activeProduction,
+  assignmentFocus = "none",
 }: {
   permissions?: string[];
   activeProduction?: ActiveProductionNavInfo;
+  assignmentFocus?: AssignmentFocus;
 }) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
+
+  const assignmentLabel = useMemo(
+    () => resolveAssignmentLabel(assignmentFocus, permissions ?? []),
+    [assignmentFocus, permissions],
+  );
+
+  const groupedConfig = useMemo<Group[]>(
+    () => [
+      { label: "Allgemein", items: GENERAL_ITEMS },
+      { label: assignmentLabel, items: ASSIGNMENT_ITEMS },
+      { label: "Produktion", items: PRODUCTION_ITEMS },
+      { label: "Verwaltung", items: ADMIN_ITEMS },
+    ],
+    [assignmentLabel],
+  );
 
   const { groups, flat } = useMemo(() => {
     const permissionSet = new Set(permissions ?? []);
@@ -198,7 +230,7 @@ export function MembersNav({
       .filter((g) => g.items.length > 0);
     const flat = groups.flatMap((g) => g.items);
     return { groups, flat } as { groups: Group[]; flat: Item[] };
-  }, [permissions]);
+  }, [groupedConfig, permissions]);
 
   const activeItem = useMemo(() => flat.find((item) => isActive(pathname, item.href)), [flat, pathname]);
   const activeHref = activeItem?.href ?? flat[0]?.href ?? "";
