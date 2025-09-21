@@ -2,6 +2,8 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { PosterSlideshow } from "./poster-slideshow";
+
 type ChronikMeta = {
   author?: string | null;
   director?: string | null;
@@ -16,7 +18,7 @@ type ChronikItem = {
   year: number;
   title?: string | null;
   synopsis?: string | null;
-  posterUrl?: string | null;
+  posterUrl?: string | string[] | null;
   meta?: ChronikMeta | null;
 };
 
@@ -24,6 +26,17 @@ function toStringArray(value: unknown, limit?: number) {
   if (!Array.isArray(value)) return [] as string[];
   const entries = value.filter((entry): entry is string => typeof entry === "string");
   return typeof limit === "number" ? entries.slice(0, limit) : entries;
+}
+
+function toPosterSources(value: ChronikItem["posterUrl"]) {
+  if (!value) {
+    return [] as string[];
+  }
+
+  const sources = Array.isArray(value) ? value : [value];
+  return sources
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter((entry): entry is string => entry.length > 0);
 }
 
 export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
@@ -111,25 +124,23 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
           const meta: ChronikMeta = s.meta ?? {};
           const sources = toStringArray(meta.sources, 3);
           const gallery = toStringArray(meta.gallery, 6);
-          return (
-            <section
-              key={s.id}
-              id={s.id}
-              data-id={s.id}
+          const posterSources = toPosterSources(s.posterUrl);
+        return (
+          <section
+            key={s.id}
+            id={s.id}
+            data-id={s.id}
               ref={(el) => { sectionRefs.current[s.id] = el; }}
               className="relative min-h-screen grid place-items-stretch overflow-hidden snap-start"
             >
               {/* Background image */}
-              {s.posterUrl && (
-                <div className="absolute inset-0 -z-10">
-                  <Image
-                    src={s.posterUrl}
-                    alt={s.title ?? String(s.year)}
-                    fill
-                    className="object-cover"
-                    priority={idx === 0}
-                  />
-                </div>
+              {posterSources.length > 0 && (
+                <PosterSlideshow
+                  sources={posterSources}
+                  alt={s.title ?? String(s.year)}
+                  priority={idx === 0}
+                  className="-z-10"
+                />
               )}
               {/* Mystic overlays for readability */}
               <div className="absolute inset-0 -z-0 bg-gradient-to-b from-background/80 via-background/60 to-background/80" />
@@ -179,9 +190,9 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
                         </div>
                       );
                     })
-                  ) : s.posterUrl ? (
+                  ) : posterSources.length > 0 ? (
                     <div className="relative col-span-2 sm:col-span-3 h-56 md:h-72 rounded overflow-hidden border border-border/40">
-                      <Image src={s.posterUrl} alt={s.title ?? String(s.year)} fill className="object-cover" />
+                      <Image src={posterSources[0]} alt={s.title ?? String(s.year)} fill className="object-cover" />
                     </div>
                   ) : null}
                 </div>
