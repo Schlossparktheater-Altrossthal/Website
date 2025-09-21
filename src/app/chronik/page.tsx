@@ -4,6 +4,11 @@ import { Heading, Text } from "@/components/ui/typography";
 import { ChronikStacked } from "./stacked";
 import { ChronikTimeline } from "./timeline";
 
+type ShowCastEntry = {
+  role: string;
+  players: string[];
+};
+
 type ShowMeta = {
   author?: string | null;
   director?: string | null;
@@ -11,6 +16,7 @@ type ShowMeta = {
   ticket_info?: string | null;
   sources?: string[] | null;
   gallery?: string[] | null;
+  cast?: ShowCastEntry[] | null;
 };
 
 function parseShowMeta(meta: Prisma.JsonValue | null | undefined): ShowMeta | null {
@@ -22,6 +28,38 @@ function parseShowMeta(meta: Prisma.JsonValue | null | undefined): ShowMeta | nu
   const stringOrNull = (value: unknown) => (typeof value === "string" ? value : null);
   const stringArrayOrNull = (value: unknown) =>
     Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : null;
+  const castOrNull = (value: unknown): ShowCastEntry[] | null => {
+    if (!Array.isArray(value)) {
+      return null;
+    }
+
+    const castEntries = value
+      .map((entry) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          return null;
+        }
+
+        const castRecord = entry as Record<string, unknown>;
+        const role = typeof castRecord.role === "string" ? castRecord.role.trim() : "";
+        const players = Array.isArray(castRecord.players)
+          ? castRecord.players
+              .filter((player): player is string => typeof player === "string" && player.trim().length > 0)
+              .map((player) => player.trim())
+          : [];
+
+        if (!role || players.length === 0) {
+          return null;
+        }
+
+        return {
+          role,
+          players,
+        } satisfies ShowCastEntry;
+      })
+      .filter((entry): entry is ShowCastEntry => Boolean(entry));
+
+    return castEntries.length > 0 ? castEntries : null;
+  };
 
   return {
     author: stringOrNull(record.author),
@@ -30,7 +68,51 @@ function parseShowMeta(meta: Prisma.JsonValue | null | undefined): ShowMeta | nu
     ticket_info: stringOrNull(record.ticket_info),
     sources: stringArrayOrNull(record.sources),
     gallery: stringArrayOrNull(record.gallery),
+    cast: castOrNull(record.cast),
   };
+}
+
+const CHRONIK_SUPPLEMENTS: Record<string, Partial<ShowMeta>> = {
+  "altrossthal-2024": {
+    cast: [
+      { role: "Jack Worthing", players: ["Luca Totzek"] },
+      { role: "Algernon Moncrieff", players: ["Yann Lindemann"] },
+      { role: "Lady Augusta Brachnell", players: ["Tobias Schneider"] },
+      { role: "Gwendolen Fairfax", players: ["Leonie Thea Tänzer", "Cosima Werner"] },
+      { role: "Cecily Dardew", players: ["Bashi Deutsch"] },
+      { role: "Miss Laetitia Prism", players: ["Helene Irmer"] },
+      { role: "Dr. Frederick Chasuble", players: ["Jonas Fehrmann"] },
+      { role: "Mary", players: ["Bianca Milke"] },
+      { role: "Lane", players: ["Nicklas Gretzel"] },
+      { role: "Diener", players: ["Bianca Milke", "Jonas Fehrmann"] },
+      {
+        role: "Amüsierdamen",
+        players: ["Sarah König", "Bashi Deutsch", "Mathilda Hoffmann", "Helene Irmer", "Mia Däbler"],
+      },
+      { role: "Gäste", players: ["Sebastian Seifert", "Lennart Neumeister", "Justus Schmeling"] },
+    ],
+  },
+};
+
+function applyChronikSupplements(id: string, meta: ShowMeta | null): ShowMeta | null {
+  const supplements = CHRONIK_SUPPLEMENTS[id];
+  if (!supplements) {
+    return meta;
+  }
+
+  const base: ShowMeta = { ...(meta ?? {}) };
+  if ((!base.cast || base.cast.length === 0) && Array.isArray(supplements.cast)) {
+    const supplementedCast = supplements.cast
+      .map((entry) => ({
+        role: entry.role ?? "",
+        players: Array.isArray(entry.players) ? [...entry.players] : [],
+      }))
+      .filter((entry): entry is ShowCastEntry => Boolean(entry.role) && entry.players.length > 0);
+
+    base.cast = supplementedCast.length > 0 ? supplementedCast : null;
+  }
+
+  return base;
 }
 
 export default async function ChronikPage() {
@@ -71,7 +153,7 @@ export default async function ChronikPage() {
     title: s.title,
     synopsis: s.synopsis ?? null,
     posterUrl: s.posterUrl ?? null,
-    meta: parseShowMeta(s.meta),
+    meta: applyChronikSupplements(s.id, parseShowMeta(s.meta)),
   }));
   
   return (
