@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { IssueCategory, IssuePriority, IssueStatus, IssueVisibility } from "@prisma/client";
+import type {
+  IssueCategory,
+  IssuePriority,
+  IssueStatus,
+  IssueVisibility,
+} from "@/lib/issues";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

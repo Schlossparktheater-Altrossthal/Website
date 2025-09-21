@@ -26,6 +26,13 @@ Diese Markdown-Variante dient der GitHub‑freundlichen Darstellung von Farbswat
 - Kalender: FullCalendar React (Alternative: react-big-calendar)
 - PDF/Print: react-to-print; optional serverseitig puppeteer
 
+## Design Tokens
+
+- `src/design-system/tokens.json` fungiert als Single Source of Truth für Farben, Radii und weitere UI-Variablen.
+- Das Skript `pnpm design-system:tokens` generiert daraus die CSS-Variablen in `src/app/design-tokens.css`. Änderungen immer über die JSON-Datei pflegen.
+- In TypeScript lassen sich die Tokens über `@/design-system` importieren (`designTokens`, `getThemeTokens`, `getSemanticToken`).
+- Tailwind greift weiterhin über die Custom Properties (`hsl(var(--...))`) auf diese Werte zu.
+
 ## Color Map (Status, Attendance, Abteilungen)
 
 Hinweise

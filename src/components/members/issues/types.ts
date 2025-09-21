@@ -1,4 +1,4 @@
-import type { IssueCategory, IssuePriority, IssueStatus, IssueVisibility } from "@prisma/client";
+import type { IssueCategory, IssuePriority, IssueStatus, IssueVisibility } from "@/lib/issues";
 
 export type IssueActor = {
   id: string;

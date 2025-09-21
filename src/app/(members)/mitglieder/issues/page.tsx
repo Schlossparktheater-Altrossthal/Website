@@ -4,7 +4,8 @@ import type { IssueStatusCounts, IssueSummary } from "@/components/members/issue
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import type { IssueStatus, Prisma } from "@prisma/client";
+import type { IssueStatus } from "@/lib/issues";
+import type { Prisma } from "@prisma/client";
 import { mapIssueSummary } from "@/app/api/issues/utils";
 
 function createEmptyCounts(): IssueStatusCounts {

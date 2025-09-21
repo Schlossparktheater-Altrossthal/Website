@@ -16,7 +16,8 @@
     "prisma:generate": "prisma generate",
     "db:migrate": "prisma migrate dev --name init",
     "db:seed": "node prisma/seed.mjs",
-    "swatches:gen": "node scripts/generate-swatches.mjs --json docs/swatches/palette.sample.json --out docs/swatches --size 14 --adoc docs/swatches/generated.adoc"
+    "swatches:gen": "node scripts/generate-swatches.mjs --json docs/swatches/palette.sample.json --out docs/swatches --size 14 --adoc docs/swatches/generated.adoc",
+    "design-system:tokens": "node scripts/build-design-tokens.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
