@@ -39,14 +39,14 @@ const schulkatzeImages = resolveSchulkatzeImages();
 export const metadata: Metadata = {
   title: "Unsere Schulkatze",
   description:
-    "Wir erinnern uns an Dieter Dennis von Altroßthal, die graug getigerte Schulkatze des BSZ Altrossthal, und erzählen seine Geschichte.",
+    "Wir erinnern uns an Dieter Dennis von Altroßthal, die grau getigerte Schulkatze des BSZ Altrossthal, und erzählen seine Geschichte.",
   alternates: {
     canonical: "/unsere-schulkatze",
   },
   openGraph: {
     title: "Unsere Schulkatze | Sommertheater Altrossthal",
     description:
-      "Porträt und Erinnerungen an Dieter, unsere graug getigerte Schulkatze, die uns über viele Jahre begleitet hat.",
+      "Porträt und Erinnerungen an Dieter, unsere grau getigerte Schulkatze, die uns über viele Jahre begleitet hat.",
     url: "/unsere-schulkatze",
     type: "website",
   },
@@ -75,7 +75,7 @@ const highlights: Highlight[] = [
     icon: Cat,
     title: "Porträt",
     description:
-      "Dieter Dennis von Altroßthal war unsere graug getigerte Schulkatze – verlässlich, gelassen und immer bereit für eine stille Beobachtung.",
+      "Dieter Dennis von Altroßthal war unsere grau getigerte Schulkatze – verlässlich, gelassen und immer bereit für eine stille Beobachtung.",
   },
   {
     icon: MoonStar,
@@ -168,7 +168,7 @@ export default function SchulkatzePage() {
               Unsere Schulkatze
             </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
-              Dieter Dennis von Altroßthal – von allen nur Dieter genannt – war unsere graug getigerte Schulkatze. Über Generationen hinweg
+              Dieter Dennis von Altroßthal – von allen nur Dieter genannt – war unsere grau getigerte Schulkatze. Über Generationen hinweg
               streifte er über das Schulgelände und wurde zum vertrauten Gesicht des BSZ Altrossthal.
             </Text>
             <Text tone="muted">
@@ -183,7 +183,7 @@ export default function SchulkatzePage() {
           <figure className="relative mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg">
             <SchulkatzeImageRotator
               images={schulkatzeImages}
-              alt="Schulkatze Dieter Dennis von Altroßthal, graug getigert, sitzt aufmerksam im Schulhof."
+              alt="Schulkatze Dieter Dennis von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
             />
             <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
               Dieter Dennis von Altroßthal war über viele Jahre Teil unserer Schulgemeinschaft.
