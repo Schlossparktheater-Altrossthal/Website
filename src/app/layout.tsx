@@ -51,6 +51,11 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
+type CommitInfo = {
+  short: string;
+  full: string;
+};
+
 const buildInfo = getBuildInfo();
 const isDevBuild = process.env.NODE_ENV === "development";
 
@@ -62,15 +67,15 @@ function getBuildInfo() {
     timeStyle: "medium",
   }).format(buildDate);
 
-  const commitHash = getShortCommitHash();
+  const commit = getCommitInfo();
 
   return {
-    commitHash,
+    commit,
     timestamp,
-  } satisfies { commitHash: string | null; timestamp: string };
+  } satisfies { commit: CommitInfo | null; timestamp: string };
 }
 
-function getShortCommitHash() {
+function getCommitInfo(): CommitInfo | null {
   const envCommit =
     process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
     process.env.VERCEL_GIT_COMMIT_SHA ??
@@ -79,11 +84,21 @@ function getShortCommitHash() {
     null;
 
   if (envCommit) {
-    return envCommit.slice(0, 7);
+    const normalizedCommit = envCommit.trim();
+
+    return {
+      short: normalizedCommit.slice(0, 7),
+      full: normalizedCommit,
+    } satisfies CommitInfo;
   }
 
   try {
-    return execSync("git rev-parse --short HEAD").toString().trim();
+    const fullCommitHash = execSync("git rev-parse HEAD").toString().trim();
+
+    return {
+      short: fullCommitHash.slice(0, 7),
+      full: fullCommitHash,
+    } satisfies CommitInfo;
   } catch {
     return null;
   }
@@ -108,7 +123,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
               <div className="mt-1 text-xs">
                 {isDevBuild ? (
-                  <>Build #{buildInfo.commitHash ?? "unbekannt"} · Stand {buildInfo.timestamp}</>
+                  <>
+                    Build
+                    {" "}
+                    {buildInfo.commit ? (
+                      <a
+                        href={`https://github.com/Schlossparktheater-Altrossthal/Website/commit/${buildInfo.commit.full}`}
+                        className="underline hover:no-underline"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        #{buildInfo.commit.short}
+                      </a>
+                    ) : (
+                      "#unbekannt"
+                    )}
+                    {" "}· Stand {buildInfo.timestamp}
+                  </>
                 ) : (
                   <>Stand {buildInfo.timestamp}</>
                 )}
