@@ -15,6 +15,40 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   "image/jpg",
 ]);
 
+const CURRENT_YEAR = new Date().getFullYear();
+
+const genderOptionLabels = {
+  female: "Weiblich",
+  male: "Männlich",
+  diverse: "Divers",
+  no_answer: "Keine Angabe",
+  custom: "Selbst beschrieben",
+} as const;
+
+type GenderOption = keyof typeof genderOptionLabels;
+
+const dietaryStyleLabels = {
+  none: "Keine besondere Ernährung",
+  omnivore: "Allesesser:in",
+  vegetarian: "Vegetarisch",
+  vegan: "Vegan",
+  pescetarian: "Pescetarisch",
+  flexitarian: "Flexitarisch",
+  halal: "Halal",
+  kosher: "Koscher",
+  custom: "Individueller Stil",
+} as const;
+
+type DietaryStyleOption = keyof typeof dietaryStyleLabels;
+
+const dietaryStrictnessLabels = {
+  strict: "Strikt – keine Ausnahmen",
+  flexible: "Flexibel – kleine Ausnahmen sind möglich",
+  situational: "Situationsabhängig / nach Rücksprache",
+} as const;
+
+type DietaryStrictnessOption = keyof typeof dietaryStrictnessLabels;
+
 const preferenceSchema = z.object({
   code: z.string().min(1),
   domain: z.enum(["acting", "crew"]),
@@ -29,6 +63,43 @@ const dietarySchema = z.object({
   note: z.string().optional().nullable(),
 });
 
+const genderSchema = z
+  .object({
+    option: z.enum(["female", "male", "diverse", "no_answer", "custom"]),
+    custom: z.string().max(120).optional().nullable(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.option === "custom") {
+      const custom = value.custom?.trim() ?? "";
+      if (!custom) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["custom"],
+          message: "Bitte beschreibe dein Geschlecht.",
+        });
+      }
+    }
+  });
+
+const dietaryPreferenceSchema = z
+  .object({
+    style: z.enum(["none", "omnivore", "vegetarian", "vegan", "pescetarian", "flexitarian", "halal", "kosher", "custom"]),
+    custom: z.string().max(120).optional().nullable(),
+    strictness: z.enum(["strict", "flexible", "situational"]),
+  })
+  .superRefine((value, ctx) => {
+    if (value.style === "custom") {
+      const custom = value.custom?.trim() ?? "";
+      if (!custom) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["custom"],
+          message: "Bitte beschreibe deinen Ernährungsstil.",
+        });
+      }
+    }
+  });
+
 const payloadSchema = z.object({
   sessionToken: z.string().min(16),
   name: z.string().min(2),
@@ -36,9 +107,12 @@ const payloadSchema = z.object({
   password: z.string().min(6).max(128),
   background: z.string().min(2),
   dateOfBirth: z.string().optional().nullable(),
+  gender: genderSchema,
+  memberSinceYear: z.number().int().min(1900).max(CURRENT_YEAR).optional().nullable(),
   focus: z.enum(["acting", "tech", "both"]),
   preferences: z.array(preferenceSchema),
   interests: z.array(z.string().min(1)).max(30),
+  dietaryPreference: dietaryPreferenceSchema,
   photoConsent: z
     .object({
       consent: z.boolean(),
@@ -115,6 +189,30 @@ export async function POST(request: NextRequest) {
     note: normalizeString(entry.note),
   }));
 
+  const genderOption = payload.gender.option as GenderOption;
+  const genderCustom = normalizeString(payload.gender.custom);
+  const genderLabel =
+    genderOption === "custom"
+      ? genderCustom
+      : genderOptionLabels[genderOption] ?? null;
+  const genderDisplay = genderLabel ?? genderOptionLabels.no_answer;
+
+  const memberSinceYear = payload.memberSinceYear ?? null;
+
+  const dietaryPreference = payload.dietaryPreference;
+  const dietaryStyleOption = dietaryPreference.style as DietaryStyleOption;
+  const dietaryCustom = normalizeString(dietaryPreference.custom);
+  const dietaryStyleLabel =
+    dietaryStyleOption === "custom"
+      ? dietaryCustom
+      : dietaryStyleLabels[dietaryStyleOption] ?? null;
+  const dietaryStyleDisplay = dietaryStyleLabel ?? dietaryStyleLabels.none;
+
+  const dietaryStrictnessOption = dietaryPreference.strictness as DietaryStrictnessOption;
+  const dietaryStrictnessLabel = dietaryStrictnessLabels[dietaryStrictnessOption];
+  const dietaryStrictnessDisplay =
+    dietaryStyleOption === "none" ? "Nicht relevant" : dietaryStrictnessLabel;
+
   let dateOfBirth: Date | null = null;
   if (payload.dateOfBirth) {
     const parsed = new Date(payload.dateOfBirth);
@@ -185,8 +283,21 @@ export async function POST(request: NextRequest) {
     focus,
     background,
     dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
+    gender: {
+      option: genderOption,
+      label: genderDisplay,
+      custom: genderCustom,
+    },
+    memberSinceYear,
     preferences,
     interests,
+    dietaryPreference: {
+      style: dietaryStyleOption,
+      label: dietaryStyleDisplay,
+      custom: dietaryCustom,
+      strictness: dietaryStrictnessOption,
+      strictnessLabel: dietaryStrictnessDisplay,
+    },
     dietary,
     photoConsent: {
       consent: photoConsent.consent,
@@ -237,6 +348,10 @@ export async function POST(request: NextRequest) {
           redemptionId: redemption.id,
           focus,
           background,
+          gender: genderDisplay,
+          memberSinceYear: memberSinceYear ?? undefined,
+          dietaryPreference: dietaryStyleDisplay,
+          dietaryPreferenceStrictness: dietaryStrictnessDisplay,
         },
       });
 

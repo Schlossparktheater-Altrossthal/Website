@@ -70,6 +70,40 @@ const crewOptions = [
   },
 ];
 
+const genderOptions = [
+  { value: "female", label: "Weiblich" },
+  { value: "male", label: "Männlich" },
+  { value: "diverse", label: "Divers" },
+  { value: "no_answer", label: "Keine Angabe" },
+  { value: "custom", label: "Selbst beschreiben" },
+] as const;
+
+type GenderOption = (typeof genderOptions)[number]["value"];
+
+const dietaryStyleOptions = [
+  { value: "none", label: "Keine besondere Ernährung" },
+  { value: "omnivore", label: "Allesesser:in" },
+  { value: "vegetarian", label: "Vegetarisch" },
+  { value: "vegan", label: "Vegan" },
+  { value: "pescetarian", label: "Pescetarisch" },
+  { value: "flexitarian", label: "Flexitarisch" },
+  { value: "halal", label: "Halal" },
+  { value: "kosher", label: "Koscher" },
+  { value: "custom", label: "Anderes (bitte angeben)" },
+] as const;
+
+type DietaryStyleOption = (typeof dietaryStyleOptions)[number]["value"];
+
+const dietaryStrictnessOptions = [
+  { value: "strict", label: "Strikt – keine Ausnahmen" },
+  { value: "flexible", label: "Flexibel – kleine Ausnahmen sind möglich" },
+  { value: "situational", label: "Situationsabhängig / nach Rücksprache" },
+] as const;
+
+type DietaryStrictnessOption = (typeof dietaryStrictnessOptions)[number]["value"];
+
+const CURRENT_YEAR = new Date().getFullYear();
+
 const BASE_BACKGROUND_SUGGESTIONS = ["Schule", "Berufsschule", "Universität", "Ausbildung", "Beruf"] as const;
 
 const allergyLevelStyles: Record<AllergyLevel, { badge: string; accent: string }> = {
@@ -255,10 +289,16 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     passwordConfirm: "",
     background: "",
     dateOfBirth: "",
+    genderOption: "no_answer" as GenderOption,
+    genderCustom: "",
+    memberSinceYear: "",
     focus: "acting" as "acting" | "tech" | "both",
     actingPreferences: initialActingPreferences,
     crewPreferences: initialCrewPreferences,
     interests: [] as string[],
+    nutritionStyle: "none" as DietaryStyleOption,
+    nutritionCustomStyle: "",
+    nutritionStrictness: "flexible" as DietaryStrictnessOption,
     photoConsent: { consent: true, skipDocument: false },
     dietary: [] as DietaryEntry[],
   });
@@ -355,6 +395,38 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
   const requiresDocument = age !== null && age < 18;
+
+  const genderLabel = useMemo(() => {
+    if (form.genderOption === "custom") {
+      const custom = form.genderCustom.trim();
+      return custom || "Selbst beschrieben";
+    }
+    const option = genderOptions.find((entry) => entry.value === form.genderOption);
+    return option?.label ?? "Keine Angabe";
+  }, [form.genderCustom, form.genderOption]);
+
+  const memberSinceYearLabel = useMemo(() => {
+    const trimmed = form.memberSinceYear.trim();
+    if (!trimmed) return "Neu dabei";
+    return trimmed;
+  }, [form.memberSinceYear]);
+
+  const nutritionStyleLabel = useMemo(() => {
+    if (form.nutritionStyle === "custom") {
+      const custom = form.nutritionCustomStyle.trim();
+      return custom || "Individueller Stil";
+    }
+    const option = dietaryStyleOptions.find((entry) => entry.value === form.nutritionStyle);
+    return option?.label ?? "Keine besondere Ernährung";
+  }, [form.nutritionCustomStyle, form.nutritionStyle]);
+
+  const nutritionStrictnessLabel = useMemo(() => {
+    if (form.nutritionStyle === "none") {
+      return "Nicht relevant";
+    }
+    const option = dietaryStrictnessOptions.find((entry) => entry.value === form.nutritionStrictness);
+    return option?.label ?? "Flexibel – kleine Ausnahmen sind möglich";
+  }, [form.nutritionStrictness, form.nutritionStyle]);
 
   const availableInterestSuggestions = useMemo(() => {
     const selected = new Set(form.interests.map((item) => item.toLowerCase()));
@@ -591,6 +663,18 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         setError("Wo kommst du her? Schule, Uni, Ausbildung – ein Stichwort genügt.");
         return;
       }
+      if (form.genderOption === "custom" && !form.genderCustom.trim()) {
+        setError("Bitte beschreibe dein Geschlecht oder wähle eine Option aus der Liste.");
+        return;
+      }
+      const sinceYear = form.memberSinceYear.trim();
+      if (sinceYear) {
+        const parsedYear = Number.parseInt(sinceYear, 10);
+        if (!Number.isFinite(parsedYear) || sinceYear.length !== 4 || parsedYear < 1900 || parsedYear > CURRENT_YEAR) {
+          setError(`Bitte gib ein gültiges Jahr zwischen 1900 und ${CURRENT_YEAR} an.`);
+          return;
+        }
+      }
       setStep(2);
       return;
     }
@@ -625,6 +709,10 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       return;
     }
     if (step === 5) {
+      if (form.nutritionStyle === "custom" && !form.nutritionCustomStyle.trim()) {
+        setError("Bitte beschreibe deinen Ernährungsstil oder wähle eine vorhandene Option.");
+        return;
+      }
       setStep(6);
       return;
     }
@@ -663,6 +751,11 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     }
     setLoading(true);
     try {
+      const genderCustom = form.genderCustom.trim();
+      const nutritionCustom = form.nutritionCustomStyle.trim();
+      const trimmedYear = form.memberSinceYear.trim();
+      const parsedYear = trimmedYear ? Number.parseInt(trimmedYear, 10) : Number.NaN;
+      const memberSinceYear = Number.isFinite(parsedYear) ? parsedYear : null;
       const payload = {
         sessionToken,
         name: form.name.trim(),
@@ -670,9 +763,19 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         password: form.password,
         background: form.background.trim(),
         dateOfBirth: form.dateOfBirth ? form.dateOfBirth : null,
+        gender: {
+          option: form.genderOption,
+          custom: genderCustom || null,
+        },
+        memberSinceYear,
         focus: form.focus,
         preferences,
         interests: form.interests,
+        dietaryPreference: {
+          style: form.nutritionStyle,
+          custom: nutritionCustom || null,
+          strictness: form.nutritionStrictness,
+        },
         photoConsent: {
           consent: form.photoConsent.consent,
           skipDocument: form.photoConsent.skipDocument,
@@ -912,6 +1015,58 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     </button>
                   ))}
                 </div>
+              </label>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1 text-sm">
+                <span className="font-medium">Geschlecht</span>
+                <Select
+                  value={form.genderOption}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      genderOption: value as GenderOption,
+                      genderCustom: value === "custom" ? prev.genderCustom : "",
+                    }))
+                  }
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Wähle eine Option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {genderOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.genderOption === "custom" && (
+                  <Input
+                    value={form.genderCustom}
+                    onChange={(event) => setForm((prev) => ({ ...prev, genderCustom: event.target.value }))}
+                    placeholder="Wie beschreibst du dich?"
+                  />
+                )}
+                <span className="text-xs text-muted-foreground">
+                  Hilft uns bei Anreden und Texten. Du kannst die Angabe später jederzeit ändern.
+                </span>
+              </div>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Seit wann bist du beim Theater?</span>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={form.memberSinceYear}
+                  onChange={(event) => setForm((prev) => ({ ...prev, memberSinceYear: event.target.value }))}
+                  placeholder={`z.B. ${CURRENT_YEAR}`}
+                  min="1900"
+                  max={String(CURRENT_YEAR)}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Falls du gerade startest, lass das Feld frei oder nutze das aktuelle Jahr.
+                </span>
               </label>
             </div>
           </CardContent>
@@ -1278,13 +1433,76 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <ShieldCheck className="h-5 w-5 text-primary" />
-              Essensunverträglichkeiten &amp; Bedürfnisse
+              Ernährung, Unverträglichkeiten &amp; Bedürfnisse
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Sag uns, was dir guttut – so planen wir Verpflegung, Proben und Events sicher und inklusiv. Alle Angaben sind optional.
+              Verrate uns deinen Ernährungsstil und mögliche Unverträglichkeiten – so planen wir Verpflegung, Proben und Events sicher und inklusiv. Alle Angaben sind optional.
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="space-y-4 rounded-2xl border border-border/60 bg-background/85 p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1 text-sm">
+                  <span className="font-medium">Ernährungsstil</span>
+                  <Select
+                    value={form.nutritionStyle}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        nutritionStyle: value as DietaryStyleOption,
+                        nutritionCustomStyle: value === "custom" ? prev.nutritionCustomStyle : "",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="bg-background/80">
+                      <SelectValue placeholder="Wähle deinen Stil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dietaryStyleOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.nutritionStyle === "custom" && (
+                    <Input
+                      value={form.nutritionCustomStyle}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, nutritionCustomStyle: event.target.value }))
+                      }
+                      placeholder="Beschreibe deinen Ernährungsstil"
+                    />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Zum Beispiel vegan, vegetarisch, halal oder ein eigener Mix.
+                  </p>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <span className="font-medium">Wie konsequent hältst du dich daran?</span>
+                  <Select
+                    value={form.nutritionStrictness}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({ ...prev, nutritionStrictness: value as DietaryStrictnessOption }))
+                    }
+                  >
+                    <SelectTrigger className="bg-background/80">
+                      <SelectValue placeholder="Wähle eine Option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dietaryStrictnessOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    So können wir besser einschätzen, ob Ausnahmen für dich in Ordnung sind.
+                  </p>
+                </div>
+              </div>
+            </div>
             <div className="grid gap-4">
               {form.dietary.map((entry) => {
                 const style = allergyLevelStyles[entry.level];
@@ -1432,6 +1650,14 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     <dt className="text-muted-foreground">Alter</dt>
                     <dd className="font-medium text-foreground">{age !== null ? `${age} Jahre` : "–"}</dd>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Geschlecht</dt>
+                    <dd className="font-medium text-foreground">{genderLabel}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Seit wann im Theater</dt>
+                    <dd className="font-medium text-foreground">{memberSinceYearLabel}</dd>
+                  </div>
                 </dl>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <span className="text-xs uppercase tracking-wide text-muted-foreground">Kontext</span>
@@ -1523,7 +1749,19 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
               </section>
 
               <section className="rounded-2xl border border-border/70 bg-background/90 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Essensunverträglichkeiten</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Ernährung &amp; Unverträglichkeiten
+                </h3>
+                <dl className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Ernährungsstil</dt>
+                    <dd className="font-medium text-foreground">{nutritionStyleLabel}</dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Umgang</dt>
+                    <dd className="font-medium text-foreground">{nutritionStrictnessLabel}</dd>
+                  </div>
+                </dl>
                 {form.dietary.length ? (
                   <div className="mt-3 space-y-3 text-sm">
                     {form.dietary.map((entry) => {
