@@ -1,9 +1,22 @@
-import PDFDocument from "pdfkit";
 import type { ZodError, ZodIssue } from "zod";
 
 import { registerDefaultPdfFonts } from "./fonts";
 import { findPdfTemplate } from "./templates";
 import type { PdfRenderResult, PdfTemplate } from "./types";
+
+type PdfDocumentConstructor = typeof import("pdfkit");
+
+let cachedPdfDocument: PdfDocumentConstructor | null = null;
+
+async function loadPdfDocument(): Promise<PdfDocumentConstructor> {
+  if (cachedPdfDocument) {
+    return cachedPdfDocument;
+  }
+
+  const { default: PdfDocument } = (await import("pdfkit")) as { default: PdfDocumentConstructor };
+  cachedPdfDocument = PdfDocument;
+  return PdfDocument;
+}
 
 export class PdfTemplateNotFoundError extends Error {
   constructor(public readonly templateId: string) {
@@ -29,7 +42,7 @@ export class PdfRenderError extends Error {
   }
 }
 
-const DEFAULT_OPTIONS: ConstructorParameters<typeof PDFDocument>[0] = {
+const DEFAULT_OPTIONS: ConstructorParameters<PdfDocumentConstructor>[0] = {
   size: "A4",
   margin: 56,
 };
@@ -51,7 +64,8 @@ export async function renderPdfTemplate(
   const data = parsed.data;
   const typedTemplate = template as PdfTemplate<typeof data>;
   const options = { ...DEFAULT_OPTIONS, ...(typedTemplate.documentOptions ?? {}) };
-  const doc = new PDFDocument(options);
+  const PdfDocument = await loadPdfDocument();
+  const doc = new PdfDocument(options);
 
   try {
     registerDefaultPdfFonts(doc);

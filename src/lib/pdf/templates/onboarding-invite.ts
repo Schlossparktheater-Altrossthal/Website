@@ -1,9 +1,23 @@
-import QRCode from "qrcode";
 import { z } from "zod";
 
 import { describeRoles, ROLES } from "@/lib/roles";
 
 import type { PdfTemplate } from "../types";
+
+type QrCodeModule = typeof import("qrcode");
+
+let cachedQrCodeModule: QrCodeModule | null = null;
+
+async function loadQrCode(): Promise<QrCodeModule> {
+  if (cachedQrCodeModule) {
+    return cachedQrCodeModule;
+  }
+
+  const qrModule = await import("qrcode");
+  const resolved = (qrModule as QrCodeModule & { default?: QrCodeModule }).default ?? (qrModule as QrCodeModule);
+  cachedQrCodeModule = resolved;
+  return resolved;
+}
 
 const optionalString = z
   .union([z.string(), z.null(), z.undefined()])
@@ -84,6 +98,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
   },
   schema: onboardingInviteSchema,
   async render(doc, data) {
+    const QRCode = await loadQrCode();
     const title = data.headline ?? data.inviteLabel ?? "Onboarding starten";
     doc.info.Title = title;
     doc.info.Subject = "Onboarding-Link";
