@@ -7,6 +7,8 @@ ENV PNPM_HOME=/root/.local/share/pnpm \
     PATH=/root/.local/share/pnpm:$PATH \
     NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=${NODE_ENV} \
+    PORT=3000 \
+    APP_SERVER_PORT=3001 \
     REALTIME_BASE_PATH=/realtime \
     NEXT_PUBLIC_REALTIME_URL=/realtime \
     NEXT_PUBLIC_REALTIME_PATH=/realtime/socket.io \
@@ -30,4 +32,4 @@ RUN pnpm prisma:generate
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm -s prisma:generate && node scripts/run-prisma-migrate.mjs && (pnpm -s db:seed || true) && pnpm -s start:combined"]
+CMD ["sh", "-c", "pnpm -s prisma:generate && node scripts/run-prisma-migrate.mjs && (pnpm -s db:seed || true) && node scripts/start-with-proxy.mjs"]

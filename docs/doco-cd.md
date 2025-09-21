@@ -36,8 +36,6 @@ Traefik routet anschließend automatisch:
 
 - `https://devtheater.beegreenx.de` → Container `app-dev`
 - `https://prodtheater.beegreenx.de` → Container `app-prod`
-- `https://devsocket.beegreenx.de` → Container `app-dev` (Realtime-Endpunkte)
-- `https://prodsocket.beegreenx.de` → Container `app-prod` (Realtime-Endpunkte)
 
 Über `DEV_IMAGE_TAG` bzw. `PROD_IMAGE_TAG` lassen sich bei Bedarf alternative
 Tags (z. B. `sha`-basierte Builds) aus der Registry laden.

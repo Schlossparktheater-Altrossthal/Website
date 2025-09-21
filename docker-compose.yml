@@ -50,7 +50,7 @@ services:
       - .:/app
       - /app/node_modules
     command: >-
-      sh -c "pnpm -s prisma:generate && node scripts/run-prisma-migrate.mjs && (pnpm -s db:seed || true) && pnpm -s start:combined"
+      sh -c "pnpm -s prisma:generate && node scripts/run-prisma-migrate.mjs && (pnpm -s db:seed || true) && node scripts/start-with-proxy.mjs"
 
 volumes:
   pgdata:

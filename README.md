@@ -3,17 +3,21 @@
 This project contains the Next.js based theater website together with the Socket.IO
 realtime server. Both pieces always run inside the same Node.js process and the
 realtime API is exposed under `/realtime` (websocket path `/realtime/socket.io`).
+The published Docker images additionally ship an internal reverse proxy so
+external deployments only have to expose a single HTTP endpoint.
 
 ## Docker overview
 
 - `Dockerfile.dev` builds the development image that serves the Next.js app via the
-  bundled dev server and mounts the realtime routes below `/realtime`.
+  bundled dev server and proxies the realtime routes below `/realtime`.
 - `Dockerfile.prod` produces the production image with the statically built Next.js
-  output. The runtime launches the combined server so the realtime API stays on
-  the same host.
+  output. The runtime launches the combined server and proxies it so the realtime
+  API stays on the same host.
 
-Both images execute `scripts/start-combined-server.mjs`, which prepares Next.js
-and attaches the Socket.IO server to the same HTTP listener. The script configures
+Both images execute `scripts/start-with-proxy.mjs`. The script first prepares
+Next.js via `scripts/start-combined-server.mjs`, attaches the Socket.IO server to
+an internal HTTP listener and then exposes it through a lightweight reverse
+proxy (default external port `3000`). During boot it configures
 `NEXT_PUBLIC_REALTIME_URL`, `NEXT_PUBLIC_REALTIME_PATH` and
 `REALTIME_SERVER_EVENT_PATH` automatically based on `REALTIME_BASE_PATH`
 (default `/realtime`).
@@ -51,6 +55,8 @@ Important environment variables:
   must use an absolute host instead of the relative `REALTIME_BASE_PATH`.
 - `REALTIME_AUTH_TOKEN` and `REALTIME_HANDSHAKE_SECRET` protect the realtime
   handshake and admin events.
+- `APP_SERVER_PORT` (default `PORT + 1`) sets the internal port where the
+  combined Next.js/Socket.IO server listens when the reverse proxy is enabled.
 
 ### Hosting with images from the registry
 
@@ -73,7 +79,12 @@ pnpm run start:combined
 ```
 
 This executes `scripts/start-combined-server.mjs` and is helpful when developing
-outside of containers.
+outside of containers. To emulate the Docker behaviour with the reverse proxy
+you can instead run:
+
+```bash
+pnpm run start:proxy
+```
 
 ## Getting Started
 
