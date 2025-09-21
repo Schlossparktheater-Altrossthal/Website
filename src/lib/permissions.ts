@@ -56,6 +56,28 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
   },
   {
+    key: "mitglieder.finanzen",
+    label: "Finanzbereich öffnen",
+    description:
+      "Dashboard für Einnahmen, Ausgaben, Rechnungen und Spenden im Mitgliederbereich einsehen.",
+  },
+  {
+    key: "mitglieder.finanzen.manage",
+    label: "Finanzbuchungen verwalten",
+    description:
+      "Neue Finanzbuchungen anlegen, bearbeiten, Rechnungen erfassen und Spenden dokumentieren.",
+  },
+  {
+    key: "mitglieder.finanzen.approve",
+    label: "Finanzbuchungen freigeben",
+    description: "Prüfen und freigeben von Rechnungen, Auslagen und Auszahlungen im Finanzmodul.",
+  },
+  {
+    key: "mitglieder.finanzen.export",
+    label: "Finanzdaten exportieren",
+    description: "CSV- oder Excel-Exporte der Finanzbuchungen und Budgetübersichten erstellen.",
+  },
+  {
     key: "mitglieder.onboarding.analytics",
     label: "Onboarding-Analytics öffnen",
     description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
@@ -69,6 +91,18 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
 
 const DEFAULT_PERMISSION_KEYS = DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key);
 const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
+
+const FINANCE_PERMISSION_KEYS = [
+  "mitglieder.finanzen",
+  "mitglieder.finanzen.manage",
+  "mitglieder.finanzen.approve",
+  "mitglieder.finanzen.export",
+] as const satisfies PermissionDefinition["key"][];
+
+const FINANCE_BOARD_PERMISSION_KEYS = [
+  "mitglieder.finanzen",
+  "mitglieder.finanzen.export",
+] as const satisfies PermissionDefinition["key"][];
 
 // Baseline permissions that every authenticated user should retain even when no
 // explicit grants exist yet (e.g. on a fresh installation before the matrix is
@@ -100,6 +134,7 @@ async function runEnsurePermissionDefinitions() {
   );
   await prisma.$transaction(operations);
   await prisma.permission.deleteMany({ where: { key: { notIn: Array.from(PERMISSION_KEY_SET) } } });
+  await ensureFinanceRoleDefaultAssignments();
 }
 
 export async function ensurePermissionDefinitions() {
@@ -146,6 +181,58 @@ export async function ensureSystemRoles() {
     });
   }
   await ensureSystemRolesPromise;
+}
+
+async function ensureFinanceRoleDefaultAssignments() {
+  await ensureSystemRoles();
+
+  const permissionKeys = Array.from(
+    new Set<string>([...FINANCE_PERMISSION_KEYS, ...FINANCE_BOARD_PERMISSION_KEYS]),
+  );
+
+  const [roles, permissions] = await Promise.all([
+    prisma.appRole.findMany({ where: { name: { in: ["finance", "board"] } } }),
+    prisma.permission.findMany({ where: { key: { in: permissionKeys } } }),
+  ]);
+
+  if (!roles.length || !permissions.length) return;
+
+  const permissionMap = new Map(permissions.map((perm) => [perm.key, perm.id]));
+  const operations: Prisma.PrismaPromise<unknown>[] = [];
+
+  const financeRole = roles.find((role) => role.name === "finance");
+  if (financeRole) {
+    for (const key of FINANCE_PERMISSION_KEYS) {
+      const permissionId = permissionMap.get(key);
+      if (!permissionId) continue;
+      operations.push(
+        prisma.appRolePermission.upsert({
+          where: { roleId_permissionId: { roleId: financeRole.id, permissionId } },
+          update: {},
+          create: { roleId: financeRole.id, permissionId },
+        }),
+      );
+    }
+  }
+
+  const boardRole = roles.find((role) => role.name === "board");
+  if (boardRole) {
+    for (const key of FINANCE_BOARD_PERMISSION_KEYS) {
+      const permissionId = permissionMap.get(key);
+      if (!permissionId) continue;
+      operations.push(
+        prisma.appRolePermission.upsert({
+          where: { roleId_permissionId: { roleId: boardRole.id, permissionId } },
+          update: {},
+          create: { roleId: boardRole.id, permissionId },
+        }),
+      );
+    }
+  }
+
+  if (operations.length) {
+    await prisma.$transaction(operations);
+  }
 }
 
 function collectOwnedRoles(user: UserLike) {
