@@ -42,6 +42,7 @@ jobs:
             dockerfile: Dockerfile.dev
             build_args: |
               NODE_ENV=development
+              GIT_COMMIT_SHA=${{ github.sha }}
             metadata_tags: |
               type=raw,value=dev
               type=sha,prefix=dev-
@@ -49,6 +50,7 @@ jobs:
             dockerfile: Dockerfile.prod
             build_args: |
               NODE_ENV=production
+              GIT_COMMIT_SHA=${{ github.sha }}
             metadata_tags: |
               type=raw,value=prod
               type=sha,prefix=prod-
