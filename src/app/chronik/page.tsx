@@ -46,6 +46,10 @@ const CHRONIK_POSTER_OVERRIDES: Record<string, PosterOverride> = {
     strategy: "replace",
     sources: ["/images/SNT_1.png", "/images/SNT_2.png"],
   },
+  "altrossthal-2016": {
+    strategy: "replace",
+    sources: ["/images/Canterville.png"],
+  },
   "altrossthal-2015": {
     strategy: "replace",
     sources: ["/images/RuJ_1.png", "/images/RuJ_2.png", "/images/RuJ_3.png", "/images/RuJ_4.png"],
