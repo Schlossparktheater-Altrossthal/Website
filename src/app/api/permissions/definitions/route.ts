@@ -18,7 +18,10 @@ export async function GET() {
   await Promise.all([ensureSystemRoles(), ensurePermissionDefinitions()]);
 
   const [roles, permissions, grants] = await Promise.all([
-    prisma.appRole.findMany({ where: { isSystem: false }, orderBy: { name: "asc" } }),
+    prisma.appRole.findMany({
+      where: { isSystem: false },
+      orderBy: [{ sortIndex: "asc" }, { name: "asc" }],
+    }),
     prisma.permission.findMany({ where: { key: { in: DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key) } } }),
     prisma.appRolePermission.findMany({ select: { roleId: true, permission: { select: { key: true } } } }),
   ]);

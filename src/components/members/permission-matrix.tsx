@@ -1,10 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
+import type { DragEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { EditIcon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/modal";
+import { GripVertical } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type Role = { id: string; name: string; isSystem: boolean; systemRole?: string | null };
+type Role = {
+  id: string;
+  name: string;
+  isSystem: boolean;
+  systemRole?: string | null;
+  sortIndex: number;
+};
 type Permission = { id: string; key: string; label?: string | null; description?: string | null };
 
 export function PermissionMatrix() {
@@ -21,6 +30,13 @@ export function PermissionMatrix() {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [draggingRoleId, setDraggingRoleId] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{
+    roleId: string;
+    position: "before" | "after";
+  } | null>(null);
+  const [orderSaving, setOrderSaving] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -29,8 +45,22 @@ export function PermissionMatrix() {
       const res = await fetch("/api/permissions/definitions");
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Laden fehlgeschlagen");
-      const fetchedRoles = Array.isArray(data.roles) ? (data.roles as Role[]) : [];
-      setRoles(fetchedRoles.filter((role) => !role.isSystem));
+      const fetchedRoles = Array.isArray(data.roles)
+        ? (data.roles as Role[]).map((role, index) => ({
+            ...role,
+            sortIndex: typeof role.sortIndex === "number" ? role.sortIndex : index,
+          }))
+        : [];
+      const nonSystemRoles = fetchedRoles
+        .filter((role) => !role.isSystem)
+        .sort((a, b) => {
+          if (a.sortIndex === b.sortIndex) {
+            return a.name.localeCompare(b.name, "de");
+          }
+          return a.sortIndex - b.sortIndex;
+        });
+      setRoles(nonSystemRoles);
+      setOrderError(null);
       const fetchedPermissions = Array.isArray(data.permissions)
         ? (data.permissions as Permission[])
         : [];
@@ -43,12 +73,138 @@ export function PermissionMatrix() {
       setError(e instanceof Error ? e.message : "Fehler");
     } finally {
       setLoading(false);
+      setDraggingRoleId(null);
+      setDropIndicator(null);
+      setOrderSaving(false);
     }
   }
 
   useEffect(() => {
     load();
   }, []);
+
+  const reorderRolesList = (
+    current: Role[],
+    draggedId: string,
+    targetId: string,
+    placeAfter: boolean,
+  ): Role[] | null => {
+    if (draggedId === targetId) return null;
+    const dragged = current.find((role) => role.id === draggedId);
+    if (!dragged) return null;
+    const withoutDragged = current.filter((role) => role.id !== draggedId);
+    const targetIndex = withoutDragged.findIndex((role) => role.id === targetId);
+    if (targetIndex === -1) return null;
+    const insertIndex = placeAfter ? targetIndex + 1 : targetIndex;
+    withoutDragged.splice(insertIndex, 0, dragged);
+    const sameOrder = withoutDragged.every((role, index) => role.id === current[index]?.id);
+    if (sameOrder) return null;
+    return withoutDragged.map((role, index) => ({ ...role, sortIndex: index }));
+  };
+
+  const revertRoleOrder = (previousOrder: string[]) => {
+    setRoles((current) => {
+      const map = new Map(current.map((role) => [role.id, role]));
+      const restored: Role[] = [];
+      previousOrder.forEach((id, index) => {
+        const match = map.get(id);
+        if (match) {
+          restored.push({ ...match, sortIndex: index });
+          map.delete(id);
+        }
+      });
+      if (map.size > 0) {
+        const remaining = Array.from(map.values()).sort((a, b) => a.sortIndex - b.sortIndex);
+        const baseIndex = restored.length;
+        remaining.forEach((role, idx) => {
+          restored.push({ ...role, sortIndex: baseIndex + idx });
+        });
+      }
+      return restored;
+    });
+  };
+
+  const persistRoleOrder = async (ordered: Role[], previousOrder: string[]) => {
+    setOrderSaving(true);
+    setOrderError(null);
+    try {
+      const res = await fetch("/api/permissions/roles/order", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roleIds: ordered.map((role) => role.id) }),
+      });
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string };
+        revertRoleOrder(previousOrder);
+        setOrderError(payload?.error ?? "Reihenfolge konnte nicht gespeichert werden");
+      }
+    } catch {
+      revertRoleOrder(previousOrder);
+      setOrderError("Reihenfolge konnte nicht gespeichert werden");
+    } finally {
+      setOrderSaving(false);
+    }
+  };
+
+  const handleDragStart = (event: DragEvent<HTMLElement>, roleId: string) => {
+    if (orderSaving) {
+      event.preventDefault();
+      return;
+    }
+    event.stopPropagation();
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", roleId);
+    setDraggingRoleId(roleId);
+    setDropIndicator(null);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLElement>, roleId: string) => {
+    if (!draggingRoleId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (draggingRoleId === roleId) {
+      setDropIndicator(null);
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const position: "before" | "after" = event.clientX > rect.left + rect.width / 2 ? "after" : "before";
+    setDropIndicator((current) => {
+      if (current && current.roleId === roleId && current.position === position) {
+        return current;
+      }
+      return { roleId, position };
+    });
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLElement>, roleId: string) => {
+    if (!draggingRoleId) return;
+    const related = event.relatedTarget as Node | null;
+    if (related && (event.currentTarget as HTMLElement).contains(related)) return;
+    setDropIndicator((current) => (current?.roleId === roleId ? null : current));
+  };
+
+  const handleDrop = (event: DragEvent<HTMLElement>, roleId: string) => {
+    if (!draggingRoleId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const draggedId = event.dataTransfer.getData("text/plain") || draggingRoleId;
+    setDropIndicator(null);
+    setDraggingRoleId(null);
+    if (!draggedId || draggedId === roleId) return;
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const placeAfter = event.clientX > rect.left + rect.width / 2;
+    const previousOrder = roles.map((role) => role.id);
+    const next = reorderRolesList(roles, draggedId, roleId, placeAfter);
+    if (!next) return;
+    setRoles(next);
+    setOrderError(null);
+    void persistRoleOrder(next, previousOrder);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingRoleId(null);
+    setDropIndicator(null);
+  };
 
   const toggle = async (roleId: string, key: string, grant: boolean) => {
     const old = new Set(grants[roleId] || new Set());
@@ -169,21 +325,55 @@ export function PermissionMatrix() {
       </div>
 
       <div className="overflow-auto rounded-xl border bg-card/40 shadow-sm">
-        <table className="min-w-full text-sm">
+        <table className="min-w-full text-sm" aria-busy={orderSaving}>
           <thead className="sticky top-0 z-10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <tr>
               <th className="sticky left-0 z-10 bg-background/80 p-3 text-left font-medium">Recht</th>
               {roles.map((r) => (
-                <th key={r.id} className="p-3 text-left align-top">
-                  <button
-                    type="button"
-                    title="Rolle bearbeiten"
-                    onClick={() => openEdit(r)}
-                    className="group inline-flex max-w-[14rem] items-center gap-1 truncate text-left text-sm font-medium underline-offset-2 hover:underline"
-                  >
-                    <span className="truncate">{r.name}</span>
-                    <EditIcon className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-80 text-foreground/60" aria-hidden />
-                  </button>
+                <th
+                  key={r.id}
+                  data-role-id={r.id}
+                  className={cn(
+                    "relative p-3 text-left align-top",
+                    dropIndicator?.roleId === r.id && dropIndicator.position === "before" &&
+                      "before:absolute before:-left-1 before:top-1 before:bottom-1 before:w-1 before:rounded-full before:bg-primary before:content-['']",
+                    dropIndicator?.roleId === r.id && dropIndicator.position === "after" &&
+                      "after:absolute after:-right-1 after:top-1 after:bottom-1 after:w-1 after:rounded-full after:bg-primary after:content-['']",
+                  )}
+                  onDragOver={(event) => handleDragOver(event, r.id)}
+                  onDrop={(event) => handleDrop(event, r.id)}
+                  onDragLeave={(event) => handleDragLeave(event, r.id)}
+                >
+                  <div className="flex items-start gap-2">
+                    <button
+                      type="button"
+                      aria-label="Rolle verschieben"
+                      className={cn(
+                        "flex h-6 w-6 items-center justify-center rounded border border-transparent text-muted-foreground transition-colors hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        orderSaving
+                          ? "cursor-not-allowed opacity-50"
+                          : draggingRoleId === r.id
+                            ? "cursor-grabbing"
+                            : "cursor-grab",
+                      )}
+                      draggable={!orderSaving}
+                      aria-disabled={orderSaving}
+                      tabIndex={orderSaving ? -1 : 0}
+                      onDragStart={(event) => handleDragStart(event, r.id)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <GripVertical className="h-4 w-4" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      title="Rolle bearbeiten"
+                      onClick={() => openEdit(r)}
+                      className="group inline-flex max-w-[14rem] items-center gap-1 truncate text-left text-sm font-medium underline-offset-2 hover:underline"
+                    >
+                      <span className="truncate">{r.name}</span>
+                      <EditIcon className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-80 text-foreground/60" aria-hidden />
+                    </button>
+                  </div>
                 </th>
               ))}
             </tr>
@@ -203,7 +393,14 @@ export function PermissionMatrix() {
                 {roles.map((r) => {
                   const granted = grants[r.id]?.has(p.key) ?? false;
                   return (
-                    <td key={r.id} className="p-3 align-middle">
+                    <td
+                      key={r.id}
+                      data-role-id={r.id}
+                      className="p-3 align-middle"
+                      onDragOver={(event) => handleDragOver(event, r.id)}
+                      onDrop={(event) => handleDrop(event, r.id)}
+                      onDragLeave={(event) => handleDragLeave(event, r.id)}
+                    >
                       <button
                         type="button"
                         role="switch"
@@ -222,6 +419,10 @@ export function PermissionMatrix() {
           </tbody>
         </table>
       </div>
+      {orderError ? <p className="text-sm text-destructive">{orderError}</p> : null}
+      {orderSaving ? (
+        <p className="text-xs text-muted-foreground">Reihenfolge wird gespeichert…</p>
+      ) : null}
       <Modal
         open={editOpen}
         onClose={closeEdit}
