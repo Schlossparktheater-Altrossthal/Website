@@ -2,6 +2,8 @@ import { unstable_cache } from "next/cache";
 import ical, { type VEvent } from "node-ical";
 import { addDays, format, isValid, parseISO } from "date-fns";
 
+import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
+
 import type { HolidayRange } from "@/types/holidays";
 
 export type { HolidayRange } from "@/types/holidays";
@@ -11,6 +13,27 @@ const DEFAULT_SAXONY_HOLIDAY_FEED =
 const FALLBACK_SAXONY_HOLIDAY_FEED = "https://ferien-api.de/api/v1/holidays/SN";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+function isTruthyFlag(value: string | undefined) {
+  if (!value) {
+    return false;
+  }
+
+  const normalised = value.trim().toLowerCase();
+  return normalised === "1" || normalised === "true" || normalised === "yes" || normalised === "on";
+}
+
+function isOutboundHttpDisabled() {
+  if (typeof fetch !== "function") {
+    return true;
+  }
+
+  return isTruthyFlag(process.env.OUTBOUND_HTTP_DISABLED);
+}
+
+function getStaticHolidayRanges() {
+  return SAXONY_SCHOOL_HOLIDAYS.map((range) => ({ ...range }));
+}
 
 function normaliseSummary(value: unknown) {
   if (typeof value !== "string") {
@@ -218,6 +241,10 @@ async function fetchIcsHolidayFeed() {
 }
 
 async function fetchHolidayFeed() {
+  if (isOutboundHttpDisabled()) {
+    return getStaticHolidayRanges();
+  }
+
   const rangesFromIcs = await fetchIcsHolidayFeed();
   if (rangesFromIcs.length > 0) {
     return rangesFromIcs;
@@ -228,7 +255,7 @@ async function fetchHolidayFeed() {
     return fallbackRanges;
   }
 
-  return [] as HolidayRange[];
+  return getStaticHolidayRanges();
 }
 
 export const getSaxonySchoolHolidayRanges = unstable_cache(
