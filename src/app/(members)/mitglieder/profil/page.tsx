@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/members/page-header";
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import { ProfileForm } from "@/components/members/profile-form";
+import { ProfileInterestsCard } from "@/components/members/profile-interests-card";
 import { ProfileSummaryCard } from "@/components/members/profile-summary-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -173,25 +174,28 @@ export default async function ProfilePage() {
             </CardContent>
           </Card>
         </div>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="space-y-2">
+              <CardTitle>Profildaten</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Name, Kontaktadresse und Passwort kannst du hier eigenständig anpassen. Änderungen werden sofort übernommen.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-0">
+              <ProfileForm
+                userId={userId}
+                initialName={user.name}
+                initialEmail={user.email}
+                initialAvatarSource={user.avatarSource}
+                initialAvatarUpdatedAt={user.avatarImageUpdatedAt?.toISOString() ?? null}
+                initialDateOfBirth={user.dateOfBirth?.toISOString() ?? null}
+              />
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="space-y-2">
-            <CardTitle>Profildaten</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Name, Kontaktadresse und Passwort kannst du hier eigenständig anpassen. Änderungen werden sofort übernommen.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            <ProfileForm
-              userId={userId}
-              initialName={user.name}
-              initialEmail={user.email}
-              initialAvatarSource={user.avatarSource}
-              initialAvatarUpdatedAt={user.avatarImageUpdatedAt?.toISOString() ?? null}
-              initialDateOfBirth={user.dateOfBirth?.toISOString() ?? null}
-            />
-          </CardContent>
-        </Card>
+          <ProfileInterestsCard />
+        </div>
       </div>
     </div>
   );
