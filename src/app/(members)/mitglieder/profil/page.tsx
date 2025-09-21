@@ -86,15 +86,49 @@ export default async function ProfilePage() {
   const roles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Mein Profil"
-        description="Halte deine Stammdaten aktuell und behalte im Blick, welche Rollen dir Zugriff auf die Module geben."
-      />
-
+    <div className="relative space-y-10 sm:space-y-12">
       <div
-        className="grid gap-6 lg:gap-8 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)] xl:items-start xl:gap-10 2xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)] 2xl:gap-12"
-      >
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-gradient-to-b from-primary/10 via-transparent to-transparent blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-40 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-secondary/15 blur-3xl dark:bg-secondary/20"
+      />
+      <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-background/80 px-6 py-8 shadow-xl shadow-primary/10 backdrop-blur sm:px-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-24 top-0 h-44 w-44 rounded-full bg-primary/15 opacity-60 blur-3xl dark:bg-primary/25"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 bottom-0 h-36 w-36 rounded-full bg-amber-200/30 opacity-70 blur-3xl dark:bg-amber-500/15"
+        />
+        <PageHeader
+          title="Mein Profil"
+          description="Halte deine Stammdaten aktuell und behalte im Blick, welche Rollen dir Zugriff auf die Module geben."
+        />
+        <div className="mt-6 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+          <Badge
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 border-primary/30 bg-primary/10 text-primary/80"
+          >
+            <UsersRound className="h-3.5 w-3.5" aria-hidden />
+            {roles.length === 1 ? "1 aktive Rolle" : `${roles.length} aktive Rollen`}
+          </Badge>
+          <Badge
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 border-muted-foreground/20 bg-muted/20 text-muted-foreground"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+            Datenpflege in Eigenregie
+          </Badge>
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:gap-8 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)] xl:items-start xl:gap-10 2xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)] 2xl:gap-12">
         <div className="space-y-6 xl:space-y-8">
           <ProfileSummaryCard
             userId={userId}
@@ -109,15 +143,14 @@ export default async function ProfilePage() {
 
           <PhotoConsentCard />
 
-          <Card>
-            <CardHeader className="space-y-2">
-              <CardTitle>Rollen & Berechtigungen</CardTitle>
+          <Card className="rounded-2xl border border-border/60 bg-background/80 p-0 shadow-lg shadow-primary/10">
+            <CardHeader className="space-y-2 px-6 pb-4 pt-6 sm:px-7">
+              <CardTitle>Rollen &amp; Berechtigungen</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Deine Rollen steuern Sichtbarkeit und Handlungsrechte im Mitgliederportal. Wende dich bei fehlenden Rechten an
-                die Administration.
+                Deine Rollen steuern Sichtbarkeit und Handlungsrechte im Mitgliederportal. Wende dich bei fehlenden Rechten an die Administration.
               </p>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-5 px-6 pb-6 sm:px-7">
               {roles.length > 0 ? (
                 <>
                   <div className="flex flex-wrap gap-2">
@@ -140,7 +173,7 @@ export default async function ProfilePage() {
                       return (
                         <li
                           key={role}
-                          className="flex gap-3 rounded-lg border border-border/60 bg-background/70 p-3 shadow-sm"
+                          className="flex gap-3 rounded-xl border border-border/60 bg-background/70 p-3 shadow-sm backdrop-blur"
                         >
                           <div
                             className={cn(
@@ -181,14 +214,14 @@ export default async function ProfilePage() {
           </Card>
         </div>
         <div className="space-y-6 xl:space-y-8">
-          <Card>
-            <CardHeader className="space-y-2">
+          <Card className="rounded-2xl border border-border/60 bg-background/80 p-0 shadow-lg shadow-primary/10">
+            <CardHeader className="space-y-2 px-6 pb-4 pt-6 sm:px-7">
               <CardTitle>Profildaten</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Name, Kontaktadresse und Passwort kannst du hier eigenständig anpassen. Änderungen werden sofort übernommen.
               </p>
             </CardHeader>
-            <CardContent className="space-y-0">
+            <CardContent className="space-y-0 px-6 pb-6 sm:px-7">
               <ProfileForm
                 userId={userId}
                 initialFirstName={user.firstName}

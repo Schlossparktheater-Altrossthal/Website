@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
-import { Camera } from "lucide-react";
+import { Camera, ChevronDown } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ export function PhotoConsentCard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -102,11 +103,14 @@ export function PhotoConsentCard() {
   const requiresDocument = summary?.requiresDocument ?? false;
   const requiresDateOfBirth = summary?.requiresDateOfBirth ?? false;
   const status = summary?.status ?? "none";
+  const isCollapsible = status === "approved" || status === "rejected";
+  const showContent = !isCollapsible || expanded;
 
   const statusBadge = useMemo(() => {
     return (
       <Badge
         variant={statusVariants[status]}
+        size="sm"
         className={cn(
           "whitespace-nowrap rounded-full px-4 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] transition-all duration-200 backdrop-blur-sm",
           statusBadgeClasses[status],
@@ -202,141 +206,198 @@ export function PhotoConsentCard() {
 
   const showIntro = !loading && status !== "approved";
 
+  useEffect(() => {
+    setExpanded(!isCollapsible);
+  }, [isCollapsible]);
+
   return (
-    <Card className="relative overflow-hidden border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background shadow-xl shadow-primary/10">
+    <Card className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-0 shadow-xl shadow-primary/10">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -left-20 top-0 h-40 w-40 rounded-full bg-primary/20 opacity-70 blur-3xl dark:bg-primary/30"
+        className="pointer-events-none absolute -left-24 top-0 h-44 w-44 rounded-full bg-primary/20 opacity-70 blur-3xl dark:bg-primary/30"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-16 top-16 h-36 w-36 rounded-full bg-warning/20 opacity-60 blur-3xl"
+        className="pointer-events-none absolute -right-20 top-16 h-40 w-40 rounded-full bg-warning/20 opacity-60 blur-3xl"
       />
-      <CardHeader className="mb-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <CardHeader className="flex flex-col gap-4 border-b border-primary/20 px-6 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-7">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary shadow-inner">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary shadow-inner shadow-primary/10">
             <Camera className="h-6 w-6" aria-hidden="true" />
           </span>
-          <div className="space-y-1">
+          <div className="space-y-1 text-center sm:text-left">
             <CardTitle className="text-xl font-semibold leading-tight">Darf dein Bühnenmoment sichtbar sein?</CardTitle>
             <p className="max-w-2xl text-sm text-foreground/70">
               Wie bei einem Cookiebanner entscheidest du hier, ob wir Fotos von Proben und Aufführungen teilen dürfen.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start rounded-full border border-primary/30 bg-background/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-foreground/60 shadow-sm backdrop-blur">
-          <span>Status</span>
-          {statusBadge}
+        <div className="flex flex-col items-stretch gap-3 sm:items-end">
+          <div className="flex items-center gap-2 self-start rounded-full border border-primary/25 bg-background/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/60 shadow-sm backdrop-blur sm:self-end">
+            <Badge variant="outline" size="sm" className="border-transparent bg-transparent px-0 py-0 text-[11px] uppercase tracking-[0.18em] text-foreground/60">
+              Status
+            </Badge>
+            {statusBadge}
+          </div>
+          {isCollapsible && (
+            <button
+              type="button"
+              onClick={() => setExpanded((prev) => !prev)}
+              aria-expanded={expanded}
+              className={cn(
+                "group inline-flex items-center justify-center gap-2 self-start rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary transition hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:self-end",
+                expanded ? "bg-primary/15" : ""
+              )}
+            >
+              <span>{expanded ? "Details ausblenden" : "Details anzeigen"}</span>
+              <ChevronDown
+                className={cn("h-4 w-4 transition-transform", expanded ? "rotate-180" : "rotate-0")}
+                aria-hidden="true"
+              />
+            </button>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="relative space-y-5 text-sm">
-        {showIntro && (
-          <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 shadow-[0_18px_45px_color-mix(in_oklab,var(--info)_18%,transparent)] backdrop-blur">
-            <p className="font-semibold text-foreground">Mit deinem „Okay“ hilfst du unserem Auftrittsteam.</p>
-            <p className="mt-1 text-foreground/70">
-              Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim Cookiebanner am Seitenrand.
+      <CardContent className="relative space-y-5 px-6 pb-6 pt-5 text-sm sm:px-7 sm:pb-7">
+        {isCollapsible && !showContent ? (
+          <div
+            className={cn(
+              "space-y-2 rounded-xl border p-4 text-foreground",
+              status === "approved"
+                ? "border-success/45 bg-success/15 text-success"
+                : "border-destructive/45 bg-destructive/15 text-destructive"
+            )}
+          >
+            <p>
+              {status === "approved"
+                ? "Vielen Dank – deine Fotoeinwilligung ist freigegeben."
+                : "Deine Fotoeinwilligung wurde abgelehnt."}
             </p>
-          </div>
-        )}
-
-        {loading ? (
-          <p className="text-muted-foreground">Lade Status …</p>
-        ) : error ? (
-          <div className="space-y-3">
-            <p className="text-destructive">{error}</p>
-            <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
-              Erneut versuchen
-            </Button>
-          </div>
-        ) : requiresDateOfBirth ? (
-          <div className="rounded-md border border-warning/45 bg-warning/15 p-3 text-warning">
-            Bitte hinterlege dein Geburtsdatum im <Link className="underline" href="/mitglieder/profil">Profil</Link>, damit wir prüfen können, ob ein Elternformular notwendig ist.
-          </div>
-        ) : status === "approved" ? (
-          <div className="space-y-2 rounded-md border border-success/45 bg-success/15 p-3 text-success">
-            <p>Vielen Dank – deine Fotoeinwilligung ist freigegeben.</p>
-            <ul className="text-xs text-success/90">
-              <li>
+            {status === "approved" ? (
+              <p className="text-xs text-success/90">
                 Bestätigt am {formatDate(summary?.approvedAt) ?? "unbekannt"}
                 {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
-              </li>
-              {summary?.documentUploadedAt && (
-                <li>Dokument zuletzt hochgeladen am {formatDate(summary.documentUploadedAt)}.</li>
-              )}
-            </ul>
+              </p>
+            ) : (
+              <p className="text-xs text-destructive/80">
+                Zuletzt bearbeitet am {formatDate(summary?.updatedAt) ?? formatDate(summary?.submittedAt) ?? "unbekannt"}.
+              </p>
+            )}
+            <p className="text-xs text-foreground/70">
+              Tippe auf „Details anzeigen“, um alle Informationen und Optionen einzublenden.
+            </p>
           </div>
         ) : (
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {summary?.status === "rejected" && summary.rejectionReason && (
-              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
-                Ablehnungsgrund: {summary.rejectionReason}
+          <>
+            {showIntro && (
+              <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 shadow-[0_18px_45px_color-mix(in_oklab,var(--info)_18%,transparent)] backdrop-blur">
+                <p className="font-semibold text-foreground">Mit deinem „Okay“ hilfst du unserem Auftrittsteam.</p>
+                <p className="mt-1 text-foreground/70">
+                  Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim Cookiebanner am Seitenrand.
+                </p>
               </div>
             )}
 
-            <div className="rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={confirm}
-                  onChange={(event) => setConfirm(event.target.checked)}
-                  className="mt-1 h-5 w-5 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-                <span className="text-foreground/80">
-                  <span className="font-semibold text-foreground">Ja, ich bin einverstanden,</span>{" "}
-                  dass im Rahmen unseres Schultheaters Fotos von mir erstellt und für interne sowie öffentliche Kommunikationszwecke genutzt werden dürfen.
-                </span>
-              </label>
-              <p className="mt-3 text-xs text-foreground/60">Du kannst dein Okay hier jederzeit widerrufen.</p>
-            </div>
-
-            {requiresDocument && (
-              <div className="space-y-3 rounded-xl border border-dashed border-primary/30 bg-background/80 p-4 shadow-sm backdrop-blur">
-                <div className="font-medium text-foreground">Elterliche Einwilligung (PDF oder JPG/PNG)</div>
-                <Input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png"
-                  onChange={handleFileChange}
-                  disabled={submitting}
-                />
-                {documentFile && <p className="text-xs text-foreground/70">Ausgewählt: {documentFile.name}</p>}
-                {summary?.hasDocument && !documentFile && (
-                  <p className="text-xs text-foreground/60">
-                    Es liegt bereits ein Dokument vor. Du kannst hier ein neues hochladen, falls eine aktualisierte Version vorliegt.
-                  </p>
+            {loading ? (
+              <p className="text-muted-foreground">Lade Status …</p>
+            ) : error ? (
+              <div className="space-y-3">
+                <p className="text-destructive">{error}</p>
+                <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
+                  Erneut versuchen
+                </Button>
+              </div>
+            ) : requiresDateOfBirth ? (
+              <div className="rounded-md border border-warning/45 bg-warning/15 p-3 text-warning">
+                Bitte hinterlege dein Geburtsdatum im <Link className="underline" href="/mitglieder/profil">Profil</Link>, damit wir prüfen können, ob ein Elternformular notwendig ist.
+              </div>
+            ) : status === "approved" ? (
+              <div className="space-y-2 rounded-md border border-success/45 bg-success/15 p-3 text-success">
+                <p>Vielen Dank – deine Fotoeinwilligung ist freigegeben.</p>
+                <ul className="text-xs text-success/90">
+                  <li>
+                    Bestätigt am {formatDate(summary?.approvedAt) ?? "unbekannt"}
+                    {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
+                  </li>
+                  {summary?.documentUploadedAt && (
+                    <li>Dokument zuletzt hochgeladen am {formatDate(summary.documentUploadedAt)}.</li>
+                  )}
+                </ul>
+              </div>
+            ) : (
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                {summary?.status === "rejected" && summary.rejectionReason && (
+                  <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
+                    Ablehnungsgrund: {summary.rejectionReason}
+                  </div>
                 )}
-                {documentError && <p className="text-sm text-destructive">{documentError}</p>}
-              </div>
+
+                <div className="rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={confirm}
+                      onChange={(event) => setConfirm(event.target.checked)}
+                      className="mt-1 h-5 w-5 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <span className="text-foreground/80">
+                      <span className="font-semibold text-foreground">Ja, ich bin einverstanden,</span>{" "}
+                      dass im Rahmen unseres Schultheaters Fotos von mir erstellt und für interne sowie öffentliche Kommunikationszwecke genutzt werden dürfen.
+                    </span>
+                  </label>
+                  <p className="mt-3 text-xs text-foreground/60">Du kannst dein Okay hier jederzeit widerrufen.</p>
+                </div>
+
+                {requiresDocument && (
+                  <div className="space-y-3 rounded-xl border border-dashed border-primary/30 bg-background/80 p-4 shadow-sm backdrop-blur">
+                    <div className="font-medium text-foreground">Elterliche Einwilligung (PDF oder JPG/PNG)</div>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      onChange={handleFileChange}
+                      disabled={submitting}
+                    />
+                    {documentFile && <p className="text-xs text-foreground/70">Ausgewählt: {documentFile.name}</p>}
+                    {summary?.hasDocument && !documentFile && (
+                      <p className="text-xs text-foreground/60">
+                        Es liegt bereits ein Dokument vor. Du kannst hier ein neues hochladen, falls eine aktualisierte Version vorliegt.
+                      </p>
+                    )}
+                    {documentError && <p className="text-sm text-destructive">{documentError}</p>}
+                  </div>
+                )}
+
+                {!requiresDocument && documentError && <p className="text-sm text-destructive">{documentError}</p>}
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="shadow-[0_20px_45px_color-mix(in_oklab,var(--info)_25%,transparent)] transition-shadow duration-200 hover:shadow-[0_22px_52px_color-mix(in_oklab,var(--info)_32%,transparent)]"
+                    disabled={
+                      submitting ||
+                      !confirm ||
+                      (requiresDocument && !documentFile && !summary?.hasDocument)
+                    }
+                  >
+                    {submitting ? "Speichere …" : "Jetzt zustimmen"}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={submitting}>
+                    Status aktualisieren
+                  </Button>
+                </div>
+
+                <div className="text-xs text-foreground/60">
+                  {summary?.submittedAt ? (
+                    <>Zuletzt gesendet am {formatDate(summary.submittedAt)}.</>
+                  ) : (
+                    <>Noch keine Einwilligung übermittelt.</>
+                  )}
+                </div>
+              </form>
             )}
-
-            {!requiresDocument && documentError && <p className="text-sm text-destructive">{documentError}</p>}
-
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                type="submit"
-                size="lg"
-                className="shadow-[0_20px_45px_color-mix(in_oklab,var(--info)_25%,transparent)] transition-shadow duration-200 hover:shadow-[0_22px_52px_color-mix(in_oklab,var(--info)_32%,transparent)]"
-                disabled={
-                  submitting ||
-                  !confirm ||
-                  (requiresDocument && !documentFile && !summary?.hasDocument)
-                }
-              >
-                {submitting ? "Speichere …" : "Jetzt zustimmen"}
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={submitting}>
-                Status aktualisieren
-              </Button>
-            </div>
-
-            <div className="text-xs text-foreground/60">
-              {summary?.submittedAt ? (
-                <>Zuletzt gesendet am {formatDate(summary.submittedAt)}.</>
-              ) : (
-                <>Noch keine Einwilligung übermittelt.</>
-              )}
-            </div>
-          </form>
+          </>
         )}
       </CardContent>
     </Card>
