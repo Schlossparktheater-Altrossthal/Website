@@ -70,22 +70,22 @@ export function Hero({ images }: { images: string[] }) {
                     aria-hidden="true"
                     className="pointer-events-none absolute -bottom-24 hidden h-72 w-[28rem] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(14,165,233,0.28),transparent_65%)] blur-[120px] md:block"
                   />
-                  <span className="relative isolate inline-flex flex-col items-center gap-6 overflow-hidden rounded-[3.6rem] border border-white/20 bg-white/10 px-10 py-10 text-center shadow-[0_40px_130px_rgba(6,12,30,0.6)] backdrop-blur-3xl sm:px-16 sm:py-14">
+                  <span className="relative isolate inline-flex flex-col items-center gap-5 overflow-hidden rounded-[3rem] border border-white/25 bg-white/8 px-8 py-8 text-center shadow-[0_32px_110px_rgba(6,12,30,0.52)] backdrop-blur-2xl sm:px-14 sm:py-12">
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 rounded-[inherit] border border-white/60 opacity-35 [mask-image:linear-gradient(to_bottom,rgba(255,255,255,0.95),transparent_80%)]"
+                      className="pointer-events-none absolute inset-0 rounded-[inherit] border border-white/50 opacity-35 [mask-image:linear-gradient(to_bottom,rgba(255,255,255,0.85),transparent_78%)]"
                     />
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute -inset-[4.5rem] -z-10 bg-[conic-gradient(from_110deg_at_50%_50%,rgba(59,130,246,0.28),rgba(236,72,153,0.22),rgba(16,185,129,0.25),rgba(59,130,246,0.28))] opacity-60 blur-3xl"
+                      className="pointer-events-none absolute -inset-[4rem] -z-10 bg-[conic-gradient(from_110deg_at_50%_50%,rgba(59,130,246,0.22),rgba(236,72,153,0.18),rgba(16,185,129,0.2),rgba(59,130,246,0.22))] opacity-60 blur-[110px]"
                     />
-                    <span className="relative text-[clamp(2.8rem,6.5vw,5.4rem)] uppercase tracking-[0.14em] leading-[0.92]">
-                      <span className="bg-gradient-to-br from-white via-white to-white/75 bg-clip-text text-transparent drop-shadow-[0_26px_55px_rgba(5,8,22,0.7)]">
+                    <span className="relative text-[clamp(2.3rem,5.6vw,4.6rem)] uppercase tracking-[0.12em] leading-[0.94]">
+                      <span className="bg-gradient-to-br from-white via-white/95 to-white/70 bg-clip-text text-transparent drop-shadow-[0_22px_48px_rgba(5,8,22,0.65)]">
                         Das Geheimnis
                       </span>
                     </span>
-                    <span className="relative text-[clamp(2.4rem,5.6vw,4.6rem)] uppercase tracking-[0.32em] leading-[0.9] text-white/90">
-                      <span className="bg-gradient-to-r from-white/80 via-white to-white/70 bg-clip-text text-transparent drop-shadow-[0_20px_48px_rgba(5,8,22,0.62)]">
+                    <span className="relative text-[clamp(2rem,4.8vw,3.8rem)] uppercase tracking-[0.26em] leading-[0.92] text-white/85">
+                      <span className="bg-gradient-to-r from-white/80 via-white to-white/65 bg-clip-text text-transparent drop-shadow-[0_18px_42px_rgba(5,8,22,0.58)]">
                         im Schlosspark
                       </span>
                     </span>
