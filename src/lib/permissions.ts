@@ -10,6 +10,12 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen" },
   { key: "mitglieder.profil", label: "Profilbereich aufrufen" },
   {
+    key: "mitglieder.issues",
+    label: "Feedback & Support nutzen",
+    description:
+      "Anliegen, Probleme oder Verbesserungsvorschläge im Mitglieder-Issue-Board melden und einsehen.",
+  },
+  {
     key: "mitglieder.meine-proben",
     label: "Eigene Probentermine einsehen",
     description: "Zugang zum Bereich \"Meine Proben\" mit persönlichen Terminen und Fristen.",
@@ -39,6 +45,11 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Onboarding-Analytics öffnen",
     description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
   },
+  {
+    key: "mitglieder.issues.manage",
+    label: "Feedback-Anliegen verwalten",
+    description: "Status, Priorität und Moderation für gemeldete Anliegen im Issue-Board übernehmen.",
+  },
 ];
 
 const DEFAULT_PERMISSION_KEYS = DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key);
@@ -51,6 +62,7 @@ const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
 const BASELINE_PERMISSION_KEYS = new Set([
   "mitglieder.dashboard",
   "mitglieder.profil",
+  "mitglieder.issues",
 ] satisfies PermissionDefinition["key"][]);
 
 let ensurePermissionsPromise: Promise<void> | null = null;

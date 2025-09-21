@@ -15,6 +15,7 @@ const groupedConfig: Group[] = [
     items: [
       { href: "/mitglieder", label: "Dashboard", permissionKey: "mitglieder.dashboard" },
       { href: "/mitglieder/profil", label: "Profil", permissionKey: "mitglieder.profil" },
+      { href: "/mitglieder/issues", label: "Feedback & Support", permissionKey: "mitglieder.issues" },
     ],
   },
   {
@@ -73,6 +74,14 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="8" r="4" />
           <path d="M6 20c0-3.314 2.686-6 6-6s6 2.686 6 6" />
+        </svg>
+      );
+    case "/mitglieder/issues":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H9l-4 4v-4H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
+          <path d="M9 7h6" />
+          <path d="M9 11h6" />
         </svg>
       );
     case "/mitglieder/meine-proben":
