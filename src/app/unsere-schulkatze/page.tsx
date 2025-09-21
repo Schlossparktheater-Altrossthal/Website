@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 
+import { DieterEncountersSection } from "./encounters-section";
+
 export const metadata: Metadata = {
   title: "Unsere Schulkatze",
   description:
@@ -252,6 +254,8 @@ export default function SchulkatzePage() {
           </div>
         </Card>
       </section>
+
+      <DieterEncountersSection />
 
       <section className="layout-container pb-24">
         <div className="mx-auto max-w-3xl space-y-4 text-center">
