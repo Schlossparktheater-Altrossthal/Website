@@ -183,6 +183,12 @@ const preferenceAccent: Record<"acting" | "crew", string> = {
   crew: "from-cyan-500/70 to-teal-500/70",
 };
 
+const focusDomainMap = {
+  acting: ["acting"],
+  tech: ["crew"],
+  both: ["acting", "crew"],
+} as const satisfies Record<"acting" | "tech" | "both", readonly ("acting" | "crew")[]>;
+
 const steps = [
   { title: "Willkommen" },
   { title: "Profil" },
@@ -572,14 +578,20 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       isCustom: Boolean(entry.isCustom),
       domain,
     });
-    const acting = form.actingPreferences
-      .filter((pref) => pref.enabled && pref.weight > 0)
-      .map((pref) => mapEntry(pref, "acting"));
-    const crew = form.crewPreferences
-      .filter((pref) => pref.enabled && pref.weight > 0)
-      .map((pref) => mapEntry(pref, "crew"));
+    const includesActing = form.focus === "acting" || form.focus === "both";
+    const includesCrew = form.focus === "tech" || form.focus === "both";
+    const acting = includesActing
+      ? form.actingPreferences
+          .filter((pref) => pref.enabled && pref.weight > 0)
+          .map((pref) => mapEntry(pref, "acting"))
+      : [];
+    const crew = includesCrew
+      ? form.crewPreferences
+          .filter((pref) => pref.enabled && pref.weight > 0)
+          .map((pref) => mapEntry(pref, "crew"))
+      : [];
     return { acting, crew };
-  }, [form.actingPreferences, form.crewPreferences]);
+  }, [form.actingPreferences, form.crewPreferences, form.focus]);
 
   const preferenceStats = useMemo(() => {
     const compute = (entries: PreferenceSummaryEntry[]) => {
@@ -774,13 +786,19 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   const handleSubmit = async () => {
     setError(null);
     if (loading) return;
-    const preferences = [
-      ...form.actingPreferences
-        .filter((pref) => pref.enabled && pref.weight > 0)
-        .map((pref) => ({ code: pref.code, domain: "acting" as const, weight: pref.weight })),
-      ...form.crewPreferences
-        .filter((pref) => pref.enabled && pref.weight > 0)
-        .map((pref) => ({ code: pref.code, domain: "crew" as const, weight: pref.weight })),
+    const includeActing = form.focus === "acting" || form.focus === "both";
+    const includeCrew = form.focus === "tech" || form.focus === "both";
+    const preferences: { code: string; domain: "acting" | "crew"; weight: number }[] = [
+      ...(includeActing
+        ? form.actingPreferences
+            .filter((pref) => pref.enabled && pref.weight > 0)
+            .map((pref) => ({ code: pref.code, domain: "acting" as const, weight: pref.weight }))
+        : []),
+      ...(includeCrew
+        ? form.crewPreferences
+            .filter((pref) => pref.enabled && pref.weight > 0)
+            .map((pref) => ({ code: pref.code, domain: "crew" as const, weight: pref.weight }))
+        : []),
     ];
     if (!preferences.length) {
       setError("Bitte markiere, wo du dich einbringen möchtest.");
@@ -1764,7 +1782,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 </div>
                 <p className="text-xs text-muted-foreground">{focusDescriptions[form.focus]}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {(["acting", "crew"] as const).map((domain) => {
+                  {focusDomainMap[form.focus].map((domain) => {
                     const entries = preferenceSummary[domain];
                     const stats = preferenceStats[domain];
                     return (
