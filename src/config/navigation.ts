@@ -18,7 +18,7 @@ export const primaryNavigation: NavigationItem[] = [
   {
     label: "Unsere Schulkatze",
     href: "/unsere-schulkatze",
-    description: "Lerne Minna kennen – Pausenbegleiterin und Herz unseres Campus.",
+    description: "Lerne Minna kennen – Pausenbegleiterin und Herz unserer Schule.",
   },
   {
     label: "Chronik",
