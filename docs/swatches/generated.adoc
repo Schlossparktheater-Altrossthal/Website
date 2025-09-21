@@ -1,5 +1,5 @@
-image::docs/swatches/primary-500.svg[width=12,height=12] primary-500 (#6D4BFF/#4227C7)
-image::docs/swatches/primary-300.svg[width=12,height=12] primary-300 (#BDAEFF/#6D4BFF)
+image::docs/swatches/primary-500.svg[width=12,height=12] primary-500 (#F7A046/#C77817)
+image::docs/swatches/primary-300.svg[width=12,height=12] primary-300 (#FFD29C/#F7A046)
 image::docs/swatches/secondary-500.svg[width=12,height=12] secondary-500 (#F7A046/#C77817)
 image::docs/swatches/secondary-200.svg[width=12,height=12] secondary-200 (#FCE3C1/#F7A046)
 image::docs/swatches/accent-500.svg[width=12,height=12] accent-500 (#2ED3C6/#0F9487)

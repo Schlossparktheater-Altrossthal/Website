@@ -1,6 +1,6 @@
 {
-  "primary-500": { "fill": "#6D4BFF", "stroke": "#4227C7" },
-  "primary-300": { "fill": "#BDAEFF", "stroke": "#6D4BFF" },
+  "primary-500": { "fill": "#F7A046", "stroke": "#C77817" },
+  "primary-300": { "fill": "#FFD29C", "stroke": "#F7A046" },
   "secondary-500": { "fill": "#F7A046", "stroke": "#C77817" },
   "secondary-200": { "fill": "#FCE3C1", "stroke": "#F7A046" },
   "accent-500": { "fill": "#2ED3C6", "stroke": "#0F9487" },
