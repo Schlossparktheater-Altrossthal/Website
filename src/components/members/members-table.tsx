@@ -1,5 +1,8 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Eye } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -72,6 +75,7 @@ export function MembersTable({
         {filteredRows.map((u) => {
           const sorted = sortRoles(u.roles);
           const displayName = getDisplayName(u);
+          const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
           return (
             <div key={u.id} className="rounded-md border bg-card p-3">
               <div className="flex items-start justify-between">
@@ -100,7 +104,18 @@ export function MembersTable({
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="secondary"
+                      className="gap-1.5"
+                    >
+                      <Link href={profileHref} title={`Profil von ${displayName} ansehen`}>
+                        <Eye className="h-4 w-4" aria-hidden />
+                        Profil
+                      </Link>
+                    </Button>
                     <Button type="button" size="sm" variant="ghost" onClick={() => setOpenFor(u.id)}>
                       Bearbeiten
                     </Button>
@@ -130,6 +145,7 @@ export function MembersTable({
           {filteredRows.map((u) => {
             const sorted = sortRoles(u.roles);
             const displayName = getDisplayName(u);
+            const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
             return (
               <tr key={u.id} className="border-b hover:bg-accent/10">
                 <td className="px-3 py-2 whitespace-nowrap">
@@ -173,7 +189,18 @@ export function MembersTable({
                   )}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="secondary"
+                      className="gap-1.5"
+                    >
+                      <Link href={profileHref} title={`Profil von ${displayName} ansehen`}>
+                        <Eye className="h-4 w-4" aria-hidden />
+                        Profil
+                      </Link>
+                    </Button>
                     <Button type="button" size="sm" variant="ghost" onClick={() => setOpenFor(u.id)}>
                       Bearbeiten
                     </Button>
