@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+import { getUserDisplayName } from "@/lib/names";
+import {
+  createPhotoConsentBoardNotification,
+  dispatchPhotoConsentBoardNotification,
+} from "@/lib/photo-consent-notifications";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -111,6 +116,10 @@ export async function GET() {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      firstName: true,
+      lastName: true,
+      name: true,
+      email: true,
       dateOfBirth: true,
       photoConsent: {
         select: {
@@ -178,6 +187,10 @@ export async function POST(request: NextRequest) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      firstName: true,
+      lastName: true,
+      name: true,
+      email: true,
       dateOfBirth: true,
       photoConsent: {
         select: {
@@ -242,37 +255,77 @@ export async function POST(request: NextRequest) {
       }
     : {};
 
-  const consent = await prisma.photoConsent.upsert({
-    where: { userId },
-    create: {
-      userId,
-      status: "pending",
-      consentGiven: true,
-      approvedAt: null,
-      approvedById: null,
-      rejectionReason: null,
-      ...docData,
+  const actorDisplayName = getUserDisplayName(
+    {
+      firstName: session.user?.firstName ?? null,
+      lastName: session.user?.lastName ?? null,
+      name: session.user?.name ?? null,
+      email: session.user?.email ?? null,
     },
-    update: {
-      status: "pending",
-      consentGiven: true,
-      approvedAt: null,
-      approvedById: null,
-      rejectionReason: null,
-      ...(documentBuffer ? docData : {}),
+    "Unbekanntes Mitglied",
+  );
+
+  const subjectDisplayName = getUserDisplayName(
+    {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      name: user.name,
+      email: user.email,
     },
-    select: {
-      id: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-      approvedAt: true,
-      rejectionReason: true,
-      documentUploadedAt: true,
-      documentName: true,
-      approvedBy: { select: { name: true } },
-    },
+    "Unbekanntes Mitglied",
+  );
+
+  const { consent, notification } = await prisma.$transaction(async (tx) => {
+    const consent = await tx.photoConsent.upsert({
+      where: { userId },
+      create: {
+        userId,
+        status: "pending",
+        consentGiven: true,
+        approvedAt: null,
+        approvedById: null,
+        rejectionReason: null,
+        ...docData,
+      },
+      update: {
+        status: "pending",
+        consentGiven: true,
+        approvedAt: null,
+        approvedById: null,
+        rejectionReason: null,
+        ...(documentBuffer ? docData : {}),
+      },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        approvedAt: true,
+        rejectionReason: true,
+        documentUploadedAt: true,
+        documentName: true,
+        approvedBy: { select: { name: true } },
+      },
+    });
+
+    const notification = await createPhotoConsentBoardNotification(tx, {
+      consentId: consent.id,
+      status: consent.status,
+      hasDocument: Boolean(consent.documentUploadedAt),
+      subjectUserId: userId,
+      subjectName: subjectDisplayName,
+      changeType: "submitted",
+      actorUserId: session.user?.id ?? null,
+      actorName: actorDisplayName,
+      rejectionReason: consent.rejectionReason ?? null,
+    });
+
+    return { consent, notification };
   });
+
+  if (notification) {
+    await dispatchPhotoConsentBoardNotification(notification);
+  }
 
   const summary = buildSummary({
     dateOfBirth: user.dateOfBirth,

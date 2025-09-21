@@ -4,7 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import type { PhotoConsentAdminEntry } from "@/types/photo-consent";
-import { combineNameParts } from "@/lib/names";
+import { combineNameParts, getUserDisplayName } from "@/lib/names";
+import {
+  createPhotoConsentBoardNotification,
+  dispatchPhotoConsentBoardNotification,
+} from "@/lib/photo-consent-notifications";
 
 type ConsentWithUser = {
   id: string;
@@ -163,32 +167,72 @@ export async function PATCH(request: NextRequest) {
       updateData.rejectionReason = null;
     }
 
-    const updated = await prisma.photoConsent.update({
-      where: { id },
-      data: updateData,
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            name: true,
-            email: true,
-            dateOfBirth: true,
-          },
-        },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            name: true,
-          },
-        },
+    const actorDisplayName = getUserDisplayName(
+      {
+        firstName: session.user?.firstName ?? null,
+        lastName: session.user?.lastName ?? null,
+        name: session.user?.name ?? null,
+        email: session.user?.email ?? null,
       },
+      "Unbekanntes Mitglied",
+    );
+
+    const { entry, notification } = await prisma.$transaction(async (tx) => {
+      const updated = await tx.photoConsent.update({
+        where: { id },
+        data: updateData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              name: true,
+              email: true,
+              dateOfBirth: true,
+            },
+          },
+          approvedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      const entry = mapConsent(updated as ConsentWithUser);
+      const subjectDisplayName = getUserDisplayName(
+        {
+          firstName: updated.user.firstName,
+          lastName: updated.user.lastName,
+          name: updated.user.name,
+          email: updated.user.email,
+        },
+        "Unbekanntes Mitglied",
+      );
+
+      const notification = await createPhotoConsentBoardNotification(tx, {
+        consentId: updated.id,
+        status: updated.status,
+        hasDocument: Boolean(updated.documentUploadedAt),
+        subjectUserId: updated.userId,
+        subjectName: subjectDisplayName,
+        changeType: "status-changed",
+        actorUserId: session.user?.id ?? null,
+        actorName: actorDisplayName,
+        rejectionReason: updated.rejectionReason ?? null,
+      });
+
+      return { entry, notification };
     });
 
-    const entry = mapConsent(updated as ConsentWithUser);
+    if (notification) {
+      await dispatchPhotoConsentBoardNotification(notification);
+    }
+
     return NextResponse.json({ ok: true, entry });
   } catch (error: unknown) {
     if (typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "P2025") {
