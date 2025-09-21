@@ -30,7 +30,13 @@ import {
   Bell,
   CheckCircle2,
   Sparkles,
+  UserRound,
+  CalendarCheck,
+  CalendarCog,
+  UsersRound,
+  ShieldCheck,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RecentActivity {
@@ -125,6 +131,44 @@ const DIETARY_LEVEL_LABELS: Record<string, string> = {
   SEVERE: "Stark",
   LETHAL: "Kritisch",
 };
+
+type QuickActionLink = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  roles?: string[];
+};
+
+const QUICK_ACTION_LINKS = [
+  {
+    href: "/mitglieder/profil",
+    label: "Profil öffnen",
+    icon: UserRound,
+  },
+  {
+    href: "/mitglieder/meine-proben",
+    label: "Meine Proben",
+    icon: CalendarCheck,
+  },
+  {
+    href: "/mitglieder/probenplanung",
+    label: "Probenplanung",
+    icon: CalendarCog,
+    roles: ["board", "admin", "tech", "owner"],
+  },
+  {
+    href: "/mitglieder/mitgliederverwaltung",
+    label: "Mitgliederverwaltung",
+    icon: UsersRound,
+    roles: ["admin", "owner"],
+  },
+  {
+    href: "/mitglieder/rechte",
+    label: "Rechteverwaltung",
+    icon: ShieldCheck,
+    roles: ["admin", "owner"],
+  },
+] satisfies QuickActionLink[];
 
 type OverviewStatsPayload = {
   totalMembers?: unknown;
@@ -768,18 +812,21 @@ export function MembersDashboard() {
                 {(() => {
                   const userRoles = (session?.user?.roles as string[] | undefined) ?? (session?.user?.role ? [session.user.role] : []);
                   const roleSet = new Set(userRoles);
-                  const links = [
-                    { href: "/mitglieder/profil", label: "Profil öffnen" },
-                    { href: "/mitglieder/meine-proben", label: "Meine Proben" },
-                    { href: "/mitglieder/probenplanung", label: "Probenplanung", roles: ["board", "admin", "tech", "owner"] },
-                    { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", roles: ["admin", "owner"] },
-                    { href: "/mitglieder/rechte", label: "Rechteverwaltung", roles: ["admin", "owner"] },
-                  ].filter((l: { href: string; label: string; roles?: string[] }) => !l.roles || l.roles.some((r) => roleSet.has(r)));
-                  return links.map((l) => (
-                    <Button asChild key={l.href} variant="outline" size="sm">
-                      <Link href={l.href}>{l.label}</Link>
-                    </Button>
-                  ));
+                  const links = QUICK_ACTION_LINKS.filter(
+                    (link) => !link.roles || link.roles.some((role) => roleSet.has(role))
+                  );
+
+                  return links.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <Button asChild key={link.href} variant="outline" size="sm">
+                        <Link href={link.href} title={link.label}>
+                          <Icon aria-hidden className="h-4 w-4" />
+                          <span className="sr-only sm:not-sr-only">{link.label}</span>
+                        </Link>
+                      </Button>
+                    );
+                  });
                 })()}
               </div>
             </CardContent>

@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Heading, Text } from "@/components/ui/typography";
 import { HeroRotator } from "@/components/hero-rotator";
-import { useEffect, useState } from "react";
+import { BookOpen, Sparkles } from "lucide-react";
 
 export function Hero({ images }: { images: string[] }) {
   const [scrollY, setScrollY] = useState(0);
@@ -88,7 +90,10 @@ export function Hero({ images }: { images: string[] }) {
                   size="xl"
                   className="px-8 py-5 text-base font-semibold tracking-wide md:px-10 md:text-lg"
                 >
-                  <Link href="/mystery">Das Geheimnis entdecken</Link>
+                  <Link href="/mystery" title="Geheimnis entdecken">
+                    <Sparkles aria-hidden className="h-5 w-5" />
+                    <span>Das Geheimnis entdecken</span>
+                  </Link>
                 </Button>
                 <Button
                   variant="outline"
@@ -96,7 +101,10 @@ export function Hero({ images }: { images: string[] }) {
                   size="xl"
                   className="border-white/50 bg-white/10 px-8 py-5 text-base font-semibold text-white shadow-lg backdrop-blur md:px-10 md:text-lg"
                 >
-                  <Link href="/chronik">Chronik</Link>
+                  <Link href="/chronik" title="Chronik öffnen">
+                    <BookOpen aria-hidden className="h-5 w-5" />
+                    <span>Chronik</span>
+                  </Link>
                 </Button>
               </div>
             </div>
