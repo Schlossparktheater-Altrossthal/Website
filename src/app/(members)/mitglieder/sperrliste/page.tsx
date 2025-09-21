@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/permissions";
 import { addDays, format } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { BlockCalendar } from "./block-calendar";
+import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 
 type BlockedDayDTO = {
   id: string;
@@ -29,6 +30,8 @@ export default async function SperrlistePage() {
     orderBy: { date: "asc" },
   });
 
+  const holidayRanges = await getSaxonySchoolHolidayRanges();
+
   const initialBlockedDays: BlockedDayDTO[] = blockedDays.map((entry) => ({
     id: entry.id,
     date: format(entry.date, "yyyy-MM-dd"),
@@ -48,7 +51,7 @@ export default async function SperrlistePage() {
         dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">
         Hinweis: Aus Planungsgründen können Sperrtermine erst ab {format(freezeUntil, "EEEE, d. MMMM yyyy", { locale: de })} eingetragen werden.
       </div>
-      <BlockCalendar initialBlockedDays={initialBlockedDays} />
+      <BlockCalendar initialBlockedDays={initialBlockedDays} holidays={holidayRanges} />
     </div>
   );
 }

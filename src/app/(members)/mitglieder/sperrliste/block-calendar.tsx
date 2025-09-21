@@ -8,10 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { addDays, format, startOfMonth } from "date-fns";
+import { addDays, format, parseISO, startOfMonth, isValid } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { toast } from "sonner";
-import { CircleX } from "lucide-react";
+import { CalendarDays, CircleX } from "lucide-react";
 
 import {
   MonthCalendar,
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
+import type { HolidayRange } from "@/types/holidays";
 
 const DATE_FORMAT = "yyyy-MM-dd";
 
@@ -31,13 +32,20 @@ export type BlockedDay = {
   reason: string | null;
 };
 
+type HolidayDayInfo = HolidayRange & {
+  date: string;
+  rangeStart: boolean;
+  rangeEnd: boolean;
+};
+
 interface BlockCalendarProps {
   initialBlockedDays: BlockedDay[];
+  holidays?: HolidayRange[];
 }
 
 type SelectionIntent = "select" | "deselect";
 
-export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
+export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [blockedDays, setBlockedDays] = useState<BlockedDay[]>(() =>
     [...initialBlockedDays].sort((a, b) => a.date.localeCompare(b.date))
@@ -69,6 +77,47 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     }
     return map;
   }, [blockedDays]);
+
+  const holidaysByDate = useMemo(() => {
+    const map = new Map<string, HolidayDayInfo[]>();
+    if (!holidays.length) {
+      return map;
+    }
+
+    for (const holiday of holidays) {
+      const start = parseISO(`${holiday.startDate}`);
+      const parsedEnd = parseISO(`${holiday.endDate}`);
+      if (!isValid(start)) {
+        continue;
+      }
+      const inclusiveEnd =
+        isValid(parsedEnd) && parsedEnd.getTime() >= start.getTime()
+          ? parsedEnd
+          : start;
+
+      for (
+        let cursor = start;
+        cursor.getTime() <= inclusiveEnd.getTime();
+        cursor = addDays(cursor, 1)
+      ) {
+        const key = format(cursor, DATE_FORMAT);
+        const info: HolidayDayInfo = {
+          ...holiday,
+          date: key,
+          rangeStart: key === holiday.startDate,
+          rangeEnd: key === holiday.endDate,
+        };
+        const existing = map.get(key);
+        if (existing) {
+          existing.push(info);
+        } else {
+          map.set(key, [info]);
+        }
+      }
+    }
+
+    return map;
+  }, [holidays]);
 
   const markRecent = useCallback((keys: string[], type: "added" | "removed") => {
     if (!keys.length) return;
@@ -120,9 +169,56 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
   // Planungsfenster: Sperrtermine erst ab einer Woche im Voraus
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayKey = format(startOfToday, DATE_FORMAT);
   const freezeUntil = addDays(startOfToday, 7);
   const freezeUntilKey = format(freezeUntil, DATE_FORMAT);
   const isWithinFreeze = useCallback((key: string) => key < freezeUntilKey, [freezeUntilKey]);
+
+  const upcomingHolidays = useMemo(() => {
+    if (!holidays.length) {
+      return [] as HolidayRange[];
+    }
+
+    const sorted = [...holidays].sort((a, b) =>
+      a.startDate.localeCompare(b.startDate),
+    );
+    const upcoming = sorted.filter((holiday) => holiday.endDate >= todayKey);
+
+    if (upcoming.length > 0) {
+      return upcoming.slice(0, 8);
+    }
+
+    const startIndex = Math.max(sorted.length - 4, 0);
+    return sorted.slice(startIndex);
+  }, [holidays, todayKey]);
+
+  const formatHolidayRangeLabel = useCallback((startDate: string, endDate: string) => {
+    const start = parseISO(`${startDate}`);
+    const end = parseISO(`${endDate}`);
+
+    if (!isValid(start)) {
+      return endDate && startDate !== endDate ? `${startDate} – ${endDate}` : startDate;
+    }
+
+    if (!isValid(end)) {
+      return format(start, "d. MMMM yyyy", { locale: de });
+    }
+
+    if (startDate === endDate) {
+      return format(start, "d. MMMM yyyy", { locale: de });
+    }
+
+    const sameYear = start.getFullYear() === end.getFullYear();
+    if (sameYear) {
+      const sameMonth = start.getMonth() === end.getMonth();
+      if (sameMonth) {
+        return `${format(start, "d.", { locale: de })} – ${format(end, "d. MMMM yyyy", { locale: de })}`;
+      }
+      return `${format(start, "d. MMM", { locale: de })} – ${format(end, "d. MMM yyyy", { locale: de })}`;
+    }
+
+    return `${format(start, "d. MMM yyyy", { locale: de })} – ${format(end, "d. MMM yyyy", { locale: de })}`;
+  }, []);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -269,6 +365,51 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
       const isSelected = selectedDayKeys.has(day.key);
       const wasAdded = recentlyAdded.has(day.key);
       const wasRemoved = recentlyRemoved.has(day.key);
+      const holidayEntries = holidaysByDate.get(day.key) ?? [];
+      const isHoliday = holidayEntries.length > 0;
+
+      const ariaLabelParts = [
+        format(day.date, "EEEE, d. MMMM yyyy", { locale: de }),
+        entry
+          ? `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
+          : ", frei",
+      ];
+
+      if (isHoliday) {
+        const descriptions = holidayEntries.map((holiday) => {
+          if (holiday.rangeStart && holiday.rangeEnd) {
+            return holiday.title;
+          }
+          if (holiday.rangeStart) {
+            return `${holiday.title} (Beginn)`;
+          }
+          if (holiday.rangeEnd) {
+            return `${holiday.title} (Ende)`;
+          }
+          return holiday.title;
+        });
+        ariaLabelParts.push(`, Schulferien: ${descriptions.join(", ")}`);
+      }
+
+      const holidayContent = isHoliday ? (
+        <div className="flex flex-wrap gap-1 text-[10px] font-medium sm:text-[11px]">
+          {holidayEntries.map((holiday) => (
+            <span
+              key={`${holiday.id}-${holiday.date}`}
+              className="inline-flex items-center rounded-md bg-sky-100 px-2 py-0.5 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100"
+              title={
+                holiday.rangeStart && !holiday.rangeEnd
+                  ? `${holiday.title} (Beginn)`
+                  : !holiday.rangeStart && holiday.rangeEnd
+                    ? `${holiday.title} (Ende)`
+                    : holiday.title
+              }
+            >
+              {holiday.title}
+            </span>
+          ))}
+        </div>
+      ) : null;
 
       return {
         onClick: () => handleDayClick(day.date, day.key),
@@ -276,6 +417,8 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
         onPointerEnter: (event) => handleDayPointerEnter(event, day.key),
         className: cn(
           entry && "border-destructive/50 bg-destructive/10",
+          !entry && isHoliday &&
+            "border-sky-400/60 bg-sky-50/80 dark:border-sky-500/40 dark:bg-sky-500/10",
           day.isToday && !isSelected && "ring-2 ring-primary/80",
           isSelected && "border-primary ring-2 ring-primary/60",
           "hover:shadow-sm hover:-translate-y-[1px]",
@@ -283,20 +426,21 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
           wasRemoved && "removed-anim"
         ),
         "aria-pressed": selectionMode ? isSelected : undefined,
-        "aria-label": `${format(day.date, "EEEE, d. MMMM yyyy", { locale: de })}${
-          entry
-            ? `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
-            : ", frei"
-        }`,
-        content: entry ? (
-          <span className="mt-auto flex items-center gap-1 text-xs font-semibold text-destructive transition-opacity duration-300">
-            <CircleX className="h-4 w-4" />
-            <span className="truncate" title={entry.reason ?? undefined}>
-              {entry.reason ?? "Gesperrt"}
-            </span>
-          </span>
-        ) : (
-          <span className="mt-auto text-xs text-muted-foreground">Frei</span>
+        "aria-label": ariaLabelParts.join(""),
+        content: (
+          <>
+            {holidayContent}
+            {entry ? (
+              <span className="mt-auto flex items-center gap-1 text-xs font-semibold text-destructive transition-opacity duration-300">
+                <CircleX className="h-4 w-4" />
+                <span className="truncate" title={entry.reason ?? undefined}>
+                  {entry.reason ?? "Gesperrt"}
+                </span>
+              </span>
+            ) : (
+              <span className="mt-auto text-xs text-muted-foreground">Frei</span>
+            )}
+          </>
         ),
       };
     },
@@ -305,6 +449,7 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
       handleDayClick,
       handleDayPointerDown,
       handleDayPointerEnter,
+      holidaysByDate,
       recentlyAdded,
       recentlyRemoved,
       selectedDayKeys,
@@ -482,6 +627,48 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
     </div>
   ) : null;
 
+  const holidayPanel = upcomingHolidays.length ? (
+    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-xs sm:text-sm dark:border-sky-500/40 dark:bg-sky-500/10">
+      <div className="flex items-center gap-2 text-sky-800 dark:text-sky-100">
+        <CalendarDays className="h-4 w-4" aria-hidden />
+        <span className="font-semibold">Schulferien in Sachsen</span>
+      </div>
+      <ul className="space-y-2 text-sky-900/90 dark:text-sky-100/90">
+        {upcomingHolidays.map((holiday) => {
+          const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
+          const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
+
+          return (
+            <li key={holiday.id} className="space-y-1 rounded-md bg-white/60 p-2 shadow-sm ring-1 ring-sky-200/60 dark:bg-slate-950/40 dark:ring-sky-500/40">
+              <div
+                className={cn(
+                  "font-medium",
+                  isActive
+                    ? "text-sky-900 dark:text-sky-50"
+                    : "text-sky-900/90 dark:text-sky-100/90",
+                )}
+              >
+                {holiday.title}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs text-sky-900/80 dark:text-sky-100/80">
+                <span>{rangeLabel}</span>
+                {isActive ? (
+                  <span className="inline-flex items-center rounded-full bg-sky-200/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900 dark:bg-sky-500/30 dark:text-sky-50">
+                    Aktuell
+                  </span>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  ) : holidays.length === 0 ? (
+    <div className="rounded-lg border border-muted/40 bg-muted/30 p-4 text-xs text-muted-foreground">
+      Die Ferienübersicht wird eingeblendet, sobald der abonnierte Kalender Termine liefert.
+    </div>
+  ) : null;
+
   const handleCreate = async () => {
     if (!selectedDateKey) return;
     const trimmed = reason.trim();
@@ -604,7 +791,12 @@ export function BlockCalendar({ initialBlockedDays }: BlockCalendarProps) {
           </Button>
         }
         renderDay={renderCalendarDay}
-        additionalContent={selectionPanel}
+        additionalContent={
+          <>
+            {selectionPanel}
+            {holidayPanel}
+          </>
+        }
       />
 
       <Modal
