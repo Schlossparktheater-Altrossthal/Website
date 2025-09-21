@@ -52,7 +52,7 @@ const highlights: Highlight[] = [
     icon: MoonStar,
     title: "Uralter Bekannter",
     description:
-      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn, zwanzig Jahren durch den Campus.",
+      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn, zwanzig Jahren über das Schulgelände.",
   },
   {
     icon: Heart,
@@ -105,7 +105,7 @@ const careCircle: Supporter[] = [
 ];
 
 const lessons: string[] = [
-  "Tiere, die unseren Campus begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
+  "Tiere, die unsere Schule begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
   "Gemeinsame Rituale schaffen Vertrauen, besonders wenn ein Vierbeiner über so viele Jahre Teil der Gemeinschaft ist.",
   "In Abschiedsmomenten hilft es, Erinnerungen zu teilen und Orte des Gedenkens zu schaffen.",
   "Wer künftig eine Schulkatze willkommen heißt, sollte an Dieters Bedürfnisse denken: Ruhe, Respekt und Zeit.",
@@ -140,7 +140,7 @@ export default function SchulkatzePage() {
             </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
               Dieter Dennis von Altroßthal – von allen nur Dieter genannt – war unsere graug getigerte Schulkatze. Über Generationen hinweg
-              streifte er durch den Campus und wurde zum vertrauten Gesicht des BSZ Altrossthal.
+              streifte er über das Schulgelände und wurde zum vertrauten Gesicht des BSZ Altrossthal.
             </Text>
             <Text tone="muted">
               Niemand wusste genau, seit wann er da war; gefühlt waren es weit über fünfzehn Jahre. Seine stille Präsenz begleitete Unterricht,
@@ -281,7 +281,7 @@ export default function SchulkatzePage() {
             In Erinnerung an Dieter
           </Heading>
           <Text variant="bodyLg" tone="muted" align="center">
-            Dieter hat Generationen von Schüler:innen begleitet und unserem Campus ein unverwechselbares Gefühl von Heimat gegeben.
+            Dieter hat Generationen von Schüler:innen begleitet und unserer Schule ein unverwechselbares Gefühl von Heimat gegeben.
             Seine Geschichte erinnert uns daran, wie wertvoll Fürsorge und Gemeinschaft sind.
           </Text>
           <Text tone="muted" align="center">

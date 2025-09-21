@@ -67,7 +67,7 @@ const signature = [
   },
   {
     icon: Trees,
-    title: "Campus voller Gewerke",
+    title: "Schulgelände voller Gewerke",
     description:
       "Schüler:innen des BSZ Altroßthal bringen Floristik, Holz- und Metallbau ein – so wachsen Bühne, Kostüm und Szenografie Hand in Hand.",
   },
