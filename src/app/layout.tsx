@@ -66,13 +66,19 @@ function getBuildInfo() {
     dateStyle: "short",
     timeStyle: "medium",
   }).format(buildDate);
+  const isoTimestamp = buildDate.toISOString();
 
   const commit = getCommitInfo();
 
   return {
     commit,
     timestamp,
-  } satisfies { commit: CommitInfo | null; timestamp: string };
+    isoTimestamp,
+  } satisfies {
+    commit: CommitInfo | null;
+    timestamp: string;
+    isoTimestamp: string;
+  };
 }
 
 function getCommitInfo(): CommitInfo | null {
