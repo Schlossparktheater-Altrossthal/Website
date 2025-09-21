@@ -10,7 +10,10 @@ const updateSchema = z.object({
   isCorrect: z.boolean(),
 });
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.mystery.tips");
   if (!allowed) {
@@ -20,6 +23,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ error: "Datenbank ist nicht konfiguriert." }, { status: 500 });
   }
+
+  const { id } = await params;
 
   let payload: unknown;
   try {
@@ -36,7 +41,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   const submission = await prisma.mysteryTipSubmission.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { clue: { select: { points: true } }, tip: { select: { count: true } } },
   });
 
