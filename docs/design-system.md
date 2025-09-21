@@ -1,182 +1,107 @@
-# Designsystem und Farben
+# Designsystem & Token-Leitfaden
 
-Diese Markdown-Variante dient der GitHub‑freundlichen Darstellung von Farbswatches (per SVG‑Bilder). Die Haupt‑Analyse liegt in `entwurf-und-analyse.md`. Diese Datei fokussiert auf UI/Color‑Themen, die in Markdown mit Bildern zuverlässig sichtbar sind.
+Dieser Leitfaden bündelt die aktualisierten Design Tokens, Typografie- und Spacing-Regeln sowie die wichtigsten Komponentenrichtlinien des Redesigns. Ergänzende Analysen bleiben in `docs/entwurf-und-analyse.md` dokumentiert.
 
-<details>
-<summary><strong>Inhaltsverzeichnis</strong></summary>
+## Technischer Überblick
 
-- [Designsystem & Bibliotheken](#designsystem--bibliotheken)
-- [Color Map (Status, Attendance, Abteilungen)](#color-map-status-attendance-abteilungen)
-  - [Visuelle Vorschau](#visuelle-vorschau)
-- [Brandfarben & Theme](#brandfarben--theme)
-- [CSS‑Variablen (Beispiel)](#css-variablen-beispiel)
-- [Tailwind‑Anbindung (Optional)](#tailwind-anbindung-optional)
+- **UI-Stack:** Tailwind CSS + shadcn/ui (Buttons, Dialoge, Tabs, Tabellen, Form Controls)
+- **Formulare:** react-hook-form + zod
+- **Icons:** lucide-react
+- **Realtime:** Socket.io Hooks (`@/hooks/useRealtime`)
+- **Design-Tokens:** `src/design-system/tokens.json` ist die Single Source of Truth. Nach Anpassungen immer `pnpm design-system:tokens` ausführen – dadurch wird `src/app/design-tokens.css` neu erzeugt und die CSS-Custom-Properties aktualisiert.
 
-</details>
+## Farbpalette
 
-## Designsystem & Bibliotheken
+Die Farbwerte liegen in OKLCH und sind für helle wie dunkle Modi gepflegt. Die Hex-Werte dienen zur schnellen visuellen Referenz (Swatches unter `docs/swatches`).
 
-- UI‑Stack: Tailwind CSS + shadcn/ui (Buttons, Dialog, Drawer, Tabs, Table, Toast, Dropdown, Badge, Tooltip)
-- Formulare: react-hook-form + zod
-- Datum/Zeit: date-fns (de‑Locale)
-- Drag & Drop: @dnd-kit/core
-- Icons: lucide-react
-- Daten-Fetching: Server Actions; klientenseitig SWR für einfache GETs
-- Diagramme: Recharts; bei Spezialfällen visx
-- Kalender: FullCalendar React (Alternative: react-big-calendar)
-- PDF/Print: react-to-print; optional serverseitig puppeteer
+| Rolle | Token | Vorschau |
+| --- | --- | --- |
+| Primär-CTA, Fokus | `--primary` / `--primary-foreground` | <img src="swatches/primary-500.svg" width="14" height="14" /> |
+| Primär-Tint | `primary` Soft (`Badge`, Sekundäraktionen) | <img src="swatches/primary-300.svg" width="14" height="14" /> |
+| Sekundär-CTA | `--secondary` / `--secondary-foreground` | <img src="swatches/secondary-500.svg" width="14" height="14" /> |
+| Sekundär-Tint | `secondary` Soft-Flächen, Highlights | <img src="swatches/secondary-200.svg" width="14" height="14" /> |
+| Akzent/Interaktion | `--accent` / `--accent-foreground` | <img src="swatches/accent-500.svg" width="14" height="14" /> |
+| Akzent-Tint | `accent` Soft States, Pills | <img src="swatches/accent-200.svg" width="14" height="14" /> |
+| Erfolg | `--success` / `--success-foreground` | <img src="swatches/success-500.svg" width="14" height="14" /> |
+| Warnung | `--warning` / `--warning-foreground` | <img src="swatches/warning-500.svg" width="14" height="14" /> |
+| Info | `--info` / `--info-foreground` | <img src="swatches/info-500.svg" width="14" height="14" /> |
+| Destruktiv | `--destructive` / `--destructive-foreground` | <img src="swatches/destructive-500.svg" width="14" height="14" /> |
+| Hintergrund dunkel | `--background` (Dark) | <img src="swatches/neutral-900.svg" width="14" height="14" /> |
+| Sekundärflächen dunkel | `--muted` (Dark) | <img src="swatches/neutral-700.svg" width="14" height="14" /> |
+| Hintergrund hell | `--background` (Light) | <img src="swatches/neutral-100.svg" width="14" height="14" /> |
+| Rahmen/Flächen hell | `--border` & `--muted` (Light) | <img src="swatches/neutral-200.svg" width="14" height="14" /> |
 
-## Design Tokens
+> **Kontrastprüfung:** Alle Primärfarben erfüllen ≥ 4.5:1 auf ihren Gegenstücken. Die `ring`- und `focus-visible`-Farben greifen auf `--primary` zurück.
 
-- `src/design-system/tokens.json` fungiert als Single Source of Truth für Farben, Radii und weitere UI-Variablen.
-- Das Skript `pnpm design-system:tokens` generiert daraus die CSS-Variablen in `src/app/design-tokens.css`. Änderungen immer über die JSON-Datei pflegen.
-- In TypeScript lassen sich die Tokens über `@/design-system` importieren (`designTokens`, `getThemeTokens`, `getSemanticToken`).
-- Tailwind greift weiterhin über die Custom Properties (`hsl(var(--...))`) auf diese Werte zu.
+## Typografie-Hierarchie
 
-## Color Map (Status, Attendance, Abteilungen)
+Die Typografie wird über Utility-Klassen (`.text-*`) und neue UI-Komponenten gesteuert. Die Basisschrift ist `var(--font-sans)`; Headings nutzen `var(--font-heading)`.
 
-Hinweise
-- Farbcodierung immer mit zweitem Merkmal kombinieren (Icon, Badge‑Label), Kontrast AA beachten.
-- Dark‑Mode: gleiche Hues, aber angepasste Tints/Foregrounds.
+| Ebene | Utility | Verwendung | Beispiel |
+| --- | --- | --- | --- |
+| Display | `.text-display` | Hero Headline | `<Heading level="display">` |
+| H1 | `.text-h1` | Seitentitel | `<Heading level="h1">` |
+| H2 | `.text-h2` | Abschnittstitel | `<Heading level="h2">` |
+| H3 | `.text-h3` | Untertitel, Feature Cards | `<Heading level="h3">` |
+| H4 | `.text-h4` | Kleinere Überschriften | `<Heading level="h4">` |
+| Lead | `.text-lead` | Hero-Text, Einleitungen | `<Text variant="lead">` |
+| Body L | `.text-body-lg` | Größerer Fließtext | `<Text variant="bodyLg">` |
+| Body | `.text-body` | Standard-Fließtext | `<Text variant="body">` |
+| Body S | `.text-body-sm` | Meta-Angaben | `<Text variant="small">` |
+| Caption | `.text-caption` | Labels, Legenden | `<Text variant="caption">` |
+| Eyebrow | `.text-eyebrow` | Kicker, Kategorie | `<Text variant="eyebrow">` |
 
-### Visuelle Vorschau
+**Komponenten:**
+- `Heading` (in `@/components/ui/typography`) kapselt Level, Tonalität (`tone`) und Ausrichtung.
+- `Text` deckt Body-, Lead- und Caption-Typen ab und erlaubt `tone`, `align`, `weight` sowie das Rendern via `asChild`.
 
-Rehearsal Lifecycle
+## Spacing & Grid Tokens
 
-| Status | Farbe | Swatch |
-|---|---|---|
-| draft | slate-300/slate-400 | <img src="swatches/slate-300.svg" width="12" height="12" /> |
-| proposed | sky-200/sky-400 | <img src="swatches/sky-200.svg" width="12" height="12" /> |
-| confirmed/final | emerald-200/emerald-500 | <img src="swatches/emerald-200.svg" width="12" height="12" /> |
-| completed | teal-200/teal-500 | <img src="swatches/teal-200.svg" width="12" height="12" /> |
-| cancelled | rose-200/rose-500 | <img src="swatches/rose-200.svg" width="12" height="12" /> |
+Die Layout-Variablen folgen einem 8pt-System, ergänzt um halbe Schritte:
 
-Attendance
+- `--space-3xs`: 0.25rem (4px)
+- `--space-2xs`: 0.5rem (8px)
+- `--space-xs`: 0.75rem (12px)
+- `--space-sm`: 1rem (16px)
+- `--space-md`: 1.5rem (24px)
+- `--space-lg`: 2rem (32px)
+- `--space-xl`: 3rem (48px)
+- `--space-2xl`: 4rem (64px)
+- `--space-3xl`: 6rem (96px)
 
-| Status | Farbe | Swatch |
-|---|---|---|
-| planned | zinc-200 | <img src="swatches/zinc-200.svg" width="12" height="12" /> |
-| yes | emerald-500 | <img src="swatches/emerald-500.svg" width="12" height="12" /> |
-| maybe | amber-500 | <img src="swatches/amber-500.svg" width="12" height="12" /> |
-| no | rose-500 | <img src="swatches/rose-500.svg" width="12" height="12" /> |
+Weitere Layout-Konstanten:
+- `--layout-max-width`: 90rem (1440px Bühne)
+- `--layout-gutter`: responsive Außenabstände (mobile 1rem → Desktop 3–4rem)
+- `--header-height`: 4rem (mobile) / 5rem (≥768px)
 
-Abteilungen
+## Komponentenrichtlinien
 
-| Bereich | Farbe | Swatch |
-|---|---|---|
-| costume | fuchsia-500 | <img src="swatches/fuchsia-500.svg" width="12" height="12" /> |
-| prop | amber-600 | <img src="swatches/amber-600.svg" width="12" height="12" /> |
-| tech | cyan-600 | <img src="swatches/cyan-600.svg" width="12" height="12" /> |
-| light | yellow-500 | <img src="swatches/yellow-500.svg" width="12" height="12" /> |
-| sound | indigo-500 | <img src="swatches/indigo-500.svg" width="12" height="12" /> |
-| fx | purple-600 | <img src="swatches/purple-600.svg" width="12" height="12" /> |
+### Buttons (`@/components/ui/button`)
+- **Varianten:** `primary` (alias `default`), `secondary`, `accent`, `outline`, `ghost`, `subtle`, `link`, `destructive`, `success`, `info`.
+- **States:** Hover reduziert Deckkraft bzw. hebt Konturen hervor; `focus-visible` nutzt `ring` + Offset, `disabled` setzt `opacity-60` und deaktiviert Pointer Events.
+- **Sizes:** `xs`–`xl` plus `icon`, alle auf das 8pt-Raster abgestimmt.
 
-Exhaustion Heatmap (Beispiel‑Skala)
+### TextLink (`@/components/ui/text-link`)
+- Variants: `default` (primär), `subtle`, `muted`, `ghost`, `accent`, `button`.
+- Unterstützt `weight` (`medium`/`semibold`), `asChild` (Integration mit `next/link`) und `disabled` (setzt `aria-disabled`, entfernt Tab-Fokus).
+- Fokusring via `ring`-Token, Underline-Offset standardisiert.
 
-| Einsätze Fr–So | Swatch |
-|---|---|
-| 0–1 | <img src="swatches/green-200.svg" width="12" height="12" /> <img src="swatches/green-400.svg" width="12" height="12" /> |
-| 2 | <img src="swatches/amber-300.svg" width="12" height="12" /> <img src="swatches/amber-500.svg" width="12" height="12" /> |
-| ≥3 | <img src="swatches/rose-400.svg" width="12" height="12" /> <img src="swatches/rose-600.svg" width="12" height="12" /> |
+### Badges (`@/components/ui/badge`)
+- Neue tönungsbasierte Varianten (`default`, `secondary`, `accent`, `muted`, `success`, `warning`, `info`, `destructive`, `outline`, `ghost`) + Größen `sm`, `md`, `lg`.
+- Standardmäßig pill-förmig (`rounded-full`) mit getönten Hintergründen; Outline-Variante erzeugt Hover-Hervorhebung.
+- SVG-Icons skalieren automatisch (`[&>svg]:size-3`).
 
-## Brandfarben & Theme
+## Utility-Übersicht
 
-Vorschlag (anpassbar)
-- primary: Violet (Bühne/Spotlight)
-- secondary: Amber (Warm/Glanzeffekt)
-- accent: Teal (Interaktionen/Highlights)
-- neutral: Slate (Text/Flächen)
-- success/warn/danger/info: Emerald/Amber/Rose/Sky
+Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch direkt in Tailwind-Klassen genutzt werden:
 
-Light Theme
+- `.text-display`, `.text-h1` … `.text-eyebrow`
+- `.text-body`, `.text-body-lg`, `.text-body-sm`, `.text-caption`
+- `--font-body`, `--font-heading`, `--font-display` für zukünftige Schriftwechsel
 
-| Token | Hex | Swatch |
-|---|---|---|
-| primary | #7C3AED | <img src="swatches/purple-600.svg" width="12" height="12" /> |
-| secondary | #F59E0B | <img src="swatches/amber-500.svg" width="12" height="12" /> |
-| accent | #14B8A6 | <img src="swatches/teal-200.svg" width="12" height="12" /> |
-| background | #FFFFFF | <img src="swatches/slate-300.svg" width="12" height="12" /> |
-| foreground | #0F172A | <img src="swatches/indigo-500.svg" width="12" height="12" /> |
-| muted | #E5E7EB | <img src="swatches/zinc-200.svg" width="12" height="12" /> |
-| border | #E5E7EB | <img src="swatches/zinc-200.svg" width="12" height="12" /> |
-| ring | #7C3AED | <img src="swatches/purple-600.svg" width="12" height="12" /> |
-| success | #10B981 | <img src="swatches/emerald-500.svg" width="12" height="12" /> |
-| warning | #F59E0B | <img src="swatches/amber-500.svg" width="12" height="12" /> |
-| danger | #EF4444 | <img src="swatches/rose-500.svg" width="12" height="12" /> |
-| info | #38BDF8 | <img src="swatches/sky-200.svg" width="12" height="12" /> |
+## Pflege & Workflow
 
-Dark Theme
-
-| Token | Hex | Swatch |
-|---|---|---|
-| primary | #8B5CF6 | <img src="swatches/purple-600.svg" width="12" height="12" /> |
-| secondary | #FBBF24 | <img src="swatches/amber-500.svg" width="12" height="12" /> |
-| accent | #2DD4BF | <img src="swatches/teal-200.svg" width="12" height="12" /> |
-| background | #0B0F16 | <img src="swatches/indigo-500.svg" width="12" height="12" /> |
-| foreground | #E2E8F0 | <img src="swatches/slate-300.svg" width="12" height="12" /> |
-| muted | #1F2937 | <img src="swatches/indigo-500.svg" width="12" height="12" /> |
-| border | #334155 | <img src="swatches/indigo-500.svg" width="12" height="12" /> |
-| ring | #8B5CF6 | <img src="swatches/purple-600.svg" width="12" height="12" /> |
-| success | #10B981 | <img src="swatches/emerald-500.svg" width="12" height="12" /> |
-| warning | #F59E0B | <img src="swatches/amber-500.svg" width="12" height="12" /> |
-| danger | #F87171 | <img src="swatches/rose-400.svg" width="12" height="12" /> |
-| info | #38BDF8 | <img src="swatches/sky-200.svg" width="12" height="12" /> |
-
-## CSS‑Variablen (Beispiel)
-
-```css
-:root {
-  --color-primary: #7C3AED;
-  --color-secondary: #F59E0B;
-  --color-accent: #14B8A6;
-  --color-background: #FFFFFF;
-  --color-foreground: #0F172A;
-  --color-muted: #E5E7EB;
-  --color-border: #E5E7EB;
-  --color-ring: #7C3AED;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-danger: #EF4444;
-  --color-info: #38BDF8;
-}
-.dark {
-  --color-primary: #8B5CF6;
-  --color-secondary: #FBBF24;
-  --color-accent: #2DD4BF;
-  --color-background: #0B0F16;
-  --color-foreground: #E2E8F0;
-  --color-muted: #1F2937;
-  --color-border: #334155;
-  --color-ring: #8B5CF6;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-danger: #F87171;
-  --color-info: #38BDF8;
-}
-```
-
-## Tailwind‑Anbindung (Optional)
-
-```js
-// tailwind.config.ts (Ausschnitt)
-export default {
-  theme: {
-    extend: {
-      colors: {
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        accent: 'var(--color-accent)',
-        background: 'var(--color-background)',
-        foreground: 'var(--color-foreground)',
-        muted: 'var(--color-muted)',
-        border: 'var(--color-border)',
-        ring: 'var(--color-ring)',
-        success: 'var(--color-success)',
-        warning: 'var(--color-warning)',
-        danger: 'var(--color-danger)',
-        info: 'var(--color-info)'
-      }
-    }
-  }
-}
-```
+1. Tokens bearbeiten (`src/design-system/tokens.json`), anschließend `pnpm design-system:tokens` ausführen.
+2. Farbänderungen in `docs/swatches/palette.sample.json` pflegen und per `pnpm swatches:gen` aktualisieren.
+3. Typografie/Spacing-Anpassungen in `src/app/globals.css` dokumentieren und in diesem Leitfaden vermerken.
+4. Für UI-Komponenten Beispiele in Storybook/Playground ergänzen (falls vorhanden) und die Varianten in Commit-Messages erwähnen.
