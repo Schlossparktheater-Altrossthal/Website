@@ -15,6 +15,7 @@ const groupedConfig: Group[] = [
     items: [
       { href: "/mitglieder", label: "Dashboard", permissionKey: "mitglieder.dashboard" },
       { href: "/mitglieder/profil", label: "Profil", permissionKey: "mitglieder.profil" },
+      { href: "/mitglieder/sperrliste", label: "Sperrliste", permissionKey: "mitglieder.sperrliste" },
       { href: "/mitglieder/issues", label: "Feedback & Support", permissionKey: "mitglieder.issues" },
     ],
   },
@@ -23,7 +24,6 @@ const groupedConfig: Group[] = [
     items: [
       { href: "/mitglieder/meine-proben", label: "Meine Proben", permissionKey: "mitglieder.meine-proben" },
       { href: "/mitglieder/probenplanung", label: "Probenplanung", permissionKey: "mitglieder.probenplanung" },
-      { href: "/mitglieder/sperrliste", label: "Sperrliste", permissionKey: "mitglieder.sperrliste" },
     ],
   },
   {
