@@ -2,6 +2,11 @@
 import Image from "next/image";
 import { Heading, Text } from "@/components/ui/typography";
 
+type ChronikCastEntry = {
+  role: string;
+  players: string[];
+};
+
 type ChronikMeta = {
   author?: string | null;
   director?: string | null;
@@ -9,6 +14,7 @@ type ChronikMeta = {
   ticket_info?: string | null;
   sources?: unknown;
   gallery?: unknown;
+  cast?: ChronikCastEntry[] | null;
 };
 
 type ChronikItem = {
@@ -24,6 +30,41 @@ function toStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
 }
 
+function toCastEntries(value: ChronikMeta["cast"]) {
+  if (!Array.isArray(value)) {
+    return [] as ChronikCastEntry[];
+  }
+
+  return value.filter(
+    (entry): entry is ChronikCastEntry =>
+      Boolean(entry) &&
+      typeof entry.role === "string" &&
+      Array.isArray(entry.players) &&
+      entry.players.length > 0,
+  );
+}
+
+function formatPlayerName(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0];
+  }
+
+  const lastName = parts.pop() ?? "";
+  const lastInitial = lastName.charAt(0);
+  const firstNames = parts.join(" ");
+  if (!lastInitial) {
+    return trimmed;
+  }
+
+  return `${firstNames} ${lastInitial}.`;
+}
+
 export function ChronikStacked({ items }: { items: ChronikItem[] }) {
   const sorted = [...items].sort((a, b) => b.year - a.year);
 
@@ -32,6 +73,7 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
       {sorted.map((s, idx) => {
         const meta: ChronikMeta = s.meta ?? {};
         const sources = toStringArray(meta.sources);
+        const castEntries = toCastEntries(meta.cast);
         return (
           <section
             key={s.id}
@@ -109,6 +151,31 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
                       <Text className="mt-6 max-w-4xl text-base leading-relaxed text-foreground/90 [text-shadow:_1px_1px_3px_rgba(0,0,0,0.45)] lg:text-lg xl:text-xl">
                         {s.synopsis}
                       </Text>
+                    )}
+                    {castEntries.length > 0 && (
+                      <div className="mt-6 text-left">
+                        <Heading
+                          level="h3"
+                          className="text-lg font-semibold text-foreground [text-shadow:_1px_1px_3px_rgba(0,0,0,0.35)] sm:text-xl"
+                        >
+                          Ensemble
+                        </Heading>
+                        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                          {castEntries.map((entry, entryIndex) => (
+                            <div
+                              key={`${entry.role}-${entryIndex}`}
+                              className="rounded-xl border border-border/50 bg-background/70 p-3 shadow-inner backdrop-blur-sm"
+                            >
+                              <dt className="text-sm font-semibold text-foreground">
+                                {entry.role}
+                              </dt>
+                              <dd className="mt-1 text-sm text-foreground/80">
+                                {entry.players.map((player) => formatPlayerName(player)).filter(Boolean).join(", ")}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
                     )}
                     {sources.length > 0 && (
                       <div className="mt-8 flex flex-wrap gap-3">
