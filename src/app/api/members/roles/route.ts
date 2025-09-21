@@ -90,6 +90,8 @@ export async function PUT(request: NextRequest) {
       },
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
         email: true,
         name: true,
         role: true,
@@ -105,6 +107,8 @@ export async function PUT(request: NextRequest) {
       user: {
         id: updated.id,
         email: updated.email,
+        firstName: updated.firstName,
+        lastName: updated.lastName,
         name: updated.name,
         roles: allRoles,
         customRoles: updated.appRoles.map((ar) => ar.role),

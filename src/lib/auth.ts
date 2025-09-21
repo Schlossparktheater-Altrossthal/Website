@@ -9,12 +9,15 @@ import Credentials from "next-auth/providers/credentials";
 import type { CredentialInput } from "next-auth/providers/credentials";
 import { sortRoles, ROLES } from "@/lib/roles";
 import { verifyPassword } from "@/lib/password";
+import { combineNameParts, splitFullName } from "@/lib/names";
 
 type MutableToken = JWT & {
   id?: string;
   role?: Role;
   roles?: Role[];
-  name?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
   email?: string;
   avatarSource?: AvatarSource;
   avatarUpdatedAt?: string | null;
@@ -77,6 +80,53 @@ function applyAvatarFields(target: MutableToken, source: Record<string, unknown>
     if (parsedDate !== undefined) {
       target.avatarUpdatedAt = parsedDate;
     }
+  }
+}
+
+function applyNameFields(target: MutableToken, source: Record<string, unknown>) {
+  let fallbackName: string | null | undefined;
+
+  if ("firstName" in source) {
+    const raw = (source as { firstName?: unknown }).firstName;
+    if (raw === null) {
+      target.firstName = null;
+    } else {
+      const parsed = extractString(raw);
+      if (parsed !== undefined) {
+        target.firstName = parsed;
+      }
+    }
+  }
+
+  if ("lastName" in source) {
+    const raw = (source as { lastName?: unknown }).lastName;
+    if (raw === null) {
+      target.lastName = null;
+    } else {
+      const parsed = extractString(raw);
+      if (parsed !== undefined) {
+        target.lastName = parsed;
+      }
+    }
+  }
+
+  if ("name" in source) {
+    const raw = (source as { name?: unknown }).name;
+    if (raw === null) {
+      fallbackName = null;
+    } else {
+      const parsed = extractString(raw);
+      if (parsed !== undefined) {
+        fallbackName = parsed;
+      }
+    }
+  }
+
+  const combined = combineNameParts(target.firstName, target.lastName);
+  if (combined) {
+    target.name = combined;
+  } else if (fallbackName !== undefined) {
+    target.name = fallbackName;
   }
 }
 
@@ -156,10 +206,25 @@ const credentialsProvider = Credentials({
         "owner@example.com": "owner",
         "admin@example.com": "admin",
       };
+      const friendlyName = email.split("@")[0] ?? "";
+      const trimmedName = friendlyName.trim();
+      const { firstName: derivedFirstName, lastName: derivedLastName } = splitFullName(trimmedName);
+      const combinedName = combineNameParts(derivedFirstName, derivedLastName) ?? (trimmedName || null);
+
       const user = await prisma.user.upsert({
         where: { email },
-        update: {},
-        create: { email, name: email.split("@")[0], role: roleMap[email] },
+        update: {
+          firstName: derivedFirstName,
+          lastName: derivedLastName,
+          name: combinedName,
+        },
+        create: {
+          email,
+          firstName: derivedFirstName,
+          lastName: derivedLastName,
+          name: combinedName,
+          role: roleMap[email],
+        },
       });
       await prisma.userRole.upsert({
         where: { userId_role: { userId: user.id, role: roleMap[email] } },
@@ -169,7 +234,9 @@ const credentialsProvider = Credentials({
       return {
         id: user.id,
         email: user.email!,
-        name: user.name!,
+        firstName: user.firstName ?? null,
+        lastName: user.lastName ?? null,
+        name: combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null),
         role: user.role,
         roles: [user.role],
         avatarSource: user.avatarSource,
@@ -203,7 +270,9 @@ const credentialsProvider = Credentials({
     return {
       id: user.id,
       email: user.email!,
-      name: user.name!,
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      name: combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null),
       role: combinedRoles[combinedRoles.length - 1],
       roles: combinedRoles,
       avatarSource: user.avatarSource,
@@ -243,10 +312,9 @@ export const authOptions: NextAuthOptions = {
       if (user && isRecord(user)) {
         const id = extractString(user.id);
         if (id) mutableToken.id = id;
-        const name = extractString(user.name);
-        if (name) mutableToken.name = name;
         const email = extractString(user.email);
         if (email) mutableToken.email = email;
+        applyNameFields(mutableToken, user);
         const userRoles = extractRolesFromSource(user as AdapterUser & RoleSource);
         if (userRoles) applyRoles(userRoles);
         applyAvatarFields(mutableToken, user);
@@ -258,8 +326,7 @@ export const authOptions: NextAuthOptions = {
           : undefined;
 
         if (isRecord(updateSource)) {
-          const nextName = extractString(updateSource.name);
-          if (nextName) mutableToken.name = nextName;
+          applyNameFields(mutableToken, updateSource);
           const nextEmail = extractString(updateSource.email);
           if (nextEmail) mutableToken.email = nextEmail;
           const updatedRoles = extractRolesFromSource(updateSource as RoleSource);
@@ -272,6 +339,10 @@ export const authOptions: NextAuthOptions = {
         const dbUser = await prisma.user.findUnique({
           where: { id: mutableToken.id },
           select: {
+            firstName: true,
+            lastName: true,
+            name: true,
+            email: true,
             role: true,
             roles: { select: { role: true } },
             avatarSource: true,
@@ -284,6 +355,11 @@ export const authOptions: NextAuthOptions = {
             ...dbUser.roles.map((r) => r.role as Role),
           ]);
           applyRoles(combined);
+          applyNameFields(mutableToken, dbUser as unknown as Record<string, unknown>);
+          const dbEmail = extractString(dbUser.email);
+          if (dbEmail) {
+            mutableToken.email = dbEmail;
+          }
           applyAvatarFields(mutableToken, dbUser as unknown as Record<string, unknown>);
         }
       }
@@ -296,14 +372,15 @@ export const authOptions: NextAuthOptions = {
         if (mutableToken.id) {
           session.user.id = mutableToken.id;
         }
+        session.user.firstName = mutableToken.firstName ?? null;
+        session.user.lastName = mutableToken.lastName ?? null;
+        const sessionFullName = combineNameParts(mutableToken.firstName, mutableToken.lastName) ?? (typeof mutableToken.name === "string" ? mutableToken.name : null);
+        session.user.name = sessionFullName;
         if (mutableToken.role) {
           session.user.role = mutableToken.role;
         }
         if (mutableToken.roles) {
           session.user.roles = mutableToken.roles;
-        }
-        if (mutableToken.name) {
-          session.user.name = mutableToken.name;
         }
         if (mutableToken.email) {
           session.user.email = mutableToken.email;

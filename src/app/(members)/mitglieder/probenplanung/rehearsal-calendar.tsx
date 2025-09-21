@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
+import { getUserDisplayName } from "@/lib/names";
 import { toast } from "sonner";
 
 import { createRehearsalDraftAction, deleteRehearsalAction } from "./actions";
@@ -60,7 +61,13 @@ export type CalendarBlockedDay = {
   date: string;
   dateKey: string;
   reason: string | null;
-  user: { id: string; name: string | null; email: string | null };
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    name: string | null;
+    email: string | null;
+  };
 };
 
 export type CalendarRehearsal = {
@@ -125,8 +132,8 @@ export function RehearsalCalendar({
     }
     for (const [, list] of map) {
       list.sort((a, b) => {
-        const nameA = (a.user.name ?? a.user.email ?? "").toLowerCase();
-        const nameB = (b.user.name ?? b.user.email ?? "").toLowerCase();
+        const nameA = getUserDisplayName(a.user, "").toLowerCase();
+        const nameB = getUserDisplayName(b.user, "").toLowerCase();
         return nameA.localeCompare(nameB);
       });
     }
@@ -466,7 +473,7 @@ export function RehearsalCalendar({
             {selectedDayBlocked.length ? (
               <ul className="space-y-2">
                 {selectedDayBlocked.map((entry) => {
-                  const displayName = entry.user.name ?? entry.user.email ?? "Mitglied";
+                  const displayName = getUserDisplayName(entry.user, "Mitglied");
                   return (
                     <li key={entry.id} className="rounded-2xl border border-border/60 bg-card/70 px-3 py-2">
                       <div className="text-sm font-medium text-foreground">{displayName}</div>
@@ -623,7 +630,7 @@ export function RehearsalCalendar({
             {selectedDayBlocked.length ? (
               <ul className="mt-4 space-y-3">
                 {selectedDayBlocked.map((entry) => {
-                  const displayName = entry.user.name ?? entry.user.email ?? "Mitglied";
+                  const displayName = getUserDisplayName(entry.user, "Mitglied");
                   return (
                     <li
                       key={entry.id}

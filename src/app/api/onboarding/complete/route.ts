@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { isInviteUsable } from "@/lib/member-invites";
 import { sortRoles, ROLES, type Role } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
+import { combineNameParts } from "@/lib/names";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -102,7 +103,8 @@ const dietaryPreferenceSchema = z
 
 const payloadSchema = z.object({
   sessionToken: z.string().min(16),
-  name: z.string().min(2),
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6).max(128),
   background: z.string().min(2),
@@ -174,6 +176,9 @@ export async function POST(request: NextRequest) {
   }
 
   const email = normalizeEmail(payload.email);
+  const firstName = payload.firstName.trim();
+  const lastName = payload.lastName.trim();
+  const fullName = combineNameParts(firstName, lastName) ?? null;
   const background = payload.background.trim();
   const focus = payload.focus;
   const password = payload.password;
@@ -290,7 +295,9 @@ export async function POST(request: NextRequest) {
   const primaryRole = roles[roles.length - 1];
 
   const storedPayload = {
-    name: payload.name,
+    firstName,
+    lastName,
+    name: fullName,
     email,
     focus,
     background,
@@ -329,7 +336,9 @@ export async function POST(request: NextRequest) {
       const user = await tx.user.create({
         data: {
           email,
-          name: payload.name.trim(),
+          firstName,
+          lastName,
+          name: fullName,
           role: primaryRole,
           dateOfBirth,
           passwordHash,

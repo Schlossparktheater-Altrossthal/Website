@@ -1,7 +1,8 @@
-import type { PrismaClient, User, Rehearsal } from '@prisma/client';
-import { render } from '@react-email/render';
-import { sendEmail } from './email-service';
-import { RehearsalReminderEmail } from './templates/rehearsal-reminder';
+import type { PrismaClient, User, Rehearsal } from "@prisma/client";
+import { render } from "@react-email/render";
+import { sendEmail } from "./email-service";
+import { RehearsalReminderEmail } from "./templates/rehearsal-reminder";
+import { getUserDisplayName } from "@/lib/names";
 
 export async function sendRehearsalReminders(prisma: PrismaClient) {
   const oneWeekFromNow = new Date();
@@ -42,8 +43,8 @@ async function findUsersWithoutResponse(
     where: {
       id: { notIn: respondedUserIds },
       AND: [
-        { role: { notIn: ['admin', 'owner'] } },
-        { roles: { none: { role: { in: ['admin', 'owner'] } } } },
+        { role: { notIn: ["admin", "owner"] } },
+        { roles: { none: { role: { in: ["admin", "owner"] } } } },
       ],
     },
   });
@@ -62,10 +63,19 @@ async function sendRemindersForRehearsal(
     if (!user.email) continue;
 
     const registrationLink = `${process.env.NEXT_PUBLIC_BASE_URL}/proben/${rehearsal.id}`;
+    const userName = getUserDisplayName(
+      {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: user.name,
+        email: user.email,
+      },
+      "Theatermitglied",
+    );
 
     const emailHtml = await render(
       RehearsalReminderEmail({
-        userName: user.name || 'Theatermitglied',
+        userName,
         rehearsalTitle: rehearsal.title,
         rehearsalDate: rehearsal.start,
         rehearsalLocation: rehearsal.location,

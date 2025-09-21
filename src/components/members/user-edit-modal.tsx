@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/user-avatar";
 import type { AvatarSource } from "@/components/user-avatar";
+import { combineNameParts, splitFullName } from "@/lib/names";
 
 export type EditableUser = {
   id: string;
   email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   name?: string | null;
   avatarSource?: AvatarSource | null;
   avatarUpdatedAt?: string | null;
@@ -24,26 +27,55 @@ type UserEditModalProps = {
 };
 
 export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditModalProps) {
+  const deriveNames = useCallback((value: EditableUser) => {
+    const parts = value.name ? splitFullName(value.name) : { firstName: null, lastName: null };
+    return {
+      firstName: value.firstName ?? parts.firstName ?? "",
+      lastName: value.lastName ?? parts.lastName ?? "",
+    };
+  }, []);
+
+  const initialNames = deriveNames(user);
+
   const [email, setEmail] = useState(user.email ?? "");
-  const [name, setName] = useState(user.name ?? "");
+  const [firstName, setFirstName] = useState(initialNames.firstName);
+  const [lastName, setLastName] = useState(initialNames.lastName);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resetState = () => {
-    setEmail(user.email ?? "");
-    setName(user.name ?? "");
-    setPassword("");
-    setConfirmPassword("");
-    setError(null);
-  };
+  const applyUserState = useCallback(
+    (value: EditableUser) => {
+      setEmail(value.email ?? "");
+      const names = deriveNames(value);
+      setFirstName(names.firstName);
+      setLastName(names.lastName);
+      setPassword("");
+      setConfirmPassword("");
+      setError(null);
+    },
+    [deriveNames],
+  );
+
+  const resetState = useCallback(() => {
+    applyUserState(user);
+  }, [applyUserState, user]);
+
+  useEffect(() => {
+    if (!open) {
+      resetState();
+    }
+  }, [open, resetState]);
 
   const closeModal = () => {
     if (saving) return;
     onOpenChange(false);
     resetState();
   };
+
+  const displayName = combineNameParts(firstName, lastName) || user.name || "";
+  const headerDisplayName = displayName || user.email || "Unbekannte Person";
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,9 +97,21 @@ export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditM
       return;
     }
 
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (!trimmedFirstName) {
+      setError("Vorname darf nicht leer sein");
+      return;
+    }
+
+    const combinedName = combineNameParts(trimmedFirstName, trimmedLastName);
+
     const payload: Record<string, unknown> = {
       email: trimmedEmail,
-      name: name.trim() || null,
+      firstName: trimmedFirstName || null,
+      lastName: trimmedLastName || null,
+      name: combinedName ?? null,
     };
 
     if (password) {
@@ -87,14 +131,29 @@ export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditM
         throw new Error(data?.error ?? "Aktualisierung fehlgeschlagen");
       }
 
+      const updatedEmail = (data?.user?.email as string | null | undefined) ?? trimmedEmail;
+      const updatedFirstName =
+        (data?.user?.firstName as string | null | undefined) ?? (trimmedFirstName || null);
+      const updatedLastName =
+        (data?.user?.lastName as string | null | undefined) ?? (trimmedLastName || null);
+      const updatedName =
+        combineNameParts(updatedFirstName, updatedLastName) ??
+        ((data?.user?.name as string | null | undefined) ?? combinedName ?? null);
+
       toast.success("Benutzer aktualisiert");
-      onUpdated({
+      const updatedUser: EditableUser = {
         id: user.id,
-        email: data?.user?.email ?? trimmedEmail,
-        name: data?.user?.name ?? (name.trim() || null),
-      });
+        email: updatedEmail,
+        firstName: updatedFirstName,
+        lastName: updatedLastName,
+        name: updatedName,
+        avatarSource: user.avatarSource,
+        avatarUpdatedAt: user.avatarUpdatedAt,
+      };
+
+      onUpdated(updatedUser);
       onOpenChange(false);
-      resetState();
+      applyUserState(updatedUser);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
       setError(message);
@@ -117,14 +176,16 @@ export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditM
             <UserAvatar
               userId={user.id}
               email={email}
-              name={name}
+              firstName={firstName}
+              lastName={lastName}
+              name={displayName}
               size={64}
               className="h-16 w-16 text-lg"
               avatarSource={user.avatarSource}
               avatarUpdatedAt={user.avatarUpdatedAt}
             />
             <div>
-              <div className="text-sm font-medium">{user.name ?? user.email}</div>
+              <div className="text-sm font-medium">{headerDisplayName}</div>
               <div className="text-xs text-muted-foreground">ID: {user.id}</div>
             </div>
           </div>
@@ -140,14 +201,27 @@ export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditM
                 required
               />
             </label>
-            <label className="block text-sm">
-              <span>Name (optional)</span>
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Vorname Nachname"
-              />
-            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span>Vorname</span>
+                <Input
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  placeholder="Vorname"
+                  required
+                  autoComplete="given-name"
+                />
+              </label>
+              <label className="block text-sm">
+                <span>Nachname (optional)</span>
+                <Input
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  placeholder="Nachname"
+                  autoComplete="family-name"
+                />
+              </label>
+            </div>
           </div>
         </div>
 

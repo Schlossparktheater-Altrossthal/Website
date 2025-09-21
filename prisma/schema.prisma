@@ -194,6 +194,8 @@ enum IssueVisibility {
 
 model User {
   id        String   @id @default(cuid())
+  firstName String?
+  lastName  String?
   name      String?
   email     String?  @unique
   role      Role     @default(member)

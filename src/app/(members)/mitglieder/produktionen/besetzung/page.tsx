@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
+import { getUserDisplayName } from "@/lib/names";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,10 +39,16 @@ const CASTING_ORDER: CharacterCastingType[] = [
 const selectSmallClassName =
   "h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-function formatUserName(user: { name: string | null; email: string | null }) {
-  if (user.name && user.name.trim()) return user.name;
-  if (user.email) return user.email;
-  return "Unbekannt";
+type DisplayUser = {
+  firstName?: string | null;
+  lastName?: string | null;
+  name: string | null;
+  email: string | null;
+};
+
+function formatUserName(user?: DisplayUser | null) {
+  if (!user) return "Unbekannt";
+  return getUserDisplayName(user, "Unbekannt");
 }
 
 export default async function ProduktionsBesetzungPage() {
@@ -86,7 +93,7 @@ export default async function ProduktionsBesetzungPage() {
         { name: "asc" },
         { email: "asc" },
       ],
-      select: { id: true, name: true, email: true },
+      select: { id: true, firstName: true, lastName: true, name: true, email: true },
     }),
     prisma.show.findUnique({
       where: { id: activeProduction.id },
@@ -110,7 +117,7 @@ export default async function ProduktionsBesetzungPage() {
                 id: true,
                 type: true,
                 notes: true,
-                user: { select: { id: true, name: true, email: true } },
+                user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
               },
             },
           },

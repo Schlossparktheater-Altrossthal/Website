@@ -67,6 +67,8 @@ export default async function ProfilePage() {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      firstName: true,
+      lastName: true,
       name: true,
       email: true,
       role: true,
@@ -94,6 +96,8 @@ export default async function ProfilePage() {
         <div className="space-y-6">
           <ProfileSummaryCard
             userId={userId}
+            firstName={user.firstName}
+            lastName={user.lastName}
             name={user.name}
             email={user.email}
             roles={roles}
@@ -185,6 +189,8 @@ export default async function ProfilePage() {
             <CardContent className="space-y-0">
               <ProfileForm
                 userId={userId}
+                initialFirstName={user.firstName}
+                initialLastName={user.lastName}
                 initialName={user.name}
                 initialEmail={user.email}
                 initialAvatarSource={user.avatarSource}

@@ -8,10 +8,13 @@ import { toast } from "sonner";
 import { UserEditModal } from "@/components/members/user-edit-modal";
 import { RolePicker } from "@/components/members/role-picker";
 import { UserAvatar } from "@/components/user-avatar";
+import { combineNameParts } from "@/lib/names";
 
 export function RoleManager({
   userId,
   email,
+  firstName,
+  lastName,
   name,
   initialRoles,
   canEditOwner = false,
@@ -22,13 +25,20 @@ export function RoleManager({
 }: {
   userId: string;
   email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   name?: string | null;
   initialRoles: Role[];
   canEditOwner?: boolean;
   availableCustomRoles?: { id: string; name: string }[];
   initialCustomRoleIds?: string[];
   onSaved?: (payload: { roles: Role[]; customRoleIds: string[] }) => void;
-  onUserUpdated?: (payload: { email?: string | null; name?: string | null }) => void;
+  onUserUpdated?: (payload: {
+    email?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    name?: string | null;
+  }) => void;
 }) {
   const initialSorted = useMemo(() => sortRoles(initialRoles), [initialRoles]);
   const [selected, setSelected] = useState<Role[]>(initialSorted);
@@ -36,7 +46,9 @@ export function RoleManager({
   const [selectedCustomIds, setSelectedCustomIds] = useState<string[]>([...initialCustomRoleIds]);
   const [savedCustomIds, setSavedCustomIds] = useState<string[]>([...initialCustomRoleIds]);
   const [currentEmail, setCurrentEmail] = useState(email ?? "");
-  const [currentName, setCurrentName] = useState(name ?? "");
+  const [currentFirstName, setCurrentFirstName] = useState(firstName ?? "");
+  const [currentLastName, setCurrentLastName] = useState(lastName ?? "");
+  const [currentNameFallback, setCurrentNameFallback] = useState(name ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -57,8 +69,19 @@ export function RoleManager({
   }, [email]);
 
   useEffect(() => {
-    setCurrentName(name ?? "");
+    setCurrentFirstName(firstName ?? "");
+  }, [firstName]);
+
+  useEffect(() => {
+    setCurrentLastName(lastName ?? "");
+  }, [lastName]);
+
+  useEffect(() => {
+    setCurrentNameFallback(name ?? "");
   }, [name]);
+
+  const displayName =
+    combineNameParts(currentFirstName, currentLastName) || currentNameFallback || "Unbekannte Person";
 
   const dirty = useMemo(() => selected.join("|") !== saved.join("|") || selectedCustomIds.join("|") !== savedCustomIds.join("|"), [selected, saved, selectedCustomIds, savedCustomIds]);
 
@@ -115,13 +138,18 @@ export function RoleManager({
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               {/* Avatar */}
-              <UserAvatar email={currentEmail} name={currentName} size={48} className="h-12 w-12 text-lg" />
+              <UserAvatar
+                email={currentEmail}
+                firstName={currentFirstName}
+                lastName={currentLastName}
+                name={displayName}
+                size={48}
+                className="h-12 w-12 text-lg"
+              />
               
               {/* User Info */}
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-xl mb-1">
-                  {currentName || "Unbekannte Person"}
-                </CardTitle>
+                <CardTitle className="text-xl mb-1">{displayName}</CardTitle>
                 <p className="text-sm text-muted-foreground mb-3">
                   {currentEmail || "Keine E-Mail hinterlegt"}
                 </p>
@@ -230,16 +258,34 @@ export function RoleManager({
       </Card>
 
       <UserEditModal
-        user={{ id: userId, email: currentEmail, name: currentName }}
-        open={editOpen}
-        onOpenChange={(open) => {
-          if (!open) setEditOpen(false);
-          else setEditOpen(true);
+        user={{
+          id: userId,
+          email: currentEmail,
+          firstName: currentFirstName,
+          lastName: currentLastName,
+          name: currentNameFallback,
         }}
+        open={editOpen}
+        onOpenChange={setEditOpen}
         onUpdated={(updated) => {
-          setCurrentEmail(updated.email ?? "");
-          setCurrentName(updated.name ?? "");
-          onUserUpdated?.({ email: updated.email, name: updated.name });
+          if (updated.email !== undefined) {
+            setCurrentEmail(updated.email ?? "");
+          }
+          if (updated.firstName !== undefined) {
+            setCurrentFirstName(updated.firstName ?? "");
+          }
+          if (updated.lastName !== undefined) {
+            setCurrentLastName(updated.lastName ?? "");
+          }
+          if (updated.name !== undefined) {
+            setCurrentNameFallback(updated.name ?? "");
+          }
+          onUserUpdated?.({
+            email: updated.email,
+            firstName: updated.firstName,
+            lastName: updated.lastName,
+            name: updated.name,
+          });
         }}
       />
     </div>

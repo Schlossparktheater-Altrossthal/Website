@@ -16,6 +16,7 @@ import {
   type CalendarRehearsal,
 } from "./rehearsal-calendar";
 import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
+import { combineNameParts } from "@/lib/names";
 export default async function ProbenplanungPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
@@ -30,14 +31,14 @@ export default async function ProbenplanungPage() {
       include: {
         attendance: {
           include: {
-            user: { select: { id: true, name: true, email: true } },
+            user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
           },
         },
         notifications: {
           include: {
             recipients: {
               include: {
-                user: { select: { id: true, name: true, email: true } },
+                user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
               },
             },
           },
@@ -49,7 +50,7 @@ export default async function ProbenplanungPage() {
     prisma.blockedDay.findMany({
       orderBy: { date: "asc" },
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
       },
     }),
     prisma.user.count(),
@@ -75,8 +76,10 @@ export default async function ProbenplanungPage() {
       reason: entry.reason,
       user: {
         id: entry.user.id,
-        name: entry.user.name,
-        email: entry.user.email,
+        firstName: entry.user.firstName ?? null,
+        lastName: entry.user.lastName ?? null,
+        name: combineNameParts(entry.user.firstName, entry.user.lastName) ?? entry.user.name ?? null,
+        email: entry.user.email ?? null,
       },
     };
   });
@@ -184,25 +187,37 @@ export default async function ProbenplanungPage() {
       />
 
       {publishedRehearsals.length ? (
-        <RehearsalList
-          initial={publishedRehearsals.map((r) => ({
-            id: r.id,
-            title: r.title,
-            start: r.start.toISOString(),
-            location: r.location,
-            attendance: r.attendance.map((a) => ({
-              status: a.status,
-              userId: a.userId,
-              user: a.user,
+      <RehearsalList
+        initial={publishedRehearsals.map((r) => ({
+          id: r.id,
+          title: r.title,
+          start: r.start.toISOString(),
+          location: r.location ?? "",
+          attendance: r.attendance.map((a) => ({
+            status: a.status,
+            userId: a.userId,
+            user: {
+              id: a.user.id,
+              firstName: a.user.firstName ?? null,
+              lastName: a.user.lastName ?? null,
+              name: combineNameParts(a.user.firstName, a.user.lastName) ?? a.user.name ?? null,
+              email: a.user.email ?? null,
+            },
+          })),
+          notifications: r.notifications.map((n) => ({
+            recipients: n.recipients.map((x) => ({
+              userId: x.userId,
+              user: {
+                id: x.user.id,
+                firstName: x.user.firstName ?? null,
+                lastName: x.user.lastName ?? null,
+                name: combineNameParts(x.user.firstName, x.user.lastName) ?? x.user.name ?? null,
+                email: x.user.email ?? null,
+              },
             })),
-            notifications: r.notifications.map((n) => ({
-              recipients: n.recipients.map((x) => ({
-                userId: x.userId,
-                user: x.user,
-              })),
-            })),
-          })) as RehearsalLite[]}
-        />
+          })),
+        })) as RehearsalLite[]}
+      />
       ) : (
         <p className="text-sm text-muted-foreground">Es sind aktuell keine Proben geplant.</p>
       )}

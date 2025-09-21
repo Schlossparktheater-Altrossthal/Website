@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
+import { getUserDisplayName } from "@/lib/names";
 
 export function UserNav({ className }: { className?: string }) {
   const { data: session, status } = useSession();
@@ -55,7 +56,15 @@ export function UserNav({ className }: { className?: string }) {
     );
   }
 
-  const name = session.user.name ?? session.user.email ?? "";
+  const name = getUserDisplayName(
+    {
+      firstName: session.user.firstName,
+      lastName: session.user.lastName,
+      name: session.user.name,
+      email: session.user.email,
+    },
+    "",
+  );
   const role = session.user.role;
   async function onLogout() {
     try {
@@ -79,7 +88,9 @@ export function UserNav({ className }: { className?: string }) {
         <UserAvatar
           userId={session.user.id}
           email={session.user.email}
-          name={session.user.name}
+          firstName={session.user.firstName}
+          lastName={session.user.lastName}
+          name={name}
           size={28}
           className="h-7 w-7 select-none"
           avatarSource={session.user.avatarSource}
