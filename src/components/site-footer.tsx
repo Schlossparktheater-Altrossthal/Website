@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BuildInfoTimestamp } from "@/components/build-info-timestamp";
 import {
   ctaNavigation,
   primaryNavigation,
@@ -14,6 +15,7 @@ type CommitInfo = {
 type BuildInfo = {
   commit: CommitInfo | null;
   timestamp: string;
+  isoTimestamp: string;
 };
 
 type SiteFooterProps = {
@@ -128,10 +130,17 @@ export function SiteFooter({ buildInfo, isDevBuild }: SiteFooterProps) {
                 ) : (
                   "#unbekannt"
                 )}
-                {" "}· Stand {buildInfo.timestamp}
+                {" "}· {" "}
+                <BuildInfoTimestamp
+                  formattedTimestamp={buildInfo.timestamp}
+                  isoTimestamp={buildInfo.isoTimestamp}
+                />
               </>
             ) : (
-              <>Stand {buildInfo.timestamp}</>
+              <BuildInfoTimestamp
+                formattedTimestamp={buildInfo.timestamp}
+                isoTimestamp={buildInfo.isoTimestamp}
+              />
             )}
           </p>
         </div>
