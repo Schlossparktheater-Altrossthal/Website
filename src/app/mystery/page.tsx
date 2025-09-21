@@ -1,8 +1,15 @@
-import { prisma } from "@/lib/prisma";
-import type { Clue, MysteryTip as MysteryTipModel, Prisma } from "@prisma/client";
 import Image from "next/image";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heading, Text } from "@/components/ui/typography";
+import {
+  DEFAULT_MYSTERY_EXPIRATION_MESSAGE,
+  readMysterySettings,
+  resolveMysterySettings,
+} from "@/lib/mystery-settings";
+import { prisma } from "@/lib/prisma";
+import type { Clue, MysteryTip as MysteryTipModel, Prisma } from "@prisma/client";
+
 import { Countdown } from "./_components/countdown";
 import { MysteryTipsBoard } from "./_components/mystery-tips-board";
 
@@ -24,13 +31,11 @@ function parseClueContent(content: Prisma.JsonValue | null | undefined): ClueCon
   };
 }
 
-const FIRST_RIDDLE_RELEASE_ISO = "2025-10-15T10:00:00.000Z";
-const FIRST_RIDDLE_RELEASE = new Date(FIRST_RIDDLE_RELEASE_ISO);
-const FIRST_RIDDLE_RELEASE_LABEL = new Intl.DateTimeFormat("de-DE", {
+const COUNTDOWN_LABEL_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "full",
   timeStyle: "short",
   timeZone: "Europe/Berlin",
-}).format(FIRST_RIDDLE_RELEASE);
+});
 
 function renderClueBody(clue: Clue, content: ClueContent) {
   if (clue.type === "image") {
@@ -50,12 +55,12 @@ export const revalidate = 30;
 
 export default async function MysteryPage() {
   const now = new Date();
-  const isFirstRiddleReleased = now >= FIRST_RIDDLE_RELEASE;
   let clues: Clue[] = [];
   let tips: MysteryTipModel[] = [];
+  let settingsRecord: Awaited<ReturnType<typeof readMysterySettings>> = null;
 
   if (process.env.DATABASE_URL) {
-    const [cluesResult, tipsResult] = await Promise.allSettled([
+    const [cluesResult, tipsResult, settingsResult] = await Promise.allSettled([
       prisma.clue.findMany({
         where: { published: true, releaseAt: { lte: now } },
         orderBy: [{ index: "asc" }],
@@ -67,11 +72,18 @@ export default async function MysteryPage() {
           { createdAt: "asc" },
         ],
       }),
+      readMysterySettings(),
     ]);
 
     clues = cluesResult.status === "fulfilled" ? cluesResult.value : [];
     tips = tipsResult.status === "fulfilled" ? tipsResult.value : [];
+    settingsRecord = settingsResult.status === "fulfilled" ? settingsResult.value : null;
   }
+
+  const resolvedSettings = resolveMysterySettings(settingsRecord);
+  const countdownTargetIso = resolvedSettings.effectiveCountdownTarget.toISOString();
+  const countdownLabel = COUNTDOWN_LABEL_FORMATTER.format(resolvedSettings.effectiveCountdownTarget);
+  const releaseMessage = resolvedSettings.effectiveExpirationMessage ?? DEFAULT_MYSTERY_EXPIRATION_MESSAGE;
 
   const firstRiddle = clues.find((clue) => clue.index === 1) ?? null;
   const remainingClues = firstRiddle ? clues.filter((clue) => clue.id !== firstRiddle.id) : clues;
@@ -85,6 +97,8 @@ export default async function MysteryPage() {
     updatedAt: tip.updatedAt.toISOString(),
   }));
 
+  const countdownReached = resolvedSettings.effectiveCountdownTarget <= now;
+  const isFirstRiddleReleased = countdownReached || Boolean(firstRiddle);
   const showSilentMessage = !isFirstRiddleReleased && clues.length === 0;
   const hasAdditionalClues = remainingClues.length > 0;
 
@@ -106,18 +120,18 @@ export default async function MysteryPage() {
             <CardContent className="space-y-4">
               {!isFirstRiddleReleased ? (
                 <>
-                  <Countdown targetDate={FIRST_RIDDLE_RELEASE_ISO} />
+                  <Countdown targetDate={countdownTargetIso} />
                   <Text variant="small" tone="muted">
-                    Start am {FIRST_RIDDLE_RELEASE_LABEL}
+                    Start am {countdownLabel}
                   </Text>
                 </>
               ) : (
                 <div className="space-y-2">
                   <Text variant="lead" tone="success">
-                    Das erste Rätsel ist jetzt verfügbar!
+                    {releaseMessage}
                   </Text>
                   <Text variant="small" tone="muted">
-                    Veröffentlicht am {FIRST_RIDDLE_RELEASE_LABEL}
+                    Veröffentlicht am {countdownLabel}
                   </Text>
                 </div>
               )}

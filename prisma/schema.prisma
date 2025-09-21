@@ -457,6 +457,14 @@ model Clue {
   @@index([showId, published, releaseAt])
 }
 
+model MysterySettings {
+  id                 String   @id @default("default")
+  countdownTarget    DateTime?
+  expirationMessage  String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
 model MysteryTip {
   id             String   @id @default(cuid())
   text           String

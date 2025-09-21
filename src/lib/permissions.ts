@@ -39,6 +39,11 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     description: "Mehrfach nutzbare Einladungslinks anlegen, deaktivieren und deren Status prüfen.",
   },
   { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen" },
+  {
+    key: "mitglieder.mystery.timer",
+    label: "Mystery-Timer verwalten",
+    description: "Countdown und Hinweistext für das öffentliche Geheimnis pflegen.",
+  },
   { key: "mitglieder.sperrliste", label: "Sperrliste pflegen" },
   {
     key: "mitglieder.fotoerlaubnisse",
