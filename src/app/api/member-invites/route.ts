@@ -68,7 +68,10 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     include: {
       createdBy: { select: { id: true, name: true, email: true } },
-      redemptions: { select: { id: true, completedAt: true } },
+      redemptions: {
+        select: { id: true, createdAt: true, completedAt: true },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -77,6 +80,7 @@ export async function GET() {
     const status = calculateInviteStatus(invite, now);
     const completed = invite.redemptions.filter((r) => r.completedAt).length;
     const pending = invite.redemptions.length - completed;
+    const recentClicks = invite.redemptions.slice(0, 3).map((entry) => entry.createdAt.toISOString());
     return {
       id: invite.id,
       label: invite.label,
@@ -95,6 +99,7 @@ export async function GET() {
       pendingSessions: pending,
       completedSessions: completed,
       shareUrl: status.isActive ? `/onboarding/${invite.tokenHash}` : null,
+      recentClicks,
     };
   });
 
