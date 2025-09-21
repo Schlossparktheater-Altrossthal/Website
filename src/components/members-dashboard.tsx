@@ -890,7 +890,7 @@ export function MembersDashboard() {
           <CardHeader className="pb-3">
             <CardTitle>Aktive Mitglieder</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Wer ist gerade online? Live-Ansicht aktualisiert über WebSockets.
+              Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
             </p>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
