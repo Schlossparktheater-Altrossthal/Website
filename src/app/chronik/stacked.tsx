@@ -24,6 +24,34 @@ function toStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
 }
 
+type ChronikBackdropOverride = {
+  test: (item: ChronikItem) => boolean;
+  src?: string | null;
+};
+
+const chronikBackdropOverrides: ChronikBackdropOverride[] = [
+  {
+    test: (item) => {
+      const normalized = (item.title ?? "").toLowerCase();
+      const mentionsAladin = normalized.includes("aladin") || normalized.includes("aladdin");
+      return mentionsAladin && normalized.includes("wunderlampe");
+    },
+    // TODO: Replace `null` with "/chronik/aladin-hintergrund.png" once the image asset is added to `public/chronik`.
+    src: null,
+  },
+];
+
+function getBackdropImage(item: ChronikItem) {
+  for (const override of chronikBackdropOverrides) {
+    if (override.test(item)) {
+      if (typeof override.src === "string" && override.src.length > 0) {
+        return override.src;
+      }
+    }
+  }
+  return item.posterUrl ?? null;
+}
+
 export function ChronikStacked({ items }: { items: ChronikItem[] }) {
   const sorted = [...items].sort((a, b) => b.year - a.year);
 
@@ -32,6 +60,7 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
       {sorted.map((s, idx) => {
         const meta: ChronikMeta = s.meta ?? {};
         const sources = toStringArray(meta.sources);
+        const backdrop = getBackdropImage(s);
         return (
           <section
             key={s.id}
@@ -39,9 +68,9 @@ export function ChronikStacked({ items }: { items: ChronikItem[] }) {
             className="group relative overflow-hidden rounded-2xl border border-border/60 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl sm:rounded-3xl"
           >
             <div className="relative h-[60vh] sm:h-[70vh] lg:h-[75vh] xl:h-[65vh] 2xl:h-[60vh] w-full max-h-[800px]">
-              {s.posterUrl && (
+              {backdrop && (
                 <Image
-                  src={s.posterUrl}
+                  src={backdrop}
                   alt={s.title ?? String(s.year)}
                   fill
                   className="object-cover"
