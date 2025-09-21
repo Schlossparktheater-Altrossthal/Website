@@ -874,52 +874,62 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         </CardHeader>
       </Card>
 
-      <div className="flex flex-wrap items-center gap-3">
-        {steps.map((item, index) => {
-          const isActive = index === step;
-          const isComplete = index < step;
-          const isFuture = index > step;
-          return (
-            <div key={item.title} className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => goToStep(index)}
-                disabled={isFuture}
-                className={cn(
-                  "group flex items-center gap-2 rounded-full bg-transparent p-0 text-left focus-visible:outline-none",
-                  isComplete ? "cursor-pointer" : "cursor-default",
-                )}
-                aria-current={isActive ? "step" : undefined}
-                aria-label={
-                  isComplete
-                    ? `Zurück zu Schritt ${index + 1}: ${item.title}`
-                    : `Schritt ${index + 1}: ${item.title}`
-                }
-              >
-                <span
+      <nav
+        aria-label="Onboarding-Fortschritt"
+        className="max-w-full overflow-x-auto rounded-xl border border-border/60 bg-background/80 px-3 py-2 shadow-sm sm:overflow-visible sm:border-none sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none"
+      >
+        <ol className="flex min-w-max list-none items-center gap-3 sm:min-w-0 sm:flex-wrap">
+          {steps.map((item, index) => {
+            const isActive = index === step;
+            const isComplete = index < step;
+            const isFuture = index > step;
+            return (
+              <li key={item.title} className="flex shrink-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => goToStep(index)}
+                  disabled={isFuture}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium transition-colors",
-                    isActive && "border-primary bg-primary text-primary-foreground",
-                    isComplete && !isActive && "border-primary bg-primary/20 text-primary",
-                    !isActive && !isComplete && "border-border text-muted-foreground",
-                    "group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
+                    "group flex shrink-0 flex-col items-center gap-1 rounded-lg bg-transparent px-2 py-1 text-center focus-visible:outline-none sm:flex-row sm:items-center sm:gap-2 sm:px-0 sm:py-0 sm:text-left",
+                    isComplete ? "cursor-pointer" : "cursor-default",
                   )}
-                  aria-hidden
+                  aria-current={isActive ? "step" : undefined}
+                  aria-label={
+                    isComplete
+                      ? `Zurück zu Schritt ${index + 1}: ${item.title}`
+                      : `Schritt ${index + 1}: ${item.title}`
+                  }
                 >
-                  {index + 1}
-                </span>
-                <span
-                  className={cn("text-sm font-medium", isActive ? "text-foreground" : "text-muted-foreground")}
-                  aria-hidden
-                >
-                  {item.title}
-                </span>
-              </button>
-              {index < steps.length - 1 && <div className="h-px w-10 bg-border" aria-hidden />}
-            </div>
-          );
-        })}
-      </div>
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium transition-colors",
+                      isActive && "border-primary bg-primary text-primary-foreground",
+                      isComplete && !isActive && "border-primary bg-primary/20 text-primary",
+                      !isActive && !isComplete && "border-border text-muted-foreground",
+                      "group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
+                    )}
+                    aria-hidden
+                  >
+                    {index + 1}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs font-medium sm:text-sm",
+                      isActive ? "text-foreground" : "text-muted-foreground",
+                    )}
+                    aria-hidden
+                  >
+                    {item.title}
+                  </span>
+                </button>
+                {index < steps.length - 1 && (
+                  <div className="hidden h-px w-10 shrink-0 bg-border sm:block" aria-hidden />
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
 
       {step === 0 && (
         <Card className="border border-border/70 bg-background/80 shadow-xl">
@@ -1844,11 +1854,16 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       )}
 
       {step > 0 && step < 6 && (
-        <div className="flex justify-between gap-3">
-          <Button variant="outline" onClick={goBack} disabled={loading}>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button
+            variant="outline"
+            onClick={goBack}
+            disabled={loading}
+            className="w-full sm:w-auto"
+          >
             Zurück
           </Button>
-          <Button onClick={goNext} disabled={loading}>
+          <Button onClick={goNext} disabled={loading} className="w-full sm:w-auto">
             Weiter
           </Button>
         </div>
