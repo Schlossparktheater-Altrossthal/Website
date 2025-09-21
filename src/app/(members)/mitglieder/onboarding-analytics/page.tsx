@@ -183,7 +183,9 @@ function humanizePreference(code: string) {
     case "crew_tech":
       return "Licht & Ton";
     case "crew_costume":
-      return "Kostüm & Maske";
+      return "Kostüm";
+    case "crew_makeup":
+      return "Maske & Make-up";
     case "crew_direction":
       return "Regieassistenz & Organisation";
     case "crew_music":
