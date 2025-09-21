@@ -10,9 +10,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-[0_10px_30px_-15px_rgba(94,58,255,0.65)] hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow-[0_10px_30px_-15px_rgba(199,120,23,0.55)] hover:bg-primary/90",
         primary:
-          "bg-primary text-primary-foreground shadow-[0_10px_30px_-15px_rgba(94,58,255,0.65)] hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow-[0_10px_30px_-15px_rgba(199,120,23,0.55)] hover:bg-primary/90",
         secondary:
           "bg-secondary text-secondary-foreground shadow-[0_8px_26px_-16px_rgba(201,148,58,0.55)] hover:bg-secondary/90",
         accent:
