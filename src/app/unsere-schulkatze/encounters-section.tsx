@@ -1,15 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import type { Role } from "@prisma/client";
+import { EyeOff, Sparkles, Trash2, Undo2, UserRound } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Text } from "@/components/ui/typography";
 
 const STORAGE_KEY = "dieter-dennis-encounters";
+const MODERATION_STORAGE_KEY = "dieter-dennis-hidden-encounters";
+
+const MODERATOR_ROLES = new Set<Role>(["board", "admin", "owner"]);
 
 type Encounter = {
   id: string;
@@ -65,7 +73,10 @@ function generateId() {
 }
 
 export function DieterEncountersSection() {
+  const { data: session } = useSession();
   const [userEncounters, setUserEncounters] = useState<Encounter[]>([]);
+  const [hiddenEncounterIds, setHiddenEncounterIds] = useState<string[]>([]);
+  const [showModerationDetails, setShowModerationDetails] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -130,9 +141,107 @@ export function DieterEncountersSection() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [userEncounters]);
 
-  const encounters = [...userEncounters, ...curatedEncounters];
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const storedValue = window.localStorage.getItem(MODERATION_STORAGE_KEY);
+
+    if (!storedValue) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(storedValue);
+
+      if (!Array.isArray(parsed)) {
+        return;
+      }
+
+      const sanitized = parsed.filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+      if (sanitized.length > 0) {
+        setHiddenEncounterIds(Array.from(new Set(sanitized)));
+      }
+    } catch {
+      // Wenn Parsing fehlschlägt, ignorieren wir die Moderationsdaten.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (hiddenEncounterIds.length === 0) {
+      window.localStorage.removeItem(MODERATION_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(MODERATION_STORAGE_KEY, JSON.stringify(hiddenEncounterIds));
+  }, [hiddenEncounterIds]);
+
+  const allEncounters = useMemo(() => [...userEncounters, ...curatedEncounters], [userEncounters]);
+
+  const hiddenEncounterIdSet = useMemo(() => new Set(hiddenEncounterIds), [hiddenEncounterIds]);
+
+  const visibleEncounters = useMemo(
+    () => allEncounters.filter((entry) => !hiddenEncounterIdSet.has(entry.id)),
+    [allEncounters, hiddenEncounterIdSet],
+  );
+
+  const archivedEncounters = useMemo(
+    () => allEncounters.filter((entry) => hiddenEncounterIdSet.has(entry.id)),
+    [allEncounters, hiddenEncounterIdSet],
+  );
+
+  const userRoles = useMemo(() => {
+    const collected = new Set<Role>();
+    const primaryRole = session?.user?.role;
+    const extraRoles = session?.user?.roles;
+
+    if (primaryRole) {
+      collected.add(primaryRole);
+    }
+
+    if (Array.isArray(extraRoles)) {
+      for (const role of extraRoles) {
+        collected.add(role);
+      }
+    }
+
+    return Array.from(collected);
+  }, [session?.user?.role, session?.user?.roles]);
+
+  const canModerate = userRoles.some((role) => MODERATOR_ROLES.has(role));
+
+  useEffect(() => {
+    if (!canModerate) {
+      setShowModerationDetails(false);
+    }
+  }, [canModerate]);
+
+  const handleHideEncounter = useCallback((entryId: string) => {
+    setHiddenEncounterIds((previous) => {
+      if (previous.includes(entryId)) {
+        return previous;
+      }
+      return [...previous, entryId];
+    });
+    setShowModerationDetails(true);
+  }, []);
+
+  const handleRestoreEncounter = useCallback((entryId: string) => {
+    setHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
+  }, []);
+
+  const handleDeleteEncounter = useCallback((entryId: string) => {
+    setUserEncounters((previous) => previous.filter((entry) => entry.id !== entryId));
+    setHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
+  }, []);
+
+  const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const form = event.currentTarget;
@@ -167,121 +276,275 @@ export function DieterEncountersSection() {
 
     const sinceInput = form.querySelector<HTMLInputElement>("#dieter-since");
     sinceInput?.focus();
-  }
+  }, []);
 
   return (
-    <section className="layout-container pb-24">
-      <div className="mx-auto max-w-5xl space-y-10">
-        <div className="space-y-4 text-center">
-          <Heading level="h2" align="center">
-            Begegnungen mit Dieter Dennis von Altroßthal
-          </Heading>
-          <Text variant="body" tone="muted" align="center">
-            Seit wann kennen Sie schon Dieter Dennis von Altroßthal? Wie hieß sie bei Ihnen? Teilen Sie uns Ihre Begegnung mit
-            Dieter mit. Wir freuen uns mehr über sie zu erfahren.
-          </Text>
-        </div>
+    <section className="relative isolate overflow-hidden bg-muted/30 pb-24 pt-24">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div
+          className="absolute left-1/2 top-[-14rem] h-[28rem] w-[120vw] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/25 via-primary/10 to-transparent opacity-70 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="absolute right-[-18vw] bottom-[-10rem] h-[26rem] w-[80vw] rounded-full bg-gradient-to-br from-primary/20 via-primary/8 to-transparent opacity-60 blur-3xl"
+          aria-hidden
+        />
+      </div>
 
-        <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-          <Card className="space-y-6 p-6 sm:p-8">
-            <div className="space-y-2">
-              <Heading level="h3" className="text-lg sm:text-xl">
-                Begegnung teilen
-              </Heading>
-              <Text variant="small" tone="muted">
-                Ihre Angaben erscheinen nach dem Absenden in der Übersicht. Pflichtfelder helfen uns, Ihre Geschichte einzuordnen.
-              </Text>
-            </div>
+      <div className="layout-container">
+        <div className="mx-auto max-w-6xl space-y-12">
+          <div className="space-y-4 text-center">
+            <Heading level="h2" align="center">
+              Begegnungen mit Dieter Dennis von Altroßthal
+            </Heading>
+            <Text variant="body" tone="muted" align="center">
+              Seit wann kennen Sie schon Dieter Dennis von Altroßthal? Wie hieß sie bei Ihnen? Teilen Sie uns Ihre Begegnung mit
+              Dieter mit. Wir freuen uns mehr über sie zu erfahren.
+            </Text>
+          </div>
 
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+            <Card className="relative overflow-hidden rounded-3xl border border-border/50 bg-background/90 p-6 shadow-xl sm:p-8">
+              <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit]">
+                <div
+                  className="absolute left-1/2 top-[-5rem] h-[18rem] w-[24rem] -translate-x-1/2 rounded-full bg-primary/15 opacity-70 blur-3xl"
+                  aria-hidden
+                />
+                <div
+                  className="absolute right-[-8rem] bottom-[-8rem] h-[16rem] w-[16rem] rounded-full bg-primary/10 opacity-60 blur-3xl"
+                  aria-hidden
+                />
+              </div>
+
+              <div className="space-y-4">
+                <Badge className="w-fit rounded-full border-0 bg-primary/15 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+                  Erinnerung teilen
+                </Badge>
                 <div className="space-y-2">
-                  <Label htmlFor="dieter-since">Seit wann kennen Sie Dieter?</Label>
-                  <Input id="dieter-since" name="since" placeholder="z. B. Frühjahr 2020" required autoComplete="off" />
+                  <Heading level="h3" className="text-xl">
+                    Begegnung teilen
+                  </Heading>
+                  <Text variant="small" tone="muted">
+                    Ihre Angaben erscheinen nach dem Absenden in der Übersicht. Pflichtfelder helfen uns, Ihre Geschichte
+                    einzuordnen und den Überblick zu behalten.
+                  </Text>
                 </div>
+              </div>
+
+              <form className="mt-6 space-y-6" onSubmit={handleSubmit}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="dieter-since">Seit wann kennen Sie Dieter?</Label>
+                    <Input id="dieter-since" name="since" placeholder="z. B. Frühjahr 2020" required autoComplete="off" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dieter-nickname">Wie hieß sie bei Ihnen?</Label>
+                    <Input
+                      id="dieter-nickname"
+                      name="nickname"
+                      placeholder="Unser Spitzname für Dieter"
+                      required
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="dieter-nickname">Wie hieß sie bei Ihnen?</Label>
+                  <Label htmlFor="dieter-author">Wer teilt diese Begegnung? (optional)</Label>
                   <Input
-                    id="dieter-nickname"
-                    name="nickname"
-                    placeholder="Unser Spitzname für Dieter"
-                    required
+                    id="dieter-author"
+                    name="author"
+                    placeholder="Ihr Name, Ihre Klasse oder Gruppe"
                     autoComplete="off"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="dieter-author">Wer teilt diese Begegnung? (optional)</Label>
-                <Input
-                  id="dieter-author"
-                  name="author"
-                  placeholder="Ihr Name, Ihre Klasse oder Gruppe"
-                  autoComplete="off"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dieter-story">Ihre Begegnung mit Dieter</Label>
+                  <Textarea
+                    id="dieter-story"
+                    name="story"
+                    placeholder="Was haben Sie mit Dieter erlebt?"
+                    rows={6}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="dieter-story">Ihre Begegnung mit Dieter</Label>
-                <Textarea
-                  id="dieter-story"
-                  name="story"
-                  placeholder="Was haben Sie mit Dieter erlebt?"
-                  rows={5}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <Text variant="caption" tone="muted">
-                  Mit dem Absenden stimmen Sie einer Veröffentlichung auf dieser Seite zu.
-                </Text>
-                <Button type="submit">Begegnung teilen</Button>
-              </div>
-            </form>
-          </Card>
-
-          <div className="space-y-4">
-            <div>
-              <Heading level="h3" className="text-lg sm:text-xl">
-                Eure Begegnungen
-              </Heading>
-              <Text variant="small" tone="muted">
-                Hier werden die Begegnungen gesammelt, so dass jede:r sie lesen kann.
-              </Text>
-            </div>
-
-            <div className="space-y-4">
-              {encounters.map((entry) => (
-                <Card key={entry.id} className="space-y-3 p-5 sm:p-6">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <Text weight="semibold" className="text-base sm:text-lg">
-                      {entry.nickname}
-                    </Text>
-                    <Text variant="small" tone="muted">
-                      {entry.source === "user" ? entry.createdAt ?? "soeben geteilt" : entry.createdAt ?? entry.since}
-                    </Text>
-                  </div>
-                  <Text variant="small" tone="muted" weight="medium">
-                    Seit {entry.since}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-4">
+                  <Text variant="caption" tone="muted">
+                    Mit dem Absenden stimmen Sie einer Veröffentlichung auf dieser Seite zu.
                   </Text>
-                  <Text variant="body" className="text-sm leading-relaxed">
-                    {entry.story}
-                  </Text>
-                  {entry.author ? (
-                    <Text variant="small" tone="muted" className="italic">
-                      — {entry.author}
-                    </Text>
-                  ) : null}
-                </Card>
-              ))}
+                  <Button type="submit">Begegnung teilen</Button>
+                </div>
+              </form>
+            </Card>
 
-              {encounters.length === 0 ? (
-                <Card className="space-y-2 p-5 sm:p-6">
-                  <Text weight="semibold">Noch keine Begegnungen</Text>
+            <div className="space-y-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-2">
+                  <Heading level="h3" className="text-lg sm:text-xl">
+                    Eure Begegnungen
+                  </Heading>
                   <Text variant="small" tone="muted">
-                    Seien Sie die erste Person, die Dieter Dennis hier vorstellt.
+                    Hier sammeln wir alle Erinnerungen – neue Beiträge erscheinen sofort nach dem Absenden.
                   </Text>
+                </div>
+                {canModerate ? (
+                  <Badge className="self-start rounded-full border-0 bg-info/15 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-info">
+                    Moderation aktiv
+                  </Badge>
+                ) : null}
+              </div>
+
+              <div className="relative pl-2 sm:pl-3">
+                <div
+                  className="pointer-events-none absolute left-[1.25rem] top-2 bottom-6 w-px bg-gradient-to-b from-primary/30 via-border/60 to-transparent sm:left-[1.5rem]"
+                  aria-hidden
+                />
+
+                <ul className="space-y-6">
+                  {visibleEncounters.length > 0 ? (
+                    visibleEncounters.map((entry) => {
+                      const isUserEntry = entry.source === "user";
+                      const moderationItems = canModerate
+                        ? [
+                            {
+                              label: "Beitrag ausblenden",
+                              icon: <EyeOff className="h-4 w-4" aria-hidden />,
+                              onClick: () => handleHideEncounter(entry.id),
+                            },
+                            ...(isUserEntry
+                              ? [
+                                  {
+                                    label: "Beitrag löschen (lokal)",
+                                    icon: <Trash2 className="h-4 w-4" aria-hidden />,
+                                    onClick: () => handleDeleteEncounter(entry.id),
+                                    variant: "destructive" as const,
+                                  },
+                                ]
+                              : []),
+                          ]
+                        : [];
+
+                      return (
+                        <li key={entry.id} className="relative pl-12">
+                          <span
+                            className="absolute left-0 top-1 flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background text-primary shadow-sm"
+                            aria-hidden
+                          >
+                            {isUserEntry ? (
+                              <UserRound className="h-4 w-4" aria-hidden />
+                            ) : (
+                              <Sparkles className="h-4 w-4" aria-hidden />
+                            )}
+                          </span>
+
+                          <Card className="group relative space-y-3 rounded-3xl border border-border/60 bg-background/80 p-5 shadow-sm transition-shadow hover:shadow-lg sm:p-6">
+                            {canModerate ? <DropdownMenu items={moderationItems} className="absolute right-4 top-4" /> : null}
+
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <Text weight="semibold" className="text-base sm:text-lg">
+                                  {entry.nickname}
+                                </Text>
+                                <Badge
+                                  className="rounded-full border-0 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                                  variant={isUserEntry ? "info" : "muted"}
+                                >
+                                  {isUserEntry ? "Community" : "Aus dem Archiv"}
+                                </Badge>
+                              </div>
+                              <Text variant="small" tone="muted">
+                                {entry.createdAt ?? entry.since}
+                              </Text>
+                            </div>
+
+                            <Text variant="small" tone="muted" weight="medium">
+                              Seit {entry.since}
+                            </Text>
+                            <Text className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">{entry.story}</Text>
+                            {entry.author ? (
+                              <Text variant="small" tone="muted" className="italic">
+                                — {entry.author}
+                              </Text>
+                            ) : null}
+
+                            {isUserEntry ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteEncounter(entry.id)}
+                                className="text-xs font-medium text-muted-foreground underline-offset-2 transition hover:text-destructive hover:underline focus-visible:outline-none"
+                              >
+                                Beitrag auf diesem Gerät entfernen
+                              </button>
+                            ) : null}
+                          </Card>
+                        </li>
+                      );
+                    })
+                  ) : (
+                    <li>
+                      <Card className="rounded-3xl border border-dashed border-border/60 bg-background/70 p-6 text-center shadow-none">
+                        <Text weight="semibold">Noch keine Begegnungen</Text>
+                        <Text variant="small" tone="muted">
+                          Seien Sie die erste Person, die Dieter Dennis hier vorstellt.
+                        </Text>
+                      </Card>
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              {canModerate && archivedEncounters.length > 0 ? (
+                <Card className="rounded-3xl border border-dashed border-primary/40 bg-primary/5 p-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <Text weight="semibold">Ausgeblendete Begegnungen</Text>
+                      <Text variant="small" tone="muted">
+                        Nur für Moderator:innen sichtbar. Blenden Sie Beiträge bei Bedarf wieder ein.
+                      </Text>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowModerationDetails((previous) => !previous)}
+                    >
+                      {showModerationDetails
+                        ? "Verbergen"
+                        : `Anzeigen (${archivedEncounters.length})`}
+                    </Button>
+                  </div>
+
+                  {showModerationDetails ? (
+                    <div className="mt-4 space-y-3">
+                      {archivedEncounters.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="flex flex-col gap-2 rounded-2xl border border-border/50 bg-background/80 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div>
+                            <Text weight="medium" className="text-sm">
+                              {entry.nickname}
+                            </Text>
+                            <Text variant="small" tone="muted">
+                              Seit {entry.since}
+                            </Text>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="self-start text-primary hover:text-primary focus-visible:ring-primary/30"
+                            onClick={() => handleRestoreEncounter(entry.id)}
+                          >
+                            <Undo2 className="mr-2 h-4 w-4" aria-hidden />
+                            Wiederherstellen
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </Card>
               ) : null}
             </div>
