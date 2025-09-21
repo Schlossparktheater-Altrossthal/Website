@@ -186,6 +186,10 @@ function humanizePreference(code: string) {
       return "Kostüm & Maske";
     case "crew_direction":
       return "Regieassistenz & Organisation";
+    case "crew_music":
+      return "Musik & Klang";
+    case "crew_props":
+      return "Requisite";
     default:
       return code;
   }
