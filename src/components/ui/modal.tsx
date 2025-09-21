@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 let openModalCount = 0;
 let savedBodyOverflow: string | null = null;
@@ -12,12 +13,14 @@ export function Modal({
   description,
   onClose,
   children,
+  allowContentOverflow = false,
 }: {
   open: boolean;
   title: string;
   description?: string;
   onClose: () => void;
   children: React.ReactNode;
+  allowContentOverflow?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -50,7 +53,10 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-lg bg-background shadow-xl border overflow-hidden"
+        className={cn(
+          "w-full max-w-2xl rounded-lg bg-background shadow-xl border",
+          allowContentOverflow ? "overflow-visible" : "overflow-hidden",
+        )}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b px-6 py-4 bg-muted/30">

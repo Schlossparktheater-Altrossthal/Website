@@ -173,6 +173,7 @@ export function MembersTable({
                     title="Benutzer bearbeiten"
                     description="Rollen und Daten bearbeiten"
                     onClose={() => setOpenFor(null)}
+                    allowContentOverflow
                   >
                     <RoleManager
                       userId={u.id}
