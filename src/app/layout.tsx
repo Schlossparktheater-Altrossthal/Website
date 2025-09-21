@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import Link from "next/link";
 import { MysticBackground } from "@/components/mystic-background";
 import type { Viewport } from "next";
+import { execSync } from "node:child_process";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
@@ -50,6 +51,44 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
+const buildInfo = getBuildInfo();
+const isDevBuild = process.env.NODE_ENV === "development";
+
+function getBuildInfo() {
+  const buildDate = new Date();
+  const timestamp = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    dateStyle: "short",
+    timeStyle: "medium",
+  }).format(buildDate);
+
+  const commitHash = getShortCommitHash();
+
+  return {
+    commitHash,
+    timestamp,
+  } satisfies { commitHash: string | null; timestamp: string };
+}
+
+function getShortCommitHash() {
+  const envCommit =
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
+    process.env.VERCEL_GIT_COMMIT_SHA ??
+    process.env.GITHUB_SHA ??
+    process.env.COMMIT_REF ??
+    null;
+
+  if (envCommit) {
+    return envCommit.slice(0, 7);
+  }
+
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return null;
+  }
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" className="dark">
@@ -61,10 +100,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="main" className="pt-16 sm:pt-20 min-h-screen">{children}</main>
           <footer className="border-t bg-background/60">
             <div className="container mx-auto p-4 text-sm opacity-80">
-              © Schultheater „Sommertheater im Schlosspark“ · {" "}
-              <Link href="/impressum" className="underline hover:no-underline">
-                Impressum
-              </Link>
+              <div>
+                © Schultheater „Sommertheater im Schlosspark“ · {" "}
+                <Link href="/impressum" className="underline hover:no-underline">
+                  Impressum
+                </Link>
+              </div>
+              <div className="mt-1 text-xs">
+                {isDevBuild ? (
+                  <>Build #{buildInfo.commitHash ?? "unbekannt"} · Stand {buildInfo.timestamp}</>
+                ) : (
+                  <>Stand {buildInfo.timestamp}</>
+                )}
+              </div>
             </div>
           </footer>
         </Providers>
