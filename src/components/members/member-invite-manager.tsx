@@ -235,10 +235,12 @@ export function MemberInviteManager() {
       </CardHeader>
       <CardContent className="space-y-6">
         {freshInvite && (
-          <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm text-primary">
+          <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm text-primary-foreground">
             <p className="font-medium">Neuer Link</p>
-            <p className="break-all text-xs">{(resolvedOrigin ? resolvedOrigin : "") + (freshInvite.shareUrl ?? freshInvite.inviteUrl)}</p>
-            <p className="text-[11px] text-primary/80">
+            <p className="break-all font-mono text-sm">
+              {(resolvedOrigin ? resolvedOrigin : "") + (freshInvite.shareUrl ?? freshInvite.inviteUrl)}
+            </p>
+            <p className="text-xs text-muted-foreground">
               Der Link bleibt während des aktiven Zeitraums auch unten in der Übersicht sichtbar.
             </p>
             <div className="mt-3 flex gap-2">
@@ -249,7 +251,7 @@ export function MemberInviteManager() {
                 size="sm"
                 variant="ghost"
                 onClick={() => setFreshInvite(null)}
-                className="text-primary"
+                className="text-primary-foreground hover:bg-primary/20"
               >
                 Ausblenden
               </Button>
@@ -291,9 +293,9 @@ export function MemberInviteManager() {
                           ))}
                         </div>
                         {invite.shareUrl && (
-                          <div className="mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary">
-                            <p className="font-medium">Aktiver Onboarding-Link</p>
-                            <p className="break-all font-mono text-[11px]">
+                          <div className="mt-3 space-y-2 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground">
+                            <p className="text-sm font-medium">Aktiver Onboarding-Link</p>
+                            <p className="break-all font-mono text-sm">
                               {(resolvedOrigin ? resolvedOrigin : "") + invite.shareUrl}
                             </p>
                             <div className="flex flex-wrap gap-2 pt-1">
@@ -305,8 +307,13 @@ export function MemberInviteManager() {
                               >
                                 Link kopieren
                               </Button>
-                              <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" asChild>
-                                <a href={invite.shareUrl} target="_blank" rel="noopener noreferrer" className="text-primary">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs text-primary-foreground hover:bg-primary/20"
+                                asChild
+                              >
+                                <a href={invite.shareUrl} target="_blank" rel="noopener noreferrer">
                                   Öffnen
                                 </a>
                               </Button>
