@@ -1,5 +1,8 @@
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Hero } from "@/components/hero";
+import { Badge } from "@/components/ui/badge";
+import { Heading, Text } from "@/components/ui/typography";
+import { TextLink } from "@/components/ui/text-link";
 import { getHeroImages, pickHeroForNow } from "@/lib/hero-images";
 import React from "react";
 
@@ -40,9 +43,13 @@ export default function Home() {
       <Hero images={heroImages} />
       <div className="container mx-auto px-4 sm:px-6">
         <div className="space-y-8 py-12 sm:py-16">
-          <section className="text-center py-6 sm:py-8">
-            <div className="mt-2 opacity-80">Ein einziges Wochenende. Ein Sommer. Ein Stück.</div>
-            <div className="mt-4 text-xl">Countdown: bald verfügbar…</div>
+          <section className="py-6 text-center sm:py-8">
+            <Text tone="muted" className="mt-2 text-sm opacity-80 sm:text-base">
+              Ein einziges Wochenende. Ein Sommer. Ein Stück.
+            </Text>
+            <Heading level="h3" className="mt-4 text-xl text-foreground sm:text-2xl">
+              Countdown: bald verfügbar…
+            </Heading>
           </section>
           <Card>
             <CardTitle className="p-4">Teaser-Hinweis</CardTitle>
@@ -55,13 +62,19 @@ export default function Home() {
             />
             <div className="relative mx-auto max-w-4xl space-y-8 px-6 py-12 sm:px-10 sm:py-16">
               <div className="space-y-4 text-center sm:space-y-5">
-                <p className="inline-flex rounded-full bg-white/10 px-4 py-1 text-sm font-medium uppercase tracking-[0.18em] text-indigo-200 shadow-sm">
+                <Badge
+                  variant="ghost"
+                  size="sm"
+                  className="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200 shadow-sm"
+                >
                   FAQ
-                </p>
-                <h2 className="text-3xl font-semibold sm:text-4xl">Häufig gestellte Fragen</h2>
-                <p className="text-base text-slate-200 sm:text-lg">
+                </Badge>
+                <Heading level="h2" className="text-3xl font-semibold text-white sm:text-4xl">
+                  Häufig gestellte Fragen
+                </Heading>
+                <Text variant="bodyLg" tone="muted" className="text-slate-200 sm:text-lg">
                   Die wichtigsten Antworten rund um das Sommertheater – kompakt und jederzeit nachlesbar.
-                </p>
+                </Text>
               </div>
               <div className="space-y-4">
                 {faqs.map((faq) => (
@@ -69,8 +82,16 @@ export default function Home() {
                     key={faq.question}
                     className="group rounded-2xl border border-white/10 bg-white/10 p-6 text-left shadow-lg backdrop-blur transition duration-300 open:border-white/20 open:bg-white/20"
                   >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold text-slate-50 sm:text-xl">
-                      <span>{faq.question}</span>
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                      <Text
+                        asChild
+                        variant="bodyLg"
+                        tone="default"
+                        weight="semibold"
+                        className="text-slate-50 sm:text-xl"
+                      >
+                        <span>{faq.question}</span>
+                      </Text>
                       <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/10 text-indigo-100 transition duration-300 group-open:rotate-180">
                         <svg
                           className="h-4 w-4"
@@ -86,16 +107,18 @@ export default function Home() {
                         </svg>
                       </span>
                     </summary>
-                    <p className="mt-4 text-base leading-relaxed text-indigo-100">{faq.answer}</p>
+                    <Text className="mt-4 text-base leading-relaxed text-indigo-100">{faq.answer}</Text>
                   </details>
                 ))}
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/10 px-6 py-5 text-sm text-slate-100 backdrop-blur sm:text-base">
-                Noch Fragen offen? Schreib uns jederzeit an
-                <a className="ml-2 font-semibold text-sky-200 underline underline-offset-4 hover:text-sky-100" href="mailto:hallo@sommertheater.de">
-                  hallo@sommertheater.de
-                </a>
-                – wir freuen uns auf deine Nachricht!
+                <Text tone="default" className="text-slate-100">
+                  Noch Fragen offen? Schreib uns jederzeit an
+                  <TextLink className="ml-2" href="mailto:hallo@sommertheater.de" variant="accent" weight="semibold">
+                    hallo@sommertheater.de
+                  </TextLink>
+                  – wir freuen uns auf deine Nachricht!
+                </Text>
               </div>
             </div>
           </section>
