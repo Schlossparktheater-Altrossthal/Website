@@ -33,12 +33,13 @@ ENV PNPM_HOME=/root/.local/share/pnpm \
     NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
+    APP_SERVER_PORT=3001 \
     REALTIME_BASE_PATH=/realtime \
     NEXT_PUBLIC_REALTIME_URL=/realtime \
     NEXT_PUBLIC_REALTIME_PATH=/realtime/socket.io \
     REALTIME_SERVER_EVENT_PATH=/realtime/events \
-    REALTIME_INTERNAL_ORIGIN=http://127.0.0.1:3000 \
-    REALTIME_SERVER_URL=http://127.0.0.1:3000/realtime
+    REALTIME_INTERNAL_ORIGIN=http://127.0.0.1:3001 \
+    REALTIME_SERVER_URL=http://127.0.0.1:3001/realtime
 RUN apk add --no-cache openssl \
     && corepack enable
 WORKDIR /app
@@ -53,4 +54,4 @@ COPY --from=builder /app/realtime-server ./realtime-server
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node scripts/run-prisma-migrate.mjs && node scripts/start-combined-server.mjs"]
+CMD ["sh", "-c", "node scripts/run-prisma-migrate.mjs && node scripts/start-with-proxy.mjs"]
