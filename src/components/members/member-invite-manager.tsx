@@ -24,6 +24,71 @@ const statusLabelMap = {
   exhausted: { label: "Verbraucht", variant: "outline" as const },
 };
 
+const RECENT_RELATIVE_FORMATTER = new Intl.RelativeTimeFormat("de-DE", { numeric: "auto" });
+const RECENT_ABSOLUTE_FORMATTER = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+const SECOND = 1;
+const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
+const MONTH = 30.4375 * DAY;
+const YEAR = 365.25 * DAY;
+
+type RecentClickDescriptor = { iso: string; relative: string; absolute: string };
+
+function formatRelativeFromNow(date: Date) {
+  const diffInSeconds = (date.getTime() - Date.now()) / 1000;
+  const absoluteDiff = Math.abs(diffInSeconds);
+
+  if (absoluteDiff < MINUTE) {
+    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / SECOND), "second");
+  }
+
+  if (absoluteDiff < HOUR) {
+    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / MINUTE), "minute");
+  }
+
+  if (absoluteDiff < DAY) {
+    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / HOUR), "hour");
+  }
+
+  if (absoluteDiff < WEEK) {
+    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / DAY), "day");
+  }
+
+  if (absoluteDiff < MONTH) {
+    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / WEEK), "week");
+  }
+
+  if (absoluteDiff < YEAR) {
+    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / MONTH), "month");
+  }
+
+  return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / YEAR), "year");
+}
+
+function buildRecentClickDetails(timestamps: string[]): RecentClickDescriptor[] {
+  return timestamps
+    .map((timestamp) => {
+      if (typeof timestamp !== "string") return null;
+      const trimmed = timestamp.trim();
+      if (!trimmed) return null;
+      const parsed = new Date(trimmed);
+      if (Number.isNaN(parsed.getTime())) return null;
+
+      return {
+        iso: parsed.toISOString(),
+        relative: formatRelativeFromNow(parsed),
+        absolute: RECENT_ABSOLUTE_FORMATTER.format(parsed),
+      } satisfies RecentClickDescriptor;
+    })
+    .filter((entry): entry is RecentClickDescriptor => Boolean(entry));
+}
+
 type InviteSummary = {
   id: string;
   label: string | null;
@@ -42,7 +107,10 @@ type InviteSummary = {
   createdBy: { id: string; name: string | null; email: string | null } | null;
   shareUrl: string | null;
   isActive: boolean;
+  recentClicks: string[];
 };
+
+type InviteSummaryPayload = Omit<InviteSummary, "recentClicks"> & { recentClicks?: string[] };
 
 type CreateInviteState = {
   label: string;
@@ -209,7 +277,15 @@ export function MemberInviteManager() {
       if (!response.ok) {
         throw new Error(data?.error ?? "Einladungen konnten nicht geladen werden");
       }
-      setInvites(Array.isArray(data?.invites) ? data.invites : []);
+      const invitesPayload = Array.isArray(data?.invites)
+        ? (data.invites as InviteSummaryPayload[])
+        : [];
+      setInvites(
+        invitesPayload.map((invite) => ({
+          ...invite,
+          recentClicks: Array.isArray(invite.recentClicks) ? invite.recentClicks : [],
+        })),
+      );
     } catch (err) {
       console.error("[MemberInviteManager] load", err);
       setError("Einladungen konnten nicht geladen werden.");
@@ -568,6 +644,7 @@ export function MemberInviteManager() {
                     variant: "destructive" as const,
                   },
                 ];
+                const recentClickDetails = buildRecentClickDetails(invite.recentClicks);
                 return (
                   <div
                     key={invite.id}
@@ -701,18 +778,62 @@ export function MemberInviteManager() {
                                 ))}
                               </div>
                             </div>
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium uppercase text-muted-foreground">Nutzungsübersicht</p>
-                              <p className="text-sm text-foreground">
-                                {invite.maxUses !== null
-                                  ? `${invite.usageCount} / ${invite.maxUses} genutzt`
-                                  : `${invite.usageCount} Nutzungen`}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {invite.completedSessions > 0 || invite.pendingSessions > 0
-                                  ? `${invite.completedSessions} abgeschlossen · ${invite.pendingSessions} offen`
-                                  : "Noch keine Sitzungen registriert."}
-                              </p>
+                            <div className="space-y-3">
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium uppercase text-muted-foreground">Nutzungsübersicht</p>
+                                <p className="text-sm text-foreground">
+                                  {invite.maxUses !== null
+                                    ? `${invite.usageCount} / ${invite.maxUses} genutzt`
+                                    : `${invite.usageCount} Nutzungen`}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {invite.completedSessions > 0 || invite.pendingSessions > 0
+                                    ? `${invite.completedSessions} abgeschlossen · ${invite.pendingSessions} offen`
+                                    : "Noch keine Sitzungen registriert."}
+                                </p>
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                  Letzte Klicks
+                                </p>
+                                {recentClickDetails.length ? (
+                                  <div className="space-y-1.5">
+                                    {recentClickDetails.map((entry, index) => (
+                                      <div
+                                        key={`${invite.id}-recent-${index}-${entry.iso}`}
+                                        className="group relative overflow-hidden rounded-lg border border-border/60 bg-card/80 px-3 py-2 shadow-sm backdrop-blur-sm transition hover:border-primary/60"
+                                      >
+                                        <div
+                                          className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_0%_0%,color-mix(in_oklab,var(--primary)_18%,transparent),transparent_70%)] opacity-70 transition group-hover:opacity-95"
+                                          aria-hidden
+                                        />
+                                        <div className="relative flex items-center justify-between gap-3">
+                                          <div className="flex items-center gap-3">
+                                            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/90 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition group-hover:border-primary/60 group-hover:text-primary">
+                                              {String(index + 1).padStart(2, "0")}
+                                            </span>
+                                            <div className="space-y-0.5">
+                                              <p className="text-sm font-medium text-foreground">{entry.relative}</p>
+                                              <time
+                                                dateTime={entry.iso}
+                                                className="text-[11px] uppercase tracking-wide text-muted-foreground"
+                                              >
+                                                {entry.absolute}
+                                              </time>
+                                            </div>
+                                          </div>
+                                          <span
+                                            aria-hidden
+                                            className="h-2 w-2 rounded-full bg-primary/80 shadow-[0_0_0.75rem_rgba(0,0,0,0.25)] transition group-hover:scale-110 group-hover:bg-primary"
+                                          />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground">Noch keine Klicks registriert.</p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
