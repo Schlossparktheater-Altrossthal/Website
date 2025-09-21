@@ -1,13 +1,40 @@
+import { readdirSync } from "node:fs";
+import path from "node:path";
+
 import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import { Cat, Fish, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
-import Image from "next/image";
 
 import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 
 import { DieterEncountersSection } from "./encounters-section";
+import { SchulkatzeImageRotator } from "./image-rotator";
+
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
+
+function resolveSchulkatzeImages(): string[] {
+  const directory = path.join(process.cwd(), "public", "images", "katze");
+
+  try {
+    const files = readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((name) => SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(name).toLowerCase()))
+      .sort((a, b) => a.localeCompare(b));
+
+    if (files.length > 0) {
+      return Array.from(new Set(files)).map((name) => `/images/katze/${name}`);
+    }
+  } catch {
+    // Wenn das Verzeichnis nicht gelesen werden kann, nutzen wir den Fallback weiter unten.
+  }
+
+  return ["/images/katze/IMG_8370.JPEG"];
+}
+
+const schulkatzeImages = resolveSchulkatzeImages();
 
 export const metadata: Metadata = {
   title: "Unsere Schulkatze",
@@ -154,16 +181,10 @@ export default function SchulkatzePage() {
             </Text>
           </div>
           <figure className="relative mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg">
-            <div className="relative aspect-[3/4]">
-              <Image
-                src="/images/katze/IMG_8370.JPEG"
-                alt="Schulkatze Dieter Dennis von Altroßthal, graug getigert, sitzt aufmerksam im Schulhof."
-                fill
-                className="object-cover"
-                sizes="(min-width: 1024px) 320px, (min-width: 768px) 40vw, 90vw"
-                priority
-              />
-            </div>
+            <SchulkatzeImageRotator
+              images={schulkatzeImages}
+              alt="Schulkatze Dieter Dennis von Altroßthal, graug getigert, sitzt aufmerksam im Schulhof."
+            />
             <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
               Dieter Dennis von Altroßthal war über viele Jahre Teil unserer Schulgemeinschaft.
             </figcaption>
