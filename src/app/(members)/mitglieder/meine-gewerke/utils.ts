@@ -4,6 +4,7 @@ import type { ComponentProps } from "react";
 import type { Prisma, DepartmentMembershipRole, TaskStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
+import { getUserDisplayName } from "@/lib/names";
 
 export const ROLE_LABELS: Record<DepartmentMembershipRole, string> = {
   lead: "Leitung",
@@ -83,10 +84,16 @@ export function countBlockedDays(memberIds: string[], blockedByUser: Map<string,
   return blocked.size;
 }
 
-export function formatUserName(user?: { name: string | null; email: string | null }) {
-  if (user?.name && user.name.trim()) return user.name;
-  if (user?.email) return user.email;
-  return "Unbekannt";
+export function formatUserName(
+  user?: {
+    name: string | null;
+    email: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  } | null,
+) {
+  if (!user) return "Unbekannt";
+  return getUserDisplayName(user, "Unbekannt");
 }
 
 export function getDueMeta(date: Date, reference: Date) {
