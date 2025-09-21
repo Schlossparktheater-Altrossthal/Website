@@ -1040,12 +1040,15 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 <span className="text-xs text-muted-foreground">Damit wissen wir, ob wir ein Eltern-Formular benötigen.</span>
               </label>
               <label className="space-y-1 text-sm">
-                <span className="font-medium">Wo bist du aktuell?</span>
+                <span className="font-medium">Was machst du aktuell schulisch oder beruflich?</span>
                 <Input
                   value={form.background}
                   onChange={(event) => setForm((prev) => ({ ...prev, background: event.target.value }))}
                   placeholder="z.B. BSZ Altroßthal – Berufsschule"
                 />
+                <span className="text-xs text-muted-foreground">
+                  Erzähl uns kurz, ob du zur Schule gehst, eine Ausbildung machst oder bereits arbeitest.
+                </span>
                 <div className="flex flex-wrap gap-2 pt-2">
                   {backgroundSuggestions.map((suggestion) => (
                     <button
