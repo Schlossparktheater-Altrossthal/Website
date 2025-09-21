@@ -13,8 +13,12 @@ function parsePort(value, fallback) {
 
 async function main() {
   const proxyPort = parsePort(process.env.PORT ?? process.env.PROXY_PORT ?? 3000, 3000);
-  const proxyHost = process.env.HOSTNAME || '0.0.0.0';
-  const appHost = process.env.APP_HOST || '127.0.0.1';
+  const proxyHost =
+    process.env.PROXY_HOST?.trim() ||
+    process.env.APP_PROXY_HOST?.trim() ||
+    process.env.HOST?.trim() ||
+    '0.0.0.0';
+  const appHost = process.env.APP_HOST?.trim() || process.env.APP_BIND_HOST?.trim() || '127.0.0.1';
   const appPort = parsePort(process.env.APP_SERVER_PORT ?? process.env.APP_PORT ?? proxyPort + 1, proxyPort + 1);
 
   if (!Number.isFinite(proxyPort) || proxyPort <= 0) {
@@ -25,7 +29,13 @@ async function main() {
   }
 
   const targetUrl = `http://${appHost}:${appPort}`;
-  const childEnv = { ...process.env, PORT: String(appPort), APP_PORT: String(appPort) };
+  const childEnv = {
+    ...process.env,
+    PORT: String(appPort),
+    APP_PORT: String(appPort),
+    APP_HOST: appHost,
+    APP_BIND_HOST: appHost,
+  };
   if (!childEnv.REALTIME_INTERNAL_ORIGIN) {
     childEnv.REALTIME_INTERNAL_ORIGIN = targetUrl;
   }
@@ -77,7 +87,7 @@ async function main() {
   };
 
   server.listen(proxyPort, proxyHost, () => {
-    const displayHost = proxyHost === '0.0.0.0' ? '0.0.0.0' : proxyHost;
+    const displayHost = ['0.0.0.0', '::', '::0'].includes(proxyHost) ? '0.0.0.0' : proxyHost;
     console.log(`[Proxy] Listening on http://${displayHost}:${proxyPort} and proxying to ${targetUrl}`);
   });
 
