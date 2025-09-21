@@ -44,9 +44,9 @@ export function SiteFooter({ buildInfo, isDevBuild }: SiteFooterProps) {
 
             <div className="grid gap-4 text-sm text-muted-foreground md:grid-cols-2">
               <address className="not-italic">
-                Schlossparkbühne Altrossthal
-                <br /> Schlossallee 1
-                <br /> 12345 Altrossthal
+                BSZ für Agrarwirtschaft und Ernährung Dresden
+                <br /> Altroßthal 1
+                <br /> 01169 Dresden
               </address>
               <div>
                 <p className="font-medium text-foreground">Kontakt</p>

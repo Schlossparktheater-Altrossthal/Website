@@ -9,8 +9,8 @@ export default function ImpressumPage() {
         <Heading level="h3" className="text-xl" weight="bold">
           Schultheater
         </Heading>
-        <Text>Schultheater „Sommertheater im Schlosspark Altrossthal“</Text>
-        <Text>Altrossthal 1, 01169 Dresden</Text>
+        <Text>Sommertheater „Schlossparktheater“</Text>
+        <Text>Altroßthal 1, 01169 Dresden</Text>
         <Text>Vertreten durch die Projektleitung (Vorname Nachname)</Text>
       </div>
       <div className="space-y-2">
@@ -24,7 +24,7 @@ export default function ImpressumPage() {
         <Heading level="h3" className="text-xl" weight="bold">
           Schule / Träger
         </Heading>
-        <Text>Schule: Gymnasium Altrossthal (Platzhalter)</Text>
+        <Text>Schule: BSZ für Agrarwirtschaft und Ernährung Dresden</Text>
         <Text>Schulträger: Landeshauptstadt Dresden (Platzhalter)</Text>
       </div>
       <div className="space-y-2">
