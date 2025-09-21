@@ -24,6 +24,7 @@
 - Klassenketten mit dem `cn`-Helper aus `@/lib/utils` zusammenführen, statt manuell Strings zu konkatinieren.
 - Farben, Typografie und Interaktionsmuster richten sich nach den Dokumenten in `docs/design-system.md` und den generierten Swatches in `docs/swatches`.
 - Achte auf Barrierefreiheit (Skip-Link, Fokuszustände, Kontraste) im Sinne des bestehenden Layouts (`src/app/layout.tsx`).
+- Wenn du Screenshots aus dem Mitgliederbereich benötigst, melde dich vorher im Mitgliederbereich an; Screenshots dürfen nicht nur die Login-Seite zeigen.
 
 ## Tests & Qualitätssicherung
 - Vor Abgabe immer `pnpm lint`, `pnpm test` und `pnpm build` ausführen; Fehler müssen behoben werden.
