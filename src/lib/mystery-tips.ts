@@ -186,7 +186,9 @@ export type MysterySubmissionWithRelations = {
   clue: { id: string; index: number; points: number; releaseAt: Date | null; published: boolean } | null;
 };
 
-export async function getMysterySubmissionsForClue(clueId: string): Promise<MysterySubmissionWithRelations[]> {
+export async function getMysterySubmissionsForClue(
+  clueId: string,
+): Promise<MysterySubmissionWithRelations[]> {
   if (!process.env.DATABASE_URL) {
     return [] as MysterySubmissionWithRelations[];
   }
