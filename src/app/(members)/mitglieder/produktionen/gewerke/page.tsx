@@ -1,19 +1,18 @@
 import Link from "next/link";
-import { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
-import { addDays, format, startOfToday } from "date-fns";
-import { de } from "date-fns/locale/de";
+import { DepartmentMembershipRole } from "@prisma/client";
+import { Sparkles } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
-import { getUserDisplayName } from "@/lib/names";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
+
+import { formatUserName, ROLE_LABELS } from "../../meine-gewerke/utils";
 
 import {
   createDepartmentAction,
@@ -22,51 +21,7 @@ import {
   addDepartmentMemberAction,
   updateDepartmentMemberAction,
   removeDepartmentMemberAction,
-  createDepartmentTaskAction,
-  updateDepartmentTaskAction,
-  deleteDepartmentTaskAction,
 } from "../actions";
-
-const ROLE_LABELS: Record<DepartmentMembershipRole, string> = {
-  lead: "Leitung",
-  member: "Mitglied",
-  deputy: "Vertretung",
-  guest: "Gast",
-};
-
-const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: "Offen",
-  doing: "In Arbeit",
-  done: "Erledigt",
-};
-
-const TASK_STATUS_VARIANT: Record<TaskStatus, "muted" | "info" | "success"> = {
-  todo: "muted",
-  doing: "info",
-  done: "success",
-};
-
-const TASK_STATUS_ORDER: Record<TaskStatus, number> = {
-  todo: 0,
-  doing: 1,
-  done: 2,
-};
-
-const PLANNING_FREEZE_DAYS = 7;
-const PLANNING_LOOKAHEAD_DAYS = 60;
-const DATE_KEY_FORMAT = "yyyy-MM-dd";
-
-type DisplayUser = {
-  firstName?: string | null;
-  lastName?: string | null;
-  name: string | null;
-  email: string | null;
-};
-
-function formatUserName(user?: DisplayUser | null) {
-  if (!user) return "Unbekannt";
-  return getUserDisplayName(user, "Unbekannt");
-}
 
 const selectClassName =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -95,13 +50,6 @@ export default async function ProduktionsGewerkePage() {
           },
           orderBy: { createdAt: "asc" },
         },
-        tasks: {
-          include: {
-            assignee: { select: { id: true, name: true, email: true } },
-            creator: { select: { id: true, name: true, email: true } },
-          },
-          orderBy: { createdAt: "asc" },
-        },
       },
     }),
     prisma.user.findMany({
@@ -113,62 +61,6 @@ export default async function ProduktionsGewerkePage() {
     }),
     getActiveProduction(),
   ]);
-
-  const today = startOfToday();
-  const planningStart = addDays(today, PLANNING_FREEZE_DAYS);
-  const planningEnd = addDays(planningStart, PLANNING_LOOKAHEAD_DAYS);
-
-  const memberUserIds = new Set<string>();
-  for (const department of departments) {
-    for (const membership of department.memberships) {
-      memberUserIds.add(membership.user.id);
-    }
-  }
-
-  const blockedDays = memberUserIds.size
-    ? await prisma.blockedDay.findMany({
-        where: {
-          userId: { in: Array.from(memberUserIds) },
-          date: { gte: today, lte: planningEnd },
-        },
-        orderBy: { date: "asc" },
-      })
-    : [];
-
-  const blockedByUser = new Map<string, Set<string>>();
-  for (const entry of blockedDays) {
-    const key = format(entry.date, DATE_KEY_FORMAT);
-    const existing = blockedByUser.get(entry.userId);
-    if (existing) {
-      existing.add(key);
-    } else {
-      blockedByUser.set(entry.userId, new Set([key]));
-    }
-  }
-
-  const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
-  const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
-
-  const findMeetingSuggestions = (memberIds: string[]) => {
-    if (memberIds.length === 0) return [] as { key: string; date: Date; label: string; shortLabel: string }[];
-
-    const results: { key: string; date: Date; label: string; shortLabel: string }[] = [];
-    let current = planningStart;
-    while (results.length < 3 && current <= planningEnd) {
-      const key = format(current, DATE_KEY_FORMAT);
-      const hasConflict = memberIds.some((id) => blockedByUser.get(id)?.has(key));
-      if (!hasConflict) {
-        results.push({
-          key,
-          date: current,
-          label: format(current, "EEEE, d. MMMM yyyy", { locale: de }),
-          shortLabel: format(current, "dd.MM.yyyy", { locale: de }),
-        });
-      }
-      current = addDays(current, 1);
-    }
-    return results;
-  };
 
   const totalMemberships = departments.reduce((count, department) => count + department.memberships.length, 0);
   const headerStats = [
@@ -253,24 +145,7 @@ export default async function ProduktionsGewerkePage() {
           const departmentMemberIds = department.memberships.map((membership) => membership.user.id);
           const memberIdSet = new Set(departmentMemberIds);
           const availableUsers = users.filter((user) => !memberIdSet.has(user.id));
-          const sortedTasks = [...department.tasks].sort((a, b) => {
-            const statusDiff = TASK_STATUS_ORDER[a.status] - TASK_STATUS_ORDER[b.status];
-            if (statusDiff !== 0) return statusDiff;
-            const dueA = a.dueAt ? a.dueAt.getTime() : Number.MAX_SAFE_INTEGER;
-            const dueB = b.dueAt ? b.dueAt.getTime() : Number.MAX_SAFE_INTEGER;
-            if (dueA !== dueB) return dueA - dueB;
-            return a.createdAt.getTime() - b.createdAt.getTime();
-          });
-          const meetingSuggestions = findMeetingSuggestions(departmentMemberIds);
-          const blockedDatesForDepartment = new Set<string>();
-          for (const memberId of departmentMemberIds) {
-            const entries = blockedByUser.get(memberId);
-            if (entries) {
-              entries.forEach((key) => blockedDatesForDepartment.add(key));
-            }
-          }
-          const blockedDatesCount = blockedDatesForDepartment.size;
-          const hasMembers = departmentMemberIds.length > 0;
+          const detailHref = `/mitglieder/produktionen/gewerke/${department.id}`;
 
           return (
             <Card key={department.id} className="space-y-6">
@@ -482,289 +357,26 @@ export default async function ProduktionsGewerkePage() {
                   </div>
                 </div>
 
-                <div className="space-y-4 rounded-lg border border-border/60 bg-background/70 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-semibold">Aufgaben &amp; ToDos</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Koordiniere Aufgaben im Gewerk mit Status, Fälligkeiten und klaren Zuständigkeiten.
-                      </p>
-                    </div>
-                    {sortedTasks.length ? (
-                      <Badge variant="muted" size="sm">
-                        {sortedTasks.length} {sortedTasks.length === 1 ? "Aufgabe" : "Aufgaben"}
-                      </Badge>
-                    ) : null}
-                  </div>
-
-                  {sortedTasks.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Noch keine Aufgaben erfasst. Lege die erste Aufgabe an, um fokussiert zu starten.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {sortedTasks.map((task) => {
-                        const dueDateValue = task.dueAt ? format(task.dueAt, DATE_KEY_FORMAT) : "";
-                        const dueDateReadable = task.dueAt
-                          ? format(task.dueAt, "dd.MM.yyyy", { locale: de })
-                          : null;
-                        const assigneeName = task.assignee ? formatUserName(task.assignee) : null;
-                        const creatorName = task.creator ? formatUserName(task.creator) : "System";
-
-                        return (
-                          <div
-                            key={task.id}
-                            className="space-y-3 rounded-md border border-border/60 bg-background/80 p-3 text-sm shadow-sm"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Badge variant={TASK_STATUS_VARIANT[task.status]} size="sm">
-                                    {TASK_STATUS_LABELS[task.status]}
-                                  </Badge>
-                                  {dueDateReadable ? (
-                                    <span className="text-xs text-muted-foreground">
-                                      Fällig bis {dueDateReadable}
-                                    </span>
-                                  ) : null}
-                                  <span className="text-xs text-muted-foreground">
-                                    {assigneeName ? `Zuständig: ${assigneeName}` : "Noch keine Zuordnung"}
-                                  </span>
-                                </div>
-                                <p className="text-base font-medium leading-snug">{task.title}</p>
-                                {task.description ? (
-                                  <p className="text-sm text-muted-foreground">{task.description}</p>
-                                ) : null}
-                                <p className="text-xs text-muted-foreground">Erstellt von {creatorName}</p>
-                              </div>
-                              <form action={deleteDepartmentTaskAction}>
-                                <input type="hidden" name="taskId" value={task.id} />
-                                <input
-                                  type="hidden"
-                                  name="redirectPath"
-                                  value="/mitglieder/produktionen/gewerke"
-                                />
-                                <Button type="submit" variant="ghost" size="sm">
-                                  Entfernen
-                                </Button>
-                              </form>
-                            </div>
-
-                            <details className="group rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden">
-                              <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                <span>Aufgabe bearbeiten</span>
-                                <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
-                                <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
-                              </summary>
-                              <form
-                                action={updateDepartmentTaskAction}
-                                className="mt-3 grid gap-3 md:grid-cols-2"
-                              >
-                                <input type="hidden" name="taskId" value={task.id} />
-                                <input
-                                  type="hidden"
-                                  name="redirectPath"
-                                  value="/mitglieder/produktionen/gewerke"
-                                />
-                                <div className="space-y-1 md:col-span-2">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    Titel
-                                  </label>
-                                  <Input
-                                    name="title"
-                                    defaultValue={task.title}
-                                    minLength={2}
-                                    maxLength={160}
-                                    required
-                                  />
-                                </div>
-                                <div className="space-y-1 md:col-span-2">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    Beschreibung
-                                  </label>
-                                  <Textarea
-                                    name="description"
-                                    rows={3}
-                                    maxLength={2000}
-                                    defaultValue={task.description ?? ""}
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    Status
-                                  </label>
-                                  <select name="status" defaultValue={task.status} className={selectClassName}>
-                                    {Object.values(TaskStatus).map((status) => (
-                                      <option key={status} value={status}>
-                                        {TASK_STATUS_LABELS[status]}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    Fällig bis
-                                  </label>
-                                  <Input type="date" name="dueAt" defaultValue={dueDateValue} />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    Zuständiges Mitglied
-                                  </label>
-                                  <select
-                                    name="assigneeId"
-                                    defaultValue={task.assignee?.id ?? ""}
-                                    className={selectClassName}
-                                  >
-                                    <option value="">Noch offen</option>
-                                    {department.memberships.map((membership) => (
-                                      <option key={membership.user.id} value={membership.user.id}>
-                                        {formatUserName(membership.user)}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="md:col-span-2 flex justify-end">
-                                  <Button type="submit" variant="outline" size="sm">
-                                    Aufgabe speichern
-                                  </Button>
-                                </div>
-                              </form>
-                            </details>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className="rounded-md border border-dashed border-border/60 bg-background/60 p-4">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Neue Aufgabe hinzufügen
-                    </h4>
-                    <form
-                      className="mt-3 grid gap-3 md:grid-cols-2"
-                      action={createDepartmentTaskAction}
-                    >
-                      <input type="hidden" name="departmentId" value={department.id} />
-                      <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
-                      <div className="space-y-1 md:col-span-2">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Titel
-                        </label>
-                        <Input
-                          name="title"
-                          placeholder="z.B. Lichtplan aktualisieren"
-                          required
-                          minLength={2}
-                          maxLength={160}
-                        />
-                      </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Beschreibung
-                        </label>
-                        <Textarea
-                          name="description"
-                          rows={3}
-                          maxLength={2000}
-                          placeholder="Optionale Details zur Aufgabe"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Status
-                        </label>
-                        <select name="status" className={selectClassName} defaultValue={TaskStatus.todo}>
-                          {Object.values(TaskStatus).map((status) => (
-                            <option key={status} value={status}>
-                              {TASK_STATUS_LABELS[status]}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Fällig bis
-                        </label>
-                        <Input type="date" name="dueAt" />
-                      </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Zuständiges Mitglied
-                        </label>
-                        <select name="assigneeId" className={selectClassName} defaultValue="">
-                          <option value="">Noch offen</option>
-                          {department.memberships.map((membership) => (
-                            <option key={membership.user.id} value={membership.user.id}>
-                              {formatUserName(membership.user)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="md:col-span-2 flex justify-end">
-                        <Button type="submit" size="sm">
-                          Aufgabe hinzufügen
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-
-                <div className="space-y-4 rounded-lg border border-border/60 bg-background/70 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-semibold">Planung &amp; Termine</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Terminvorschläge ab {freezeUntilLabel} und innerhalb der nächsten {PLANNING_LOOKAHEAD_DAYS} Tage
-                        (bis {planningWindowLabel}).
-                      </p>
-                    </div>
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href="/mitglieder/sperrliste">Sperrliste öffnen</Link>
-                    </Button>
-                  </div>
-
-                  {!hasMembers ? (
-                    <p className="text-sm text-muted-foreground">
-                      Füge Mitglieder hinzu, um gemeinsame Termine zu planen.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-xs text-muted-foreground">
-                        {blockedDatesCount > 0
-                          ? `Markierte Sperrtage im Zeitraum: ${blockedDatesCount}`
-                          : "Keine Sperrtage im Zeitraum – perfekte Gelegenheit für einen Termin."}
-                      </p>
-                      {meetingSuggestions.length === 0 ? (
-                        <div className="rounded-md border border-dashed border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/10 dark:text-amber-200">
-                          Kein gemeinsamer freier Termin gefunden. Aktualisiert eure Sperrlisten oder erweitert den Zeitrahmen.
-                        </div>
-                      ) : (
-                        <ul className="space-y-2">
-                          {meetingSuggestions.map((slot) => (
-                            <li
-                              key={slot.key}
-                              className="rounded-md border border-border/60 bg-background/80 p-3 text-sm shadow-sm"
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div>
-                                  <p className="font-medium">{slot.label}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Alle {departmentMemberIds.length} Mitglieder sind verfügbar.
-                                  </p>
-                                </div>
-                                <Badge variant="success" size="sm">
-                                  Alle verfügbar
-                                </Badge>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                </div>
               </CardContent>
+
+              <div className="flex flex-col gap-3 border-t border-border/60 bg-background/60 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">Mission Control</p>
+                  <p className="text-xs text-muted-foreground">
+                    Aufgaben &amp; Termine findest du jetzt direkt im Gewerk-Hub.
+                  </p>
+                </div>
+                <Button
+                  asChild
+                  size="sm"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground shadow-[0_18px_40px_-28px_rgba(99,102,241,0.9)] transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
+                >
+                  <Link href={detailHref} title={`${department.name} öffnen`}>
+                    <Sparkles aria-hidden className="h-4 w-4" />
+                    <span>Gewerk-Hub öffnen</span>
+                  </Link>
+                </Button>
+              </div>
             </Card>
           );
         })}
