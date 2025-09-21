@@ -1587,7 +1587,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   <Input
                     value={dietaryDraft.allergen}
                     onChange={(event) => setDietaryDraft((prev) => ({ ...prev, allergen: event.target.value }))}
-                    placeholder="z.B. Erdnüsse, Gluten, Vegan"
+                    placeholder="z.B. Erdnüsse, Gluten, Laktose"
                   />
                 </label>
                 <label className="space-y-1 text-sm">
