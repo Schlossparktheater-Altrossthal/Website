@@ -1,12 +1,8 @@
 import { prisma } from "@/lib/prisma";
 
-function resolveAggregateCount(value: number | { _all?: number } | null | undefined) {
-  if (typeof value === "number") {
-    return value;
-  }
-  if (value && typeof value._all === "number") {
-    return value._all;
-  }
+function resolveAggregateCount(value: number | { _all?: number } | null | undefined): number {
+  if (typeof value === "number") return value;
+  if (value && typeof value._all === "number") return value._all;
   return 0;
 }
 
@@ -19,15 +15,15 @@ export type MysteryScoreboardEntry = {
 };
 
 export async function getMysteryScoreboard(limit?: number): Promise<MysteryScoreboardEntry[]> {
-  if (!process.env.DATABASE_URL) {
-    return [];
-  }
+  if (!process.env.DATABASE_URL) return [];
+
   type GroupTotals = {
     playerName: string;
     _sum: { score: number | null };
     _count: { _all: number | null };
     _max: { updatedAt: Date | null };
   };
+
   const totals = (await (prisma as unknown as {
     mysteryTipSubmission: {
       groupBy: (args: {
@@ -69,9 +65,7 @@ export async function getMysteryScoreboard(limit?: number): Promise<MysteryScore
       const playerName = entry.playerName.trim();
       const totalScore = entry._sum.score ?? 0;
       const totalSubmissions = entry._count._all ?? 0;
-      if (!playerName || totalScore <= 0) {
-        return null;
-      }
+      if (!playerName || totalScore <= 0) return null;
       return {
         playerName,
         totalScore,
@@ -89,28 +83,21 @@ export async function getMysteryScoreboard(limit?: number): Promise<MysteryScore
     return a.playerName.localeCompare(b.playerName, "de-DE", { sensitivity: "base" });
   });
 
-  if (typeof limit === "number" && limit > 0) {
-    return scoreboard.slice(0, limit);
-  }
-
+  if (typeof limit === "number" && limit > 0) return scoreboard.slice(0, limit);
   return scoreboard;
 }
 
 export async function getMysteryScoreboardEntry(playerName: string): Promise<MysteryScoreboardEntry | null> {
   const trimmed = playerName.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  if (!process.env.DATABASE_URL) {
-    return null;
-  }
+  if (!trimmed) return null;
+  if (!process.env.DATABASE_URL) return null;
 
   type AggregateTotals = {
     _sum: { score: number | null };
     _count: number | { _all?: number } | null;
     _max: { updatedAt: Date | null };
   };
+
   const [totals, correctCount] = await Promise.all([
     (prisma as unknown as {
       mysteryTipSubmission: {
@@ -135,10 +122,7 @@ export async function getMysteryScoreboardEntry(playerName: string): Promise<Mys
   ]);
 
   const totalScore = totals._sum.score ?? 0;
-  if (totalScore <= 0) {
-    return null;
-  }
-
+  if (totalScore <= 0) return null;
   const totalSubmissions = resolveAggregateCount(totals._count);
 
   return {
@@ -151,18 +135,10 @@ export async function getMysteryScoreboardEntry(playerName: string): Promise<Mys
 }
 
 export async function getMysteryClueSummaries() {
-  if (!process.env.DATABASE_URL) {
-    return [] as Awaited<ReturnType<typeof prisma.clue.findMany>>;
-  }
+  if (!process.env.DATABASE_URL) return [] as Awaited<ReturnType<typeof prisma.clue.findMany>>;
   return prisma.clue.findMany({
     orderBy: [{ index: "asc" }],
-    select: {
-      id: true,
-      index: true,
-      points: true,
-      releaseAt: true,
-      published: true,
-    },
+    select: { id: true, index: true, points: true, releaseAt: true, published: true },
   });
 }
 
@@ -186,12 +162,8 @@ export type MysterySubmissionWithRelations = {
   clue: { id: string; index: number; points: number; releaseAt: Date | null; published: boolean } | null;
 };
 
-export async function getMysterySubmissionsForClue(
-  clueId: string,
-): Promise<MysterySubmissionWithRelations[]> {
-  if (!process.env.DATABASE_URL) {
-    return [] as MysterySubmissionWithRelations[];
-  }
+export async function getMysterySubmissionsForClue(clueId: string): Promise<MysterySubmissionWithRelations[]> {
+  if (!process.env.DATABASE_URL) return [] as MysterySubmissionWithRelations[];
   return (prisma as unknown as {
     mysteryTipSubmission: {
       findMany: (args: {
