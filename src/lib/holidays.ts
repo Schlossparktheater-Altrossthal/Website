@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import ical, { type VEvent } from "node-ical";
-import { addDays, format } from "date-fns";
+import { addDays, format, isValid, parseISO } from "date-fns";
 
 import type { HolidayRange } from "@/types/holidays";
 
@@ -8,6 +8,7 @@ export type { HolidayRange } from "@/types/holidays";
 
 const DEFAULT_SAXONY_HOLIDAY_FEED =
   "https://www.schulferien.org/media/ical/deutschland/ferien_sachsen.ics";
+const FALLBACK_SAXONY_HOLIDAY_FEED = "https://ferien-api.de/api/v1/holidays/SN";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -17,6 +18,33 @@ function normaliseSummary(value: unknown) {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : "";
+}
+
+function normaliseFallbackTitle(value: unknown) {
+  const summary = normaliseSummary(value);
+  if (!summary) {
+    return "Ferien";
+  }
+
+  return summary.replace(/\b\p{L}/gu, (char) => char.toLocaleUpperCase("de-DE"));
+}
+
+function normaliseIsoDate(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = parseISO(trimmed);
+  if (!isValid(parsed)) {
+    return null;
+  }
+
+  return format(parsed, "yyyy-MM-dd");
 }
 
 function ensureDate(value: unknown) {
@@ -88,7 +116,73 @@ function parseHolidayRanges(body: string) {
   return ranges;
 }
 
-async function fetchHolidayFeed() {
+type FerienApiHoliday = {
+  start?: string;
+  end?: string;
+  name?: string;
+  slug?: string;
+};
+
+function parseFallbackHolidayRanges(payload: unknown) {
+  if (!Array.isArray(payload)) {
+    return [] as HolidayRange[];
+  }
+
+  const ranges: HolidayRange[] = [];
+
+  for (const entry of payload as FerienApiHoliday[]) {
+    if (!entry) {
+      continue;
+    }
+
+    const startDate = normaliseIsoDate(entry.start);
+    const endDate = normaliseIsoDate(entry.end);
+
+    if (!startDate || !endDate) {
+      continue;
+    }
+
+    const title = normaliseFallbackTitle(entry.name);
+    const slug = normaliseSummary(entry.slug);
+
+    ranges.push({
+      id: slug ? `ferien-api:${slug}` : `${startDate}-${endDate}-${title}`,
+      title,
+      startDate,
+      endDate,
+    });
+  }
+
+  ranges.sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  return ranges;
+}
+
+async function fetchFallbackHolidayFeed() {
+  try {
+    const response = await fetch(FALLBACK_SAXONY_HOLIDAY_FEED, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent":
+          "Theaterverein Kalenderbot/1.0 (+https://devtheater.beegreenx.de)",
+        Referer: "https://devtheater.beegreenx.de/mitglieder/sperrliste",
+      },
+      next: { revalidate: 60 * 60 * 12 },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Unexpected response: ${response.status}`);
+    }
+
+    const payload = await response.json();
+    return parseFallbackHolidayRanges(payload);
+  } catch (error) {
+    console.error("[holidays] fallback feed fetch failed", error);
+    return [] as HolidayRange[];
+  }
+}
+
+async function fetchIcsHolidayFeed() {
   const source = process.env.SAXONY_HOLIDAYS_ICS_URL || DEFAULT_SAXONY_HOLIDAY_FEED;
 
   if (!source) {
@@ -121,6 +215,20 @@ async function fetchHolidayFeed() {
     console.error("[holidays] feed fetch failed", error);
     return [] as HolidayRange[];
   }
+}
+
+async function fetchHolidayFeed() {
+  const rangesFromIcs = await fetchIcsHolidayFeed();
+  if (rangesFromIcs.length > 0) {
+    return rangesFromIcs;
+  }
+
+  const fallbackRanges = await fetchFallbackHolidayFeed();
+  if (fallbackRanges.length > 0) {
+    return fallbackRanges;
+  }
+
+  return [] as HolidayRange[];
 }
 
 export const getSaxonySchoolHolidayRanges = unstable_cache(
