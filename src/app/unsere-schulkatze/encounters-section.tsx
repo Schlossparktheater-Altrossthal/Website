@@ -303,8 +303,8 @@ export function DieterEncountersSection() {
             </Text>
           </div>
 
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-            <Card className="relative overflow-hidden rounded-3xl border border-border/50 bg-background/90 p-6 shadow-xl sm:p-8">
+          <div className="flex flex-col gap-10 lg:gap-12">
+            <Card className="relative mx-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-border/50 bg-background/90 p-6 shadow-xl sm:p-8">
               <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit]">
                 <div
                   className="absolute left-1/2 top-[-5rem] h-[18rem] w-[24rem] -translate-x-1/2 rounded-full bg-primary/15 opacity-70 blur-3xl"
