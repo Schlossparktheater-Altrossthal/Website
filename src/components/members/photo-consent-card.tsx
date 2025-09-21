@@ -32,13 +32,13 @@ const statusVariants: Record<PhotoConsentSummary["status"], "default" | "seconda
 
 const statusBadgeClasses: Record<PhotoConsentSummary["status"], string> = {
   none:
-    "border-indigo-200 bg-indigo-50/90 text-indigo-700 shadow-[0_12px_32px_rgba(99,102,241,0.18)] dark:border-indigo-400/40 dark:bg-indigo-400/15 dark:text-indigo-50",
+    "border-info/45 bg-info/15 text-info shadow-[0_12px_32px_color-mix(in_oklab,var(--info)_22%,transparent)]",
   pending:
-    "border-amber-200 bg-amber-50/90 text-amber-700 shadow-[0_12px_32px_rgba(245,158,11,0.18)] dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-100",
+    "border-warning/45 bg-warning/15 text-warning shadow-[0_12px_32px_color-mix(in_oklab,var(--warning)_22%,transparent)]",
   approved:
-    "border-emerald-200 bg-emerald-50/90 text-emerald-700 shadow-[0_12px_36px_rgba(16,185,129,0.22)] dark:border-emerald-400/40 dark:bg-emerald-400/15 dark:text-emerald-50",
+    "border-success/45 bg-success/15 text-success shadow-[0_12px_36px_color-mix(in_oklab,var(--success)_24%,transparent)]",
   rejected:
-    "border-rose-200 bg-rose-50/90 text-rose-700 shadow-[0_12px_32px_rgba(244,63,94,0.18)] dark:border-rose-400/40 dark:bg-rose-400/15 dark:text-rose-50",
+    "border-destructive/45 bg-destructive/15 text-destructive shadow-[0_12px_32px_color-mix(in_oklab,var(--destructive)_22%,transparent)]",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
@@ -203,14 +203,14 @@ export function PhotoConsentCard() {
   const showIntro = !loading && status !== "approved";
 
   return (
-    <Card className="relative overflow-hidden border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background shadow-xl shadow-primary/10 dark:from-primary/20">
+    <Card className="relative overflow-hidden border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background shadow-xl shadow-primary/10">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -left-20 top-0 h-40 w-40 rounded-full bg-primary/20 opacity-70 blur-3xl dark:bg-primary/30"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-16 top-16 h-36 w-36 rounded-full bg-amber-100 opacity-60 blur-3xl dark:bg-amber-300/20"
+        className="pointer-events-none absolute -right-16 top-16 h-36 w-36 rounded-full bg-warning/20 opacity-60 blur-3xl"
       />
       <CardHeader className="mb-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
@@ -224,14 +224,14 @@ export function PhotoConsentCard() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start rounded-full border border-primary/20 bg-background/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-foreground/60 shadow-sm backdrop-blur dark:border-primary/40 dark:bg-slate-900/70">
+        <div className="flex items-center gap-2 self-start rounded-full border border-primary/30 bg-background/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-foreground/60 shadow-sm backdrop-blur">
           <span>Status</span>
           {statusBadge}
         </div>
       </CardHeader>
       <CardContent className="relative space-y-5 text-sm">
         {showIntro && (
-          <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 shadow-[0_18px_45px_rgba(59,130,246,0.12)] backdrop-blur dark:border-primary/40 dark:bg-slate-900/70">
+          <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 shadow-[0_18px_45px_color-mix(in_oklab,var(--info)_18%,transparent)] backdrop-blur">
             <p className="font-semibold text-foreground">Mit deinem „Okay“ hilfst du unserem Auftrittsteam.</p>
             <p className="mt-1 text-foreground/70">
               Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim Cookiebanner am Seitenrand.
@@ -249,13 +249,13 @@ export function PhotoConsentCard() {
             </Button>
           </div>
         ) : requiresDateOfBirth ? (
-          <div className="rounded-md border border-amber-300 bg-amber-50/60 p-3 text-amber-900">
+          <div className="rounded-md border border-warning/45 bg-warning/15 p-3 text-warning">
             Bitte hinterlege dein Geburtsdatum im <Link className="underline" href="/mitglieder/profil">Profil</Link>, damit wir prüfen können, ob ein Elternformular notwendig ist.
           </div>
         ) : status === "approved" ? (
-          <div className="space-y-2 rounded-md border border-emerald-300 bg-emerald-50/70 p-3 text-emerald-900">
+          <div className="space-y-2 rounded-md border border-success/45 bg-success/15 p-3 text-success">
             <p>Vielen Dank – deine Fotoeinwilligung ist freigegeben.</p>
-            <ul className="text-xs text-emerald-800">
+            <ul className="text-xs text-success/90">
               <li>
                 Bestätigt am {formatDate(summary?.approvedAt) ?? "unbekannt"}
                 {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
@@ -273,7 +273,7 @@ export function PhotoConsentCard() {
               </div>
             )}
 
-            <div className="rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur dark:border-primary/40 dark:bg-slate-900/70">
+            <div className="rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
               <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
@@ -290,7 +290,7 @@ export function PhotoConsentCard() {
             </div>
 
             {requiresDocument && (
-              <div className="space-y-3 rounded-xl border border-dashed border-primary/30 bg-background/80 p-4 shadow-sm backdrop-blur dark:border-primary/40 dark:bg-slate-900/70">
+              <div className="space-y-3 rounded-xl border border-dashed border-primary/30 bg-background/80 p-4 shadow-sm backdrop-blur">
                 <div className="font-medium text-foreground">Elterliche Einwilligung (PDF oder JPG/PNG)</div>
                 <Input
                   ref={fileInputRef}
@@ -315,7 +315,7 @@ export function PhotoConsentCard() {
               <Button
                 type="submit"
                 size="lg"
-                className="shadow-[0_20px_45px_rgba(59,130,246,0.25)] transition-shadow duration-200 hover:shadow-[0_22px_52px_rgba(59,130,246,0.32)]"
+                className="shadow-[0_20px_45px_color-mix(in_oklab,var(--info)_25%,transparent)] transition-shadow duration-200 hover:shadow-[0_22px_52px_color-mix(in_oklab,var(--info)_32%,transparent)]"
                 disabled={
                   submitting ||
                   !confirm ||

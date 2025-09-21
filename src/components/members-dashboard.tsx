@@ -101,8 +101,8 @@ const ONBOARDING_FOCUS_DESCRIPTIONS: Record<"acting" | "tech" | "both", string> 
 };
 
 const ONBOARDING_DOMAIN_ACCENT: Record<"acting" | "crew", string> = {
-  acting: "from-violet-500/70 to-fuchsia-500/70",
-  crew: "from-cyan-500/70 to-teal-500/70",
+  acting: "from-primary/60 via-primary/30 to-transparent",
+  crew: "from-info/60 via-info/30 to-transparent",
 };
 
 const ONBOARDING_PHOTO_STATUS_LABELS: Record<OnboardingPhotoStatus, string> = {
@@ -113,10 +113,10 @@ const ONBOARDING_PHOTO_STATUS_LABELS: Record<OnboardingPhotoStatus, string> = {
 };
 
 const ONBOARDING_PHOTO_STATUS_CLASSES: Record<OnboardingPhotoStatus, string> = {
-  none: "border-border/60 bg-muted/40 text-muted-foreground",
-  pending: "border-amber-400/40 bg-amber-50 text-amber-700",
-  approved: "border-emerald-400/40 bg-emerald-50 text-emerald-700",
-  rejected: "border-red-400/40 bg-red-50 text-red-700",
+  none: "border border-border/60 bg-muted/40 text-muted-foreground",
+  pending: "border border-warning/45 bg-warning/15 text-warning",
+  approved: "border border-success/45 bg-success/15 text-success",
+  rejected: "border border-destructive/45 bg-destructive/15 text-destructive",
 };
 
 const DIETARY_LEVEL_LABELS: Record<string, string> = {
@@ -430,12 +430,12 @@ export function MembersDashboard() {
   const getActivityIcon = useCallback((type: RecentActivity["type"]) => {
     switch (type) {
       case "attendance":
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+        return <CheckCircle2 className="h-4 w-4 text-success" />;
       case "rehearsal":
-        return <Calendar className="h-4 w-4 text-blue-500" />;
+        return <Calendar className="h-4 w-4 text-info" />;
       case "notification":
       default:
-        return <Bell className="h-4 w-4 text-purple-500" />;
+        return <Bell className="h-4 w-4 text-accent" />;
     }
   }, []);
 
@@ -499,9 +499,9 @@ export function MembersDashboard() {
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffDays > 0) {
-      let tone: "info" | "warning" | "danger" = "info";
+      let tone: "info" | "warning" | "destructive" = "info";
       if (diffDays <= 3) {
-        tone = "danger";
+        tone = "destructive";
       } else if (diffDays <= 7) {
         tone = "warning";
       }
@@ -564,11 +564,11 @@ export function MembersDashboard() {
       ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(onboarding.completedAt)
       : null;
     const statusBadge = onboarding.completed ? (
-      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
+      <Badge variant="secondary" className="border-success/45 bg-success/15 text-success">
         Abgeschlossen
       </Badge>
     ) : (
-      <Badge variant="outline" className="border-amber-400/40 text-amber-700">
+      <Badge variant="outline" className="border-warning/45 text-warning">
         In Bearbeitung
       </Badge>
     );
@@ -708,7 +708,7 @@ export function MembersDashboard() {
             </div>
             <p className="text-xs text-muted-foreground">{photoText}</p>
             {!onboarding.photoConsent.hasDocument && onboarding.photoConsent.consentGiven && (
-              <p className="text-[11px] text-amber-600">Hinweis: Dokument noch ausstehend.</p>
+              <p className="text-[11px] text-warning">Hinweis: Dokument noch ausstehend.</p>
             )}
             {photoUpdatedLabel ? (
               <p className="text-[11px] text-muted-foreground">Zuletzt aktualisiert am {photoUpdatedLabel}</p>
@@ -843,7 +843,7 @@ export function MembersDashboard() {
                 {onlineList.map((user) => (
                   <li key={`${user.id}-${user.joinedAt.getTime()}`} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-success" />
                       <span className="text-sm font-medium">{user.name}</span>
                     </div>
                     <span className="text-xs text-muted-foreground">

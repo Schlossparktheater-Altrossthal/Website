@@ -10,11 +10,10 @@ const keyMetricValueVariants = cva(
     variants: {
       tone: {
         default: "text-foreground",
-        positive:
-          "text-emerald-600 dark:text-emerald-400",
-        info: "text-sky-600 dark:text-sky-400",
-        warning: "text-amber-600 dark:text-amber-400",
-        danger: "text-rose-600 dark:text-rose-400",
+        positive: "text-success",
+        info: "text-info",
+        warning: "text-warning",
+        destructive: "text-destructive",
       },
     },
     defaultVariants: {

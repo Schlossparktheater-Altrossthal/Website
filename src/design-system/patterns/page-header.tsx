@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { Heading, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 type PageHeaderProps = React.HTMLAttributes<HTMLDivElement>;
@@ -21,15 +22,7 @@ export function PageHeader({ className, ...props }: PageHeaderProps) {
 type PageHeaderTitleProps = React.HTMLAttributes<HTMLHeadingElement>;
 
 export function PageHeaderTitle({ className, ...props }: PageHeaderTitleProps) {
-  return (
-    <h1
-      className={cn(
-        "text-3xl font-semibold tracking-tight text-foreground sm:text-4xl",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <Heading level="h1" className={cn("text-3xl sm:text-4xl", className)} {...props} />;
 }
 
 type PageHeaderDescriptionProps = React.HTMLAttributes<HTMLParagraphElement>;
@@ -38,15 +31,7 @@ export function PageHeaderDescription({
   className,
   ...props
 }: PageHeaderDescriptionProps) {
-  return (
-    <p
-      className={cn(
-        "max-w-2xl text-sm text-muted-foreground sm:text-base",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <Text className={cn("max-w-2xl", className)} tone="muted" variant="body" {...props} />;
 }
 
 type PageHeaderActionsProps = React.HTMLAttributes<HTMLDivElement>;
@@ -68,15 +53,11 @@ const pageHeaderStatusVariants = cva(
   {
     variants: {
       state: {
-        idle: "bg-muted text-muted-foreground ring-border/60",
-        online:
-          "bg-emerald-50 text-emerald-700 ring-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-400/40",
-        offline:
-          "bg-muted text-muted-foreground ring-border/60 dark:bg-muted/40 dark:text-muted-foreground",
-        error:
-          "bg-rose-50 text-rose-700 ring-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200 dark:ring-rose-400/40",
-        warning:
-          "bg-amber-50 text-amber-700 ring-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100 dark:ring-amber-400/40",
+        idle: "bg-muted/60 text-muted-foreground ring-border/60",
+        online: "bg-success/15 text-success ring-success/40",
+        offline: "bg-muted/40 text-muted-foreground ring-border/60",
+        error: "bg-destructive/15 text-destructive ring-destructive/40",
+        warning: "bg-warning/15 text-warning ring-warning/40",
       },
     },
     defaultVariants: {

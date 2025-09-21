@@ -31,13 +31,13 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
 };
 
 export const ROLE_BADGE_VARIANTS: Record<Role, string> = {
-  member: "bg-slate-100 text-slate-700 border-slate-200",
-  cast: "bg-purple-100 text-purple-700 border-purple-200",
-  tech: "bg-blue-100 text-blue-700 border-blue-200",
-  board: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  finance: "bg-amber-100 text-amber-700 border-amber-200",
-  owner: "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
-  admin: "bg-red-100 text-red-700 border-red-200",
+  member: "border border-border/60 bg-muted/50 text-muted-foreground",
+  cast: "border border-primary/45 bg-primary/15 text-primary",
+  tech: "border border-info/45 bg-info/15 text-info",
+  board: "border border-success/45 bg-success/15 text-success",
+  finance: "border border-warning/45 bg-warning/15 text-warning",
+  owner: "border border-secondary/45 bg-secondary/15 text-secondary",
+  admin: "border border-destructive/45 bg-destructive/15 text-destructive",
 };
 
 export function sortRoles(roles: Role[]) {

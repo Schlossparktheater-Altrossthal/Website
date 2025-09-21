@@ -72,7 +72,7 @@ export function SiteHeader() {
           className={`font-serif text-lg transition-all duration-300 sm:text-xl ${
             scrolled || !isHomePage
               ? "text-primary hover:opacity-90"
-              : "text-white drop-shadow-lg hover:text-primary/90"
+              : "text-foreground drop-shadow-lg hover:text-primary/90"
           }`}
           href="/"
         >
@@ -90,7 +90,7 @@ export function SiteHeader() {
                 className={`transition-all duration-300 ${
                   scrolled || !isHomePage
                     ? "text-foreground/90 hover:text-primary"
-                    : "text-white/90 drop-shadow-lg hover:text-white"
+                    : "text-foreground/90 drop-shadow-lg hover:text-foreground"
                 } ${isActive ? "font-semibold" : ""}`}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
@@ -116,7 +116,7 @@ export function SiteHeader() {
             className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring md:hidden ${
               scrolled || !isHomePage
                 ? "border border-border/60 text-foreground hover:bg-accent/30"
-                : "border border-white/30 text-white drop-shadow-lg hover:bg-white/20"
+                : "border border-border/60 text-foreground drop-shadow-lg hover:bg-accent/20"
             }`}
           >
             <span className="sr-only">Menü</span>
