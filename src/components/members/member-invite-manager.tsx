@@ -50,7 +50,12 @@ type CreateInviteState = {
   roles: Role[];
 };
 
-type FreshInvite = { token: string; inviteUrl: string; shareUrl: string } | null;
+type FreshInvite = {
+  id: string;
+  token: string;
+  inviteUrl: string;
+  shareUrl: string | null;
+};
 
 export function MemberInviteManager() {
   const [invites, setInvites] = useState<InviteSummary[]>([]);
@@ -58,7 +63,7 @@ export function MemberInviteManager() {
   const [creating, setCreating] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [freshInvite, setFreshInvite] = useState<FreshInvite>(null);
+  const [freshInvite, setFreshInvite] = useState<FreshInvite | null>(null);
   const [origin, setOrigin] = useState("");
   const resolvedOrigin = useMemo(() => {
     if (origin) return origin;
@@ -135,12 +140,20 @@ export function MemberInviteManager() {
         throw new Error(data?.error ?? "Einladung konnte nicht erstellt werden");
       }
       if (data?.invite?.inviteUrl) {
-        const shareUrl = data.invite.shareUrl ?? data.invite.inviteUrl;
-        setFreshInvite({ token: data.invite.token, inviteUrl: data.invite.inviteUrl, shareUrl });
+        const inviteId = typeof data.invite.id === "string" && data.invite.id.trim().length
+          ? data.invite.id
+          : data.invite.token;
+        const sharePath = data.invite.shareUrl ?? data.invite.inviteUrl;
+        setFreshInvite({
+          id: inviteId,
+          token: data.invite.token,
+          inviteUrl: data.invite.inviteUrl,
+          shareUrl: data.invite.shareUrl ?? null,
+        });
         try {
           const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
           if (base) {
-            await navigator.clipboard.writeText(base + shareUrl);
+            await navigator.clipboard.writeText(base + sharePath);
             toast.success("Neuer Link kopiert.");
           } else {
             toast.success("Neue Einladung erstellt. Link siehe unten.");
@@ -223,7 +236,7 @@ export function MemberInviteManager() {
   const sortedInvites = useMemo(() => invites.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [invites]);
 
   return (
-    <Card className="border border-border/70">
+    <Card className="border border-border/60 bg-card/80 shadow-sm">
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle className="text-xl font-semibold">Einladungslinks</CardTitle>
@@ -235,25 +248,47 @@ export function MemberInviteManager() {
       </CardHeader>
       <CardContent className="space-y-6">
         {freshInvite && (
-          <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm text-primary-foreground">
-            <p className="font-medium">Neuer Link</p>
-            <p className="break-all font-mono text-sm">
+          <div className="rounded-xl border border-primary/60 bg-primary/20 p-4 text-sm text-foreground shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-base font-semibold text-foreground">Neuer Onboarding-Link erstellt</p>
+                <p className="text-xs text-foreground/80 sm:text-sm">
+                  Kopiere den Link für den Versand oder öffne ihn direkt in einem neuen Tab.
+                </p>
+              </div>
+            </div>
+            <code className="mt-3 block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
               {(resolvedOrigin ? resolvedOrigin : "") + (freshInvite.shareUrl ?? freshInvite.inviteUrl)}
-            </p>
-            <p className="text-xs text-muted-foreground">
+            </code>
+            <p className="mt-2 text-xs text-foreground/80">
               Der Link bleibt während des aktiven Zeitraums auch unten in der Übersicht sichtbar.
             </p>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="outline" onClick={copyFreshInvite}>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-primary/60 text-primary hover:bg-primary/20"
+                onClick={copyFreshInvite}
+              >
                 Link kopieren
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
+                className="text-foreground hover:bg-primary/10"
                 onClick={() => setFreshInvite(null)}
-                className="text-primary-foreground hover:bg-primary/20"
               >
                 Ausblenden
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-foreground hover:bg-primary/10"
+                asChild
+              >
+                <a href={freshInvite.shareUrl ?? freshInvite.inviteUrl} target="_blank" rel="noopener noreferrer">
+                  Öffnen
+                </a>
               </Button>
             </div>
           </div>
@@ -268,8 +303,15 @@ export function MemberInviteManager() {
             <div className="grid gap-4">
               {sortedInvites.map((invite) => {
                 const status = statusForInvite(invite);
+                const isFresh = freshInvite?.id === invite.id;
                 return (
-                  <div key={invite.id} className="rounded-lg border border-border/70 bg-background/70 p-4">
+                  <div
+                    key={invite.id}
+                    className={cn(
+                      "rounded-lg border border-border/70 bg-card/80 p-4 shadow-sm transition-colors",
+                      isFresh && "border-primary/60 bg-primary/20",
+                    )}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
                         <h3 className="text-sm font-semibold">
@@ -292,17 +334,17 @@ export function MemberInviteManager() {
                             </Badge>
                           ))}
                         </div>
-                        {invite.shareUrl && (
-                          <div className="mt-3 space-y-2 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground">
-                            <p className="text-sm font-medium">Aktiver Onboarding-Link</p>
-                            <p className="break-all font-mono text-sm">
+                        {invite.shareUrl && !isFresh && (
+                          <div className="mt-3 space-y-2 rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-foreground shadow-sm">
+                            <p className="text-sm font-medium text-foreground">Aktiver Onboarding-Link</p>
+                            <code className="block break-all rounded bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
                               {(resolvedOrigin ? resolvedOrigin : "") + invite.shareUrl}
-                            </p>
+                            </code>
                             <div className="flex flex-wrap gap-2 pt-1">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-8 px-2 text-xs"
+                                className="h-8 px-3 text-xs text-foreground hover:bg-muted/60"
                                 onClick={() => copyInviteLink(invite.shareUrl!)}
                               >
                                 Link kopieren
@@ -310,7 +352,7 @@ export function MemberInviteManager() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 px-2 text-xs text-primary-foreground hover:bg-primary/20"
+                                className="h-8 px-3 text-xs text-foreground hover:bg-muted/50"
                                 asChild
                               >
                                 <a href={invite.shareUrl} target="_blank" rel="noopener noreferrer">
