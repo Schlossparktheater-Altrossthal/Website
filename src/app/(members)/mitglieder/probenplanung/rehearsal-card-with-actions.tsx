@@ -136,14 +136,14 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
             </div>
             <div className="flex items-start gap-3">
               <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/50 bg-emerald-500/10 px-2 py-1 text-emerald-600">
-                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /> {yes.length}
+                <span className="inline-flex items-center gap-1 rounded-full border border-success/45 bg-success/15 px-2 py-1 text-success">
+                  <span className="inline-block h-2 w-2 rounded-full bg-success" /> {yes.length}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-rose-300/50 bg-rose-500/10 px-2 py-1 text-rose-600">
-                  <span className="inline-block h-2 w-2 rounded-full bg-rose-500" /> {no.length}
+                <span className="inline-flex items-center gap-1 rounded-full border border-destructive/45 bg-destructive/15 px-2 py-1 text-destructive">
+                  <span className="inline-block h-2 w-2 rounded-full bg-destructive" /> {no.length}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted px-2 py-1 text-muted-foreground">
-                  <span className="inline-block h-2 w-2 rounded-full bg-slate-400" /> {pending.length}
+                <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/60 px-2 py-1 text-muted-foreground">
+                  <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/70" /> {pending.length}
                 </span>
               </div>
               <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>

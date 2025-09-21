@@ -78,22 +78,22 @@ export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeSta
   const getConnectionIcon = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <Wifi className="h-4 w-4 text-green-500" />;
+        return <Wifi className="h-4 w-4 text-success" />;
       case 'connecting':
-        return <Clock className="h-4 w-4 text-yellow-500 animate-pulse" />;
+        return <Clock className="h-4 w-4 text-warning animate-pulse" />;
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
+        return <AlertCircle className="h-4 w-4 text-destructive" />;
       default:
-        return <WifiOff className="h-4 w-4 text-gray-500" />;
+        return <WifiOff className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
   const getConnectionBadge = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <Badge variant="secondary" className="text-green-700 bg-green-100">Verbunden</Badge>;
+        return <Badge variant="secondary" className="border-success/45 bg-success/15 text-success">Verbunden</Badge>;
       case 'connecting':
-        return <Badge variant="secondary" className="text-yellow-700 bg-yellow-100">Verbinde...</Badge>;
+        return <Badge variant="secondary" className="border-warning/45 bg-warning/15 text-warning">Verbinde...</Badge>;
       case 'error':
         return <Badge variant="destructive">Fehler</Badge>;
       default:
@@ -115,7 +115,7 @@ export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeSta
         {/* Connection Status */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Verbindung:</span>
-          <span className={`font-medium ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+          <span className={`font-medium ${isConnected ? 'text-success' : 'text-destructive'}`}>
             {isConnected ? 'Aktiv' : 'Getrennt'}
           </span>
         </div>
@@ -152,7 +152,7 @@ export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeSta
               ) : (
                 presentUsers.map((user) => (
                   <div key={user.id} className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <div className="h-2 w-2 rounded-full bg-success" />
                     <span className="text-xs">{user.name}</span>
                   </div>
                 ))
@@ -165,7 +165,7 @@ export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeSta
         {!isConnected && (
           <button
             onClick={reconnect}
-            className="w-full mt-3 px-3 py-2 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-colors"
+            className="w-full mt-3 rounded-md bg-info/15 px-3 py-2 text-xs text-info transition-colors hover:bg-info/20"
           >
             Neu verbinden
           </button>
@@ -209,11 +209,11 @@ export function AttendanceUpdates({ rehearsalId }: AttendanceUpdatesProps) {
   const getStatusIcon = (status: string | null) => {
     switch (status) {
       case 'yes':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-success" />;
       case 'no':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-destructive" />;
       case 'emergency':
-        return <AlertCircle className="h-4 w-4 text-amber-500" />;
+        return <AlertCircle className="h-4 w-4 text-warning" />;
       default:
         return null;
     }
@@ -240,8 +240,8 @@ export function AttendanceUpdates({ rehearsalId }: AttendanceUpdatesProps) {
         <CardTitle className="text-sm">Live-Updates</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {recentUpdates.map((update) => (
-          <div key={update.id} className="flex items-start gap-2 rounded-lg bg-gray-50 p-2">
+          {recentUpdates.map((update) => (
+            <div key={update.id} className="flex items-start gap-2 rounded-lg bg-muted/40 p-2">
             {getStatusIcon(update.status)}
             <div className="flex-1 min-w-0 space-y-1">
               <p className="text-sm">

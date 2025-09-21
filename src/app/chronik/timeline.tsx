@@ -77,9 +77,9 @@ export function ChronikTimeline({ items }: { items: ChronikItem[] }) {
   return (
     <div className="px-4 pb-12 sm:px-0 sm:pb-0">
       <div className="relative w-full sm:fixed sm:bottom-8 sm:left-1/2 sm:z-40 sm:w-auto sm:-translate-x-1/2 sm:transform">
-        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/65 px-5 py-4 shadow-xl backdrop-blur-lg sm:rounded-2xl sm:px-8">
+        <div className="relative overflow-hidden rounded-xl border border-border/60 bg-background/80 px-5 py-4 shadow-xl backdrop-blur-lg sm:rounded-2xl sm:px-8">
           <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 sm:rounded-2xl" />
-          <div className="pointer-events-none absolute top-2 left-4 right-4 h-0.5 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute top-2 left-4 right-4 h-0.5 rounded-full bg-border/60" />
           <div
             className="pointer-events-none absolute top-2 left-4 h-0.5 rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-500 ease-out"
             style={{ width: `${completion}%` }}
@@ -95,19 +95,21 @@ export function ChronikTimeline({ items }: { items: ChronikItem[] }) {
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className="group relative m-1 flex min-w-fit flex-col items-center gap-2 rounded-lg p-3 transition-all duration-300 hover:scale-105 focus:outline-none"
+                  className={cn(
+                    "group relative m-1 flex min-w-fit flex-col items-center gap-2 rounded-lg p-3 transition-all duration-300 hover:scale-105 focus:outline-none",
+                    isActive ? "ring-2 ring-primary/70" : "ring-1 ring-border/50",
+                  )}
                   title={item.title || `Saison ${item.year}`}
-                  style={{ boxShadow: isActive ? "0 0 0 2px rgba(184, 139, 46, 0.5)" : "none" }}
                 >
                   <div className="relative">
                     <div
                       className={cn(
                         "h-4 w-4 rounded-full border-2 transition-all duration-500",
-                        isActive && "scale-110 bg-primary border-primary shadow-lg shadow-primary/50",
+                        isActive && "scale-110 border-primary bg-primary shadow-lg shadow-primary/40",
                         !isActive &&
                           (isPast
-                            ? "bg-primary/60 border-primary/60 shadow-md shadow-primary/25"
-                            : "border-white/40 bg-transparent group-hover:scale-110 group-hover:border-primary group-hover:bg-primary/20"),
+                            ? "border-primary/50 bg-primary/40 shadow-md shadow-primary/25"
+                            : "border-border/60 bg-transparent group-hover:scale-110 group-hover:border-primary group-hover:bg-primary/15"),
                       )}
                     />
                     {isActive && (
@@ -120,9 +122,9 @@ export function ChronikTimeline({ items }: { items: ChronikItem[] }) {
 
                   <span
                     className={cn(
-                      "text-sm font-semibold [text-shadow:_1px_1px_3px_rgba(0,0,0,0.9)] transition-all duration-300",
+                      "text-sm font-semibold transition-all duration-300",
                       isActive && "scale-105 text-primary",
-                      !isActive && (isPast ? "text-primary/80" : "text-white/70 group-hover:scale-105 group-hover:text-white"),
+                      !isActive && (isPast ? "text-primary/80" : "text-muted-foreground group-hover:scale-105 group-hover:text-foreground"),
                     )}
                   >
                     {item.year}

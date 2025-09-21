@@ -41,38 +41,43 @@ export default function Home() {
   return (
     <div>
       <Hero images={heroImages} />
-      <div className="container mx-auto px-4 sm:px-6">
-        <div className="space-y-8 py-12 sm:py-16">
-          <section className="py-6 text-center sm:py-8">
-            <Text tone="muted" className="mt-2 text-sm opacity-80 sm:text-base">
-              Ein einziges Wochenende. Ein Sommer. Ein Stück.
+      <div className="layout-container">
+        <div className="space-y-12 py-16">
+          <section className="flex flex-col items-center gap-4 text-center">
+            <Text variant="eyebrow" uppercase tone="primary">
+              Sommertheater Altrossthal
             </Text>
-            <Heading level="h3" className="mt-4 text-xl text-foreground sm:text-2xl">
+            <Heading level="h3" align="center" tone="default">
               Countdown: bald verfügbar…
             </Heading>
+            <Text variant="bodyLg" align="center" tone="muted">
+              Ein einziges Wochenende. Ein Sommer. Ein Stück.
+            </Text>
           </section>
           <Card>
-            <CardTitle className="p-4">Teaser-Hinweis</CardTitle>
-            <CardContent>Folge den Spuren im Nebel…</CardContent>
+            <CardTitle className="px-6 pt-6 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Teaser-Hinweis
+            </CardTitle>
+            <CardContent className="pb-6 text-muted-foreground">Folge den Spuren im Nebel…</CardContent>
           </Card>
-          <section className="relative overflow-hidden rounded-3xl border border-slate-100/10 bg-slate-900 text-slate-50 shadow-2xl">
+          <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(129,140,248,0.35),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(14,165,233,0.25),_transparent_55%)]"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--primary)_35%,transparent),_transparent_60%),radial-gradient(circle_at_bottom,_color-mix(in_oklab,var(--info)_25%,transparent),_transparent_55%)]"
               aria-hidden="true"
             />
-            <div className="relative mx-auto max-w-4xl space-y-8 px-6 py-12 sm:px-10 sm:py-16">
-              <div className="space-y-4 text-center sm:space-y-5">
+            <div className="relative mx-auto max-w-4xl space-y-8 px-8 py-14 sm:px-12">
+              <div className="space-y-4 text-center">
                 <Badge
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200 shadow-sm"
+                  className="inline-flex rounded-full border-primary/40 bg-primary/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary shadow-sm"
                 >
                   FAQ
                 </Badge>
-                <Heading level="h2" className="text-3xl font-semibold text-white sm:text-4xl">
+                <Heading level="h2" align="center">
                   Häufig gestellte Fragen
                 </Heading>
-                <Text variant="bodyLg" tone="muted" className="text-slate-200 sm:text-lg">
+                <Text variant="bodyLg" align="center" tone="muted">
                   Die wichtigsten Antworten rund um das Sommertheater – kompakt und jederzeit nachlesbar.
                 </Text>
               </div>
@@ -80,19 +85,13 @@ export default function Home() {
                 {faqs.map((faq) => (
                   <details
                     key={faq.question}
-                    className="group rounded-2xl border border-white/10 bg-white/10 p-6 text-left shadow-lg backdrop-blur transition duration-300 open:border-white/20 open:bg-white/20"
+                    className="group rounded-2xl border border-border/60 bg-background/60 p-6 text-left shadow-lg backdrop-blur transition duration-300 open:border-primary/40 open:bg-background/80"
                   >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                      <Text
-                        asChild
-                        variant="bodyLg"
-                        tone="default"
-                        weight="semibold"
-                        className="text-slate-50 sm:text-xl"
-                      >
+                      <Text asChild variant="bodyLg" weight="semibold">
                         <span>{faq.question}</span>
                       </Text>
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/10 text-indigo-100 transition duration-300 group-open:rotate-180">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border/50 bg-background/70 text-primary transition duration-300 group-open:rotate-180">
                         <svg
                           className="h-4 w-4"
                           viewBox="0 0 24 24"
@@ -107,12 +106,14 @@ export default function Home() {
                         </svg>
                       </span>
                     </summary>
-                    <Text className="mt-4 text-base leading-relaxed text-indigo-100">{faq.answer}</Text>
+                    <Text tone="muted" className="mt-4 leading-relaxed">
+                      {faq.answer}
+                    </Text>
                   </details>
                 ))}
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/10 px-6 py-5 text-sm text-slate-100 backdrop-blur sm:text-base">
-                <Text tone="default" className="text-slate-100">
+              <div className="rounded-2xl border border-border/60 bg-background/70 px-6 py-5 text-sm text-muted-foreground backdrop-blur">
+                <Text>
                   Noch Fragen offen? Schreib uns jederzeit an
                   <TextLink className="ml-2" href="mailto:hallo@sommertheater.de" variant="accent" weight="semibold">
                     hallo@sommertheater.de

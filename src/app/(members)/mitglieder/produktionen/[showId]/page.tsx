@@ -31,14 +31,7 @@ export default async function ProduktionDetailPage({ params }: { params: { showI
   const [show, breakdownCount] = await Promise.all([
     prisma.show.findUnique({
       where: { id: params.showId },
-      select: {
-        id: true,
-        title: true,
-        year: true,
-        synopsis: true,
-        finalRehearsalWeekStart: true,
-        _count: { select: { characters: true, scenes: true } },
-      },
+      include: { _count: { select: { characters: true, scenes: true } } },
     }),
     prisma.sceneBreakdownItem.count({ where: { scene: { showId: params.showId } } }),
   ]);

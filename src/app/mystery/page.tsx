@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Clue, Prisma } from "@prisma/client";
 import Image from "next/image";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Heading, Text } from "@/components/ui/typography";
 
 type ClueContent = {
   text?: string;
@@ -36,11 +37,11 @@ export default async function MysteryPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-10 space-y-6">
-      <h1 className="font-serif text-3xl">Das Geheimnis</h1>
-      {clues.length === 0 && <p>Die Schatten sind noch still…</p>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clues.map((c) => {
+    <div className="layout-container space-y-6 py-12">
+      <Heading level="h1">Das Geheimnis</Heading>
+      {clues.length === 0 && <Text tone="muted">Die Schatten sind noch still…</Text>}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {clues.map((c) => {
           const content = parseClueContent(c.content);
           return (
             <Card key={c.id}>
@@ -48,13 +49,13 @@ export default async function MysteryPage() {
                 Hinweis {c.index} • {c.points} Punkte
               </CardTitle>
               <CardContent>
-                {c.type === "text" && <p>{content.text}</p>}
+                {c.type === "text" && <Text>{content.text}</Text>}
                 {c.type === "image" && (
                   <div className="relative w-full h-64">
                     <Image src={content.url ?? "/next.svg"} alt={content.alt ?? "Hinweis"} fill className="object-contain" />
                   </div>
                 )}
-                {c.type !== "text" && c.type !== "image" && <p>Ein Rätsel wartet…</p>}
+                {c.type !== "text" && c.type !== "image" && <Text>Ein Rätsel wartet…</Text>}
               </CardContent>
             </Card>
           );

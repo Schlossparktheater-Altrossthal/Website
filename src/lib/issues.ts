@@ -66,30 +66,30 @@ export const ISSUE_VISIBILITY_DESCRIPTIONS: Record<IssueVisibility, string> = {
 };
 
 export const ISSUE_STATUS_BADGE_CLASSES: Record<IssueStatus, string> = {
-  open: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200",
-  in_progress: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200",
-  resolved: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
-  closed: "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-200",
+  open: "border-warning/45 bg-warning/15 text-warning",
+  in_progress: "border-info/45 bg-info/15 text-info",
+  resolved: "border-success/45 bg-success/15 text-success",
+  closed: "border-muted/50 bg-muted/40 text-muted-foreground",
 };
 
 export const ISSUE_CATEGORY_BADGE_CLASSES: Record<IssueCategory, string> = {
-  general: "border-slate-400/40 bg-slate-500/10 text-slate-700 dark:text-slate-200",
-  website_bug: "border-rose-500/35 bg-rose-500/10 text-rose-700 dark:text-rose-200",
-  improvement: "border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
-  support: "border-indigo-500/35 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200",
-  other: "border-zinc-500/35 bg-zinc-500/10 text-zinc-700 dark:text-zinc-200",
+  general: "border-muted/50 bg-muted/35 text-muted-foreground",
+  website_bug: "border-destructive/45 bg-destructive/15 text-destructive",
+  improvement: "border-success/45 bg-success/15 text-success",
+  support: "border-primary/45 bg-primary/15 text-primary",
+  other: "border-secondary/45 bg-secondary/15 text-secondary",
 };
 
 export const ISSUE_PRIORITY_BADGE_CLASSES: Record<IssuePriority, string> = {
-  low: "border-slate-400/40 bg-slate-500/10 text-slate-700 dark:text-slate-200",
-  medium: "border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-200",
-  high: "border-orange-500/35 bg-orange-500/10 text-orange-700 dark:text-orange-200",
-  urgent: "border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-200",
+  low: "border-muted/50 bg-muted/35 text-muted-foreground",
+  medium: "border-info/45 bg-info/15 text-info",
+  high: "border-warning/45 bg-warning/15 text-warning",
+  urgent: "border-destructive/50 bg-destructive/15 text-destructive",
 };
 
 export const ISSUE_VISIBILITY_BADGE_CLASSES: Record<IssueVisibility, string> = {
-  public: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
-  private: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-200",
+  public: "border-success/45 bg-success/15 text-success",
+  private: "border-destructive/45 bg-destructive/15 text-destructive",
 };
 
 const ISSUE_STATUS_SET = new Set<IssueStatus>(ISSUE_STATUS_VALUES);

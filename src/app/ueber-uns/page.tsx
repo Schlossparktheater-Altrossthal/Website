@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Heading, Text } from "@/components/ui/typography";
 
 export const metadata: Metadata = {
   title: "Über uns",
@@ -173,18 +174,22 @@ export default function AboutPage() {
         />
       </div>
 
-      <section className="container mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-12">
+      <section className="layout-container pb-12 pt-16 sm:pt-24">
         <div className="max-w-3xl">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary/80">Sommertheater Altrossthal</p>
-          <h1 className="mt-4 font-serif text-4xl tracking-tight sm:text-5xl">Über uns</h1>
-          <p className="mt-6 text-lg text-muted-foreground">
+          <Text variant="eyebrow" uppercase tone="primary">
+            Sommertheater Altrossthal
+          </Text>
+          <Heading level="h1" className="mt-4">
+            Über uns
+          </Heading>
+          <Text variant="bodyLg" tone="muted" className="mt-6">
             Wir erzählen Geschichten für laue Sommernächte. Unser Ensemble verbindet professionelle Theaterarbeit mit ehrenamtlichem Herzblut – mitten im
             Schlosspark Altrossthal.
-          </p>
-          <p className="mt-4 text-base text-muted-foreground">
+          </Text>
+          <Text tone="muted" className="mt-4">
             Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Lernende, Alumni und Freund:innen des
             BSZ Altroßthal, um eine Bühne zu schaffen, die weit über klassischen Unterricht hinausgeht.
-          </p>
+          </Text>
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
@@ -202,15 +207,15 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+      <section className="layout-container pb-16 sm:pb-24">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-6">
-            <h2 className="font-serif text-3xl sm:text-4xl">Unsere Handschrift</h2>
-            <p className="text-lg text-muted-foreground">
+            <Heading level="h2">Unsere Handschrift</Heading>
+            <Text variant="bodyLg" tone="muted">
               Die Sommerproduktionen entstehen über Monate hinweg – von der ersten Idee bis zur letzten Generalprobe. Dabei verbinden wir poetische Stoffe mit
               immersiven Erlebnissen, die nur unter freiem Himmel möglich sind. Werkstätten für Floristik, Holz- und Metallgestaltung sowie Maskenbild des
               Berufsschulzentrums fließen direkt in Bühnenwelten ein.
-            </p>
+            </Text>
             <div className="space-y-5">
               {signature.map(({ icon: Icon, title, description }) => (
                 <div
@@ -221,8 +226,12 @@ export default function AboutPage() {
                     <Icon className="h-6 w-6" aria-hidden />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">{title}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                    <Heading level="h4" className="text-lg" weight="bold">
+                      {title}
+                    </Heading>
+                    <Text variant="small" tone="muted" className="mt-1">
+                      {description}
+                    </Text>
                   </div>
                 </div>
               ))}
@@ -232,26 +241,28 @@ export default function AboutPage() {
           <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-primary/10 via-background to-background p-8 shadow-lg">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,223,150,0.18),_transparent_60%)]" aria-hidden />
             <div className="relative space-y-4">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary/80">Atmosphäre</p>
-              <p className="font-serif text-2xl">
+              <Text variant="eyebrow" uppercase tone="primary">
+                Atmosphäre
+              </Text>
+              <Heading level="h3" className="text-2xl">
                 Wenn die Sonne hinter den Baumwipfeln verschwindet, beginnt unser Bühnenraum zu leben: leuchtende Pfade, flüsternde Bäume und ein Ensemble, das
                 das Publikum mitnimmt in eine andere Welt.
-              </p>
-              <p className="text-sm text-muted-foreground">
+              </Heading>
+              <Text variant="small" tone="muted">
                 Jedes Szenenbild wird speziell für den Schlosspark entwickelt. Lichtinstallationen und räumlicher Klang lassen die Besucher:innen mitten in der
                 Geschichte stehen.
-              </p>
+              </Text>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="container mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+      <section className="layout-container pb-16 sm:pb-24">
         <div className="max-w-2xl">
-          <h2 className="font-serif text-3xl sm:text-4xl">Werte, die wir leben</h2>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <Heading level="h2">Werte, die wir leben</Heading>
+          <Text variant="bodyLg" tone="muted" className="mt-4">
             Ensemblearbeit bedeutet Vertrauen. Unsere Werte spiegeln sich in jeder Probe, jedem Ehrenamt und jedem Gast wider, der den Weg nach Altrossthal findet.
-          </p>
+          </Text>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {values.map(({ icon: Icon, title, description }) => (
@@ -262,20 +273,22 @@ export default function AboutPage() {
               </CardHeader>
               <CardContent>
                 <CardTitle className="text-xl">{title}</CardTitle>
-                <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+                <Text variant="small" tone="muted" className="mt-2">
+                  {description}
+                </Text>
               </CardContent>
             </Card>
           ))}
         </div>
       </section>
 
-      <section className="container mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+      <section className="layout-container pb-16 sm:pb-24">
         <div className="grid gap-10 lg:grid-cols-2">
           <div>
-            <h2 className="font-serif text-3xl sm:text-4xl">Meilensteine</h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <Heading level="h2">Meilensteine</Heading>
+            <Text variant="bodyLg" tone="muted" className="mt-4">
               Wir wachsen organisch und mit viel Leidenschaft. Ein paar Stationen auf unserem Weg:
-            </p>
+            </Text>
           </div>
           <div className="relative">
             <div className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" aria-hidden />
@@ -285,8 +298,12 @@ export default function AboutPage() {
                   <div className="absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-primary/20 text-primary">
                     <span className="text-xs font-semibold">{milestone.year}</span>
                   </div>
-                  <h3 className="text-lg font-semibold">{milestone.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{milestone.description}</p>
+                  <Heading level="h4" className="text-lg" weight="bold">
+                    {milestone.title}
+                  </Heading>
+                  <Text variant="small" tone="muted" className="mt-2">
+                    {milestone.description}
+                  </Text>
                 </li>
               ))}
             </ul>
@@ -294,15 +311,15 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 sm:px-6 pb-20 sm:pb-28">
+      <section className="layout-container pb-20 sm:pb-28">
         <div className="rounded-3xl border border-border/40 bg-card/60 p-8 sm:p-12">
           <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
             <div className="space-y-5">
-              <h2 className="font-serif text-3xl sm:text-4xl">Engagement rund um das Ensemble</h2>
-              <p className="text-lg text-muted-foreground">
+              <Heading level="h2">Engagement rund um das Ensemble</Heading>
+              <Text variant="bodyLg" tone="muted">
                 Unser Sommertheater lebt von Menschen, die ihre Zeit und ihr Können einbringen. Wir begleiten neue Mitglieder mit Mentoring-Formaten, öffnen die
                 Werkstätten des BSZ Altroßthal für Floristik, Holz und Metall und bieten Fortbildungen für Licht, Ton und Bühnenbild an.
-              </p>
+              </Text>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <MapPin className="h-5 w-5 text-primary" aria-hidden />
                 <span>Schlosspark Altrossthal · Probenscheune im Alten Forsthaus</span>
@@ -311,8 +328,12 @@ export default function AboutPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {engagement.map((item) => (
                 <div key={item.title} className="rounded-2xl border border-border/40 bg-background/70 p-5">
-                  <h3 className="text-lg font-semibold">{item.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+                  <Heading level="h4" className="text-lg" weight="bold">
+                    {item.title}
+                  </Heading>
+                  <Text variant="small" tone="muted" className="mt-2">
+                    {item.description}
+                  </Text>
                   <Link
                     href={item.action.href}
                     className="mt-4 inline-flex items-center text-sm font-medium text-primary hover:text-primary/80"
