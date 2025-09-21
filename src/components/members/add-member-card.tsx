@@ -6,12 +6,14 @@ import { describeRoles, ROLE_LABELS, ROLES, sortRoles, type Role } from "@/lib/r
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
+import { combineNameParts } from "@/lib/names";
 
 export function AddMemberModal() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [roles, setRoles] = useState<Role[]>(["member"]);
@@ -28,7 +30,8 @@ export function AddMemberModal() {
 
   const resetForm = () => {
     setEmail("");
-    setName("");
+    setFirstName("");
+    setLastName("");
     setPassword("");
     setConfirmPassword("");
     setRoles(["member"]);
@@ -37,8 +40,16 @@ export function AddMemberModal() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!email.trim()) {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (!trimmedEmail) {
       setError("E-Mail wird benötigt");
+      return;
+    }
+    if (!trimmedFirstName) {
+      setError("Vorname wird benötigt");
       return;
     }
     if (password.length < 6) {
@@ -52,12 +63,15 @@ export function AddMemberModal() {
     setSaving(true);
     setError(null);
     try {
+      const combinedName = combineNameParts(trimmedFirstName, trimmedLastName);
       const response = await fetch("/api/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          name: name.trim() || null,
+          email: trimmedEmail,
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName || null,
+          name: combinedName ?? null,
           roles,
           password,
         }),
@@ -66,7 +80,7 @@ export function AddMemberModal() {
       if (!response.ok) {
         throw new Error(data?.error ?? "Benutzer konnte nicht erstellt werden");
       }
-      toast.success(`Benutzer ${data?.user?.email ?? email} angelegt`);
+      toast.success(`Benutzer ${data?.user?.email ?? trimmedEmail} angelegt`);
       resetForm();
       setOpen(false);
       router.refresh();
@@ -107,14 +121,25 @@ export function AddMemberModal() {
                 placeholder="person@example.com"
               />
             </label>
-            <label className="space-y-1 text-sm">
-              <span className="font-medium">Name (optional)</span>
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Vorname Nachname"
-              />
-            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Vorname</span>
+                <Input
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  placeholder="Vorname"
+                  required
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Nachname (optional)</span>
+                <Input
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  placeholder="Nachname"
+                />
+              </label>
+            </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">

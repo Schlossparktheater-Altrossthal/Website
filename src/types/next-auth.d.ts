@@ -5,6 +5,8 @@ declare module "next-auth" {
   interface Session {
     user?: {
       id: string;
+      firstName?: string | null;
+      lastName?: string | null;
       name?: string | null;
       email?: string | null;
       role?: Role;
@@ -15,6 +17,8 @@ declare module "next-auth" {
     };
   }
   interface User {
+    firstName?: string | null;
+    lastName?: string | null;
     role?: Role;
     roles?: Role[];
     avatarSource?: AvatarSource | null;

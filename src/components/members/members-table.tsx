@@ -8,16 +8,23 @@ import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/ro
 import { RoleManager } from "@/components/members/role-manager";
 import { UserAvatar } from "@/components/user-avatar";
 import type { AvatarSource } from "@/components/user-avatar";
+import { combineNameParts } from "@/lib/names";
 
 export type MembersTableUser = {
   id: string;
   email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   name?: string | null;
   roles: Role[];
   customRoles: { id: string; name: string }[];
   avatarSource?: AvatarSource | null;
   avatarUpdatedAt?: string | number | Date | null;
 };
+
+function getDisplayName(user: MembersTableUser): string {
+  return combineNameParts(user.firstName, user.lastName) ?? user.name ?? "";
+}
 
 export function MembersTable({
   users,
@@ -41,9 +48,9 @@ export function MembersTable({
     const q = query.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) => {
-      const name = r.name ?? "";
-      const email = r.email ?? "";
-      return name.toLowerCase().includes(q) || email.toLowerCase().includes(q);
+      const name = getDisplayName(r).toLowerCase();
+      const email = (r.email ?? "").toLowerCase();
+      return name.includes(q) || email.includes(q);
     });
   }, [rows, query]);
 
@@ -64,6 +71,7 @@ export function MembersTable({
       <div className="space-y-2 sm:hidden">
         {filteredRows.map((u) => {
           const sorted = sortRoles(u.roles);
+          const displayName = getDisplayName(u);
           return (
             <div key={u.id} className="rounded-md border bg-card p-3">
               <div className="flex items-start justify-between">
@@ -71,14 +79,16 @@ export function MembersTable({
                   <UserAvatar
                     userId={u.id}
                     email={u.email}
-                    name={u.name}
+                    firstName={u.firstName}
+                    lastName={u.lastName}
+                    name={displayName}
                     size={40}
                     className="h-10 w-10"
                     avatarSource={u.avatarSource}
                     avatarUpdatedAt={u.avatarUpdatedAt}
                   />
                   <div>
-                    <div className="font-medium">{u.name || "—"}</div>
+                    <div className="font-medium">{displayName || "—"}</div>
                     <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {sorted.map((r) => (
@@ -119,6 +129,7 @@ export function MembersTable({
         <tbody>
           {filteredRows.map((u) => {
             const sorted = sortRoles(u.roles);
+            const displayName = getDisplayName(u);
             return (
               <tr key={u.id} className="border-b hover:bg-accent/10">
                 <td className="px-3 py-2 whitespace-nowrap">
@@ -126,14 +137,16 @@ export function MembersTable({
                     <UserAvatar
                       userId={u.id}
                       email={u.email}
-                      name={u.name}
+                      firstName={u.firstName}
+                      lastName={u.lastName}
+                      name={displayName}
                       size={32}
                       className="h-8 w-8"
                       avatarSource={u.avatarSource}
                       avatarUpdatedAt={u.avatarUpdatedAt}
                     />
                     <div>
-                      <div className="font-medium">{u.name || "—"}</div>
+                      <div className="font-medium">{displayName || "—"}</div>
                       <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
                     </div>
                   </div>
@@ -178,7 +191,9 @@ export function MembersTable({
                     <RoleManager
                       userId={u.id}
                       email={u.email}
-                      name={u.name}
+                      firstName={u.firstName}
+                      lastName={u.lastName}
+                      name={displayName}
                       initialRoles={u.roles}
                       canEditOwner={canEditOwner}
                       availableCustomRoles={availableCustomRoles}
@@ -196,14 +211,21 @@ export function MembersTable({
                           ),
                         );
                       }}
-                      onUserUpdated={({ email, name }) => {
+                      onUserUpdated={({ email, firstName, lastName, name }) => {
                         setRows((prev) =>
                           prev.map((row) =>
                             row.id === u.id
                               ? {
                                   ...row,
                                   email: email ?? row.email,
-                                  name: name ?? row.name,
+                                  firstName: firstName !== undefined ? firstName : row.firstName,
+                                  lastName: lastName !== undefined ? lastName : row.lastName,
+                                  name:
+                                    name ??
+                                    combineNameParts(
+                                      firstName !== undefined ? firstName : row.firstName,
+                                      lastName !== undefined ? lastName : row.lastName,
+                                    ) ?? row.name,
                                 }
                               : row,
                           ),

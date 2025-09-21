@@ -5,8 +5,15 @@ import { RehearsalCardWithActions } from "./rehearsal-card-with-actions";
 import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { Button } from "@/components/ui/button";
+import { getUserDisplayName } from "@/lib/names";
 
-type UserLite = { id: string; name: string | null; email: string | null };
+type UserLite = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  name: string | null;
+  email: string | null;
+};
 type AttendanceLite = { status: string; userId: string; user: UserLite };
 type RecipientLite = { userId: string; user: UserLite };
 type NotificationLite = { recipients: RecipientLite[] };
@@ -34,7 +41,15 @@ export function RehearsalList({ initial }: { initial: RehearsalLite[] }) {
       if (!q) return true;
       return (
         r.title.toLowerCase().includes(q) ||
-        r.location.toLowerCase().includes(q)
+        r.location.toLowerCase().includes(q) ||
+        r.attendance.some((entry) =>
+          getUserDisplayName(entry.user, "").toLowerCase().includes(q)
+        ) ||
+        r.notifications.some((notification) =>
+          notification.recipients.some((recipient) =>
+            getUserDisplayName(recipient.user, "").toLowerCase().includes(q)
+          )
+        )
       );
     });
   }, [initial, query, onlyUpcoming]);

@@ -3,9 +3,12 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { hasPermission } from "@/lib/permissions";
+import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
 type UpdateMemberPayload = {
   email?: unknown;
+  firstName?: unknown;
+  lastName?: unknown;
   name?: unknown;
   password?: unknown;
 };
@@ -25,6 +28,74 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = rawBody as UpdateMemberPayload;
   const updates: Record<string, unknown> = {};
 
+  let firstNameProvided = false;
+  let lastNameProvided = false;
+  let parsedFirstName: string | null = null;
+  let parsedLastName: string | null = null;
+  let fallbackNameProvided = false;
+  let fallbackFullName: string | null = null;
+
+  if (typeof body.firstName === "string") {
+    firstNameProvided = true;
+    parsedFirstName = trimToNull(body.firstName);
+  } else if (body.firstName === null) {
+    firstNameProvided = true;
+    parsedFirstName = null;
+  } else if (body.firstName !== undefined) {
+    return NextResponse.json({ error: "Vorname hat ein ungültiges Format" }, { status: 400 });
+  }
+
+  if (typeof body.lastName === "string") {
+    lastNameProvided = true;
+    parsedLastName = trimToNull(body.lastName);
+  } else if (body.lastName === null) {
+    lastNameProvided = true;
+    parsedLastName = null;
+  } else if (body.lastName !== undefined) {
+    return NextResponse.json({ error: "Nachname hat ein ungültiges Format" }, { status: 400 });
+  }
+
+  if (typeof body.name === "string") {
+    fallbackNameProvided = true;
+    fallbackFullName = trimToNull(body.name);
+  } else if (body.name === null) {
+    fallbackNameProvided = true;
+    fallbackFullName = null;
+  } else if (body.name !== undefined) {
+    return NextResponse.json({ error: "Name hat ein ungültiges Format" }, { status: 400 });
+  }
+
+  if (fallbackNameProvided && !firstNameProvided && !lastNameProvided) {
+    const split = splitFullName(fallbackFullName);
+    firstNameProvided = true;
+    lastNameProvided = true;
+    parsedFirstName = split.firstName;
+    parsedLastName = split.lastName;
+  }
+
+  if (firstNameProvided) {
+    updates.firstName = parsedFirstName;
+  }
+
+  if (lastNameProvided) {
+    updates.lastName = parsedLastName;
+  }
+
+  if (firstNameProvided || lastNameProvided) {
+    const existingNames = await prisma.user.findUnique({
+      where: { id },
+      select: { firstName: true, lastName: true },
+    });
+    if (!existingNames) {
+      return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+    }
+    const effectiveFirstName = firstNameProvided ? parsedFirstName : existingNames.firstName;
+    const effectiveLastName = lastNameProvided ? parsedLastName : existingNames.lastName;
+    updates.name = combineNameParts(effectiveFirstName, effectiveLastName);
+  } else if (fallbackNameProvided) {
+    updates.name = fallbackFullName;
+  }
+
   if (typeof body.email === "string") {
     const email = body.email.trim().toLowerCase();
     if (!email) {
@@ -33,14 +104,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     updates.email = email;
   } else if (body.email !== undefined) {
     return NextResponse.json({ error: "E-Mail muss eine Zeichenkette sein" }, { status: 400 });
-  }
-
-  if (typeof body.name === "string") {
-    updates.name = body.name.trim() || null;
-  } else if (body.name === null) {
-    updates.name = null;
-  } else if (body.name !== undefined) {
-    return NextResponse.json({ error: "Name hat ein ungültiges Format" }, { status: 400 });
   }
 
   if (typeof body.password === "string" && body.password.length > 0) {
@@ -60,10 +123,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const user = await prisma.user.update({
       where: { id },
       data: updates,
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, firstName: true, lastName: true, name: true },
     });
 
-    return NextResponse.json({ ok: true, user });
+    const responseName = combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null);
+
+    return NextResponse.json({
+      ok: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName ?? null,
+        lastName: user.lastName ?? null,
+        name: responseName,
+      },
+    });
   } catch (error: unknown) {
     if (error && typeof error === 'object' && 'code' in error && error.code === "P2002") {
       return NextResponse.json({ error: "E-Mail wird bereits verwendet" }, { status: 409 });

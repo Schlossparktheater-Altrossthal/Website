@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
+import { getUserDisplayName } from "@/lib/names";
 
 const STATUS_LABELS: Record<string, string> = {
   PLANNED: "Geplant",
@@ -42,8 +43,16 @@ function sanitizeDescription(html: string | null | undefined) {
   });
 }
 
-function displayName(user: { name: string | null; email: string | null }) {
-  return user.name?.trim() || user.email?.trim() || "Unbekannt";
+type DisplayUser = {
+  firstName?: string | null;
+  lastName?: string | null;
+  name: string | null;
+  email: string | null;
+};
+
+function displayName(user?: DisplayUser | null) {
+  if (!user) return "Unbekannt";
+  return getUserDisplayName(user, "Unbekannt");
 }
 
 export default async function RehearsalDetailPage({ params }: { params: { rehearsalId: string } }) {
@@ -65,6 +74,8 @@ export default async function RehearsalDetailPage({ params }: { params: { rehear
           user: {
             select: {
               id: true,
+              firstName: true,
+              lastName: true,
               name: true,
               email: true,
               roles: { select: { role: true } },
@@ -74,7 +85,7 @@ export default async function RehearsalDetailPage({ params }: { params: { rehear
       },
       attendance: {
         include: {
-          user: { select: { id: true, name: true, email: true } },
+          user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
         },
       },
     },

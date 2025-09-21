@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { sortRoles, type Role } from "@/lib/roles";
 import type { AvatarSource } from "@prisma/client";
+import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -39,6 +40,8 @@ export async function GET() {
     where: { id: userId },
     select: {
       id: true,
+      firstName: true,
+      lastName: true,
       name: true,
       email: true,
       role: true,
@@ -54,10 +57,13 @@ export async function GET() {
   }
 
   const roles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
+  const fullName = combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null);
 
   return NextResponse.json({
     id: user.id,
-    name: user.name,
+    firstName: user.firstName ?? null,
+    lastName: user.lastName ?? null,
+    name: fullName,
     email: user.email,
     roles,
     avatarSource: user.avatarSource,
@@ -105,15 +111,78 @@ export async function PUT(request: NextRequest) {
   const updates: Record<string, unknown> = {};
   let parsedAvatarSource: AvatarSource | null = null;
 
+  let firstNameProvided = false;
+  let lastNameProvided = false;
+  let parsedFirstName: string | null = null;
+  let parsedLastName: string | null = null;
+  let fallbackNameProvided = false;
+  let fallbackFullName: string | null = null;
+
+  if ("firstName" in body) {
+    firstNameProvided = true;
+    const value = body.firstName;
+    if (typeof value === "string") {
+      parsedFirstName = trimToNull(value);
+    } else if (value === null) {
+      parsedFirstName = null;
+    } else {
+      return NextResponse.json({ error: "Ungültiger Vorname" }, { status: 400 });
+    }
+  }
+
+  if ("lastName" in body) {
+    lastNameProvided = true;
+    const value = body.lastName;
+    if (typeof value === "string") {
+      parsedLastName = trimToNull(value);
+    } else if (value === null) {
+      parsedLastName = null;
+    } else {
+      return NextResponse.json({ error: "Ungültiger Nachname" }, { status: 400 });
+    }
+  }
+
   if ("name" in body) {
-    const name = body.name;
-    if (typeof name === "string") {
-      updates.name = name.trim() || null;
-    } else if (name === null) {
-      updates.name = null;
+    fallbackNameProvided = true;
+    const value = body.name;
+    if (typeof value === "string") {
+      fallbackFullName = trimToNull(value);
+    } else if (value === null) {
+      fallbackFullName = null;
     } else {
       return NextResponse.json({ error: "Ungültiger Name" }, { status: 400 });
     }
+  }
+
+  if (fallbackNameProvided && !firstNameProvided && !lastNameProvided) {
+    const split = splitFullName(fallbackFullName);
+    firstNameProvided = true;
+    lastNameProvided = true;
+    parsedFirstName = split.firstName;
+    parsedLastName = split.lastName;
+  }
+
+  if (firstNameProvided) {
+    updates.firstName = parsedFirstName;
+  }
+
+  if (lastNameProvided) {
+    updates.lastName = parsedLastName;
+  }
+
+  if (firstNameProvided || lastNameProvided) {
+    const existingNames = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+    if (!existingNames) {
+      return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+    }
+    const effectiveFirstName = firstNameProvided ? parsedFirstName : existingNames.firstName;
+    const effectiveLastName = lastNameProvided ? parsedLastName : existingNames.lastName;
+    updates.name = combineNameParts(effectiveFirstName, effectiveLastName);
+  } else if (fallbackNameProvided) {
+    updates.name = fallbackFullName;
   }
 
   if ("email" in body) {
@@ -231,6 +300,8 @@ export async function PUT(request: NextRequest) {
       data: updates,
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
         name: true,
         email: true,
         role: true,
@@ -242,12 +313,15 @@ export async function PUT(request: NextRequest) {
     });
 
     const roles = sortRoles([updated.role as Role, ...updated.roles.map((r) => r.role as Role)]);
+    const userFullName = combineNameParts(updated.firstName, updated.lastName) ?? (updated.name ?? null);
 
     return NextResponse.json({
       ok: true,
       user: {
         id: updated.id,
-        name: updated.name,
+        firstName: updated.firstName ?? null,
+        lastName: updated.lastName ?? null,
+        name: userFullName,
         email: updated.email,
         roles,
         avatarSource: updated.avatarSource,

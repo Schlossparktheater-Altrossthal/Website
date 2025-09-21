@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserAvatar, type AvatarSource } from "@/components/user-avatar";
 import { ROLE_LABELS, type Role } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { getUserDisplayName } from "@/lib/names";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
@@ -33,7 +34,9 @@ function formatUpdatedAt(value: string | null | undefined) {
 
 export interface ProfileSummaryCardProps {
   userId: string;
-  name: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
   email: string | null;
   roles: Role[];
   avatarSource: AvatarSource | string | null;
@@ -42,13 +45,15 @@ export interface ProfileSummaryCardProps {
 
 export function ProfileSummaryCard({
   userId,
+  firstName,
+  lastName,
   name,
   email,
   roles,
   avatarSource,
   avatarUpdatedAt,
 }: ProfileSummaryCardProps) {
-  const displayName = name?.trim() ? name.trim() : "Unbenanntes Profil";
+  const displayName = getUserDisplayName({ firstName, lastName, name, email }, "") || "Unbenanntes Profil";
   const normalizedEmail = email?.trim() ?? "";
   const hasEmail = Boolean(normalizedEmail);
   const normalizedSource = normalizeAvatarSource(avatarSource);
@@ -63,15 +68,17 @@ export function ProfileSummaryCard({
       <CardHeader className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <UserAvatar
-              userId={userId}
-              name={name}
-              email={email}
-              avatarSource={avatarSource}
-              avatarUpdatedAt={avatarUpdatedAt}
-              size={76}
-              className="h-[76px] w-[76px] border-border/80 text-xl shadow-sm"
-            />
+          <UserAvatar
+            userId={userId}
+            firstName={firstName}
+            lastName={lastName}
+            name={displayName}
+            email={email}
+            avatarSource={avatarSource}
+            avatarUpdatedAt={avatarUpdatedAt}
+            size={76}
+            className="h-[76px] w-[76px] border-border/80 text-xl shadow-sm"
+          />
             <div className="space-y-1.5">
               <CardTitle className="text-xl font-semibold leading-tight text-foreground">{displayName}</CardTitle>
               <p className="text-sm text-muted-foreground">{rolesSummary}</p>

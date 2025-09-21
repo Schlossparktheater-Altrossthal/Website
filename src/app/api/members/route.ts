@@ -5,6 +5,7 @@ import { sortRoles, type Role } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
 import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
+import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,8 +20,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
-  const { email: emailValue, name: nameValue, password: passwordValue, roles: rolesValue } = rawBody as {
+  const {
+    email: emailValue,
+    firstName: firstNameValue,
+    lastName: lastNameValue,
+    name: nameValue,
+    password: passwordValue,
+    roles: rolesValue,
+  } = rawBody as {
     email?: unknown;
+    firstName?: unknown;
+    lastName?: unknown;
     name?: unknown;
     password?: unknown;
     roles?: unknown;
@@ -31,10 +41,51 @@ export async function POST(request: NextRequest) {
   }
 
   const email = emailValue.trim().toLowerCase();
-  const name = typeof nameValue === "string" ? nameValue.trim() : undefined;
   if (!EMAIL_REGEX.test(email)) {
     return NextResponse.json({ error: "Ungültige E-Mail-Adresse" }, { status: 400 });
   }
+
+  let firstName: string | null = null;
+  let lastName: string | null = null;
+  let fallbackName: string | null = null;
+
+  if (firstNameValue !== undefined) {
+    if (typeof firstNameValue === "string") {
+      firstName = trimToNull(firstNameValue);
+    } else if (firstNameValue === null) {
+      firstName = null;
+    } else {
+      return NextResponse.json({ error: "Ungültiger Vorname" }, { status: 400 });
+    }
+  }
+
+  if (lastNameValue !== undefined) {
+    if (typeof lastNameValue === "string") {
+      lastName = trimToNull(lastNameValue);
+    } else if (lastNameValue === null) {
+      lastName = null;
+    } else {
+      return NextResponse.json({ error: "Ungültiger Nachname" }, { status: 400 });
+    }
+  }
+
+  if (nameValue !== undefined) {
+    if (typeof nameValue === "string") {
+      fallbackName = trimToNull(nameValue);
+    } else if (nameValue === null) {
+      fallbackName = null;
+    } else {
+      return NextResponse.json({ error: "Ungültiger Name" }, { status: 400 });
+    }
+  }
+
+  if (nameValue !== undefined && firstNameValue === undefined && lastNameValue === undefined) {
+    const split = splitFullName(fallbackName);
+    firstName = split.firstName;
+    lastName = split.lastName;
+  }
+
+  const displayName = combineNameParts(firstName, lastName) ?? fallbackName ?? null;
 
   if (passwordValue !== undefined && typeof passwordValue !== "string") {
     return NextResponse.json({ error: "Passwort hat ein ungültiges Format" }, { status: 400 });
@@ -66,7 +117,9 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.create({
       data: {
         email,
-        name: name || null,
+        firstName,
+        lastName,
+        name: displayName,
         role: primaryRole,
         passwordHash,
         roles: {
@@ -75,21 +128,26 @@ export async function POST(request: NextRequest) {
       },
       select: {
         id: true,
-        email: true,
+        firstName: true,
+        lastName: true,
         name: true,
+        email: true,
         role: true,
         roles: { select: { role: true } },
       },
     });
 
     const allRoles = sortRoles([user.role, ...user.roles.map((r) => r.role as Role)]);
+    const responseName = combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null);
 
     return NextResponse.json({
       ok: true,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        firstName: user.firstName ?? null,
+        lastName: user.lastName ?? null,
+        name: responseName,
         roles: allRoles,
       },
     });
