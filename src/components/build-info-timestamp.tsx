@@ -60,11 +60,7 @@ export function BuildInfoTimestamp({
     [],
   );
   const isValidTimestamp = !Number.isNaN(buildDate.getTime());
-  const [relativeTime, setRelativeTime] = useState(() =>
-    isValidTimestamp
-      ? formatRelativeTime(buildDate, relativeTimeFormatter)
-      : "",
-  );
+  const [relativeTime, setRelativeTime] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isValidTimestamp) {
@@ -91,8 +87,12 @@ export function BuildInfoTimestamp({
   return (
     <span className="inline-flex items-baseline gap-1">
       <time dateTime={isoTimestamp}>Stand {formattedTimestamp}</time>
-      <span aria-hidden>({relativeTime})</span>
-      <span className="sr-only">, aktualisiert {relativeTime}</span>
+      {relativeTime ? (
+        <>
+          <span aria-hidden>({relativeTime})</span>
+          <span className="sr-only">, aktualisiert {relativeTime}</span>
+        </>
+      ) : null}
     </span>
   );
 }
