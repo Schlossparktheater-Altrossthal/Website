@@ -45,7 +45,6 @@ jobs:
               GIT_COMMIT_SHA=${{ github.sha }}
             metadata_tags: |
               type=raw,value=dev
-              type=sha,prefix=dev-
           - environment: prod
             dockerfile: Dockerfile.prod
             build_args: |
@@ -53,7 +52,6 @@ jobs:
               GIT_COMMIT_SHA=${{ github.sha }}
             metadata_tags: |
               type=raw,value=prod
-              type=sha,prefix=prod-
     name: Build and Push Theater Website Image (${{ matrix.environment }})
     steps:
       - name: Checkout repository
