@@ -39,16 +39,15 @@ const PRODUCTION_ITEMS: Item[] = [
 ];
 
 const MYSTERY_ITEMS: Item[] = [
-  {
-    href: "/mitglieder/mystery/timer",
-    label: "Mystery-Timer",
-    permissionKey: "mitglieder.mystery.timer",
-  },
-  {
-    href: "/mitglieder/mystery/tipps",
-    label: "Mystery-Tipps",
-    permissionKey: "mitglieder.mystery.tips",
-  },
+  { href: "/mitglieder/mystery/timer", label: "Mystery-Timer", permissionKey: "mitglieder.mystery.timer" },
+  { href: "/mitglieder/mystery/tipps", label: "Mystery-Tipps", permissionKey: "mitglieder.mystery.tips" },
+];
+
+const FINANCE_ITEMS: Item[] = [
+  { href: "/mitglieder/finanzen", label: "Finanz-Dashboard", permissionKey: "mitglieder.finanzen" },
+  { href: "/mitglieder/finanzen/buchungen", label: "Buchungen", permissionKey: "mitglieder.finanzen" },
+  { href: "/mitglieder/finanzen/budgets", label: "Budgets", permissionKey: "mitglieder.finanzen" },
+  { href: "/mitglieder/finanzen/export", label: "Exporte", permissionKey: "mitglieder.finanzen.export" },
 ];
 
 const ADMIN_ITEMS: Item[] = [
@@ -213,6 +212,43 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
           <path d="M4 20h7" />
         </svg>
       );
+    case "/mitglieder/finanzen":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M7 10h10" />
+          <path d="M7 14h6" />
+          <circle cx="9" cy="10" r="0.5" fill="currentColor" />
+          <circle cx="15" cy="14" r="0.5" fill="currentColor" />
+        </svg>
+      );
+    case "/mitglieder/finanzen/buchungen":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 6h16v4H4z" />
+          <path d="M7 10v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-8" />
+          <path d="M9 14h6" />
+          <path d="M9 18h4" />
+        </svg>
+      );
+    case "/mitglieder/finanzen/budgets":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 19h16" />
+          <path d="M7 19v-7" />
+          <path d="M12 19v-11" />
+          <path d="M17 19v-5" />
+          <path d="M5 8h14l-2-3H7z" />
+        </svg>
+      );
+    case "/mitglieder/finanzen/export":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3v12" />
+          <path d="m8 11 4 4 4-4" />
+          <path d="M4 19h16" />
+        </svg>
+      );
     default:
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -244,6 +280,7 @@ export function MembersNav({
       { label: "Allgemein", items: GENERAL_ITEMS },
       { label: assignmentLabel, items: ASSIGNMENT_ITEMS },
       { label: "Produktion", items: PRODUCTION_ITEMS },
+      { label: "Finanzen", items: FINANCE_ITEMS },
       { label: "Das Geheimnis", items: MYSTERY_ITEMS },
       { label: "Verwaltung", items: ADMIN_ITEMS },
     ],

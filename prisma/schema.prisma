@@ -154,6 +154,20 @@ enum FinanceType {
   expense
 }
 
+enum FinanceEntryKind {
+  general
+  invoice
+  donation
+}
+
+enum FinanceEntryStatus {
+  draft
+  pending
+  approved
+  paid
+  cancelled
+}
+
 enum VisibilityScope {
   board
   finance
@@ -243,6 +257,10 @@ model User {
   issuesCreated          Issue[]                @relation("IssueCreatedBy")
   issuesUpdated          Issue[]                @relation("IssueUpdatedBy")
   issueComments          IssueComment[]         @relation("IssueCommentAuthor")
+  financeEntriesCreated  FinanceEntry[]         @relation("FinanceEntryCreatedBy")
+  financeEntriesApproved FinanceEntry[]         @relation("FinanceEntryApprovedBy")
+  financeEntriesPaidFor  FinanceEntry[]         @relation("FinanceEntryMemberPaidBy")
+  financeLogsAuthored    FinanceLog[]           @relation("FinanceLogChangedBy")
 }
 
 model Account {
@@ -300,6 +318,7 @@ model Show {
   clues      Clue[]
   rehearsals Rehearsal[]
   finance    FinanceEntry[]
+  budgets    FinanceBudget[]
   guesses    Guess[]
   proposals  RehearsalProposal[]
   characters Character[]
@@ -760,13 +779,88 @@ model InventoryItem {
 }
 
 model FinanceEntry {
-  id              String          @id @default(cuid())
+  id              String             @id @default(cuid())
   type            FinanceType
+  kind            FinanceEntryKind   @default(general)
+  status          FinanceEntryStatus @default(draft)
+  title           String
+  description     String?
   amount          Float
+  currency        String             @default("EUR")
   category        String?
+  bookingDate     DateTime           @default(now())
+  dueDate         DateTime?
+  paidAt          DateTime?
+  invoiceNumber   String?
+  vendor          String?
+  memberPaidById  String?
+  donationSource  String?
+  donorContact    String?
+  tags            Json?
   showId          String?
-  visibilityScope VisibilityScope
-  show            Show?           @relation(fields: [showId], references: [id])
+  budgetId        String?
+  visibilityScope VisibilityScope    @default(finance)
+  createdById     String
+  approvedById    String?
+  approvedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  show           Show?          @relation(fields: [showId], references: [id], onDelete: SetNull)
+  budget         FinanceBudget? @relation(fields: [budgetId], references: [id], onDelete: SetNull)
+  createdBy      User           @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  approvedBy     User?          @relation("FinanceEntryApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  memberPaidBy   User?          @relation("FinanceEntryMemberPaidBy", fields: [memberPaidById], references: [id], onDelete: SetNull)
+  attachments    FinanceAttachment[]
+  logs           FinanceLog[]
+
+  @@index([showId, status])
+  @@index([budgetId])
+  @@index([memberPaidById, bookingDate])
+}
+
+model FinanceAttachment {
+  id        String        @id @default(cuid())
+  entryId   String
+  filename  String
+  url       String?
+  mimeType  String?
+  size      Int?
+  meta      Json?
+  createdAt DateTime      @default(now())
+  entry     FinanceEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+}
+
+model FinanceBudget {
+  id            String         @id @default(cuid())
+  showId        String?
+  category      String
+  plannedAmount Float          @default(0)
+  currency      String         @default("EUR")
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  show          Show?          @relation(fields: [showId], references: [id], onDelete: SetNull)
+  entries       FinanceEntry[]
+
+  @@index([showId, category])
+}
+
+model FinanceLog {
+  id          String             @id @default(cuid())
+  entryId     String
+  changedById String?
+  fromStatus  FinanceEntryStatus?
+  toStatus    FinanceEntryStatus
+  note        String?
+  createdAt   DateTime           @default(now())
+  entry       FinanceEntry       @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  changedBy   User?              @relation("FinanceLogChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([entryId])
+  @@index([changedById])
 }
 
 model Notification {
