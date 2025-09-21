@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import type { ZodError, ZodIssue } from "zod";
 
+import { registerDefaultPdfFonts } from "./fonts";
 import { findPdfTemplate } from "./templates";
 import type { PdfRenderResult, PdfTemplate } from "./types";
 
@@ -51,6 +52,17 @@ export async function renderPdfTemplate(
   const typedTemplate = template as PdfTemplate<typeof data>;
   const options = { ...DEFAULT_OPTIONS, ...(typedTemplate.documentOptions ?? {}) };
   const doc = new PDFDocument(options);
+
+  try {
+    registerDefaultPdfFonts(doc);
+  } catch (error) {
+    try {
+      doc.end();
+    } catch {
+      // ignore cleanup failure
+    }
+    throw new PdfRenderError(typedTemplate.id, error);
+  }
   const chunks: Buffer[] = [];
 
   return await new Promise<PdfRenderResult<typeof data>>((resolve, reject) => {
