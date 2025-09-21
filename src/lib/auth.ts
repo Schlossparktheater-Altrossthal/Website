@@ -6,6 +6,7 @@ import type { AdapterUser } from "next-auth/adapters";
 import type { JWT } from "next-auth/jwt";
 import EmailProvider from "next-auth/providers/email";
 import Credentials from "next-auth/providers/credentials";
+import type { CredentialInput } from "next-auth/providers/credentials";
 import { sortRoles, ROLES } from "@/lib/roles";
 import { verifyPassword } from "@/lib/password";
 
@@ -115,6 +116,102 @@ function extractRolesFromSource(source: RoleSource | undefined): Role[] | undefi
 // when NEXTAUTH_URL points to an https domain (avoids login redirect loops).
 const useSecureCookies = process.env.NODE_ENV === "production";
 
+const credentialInputs: Record<string, CredentialInput> = {
+  email: { label: "Email", type: "email" },
+  password: { label: "Passwort", type: "password" },
+};
+
+if (process.env.NODE_ENV !== "production") {
+  credentialInputs.dev = { label: "Dev", type: "text" };
+}
+
+const credentialsProvider = Credentials({
+  name: "Passwort Login",
+  credentials: credentialInputs,
+  async authorize(credentials) {
+    const email = credentials?.email?.toString().toLowerCase();
+    const password = credentials?.password?.toString();
+    const devFastLogin =
+      process.env.NODE_ENV !== "production" && credentials?.dev === "1";
+
+    if (!email) return null;
+
+    if (devFastLogin) {
+      const allowed = [
+        "member@example.com",
+        "cast@example.com",
+        "tech@example.com",
+        "board@example.com",
+        "finance@example.com",
+        "owner@example.com",
+        "admin@example.com",
+      ];
+      if (!allowed.includes(email)) return null;
+      const roleMap: Record<string, Role> = {
+        "member@example.com": "member",
+        "cast@example.com": "cast",
+        "tech@example.com": "tech",
+        "board@example.com": "board",
+        "finance@example.com": "finance",
+        "owner@example.com": "owner",
+        "admin@example.com": "admin",
+      };
+      const user = await prisma.user.upsert({
+        where: { email },
+        update: {},
+        create: { email, name: email.split("@")[0], role: roleMap[email] },
+      });
+      await prisma.userRole.upsert({
+        where: { userId_role: { userId: user.id, role: roleMap[email] } },
+        update: {},
+        create: { userId: user.id, role: roleMap[email] },
+      });
+      return {
+        id: user.id,
+        email: user.email!,
+        name: user.name!,
+        role: user.role,
+        roles: [user.role],
+        avatarSource: user.avatarSource,
+        avatarImageUpdatedAt: user.avatarImageUpdatedAt,
+      };
+    }
+
+    if (!password) {
+      throw new Error("Passwort erforderlich");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { roles: true },
+    });
+
+    if (!user || !user.passwordHash) {
+      throw new Error("Ungültige Zugangsdaten");
+    }
+
+    const valid = await verifyPassword(password, user.passwordHash);
+    if (!valid) {
+      throw new Error("Ungültige Zugangsdaten");
+    }
+
+    const combinedRoles = sortRoles([
+      user.role as Role,
+      ...user.roles.map((r) => r.role as Role),
+    ]);
+
+    return {
+      id: user.id,
+      email: user.email!,
+      name: user.name!,
+      role: combinedRoles[combinedRoles.length - 1],
+      roles: combinedRoles,
+      avatarSource: user.avatarSource,
+      avatarImageUpdatedAt: user.avatarImageUpdatedAt,
+    };
+  },
+});
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   useSecureCookies,
@@ -130,100 +227,7 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
-    ...(process.env.NODE_ENV !== "production"
-      ? [
-          Credentials({
-            name: "Test Login",
-            credentials: {
-              email: { label: "Email", type: "email" },
-              password: { label: "Passwort", type: "password" },
-              dev: { label: "Dev", type: "text" },
-            },
-            async authorize(credentials) {
-              const email = credentials?.email?.toString().toLowerCase();
-              const password = credentials?.password?.toString();
-              const devFastLogin =
-                process.env.NODE_ENV !== "production" && credentials?.dev === "1";
-
-              if (!email) return null;
-
-              if (devFastLogin) {
-                const allowed = [
-                  "member@example.com",
-                  "cast@example.com",
-                  "tech@example.com",
-                  "board@example.com",
-                  "finance@example.com",
-                  "owner@example.com",
-                  "admin@example.com",
-                ];
-                if (!allowed.includes(email)) return null;
-                const roleMap: Record<string, Role> = {
-                  "member@example.com": "member",
-                  "cast@example.com": "cast",
-                  "tech@example.com": "tech",
-                  "board@example.com": "board",
-                  "finance@example.com": "finance",
-                  "owner@example.com": "owner",
-                  "admin@example.com": "admin",
-                };
-                const user = await prisma.user.upsert({
-                  where: { email },
-                  update: {},
-                  create: { email, name: email.split("@")[0], role: roleMap[email] },
-                });
-                await prisma.userRole.upsert({
-                  where: { userId_role: { userId: user.id, role: roleMap[email] } },
-                  update: {},
-                  create: { userId: user.id, role: roleMap[email] },
-                });
-                return {
-                  id: user.id,
-                  email: user.email!,
-                  name: user.name!,
-                  role: user.role,
-                  roles: [user.role],
-                  avatarSource: user.avatarSource,
-                  avatarImageUpdatedAt: user.avatarImageUpdatedAt,
-                };
-              }
-
-              if (!password) {
-                throw new Error("Passwort erforderlich");
-              }
-
-              const user = await prisma.user.findUnique({
-                where: { email },
-                include: { roles: true },
-              });
-
-              if (!user || !user.passwordHash) {
-                throw new Error("Ungültige Zugangsdaten");
-              }
-
-              const valid = await verifyPassword(password, user.passwordHash);
-              if (!valid) {
-                throw new Error("Ungültige Zugangsdaten");
-              }
-
-              const combinedRoles = sortRoles([
-                user.role as Role,
-                ...user.roles.map((r) => r.role as Role),
-              ]);
-
-              return {
-                id: user.id,
-                email: user.email!,
-                name: user.name!,
-                role: combinedRoles[combinedRoles.length - 1],
-                roles: combinedRoles,
-                avatarSource: user.avatarSource,
-                avatarImageUpdatedAt: user.avatarImageUpdatedAt,
-              };
-            },
-          }),
-        ]
-      : []),
+    credentialsProvider,
   ],
   pages: { signIn: "/login" },
   callbacks: {
