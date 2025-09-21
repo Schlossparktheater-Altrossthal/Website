@@ -29,8 +29,31 @@ type PosterOverride =
   | { strategy: "append"; sources: string[] };
 
 const CHRONIK_POSTER_OVERRIDES: Record<string, PosterOverride> = {
-  "altrossthal-2024": { strategy: "replace", sources: ["/images/Bunbury_Flyer.jpg"] },
+  "altrossthal-2024": {
+    strategy: "replace",
+    sources: ["/images/Bunbury_Flyer.jpg", "/images/Sequenz%2001.Standbild137.jpg"],
+  },
+  "altrossthal-2023": {
+    strategy: "replace",
+    sources: ["/images/Screenshot%202025-09-21%20234531.png"],
+  },
   "altrossthal-2022": { strategy: "append", sources: ["/images/Aladin_Bühne.jpg"] },
+  "altrossthal-2018": {
+    strategy: "replace",
+    sources: ["/images/Screenshot%202025-09-21%20235339.png"],
+  },
+  "altrossthal-2017": {
+    strategy: "replace",
+    sources: ["/images/SNT_1.png", "/images/SNT_2.png"],
+  },
+  "altrossthal-2015": {
+    strategy: "replace",
+    sources: ["/images/RuJ_1.png", "/images/RuJ_2.png", "/images/RuJ_3.png", "/images/RuJ_4.png"],
+  },
+  "altrossthal-2014": {
+    strategy: "replace",
+    sources: ["/images/Faust_1.png", "/images/Faust_2.png"],
+  },
 };
 
 function sanitizePosterSources(sources: (string | null | undefined)[]) {
