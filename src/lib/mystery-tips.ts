@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 
 export type MysteryScoreboardEntry = {
@@ -87,7 +89,7 @@ export async function getMysteryScoreboardEntry(playerName: string): Promise<Mys
     return null;
   }
 
-  const totalSubmissions = typeof totals._count === "number" ? totals._count : totals._count?._all ?? 0;
+  const totalSubmissions = totals._count ?? 0;
 
   return {
     playerName: trimmed,
@@ -114,29 +116,37 @@ export async function getMysteryClueSummaries() {
   });
 }
 
-export async function getMysterySubmissionsForClue(clueId: string) {
+const mysterySubmissionInclude = {
+  tip: {
+    select: {
+      text: true,
+      count: true,
+    },
+  },
+  clue: {
+    select: {
+      id: true,
+      index: true,
+      points: true,
+      releaseAt: true,
+      published: true,
+    },
+  },
+} satisfies Prisma.MysteryTipSubmissionInclude;
+
+export type MysterySubmissionWithRelations = Prisma.MysteryTipSubmissionGetPayload<{
+  include: typeof mysterySubmissionInclude;
+}>;
+
+export async function getMysterySubmissionsForClue(
+  clueId: string,
+): Promise<MysterySubmissionWithRelations[]> {
   if (!process.env.DATABASE_URL) {
-    return [] as Awaited<ReturnType<typeof prisma.mysteryTipSubmission.findMany>>;
+    return [];
   }
   return prisma.mysteryTipSubmission.findMany({
     where: { clueId },
-    include: {
-      tip: {
-        select: {
-          text: true,
-          count: true,
-        },
-      },
-      clue: {
-        select: {
-          id: true,
-          index: true,
-          points: true,
-          releaseAt: true,
-          published: true,
-        },
-      },
-    },
+    include: mysterySubmissionInclude,
     orderBy: [{ createdAt: "desc" }],
   });
 }
