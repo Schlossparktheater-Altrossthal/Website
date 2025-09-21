@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
 import { HeroRotator } from "@/components/hero-rotator";
 import { useEffect, useState } from "react";
@@ -47,54 +46,38 @@ export function Hero({ images }: { images: string[] }) {
               transform: `translateY(${scrollY * -0.3}px)`,
             }}
           >
-            <div className="flex flex-col items-center gap-6 md:gap-7 lg:gap-9">
-              <Badge
-                variant="outline"
-                size="sm"
-                className="rounded-full border-white/30 bg-black/20 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/80 shadow-lg backdrop-blur"
-              >
-                Sommer 2025
-              </Badge>
+            <div className="flex flex-col items-center gap-8 md:gap-10">
               <Heading
                 level="display"
                 weight="bold"
-                className="font-serif text-balance text-white [text-shadow:_0_0_14px_rgba(0,0,0,0.85),_2px_2px_8px_rgba(0,0,0,0.65)]"
+                className="font-serif text-balance leading-[0.92] text-white drop-shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
               >
-                Magische Nächte unter freiem Himmel
+                <span className="block">Das Geheimnis</span>
+                <span className="block">im Schlosspark</span>
               </Heading>
               <Text
                 variant="lead"
                 weight="medium"
-                className="mx-auto max-w-2xl text-balance text-white/95 [text-shadow:_0_0_10px_rgba(0,0,0,0.65)]"
+                className="mx-auto max-w-3xl text-balance text-white/95 [text-shadow:_0_0_10px_rgba(0,0,0,0.55)]"
               >
-                Das Ensemble des Sommertheaters lädt zu einem neuen Erlebnis aus Licht, Musik und
-                Erzählung ein – nur an einem Wochenende im Schlosspark.
+                Ein Sommer. Ein Wochenende. Ein einziges Stück – verborgen zwischen Licht und Laub.
               </Text>
-              <div className="flex flex-col items-center gap-6">
-                <ul className="grid gap-3 text-sm font-medium text-white/80 md:grid-cols-3 md:gap-4">
-                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
-                    Live-Orchester &amp; Chor
-                  </li>
-                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
-                    Immersive Lichtinstallationen
-                  </li>
-                  <li className="rounded-full border border-white/20 bg-black/20 px-5 py-2 shadow-md backdrop-blur">
-                    Familienfreundliches Rahmenprogramm
-                  </li>
-                </ul>
-                <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
-                  <Button asChild size="lg" className="px-8 py-5 text-base md:text-lg">
-                    <Link href="/mystery">Das Geheimnis entdecken</Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    asChild
-                    size="lg"
-                    className="border-white/40 bg-white/10 px-8 py-5 text-base text-white shadow-lg backdrop-blur hover:border-white/60 hover:bg-white/20 md:text-lg"
-                  >
-                    <Link href="/chronik">Rückblick 2024</Link>
-                  </Button>
-                </div>
+              <div className="flex flex-col items-center justify-center gap-4 md:flex-row md:gap-5">
+                <Button
+                  asChild
+                  size="xl"
+                  className="px-8 py-5 text-base font-semibold tracking-wide md:px-10 md:text-lg"
+                >
+                  <Link href="/mystery">Das Geheimnis entdecken</Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  asChild
+                  size="xl"
+                  className="border-white/50 bg-white/10 px-8 py-5 text-base font-semibold text-white shadow-lg backdrop-blur md:px-10 md:text-lg"
+                >
+                  <Link href="/chronik">Chronik</Link>
+                </Button>
               </div>
             </div>
           </div>
