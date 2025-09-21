@@ -6,19 +6,25 @@ import { hasPermission } from "@/lib/permissions";
 import {
   DEFAULT_ISSUE_CATEGORY,
   DEFAULT_ISSUE_PRIORITY,
+  DEFAULT_ISSUE_VISIBILITY,
   isIssueCategory,
   isIssuePriority,
   isIssueStatus,
+  isIssueVisibility,
 } from "@/lib/issues";
 import type { IssueStatusCounts } from "@/components/members/issues/types";
-import { mapIssueSummary } from "./utils";
+import { extractIssuePlainText, mapIssueSummary, sanitizeIssueDescription } from "./utils";
 
 const MAX_RESULTS = 100;
 
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.issues");
-  if (!allowed) {
+  const [canView, canManage] = await Promise.all([
+    hasPermission(session.user, "mitglieder.issues"),
+    hasPermission(session.user, "mitglieder.issues.manage"),
+  ]);
+
+  if (!canView) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
@@ -27,7 +33,15 @@ export async function GET(request: NextRequest) {
   const categoryParam = url.searchParams.get("category");
   const searchParam = url.searchParams.get("q");
 
-  const where: Prisma.IssueWhereInput = {};
+  const currentUserId = session.user?.id ?? "";
+  const baseConditions: Prisma.IssueWhereInput[] = [{ visibility: "public" }];
+  if (currentUserId) {
+    baseConditions.push({ createdById: currentUserId });
+  }
+
+  const baseWhere: Prisma.IssueWhereInput = canManage ? {} : { OR: baseConditions };
+
+  const where: Prisma.IssueWhereInput = { ...baseWhere };
 
   if (statusParam && isIssueStatus(statusParam)) {
     where.status = statusParam;
@@ -65,7 +79,7 @@ export async function GET(request: NextRequest) {
         _count: { select: { comments: true } },
       },
     }),
-    prisma.issue.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.issue.groupBy({ by: ["status"], where: baseWhere, _count: { _all: true } }),
   ]);
 
   const counts: IssueStatusCounts = { open: 0, in_progress: 0, resolved: 0, closed: 0 };
@@ -106,11 +120,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Titel darf maximal 160 Zeichen haben" }, { status: 400 });
   }
 
-  const descriptionValue = typeof body.description === "string" ? body.description.trim() : "";
-  if (descriptionValue.length < 10) {
+  const descriptionRaw = typeof body.description === "string" ? body.description : "";
+  const sanitizedDescription = sanitizeIssueDescription(descriptionRaw);
+  const plainDescription = extractIssuePlainText(sanitizedDescription);
+  if (plainDescription.length < 10) {
     return NextResponse.json({ error: "Beschreibung muss mindestens 10 Zeichen enthalten" }, { status: 400 });
   }
-  if (descriptionValue.length > 4000) {
+  if (plainDescription.length > 4000) {
     return NextResponse.json({ error: "Beschreibung darf maximal 4000 Zeichen enthalten" }, { status: 400 });
   }
 
@@ -124,12 +140,18 @@ export async function POST(request: NextRequest) {
     priority = body.priority;
   }
 
+  let visibility = DEFAULT_ISSUE_VISIBILITY;
+  if (typeof body.visibility === "string" && isIssueVisibility(body.visibility)) {
+    visibility = body.visibility;
+  }
+
   const issue = await prisma.issue.create({
     data: {
       title: titleValue,
-      description: descriptionValue,
+      description: sanitizedDescription,
       category,
       priority,
+      visibility,
       status: "open",
       createdById: userId,
       updatedById: userId,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { IssueCategory, IssuePriority, IssueStatus } from "@prisma/client";
+import type { IssueCategory, IssuePriority, IssueStatus, IssueVisibility } from "@prisma/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,14 @@ import {
   ISSUE_STATUS_BADGE_CLASSES,
   ISSUE_STATUS_LABELS,
   ISSUE_STATUS_VALUES,
+  ISSUE_VISIBILITY_BADGE_CLASSES,
+  ISSUE_VISIBILITY_DESCRIPTIONS,
+  ISSUE_VISIBILITY_LABELS,
+  ISSUE_VISIBILITY_VALUES,
   isIssueCategory,
   isIssuePriority,
   isIssueStatus,
+  isIssueVisibility,
 } from "@/lib/issues";
 import { cn } from "@/lib/utils";
 import type { IssueDetail as IssueDetailType, IssueSummary } from "./types";
@@ -91,11 +96,19 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
   }, [issueId, loadIssue]);
 
   const handleUpdate = useCallback(
-    async (updates: Partial<{ status: IssueStatus; priority: IssuePriority; category: IssueCategory }>) => {
+    async (
+      updates: Partial<{
+        status: IssueStatus;
+        priority: IssuePriority;
+        category: IssueCategory;
+        visibility: IssueVisibility;
+      }>,
+    ) => {
       if (!issue) return;
       if (updates.status && !isIssueStatus(updates.status)) return;
       if (updates.priority && !isIssuePriority(updates.priority)) return;
       if (updates.category && !isIssueCategory(updates.category)) return;
+      if (updates.visibility && !isIssueVisibility(updates.visibility)) return;
       setUpdating(true);
       try {
         const response = await fetch(`/api/issues/${issue.id}`, {
@@ -144,6 +157,13 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
     if (issue.category === nextCategory) return;
     if (!isIssueCategory(nextCategory)) return;
     await handleUpdate({ category: nextCategory });
+  };
+
+  const handleVisibilityChange = async (nextVisibility: string) => {
+    if (!issue) return;
+    if (issue.visibility === nextVisibility) return;
+    if (!isIssueVisibility(nextVisibility)) return;
+    await handleUpdate({ visibility: nextVisibility });
   };
 
   const handleCommentSubmit = async () => {
@@ -222,9 +242,19 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
           <Badge className={cn("border", ISSUE_CATEGORY_BADGE_CLASSES[issue.category])}>
             {ISSUE_CATEGORY_LABELS[issue.category]}
           </Badge>
+          <Badge className={cn("border", ISSUE_VISIBILITY_BADGE_CLASSES[issue.visibility])}>
+            {ISSUE_VISIBILITY_LABELS[issue.visibility]}
+          </Badge>
         </div>
         <h2 className="text-xl font-semibold">{issue.title}</h2>
-        <p className="whitespace-pre-line text-sm text-foreground/80">{issue.description}</p>
+        {issue.descriptionHtml ? (
+          <div
+            className="prose prose-sm max-w-none text-foreground prose-headings:text-foreground prose-a:text-primary"
+            dangerouslySetInnerHTML={{ __html: issue.descriptionHtml }}
+          />
+        ) : (
+          <p className="whitespace-pre-line text-sm text-foreground/80">{issue.description}</p>
+        )}
       </div>
 
       <div className="grid gap-4 rounded-lg border border-border/40 bg-muted/10 p-4 text-sm text-muted-foreground md:grid-cols-2">
@@ -299,6 +329,29 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
                   {ISSUE_CATEGORY_VALUES.map((category) => (
                     <SelectItem key={category} value={category}>
                       {ISSUE_CATEGORY_LABELS[category]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
+          {canUpdate ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground/80">Sichtbarkeit</label>
+              <Select value={issue.visibility} onValueChange={handleVisibilityChange} disabled={updating}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sichtbarkeit wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ISSUE_VISIBILITY_VALUES.map((visibility) => (
+                    <SelectItem key={visibility} value={visibility}>
+                      <div className="flex flex-col text-left">
+                        <span>{ISSUE_VISIBILITY_LABELS[visibility]}</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {ISSUE_VISIBILITY_DESCRIPTIONS[visibility]}
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

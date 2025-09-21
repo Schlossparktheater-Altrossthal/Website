@@ -9,8 +9,11 @@ export async function POST(
   { params }: { params: Promise<{ issueId: string }> },
 ) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.issues");
-  if (!allowed) {
+  const [canView, canManage] = await Promise.all([
+    hasPermission(session.user, "mitglieder.issues"),
+    hasPermission(session.user, "mitglieder.issues.manage"),
+  ]);
+  if (!canView) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
@@ -24,9 +27,16 @@ export async function POST(
     return NextResponse.json({ error: "Ungültige ID" }, { status: 400 });
   }
 
-  const issueExists = await prisma.issue.findUnique({ where: { id: issueId }, select: { id: true } });
-  if (!issueExists) {
+  const issueMeta = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: { id: true, visibility: true, createdById: true },
+  });
+  if (!issueMeta) {
     return NextResponse.json({ error: "Anliegen nicht gefunden" }, { status: 404 });
+  }
+
+  if (issueMeta.visibility === "private" && !canManage && issueMeta.createdById !== userId) {
+    return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
 
   const rawBody = await request.json().catch(() => null);

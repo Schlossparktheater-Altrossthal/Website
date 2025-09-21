@@ -4,7 +4,8 @@ import type { IssueStatusCounts, IssueSummary } from "@/components/members/issue
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import type { IssueStatus } from "@prisma/client";
+import type { IssueStatus, Prisma } from "@prisma/client";
+import { mapIssueSummary } from "@/app/api/issues/utils";
 
 function createEmptyCounts(): IssueStatusCounts {
   return {
@@ -28,8 +29,18 @@ export default async function IssuesPage() {
 
   const currentUserId = session.user?.id ?? "";
 
+  const baseWhere: Prisma.IssueWhereInput = canManage
+    ? {}
+    : {
+        OR: [
+          { visibility: "public" },
+          ...(currentUserId ? [{ createdById: currentUserId }] : []),
+        ],
+      };
+
   const [issuesRaw, countsRaw] = await Promise.all([
     prisma.issue.findMany({
+      where: baseWhere,
       orderBy: { lastActivityAt: "desc" },
       take: 50,
       include: {
@@ -40,6 +51,7 @@ export default async function IssuesPage() {
     }),
     prisma.issue.groupBy({
       by: ["status"],
+      where: baseWhere,
       _count: { _all: true },
     }),
   ]);
@@ -49,27 +61,7 @@ export default async function IssuesPage() {
     return acc;
   }, createEmptyCounts());
 
-  const initialIssues: IssueSummary[] = issuesRaw.map((issue) => ({
-    id: issue.id,
-    title: issue.title,
-    description: issue.description,
-    category: issue.category,
-    status: issue.status,
-    priority: issue.priority,
-    createdAt: issue.createdAt.toISOString(),
-    updatedAt: issue.updatedAt.toISOString(),
-    lastActivityAt: issue.lastActivityAt.toISOString(),
-    resolvedAt: issue.resolvedAt ? issue.resolvedAt.toISOString() : null,
-    createdById: issue.createdById,
-    updatedById: issue.updatedById ?? null,
-    createdBy: issue.createdBy
-      ? { id: issue.createdBy.id, name: issue.createdBy.name, email: issue.createdBy.email }
-      : null,
-    updatedBy: issue.updatedBy
-      ? { id: issue.updatedBy.id, name: issue.updatedBy.name, email: issue.updatedBy.email }
-      : null,
-    commentCount: issue._count.comments,
-  }));
+  const initialIssues: IssueSummary[] = issuesRaw.map(mapIssueSummary);
 
   return (
     <div className="space-y-6">

@@ -8,26 +8,41 @@ import type { IssueSummary } from "./types";
 import {
   DEFAULT_ISSUE_CATEGORY,
   DEFAULT_ISSUE_PRIORITY,
+  DEFAULT_ISSUE_VISIBILITY,
   ISSUE_CATEGORY_DESCRIPTIONS,
   ISSUE_CATEGORY_LABELS,
   ISSUE_CATEGORY_VALUES,
   ISSUE_PRIORITY_LABELS,
   ISSUE_PRIORITY_VALUES,
+  ISSUE_VISIBILITY_DESCRIPTIONS,
+  ISSUE_VISIBILITY_LABELS,
+  ISSUE_VISIBILITY_VALUES,
   isIssueCategory,
   isIssuePriority,
+  isIssueVisibility,
 } from "@/lib/issues";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { toast } from "sonner";
+
+function extractPlainText(value: string) {
+  if (!value) return "";
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 type IssueCreateFormValues = {
   title: string;
   description: string;
   category: string;
   priority: string;
+  visibility: string;
 };
 
 const schema = z.object({
@@ -37,14 +52,24 @@ const schema = z.object({
     .max(160, "Titel darf höchstens 160 Zeichen lang sein"),
   description: z
     .string()
-    .min(10, "Beschreibe dein Anliegen mit mindestens 10 Zeichen")
-    .max(4000, "Beschreibung darf höchstens 4000 Zeichen lang sein"),
+    .transform((value) => value.trim())
+    .superRefine((value, ctx) => {
+      const plain = extractPlainText(value);
+      if (plain.length < 10) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Beschreibe dein Anliegen mit mindestens 10 Zeichen" });
+      } else if (plain.length > 4000) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Beschreibung darf höchstens 4000 Zeichen lang sein" });
+      }
+    }),
   category: z
     .string()
     .refine(isIssueCategory, "Ungültige Kategorie"),
   priority: z
     .string()
     .refine(isIssuePriority, "Ungültige Priorität"),
+  visibility: z
+    .string()
+    .refine(isIssueVisibility, "Ungültige Sichtbarkeit"),
 });
 
 type IssueCreateFormProps = {
@@ -61,14 +86,16 @@ export function IssueCreateForm({ onCreated, onSuccess }: IssueCreateFormProps) 
       description: "",
       category: DEFAULT_ISSUE_CATEGORY,
       priority: DEFAULT_ISSUE_PRIORITY,
+      visibility: DEFAULT_ISSUE_VISIBILITY,
     },
   });
 
   const categoryOptions = useMemo(() => ISSUE_CATEGORY_VALUES, []);
   const priorityOptions = useMemo(() => ISSUE_PRIORITY_VALUES, []);
+  const visibilityOptions = useMemo(() => ISSUE_VISIBILITY_VALUES, []);
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    const { title, description, category, priority } = values;
+    const { title, description, category, priority, visibility } = values;
     setSubmitting(true);
     try {
       const response = await fetch("/api/issues", {
@@ -79,6 +106,7 @@ export function IssueCreateForm({ onCreated, onSuccess }: IssueCreateFormProps) 
           description: description.trim(),
           category,
           priority,
+          visibility,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -95,6 +123,7 @@ export function IssueCreateForm({ onCreated, onSuccess }: IssueCreateFormProps) 
         description: "",
         category,
         priority,
+        visibility,
       });
       onSuccess?.();
     } catch (error) {
@@ -181,6 +210,40 @@ export function IssueCreateForm({ onCreated, onSuccess }: IssueCreateFormProps) 
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="visibility"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Sichtbarkeit</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sichtbarkeit wählen" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {visibilityOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        <div className="flex flex-col text-left">
+                          <span>{ISSUE_VISIBILITY_LABELS[option]}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {ISSUE_VISIBILITY_DESCRIPTIONS[option]}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Private Anliegen sind nur für dich und das Support-Team sichtbar. Öffentliche Anliegen sehen alle Mitglieder
+                  mit Support-Zugang.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <FormField
@@ -190,10 +253,11 @@ export function IssueCreateForm({ onCreated, onSuccess }: IssueCreateFormProps) 
             <FormItem>
               <FormLabel>Beschreibung</FormLabel>
               <FormControl>
-                <Textarea
-                  rows={6}
+                <RichTextEditor
+                  value={field.value}
+                  onChange={field.onChange}
                   placeholder="Beschreibe das Problem, gewünschte Verbesserungen oder relevante Schritte im Detail."
-                  {...field}
+                  className="min-h-[220px]"
                 />
               </FormControl>
               <FormDescription>

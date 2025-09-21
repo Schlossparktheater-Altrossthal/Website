@@ -1,5 +1,60 @@
+import sanitizeHtml from "sanitize-html";
 import type { Prisma } from "@prisma/client";
 import type { IssueDetail, IssueSummary } from "@/components/members/issues/types";
+
+const ISSUE_DESCRIPTION_ALLOWED_TAGS = [
+  "p",
+  "br",
+  "strong",
+  "em",
+  "u",
+  "s",
+  "ol",
+  "ul",
+  "li",
+  "blockquote",
+  "code",
+  "pre",
+  "a",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+];
+
+const NBSP_REGEX = /\u00a0/g;
+
+export function sanitizeIssueDescription(input: string): string {
+  if (!input) {
+    return "";
+  }
+
+  return sanitizeHtml(input, {
+    allowedTags: ISSUE_DESCRIPTION_ALLOWED_TAGS,
+    allowedAttributes: {
+      a: ["href", "target", "rel"],
+    },
+    transformTags: {
+      a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer", target: "_blank" }),
+    },
+    textFilter: (text) => text.replace(NBSP_REGEX, " "),
+  }).trim();
+}
+
+export function extractIssuePlainText(html: string): string {
+  if (!html) {
+    return "";
+  }
+
+  const stripped = sanitizeHtml(html, {
+    allowedTags: [],
+    allowedAttributes: {},
+    textFilter: (text) => text.replace(NBSP_REGEX, " "),
+  });
+
+  return stripped.replace(/\s+/g, " ").trim();
+}
 
 type IssueSummaryPayload = Prisma.IssueGetPayload<{
   include: {
@@ -22,13 +77,18 @@ type IssueDetailPayload = Prisma.IssueGetPayload<{
 }>;
 
 export function mapIssueSummary(issue: IssueSummaryPayload): IssueSummary {
+  const sanitizedDescription = sanitizeIssueDescription(issue.description ?? "");
+  const plainTextDescription = extractIssuePlainText(sanitizedDescription);
+
   return {
     id: issue.id,
     title: issue.title,
-    description: issue.description,
+    description: plainTextDescription,
+    descriptionHtml: sanitizedDescription,
     category: issue.category,
     status: issue.status,
     priority: issue.priority,
+    visibility: issue.visibility,
     createdAt: issue.createdAt.toISOString(),
     updatedAt: issue.updatedAt.toISOString(),
     lastActivityAt: issue.lastActivityAt.toISOString(),

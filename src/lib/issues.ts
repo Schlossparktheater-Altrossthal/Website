@@ -1,4 +1,4 @@
-import type { IssueCategory, IssuePriority, IssueStatus } from "@prisma/client";
+import type { IssueCategory, IssuePriority, IssueStatus, IssueVisibility } from "@prisma/client";
 
 export const ISSUE_STATUS_VALUES = ["open", "in_progress", "resolved", "closed"] as const satisfies readonly IssueStatus[];
 export const ISSUE_STATUS_ORDER: readonly IssueStatus[] = ISSUE_STATUS_VALUES;
@@ -13,6 +13,8 @@ export const ISSUE_CATEGORY_VALUES = [
 
 export const ISSUE_PRIORITY_VALUES = ["low", "medium", "high", "urgent"] as const satisfies readonly IssuePriority[];
 export const ISSUE_PRIORITY_ORDER: readonly IssuePriority[] = ISSUE_PRIORITY_VALUES;
+
+export const ISSUE_VISIBILITY_VALUES = ["public", "private"] as const satisfies readonly IssueVisibility[];
 
 export const ISSUE_STATUS_LABELS: Record<IssueStatus, string> = {
   open: "Offen",
@@ -51,6 +53,16 @@ export const ISSUE_PRIORITY_LABELS: Record<IssuePriority, string> = {
   urgent: "Dringend",
 };
 
+export const ISSUE_VISIBILITY_LABELS: Record<IssueVisibility, string> = {
+  public: "Öffentlich",
+  private: "Privat",
+};
+
+export const ISSUE_VISIBILITY_DESCRIPTIONS: Record<IssueVisibility, string> = {
+  public: "Das Anliegen ist für alle Mitglieder mit Support-Zugang sichtbar.",
+  private: "Nur du und das Support-Team können dieses Anliegen sehen.",
+};
+
 export const ISSUE_STATUS_BADGE_CLASSES: Record<IssueStatus, string> = {
   open: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200",
   in_progress: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200",
@@ -73,9 +85,15 @@ export const ISSUE_PRIORITY_BADGE_CLASSES: Record<IssuePriority, string> = {
   urgent: "border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-200",
 };
 
+export const ISSUE_VISIBILITY_BADGE_CLASSES: Record<IssueVisibility, string> = {
+  public: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+  private: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-200",
+};
+
 const ISSUE_STATUS_SET = new Set<IssueStatus>(ISSUE_STATUS_VALUES);
 const ISSUE_CATEGORY_SET = new Set<IssueCategory>(ISSUE_CATEGORY_VALUES);
 const ISSUE_PRIORITY_SET = new Set<IssuePriority>(ISSUE_PRIORITY_VALUES);
+const ISSUE_VISIBILITY_SET = new Set<IssueVisibility>(ISSUE_VISIBILITY_VALUES);
 
 export function isIssueStatus(value: unknown): value is IssueStatus {
   return typeof value === "string" && ISSUE_STATUS_SET.has(value as IssueStatus);
@@ -89,6 +107,11 @@ export function isIssuePriority(value: unknown): value is IssuePriority {
   return typeof value === "string" && ISSUE_PRIORITY_SET.has(value as IssuePriority);
 }
 
+export function isIssueVisibility(value: unknown): value is IssueVisibility {
+  return typeof value === "string" && ISSUE_VISIBILITY_SET.has(value as IssueVisibility);
+}
+
 export const DEFAULT_ISSUE_STATUS: IssueStatus = "open";
 export const DEFAULT_ISSUE_PRIORITY: IssuePriority = "medium";
 export const DEFAULT_ISSUE_CATEGORY: IssueCategory = "general";
+export const DEFAULT_ISSUE_VISIBILITY: IssueVisibility = "public";

@@ -25,6 +25,8 @@ import {
   ISSUE_STATUS_BADGE_CLASSES,
   ISSUE_STATUS_LABELS,
   ISSUE_STATUS_VALUES,
+  ISSUE_VISIBILITY_BADGE_CLASSES,
+  ISSUE_VISIBILITY_LABELS,
 } from "@/lib/issues";
 import { cn } from "@/lib/utils";
 import { IssueCreateForm } from "./issue-create-form";
@@ -333,6 +335,9 @@ export function IssueOverview({ initialIssues, initialCounts, canManage, current
                       </Badge>
                       <Badge className={cn("border", ISSUE_CATEGORY_BADGE_CLASSES[issue.category])}>
                         {ISSUE_CATEGORY_LABELS[issue.category]}
+                      </Badge>
+                      <Badge className={cn("border", ISSUE_VISIBILITY_BADGE_CLASSES[issue.visibility])}>
+                        {ISSUE_VISIBILITY_LABELS[issue.visibility]}
                       </Badge>
                     </div>
                     <h3 className="mt-2 text-lg font-semibold text-foreground">{issue.title}</h3>
