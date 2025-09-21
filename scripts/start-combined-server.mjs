@@ -16,10 +16,28 @@ function ensureLeadingSlash(path, fallback = '/socket.io') {
   return value.startsWith('/') ? value : `/${value}`;
 }
 
+function resolveHostname() {
+  const candidates = [
+    process.env.APP_HOST,
+    process.env.APP_BIND_HOST,
+    process.env.BIND_HOST,
+    process.env.SERVER_HOST,
+    process.env.HOST,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return '0.0.0.0';
+}
+
 async function main() {
   const dev = process.env.NODE_ENV !== 'production';
   const port = Number(process.env.PORT || process.env.APP_PORT || 3000);
-  const hostname = process.env.HOSTNAME || '0.0.0.0';
+  const hostname = resolveHostname();
 
   const basePath = normalizeBasePath(process.env.REALTIME_BASE_PATH);
   const socketPath = ensureLeadingSlash(
@@ -72,11 +90,21 @@ async function main() {
     });
   });
 
-  await new Promise((resolve) => {
-    server.listen(port, hostname, resolve);
+  await new Promise((resolve, reject) => {
+    const handleError = (error) => {
+      server.off('listening', handleListening);
+      reject(error);
+    };
+    const handleListening = () => {
+      server.off('error', handleError);
+      resolve();
+    };
+
+    server.once('error', handleError);
+    server.listen(port, hostname, handleListening);
   });
 
-  const displayHost = hostname === '0.0.0.0' ? 'localhost' : hostname;
+  const displayHost = ['0.0.0.0', '::', '::0'].includes(hostname) ? 'localhost' : hostname;
   console.log(`Next.js app listening on http://${displayHost}:${port}`);
   console.log(
     `Realtime server mounted at ${process.env.REALTIME_SERVER_URL} (socket path: ${socketPath}, event path: ${eventPath})`,
