@@ -449,7 +449,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   }, []);
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
-  const requiresDocument = age !== null && age <= 18;
+  const requiresDocument = age !== null && age < 18;
   const requiresBackgroundClass = useMemo(() => requiresBszClass(form.background), [form.background]);
   const backgroundClassLabel = useMemo(() => {
     const trimmed = form.backgroundClass.trim();
@@ -1609,7 +1609,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
 
             {requiresDocument && (
               <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
-                <p className="font-medium">Du bist 18 Jahre oder jünger</p>
+                <p className="font-medium">Du bist unter 18 Jahre alt</p>
                 <p>
                   Wir benötigen eine unterschriebene Foto-Einverständniserklärung. Lade sie als Datei hoch oder unterschreibe
                   direkt hier digital. Wenn es gerade nicht passt, kannst du die Unterschrift auch später im Profil nachreichen.
