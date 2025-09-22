@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { AlertCircle, CheckCircle2, Loader2, PlugZap, Sparkles } from "lucide-react";
 
-import { AlertCircle, CheckCircle2, ChevronDown, Loader2, PlugZap, Sparkles } from "lucide-react";
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ const CHECKED_AT_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   timeStyle: "short",
 });
 
+const FREEZE_DAY_PRESETS = [0, 3, 5, 7, 10, 14, 21, 28, 30] as const;
+
 interface SperrlisteSettingsManagerProps {
   settings: ClientSperrlisteSettings;
   defaultHolidaySourceUrl: string;
@@ -32,29 +34,37 @@ interface SperrlisteSettingsManagerProps {
   ) => void;
 }
 
+type ErrorState = {
+  message: string;
+  details?: string;
+};
+
 type HolidayStatusMeta = {
   label: string;
   tone: "ok" | "warning" | "disabled" | "unknown";
   description: string;
 };
 
-const STATUS_CONTAINER_TONES: Record<HolidayStatusMeta["tone"], string> = {
-  ok: "border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-100",
-  warning:
-    "border-amber-400/60 bg-amber-100 text-amber-900 dark:border-amber-500/70 dark:bg-amber-500/10 dark:text-amber-100",
-  disabled: "border-border/60 bg-muted/40 text-muted-foreground",
-  unknown:
-    "border-slate-400/50 bg-slate-100 text-slate-700 dark:border-slate-600/60 dark:bg-slate-800/40 dark:text-slate-100",
+const STATUS_LINE_CLASSES: Record<HolidayStatusMeta["tone"], string> = {
+  ok: "border-emerald-500/50 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100",
+  warning: "border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100",
+  disabled: "border-border bg-muted text-muted-foreground",
+  unknown: "border-slate-400/60 bg-slate-400/10 text-slate-800 dark:text-slate-100",
 };
 
-const STATUS_BADGE_TONES: Record<HolidayStatusMeta["tone"], string> = {
-  ok: "bg-emerald-500/20 text-emerald-700 dark:bg-emerald-500/30 dark:text-emerald-100",
-  warning:
-    "bg-amber-500/20 text-amber-900 dark:bg-amber-500/30 dark:text-amber-100",
-  disabled: "bg-muted text-muted-foreground",
-  unknown:
-    "bg-slate-500/20 text-slate-700 dark:bg-slate-500/30 dark:text-slate-100",
-};
+const STATUS_BADGE_VARIANTS = {
+  ok: "success",
+  warning: "warning",
+  disabled: "muted",
+  unknown: "info",
+} as const satisfies Record<HolidayStatusMeta["tone"], ComponentProps<typeof Badge>["variant"]>;
+
+const STATUS_ICONS = {
+  ok: CheckCircle2,
+  warning: AlertCircle,
+  disabled: PlugZap,
+  unknown: Loader2,
+} as const;
 
 function getStatusMeta(status: HolidaySourceStatus): HolidayStatusMeta {
   switch (status) {
@@ -62,25 +72,25 @@ function getStatusMeta(status: HolidaySourceStatus): HolidayStatusMeta {
       return {
         label: "Quelle aktiv",
         tone: "ok",
-        description: "Der konfigurierte Feed lieferte nutzbare Termine.",
+        description: "Die Ferienquelle liefert nutzbare Termine.",
       };
     case "error":
       return {
-        label: "Fehler bei der Quelle",
+        label: "Quelle fehlerhaft",
         tone: "warning",
-        description: "Die zuletzt getestete Quelle konnte nicht geladen werden.",
+        description: "Beim Abruf der Ferienquelle trat ein Fehler auf.",
       };
     case "disabled":
       return {
         label: "Quelle deaktiviert",
         tone: "disabled",
-        description: "Es werden ausschließlich statische Ferientermine genutzt.",
+        description: "Es werden nur hinterlegte Ferientermine genutzt.",
       };
     default:
       return {
-        label: "Status unbekannt",
+        label: "Quelle nicht geprüft",
         tone: "unknown",
-        description: "Für die aktuelle Quelle liegt noch kein Prüfstatus vor.",
+        description: "Für diese Konfiguration liegt noch kein Prüfergebnis vor.",
       };
   }
 }
@@ -95,60 +105,32 @@ function sortArray(values: Iterable<number>) {
   return WEEKDAY_ORDER.filter((weekday) => set.has(weekday));
 }
 
-interface SettingsSectionProps {
-  title: string;
-  description?: string;
-  summary?: ReactNode;
-  defaultOpen?: boolean;
-  children: ReactNode;
+function areArraysEqual(a: number[], b: number[]) {
+  if (a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
 }
 
-function SettingsSection({ title, description, summary, defaultOpen = false, children }: SettingsSectionProps) {
-  const [open, setOpen] = useState(defaultOpen);
-  const contentId = useId();
+function formatFreezeLabel(value: number) {
+  if (value === 0) return "Keine Sperrfrist";
+  if (value === 1) return "1 Tag";
+  if (value === 7) return "7 Tage (1 Woche)";
+  if (value === 14) return "14 Tage (2 Wochen)";
+  if (value === 21) return "21 Tage (3 Wochen)";
+  if (value === 28) return "28 Tage (4 Wochen)";
+  return `${value} Tage`;
+}
 
-  const renderSummary = (className?: string) => {
-    if (summary === undefined || summary === null) return null;
-    return (
-      <span className={cn("flex flex-wrap items-center gap-2 text-sm", className)}>
-        {typeof summary === "string" ? <span className="text-muted-foreground">{summary}</span> : summary}
-      </span>
-    );
-  };
-
-  const summaryMobile = renderSummary();
-  const summaryDesktop = renderSummary("text-muted-foreground");
-
-  return (
-    <section className="rounded-lg border border-border/60 bg-card/50">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
-        aria-controls={contentId}
-        className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-      >
-        <div className="flex-1 space-y-1">
-          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-          {summaryMobile ? <div className="sm:hidden">{summaryMobile}</div> : null}
-        </div>
-        <div className="flex items-center gap-3">
-          {summaryDesktop ? <div className="hidden sm:block">{summaryDesktop}</div> : null}
-          <ChevronDown
-            className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
-            aria-hidden
-          />
-        </div>
-      </button>
-      <div
-        id={contentId}
-        className={cn("px-4 pb-4", open ? "block border-t border-border/60 pt-4" : "hidden")}
-      >
-        <div className="space-y-4">{children}</div>
-      </div>
-    </section>
-  );
+function buildFreezeOptions(current: number | null) {
+  const values = new Set<number>(FREEZE_DAY_PRESETS);
+  if (current !== null) {
+    values.add(current);
+  }
+  return Array.from(values)
+    .sort((a, b) => a - b)
+    .map((value) => ({
+      value: String(value),
+      label: formatFreezeLabel(value),
+    }));
 }
 
 export function SperrlisteSettingsManager({
@@ -157,20 +139,21 @@ export function SperrlisteSettingsManager({
   onSettingsChange,
 }: SperrlisteSettingsManagerProps) {
   const [freezeDaysValue, setFreezeDaysValue] = useState(String(settings.freezeDays));
-  const [holidayMode, setHolidayMode] = useState<HolidaySourceMode>(settings.holidaySource.mode);
-  const [holidayUrl, setHolidayUrl] = useState(settings.holidaySource.url ?? "");
+  const [holidayModeState, setHolidayModeState] = useState<HolidaySourceMode>(settings.holidaySource.mode);
+  const [holidayUrlState, setHolidayUrlState] = useState(settings.holidaySource.url ?? "");
   const [preferredDays, setPreferredDays] = useState(() => new Set(settings.preferredWeekdays));
   const [exceptionDays, setExceptionDays] = useState(() => new Set(settings.exceptionWeekdays));
   const [status, setStatus] = useState(settings.holidayStatus);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<ErrorState | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [defaults, setDefaults] = useState({ holidaySourceUrl: defaultHolidaySourceUrl });
 
   useEffect(() => {
     setFreezeDaysValue(String(settings.freezeDays));
-    setHolidayMode(settings.holidaySource.mode);
-    setHolidayUrl(settings.holidaySource.url ?? "");
+    setHolidayModeState(settings.holidaySource.mode);
+    setHolidayUrlState(settings.holidaySource.url ?? "");
     setPreferredDays(new Set(settings.preferredWeekdays));
     setExceptionDays(new Set(settings.exceptionWeekdays));
     setStatus(settings.holidayStatus);
@@ -179,6 +162,45 @@ export function SperrlisteSettingsManager({
   useEffect(() => {
     setDefaults({ holidaySourceUrl: defaultHolidaySourceUrl });
   }, [defaultHolidaySourceUrl]);
+
+  const resetFeedback = () => {
+    setError(null);
+    setSuccess(null);
+  };
+
+  const markStatusPending = () => {
+    setStatus((prev) => {
+      if (prev.status === "unknown" && !prev.checkedAt) {
+        return prev;
+      }
+      return {
+        status: "unknown",
+        message: null,
+        checkedAt: null,
+      };
+    });
+  };
+
+  const handleHolidayModeChange = (value: HolidaySourceMode) => {
+    if (value === holidayModeState) {
+      return;
+    }
+    setHolidayModeState(value);
+    resetFeedback();
+    markStatusPending();
+  };
+
+  const handleHolidayUrlInput = (value: string) => {
+    if (value === holidayUrlState) {
+      return;
+    }
+    setHolidayUrlState(value);
+    resetFeedback();
+    markStatusPending();
+  };
+
+  const holidayMode = holidayModeState;
+  const holidayUrl = holidayUrlState;
 
   const preferredList = useMemo(
     () => formatWeekdayList(preferredDays, { fallback: "keine bevorzugten Tage" }),
@@ -203,33 +225,77 @@ export function SperrlisteSettingsManager({
         return "Standardfeed (Schulferien Sachsen)";
       case "custom": {
         const trimmed = holidayUrl.trim();
-        if (!trimmed) return "Eigener Feed (URL fehlt)";
+        if (!trimmed) return "Eigene URL (noch nicht gesetzt)";
         try {
           const parsed = new URL(trimmed);
-          return `Eigener Feed (${parsed.hostname})`;
+          return `Eigene URL (${parsed.hostname})`;
         } catch {
-          return `Eigener Feed (${trimmed})`;
+          return `Eigene URL (${trimmed})`;
         }
       }
       case "disabled":
       default:
-        return "Keine externe Quelle";
+        return "Keine Ferienquelle";
     }
   }, [holidayMode, holidayUrl]);
 
   const freezeDaysNumber = useMemo(() => {
-    if (!freezeDaysValue) return null;
     const parsed = Number.parseInt(freezeDaysValue, 10);
     return Number.isFinite(parsed) ? parsed : null;
   }, [freezeDaysValue]);
 
+  const freezeOptions = useMemo(() => buildFreezeOptions(freezeDaysNumber), [freezeDaysNumber]);
+
   const freezeDaysSummary = useMemo(() => {
-    if (freezeDaysNumber === null) return "Nicht gesetzt";
-    const suffix = freezeDaysNumber === 1 ? "Tag" : "Tage";
-    return `${freezeDaysNumber} ${suffix}`;
+    if (freezeDaysNumber === null) return "Unbekannt";
+    return formatFreezeLabel(freezeDaysNumber);
   }, [freezeDaysNumber]);
 
-  const statusChipClasses = STATUS_BADGE_TONES[statusMeta.tone];
+  const currentPreferredWeekdays = useMemo(() => sortArray(preferredDays), [preferredDays]);
+  const currentExceptionWeekdays = useMemo(() => sortArray(exceptionDays), [exceptionDays]);
+  const initialPreferredWeekdays = useMemo(
+    () => sortArray(settings.preferredWeekdays),
+    [settings.preferredWeekdays],
+  );
+  const initialExceptionWeekdays = useMemo(
+    () => sortArray(settings.exceptionWeekdays),
+    [settings.exceptionWeekdays],
+  );
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (freezeDaysNumber === null) {
+      return true;
+    }
+    if (freezeDaysNumber !== settings.freezeDays) {
+      return true;
+    }
+    if (!areArraysEqual(currentPreferredWeekdays, initialPreferredWeekdays)) {
+      return true;
+    }
+    if (!areArraysEqual(currentExceptionWeekdays, initialExceptionWeekdays)) {
+      return true;
+    }
+    if (holidayMode !== settings.holidaySource.mode) {
+      return true;
+    }
+    const trimmedUrl = holidayMode === "custom" ? holidayUrl.trim() : null;
+    const initialUrl = settings.holidaySource.url ?? null;
+    if ((trimmedUrl ?? null) !== (initialUrl ?? null)) {
+      return true;
+    }
+    return false;
+  }, [
+    freezeDaysNumber,
+    currentPreferredWeekdays,
+    initialPreferredWeekdays,
+    currentExceptionWeekdays,
+    initialExceptionWeekdays,
+    holidayMode,
+    holidayUrl,
+    settings.freezeDays,
+    settings.holidaySource.mode,
+    settings.holidaySource.url,
+  ]);
 
   const togglePreferred = (weekday: number) => {
     setPreferredDays((prev) => {
@@ -247,8 +313,7 @@ export function SperrlisteSettingsManager({
       next.delete(weekday);
       return next;
     });
-    setSuccess(null);
-    setError(null);
+    resetFeedback();
   };
 
   const toggleException = (weekday: number) => {
@@ -267,39 +332,100 @@ export function SperrlisteSettingsManager({
       next.delete(weekday);
       return next;
     });
-    setSuccess(null);
-    setError(null);
+    resetFeedback();
   };
 
-  const handleResetToDefaultUrl = () => {
-    setHolidayUrl(defaults.holidaySourceUrl ?? "");
-    setSuccess(null);
-    setError(null);
+  const handleResetToDefault = () => {
+    const targetUrl = defaults.holidaySourceUrl ?? "";
+    const shouldUpdateStatus =
+      holidayModeState !== "default" || holidayUrlState.trim() !== targetUrl.trim();
+
+    if (holidayModeState !== "default") {
+      setHolidayModeState("default");
+    }
+    if (holidayUrlState !== targetUrl) {
+      setHolidayUrlState(targetUrl);
+    }
+
+    if (shouldUpdateStatus) {
+      markStatusPending();
+    }
+    resetFeedback();
+  };
+
+  const handleDiscardChanges = () => {
+    resetFeedback();
+    setFreezeDaysValue(String(settings.freezeDays));
+    setHolidayModeState(settings.holidaySource.mode);
+    setHolidayUrlState(settings.holidaySource.url ?? "");
+    setPreferredDays(new Set(settings.preferredWeekdays));
+    setExceptionDays(new Set(settings.exceptionWeekdays));
+    setStatus(settings.holidayStatus);
+  };
+
+  const handleCheckHolidaySource = async () => {
+    resetFeedback();
+
+    if (holidayMode === "custom" && !holidayUrl.trim()) {
+      setError({ message: "Bitte gib eine gültige URL für die Ferienquelle an." });
+      return;
+    }
+
+    setChecking(true);
+    try {
+      const response = await fetch("/api/sperrliste/settings/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: holidayMode,
+          url: holidayMode === "custom" ? holidayUrl.trim() : null,
+        }),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as {
+        holidayStatus?: ClientSperrlisteSettings["holidayStatus"];
+        error?: string;
+      };
+
+      if (!response.ok || !data?.holidayStatus) {
+        throw new Error(data?.error || "Ferienquelle konnte nicht geprüft werden.");
+      }
+
+      setStatus(data.holidayStatus);
+    } catch (err) {
+      setError({
+        message: "Ferienquelle konnte nicht geprüft werden.",
+        details: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setChecking(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setSuccess(null);
+    resetFeedback();
 
+    const trimmedUrl = holidayMode === "custom" ? holidayUrl.trim() : null;
     const parsedFreezeDays = Number.parseInt(freezeDaysValue, 10);
+
     if (!Number.isFinite(parsedFreezeDays) || parsedFreezeDays < 0) {
-      setError("Bitte gib eine gültige Anzahl an Vorlauftagen an.");
+      setError({ message: "Bitte wähle eine gültige Sperrfrist." });
+      return;
+    }
+
+    if (holidayMode === "custom" && !trimmedUrl) {
+      setError({ message: "Bitte gib eine gültige URL für die Ferienquelle an." });
       return;
     }
 
     const payload = {
       freezeDays: parsedFreezeDays,
-      preferredWeekdays: sortArray(preferredDays),
-      exceptionWeekdays: sortArray(exceptionDays),
+      preferredWeekdays: currentPreferredWeekdays,
+      exceptionWeekdays: currentExceptionWeekdays,
       holidaySourceMode: holidayMode,
-      holidaySourceUrl: holidayMode === "custom" ? holidayUrl.trim() : null,
+      holidaySourceUrl: trimmedUrl,
     } as const;
-
-    if (holidayMode === "custom" && !payload.holidaySourceUrl) {
-      setError("Bitte hinterlege eine gültige URL für den individuellen Ferien-Feed.");
-      return;
-    }
 
     setSaving(true);
     try {
@@ -317,19 +443,23 @@ export function SperrlisteSettingsManager({
       };
 
       if (!response.ok || !data?.settings) {
-        throw new Error(data?.error || "Die Einstellungen konnten nicht gespeichert werden.");
+        throw new Error(data?.error || "Die Sperrlisten-Einstellungen konnten nicht gespeichert werden.");
       }
 
       setStatus(data.settings.holidayStatus);
       setDefaults({ holidaySourceUrl: data.defaults?.holidaySourceUrl ?? defaultHolidaySourceUrl });
-      setSuccess("Die Sperrlisten-Einstellungen wurden aktualisiert.");
+      setSuccess("Sperrlisten-Einstellungen gespeichert.");
+
       onSettingsChange?.({
         settings: data.settings,
         holidays: data.holidays,
         defaults: data.defaults,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unbekannter Fehler beim Speichern.");
+      setError({
+        message: "Änderungen konnten nicht gespeichert werden.",
+        details: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setSaving(false);
     }
@@ -353,11 +483,12 @@ export function SperrlisteSettingsManager({
         onClick={() => onToggle(weekday)}
         aria-pressed={isActive}
         className={cn(
-          "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary",
-          isActive && type === "preferred" && "border-primary bg-primary/10 text-primary",
-          isActive && type === "exception" &&
-            "border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-500/70 dark:bg-amber-500/10 dark:text-amber-100",
-          !isActive && "border-border/60 bg-background/80 hover:border-primary/40",
+          "flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary",
+          isActive &&
+            (type === "preferred"
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-amber-500 bg-amber-500/15 text-amber-900 dark:border-amber-500/60 dark:text-amber-100"),
+          !isActive && "border-border/60 bg-background hover:border-primary/40 hover:text-primary",
         )}
       >
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
@@ -368,6 +499,8 @@ export function SperrlisteSettingsManager({
     );
   };
 
+  const StatusIcon = STATUS_ICONS[statusMeta.tone];
+
   return (
     <Card>
       <CardHeader className="space-y-3">
@@ -376,221 +509,221 @@ export function SperrlisteSettingsManager({
           Sperrlisten-Einstellungen
         </CardTitle>
         <Text variant="small" tone="muted">
-          Lege fest, welche Ferienquelle genutzt wird, wie groß der Planungsvorlauf ist und welche Wochentage als bevorzugte
-          oder Ausnahme-Proben gelten.
+          Verwalte Ferienquelle, Probenplanung und Sperrfrist in einem kompakten Ablauf.
         </Text>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div
-              className={cn(
-                "flex items-start gap-3 rounded-lg border p-4 text-sm leading-relaxed",
-                STATUS_CONTAINER_TONES[statusMeta.tone],
-              )}
-            >
-              {statusMeta.tone === "ok" ? (
-                <CheckCircle2 className="mt-1 h-5 w-5 shrink-0" aria-hidden />
-              ) : statusMeta.tone === "warning" ? (
-                <AlertCircle className="mt-1 h-5 w-5 shrink-0" aria-hidden />
-              ) : statusMeta.tone === "disabled" ? (
-                <PlugZap className="mt-1 h-5 w-5 shrink-0" aria-hidden />
-              ) : (
-                <Loader2 className="mt-1 h-5 w-5 shrink-0 animate-spin" aria-hidden />
-              )}
-              <div className="space-y-1">
-                <p className="text-sm font-semibold uppercase tracking-wide">{statusMeta.label}</p>
-                <p className="text-sm opacity-90">
-                  {status.message ?? statusMeta.description}
-                </p>
-                {formattedCheckedAt ? (
-                  <p className="text-xs opacity-80">Zuletzt geprüft: {formattedCheckedAt}</p>
-                ) : null}
-              </div>
+          <div className="flex flex-col gap-6 lg:flex-row">
+            <div className="flex-1 space-y-6">
+              <section className="space-y-4 rounded-lg border border-border/60 bg-card/40 p-4">
+                <header className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold leading-5">Ferienquelle</p>
+                    <p className="text-sm text-muted-foreground">
+                      Wähle, wie Ferien automatisch berücksichtigt werden.
+                    </p>
+                  </div>
+                  <Badge variant={STATUS_BADGE_VARIANTS[statusMeta.tone]}>{statusMeta.label}</Badge>
+                </header>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="holiday-mode">Quelle</Label>
+                    <Select
+                      value={holidayMode}
+                      onValueChange={(value) => handleHolidayModeChange(value as HolidaySourceMode)}
+                      disabled={saving}
+                    >
+                      <SelectTrigger id="holiday-mode">
+                        <SelectValue placeholder="Modus wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Standardfeed (Schulferien Sachsen)</SelectItem>
+                        <SelectItem value="custom">Eigene URL</SelectItem>
+                        <SelectItem value="disabled">Keine Ferienquelle</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="holiday-url">Eigene URL</Label>
+                    <Input
+                      id="holiday-url"
+                      type="url"
+                      value={holidayUrl}
+                      onChange={(event) => handleHolidayUrlInput(event.target.value)}
+                      placeholder={defaults.holidaySourceUrl}
+                      disabled={holidayMode !== "custom" || saving}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCheckHolidaySource}
+                    disabled={checking || saving}
+                  >
+                    {checking ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        Quelle prüfen
+                      </span>
+                    ) : (
+                      "Quelle prüfen"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleResetToDefault}
+                    disabled={checking || saving}
+                  >
+                    Auf Standard zurücksetzen
+                  </Button>
+                </div>
+                <div
+                  className={cn(
+                    "flex items-start gap-3 rounded-md border px-3 py-2 text-sm",
+                    STATUS_LINE_CLASSES[statusMeta.tone],
+                  )}
+                >
+                  <StatusIcon
+                    className={cn(
+                      "mt-0.5 h-4 w-4 shrink-0",
+                      statusMeta.tone === "unknown" && checking ? "animate-spin" : undefined,
+                    )}
+                    aria-hidden
+                  />
+                  <div className="space-y-1">
+                    <p className="font-medium leading-5">{statusMeta.label}</p>
+                    <p className="text-xs leading-5 opacity-80">
+                      {status.message ?? statusMeta.description}
+                      {formattedCheckedAt ? ` – geprüft am ${formattedCheckedAt}` : ""}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-lg border border-border/60 bg-card/40 p-4">
+                <header className="space-y-1">
+                  <p className="text-sm font-semibold leading-5">Probenplanung</p>
+                  <p className="text-sm text-muted-foreground">
+                    Markiere bevorzugte Probentage und seltene Ausnahmen.
+                  </p>
+                </header>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <fieldset className="space-y-3">
+                    <legend className="text-sm font-semibold">Bevorzugte Tage</legend>
+                    <p className="text-xs text-muted-foreground">
+                      Diese Wochentage werden bei Vorschlägen priorisiert.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {WEEKDAY_OPTIONS.map((option) =>
+                        renderWeekdayToggle("preferred", option.value, option.label, option.short),
+                      )}
+                    </div>
+                  </fieldset>
+                  <fieldset className="space-y-3">
+                    <legend className="text-sm font-semibold">Ausnahmen</legend>
+                    <p className="text-xs text-muted-foreground">
+                      Markiere Tage, an denen nur im Ausnahmefall geplant wird.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {WEEKDAY_OPTIONS.map((option) =>
+                        renderWeekdayToggle("exception", option.value, option.label, option.short),
+                      )}
+                    </div>
+                  </fieldset>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-lg border border-border/60 bg-card/40 p-4">
+                <header className="space-y-1">
+                  <p className="text-sm font-semibold leading-5">Sperrfrist</p>
+                  <p className="text-sm text-muted-foreground">
+                    Lege fest, wie viele Tage vor einer Probe keine neuen Sperrtage mehr eingetragen werden können.
+                  </p>
+                </header>
+                <div className="space-y-2">
+                  <Label htmlFor="freeze-days">Sperrfrist</Label>
+                  <Select
+                    value={freezeDaysValue}
+                    onValueChange={setFreezeDaysValue}
+                    disabled={saving}
+                  >
+                    <SelectTrigger id="freeze-days">
+                      <SelectValue placeholder="Sperrfrist wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {freezeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Innerhalb der Sperrfrist lassen sich keine neuen Sperrtage eintragen. Bestehende Termine bleiben editierbar.
+                  </p>
+                </div>
+              </section>
             </div>
-            <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-4">
+
+            <aside className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 lg:w-64 lg:flex-shrink-0">
               <Text variant="caption" uppercase className="text-muted-foreground">
                 Kurzüberblick
               </Text>
-              <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+              <dl className="mt-3 space-y-4 text-sm">
                 <div className="space-y-1">
                   <Text variant="caption" uppercase className="text-muted-foreground">
-                    Ferienmodus
+                    Ferienquelle
                   </Text>
-                  <Text variant="small">{holidayModeSummary}</Text>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>{holidayModeSummary}</span>
+                    <Badge variant={STATUS_BADGE_VARIANTS[statusMeta.tone]}>{statusMeta.label}</Badge>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Text variant="caption" uppercase className="text-muted-foreground">
                     Bevorzugte Tage
                   </Text>
-                  <Text variant="small">{preferredList}</Text>
+                  <span>{preferredList}</span>
                 </div>
                 <div className="space-y-1">
                   <Text variant="caption" uppercase className="text-muted-foreground">
-                    Ausnahmeproben
+                    Ausnahmen
                   </Text>
-                  <Text variant="small">{exceptionList}</Text>
+                  <span>{exceptionList}</span>
                 </div>
                 <div className="space-y-1">
                   <Text variant="caption" uppercase className="text-muted-foreground">
                     Sperrfrist
                   </Text>
-                  <Text variant="small">{freezeDaysSummary}</Text>
+                  <span>{freezeDaysSummary}</span>
                 </div>
               </dl>
-            </div>
+            </aside>
           </div>
-
-          <SettingsSection
-            title="Ferienquelle"
-            description="Steuert, ob Ferien automatisch geladen werden oder die Sperrliste ohne externe Quelle arbeitet."
-            summary={
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <span>{holidayModeSummary}</span>
-                <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase", statusChipClasses)}>
-                  {statusMeta.label}
-                </span>
-              </span>
-            }
-            defaultOpen
-          >
-            <div
-              className={cn(
-                "flex items-start gap-3 rounded-md border border-dashed p-3 text-sm",
-                STATUS_CONTAINER_TONES[statusMeta.tone],
-              )}
-            >
-              {statusMeta.tone === "ok" ? (
-                <CheckCircle2 className="mt-1 h-4 w-4 shrink-0" aria-hidden />
-              ) : statusMeta.tone === "warning" ? (
-                <AlertCircle className="mt-1 h-4 w-4 shrink-0" aria-hidden />
-              ) : statusMeta.tone === "disabled" ? (
-                <PlugZap className="mt-1 h-4 w-4 shrink-0" aria-hidden />
-              ) : (
-                <Loader2 className="mt-1 h-4 w-4 shrink-0 animate-spin" aria-hidden />
-              )}
-              <div className="space-y-1">
-                <p className="text-sm font-semibold uppercase tracking-wide">{statusMeta.label}</p>
-                <p className="text-xs opacity-80">
-                  {status.message ?? statusMeta.description}
-                  {formattedCheckedAt ? ` — geprüft am ${formattedCheckedAt}` : ""}
-                </p>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="holiday-mode">Quelle auswählen</Label>
-                <Select value={holidayMode} onValueChange={(value) => setHolidayMode(value as HolidaySourceMode)}>
-                  <SelectTrigger id="holiday-mode">
-                    <SelectValue placeholder="Modus wählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Standardfeed (Schulferien Sachsen)</SelectItem>
-                    <SelectItem value="custom">Eigener Feed (ICS oder JSON)</SelectItem>
-                    <SelectItem value="disabled">Keine externe Quelle verwenden</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="holiday-url">Feed-URL</Label>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    id="holiday-url"
-                    type="url"
-                    value={holidayUrl}
-                    onChange={(event) => setHolidayUrl(event.target.value)}
-                    placeholder={defaults.holidaySourceUrl}
-                    disabled={holidayMode !== "custom" || saving}
-                    className="sm:flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleResetToDefaultUrl}
-                    disabled={holidayMode !== "custom" || saving}
-                  >
-                    Standard übernehmen
-                  </Button>
-                </div>
-                <Text variant="small" tone="muted">
-                  Für individuelle Quellen kannst du ICS-Kalender oder JSON-Endpunkte (z. B. ferien-api.de) hinterlegen.
-                </Text>
-              </div>
-            </div>
-          </SettingsSection>
-
-          <SettingsSection
-            title="Probenplanung"
-            description="Lege fest, welche Wochentage bevorzugt oder nur als Ausnahme berücksichtigt werden."
-            summary={`Bevorzugt: ${preferredList} · Ausnahmen: ${exceptionList}`}
-            defaultOpen
-          >
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-3">
-                <Text variant="small" tone="muted">
-                  Bevorzugte Probentage
-                </Text>
-                <div className="flex flex-wrap gap-2">
-                  {WEEKDAY_OPTIONS.map((option) =>
-                    renderWeekdayToggle("preferred", option.value, option.label, option.short),
-                  )}
-                </div>
-                <Text variant="caption" tone="muted">
-                  Aktuell: {preferredList}
-                </Text>
-              </div>
-              <div className="space-y-3">
-                <Text variant="small" tone="muted">
-                  Ausnahmeproben
-                </Text>
-                <div className="flex flex-wrap gap-2">
-                  {WEEKDAY_OPTIONS.map((option) =>
-                    renderWeekdayToggle("exception", option.value, option.label, option.short),
-                  )}
-                </div>
-                <Text variant="caption" tone="muted">
-                  Aktuell: {exceptionList}
-                </Text>
-              </div>
-            </div>
-          </SettingsSection>
-
-          <SettingsSection
-            title="Sperrfrist"
-            description="Bestimme, wie viele Tage vor einer Probe neue Sperrtermine blockiert werden."
-            summary={`Vorlauf: ${freezeDaysSummary}`}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="freeze-days">Vorlauf für Sperrtermine (Tage)</Label>
-              <Input
-                id="freeze-days"
-                type="number"
-                min={0}
-                max={365}
-                value={freezeDaysValue}
-                onChange={(event) => setFreezeDaysValue(event.target.value.replace(/[^0-9]/g, ""))}
-                disabled={saving}
-              />
-              <Text variant="small" tone="muted">
-                Innerhalb dieses Zeitraums können Mitglieder keine neuen Sperrtage hinzufügen. Bestehende Einträge lassen sich
-                weiterhin entfernen.
-              </Text>
-            </div>
-          </SettingsSection>
 
           <div className="space-y-3">
             {error ? (
               <div
                 role="alert"
-                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
               >
-                {error}
+                <p className="font-medium">{error.message}</p>
+                {error.details ? (
+                  <details className="mt-2 text-xs">
+                    <summary className="cursor-pointer text-destructive">Technische Details</summary>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-destructive/80">{error.details}</p>
+                  </details>
+                ) : null}
               </div>
             ) : null}
             {success ? (
               <div
                 role="status"
-                className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-200"
+                className="rounded-md border border-emerald-400/40 bg-emerald-500/10 p-3 text-sm text-emerald-900 dark:text-emerald-100"
               >
                 {success}
               </div>
@@ -599,18 +732,30 @@ export function SperrlisteSettingsManager({
 
           <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <Text variant="small" tone="muted">
-              Änderungen beeinflussen sofort die Hinweise im Kalender und die Farbgebung der Sperrlisten-Übersicht.
+              Änderungen wirken sich sofort auf Kalender und Sperrlistenfarben aus.
             </Text>
-            <Button type="submit" disabled={saving} className="sm:w-auto">
-              {saving ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  Speichern …
-                </span>
-              ) : (
-                "Änderungen speichern"
-              )}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {hasUnsavedChanges ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleDiscardChanges}
+                  disabled={saving || checking}
+                >
+                  Verwerfen
+                </Button>
+              ) : null}
+              <Button type="submit" disabled={saving}>
+                {saving ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    Speichern …
+                  </span>
+                ) : (
+                  "Änderungen speichern"
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>
