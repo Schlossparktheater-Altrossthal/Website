@@ -6,6 +6,7 @@ import {
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import chronikAltrossthal from "../src/data/chronik-altrossthal.json" assert { type: "json" };
+import designTokens from "../src/design-system/tokens.json" assert { type: "json" };
 const prisma = new PrismaClient();
 
 function splitFullName(value) {
@@ -41,6 +42,41 @@ function combineName(firstName, lastName) {
 }
 
 async function main() {
+  const defaultThemeId = "default-website-theme";
+  const themeTokens = JSON.parse(JSON.stringify(designTokens));
+
+  await prisma.websiteTheme.upsert({
+    where: { id: defaultThemeId },
+    update: {
+      name: "Sommertheater Standard",
+      description: "Dynamisches Theme basierend auf dem aktuellen Designsystem.",
+      tokens: themeTokens,
+      isDefault: true,
+    },
+    create: {
+      id: defaultThemeId,
+      name: "Sommertheater Standard",
+      description: "Dynamisches Theme basierend auf dem aktuellen Designsystem.",
+      tokens: themeTokens,
+      isDefault: true,
+    },
+  });
+
+  await prisma.websiteSettings.upsert({
+    where: { id: "public" },
+    update: {
+      siteTitle: "Sommertheater im Schlosspark",
+      colorMode: "dark",
+      theme: { connect: { id: defaultThemeId } },
+    },
+    create: {
+      id: "public",
+      siteTitle: "Sommertheater im Schlosspark",
+      colorMode: "dark",
+      theme: { connect: { id: defaultThemeId } },
+    },
+  });
+
   // --- Chronik: use ONLY the provided Altroßthal data below ---
 
   // Altroßthal data provided (curated demo -> replace with real assets later)

@@ -6,11 +6,17 @@ import { SiteFooter } from "@/components/site-footer";
 import { MysticBackground } from "@/components/mystic-background";
 import type { Viewport } from "next";
 import { execSync } from "node:child_process";
+import { ThemeStyleRegistry } from "@/components/theme/theme-style-registry";
+import {
+  DEFAULT_SITE_TITLE,
+  readWebsiteSettings,
+  resolveWebsiteSettings,
+} from "@/lib/website-settings";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
   title: {
-    default: "Sommertheater im Schlosspark",
+    default: DEFAULT_SITE_TITLE,
     template: "%s | Sommertheater",
   },
   description: "Mystische Bühne unter freiem Himmel",
@@ -20,7 +26,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "/",
-    title: "Sommertheater im Schlosspark",
+    title: DEFAULT_SITE_TITLE,
     description: "Mystische Bühne unter freiem Himmel",
     images: [
       {
@@ -35,7 +41,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sommertheater im Schlosspark",
+    title: DEFAULT_SITE_TITLE,
     description: "Mystische Bühne unter freiem Himmel",
     images: ["https://picsum.photos/id/1069/1200/630"],
   },
@@ -110,19 +116,44 @@ function getCommitInfo(): CommitInfo | null {
   }
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  let resolvedSettings = resolveWebsiteSettings(null);
+
+  if (process.env.DATABASE_URL) {
+    try {
+      const record = await readWebsiteSettings();
+      if (record) {
+        resolvedSettings = resolveWebsiteSettings(record);
+      }
+    } catch (error) {
+      console.error("Failed to load website settings", error);
+    }
+  }
+
+  const htmlClassName = resolvedSettings.colorMode === "dark" ? "dark" : undefined;
+  const siteTitle = resolvedSettings.siteTitle;
+  const themeTokens = resolvedSettings.theme.tokens;
+
   return (
-    <html lang="de" className="dark">
+    <html lang="de" className={htmlClassName}>
+      <head>
+        <ThemeStyleRegistry tokens={themeTokens} />
+      </head>
       <body className="antialiased bg-background text-foreground">
         <Providers>
-          <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-card/90 focus:px-3 focus:py-2">Zum Inhalt springen</a>
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-card/90 focus:px-3 focus:py-2"
+          >
+            Zum Inhalt springen
+          </a>
           <div className="app-shell">
             <MysticBackground />
-            <SiteHeader />
+            <SiteHeader siteTitle={siteTitle} />
             <main id="main" className="site-main">
               {children}
             </main>
-            <SiteFooter buildInfo={buildInfo} isDevBuild={isDevBuild} />
+            <SiteFooter buildInfo={buildInfo} isDevBuild={isDevBuild} siteTitle={siteTitle} />
           </div>
         </Providers>
       </body>

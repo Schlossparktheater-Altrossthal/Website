@@ -8,7 +8,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
 import { ctaNavigation, primaryNavigation } from "@/config/navigation";
 
-export function SiteHeader() {
+export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
@@ -76,7 +76,7 @@ export function SiteHeader() {
           }`}
           href="/"
         >
-          Sommertheater
+          {siteTitle}
         </Link>
 
         <div className="hidden items-center gap-6 md:flex">
