@@ -261,8 +261,8 @@ type OnboardingWizardProps = {
 const initialActingPreferences: PreferenceEntry[] = actingOptions.map((option) => ({
   ...option,
   domain: "acting",
-  enabled: option.code === "acting_medium",
-  weight: option.code === "acting_medium" ? 60 : 40,
+  enabled: false,
+  weight: 50,
 }));
 
 const initialCrewPreferences: PreferenceEntry[] = crewOptions.map((option) => ({
