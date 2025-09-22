@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,8 @@ const percentPreciseFormat = new Intl.NumberFormat("de-DE", {
 const percentChangeFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const dateTimeFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 const uptimeFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const ANIMATION_DURATION_MS = 450;
 
 function formatDuration(totalSeconds: number) {
   const seconds = Math.round(totalSeconds);
@@ -107,6 +109,100 @@ function formatLogTimestamp(value: string | undefined) {
   return "Zeitpunkt unbekannt";
 }
 
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function interpolateValue<T>(start: T, end: T, progress: number): T {
+  if (typeof start === "number" && typeof end === "number" && Number.isFinite(start) && Number.isFinite(end)) {
+    return (start + (end - start) * progress) as T;
+  }
+
+  if (Array.isArray(start) && Array.isArray(end)) {
+    if (start.length !== end.length) {
+      return end as T;
+    }
+
+    return end.map((value, index) => interpolateValue(start[index], value, progress)) as unknown as T;
+  }
+
+  if (
+    start !== null &&
+    start !== undefined &&
+    end !== null &&
+    end !== undefined &&
+    typeof start === "object" &&
+    typeof end === "object"
+  ) {
+    const result: Record<string, unknown> = {};
+    const startRecord = start as Record<string, unknown>;
+    const endRecord = end as Record<string, unknown>;
+    const keys = new Set([...Object.keys(startRecord), ...Object.keys(endRecord)]);
+
+    keys.forEach((key) => {
+      result[key] = interpolateValue(startRecord[key], endRecord[key], progress);
+    });
+
+    return result as T;
+  }
+
+  return end;
+}
+
+function useAnimatedAnalytics(targetAnalytics: ServerAnalytics, durationMs = ANIMATION_DURATION_MS) {
+  const [animatedAnalytics, setAnimatedAnalytics] = useState<ServerAnalytics>(targetAnalytics);
+  const frameRef = useRef<number | null>(null);
+  const latestValueRef = useRef<ServerAnalytics>(targetAnalytics);
+
+  useEffect(() => {
+    latestValueRef.current = animatedAnalytics;
+  }, [animatedAnalytics]);
+
+  useEffect(() => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+
+    const startValue = latestValueRef.current;
+
+    if (Object.is(startValue, targetAnalytics)) {
+      setAnimatedAnalytics(targetAnalytics);
+      latestValueRef.current = targetAnalytics;
+      return;
+    }
+
+    const startTime = performance.now();
+
+    const tick = (timestamp: number) => {
+      const elapsed = timestamp - startTime;
+      const progress = durationMs <= 0 ? 1 : Math.min(1, elapsed / durationMs);
+      const eased = easeOutCubic(progress);
+
+      if (progress >= 1) {
+        setAnimatedAnalytics(targetAnalytics);
+        latestValueRef.current = targetAnalytics;
+        frameRef.current = null;
+        return;
+      }
+
+      setAnimatedAnalytics(interpolateValue(startValue, targetAnalytics, eased));
+      frameRef.current = requestAnimationFrame(tick);
+    };
+
+    frameRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
+  }, [targetAnalytics, durationMs]);
+
+  return animatedAnalytics;
+}
+
 const severityLabelMap: Record<ServerLogEvent["severity"], string> = {
   info: "Info",
   warning: "Warnung",
@@ -151,6 +247,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
   const [analytics, setAnalytics] = useState<ServerAnalytics>(initialAnalytics);
   const [generatedAt, setGeneratedAt] = useState<Date>(() => parseGeneratedAt(initialAnalytics.generatedAt));
   const [hasLiveUpdate, setHasLiveUpdate] = useState(false);
+  const displayAnalytics = useAnimatedAnalytics(analytics);
 
   useEffect(() => {
     setAnalytics(initialAnalytics);
@@ -292,7 +389,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             <CardTitle className="text-sm font-medium text-muted-foreground">Verfügbarkeit</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{uptimeFormat.format(analytics.summary.uptimePercentage)} %</p>
+            <p className="text-3xl font-semibold">{uptimeFormat.format(displayAnalytics.summary.uptimePercentage)} %</p>
             <p className="text-xs text-muted-foreground">letzte 30 Tage</p>
           </CardContent>
         </Card>
@@ -301,7 +398,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             <CardTitle className="text-sm font-medium text-muted-foreground">Anfragen (24h)</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(analytics.summary.requestsLast24h)}</p>
+            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.requestsLast24h)}</p>
             <p className="text-xs text-muted-foreground">über alle Systeme hinweg</p>
           </CardContent>
         </Card>
@@ -310,8 +407,8 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             <CardTitle className="text-sm font-medium text-muted-foreground">Ø Antwortzeit</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{formatMs(analytics.summary.averageResponseTimeMs)}</p>
-            <p className="text-xs text-muted-foreground">95. Perzentil liegt bei {formatMs(analytics.summary.averageResponseTimeMs * 1.6)}</p>
+            <p className="text-3xl font-semibold">{formatMs(displayAnalytics.summary.averageResponseTimeMs)}</p>
+            <p className="text-xs text-muted-foreground">95. Perzentil liegt bei {formatMs(displayAnalytics.summary.averageResponseTimeMs * 1.6)}</p>
           </CardContent>
         </Card>
         <Card className="border border-border/70">
@@ -319,7 +416,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             <CardTitle className="text-sm font-medium text-muted-foreground">Peak gleichzeitiger Nutzer</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(analytics.summary.peakConcurrentUsers)}</p>
+            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.peakConcurrentUsers)}</p>
             <p className="text-xs text-muted-foreground">innerhalb der letzten 24 Stunden</p>
           </CardContent>
         </Card>
@@ -328,7 +425,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             <CardTitle className="text-sm font-medium text-muted-foreground">Cache-Hit-Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{percentPreciseFormat.format(analytics.summary.cacheHitRate)}</p>
+            <p className="text-3xl font-semibold">{percentPreciseFormat.format(displayAnalytics.summary.cacheHitRate)}</p>
             <p className="text-xs text-muted-foreground">Edge- und Anwendungscache kombiniert</p>
           </CardContent>
         </Card>
@@ -337,7 +434,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             <CardTitle className="text-sm font-medium text-muted-foreground">Realtime-Ereignisse (24h)</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(analytics.summary.realtimeEventsLast24h)}</p>
+            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.realtimeEventsLast24h)}</p>
             <p className="text-xs text-muted-foreground">Socket.io Updates und Live-Sync</p>
           </CardContent>
         </Card>
@@ -346,7 +443,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             <CardTitle className="text-sm font-medium text-muted-foreground">Fehlerquote</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">{percentPreciseFormat.format(analytics.summary.errorRate)}</p>
+            <p className="text-3xl font-semibold">{percentPreciseFormat.format(displayAnalytics.summary.errorRate)}</p>
             <p className="text-xs text-muted-foreground">5xx/4xx im Verhältnis zu allen Requests</p>
           </CardContent>
         </Card>
@@ -362,7 +459,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics.resourceUsage.map((resource) => (
+              {displayAnalytics.resourceUsage.map((resource) => (
                 <div key={resource.id} className="space-y-2 rounded-md border border-border/60 p-3">
                   <div className="flex items-center justify-between text-sm font-medium">
                     <span>{resource.label}</span>
@@ -393,7 +490,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
-              {analytics.peakHours.map((bucket) => (
+              {displayAnalytics.peakHours.map((bucket) => (
                 <li
                   key={bucket.range}
                   className="flex items-center justify-between rounded-md border border-border/60 bg-background/60 px-3 py-2"
@@ -433,7 +530,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
-                {analytics.publicPages.map((entry) => (
+                {displayAnalytics.publicPages.map((entry) => (
                   <tr key={entry.path} className="bg-background/60">
                     <td className="px-3 py-2">
                       <div className="font-medium text-foreground">{entry.title}</div>
@@ -488,7 +585,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
-                {analytics.memberPages.map((entry) => (
+                {displayAnalytics.memberPages.map((entry) => (
                   <tr key={entry.path} className="bg-background/60">
                     <td className="px-3 py-2">
                       <div className="font-medium text-foreground">{entry.title}</div>
@@ -543,7 +640,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/70">
-                  {analytics.trafficSources.map((source) => (
+                  {displayAnalytics.trafficSources.map((source) => (
                     <tr key={source.channel} className="bg-background/60">
                       <td className="px-3 py-2 font-medium text-foreground">{source.channel}</td>
                       <td className="px-3 py-2 text-foreground">{numberFormat.format(source.sessions)}</td>
@@ -583,7 +680,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/70">
-                  {analytics.deviceBreakdown.map((device) => (
+                  {displayAnalytics.deviceBreakdown.map((device) => (
                     <tr key={device.device} className="bg-background/60">
                       <td className="px-3 py-2 font-medium text-foreground">{device.device}</td>
                       <td className="px-3 py-2 text-foreground">{numberFormat.format(device.sessions)}</td>
@@ -619,7 +716,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/70">
-                  {analytics.sessionInsights.map((segment) => (
+                  {displayAnalytics.sessionInsights.map((segment) => (
                     <tr key={segment.segment} className="bg-background/60">
                       <td className="px-3 py-2 font-medium text-foreground">{segment.segment}</td>
                       <td className="px-3 py-2 text-foreground">{formatDuration(segment.avgSessionDurationSeconds)}</td>
@@ -643,7 +740,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics.optimizationInsights.map((insight) => (
+              {displayAnalytics.optimizationInsights.map((insight) => (
                 <div key={insight.id} className="space-y-2 rounded-md border border-border/60 bg-background/70 p-3">
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <Badge variant={areaBadgeVariant(insight.area)}>{insight.area}</Badge>
