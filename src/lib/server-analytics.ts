@@ -7,6 +7,24 @@ import staticAnalyticsData from "@/data/server-analytics-static.json";
 export type OptimizationImpact = "Hoch" | "Mittel" | "Niedrig";
 export type OptimizationArea = "Frontend" | "Mitgliederbereich" | "Infrastruktur";
 
+export type ServerLogSeverity = "info" | "warning" | "error";
+export type ServerLogStatus = "open" | "monitoring" | "resolved";
+
+export type ServerLogEvent = {
+  id: string;
+  severity: ServerLogSeverity;
+  service: string;
+  message: string;
+  description: string;
+  occurrences: number;
+  firstSeen: string;
+  lastSeen: string;
+  status: ServerLogStatus;
+  recommendedAction?: string;
+  affectedUsers?: number;
+  tags?: string[];
+};
+
 export type ServerSummary = {
   uptimePercentage: number;
   requestsLast24h: number;
@@ -110,6 +128,7 @@ export type ServerAnalytics = {
   deviceBreakdown: DeviceStat[];
   sessionInsights: SessionInsight[];
   optimizationInsights: OptimizationInsight[];
+  serverLogs: ServerLogEvent[];
 };
 
 type StaticAnalyticsData = Omit<ServerAnalytics, "generatedAt">;

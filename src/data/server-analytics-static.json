@@ -304,5 +304,77 @@
       "impact": "Mittel",
       "metric": "Suche im Issue-Board 420 ms (Ziel < 250 ms)"
     }
+  ],
+  "serverLogs": [
+    {
+      "id": "log-db-connection",
+      "severity": "error",
+      "service": "Next.js API · /api/rehearsals",
+      "message": "Datenbank-Timeout bei der Probenplanung",
+      "description": "Der Connection-Pool erreichte das Limit und Prisma brach die Anfrage nach 5 s ab.",
+      "occurrences": 7,
+      "firstSeen": "2025-01-22T06:14:00.000Z",
+      "lastSeen": "2025-01-24T05:45:00.000Z",
+      "status": "open",
+      "recommendedAction": "Poolgröße auf 20 erhöhen und Slow-Query-Log für /api/rehearsals analysieren.",
+      "affectedUsers": 12,
+      "tags": ["Datenbank", "API"]
+    },
+    {
+      "id": "log-cache-stale",
+      "severity": "warning",
+      "service": "Edge Cache",
+      "message": "Stale-While-Revalidate dauerte länger als erwartet",
+      "description": "Mehrere Kacheln der Startseite liefen gleichzeitig aus und verursachten 1,8 s Revalidierungszeit.",
+      "occurrences": 42,
+      "firstSeen": "2025-01-23T08:05:00.000Z",
+      "lastSeen": "2025-01-24T06:58:00.000Z",
+      "status": "monitoring",
+      "recommendedAction": "Cache-Warmup in der Nacht aktivieren und TTL von Hero-Content erhöhen.",
+      "affectedUsers": 86,
+      "tags": ["Performance", "Frontend"]
+    },
+    {
+      "id": "log-realtime-handshake",
+      "severity": "error",
+      "service": "Realtime-Server",
+      "message": "Abgelehnte Socket-Handshakes",
+      "description": "18 Verbindungsversuche wurden mit 'Invalid token signature' verworfen.",
+      "occurrences": 18,
+      "firstSeen": "2025-01-23T05:42:00.000Z",
+      "lastSeen": "2025-01-24T05:12:00.000Z",
+      "status": "monitoring",
+      "recommendedAction": "Handshake-Token erneuern und Mitglieder über erneuten Login informieren.",
+      "affectedUsers": 5,
+      "tags": ["Realtime", "Authentifizierung"]
+    },
+    {
+      "id": "log-cron-backlog",
+      "severity": "warning",
+      "service": "Cronjob · /api/cron/rehearsal-reminders",
+      "message": "Versand der Probenerinnerungen verzögert",
+      "description": "Die Queue-Auslastung lag bei 82 % und die Ausführung verschob sich um 14 Minuten.",
+      "occurrences": 9,
+      "firstSeen": "2025-01-22T04:00:00.000Z",
+      "lastSeen": "2025-01-24T04:00:00.000Z",
+      "status": "open",
+      "recommendedAction": "Cronjob auf zwei Worker verteilen und Batch-Größe auf 35 reduzieren.",
+      "affectedUsers": 64,
+      "tags": ["Automatisierung", "Mitglieder"]
+    },
+    {
+      "id": "log-storage-permissions",
+      "severity": "error",
+      "service": "Dateispeicher",
+      "message": "Upload fehlgeschlagen – fehlende Schreibrechte",
+      "description": "Ein Deploy überschieb die IAM-Rolle, wodurch fünf Uploads auf S3 abgewiesen wurden.",
+      "occurrences": 5,
+      "firstSeen": "2025-01-21T16:22:00.000Z",
+      "lastSeen": "2025-01-23T11:10:00.000Z",
+      "status": "resolved",
+      "recommendedAction": "Rollback-Regel im CI aktivieren und Policy-Drift-Check ins Deployment aufnehmen.",
+      "affectedUsers": 3,
+      "tags": ["Storage", "Deployment"]
+    }
   ]
 }
