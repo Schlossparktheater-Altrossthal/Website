@@ -51,6 +51,8 @@ function formatShowOption(show: { id: string; title: string | null; year: number
   return parts.join(" • ") || "Unbenannte Produktion";
 }
 
+const EMPTY_SELECT_VALUE = "__none__";
+
 export function FinanceBudgetForm({
   showOptions,
   onCreated,
@@ -178,14 +180,17 @@ export function FinanceBudgetForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Produktion</FormLabel>
-                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                <Select
+                  value={field.value ? field.value : EMPTY_SELECT_VALUE}
+                  onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Produktion auswählen" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Keiner Produktion zugeordnet</SelectItem>
+                    <SelectItem value={EMPTY_SELECT_VALUE}>Keiner Produktion zugeordnet</SelectItem>
                     {showOptions.map((show) => (
                       <SelectItem key={show.id} value={show.id}>
                         {formatShowOption(show)}
