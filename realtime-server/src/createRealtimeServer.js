@@ -5,8 +5,10 @@ import os from 'node:os';
 import { setTimeout as wait } from 'node:timers/promises';
 import { Server } from 'socket.io';
 import { URL } from 'url';
+import { createRequire } from 'node:module';
 
-import analyticsStaticData from '../../src/data/server-analytics-static.json' assert { type: 'json' };
+const require = createRequire(import.meta.url);
+const analyticsStaticData = require('../../src/data/server-analytics-static.json');
 
 const fallbackAnalyticsModule = {
   applyPagePerformanceMetrics(baseEntries = []) {
