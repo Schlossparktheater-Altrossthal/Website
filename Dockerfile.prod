@@ -3,7 +3,7 @@
 # Production Dockerfile bundling the Next.js app and realtime server
 ARG GIT_COMMIT_SHA
 
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 ENV PNPM_HOME=/root/.local/share/pnpm \
     PATH=/root/.local/share/pnpm:$PATH \
     NEXT_TELEMETRY_DISABLED=1
