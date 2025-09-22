@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { endOfWeek, startOfWeek } from "date-fns";
 
-import { requireAuth } from "@/lib/rbac";
+import { hasRole, requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
@@ -21,10 +21,12 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const canManageMeasurements = await hasPermission(
+    const hasMeasurementPermission = await hasPermission(
       session.user,
       "mitglieder.koerpermasse",
     );
+    const isEnsembleMember = hasRole(session.user, "cast");
+    const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
 
     const now = new Date();
     const startOfCurrentWeek = startOfWeek(now, { weekStartsOn: 1 });

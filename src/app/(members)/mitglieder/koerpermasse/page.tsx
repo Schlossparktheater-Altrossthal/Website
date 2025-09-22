@@ -19,6 +19,12 @@ export default async function MemberMeasurementsPage() {
   }
 
   const members = await prisma.user.findMany({
+    where: {
+      OR: [
+        { role: "cast" },
+        { roles: { some: { role: "cast" } } },
+      ],
+    },
     orderBy: [
       { lastName: "asc" },
       { firstName: "asc" },
