@@ -81,6 +81,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   },
   { key: "mitglieder.probenplanung", label: "Probenplanung verwalten", category: "planning" },
   {
+    key: "mitglieder.essenplanung",
+    label: "Essensplanung koordinieren",
+    description:
+      "Zugang zum kulinarischen Cockpit für die Endprobenwoche: Ernährungsprofile bündeln, Allergien absichern und Menüs zusammenstellen.",
+    category: "planning",
+  },
+  {
     key: "mitglieder.produktionen",
     label: "Produktionsplanung öffnen",
     description:
