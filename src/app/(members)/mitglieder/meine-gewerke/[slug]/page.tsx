@@ -62,7 +62,17 @@ export default async function GewerkDetailPage({ params }: PageProps) {
             },
           },
           tasks: {
-            where: { assigneeId: userId },
+            include: {
+              assignee: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
             orderBy: { createdAt: "asc" },
           },
         },
@@ -135,13 +145,15 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
   const now = new Date();
 
-  const activeTasksCount = membership.department.tasks.filter((task) => task.status !== "done").length;
-  const completedTasksCount = membership.department.tasks.filter((task) => task.status === "done").length;
+  const isEnsembleDepartment = membership.department.slug?.toLowerCase() === "ensemble";
+  const tasksForStats = isEnsembleDepartment ? [] : membership.department.tasks;
+  const activeTasksCount = tasksForStats.filter((task) => task.status !== "done").length;
+  const completedTasksCount = tasksForStats.filter((task) => task.status === "done").length;
 
   const summaryStats: SummaryStat[] = [
     { label: "Teammitglieder", value: membership.department.memberships.length, hint: "Aktive Personen", icon: Users },
-    { label: "Aktive Aufgaben", value: activeTasksCount, hint: "Status offen & in Arbeit", icon: ListTodo },
-    { label: "Abgeschlossen", value: completedTasksCount, hint: "Eigene erledigte Aufgaben", icon: CheckCircle2 },
+    { label: "Aktive Aufgaben", value: activeTasksCount, hint: "Offen & in Arbeit im Gewerk", icon: ListTodo },
+    { label: "Abgeschlossen", value: completedTasksCount, hint: "Erledigte Gewerke-Aufgaben", icon: CheckCircle2 },
   ];
 
   const headerActions = (
