@@ -258,6 +258,9 @@ export function DepartmentCard({
                 {membersWithMeasurements} {membersWithMeasurements === 1 ? "Person" : "Personen"} mit Angaben
               </Badge>
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Übersicht der in den Profilen hinterlegten Maße aller Schauspieler:innen dieses Gewerks.
+            </p>
             <ul className="mt-4 space-y-3">
               {sortedMembers.map((member) => {
                 const entries = measurementsForDepartment[member.userId]
@@ -270,7 +273,7 @@ export function DepartmentCard({
                         <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
                         <span className="text-[11px] text-muted-foreground">Keine Angaben</span>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">Noch keine Maße hinterlegt.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Noch keine Maße im Profil hinterlegt.</p>
                     </li>
                   );
                 }

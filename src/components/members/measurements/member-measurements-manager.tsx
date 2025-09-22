@@ -158,8 +158,8 @@ export function MemberMeasurementsManager({
           </ul>
         ) : (
           <div className="rounded-2xl border border-dashed border-border/60 p-6 text-sm text-muted-foreground">
-            Noch keine Maße hinterlegt. Erfasse deine Körpermaße, damit das Kostüm-Team dich
-            bei Anproben optimal unterstützen kann.
+            Noch keine Maße hinterlegt. Erfasse deine Körpermaße in deinem Profil, damit das Kostüm-Team dich{" "}
+            bei Anproben optimal unterstützen und in der Gewerke-Übersicht den Überblick behalten kann.
           </div>
         )}
 
