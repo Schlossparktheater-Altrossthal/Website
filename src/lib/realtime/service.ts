@@ -3,13 +3,11 @@ import type { Server as HTTPServer } from "http";
 import { resolveHandshakeSecret, verifyHandshakeToken } from "./handshake";
 import { prisma } from "@/lib/prisma";
 import {
-  AttendanceUpdatedEvent,
   ClientToServerEvents,
   InterServerEvents,
   NotificationCreatedEvent,
   OnlineStatsSnapshot,
   RealtimeEvent,
-  RehearsalCreatedEvent,
   RehearsalUpdatedEvent,
   RoomType,
   ServerToClientEvents,
