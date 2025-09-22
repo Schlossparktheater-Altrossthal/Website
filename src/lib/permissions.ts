@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 
+// Categories for permissions
 type PermissionCategoryKey =
   | "base"
   | "communication"
@@ -23,6 +24,7 @@ export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> =
   analytics: "Onboarding & Analysen",
 };
 
+// Permission definition shape
 type PermissionDefinition = {
   key: string;
   label: string;
@@ -30,24 +32,23 @@ type PermissionDefinition = {
   category: PermissionCategoryKey;
 };
 
+// User-like object used across helpers
 type UserLike = { id?: string; role?: Role; roles?: Role[] } | null | undefined;
 
+// Role context resolved from DB
 type ResolvedRoleContext = {
   systemRoles: Role[];
   customRoleIds: string[];
 };
 
-// Permissions that gate access to sensitive profile data sections. These keys are
-// shared with the profile access helpers to ensure a single source of truth.
+// Shared keys for profile data gatekeeping
 export const PROFILE_DATA_PERMISSION_KEYS = {
   measurements: "mitglieder.koerpermasse",
   sizes: "mitglieder.konfektionsgroessen",
   dietary: "mitglieder.ernaehrungshinweise",
-} as const satisfies Record<
-  "measurements" | "sizes" | "dietary",
-  PermissionDefinition["key"]
->;
+} as const satisfies Record<"measurements" | "sizes" | "dietary", PermissionDefinition["key"]>;
 
+// Registry of all permissions used by the app
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen", category: "base" },
   { key: "mitglieder.profil", label: "Profilbereich aufrufen", category: "base" },
@@ -88,13 +89,14 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   {
     key: "mitglieder.meine-proben",
     label: "Eigene Probentermine einsehen",
-    description: "Zugang zum Bereich \"Meine Proben\" mit persönlichen Terminen und Fristen.",
+    description: 'Zugang zum Bereich "Meine Proben" mit persönlichen Terminen und Fristen.',
     category: "self",
   },
   {
     key: "mitglieder.meine-gewerke",
     label: "Eigene Gewerke einsehen",
-    description: "Zugang zum Bereich \"Meine Gewerke\" mit Aufgabenübersicht und Terminvorschlägen.",
+    description:
+      'Zugang zum Bereich "Meine Gewerke" mit Aufgabenübersicht und Terminvorschlägen.',
     category: "self",
   },
   {
@@ -124,6 +126,20 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Essensplanung koordinieren",
     description:
       "Zugang zum kulinarischen Cockpit für die Endprobenwoche: Ernährungsprofile bündeln, Allergien absichern und Menüs zusammenstellen.",
+    category: "planning",
+  },
+  {
+    key: "mitglieder.endprobenwoche",
+    label: "Endprobenwoche einsehen",
+    description:
+      "Planungsübersicht für die finale Probenwoche mit Dienstplänen, Verpflegung und organisatorischen Hinweisen einsehen.",
+    category: "planning",
+  },
+  {
+    key: "mitglieder.endprobenwoche.manage",
+    label: "Endprobenwoche koordinieren",
+    description:
+      "Dienstpläne der Endprobenwoche pflegen, Aufgaben hinzufügen und verantwortliche Mitglieder zuweisen.",
     category: "planning",
   },
   {
@@ -209,6 +225,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
 const DEFAULT_PERMISSION_KEYS = DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key);
 const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
 
+// Grouped permission helpers
 const FINANCE_PERMISSION_KEYS = [
   "mitglieder.finanzen",
   "mitglieder.finanzen.manage",
@@ -236,10 +253,23 @@ const MEASUREMENT_DEFAULT_ROLE_NAMES = [
   "finance",
 ] as const satisfies readonly Role[];
 
-// Baseline permissions that every authenticated user should retain even when no
-// explicit grants exist yet (e.g. on a fresh installation before the matrix is
-// configured). This prevents core pages like the dashboard from responding with
-// 403 errors for regular members.
+const FINAL_WEEK_VIEW_PERMISSION_KEY =
+  "mitglieder.endprobenwoche" as const satisfies PermissionDefinition["key"];
+
+const FINAL_WEEK_VIEW_DEFAULT_ROLE_NAMES = [
+  "member",
+  "cast",
+  "tech",
+  "board",
+  "finance",
+] as const satisfies readonly Role[];
+
+const FINAL_WEEK_MANAGE_PERMISSION_KEY =
+  "mitglieder.endprobenwoche.manage" as const satisfies PermissionDefinition["key"];
+
+const FINAL_WEEK_MANAGE_ROLE_NAMES = ["board"] as const satisfies readonly Role[];
+
+// Baseline permissions that every authenticated user should retain even when not explicitly granted
 const BASELINE_PERMISSION_KEYS = new Set([
   "mitglieder.dashboard",
   "mitglieder.profil",
@@ -269,6 +299,7 @@ async function runEnsurePermissionDefinitions() {
   await ensureFinanceRoleDefaultAssignments();
   await ensureMeasurementRoleDefaultAssignments();
   await ensureProfileAdminDefaultAssignments();
+  await ensureFinalWeekRoleDefaultAssignments();
 }
 
 export async function ensurePermissionDefinitions() {
@@ -420,6 +451,64 @@ async function ensureProfileAdminDefaultAssignments() {
         create: { roleId: role.id, permissionId },
       }),
     );
+  }
+
+  if (operations.length) {
+    await prisma.$transaction(operations);
+  }
+}
+
+async function ensureFinalWeekRoleDefaultAssignments() {
+  await ensureSystemRoles();
+
+  const roleNames = Array.from(
+    new Set<string>([...FINAL_WEEK_VIEW_DEFAULT_ROLE_NAMES, ...FINAL_WEEK_MANAGE_ROLE_NAMES]),
+  );
+
+  const [viewPermission, managePermission, roles] = await Promise.all([
+    prisma.permission.findUnique({ where: { key: FINAL_WEEK_VIEW_PERMISSION_KEY } }),
+    prisma.permission.findUnique({ where: { key: FINAL_WEEK_MANAGE_PERMISSION_KEY } }),
+    prisma.appRole.findMany({ where: { name: { in: roleNames } } }),
+  ]);
+
+  if ((!viewPermission && !managePermission) || roles.length === 0) {
+    return;
+  }
+
+  const operations: Prisma.PrismaPromise<unknown>[] = [];
+
+  if (viewPermission) {
+    const viewRoles = new Set<Role>(FINAL_WEEK_VIEW_DEFAULT_ROLE_NAMES);
+    for (const role of roles) {
+      const roleName = role.name as Role;
+      if (!viewRoles.has(roleName)) continue;
+      operations.push(
+        prisma.appRolePermission.upsert({
+          where: {
+            roleId_permissionId: { roleId: role.id, permissionId: viewPermission.id },
+          },
+          update: {},
+          create: { roleId: role.id, permissionId: viewPermission.id },
+        }),
+      );
+    }
+  }
+
+  if (managePermission) {
+    const manageRoles = new Set<Role>(FINAL_WEEK_MANAGE_ROLE_NAMES);
+    for (const role of roles) {
+      const roleName = role.name as Role;
+      if (!manageRoles.has(roleName)) continue;
+      operations.push(
+        prisma.appRolePermission.upsert({
+          where: {
+            roleId_permissionId: { roleId: role.id, permissionId: managePermission.id },
+          },
+          update: {},
+          create: { roleId: role.id, permissionId: managePermission.id },
+        }),
+      );
+    }
   }
 
   if (operations.length) {

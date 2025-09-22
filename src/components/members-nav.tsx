@@ -24,7 +24,19 @@ const ASSIGNMENT_ITEMS: Item[] = [
   { href: "/mitglieder/meine-gewerke", label: "Meine Gewerke", permissionKey: "mitglieder.meine-gewerke" },
   { href: "/mitglieder/koerpermasse", label: "Körpermaße", permissionKey: "mitglieder.koerpermasse" },
   { href: "/mitglieder/probenplanung", label: "Probenplanung", permissionKey: "mitglieder.probenplanung" },
-  { href: "/mitglieder/essenplanung", label: "Essensplanung", permissionKey: "mitglieder.essenplanung" },
+];
+
+const FINAL_WEEK_ITEMS: Item[] = [
+  {
+    href: "/mitglieder/endproben-woche/dienstplan",
+    label: "Dienstplan",
+    permissionKey: "mitglieder.endprobenwoche",
+  },
+  {
+    href: "/mitglieder/endproben-woche/essenplanung",
+    label: "Essensplanung",
+    permissionKey: "mitglieder.essenplanung",
+  },
 ];
 
 const PRODUCTION_ITEMS: Item[] = [
@@ -158,6 +170,17 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
           <path d="M16 2v4M8 2v4M3 10h18" />
         </svg>
       );
+    case "/mitglieder/endproben-woche/dienstplan":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="5" width="16" height="16" rx="2" />
+          <path d="M9 3v4" />
+          <path d="M15 3v4" />
+          <path d="M4 11h16" />
+          <path d="m9 16 2 2 4-4" />
+        </svg>
+      );
+    case "/mitglieder/endproben-woche/essenplanung":
     case "/mitglieder/essenplanung":
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -305,6 +328,7 @@ export function MembersNav({
     () => [
       { label: "Allgemein", items: GENERAL_ITEMS },
       { label: assignmentLabel, items: ASSIGNMENT_ITEMS },
+      { label: "Endproben Woche", items: FINAL_WEEK_ITEMS },
       { label: "Produktion", items: PRODUCTION_ITEMS },
       { label: "Finanzen", items: FINANCE_ITEMS },
       { label: "Verwaltung", items: ADMIN_ITEMS },
