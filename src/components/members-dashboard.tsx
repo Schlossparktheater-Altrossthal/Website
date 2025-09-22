@@ -66,6 +66,7 @@ interface OnboardingOverview {
   completedAt: Date | null;
   focus: "acting" | "tech" | "both" | null;
   background: string | null;
+  backgroundClass: string | null;
   notes: string | null;
   stats: {
     acting: OnboardingDomainStats;
@@ -282,6 +283,10 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
   const focusRaw = value.focus;
   const focus = isFocusValue(focusRaw) ? focusRaw : null;
   const background = typeof value.background === "string" && value.background.trim() ? value.background : null;
+  const backgroundClass =
+    typeof value.backgroundClass === "string" && value.backgroundClass.trim()
+      ? value.backgroundClass
+      : null;
   const notes = typeof value.notes === "string" && value.notes.trim() ? value.notes : null;
   const completedAt = parseIsoDate(value.completedAt);
 
@@ -334,6 +339,7 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
     completedAt,
     focus,
     background,
+    backgroundClass,
     notes,
     stats: {
       acting: actingStats,
@@ -700,6 +706,18 @@ export function MembersDashboard() {
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
                   {onboarding.background}
+                </Badge>
+                {onboarding.backgroundClass && (
+                  <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                    Klasse {onboarding.backgroundClass}
+                  </Badge>
+                )}
+              </div>
+            )}
+            {!onboarding.background && onboarding.backgroundClass && (
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                  Klasse {onboarding.backgroundClass}
                 </Badge>
               </div>
             )}

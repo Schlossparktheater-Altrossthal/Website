@@ -115,11 +115,39 @@ export async function GET() {
           },
         },
       }),
-      prisma.memberOnboardingProfile.findUnique({
+      (
+        prisma as unknown as {
+          memberOnboardingProfile: {
+            findUnique: (args: {
+              where: { userId: string };
+              select: {
+                focus: true;
+                background: true;
+                backgroundClass: true;
+                notes: true;
+                createdAt: true;
+                updatedAt: true;
+                dietaryPreference: true;
+                dietaryPreferenceStrictness: true;
+              };
+            }) => Promise<{
+              focus: string;
+              background: string | null;
+              backgroundClass: string | null;
+              notes: string | null;
+              createdAt: Date;
+              updatedAt: Date;
+              dietaryPreference: string | null;
+              dietaryPreferenceStrictness: string | null;
+            } | null>;
+          };
+        }
+      ).memberOnboardingProfile.findUnique({
         where: { userId },
         select: {
           focus: true,
           background: true,
+          backgroundClass: true,
           notes: true,
           createdAt: true,
           updatedAt: true,
@@ -212,6 +240,7 @@ export async function GET() {
       completedAt: onboardingProfile?.createdAt?.toISOString() ?? null,
       focus: onboardingProfile?.focus ?? null,
       background: onboardingProfile?.background ?? null,
+      backgroundClass: onboardingProfile?.backgroundClass ?? null,
       notes: onboardingProfile?.notes ?? null,
       stats: {
         acting: { count: actingPreferences.length, averageWeight: averageWeight(actingPreferences) },
