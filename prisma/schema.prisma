@@ -272,6 +272,8 @@ model User {
   financeEntriesApproved FinanceEntry[]         @relation("FinanceEntryApprovedBy")
   financeEntriesPaidFor  FinanceEntry[]         @relation("FinanceEntryMemberPaidBy")
   financeLogsAuthored    FinanceLog[]           @relation("FinanceLogChangedBy")
+  finalRehearsalDutiesAssigned FinalRehearsalDuty[] @relation("FinalRehearsalDutyAssignee")
+  finalRehearsalDutiesCreated  FinalRehearsalDuty[] @relation("FinalRehearsalDutyCreatedBy")
   galleryItems           GalleryItem[]
 }
 
@@ -335,6 +337,28 @@ model Show {
   proposals  RehearsalProposal[]
   characters Character[]
   scenes     Scene[]
+  finalRehearsalDuties FinalRehearsalDuty[]
+}
+
+model FinalRehearsalDuty {
+  id          String   @id @default(cuid())
+  showId      String
+  date        DateTime
+  title       String
+  description String?
+  location    String?
+  startTime   Int?
+  endTime     Int?
+  assigneeId  String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  assignee    User?    @relation("FinalRehearsalDutyAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy   User     @relation("FinalRehearsalDutyCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([showId, date])
+  @@index([assigneeId])
 }
 
 model Department {

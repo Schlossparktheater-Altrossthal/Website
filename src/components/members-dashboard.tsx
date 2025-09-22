@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   Hammer,
   PiggyBank,
+  CalendarRange,
   UtensilsCrossed,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -178,6 +179,12 @@ const QUICK_ACTION_LINKS = [
     label: "Probenplanung",
     icon: CalendarCog,
     permissionKey: "mitglieder.probenplanung",
+  },
+  {
+    href: "/mitglieder/endproben-woche/dienstplan",
+    label: "Endproben-Woche",
+    icon: CalendarRange,
+    permissionKey: "mitglieder.endprobenwoche",
   },
   {
     href: "/mitglieder/essenplanung",
