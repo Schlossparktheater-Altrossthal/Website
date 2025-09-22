@@ -93,6 +93,17 @@ function impactBadgeVariant(impact: OptimizationImpact) {
   }
 }
 
+function MockDataBadge({ label = "Demo" }: { label?: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className="border-dashed text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+    >
+      {label}
+    </Badge>
+  );
+}
+
 function parseGeneratedAt(value: string | undefined) {
   const parsed = Date.parse(value ?? "");
   if (Number.isFinite(parsed)) {
@@ -386,7 +397,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Verfügbarkeit</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              Verfügbarkeit
+              <MockDataBadge />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{uptimeFormat.format(displayAnalytics.summary.uptimePercentage)} %</p>
@@ -395,7 +409,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </Card>
         <Card className="border border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Anfragen (24h)</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              Anfragen (24h)
+              <MockDataBadge />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.requestsLast24h)}</p>
@@ -404,7 +421,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </Card>
         <Card className="border border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ø Antwortzeit</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              Ø Antwortzeit
+              <MockDataBadge />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{formatMs(displayAnalytics.summary.averageResponseTimeMs)}</p>
@@ -413,7 +433,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </Card>
         <Card className="border border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Peak gleichzeitiger Nutzer</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              Peak gleichzeitiger Nutzer
+              <MockDataBadge />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.peakConcurrentUsers)}</p>
@@ -422,7 +445,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </Card>
         <Card className="border border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Cache-Hit-Rate</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              Cache-Hit-Rate
+              <MockDataBadge />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{percentPreciseFormat.format(displayAnalytics.summary.cacheHitRate)}</p>
@@ -431,7 +457,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </Card>
         <Card className="border border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Realtime-Ereignisse (24h)</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              Realtime-Ereignisse (24h)
+              <MockDataBadge />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.realtimeEventsLast24h)}</p>
@@ -440,7 +469,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </Card>
         <Card className="border border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Fehlerquote</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              Fehlerquote
+              <MockDataBadge />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{percentPreciseFormat.format(displayAnalytics.summary.errorRate)}</p>
@@ -485,7 +517,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
 
         <Card className="border border-border/70">
           <CardHeader>
-            <CardTitle>Stoßzeiten & Lastverteilung</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Stoßzeiten & Lastverteilung
+              <MockDataBadge />
+            </CardTitle>
             <p className="text-sm text-muted-foreground">Zeitfenster mit erhöhter Auslastung innerhalb der letzten 7 Tage.</p>
           </CardHeader>
           <CardContent>
@@ -511,7 +546,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
 
       <Card className="border border-border/70">
         <CardHeader>
-          <CardTitle>Seitenperformance – Öffentlicher Bereich</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Seitenperformance – Öffentlicher Bereich
+            <MockDataBadge />
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
             Ladezeiten, Verweildauer und Zielerfüllung auf den wichtigsten öffentlichen Seiten.
           </p>
@@ -566,7 +604,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
 
       <Card className="border border-border/70">
         <CardHeader>
-          <CardTitle>Seitenperformance – Mitgliederbereich</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Seitenperformance – Mitgliederbereich
+            <MockDataBadge />
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
             Nutzungsverhalten der eingeloggten Mitglieder inklusive Verweildauer und Erfolgsquote in den Arbeitsbereichen.
           </p>
@@ -622,7 +663,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border border-border/70">
           <CardHeader>
-            <CardTitle>Traffic-Kanäle</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Traffic-Kanäle
+              <MockDataBadge />
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               Entwicklung der wichtigsten Besucherquellen inklusive Konversionsrate.
             </p>
@@ -698,7 +742,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border border-border/70">
           <CardHeader>
-            <CardTitle>Session Insights</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Session Insights
+              <MockDataBadge />
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               Vergleich von neuen, wiederkehrenden und eingeloggten Nutzergruppen.
             </p>
@@ -733,7 +780,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
 
         <Card className="border border-border/70">
           <CardHeader>
-            <CardTitle>Optimierungspotenziale</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Optimierungspotenziale
+              <MockDataBadge />
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               Konkrete Hebel zur Verbesserung der Ladezeiten und Nutzerführung basierend auf den gemessenen Daten.
             </p>
@@ -763,7 +813,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <div className="grid gap-4 md:grid-cols-3">
             <Card className="border border-border/70">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Warnungen</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  Warnungen
+                  <MockDataBadge />
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-semibold">{numberFormat.format(warningCount)}</p>
@@ -772,7 +825,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             </Card>
             <Card className="border border-border/70">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Fehler</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  Fehler
+                  <MockDataBadge />
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-semibold">{numberFormat.format(errorCount)}</p>
@@ -781,7 +837,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             </Card>
             <Card className="border border-border/70">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Offene Vorfälle</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  Offene Vorfälle
+                  <MockDataBadge />
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-semibold">{numberFormat.format(openIncidents)}</p>
@@ -803,9 +862,12 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             </Card>
           </div>
 
-          <Card className="border border-border/70">
-            <CardHeader>
-              <CardTitle>Warn- & Fehlermeldungen</CardTitle>
+        <Card className="border border-border/70">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Warn- & Fehlermeldungen
+              <MockDataBadge />
+            </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Automatisch aggregierte Serverlogs der letzten 48 Stunden.
               </p>

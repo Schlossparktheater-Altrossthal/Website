@@ -3,6 +3,13 @@ import os from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
 
 import staticAnalyticsData from "@/data/server-analytics-static.json";
+import {
+  applyPagePerformanceMetrics,
+  loadDeviceBreakdownFromDatabase,
+  loadPagePerformanceMetrics,
+  mergeDeviceBreakdown,
+} from "@/lib/server-analytics-data";
+import type { PagePerformanceMetricOverride } from "@/lib/server-analytics-data";
 
 export type OptimizationImpact = "Hoch" | "Mittel" | "Niedrig";
 export type OptimizationArea = "Frontend" | "Mitgliederbereich" | "Infrastruktur";
@@ -342,6 +349,9 @@ async function collectSystemResourceUsage(): Promise<ServerResourceUsage[]> {
 
 export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   let resourceUsage = STATIC_ANALYTICS.resourceUsage;
+  let deviceBreakdown = STATIC_ANALYTICS.deviceBreakdown;
+  let publicPages = STATIC_ANALYTICS.publicPages;
+  let memberPages = STATIC_ANALYTICS.memberPages;
 
   try {
     resourceUsage = await collectSystemResourceUsage();
@@ -349,9 +359,41 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     console.error("[server-analytics] Verwende statische Ressourcenwerte", error);
   }
 
+  if (process.env.DATABASE_URL) {
+    const [deviceOverrides, pageMetricsResult] = await Promise.all([
+      loadDeviceBreakdownFromDatabase().catch((error) => {
+        console.error("[server-analytics] Failed to load device analytics", error);
+        return null;
+      }),
+      loadPagePerformanceMetrics().catch((error) => {
+        console.error("[server-analytics] Failed to load page performance metrics", error);
+        return [] as PagePerformanceMetricOverride[];
+      }),
+    ]);
+
+    deviceBreakdown = mergeDeviceBreakdown(deviceBreakdown, deviceOverrides ?? undefined);
+
+    const pageMetrics = Array.isArray(pageMetricsResult) ? pageMetricsResult : [];
+
+    if (pageMetrics.length > 0) {
+      publicPages = applyPagePerformanceMetrics(publicPages, pageMetrics, "public");
+      memberPages = applyPagePerformanceMetrics(memberPages, pageMetrics, "members");
+    } else {
+      publicPages = publicPages.map((entry) => ({ ...entry }));
+      memberPages = memberPages.map((entry) => ({ ...entry }));
+    }
+  } else {
+    deviceBreakdown = deviceBreakdown.map((entry) => ({ ...entry }));
+    publicPages = publicPages.map((entry) => ({ ...entry }));
+    memberPages = memberPages.map((entry) => ({ ...entry }));
+  }
+
   return {
     generatedAt: new Date().toISOString(),
     ...STATIC_ANALYTICS,
     resourceUsage,
+    deviceBreakdown,
+    publicPages,
+    memberPages,
   };
 }
