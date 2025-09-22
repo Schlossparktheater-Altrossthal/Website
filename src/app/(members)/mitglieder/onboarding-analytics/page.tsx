@@ -267,6 +267,9 @@ export default async function OnboardingAnalyticsPage() {
                     {profile.background && (
                       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{profile.background}</p>
                     )}
+                    {profile.backgroundClass && (
+                      <p className="mt-1 text-xs text-muted-foreground">Klasse: {profile.backgroundClass}</p>
+                    )}
 
                     <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       <div>
@@ -372,6 +375,8 @@ export default async function OnboardingAnalyticsPage() {
 
 function humanizePreference(code: string) {
   switch (code) {
+    case "acting_statist":
+      return "Statistenrolle";
     case "acting_scout":
       return "Schnupperrolle";
     case "acting_medium":

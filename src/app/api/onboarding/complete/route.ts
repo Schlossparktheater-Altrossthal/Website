@@ -108,6 +108,7 @@ const payloadSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6).max(128),
   background: z.string().min(2),
+  backgroundClass: z.string().max(120).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
   gender: genderSchema,
@@ -154,6 +155,21 @@ function normalizeString(value: string | null | undefined) {
   return trimmed ? trimmed : null;
 }
 
+function normalizeForMatch(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .toLowerCase();
+}
+
+function requiresBszClass(value: string) {
+  if (!value) return false;
+  const normalized = normalizeForMatch(value);
+  if (!normalized.includes("bsz")) return false;
+  return ["altrossthal", "altrothal", "canaletto"].some((keyword) => normalized.includes(keyword));
+}
+
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
@@ -181,6 +197,11 @@ export async function POST(request: NextRequest) {
   const lastName = payload.lastName.trim();
   const fullName = combineNameParts(firstName, lastName) ?? null;
   const background = payload.background.trim();
+  const backgroundClass = normalizeString(payload.backgroundClass);
+  const requiresBackgroundClass = requiresBszClass(background);
+  if (requiresBackgroundClass && !backgroundClass) {
+    return NextResponse.json({ error: "Bitte gib deine Klasse am BSZ an." }, { status: 400 });
+  }
   const notes = normalizeString(payload.notes);
   const focus = payload.focus;
   const password = payload.password;
@@ -265,7 +286,7 @@ export async function POST(request: NextRequest) {
     documentSize = documentBuffer.length;
   }
 
-  if (age !== null && age < 18 && !skipDocument && !documentBuffer) {
+  if (age !== null && age <= 18 && !skipDocument && !documentBuffer) {
     return NextResponse.json({ error: "Bitte lade die unterschriebene Einverständniserklärung hoch oder überspringe den Upload" }, { status: 400 });
   }
 
@@ -303,6 +324,7 @@ export async function POST(request: NextRequest) {
     email,
     focus,
     background,
+    backgroundClass,
     notes,
     dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
     gender: {
@@ -372,6 +394,7 @@ export async function POST(request: NextRequest) {
           redemptionId: redemption.id,
           focus,
           background,
+          backgroundClass: backgroundClass ?? undefined,
           notes: notes ?? undefined,
           gender: genderDisplay,
           memberSinceYear: memberSinceYear ?? undefined,
@@ -451,7 +474,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const shouldCreateConsent = photoConsent.consent || documentBuffer || (age !== null && age < 18);
+      const shouldCreateConsent = photoConsent.consent || documentBuffer || (age !== null && age <= 18);
       if (shouldCreateConsent) {
         await tx.photoConsent.create({
           data: {

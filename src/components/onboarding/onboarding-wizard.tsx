@@ -8,6 +8,7 @@ import { AllergyLevel, type Role } from "@prisma/client";
 import { Sparkles, ShieldCheck, Lock, Target } from "lucide-react";
 import { toast } from "sonner";
 
+import { SignaturePad } from "@/components/onboarding/signature-pad";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,11 @@ const allergyLevelLabels: Record<AllergyLevel, string> = {
 };
 
 const actingOptions = [
+  {
+    code: "acting_statist",
+    title: "Statistenrolle",
+    description: "Auf der Bühne ohne Text – Präsenz in Bildern und Szenen.",
+  },
   {
     code: "acting_scout",
     title: "Schnupperrolle",
@@ -251,11 +257,11 @@ type OnboardingWizardProps = {
   invite: InviteMeta;
 };
 
-const initialActingPreferences: PreferenceEntry[] = actingOptions.map((option, index) => ({
+const initialActingPreferences: PreferenceEntry[] = actingOptions.map((option) => ({
   ...option,
   domain: "acting",
-  enabled: index === 1,
-  weight: index === 1 ? 60 : 40,
+  enabled: option.code === "acting_medium",
+  weight: option.code === "acting_medium" ? 60 : 40,
 }));
 
 const initialCrewPreferences: PreferenceEntry[] = crewOptions.map((option) => ({
@@ -292,6 +298,21 @@ function createPreferenceCode() {
   return `custom-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function normalizeForMatch(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .toLowerCase();
+}
+
+function requiresBszClass(value: string) {
+  if (!value) return false;
+  const normalized = normalizeForMatch(value);
+  if (!normalized.includes("bsz")) return false;
+  return ["altrossthal", "altrothal", "canaletto"].some((keyword) => normalized.includes(keyword));
+}
+
 export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -300,6 +321,8 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   const [success, setSuccess] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
+  const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [availableInterests, setAvailableInterests] = useState<InterestSuggestion[]>([]);
   const [interestsLoading, setInterestsLoading] = useState(false);
   const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(
@@ -315,6 +338,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     password: "",
     passwordConfirm: "",
     background: "",
+    backgroundClass: "",
     notes: "",
     dateOfBirth: "",
     genderOption: "no_answer" as GenderOption,
@@ -422,7 +446,21 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   }, []);
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
-  const requiresDocument = age !== null && age < 18;
+  const requiresDocument = age !== null && age <= 18;
+  const requiresBackgroundClass = useMemo(() => requiresBszClass(form.background), [form.background]);
+  const backgroundClassLabel = useMemo(() => {
+    const trimmed = form.backgroundClass.trim();
+    return trimmed ? trimmed : null;
+  }, [form.backgroundClass]);
+
+  useEffect(() => {
+    if (requiresBackgroundClass) return;
+    if (!form.backgroundClass) return;
+    setForm((prev) => {
+      if (!prev.backgroundClass) return prev;
+      return { ...prev, backgroundClass: "" };
+    });
+  }, [form.backgroundClass, requiresBackgroundClass]);
 
   const genderLabel = useMemo(() => {
     if (form.genderOption === "custom") {
@@ -614,14 +652,14 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     }
     if (requiresDocument) {
       if (form.photoConsent.skipDocument) {
-        return "Einverständnis erteilt – du reichst das Elternformular später nach.";
+        return "Einverständnis erteilt – du reichst die unterschriebene Erklärung später nach.";
       }
       if (documentFile) {
-        return "Einverständnis erteilt – das unterschriebene Formular wird mitgeschickt.";
+        return "Einverständnis erteilt – deine unterschriebene Erklärung wird mitgeschickt.";
       }
-      return "Einverständnis erteilt – lade das Elternformular hoch oder wähle später nachreichen.";
+      return "Einverständnis erteilt – lade deine Unterschrift hoch oder entscheide dich fürs Nachreichen.";
     }
-    return "Einverständnis erteilt – kein Elternformular erforderlich.";
+    return "Einverständnis erteilt – keine zusätzliche Unterschrift erforderlich.";
   }, [documentFile, form.photoConsent.consent, form.photoConsent.skipDocument, requiresDocument]);
 
   const handleAddDietary = () => {
@@ -662,26 +700,92 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     }));
   };
 
-  const handleDocumentChange = (file: File | null) => {
-    if (!file) {
-      setDocumentFile(null);
+  const setDocumentFromFile = useCallback(
+    (file: File | null) => {
+      if (!file) {
+        setDocumentFile(null);
+        setDocumentError(null);
+        return;
+      }
+      if (file.size > MAX_DOCUMENT_BYTES) {
+        setDocumentError("Dokument darf maximal 8 MB groß sein");
+        setDocumentFile(null);
+        return;
+      }
+      const type = file.type?.toLowerCase() ?? "";
+      if (type && !ALLOWED_DOCUMENT_TYPES.has(type)) {
+        setDocumentError("Bitte nutze PDF oder Bilddateien (JPG/PNG)");
+        setDocumentFile(null);
+        return;
+      }
       setDocumentError(null);
-      return;
+      setDocumentFile(file);
+    },
+    [setDocumentError, setDocumentFile],
+  );
+
+  const handleDocumentInput = (file: File | null) => {
+    if (documentMode !== "upload") {
+      setDocumentMode("upload");
     }
-    if (file.size > MAX_DOCUMENT_BYTES) {
-      setDocumentError("Dokument darf maximal 8 MB groß sein");
-      setDocumentFile(null);
-      return;
-    }
-    const type = file.type?.toLowerCase() ?? "";
-    if (type && !ALLOWED_DOCUMENT_TYPES.has(type)) {
-      setDocumentError("Bitte nutze PDF oder Bilddateien (JPG/PNG)");
-      setDocumentFile(null);
-      return;
-    }
-    setDocumentError(null);
-    setDocumentFile(file);
+    setSignatureDataUrl(null);
+    setDocumentFromFile(file);
   };
+
+  const handleSelectUploadMode = () => {
+    if (documentMode === "upload") return;
+    setDocumentMode("upload");
+    setSignatureDataUrl(null);
+    setDocumentFromFile(null);
+  };
+
+  const handleSelectSignatureMode = () => {
+    if (documentMode === "signature") return;
+    setDocumentMode("signature");
+    setSignatureDataUrl(null);
+    setDocumentFromFile(null);
+  };
+
+  const handleSignatureChange = (dataUrl: string | null) => {
+    if (documentMode !== "signature") {
+      setDocumentMode("signature");
+    }
+    setSignatureDataUrl(dataUrl);
+  };
+
+  useEffect(() => {
+    if (!signatureDataUrl) {
+      if (documentMode === "signature") {
+        setDocumentFromFile(null);
+        setDocumentError(null);
+      }
+      return;
+    }
+    const commaIndex = signatureDataUrl.indexOf(",");
+    if (commaIndex === -1) {
+      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
+      setDocumentFile(null);
+      return;
+    }
+    const header = signatureDataUrl.slice(0, commaIndex);
+    const mimeMatch = header.match(/data:(.*?);base64/);
+    const mime = (mimeMatch?.[1] ?? "image/png").toLowerCase();
+    const base64 = signatureDataUrl.slice(commaIndex + 1);
+    try {
+      const binary = atob(base64);
+      const length = binary.length;
+      const bytes = new Uint8Array(length);
+      for (let index = 0; index < length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      const file = new File([bytes], "digitale-unterschrift.png", { type: mime || "image/png" });
+      setDocumentFromFile(file);
+    } catch (conversionError) {
+      console.error("[onboarding.signature]", conversionError);
+      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
+      setDocumentFile(null);
+    }
+  }, [documentMode, signatureDataUrl, setDocumentError, setDocumentFile, setDocumentFromFile]);
 
   const goNext = () => {
     setError(null);
@@ -712,6 +816,10 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       }
       if (!form.background.trim()) {
         setError("Wo kommst du her? Schule, Uni, Ausbildung – ein Stichwort genügt.");
+        return;
+      }
+      if (requiresBackgroundClass && !form.backgroundClass.trim()) {
+        setError("Bitte gib deine Klasse am BSZ an.");
         return;
       }
       if (form.genderOption === "custom" && !form.genderCustom.trim()) {
@@ -821,6 +929,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         email: form.email.trim(),
         password: form.password,
         background: form.background.trim(),
+        backgroundClass: backgroundClassLabel,
         notes: notes || null,
         dateOfBirth: form.dateOfBirth ? form.dateOfBirth : null,
         gender: {
@@ -1116,6 +1225,19 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   ))}
                 </div>
               </label>
+              {requiresBackgroundClass && (
+                <label className="space-y-1 text-sm md:col-start-2">
+                  <span className="font-medium">Welche Klasse besuchst du am BSZ Altroßthal/Canaletto?</span>
+                  <Input
+                    value={form.backgroundClass}
+                    onChange={(event) => setForm((prev) => ({ ...prev, backgroundClass: event.target.value }))}
+                    placeholder="z.B. BFS 23A"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Damit können wir dich deinem Jahrgang zuordnen.
+                  </span>
+                </label>
+              )}
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1 text-sm">
@@ -1493,10 +1615,10 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
 
             {requiresDocument && (
               <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
-                <p className="font-medium">Du bist minderjährig</p>
+                <p className="font-medium">Du bist 18 Jahre oder jünger</p>
                 <p>
-                  Bitte lade die unterschriebene Erlaubnis deiner Eltern hoch. Wenn das gerade nicht klappt, kannst du den Upload
-                  überspringen und später im Profil nachreichen.
+                  Wir benötigen eine unterschriebene Foto-Einverständniserklärung. Lade sie als Datei hoch oder unterschreibe
+                  direkt hier digital. Wenn es gerade nicht passt, kannst du die Unterschrift auch später im Profil nachreichen.
                 </p>
                 <label className="mt-3 flex items-center gap-2 text-xs">
                   <input
@@ -1510,28 +1632,62 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     }
                     className="h-4 w-4"
                   />
-                  <span>Upload später nachreichen</span>
+                  <span>Upload bzw. Unterschrift später nachreichen</span>
                 </label>
               </div>
             )}
 
             {requiresDocument ? (
-              <div className="space-y-2 text-sm">
-                <label className="block font-medium">Eltern-Formular (PDF, JPG, PNG)</label>
-                <Input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png"
-                  onChange={(event) => handleDocumentChange(event.target.files?.[0] ?? null)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {documentFile ? `Ausgewählt: ${documentFile.name}` : "Optional – wenn vorhanden, gleich hier hochladen."}
-                </p>
+              <div className="space-y-3 text-sm">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={documentMode === "upload" ? "default" : "outline"}
+                    onClick={handleSelectUploadMode}
+                  >
+                    Dokument hochladen
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={documentMode === "signature" ? "default" : "outline"}
+                    onClick={handleSelectSignatureMode}
+                  >
+                    Digital unterschreiben
+                  </Button>
+                </div>
+                {documentMode === "upload" ? (
+                  <div className="space-y-2">
+                    <label className="block font-medium">Einverständnis (PDF, JPG, PNG)</label>
+                    <Input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {documentFile
+                        ? `Ausgewählt: ${documentFile.name}`
+                        : "Optional – wenn vorhanden, gleich hier hochladen."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="block font-medium">Digital unterschreiben</label>
+                    <SignaturePad value={signatureDataUrl} onChange={handleSignatureChange} />
+                    <p className="text-xs text-muted-foreground">
+                      {documentFile
+                        ? "Deine digitale Unterschrift wird mitgeschickt."
+                        : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
+                    </p>
+                  </div>
+                )}
                 {documentError && <p className="text-xs text-destructive">{documentError}</p>}
               </div>
             ) : (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
                 <p className="font-medium">Du bist volljährig</p>
-                <p>Deine Zustimmung reicht aus – ein Elternformular ist nicht erforderlich.</p>
+                <p>Deine Zustimmung reicht aus – eine zusätzliche Unterschrift ist nicht erforderlich.</p>
               </div>
             )}
           </CardContent>
@@ -1776,9 +1932,16 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <span className="text-xs uppercase tracking-wide text-muted-foreground">Kontext</span>
                   {form.background ? (
-                    <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-                      {form.background}
-                    </Badge>
+                    <>
+                      <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                        {form.background}
+                      </Badge>
+                      {backgroundClassLabel && (
+                        <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                          Klasse {backgroundClassLabel}
+                        </Badge>
+                      )}
+                    </>
                   ) : (
                     <span className="text-xs text-muted-foreground">Keine Angaben</span>
                   )}
