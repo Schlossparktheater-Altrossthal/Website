@@ -327,16 +327,16 @@ export function MealPlanRecipeWorkbench({
   };
 
   return (
-    <Card className="border border-border/60 bg-background/70">
-      <CardHeader className="space-y-2">
-        <CardTitle className="text-lg font-semibold">
-          Rezept- & Einkaufsgenerator
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Wähle oder ergänze Rezepte pro Mahlzeit, skaliere die Zutatenmengen und exportiere eine gebündelte Einkaufsliste.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="space-y-4">
+      <Card className="border border-border/60 bg-background/80">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-base font-semibold">Rezeptplanung</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Wähle Vorschläge aus der Bibliothek oder ergänze eigene Rezepte pro Slot – die Mengen werden automatisch auf eure
+            Gruppengröße skaliert.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="max-w-xs space-y-1">
             <Label htmlFor="planner-participants">Personenanzahl</Label>
@@ -653,17 +653,26 @@ export function MealPlanRecipeWorkbench({
           ))}
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
+        </CardContent>
+      </Card>
+
+      <Card className="border border-border/60 bg-background/80">
+        <CardHeader className="space-y-2">
           <div className="flex items-center gap-2">
             <ListChecks className="h-5 w-5 text-primary" />
-            <p className="text-sm font-semibold text-foreground">Einkaufsliste</p>
+            <CardTitle className="text-base font-semibold">Einkaufsliste</CardTitle>
           </div>
+          <p className="text-sm text-muted-foreground">
+            Alle benötigten Zutaten der ausgewählten Rezepte – perfekt zum Teilen mit Einkaufsteams.
+          </p>
+        </CardHeader>
+        <CardContent>
           {shoppingList.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Bitte wähle mindestens ein Rezept, um automatisch eine Einkaufsliste zu erstellen.
             </p>
           ) : (
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <ul className="space-y-2 text-sm text-muted-foreground">
               {shoppingList.map((entry) => {
                 const rounded = Math.round(entry.amount * 100) / 100;
                 return (
@@ -687,8 +696,8 @@ export function MealPlanRecipeWorkbench({
               })}
             </ul>
           )}
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
