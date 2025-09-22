@@ -1,97 +1,73 @@
 "use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+
 import { Heading, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 import { PosterSlideshow } from "./poster-slideshow";
+import type { ChronikCastEntry, ChronikMeta, ChronikPreparedItem } from "./types";
+import { formatChronikPlayerName } from "./formatters";
 
-type ChronikCastEntry = {
-  role: string;
-  players: string[];
-};
+type ChronikItem = ChronikPreparedItem;
 
-type ChronikMeta = {
-  author?: string | null;
-  director?: string | null;
-  venue?: string | null;
-  ticket_info?: string | null;
-  sources?: unknown;
-  gallery?: unknown;
-  cast?: ChronikCastEntry[] | null;
-};
-
-type ChronikItem = {
-  id: string;
-  year: number;
-  title?: string | null;
-  synopsis?: string | null;
-  posterUrl?: string | string[] | null;
-  meta?: ChronikMeta | null;
-};
-
-function toStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+function toStringArray(value: ChronikMeta["sources"]) {
+  return Array.isArray(value) ? [...value] : [];
 }
 
 function toCastEntries(value: ChronikMeta["cast"]) {
-  if (!Array.isArray(value)) {
-    return [] as ChronikCastEntry[];
-  }
-
-  return value.filter(
-    (entry): entry is ChronikCastEntry =>
-      Boolean(entry) &&
-      typeof entry.role === "string" &&
-      Array.isArray(entry.players) &&
-      entry.players.length > 0,
-  );
-}
-
-function formatPlayerName(name: string) {
-  const trimmed = name.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  const parts = trimmed.split(/\s+/);
-  if (parts.length === 1) {
-    return parts[0];
-  }
-
-  const lastName = parts.pop() ?? "";
-  const lastInitial = lastName.charAt(0);
-  const firstNames = parts.join(" ");
-  if (!lastInitial) {
-    return trimmed;
-  }
-
-  return `${firstNames} ${lastInitial}.`;
-}
-
-function toPosterSources(value: ChronikItem["posterUrl"]) {
-  if (!value) {
-    return [] as string[];
-  }
-
-  const sources = Array.isArray(value) ? value : [value];
-  return sources
-    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
-    .filter((entry): entry is string => entry.length > 0);
+  return Array.isArray(value) ? value : ([] as ChronikCastEntry[]);
 }
 
 function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number }) {
+  const router = useRouter();
   const meta: ChronikMeta = item.meta ?? {};
   const sources = toStringArray(meta.sources);
   const castEntries = toCastEntries(meta.cast);
-  const posterSources = toPosterSources(item.posterUrl);
+  const posterSources = item.posterSources;
+  const detailHref = `/chronik/${item.id}`;
+  const headingId = `chronik-${item.id}-heading`;
+  const castListId = `chronik-${item.id}-cast`;
   const isBunburySeason = item.id === "altrossthal-2024";
   const [isCastVisible, setIsCastVisible] = useState(() => !isBunburySeason);
-  const castListId = `chronik-${item.id}-cast`;
+
+  const isInteractiveTarget = (target: EventTarget | null) => {
+    if (!target || typeof (target as HTMLElement).closest !== "function") {
+      return false;
+    }
+
+    return Boolean((target as HTMLElement).closest("a, button, [role='button']"));
+  };
+
+  const handleCardClick = (event: React.MouseEvent<HTMLElement>) => {
+    if (event.defaultPrevented || isInteractiveTarget(event.target)) {
+      return;
+    }
+
+    router.push(detailHref);
+  };
+
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.defaultPrevented || isInteractiveTarget(event.target)) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      router.push(detailHref);
+    }
+  };
 
   return (
     <section
       id={item.id}
-      className="group relative overflow-hidden rounded-2xl border border-border/60 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl sm:rounded-3xl"
+      role="link"
+      tabIndex={0}
+      aria-labelledby={headingId}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border/60 shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:shadow-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:rounded-3xl"
     >
       <div className="relative h-[60vh] sm:h-[70vh] lg:h-[75vh] xl:h-[65vh] 2xl:h-[60vh] w-full max-h-[800px]">
         {posterSources.length > 0 && (
@@ -117,6 +93,7 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
               </div>
               <Heading
                 level="h2"
+                id={headingId}
                 className="mt-4 max-w-4xl text-balance leading-tight [text-shadow:_0_0_14px_rgba(0,0,0,0.55)]"
               >
                 {item.title ?? `Saison ${item.year}`}
@@ -208,9 +185,12 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
                               <dt className="text-sm font-semibold text-foreground">
                                 {entry.role}
                               </dt>
-                              <dd className="mt-1 text-sm text-foreground/80">
-                                {entry.players.map((player) => formatPlayerName(player)).filter(Boolean).join(", ")}
-                              </dd>
+                            <dd className="mt-1 text-sm text-foreground/80">
+                              {entry.players
+                                .map((player) => formatChronikPlayerName(player))
+                                .filter(Boolean)
+                                .join(", ")}
+                            </dd>
                             </div>
                           ))}
                         </dl>
@@ -234,7 +214,10 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
                               {entry.role}
                             </dt>
                             <dd className="mt-1 text-sm text-foreground/80">
-                              {entry.players.map((player) => formatPlayerName(player)).filter(Boolean).join(", ")}
+                              {entry.players
+                                .map((player) => formatChronikPlayerName(player))
+                                .filter(Boolean)
+                                .join(", ")}
                             </dd>
                           </div>
                         ))}
@@ -243,24 +226,35 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
                   )}
                 </div>
               )}
-              {sources.length > 0 && (
-                <div className="mt-8 flex flex-wrap gap-3">
-                  {sources.slice(0, 3).map((src, i) => (
-                    <a
-                      key={i}
-                      href={src}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-2 text-sm text-foreground transition-all duration-200 hover:scale-105 hover:border-primary/50 hover:bg-background/80 backdrop-blur-sm"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      Quelle {i + 1}
-                    </a>
-                  ))}
-                </div>
-              )}
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                {sources.slice(0, 3).map((src, i) => (
+                  <a
+                    key={`${item.id}-source-${i}`}
+                    href={src}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(event) => event.stopPropagation()}
+                    className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-2 text-sm text-foreground transition-all duration-200 hover:scale-105 hover:border-primary/50 hover:bg-background/80 backdrop-blur-sm"
+                  >
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Quelle {i + 1}
+                  </a>
+                ))}
+
+                <Link
+                  href={detailHref}
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex items-center gap-2 rounded-full border border-primary/50 bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-all duration-200 hover:scale-105 hover:border-primary hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  aria-label={`${item.title ?? `Saison ${item.year}`} im Detail ansehen`}
+                >
+                  Mehr erfahren
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
