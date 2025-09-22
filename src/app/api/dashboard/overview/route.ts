@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
+import { buildProfileChecklist } from "@/lib/profile-completion";
 
 export async function GET() {
   try {
@@ -19,6 +20,11 @@ export async function GET() {
     if (!(await hasPermission(session.user, "mitglieder.dashboard"))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const canManageMeasurements = await hasPermission(
+      session.user,
+      "mitglieder.koerpermasse",
+    );
 
     const now = new Date();
     const startOfCurrentWeek = startOfWeek(now, { weekStartsOn: 1 });
@@ -52,6 +58,7 @@ export async function GET() {
       dietaryRestrictions,
       photoConsent,
       userRecord,
+      measurementCount,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.rehearsal.count({
@@ -110,7 +117,15 @@ export async function GET() {
       }),
       prisma.memberOnboardingProfile.findUnique({
         where: { userId },
-        select: { focus: true, background: true, notes: true, createdAt: true, updatedAt: true },
+        select: {
+          focus: true,
+          background: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+          dietaryPreference: true,
+          dietaryPreferenceStrictness: true,
+        },
       }),
       prisma.memberRolePreference.findMany({
         where: { userId },
@@ -129,12 +144,26 @@ export async function GET() {
       }),
       prisma.photoConsent.findUnique({
         where: { userId },
-        select: { status: true, consentGiven: true, documentUploadedAt: true, updatedAt: true },
+        select: {
+          status: true,
+          consentGiven: true,
+          documentUploadedAt: true,
+          updatedAt: true,
+        },
       }),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { passwordHash: true },
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          dateOfBirth: true,
+          passwordHash: true,
+        },
       }),
+      canManageMeasurements
+        ? prisma.memberMeasurement.count({ where: { userId } })
+        : Promise.resolve(0),
     ]);
 
     const activeProduction = activeProductionPromise ? await activeProductionPromise : null;
@@ -199,6 +228,18 @@ export async function GET() {
       passwordSet: Boolean(userRecord?.passwordHash),
     };
 
+    const profileChecklist = buildProfileChecklist({
+      hasBasicData: Boolean(
+        userRecord?.firstName && userRecord?.lastName && userRecord?.email,
+      ),
+      hasBirthdate: Boolean(userRecord?.dateOfBirth),
+      hasDietaryPreference: Boolean(
+        onboardingProfile?.dietaryPreference?.trim(),
+      ),
+      hasMeasurements: canManageMeasurements ? measurementCount > 0 : undefined,
+      photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
+    });
+
     const finalRehearsalWeek = activeProduction?.finalRehearsalWeekStart
       ? {
           showId: activeProduction.id,
@@ -219,6 +260,11 @@ export async function GET() {
       recentActivities: activities,
       onboarding,
       finalRehearsalWeek,
+      profileCompletion: {
+        complete: profileChecklist.complete,
+        completed: profileChecklist.completed,
+        total: profileChecklist.total,
+      },
     });
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {

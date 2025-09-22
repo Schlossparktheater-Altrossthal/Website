@@ -11,6 +11,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import type { AvatarSource } from "@/components/user-avatar";
 import { combineNameParts, splitFullName } from "@/lib/names";
 import { cn } from "@/lib/utils";
+import { useProfileCompletion } from "@/components/members/profile-completion-context";
 
 interface ProfileFormProps {
   initialFirstName?: string | null;
@@ -88,6 +89,7 @@ export function ProfileForm({
   const [removeAvatar, setRemoveAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const hasStoredAvatar = Boolean(avatarUpdatedAt);
+  const completion = useProfileCompletion();
 
   useEffect(() => {
     return () => {
@@ -268,6 +270,12 @@ export function ProfileForm({
       setRemoveAvatar(false);
       setSuccess("Profil wurde erfolgreich aktualisiert");
       toast.success("Profil wurde aktualisiert");
+
+      completion.setItemComplete(
+        "basics",
+        Boolean(updatedFirstName && updatedLastName && updatedEmail),
+      );
+      completion.setItemComplete("birthdate", Boolean(updatedDateOfBirthIso));
 
       // Aktualisiere die Session-Daten, damit Navigationskomponenten sofort aktualisiert werden.
       try {
