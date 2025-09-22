@@ -187,7 +187,7 @@ const QUICK_ACTION_LINKS = [
     permissionKey: "mitglieder.endprobenwoche",
   },
   {
-    href: "/mitglieder/essenplanung",
+    href: "/mitglieder/endproben-woche/essenplanung",
     label: "Essensplanung",
     icon: UtensilsCrossed,
     permissionKey: "mitglieder.essenplanung",
