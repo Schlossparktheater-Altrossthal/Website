@@ -74,9 +74,9 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   },
   {
     key: "mitglieder.koerpermasse",
-    label: "Körpermaße pflegen",
+    label: "Körpermaße verwalten",
     description:
-      "Ermöglicht das Pflegen eigener Maße für Anproben und blendet den Menüpunkt \"Körpermaße\" in Proben & Gewerken ein, damit das Kostüm-Team die Angaben sieht.",
+      "Öffnet das Körpermaße-Control-Center für das Kostüm-Team, um alle Maße des Ensembles futuristisch zu überwachen, fehlende Angaben zu erkennen und Einträge live zu aktualisieren.",
     category: "self",
   },
   { key: "mitglieder.probenplanung", label: "Probenplanung verwalten", category: "planning" },
