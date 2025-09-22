@@ -16,9 +16,9 @@ export const primaryNavigation: NavigationItem[] = [
     description: "Tauche in die Welt hinter dem mystischen Vorhang ein.",
   },
   {
-    label: "Galerie",
+    label: "Archiv und Bilder",
     href: "/galerie",
-    description: "Lade Bilder hoch und pflege das Archiv von 2009 bis heute.",
+    description: "Alle Infos zum geschützten Medienarchiv mit Fotos und Videos vergangener Jahre.",
   },
   {
     label: "Unsere Schulkatze",

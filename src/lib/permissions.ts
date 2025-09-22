@@ -54,16 +54,23 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.profil", label: "Profilbereich aufrufen", category: "base" },
   {
     key: "mitglieder.galerie",
-    label: "Galerie öffnen",
+    label: "Archiv und Bilder öffnen",
     description:
-      "Zugang zum Medienarchiv mit Jahrgangsordnern und Upload-Bereich im Mitgliederportal.",
+      "Zugang zum Medienarchiv mit Jahrgangsordnern, Fotos und Videos im Mitgliederportal.",
     category: "self",
   },
   {
     key: "mitglieder.galerie.upload",
-    label: "Medien in der Galerie hochladen",
+    label: "Medien in Archiv und Bilder hochladen",
     description:
       "Eigene Fotos und Videos in Jahrgangsordnern ablegen sowie Beschreibungen ergänzen.",
+    category: "self",
+  },
+  {
+    key: "mitglieder.galerie.delete",
+    label: "Uploads im Archiv moderieren",
+    description:
+      "Fremde Beiträge löschen, Inhalte kuratieren und das Medienarchiv aufräumen.",
     category: "self",
   },
   {

@@ -80,9 +80,10 @@ export async function POST(
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  const [canView, canUpload] = await Promise.all([
+  const [canView, canUpload, canModerate] = await Promise.all([
     hasPermission(session.user, "mitglieder.galerie"),
     hasPermission(session.user, "mitglieder.galerie.upload"),
+    hasPermission(session.user, "mitglieder.galerie.delete"),
   ]);
 
   if (!canView || !canUpload) {
@@ -198,7 +199,7 @@ export async function POST(
         email: item.uploadedBy?.email ?? null,
       },
       downloadUrl: `/api/gallery/items/${item.id}/file`,
-      canDelete: item.uploadedById === userId,
+      canDelete: canModerate || item.uploadedById === userId,
     }));
 
     return NextResponse.json({ items });
