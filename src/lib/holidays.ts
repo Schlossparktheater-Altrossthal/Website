@@ -3,16 +3,32 @@ import ical, { type VEvent } from "node-ical";
 import { addDays, format, isValid, parseISO } from "date-fns";
 
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
+import {
+  applyHolidaySourceStatus,
+  getDefaultHolidaySourceUrl,
+  readSperrlisteSettings,
+  resolveSperrlisteSettings,
+  type HolidaySourceStatus,
+  type ResolvedSperrlisteSettings,
+} from "@/lib/sperrliste-settings";
 
 import type { HolidayRange } from "@/types/holidays";
 
 export type { HolidayRange } from "@/types/holidays";
-
-const DEFAULT_SAXONY_HOLIDAY_FEED =
-  "https://www.schulferien.org/media/ical/deutschland/ferien_sachsen.ics";
 const FALLBACK_SAXONY_HOLIDAY_FEED = "https://ferien-api.de/api/v1/holidays/SN";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+type HolidayFetchStatus = {
+  status: HolidaySourceStatus;
+  message: string | null;
+  checkedAt: Date;
+};
+
+export type HolidayFetchResult = {
+  ranges: HolidayRange[];
+  status: HolidayFetchStatus;
+};
 
 function isTruthyFlag(value: string | undefined) {
   if (!value) {
@@ -181,6 +197,19 @@ function parseFallbackHolidayRanges(payload: unknown) {
   return ranges;
 }
 
+function formatRangeCount(count: number) {
+  return count === 1 ? "1 Zeitraum" : `${count} Zeiträume`;
+}
+
+function filterRelevantRanges(ranges: HolidayRange[]) {
+  const thresholdStart = format(addDays(new Date(), -365), "yyyy-MM-dd");
+  const thresholdEnd = format(addDays(new Date(), 365 * 3), "yyyy-MM-dd");
+
+  return ranges.filter(
+    (range) => range.endDate >= thresholdStart && range.startDate <= thresholdEnd,
+  );
+}
+
 async function fetchFallbackHolidayFeed() {
   try {
     const response = await fetch(FALLBACK_SAXONY_HOLIDAY_FEED, {
@@ -205,69 +234,146 @@ async function fetchFallbackHolidayFeed() {
   }
 }
 
-async function fetchIcsHolidayFeed() {
-  const source = process.env.SAXONY_HOLIDAYS_ICS_URL || DEFAULT_SAXONY_HOLIDAY_FEED;
+async function fetchHolidayUrl(url: string) {
+  const response = await fetch(url, {
+    headers: {
+      Accept: "text/calendar, application/json;q=0.9,*/*;q=0.1",
+      "User-Agent": "Theaterverein Kalenderbot/1.0 (+https://devtheater.beegreenx.de)",
+      Referer: "https://devtheater.beegreenx.de/mitglieder/sperrliste",
+    },
+    next: { revalidate: 60 * 60 * 12 },
+  });
 
-  if (!source) {
-    return [] as HolidayRange[];
+  if (!response.ok) {
+    throw new Error(`Unexpected response: ${response.status}`);
   }
 
-  try {
-    const response = await fetch(source, {
-      headers: {
-        Accept: "text/calendar, text/plain;q=0.9,*/*;q=0.1",
-        "User-Agent":
-          "Theaterverein Kalenderbot/1.0 (+https://devtheater.beegreenx.de)",
-        Referer: "https://devtheater.beegreenx.de/mitglieder/sperrliste",
-      },
-      next: { revalidate: 60 * 60 * 12 },
-    });
+  const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+  const isJson = contentType.includes("json") || url.toLowerCase().endsWith(".json");
 
-    if (!response.ok) {
-      throw new Error(`Unexpected response: ${response.status}`);
+  if (isJson) {
+    const payload = await response.json();
+    const ranges = parseFallbackHolidayRanges(payload);
+    if (ranges.length === 0) {
+      throw new Error("Ferienquelle lieferte keine verwertbaren Daten.");
     }
-
-    const body = await response.text();
-
-    if (!body.trim()) {
-      throw new Error("Ferien-Kalender lieferte keine Daten");
-    }
-
-    return parseHolidayRanges(body);
-  } catch (error) {
-    console.error("[holidays] feed fetch failed", error);
-    return [] as HolidayRange[];
+    return ranges;
   }
+
+  const body = await response.text();
+  if (!body.trim()) {
+    throw new Error("Ferienquelle lieferte keine Daten.");
+  }
+
+  const ranges = parseHolidayRanges(body);
+  if (ranges.length === 0) {
+    throw new Error("Ferienquelle lieferte keine Termine.");
+  }
+  return ranges;
 }
 
-async function fetchHolidayFeed() {
+function createStaticFallbackStatus(message: string, checkedAt: Date): HolidayFetchStatus {
+  return {
+    status: "error",
+    message,
+    checkedAt,
+  };
+}
+
+export async function fetchHolidayRangesForSettings(
+  settings: ResolvedSperrlisteSettings,
+): Promise<HolidayFetchResult> {
+  const checkedAt = new Date();
+
+  if (settings.holidaySource.mode === "disabled") {
+    const ranges = filterRelevantRanges(getStaticHolidayRanges());
+    return {
+      ranges,
+      status: {
+        status: "disabled",
+        message: "Ferienquelle ist deaktiviert. Es werden nur statische Termine verwendet.",
+        checkedAt,
+      },
+    };
+  }
+
   if (isOutboundHttpDisabled()) {
-    return getStaticHolidayRanges();
+    const ranges = filterRelevantRanges(getStaticHolidayRanges());
+    return {
+      ranges,
+      status: createStaticFallbackStatus(
+        "Externe Abrufe sind deaktiviert (OUTBOUND_HTTP_DISABLED). Es wird die statische Ferienliste genutzt.",
+        checkedAt,
+      ),
+    };
   }
 
-  const rangesFromIcs = await fetchIcsHolidayFeed();
-  if (rangesFromIcs.length > 0) {
-    return rangesFromIcs;
+  const primaryUrl =
+    settings.holidaySource.mode === "custom"
+      ? settings.holidaySource.url
+      : settings.holidaySource.effectiveUrl ?? getDefaultHolidaySourceUrl();
+
+  let primaryError: Error | null = null;
+
+  if (primaryUrl) {
+    try {
+      const primaryRanges = await fetchHolidayUrl(primaryUrl);
+      const filtered = filterRelevantRanges(primaryRanges);
+      return {
+        ranges: filtered,
+        status: {
+          status: "ok",
+          message: `Quelle ${primaryUrl} lieferte ${formatRangeCount(filtered.length)}.`,
+          checkedAt,
+        },
+      };
+    } catch (error) {
+      primaryError = error instanceof Error ? error : new Error("Ferienquelle konnte nicht geladen werden.");
+      console.error("[holidays] primary feed fetch failed", primaryError);
+    }
+  } else {
+    primaryError = new Error("Keine Ferienquelle konfiguriert.");
   }
 
-  const fallbackRanges = await fetchFallbackHolidayFeed();
-  if (fallbackRanges.length > 0) {
-    return fallbackRanges;
+  if (settings.holidaySource.mode === "default") {
+    const fallbackRanges = await fetchFallbackHolidayFeed();
+    if (fallbackRanges.length > 0) {
+      const filtered = filterRelevantRanges(fallbackRanges);
+      return {
+        ranges: filtered,
+        status: {
+          status: primaryError ? "error" : "ok",
+          message: primaryError
+            ? `Primärer Feed (${primaryUrl ?? getDefaultHolidaySourceUrl()}) schlug fehl: ${primaryError.message}. Fallback (${FALLBACK_SAXONY_HOLIDAY_FEED}) lieferte ${formatRangeCount(filtered.length)}.`
+            : `Fallback (${FALLBACK_SAXONY_HOLIDAY_FEED}) lieferte ${formatRangeCount(filtered.length)}.`,
+          checkedAt,
+        },
+      };
+    }
   }
 
-  return getStaticHolidayRanges();
+  const staticRanges = filterRelevantRanges(getStaticHolidayRanges());
+  const fallbackMessage = primaryError
+    ? `Ferienquelle konnte nicht geladen werden: ${primaryError.message}.`
+    : "Es wurde auf die statische Ferienliste zurückgegriffen.";
+
+  return {
+    ranges: staticRanges,
+    status: createStaticFallbackStatus(
+      `${fallbackMessage} Verwendet werden ${formatRangeCount(staticRanges.length)}.`,
+      checkedAt,
+    ),
+  };
 }
 
 export const getSaxonySchoolHolidayRanges = unstable_cache(
-  async () => {
-    const ranges = await fetchHolidayFeed();
-
-    const thresholdStart = format(addDays(new Date(), -365), "yyyy-MM-dd");
-    const thresholdEnd = format(addDays(new Date(), 365 * 3), "yyyy-MM-dd");
-
-    return ranges.filter(
-      (range) => range.endDate >= thresholdStart && range.startDate <= thresholdEnd,
-    );
+  async (_settingsKey?: string) => {
+    void _settingsKey;
+    const record = await readSperrlisteSettings();
+    const resolved = resolveSperrlisteSettings(record);
+    const result = await fetchHolidayRangesForSettings(resolved);
+    await applyHolidaySourceStatus(result.status);
+    return result.ranges;
   },
   ["saxony-school-holidays"],
   { revalidate: 60 * 60 * 12 },

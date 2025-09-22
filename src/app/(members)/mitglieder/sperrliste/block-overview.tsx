@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
 import { combineNameParts } from "@/lib/names";
+import { formatWeekdayList, sortWeekdays } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";
 
 import type { BlockedDay } from "./block-calendar";
@@ -150,9 +151,13 @@ function LegendItem({
 export function BlockOverview({
   members,
   holidays = [],
+  preferredWeekdays = [],
+  exceptionWeekdays = [],
 }: {
   members: OverviewMember[];
   holidays?: HolidayRange[];
+  preferredWeekdays?: number[];
+  exceptionWeekdays?: number[];
 }) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
 
@@ -163,6 +168,32 @@ export function BlockOverview({
     const rangeEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
     return eachDayOfInterval({ start: rangeStart, end: rangeEnd });
   }, [currentMonth]);
+
+  const preferredWeekdaySet = useMemo(() => new Set(preferredWeekdays), [preferredWeekdays]);
+  const exceptionWeekdaySet = useMemo(() => new Set(exceptionWeekdays), [exceptionWeekdays]);
+  const sortedPreferredWeekdays = useMemo(() => sortWeekdays(preferredWeekdays), [preferredWeekdays]);
+  const preferredSummary = useMemo(
+    () => formatWeekdayList(preferredWeekdays, { fallback: "keine bevorzugten Probentage" }),
+    [preferredWeekdays],
+  );
+  const exceptionSummary = useMemo(
+    () => formatWeekdayList(exceptionWeekdays, { fallback: "keine Ausnahmeproben" }),
+    [exceptionWeekdays],
+  );
+  const preferredDescription = useMemo(
+    () =>
+      preferredWeekdays.length > 0
+        ? `Standardmäßig zeigen wir ${preferredSummary}.`
+        : "Aktuell sind keine bevorzugten Probentage hinterlegt – zusätzliche Tage erscheinen nur bei ausdrücklich markierten Wunschterminen.",
+    [preferredWeekdays.length, preferredSummary],
+  );
+  const exceptionDescription = useMemo(
+    () =>
+      exceptionWeekdays.length > 0
+        ? `Ausnahmeproben heben wir in warmen Gelbtönen für ${exceptionSummary} hervor.`
+        : "Es sind keine Ausnahmeproben hinterlegt.",
+    [exceptionWeekdays.length, exceptionSummary],
+  );
 
   const preparedMembers = useMemo(() => prepareMembers(members), [members]);
   const preferredDayKeys = useMemo(() => {
@@ -183,10 +214,11 @@ export function BlockOverview({
         .map((day) => ({ day, key: format(day, DATE_FORMAT) }))
         .filter(({ day, key }) => {
           const weekday = day.getDay();
-          const isCoreDay = weekday === 5 || weekday === 6 || weekday === 0;
-          return isCoreDay || preferredDayKeys.has(key);
+          const isPreferredDay = preferredWeekdaySet.has(weekday);
+          const isExceptionDay = exceptionWeekdaySet.has(weekday);
+          return isPreferredDay || isExceptionDay || preferredDayKeys.has(key);
         }),
-    [daysInView, preferredDayKeys],
+    [daysInView, preferredDayKeys, preferredWeekdaySet, exceptionWeekdaySet],
   );
 
   const dayKeys = useMemo(
@@ -304,9 +336,9 @@ export function BlockOverview({
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-muted-foreground lg:max-w-xl">
-            Tippe oder fahre über die Tageszellen, um Gründe und Ferieninfos zu sehen. Gesperrte Tage leuchten warm, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. Standardmäßig siehst du Freitag bis Sonntag; weitere Tage blenden wir nur ein, wenn jemand sie ausdrücklich bevorzugt.
+            Tippe oder fahre über die Tageszellen, um Gründe und Ferieninfos zu sehen. Gesperrte Tage leuchten warm, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription} {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <LegendItem
@@ -318,6 +350,11 @@ export function BlockOverview({
               label="Bevorzugt"
               description="Freiwillige Wunschtermine"
               className="border-emerald-400/60 bg-gradient-to-br from-emerald-500/25 via-emerald-500/15 to-emerald-500/5 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.45)]"
+            />
+            <LegendItem
+              label="Ausnahme"
+              description="Seltene Probenfenster"
+              className="border-amber-400/60 bg-gradient-to-br from-amber-500/25 via-amber-500/15 to-amber-500/5 shadow-[0_12px_30px_-18px_rgba(251,191,36,0.45)]"
             />
             <LegendItem
               label="Ferien"
@@ -343,10 +380,13 @@ export function BlockOverview({
                 </th>
                 {visibleDayInfo.map(({ day, key }, index) => {
                   const weekday = day.getDay();
-                  const isWeekend = weekday === 0 || weekday === 6;
-                  const isCoreDay = weekday === 5 || weekday === 6 || weekday === 0;
-                  const isPreferredExtra = !isCoreDay;
-                  const showDivider = weekday === 5 && index !== 0;
+                  const isPreferredDay = preferredWeekdaySet.has(weekday);
+                  const isExceptionDay = exceptionWeekdaySet.has(weekday);
+                  const isPreferredExtra = !isPreferredDay && !isExceptionDay;
+                  const showDivider =
+                    sortedPreferredWeekdays.length > 0 &&
+                    weekday === sortedPreferredWeekdays[0] &&
+                    index !== 0;
                   const isFirstOfMonth = format(day, "d") === "1";
                   const holidayEntries = holidayMap.get(key) ?? [];
                   return (
@@ -355,8 +395,9 @@ export function BlockOverview({
                       className={cn(
                         "px-3 pb-3 text-center align-bottom text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80",
                         showDivider && "border-l border-border/60",
-                        isWeekend && "text-rose-500/80",
-                        isPreferredExtra && "text-emerald-600",
+                        isPreferredDay && "text-primary",
+                        isExceptionDay && "text-amber-600",
+                        isPreferredExtra && preferredDayKeys.has(key) && "text-emerald-600",
                       )}
                     >
                       <div className="flex flex-col items-center gap-1">
@@ -420,8 +461,12 @@ export function BlockOverview({
                     {visibleDayInfo.map(({ day, key }, index) => {
                       const entry = member.blockedMap.get(key);
                       const weekday = day.getDay();
-                      const showDivider = weekday === 5 && index !== 0;
-                      const isCoreDay = weekday === 5 || weekday === 6 || weekday === 0;
+                      const showDivider =
+                        sortedPreferredWeekdays.length > 0 &&
+                        weekday === sortedPreferredWeekdays[0] &&
+                        index !== 0;
+                      const isPreferredDay = preferredWeekdaySet.has(weekday);
+                      const isExceptionDay = exceptionWeekdaySet.has(weekday);
                       const holidayEntries = holidayMap.get(key) ?? [];
                       const isHoliday = holidayEntries.length > 0;
                       const isBlocked = entry?.kind === "BLOCKED";
@@ -440,6 +485,13 @@ export function BlockOverview({
                       ];
                       if (isHoliday) {
                         label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`);
+                      } else if (!entry) {
+                        if (isPreferredDay) {
+                          label.push("bevorzugter Probentag");
+                        }
+                        if (isExceptionDay) {
+                          label.push("Ausnahmeprobentag");
+                        }
                       }
 
                       return (
@@ -448,7 +500,8 @@ export function BlockOverview({
                           className={cn(
                             "px-2 py-2 text-center align-top text-xs",
                             showDivider && "border-l border-border/60",
-                            isCoreDay && !entry && "bg-muted/30",
+                            isPreferredDay && !entry && "bg-muted/30",
+                            isExceptionDay && !entry && "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100",
                           )}
                         >
                           <div
@@ -460,7 +513,12 @@ export function BlockOverview({
                                 "border-emerald-400/50 bg-gradient-to-br from-emerald-500/25 via-emerald-500/15 to-emerald-500/10 text-emerald-900 shadow-[0_12px_30px_-20px_rgba(16,185,129,0.55)] dark:text-emerald-100",
                               !entry && isHoliday &&
                                 "border-sky-400/40 bg-gradient-to-br from-sky-500/20 via-sky-500/10 to-sky-500/5 text-sky-900 dark:text-sky-100",
-                              !entry && !isHoliday && "bg-card/40 text-muted-foreground",
+                              !entry && !isHoliday && isPreferredDay &&
+                                "border-primary/40 bg-primary/5 text-primary dark:border-primary/60 dark:bg-primary/10 dark:text-primary-foreground",
+                              !entry && !isHoliday && isExceptionDay &&
+                                "border-amber-300/60 bg-amber-100/60 text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-100",
+                              !entry && !isHoliday && !isPreferredDay && !isExceptionDay &&
+                                "bg-card/40 text-muted-foreground",
                               isToday(day) && "ring-2 ring-primary/70",
                               !isSameMonth(day, currentMonth) && "opacity-60",
                             )}

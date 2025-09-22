@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
+import { formatWeekdayList } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";
 
 const DATE_FORMAT = "yyyy-MM-dd";
@@ -82,11 +83,20 @@ type HolidayDayInfo = HolidayRange & {
 interface BlockCalendarProps {
   initialBlockedDays: BlockedDay[];
   holidays?: HolidayRange[];
+  freezeDays?: number;
+  preferredWeekdays?: number[];
+  exceptionWeekdays?: number[];
 }
 
 type SelectionIntent = "select" | "deselect";
 
-export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalendarProps) {
+export function BlockCalendar({
+  initialBlockedDays,
+  holidays = [],
+  freezeDays = 0,
+  preferredWeekdays = [],
+  exceptionWeekdays = [],
+}: BlockCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [blockedDays, setBlockedDays] = useState<BlockedDay[]>(() =>
     [...initialBlockedDays].sort((a, b) => a.date.localeCompare(b.date))
@@ -164,6 +174,9 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     return map;
   }, [holidays, showHolidays]);
 
+  const preferredWeekdaySet = useMemo(() => new Set(preferredWeekdays), [preferredWeekdays]);
+  const exceptionWeekdaySet = useMemo(() => new Set(exceptionWeekdays), [exceptionWeekdays]);
+
   const markRecent = useCallback((keys: string[], type: "added" | "removed") => {
     if (!keys.length) return;
     if (type === "added") {
@@ -228,7 +241,8 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const todayKey = format(startOfToday, DATE_FORMAT);
-  const freezeUntil = addDays(startOfToday, 7);
+  const freezeOffset = Number.isFinite(freezeDays) && freezeDays > 0 ? Math.floor(freezeDays) : 0;
+  const freezeUntil = addDays(startOfToday, freezeOffset);
   const freezeUntilKey = format(freezeUntil, DATE_FORMAT);
   const isWithinFreeze = useCallback((key: string) => key < freezeUntilKey, [freezeUntilKey]);
 
@@ -441,6 +455,9 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
       const wasRemoved = recentlyRemoved.has(day.key);
       const holidayEntries = holidaysByDate.get(day.key) ?? [];
       const isHoliday = holidayEntries.length > 0;
+      const weekdayIndex = day.date.getDay();
+      const isPreferredDay = preferredWeekdaySet.has(weekdayIndex);
+      const isExceptionDay = exceptionWeekdaySet.has(weekdayIndex);
 
       const ariaLabelParts = [
         format(day.date, "EEEE, d. MMMM yyyy", { locale: de }),
@@ -450,6 +467,15 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
             : `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
           : ", frei",
       ];
+
+      if (!entry) {
+        if (isPreferredDay) {
+          ariaLabelParts.push(", bevorzugter Probentag");
+        }
+        if (isExceptionDay) {
+          ariaLabelParts.push(", Ausnahmeprobentag");
+        }
+      }
 
       if (isHoliday) {
         const descriptions = holidayEntries.map((holiday) => {
@@ -497,6 +523,10 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
             "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-500/40 dark:bg-emerald-500/10",
           !entry && isHoliday &&
             "border-sky-400/60 bg-sky-50/80 dark:border-sky-500/40 dark:bg-sky-500/10",
+          !entry && !isHoliday && isPreferredDay &&
+            "border-primary/40 bg-primary/5 text-primary dark:border-primary/60 dark:bg-primary/10 dark:text-primary-foreground",
+          !entry && !isHoliday && isExceptionDay &&
+            "border-amber-300/60 bg-amber-100/60 text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-100",
           day.isToday && !isSelected && "ring-2 ring-primary/80",
           isSelected && "border-primary ring-2 ring-primary/60",
           "hover:shadow-sm hover:-translate-y-[1px]",
@@ -543,6 +573,8 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
       recentlyRemoved,
       selectedDayKeys,
       selectionMode,
+      preferredWeekdaySet,
+      exceptionWeekdaySet,
     ]
   );
   // Define bulk handlers before they are referenced in JSX
@@ -841,9 +873,27 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
           </div>
         );
 
+  const preferredSummary = useMemo(
+    () => formatWeekdayList(preferredWeekdays, { fallback: "keine bevorzugten Tage" }),
+    [preferredWeekdays],
+  );
+  const exceptionSummary = useMemo(
+    () => formatWeekdayList(exceptionWeekdays, { fallback: "keine Ausnahmeproben" }),
+    [exceptionWeekdays],
+  );
+
   const rehearsalHint = (
     <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm leading-6 text-primary dark:border-primary/30 dark:bg-primary/10">
-      Samstag und Sonntag sind unsere bevorzugten Probentage. Freitage planen wir nur in Ausnahmefällen – markiere sie bitte nur als bevorzugt, wenn du wirklich kommen kannst.
+      <p>
+        {preferredWeekdays.length > 0
+          ? `Bevorzugte Probentage: ${preferredSummary}.`
+          : "Es sind aktuell keine bevorzugten Probentage hinterlegt."}
+      </p>
+      <p className="mt-2">
+        {exceptionWeekdays.length > 0
+          ? `Ausnahmeproben planen wir nur an ${exceptionSummary}. Markiere diese Tage nur, wenn es wirklich passt.`
+          : "Zusätzliche Ausnahmeproben sind derzeit nicht vorgesehen."}
+      </p>
     </div>
   );
 

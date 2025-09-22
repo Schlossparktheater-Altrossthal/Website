@@ -97,6 +97,12 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen", category: "membership" },
   { key: "mitglieder.sperrliste", label: "Sperrliste pflegen", category: "membership" },
   {
+    key: "mitglieder.sperrliste.settings",
+    label: "Sperrlisten-Einstellungen verwalten",
+    description: "Ferienquelle, Vorlaufzeit und bevorzugte Probentage anpassen.",
+    category: "membership",
+  },
+  {
     key: "mitglieder.fotoerlaubnisse",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
