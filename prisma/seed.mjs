@@ -4,9 +4,12 @@ import {
   CharacterCastingType,
   BreakdownStatus,
 } from "@prisma/client";
+import { createRequire } from "node:module";
 import bcrypt from "bcryptjs";
-import chronikAltrossthal from "../src/data/chronik-altrossthal.json" assert { type: "json" };
-import designTokens from "../src/design-system/tokens.json" assert { type: "json" };
+
+const require = createRequire(import.meta.url);
+const chronikAltrossthal = require("../src/data/chronik-altrossthal.json");
+const designTokens = require("../src/design-system/tokens.json");
 const prisma = new PrismaClient();
 
 function splitFullName(value) {
