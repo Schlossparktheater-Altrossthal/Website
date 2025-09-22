@@ -29,6 +29,13 @@ function formatCurrency(amount: number, currency = "EUR") {
   }
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.valueOf())) return "—";
+  return parsed.toLocaleDateString("de-DE");
+}
+
 function sortBudgets(list: FinanceBudgetDTO[]) {
   return [...list].sort((a, b) => {
     const yearA = a.show.year ?? 0;
@@ -229,7 +236,7 @@ export function FinanceOverview({
                     <div className="flex-1">
                       <div className="font-medium text-foreground">{entry.title}</div>
                       <div className="text-xs text-muted-foreground">
-                        {entry.show?.title ?? "Allgemein"} · {new Date(entry.bookingDate).toLocaleDateString("de-DE")}
+                        {entry.show?.title ?? "Allgemein"} · {formatDate(entry.bookingDate)}
                       </div>
                     </div>
                     <div className="text-right">
