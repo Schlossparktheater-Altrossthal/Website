@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { AttendanceStatus, OnboardingFocus, PhotoConsentStatus, TaskStatus } from "@prisma/client";
+import type { AttendanceStatus, OnboardingFocus, PhotoConsentStatus, Prisma, TaskStatus } from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -265,6 +265,47 @@ function sortByDueDateAscending(
   return aTime - bTime;
 }
 
+const memberSelect = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  name: true,
+  email: true,
+  role: true,
+  roles: { select: { role: true } },
+  appRoles: {
+    select: {
+      role: { select: { id: true, name: true, systemRole: true, isSystem: true } },
+    },
+  },
+  avatarSource: true,
+  avatarImageUpdatedAt: true,
+  createdAt: true,
+  dateOfBirth: true,
+  deactivatedAt: true,
+  onboardingProfile: {
+    select: {
+      memberSinceYear: true,
+      focus: true,
+      background: true,
+      notes: true,
+    },
+  },
+  interests: {
+    select: {
+      interest: { select: { id: true, name: true } },
+    },
+  },
+  photoConsent: {
+    select: {
+      status: true,
+      consentGiven: true,
+      updatedAt: true,
+      approvedAt: true,
+    },
+  },
+} satisfies Prisma.UserSelect;
+
 export default async function MemberProfileAdminPage({ params }: PageProps) {
   const session = await requireAuth();
   const [allowed, canSendTestNotifications] = await Promise.all([
@@ -279,49 +320,10 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
   const decodedId = decodeURIComponent(userId);
 
-  const member = (await prisma.user.findUnique({
+  const member = await prisma.user.findUnique({
     where: { id: decodedId },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      name: true,
-      email: true,
-      role: true,
-      roles: { select: { role: true } },
-      appRoles: {
-        select: {
-          role: { select: { id: true, name: true, systemRole: true, isSystem: true } },
-        },
-      },
-      avatarSource: true,
-      avatarImageUpdatedAt: true,
-      createdAt: true,
-      dateOfBirth: true,
-      deactivatedAt: true,
-      onboardingProfile: {
-        select: {
-          memberSinceYear: true,
-          focus: true,
-          background: true,
-          notes: true,
-        },
-      },
-      interests: {
-        select: {
-          interest: { select: { id: true, name: true } },
-        },
-      },
-      photoConsent: {
-        select: {
-          status: true,
-          consentGiven: true,
-          updatedAt: true,
-          approvedAt: true,
-        },
-      },
-    } as any,
-  })) as any;
+    select: memberSelect,
+  });
 
   if (!member) {
     notFound();
@@ -648,7 +650,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const email = member.email?.trim() ?? null;
   const dateOfBirthLabel = formatDate(member.dateOfBirth);
   const createdAtLabel = formatDateTime(member.createdAt);
-  const deactivatedAt = (member as any).deactivatedAt as Date | null | undefined;
+  const deactivatedAt = member.deactivatedAt ?? null;
   const isDeactivated = Boolean(deactivatedAt);
   const deactivatedAtLabel = formatDateTime(deactivatedAt);
 
