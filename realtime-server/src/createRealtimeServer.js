@@ -1,7 +1,12 @@
+import fs from 'node:fs/promises';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'http';
+import os from 'node:os';
+import { setTimeout as wait } from 'node:timers/promises';
 import { Server } from 'socket.io';
 import { URL } from 'url';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+
+import analyticsStaticData from '../../src/data/server-analytics-static.json' assert { type: 'json' };
 
 function toISO(date) {
   return new Date(date).toISOString();
@@ -36,6 +41,202 @@ function resolveBoolean(value, fallback) {
   return fallback;
 }
 
+function resolveNumber(value, fallback) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const previousResourceUsage = new Map();
+
+function cloneStaticAnalyticsData() {
+  return JSON.parse(JSON.stringify(analyticsStaticData));
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.min(Math.max(value, min), max);
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '0 B';
+  }
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  let value = bytes;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  const decimals = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toFixed(decimals)} ${units[unitIndex]}`;
+}
+
+function readCpuTimes() {
+  return os.cpus().reduce(
+    (accumulator, cpu) => {
+      const times = cpu.times;
+      const total = times.user + times.nice + times.sys + times.idle + times.irq;
+      return {
+        idle: accumulator.idle + times.idle,
+        total: accumulator.total + total,
+      };
+    },
+    { idle: 0, total: 0 },
+  );
+}
+
+async function measureCpuUsagePercent(intervalMs = 200) {
+  const start = readCpuTimes();
+  if (start.total === 0) {
+    return 0;
+  }
+
+  await wait(intervalMs);
+
+  const end = readCpuTimes();
+  const totalDelta = end.total - start.total;
+  if (totalDelta <= 0) {
+    return 0;
+  }
+
+  const idleDelta = end.idle - start.idle;
+  const usage = 1 - idleDelta / totalDelta;
+  if (!Number.isFinite(usage) || usage < 0) {
+    return 0;
+  }
+
+  return clamp(usage * 100, 0, 100);
+}
+
+function getMemoryUsageSnapshot() {
+  const total = os.totalmem();
+  const free = os.freemem();
+
+  const totalBytes = clamp(total, 0, Number.MAX_SAFE_INTEGER);
+  const freeBytes = clamp(Math.min(free, totalBytes), 0, totalBytes);
+  const usedBytes = Math.max(totalBytes - freeBytes, 0);
+  const usagePercent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
+
+  return {
+    usagePercent,
+    totalBytes,
+    freeBytes,
+  };
+}
+
+async function getDiskUsageSnapshot(path) {
+  const stats = await fs.statfs(path);
+
+  const blockSize = clamp(stats.bsize ?? 0, 0, Number.MAX_SAFE_INTEGER);
+  const totalBlocks = clamp(stats.blocks ?? 0, 0, Number.MAX_SAFE_INTEGER);
+  const availableBlocksValue = typeof stats.bavail === 'number' && stats.bavail >= 0 ? stats.bavail : stats.bfree ?? 0;
+  const availableBlocks = clamp(availableBlocksValue, 0, totalBlocks);
+
+  const totalBytes = blockSize * totalBlocks;
+  const freeBytes = blockSize * availableBlocks;
+  const usedBytes = Math.max(totalBytes - freeBytes, 0);
+  const usagePercent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
+
+  return {
+    usagePercent,
+    totalBytes,
+    freeBytes,
+    path,
+  };
+}
+
+function calculateChangePercent(id, currentValue) {
+  const previous = previousResourceUsage.get(id);
+  previousResourceUsage.set(id, currentValue);
+
+  if (previous === undefined || previous <= 0) {
+    return 0;
+  }
+
+  const change = (currentValue - previous) / previous;
+  if (!Number.isFinite(change)) {
+    return 0;
+  }
+
+  return clamp(change, -5, 5);
+}
+
+function finalizeResourceMeasurement(measurement) {
+  const sanitizedUsage = clamp(measurement.usagePercent, 0, 100);
+  const roundedUsage = Math.round(sanitizedUsage * 10) / 10;
+  const changePercent = Math.round(calculateChangePercent(measurement.id, roundedUsage) * 100) / 100;
+
+  return {
+    ...measurement,
+    usagePercent: roundedUsage,
+    changePercent,
+  };
+}
+
+async function collectSystemResourceUsage(logError = console.error) {
+  const resources = [];
+
+  const cpuCount = Math.max(os.cpus().length, 1);
+  const loadAverages = os.loadavg();
+  const loadOneMinuteRaw = loadAverages.length > 0 ? loadAverages[0] : 0;
+  const loadOneMinute = Number.isFinite(loadOneMinuteRaw) ? loadOneMinuteRaw : 0;
+
+  const diskPath = process.cwd();
+
+  const [cpuUsagePercent, diskUsage] = await Promise.all([
+    measureCpuUsagePercent().catch((error) => {
+      logError('[server-analytics] CPU usage probe failed', error);
+      return null;
+    }),
+    getDiskUsageSnapshot(diskPath).catch((error) => {
+      logError(`[server-analytics] Disk usage probe failed for ${diskPath}`, error);
+      return null;
+    }),
+  ]);
+
+  if (cpuUsagePercent !== null) {
+    resources.push({
+      id: 'app-cpu',
+      label: 'App-Server CPU',
+      usagePercent: cpuUsagePercent,
+      capacity: `${cpuCount} Kern${cpuCount === 1 ? '' : 'e'} · Load 1m ${loadOneMinute.toFixed(2)}`,
+    });
+  }
+
+  const memoryUsage = getMemoryUsageSnapshot();
+  resources.push({
+    id: 'app-ram',
+    label: 'Arbeitsspeicher',
+    usagePercent: memoryUsage.usagePercent,
+    capacity: `${formatBytes(memoryUsage.totalBytes)} gesamt · ${formatBytes(memoryUsage.freeBytes)} frei`,
+  });
+
+  if (diskUsage !== null) {
+    const normalizedPath = diskUsage.path === '' ? '/' : diskUsage.path;
+    resources.push({
+      id: 'app-disk',
+      label: `Dateisystem (${normalizedPath})`,
+      usagePercent: diskUsage.usagePercent,
+      capacity: `${formatBytes(diskUsage.totalBytes)} gesamt · ${formatBytes(diskUsage.freeBytes)} frei`,
+    });
+  }
+
+  if (resources.length === 0) {
+    throw new Error('Keine Systemressourcen konnten ermittelt werden');
+  }
+
+  return resources.map(finalizeResourceMeasurement);
+}
+
 export function createRealtimeServer(options = {}) {
   const {
     server,
@@ -49,6 +250,8 @@ export function createRealtimeServer(options = {}) {
     corsOrigin: explicitCorsOrigin,
     allowFallbackResponse,
     attachRequestListener = true,
+    analyticsIntervalMs: explicitAnalyticsIntervalMs,
+    analyticsMaxAgeMs: explicitAnalyticsMaxAgeMs,
   } = options;
 
   const port = Number.isFinite(explicitPort) ? Number(explicitPort) : Number(process.env.PORT || 4001);
@@ -108,6 +311,115 @@ export function createRealtimeServer(options = {}) {
           origin: allowedOrigins,
           credentials: true,
         },
+  });
+
+  const logError = typeof logger.error === 'function' ? (...args) => logger.error(...args) : (...args) => console.error(...args);
+
+  const defaultAnalyticsInterval = 15000;
+  const analyticsIntervalMsRaw = resolveNumber(
+    explicitAnalyticsIntervalMs,
+    resolveNumber(process.env.REALTIME_ANALYTICS_INTERVAL_MS, defaultAnalyticsInterval),
+  );
+  const analyticsIntervalMs = Math.max(analyticsIntervalMsRaw, 2000);
+
+  const analyticsMaxAgeMsRaw = resolveNumber(
+    explicitAnalyticsMaxAgeMs,
+    resolveNumber(process.env.REALTIME_ANALYTICS_MAX_AGE_MS, analyticsIntervalMs * 1.5),
+  );
+  const analyticsMaxAgeMs = Math.max(analyticsMaxAgeMsRaw, analyticsIntervalMs);
+
+  let latestAnalytics = null;
+  let analyticsRefreshPromise = null;
+  let analyticsIntervalId = null;
+
+  async function collectAnalyticsSnapshot() {
+    const base = cloneStaticAnalyticsData();
+    let resourceUsage = base.resourceUsage;
+    try {
+      resourceUsage = await collectSystemResourceUsage(logError);
+    } catch (error) {
+      logError('[Realtime] Verwende statische Ressourcenwerte für Server-Analytics', error);
+    }
+
+    return {
+      generatedAt: toISO(Date.now()),
+      ...base,
+      resourceUsage,
+    };
+  }
+
+  function analyticsIsFresh() {
+    if (!latestAnalytics) {
+      return false;
+    }
+    const timestamp = Date.parse(latestAnalytics.generatedAt);
+    if (!Number.isFinite(timestamp)) {
+      return false;
+    }
+    return Date.now() - timestamp < analyticsMaxAgeMs;
+  }
+
+  async function refreshAnalytics() {
+    if (analyticsRefreshPromise) {
+      return analyticsRefreshPromise;
+    }
+
+    analyticsRefreshPromise = collectAnalyticsSnapshot()
+      .then((snapshot) => {
+        latestAnalytics = snapshot;
+        return snapshot;
+      })
+      .catch((error) => {
+        logError('[Realtime] Failed to refresh analytics snapshot', error);
+        if (latestAnalytics) {
+          return latestAnalytics;
+        }
+        const fallback = { generatedAt: toISO(Date.now()), ...cloneStaticAnalyticsData() };
+        latestAnalytics = fallback;
+        return fallback;
+      })
+      .finally(() => {
+        analyticsRefreshPromise = null;
+      });
+
+    return analyticsRefreshPromise;
+  }
+
+  async function getAnalyticsSnapshot() {
+    if (analyticsIsFresh()) {
+      return latestAnalytics;
+    }
+    return refreshAnalytics();
+  }
+
+  function emitAnalytics(target, analytics) {
+    if (!analytics || typeof target.emit !== 'function') {
+      return;
+    }
+    target.emit('server_analytics_update', {
+      type: 'server_analytics_update',
+      timestamp: analytics.generatedAt ?? toISO(Date.now()),
+      analytics,
+    });
+  }
+
+  function scheduleAnalyticsBroadcast() {
+    refreshAnalytics()
+      .then((analytics) => {
+        emitAnalytics(io, analytics);
+      })
+      .catch((error) => {
+        logError('[Realtime] Failed to broadcast analytics update', error);
+      });
+  }
+
+  analyticsIntervalId = setInterval(scheduleAnalyticsBroadcast, analyticsIntervalMs);
+  if (typeof analyticsIntervalId.unref === 'function') {
+    analyticsIntervalId.unref();
+  }
+
+  refreshAnalytics().catch((error) => {
+    logError('[Realtime] Initial analytics snapshot failed', error);
   });
 
   const onlineUsers = new Map();
@@ -487,6 +799,14 @@ export function createRealtimeServer(options = {}) {
 
     registerUser(socket);
 
+    getAnalyticsSnapshot()
+      .then((analytics) => {
+        emitAnalytics(socket, analytics);
+      })
+      .catch((error) => {
+        logError(`[Realtime] Failed to deliver analytics snapshot to socket ${socket.id}`, error);
+      });
+
     socket.join('global');
     socket.data.rooms.add('global');
 
@@ -529,6 +849,16 @@ export function createRealtimeServer(options = {}) {
       emitRehearsalUsersList(rehearsalId, socket);
     });
 
+    socket.on('get_server_analytics', () => {
+      getAnalyticsSnapshot()
+        .then((analytics) => {
+          emitAnalytics(socket, analytics);
+        })
+        .catch((error) => {
+          logError(`[Realtime] Failed to refresh analytics for socket ${socket.id}`, error);
+        });
+    });
+
     socket.on('ping', () => {
       socket.emit('pong');
     });
@@ -559,6 +889,10 @@ export function createRealtimeServer(options = {}) {
   async function close() {
     if (closed) return;
     closed = true;
+    if (analyticsIntervalId) {
+      clearInterval(analyticsIntervalId);
+      analyticsIntervalId = null;
+    }
     await new Promise((resolve, reject) => {
       io.close((error) => {
         if (error) {
