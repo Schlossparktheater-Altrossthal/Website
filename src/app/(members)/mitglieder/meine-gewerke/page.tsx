@@ -29,6 +29,10 @@ export default async function MeineGewerkePage() {
     session.user,
     "mitglieder.koerpermasse",
   );
+  const canManageDepartments = await hasPermission(
+    session.user,
+    "mitglieder.produktionen",
+  );
   const isEnsembleMember = hasRole(session.user, "cast");
   const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
   if (!allowed) {
@@ -329,9 +333,12 @@ export default async function MeineGewerkePage() {
 
       <div className="space-y-8">
         {memberships.map((membership) => {
-          const teamLinkHref = membership.department.slug
-            ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
-            : undefined;
+          const teamLinkHref = canManageDepartments
+            ? `/mitglieder/produktionen/gewerke/${membership.department.id}`
+            : membership.department.slug
+              ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
+              : undefined;
+          const teamLinkLabel = canManageDepartments ? "Gewerk-Hub öffnen" : "Team ansehen";
 
           return (
             <DepartmentCard
@@ -345,6 +352,7 @@ export default async function MeineGewerkePage() {
               planningWindowLabel={planningWindowLabel}
               now={now}
               teamLinkHref={teamLinkHref}
+              teamLinkLabel={teamLinkLabel}
               measurementsByUser={costumeMeasurementsByUser}
             />
           );
