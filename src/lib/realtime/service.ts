@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import type { Server as HTTPServer } from "http";
 import { resolveHandshakeSecret, verifyHandshakeToken } from "./handshake";
+import { prisma } from "@/lib/prisma";
 import {
   AttendanceUpdatedEvent,
   ClientToServerEvents,
@@ -142,41 +143,42 @@ export class RealtimeService {
   }
 
   private registerCoreListeners(socket: IOSocket): void {
-    socket.on("join_room", (room: RoomType) => {
-      let verifiedUserId: string | undefined;
-      if (room.startsWith("user_")) {
-        if (!socket.data.handshakeVerified || !socket.data.userId) {
-          console.warn(
-            `[Realtime] ${socket.id} attempted to join ${room} without verified handshake.`,
-          );
+    socket.on("join_room", async (room: RoomType) => {
+      try {
+        if (!room) {
+          this.logUnauthorizedRoomJoin(socket, room, "invalid room identifier");
           return;
         }
 
-        const targetUserId = room.substring(5);
-        if (socket.data.userId !== targetUserId) {
-          console.warn(
-            `[Realtime] ${socket.id} attempted to join user room ${room} as ${socket.data.userId}.`,
-          );
+        if (!socket.data.rooms) {
+          socket.data.rooms = new Set<RoomType>();
+        }
+
+        if (socket.data.rooms.has(room)) {
           return;
         }
 
-        verifiedUserId = socket.data.userId;
-      }
-
-      socket.join(room);
-      socket.data.rooms.add(room);
-
-      if (room.startsWith("user_")) {
-        const userId = verifiedUserId!;
-        const becameOnline = this.addUserConnection(userId, socket.id, socket.data.userName);
-        if (becameOnline) {
-          this.notifyUserJoined(userId, socket.data.userName);
-          this.emitOnlineStatsUpdate();
+        const allowed = await this.ensureRoomAccess(socket, room);
+        if (!allowed) {
+          return;
         }
-      }
 
-      this.emitRehearsalPresence(socket, room, "join");
-      console.log(`[Realtime] ${socket.id} joined room ${room}`);
+        await socket.join(room);
+        socket.data.rooms.add(room);
+
+        if (room.startsWith("user_") && socket.data.userId) {
+          const becameOnline = this.addUserConnection(socket.data.userId, socket.id, socket.data.userName);
+          if (becameOnline) {
+            this.notifyUserJoined(socket.data.userId, socket.data.userName);
+            this.emitOnlineStatsUpdate();
+          }
+        }
+
+        this.emitRehearsalPresence(socket, room, "join");
+        console.log(`[Realtime] ${socket.id} joined room ${room}`);
+      } catch (error) {
+        console.error(`[Realtime] Failed to handle join_room for socket ${socket.id}`, error);
+      }
     });
 
     socket.on("leave_room", (room: RoomType) => {
@@ -222,6 +224,120 @@ export class RealtimeService {
         }
       }
     });
+  }
+
+  private logUnauthorizedRoomJoin(socket: IOSocket, room: RoomType, reason: string): void {
+    const userDescriptor = socket.data.userId ? `user ${socket.data.userId}` : "unauthenticated user";
+    console.warn(
+      `[Realtime] Blocked socket ${socket.id} (${userDescriptor}) from joining room ${room}: ${reason}`,
+    );
+  }
+
+  private async ensureRoomAccess(socket: IOSocket, room: RoomType): Promise<boolean> {
+    if (room === "global") {
+      return true;
+    }
+
+    if (room.startsWith("user_")) {
+      const authenticatedUserId = socket.data.userId;
+      if (!authenticatedUserId) {
+        this.logUnauthorizedRoomJoin(socket, room, "missing authenticated user");
+        return false;
+      }
+
+      const targetUserId = room.substring("user_".length);
+      if (!targetUserId || targetUserId !== authenticatedUserId) {
+        this.logUnauthorizedRoomJoin(
+          socket,
+          room,
+          `mismatched user room (expected user_${authenticatedUserId})`,
+        );
+        return false;
+      }
+
+      return true;
+    }
+
+    const userId = socket.data.userId;
+    if (!userId) {
+      this.logUnauthorizedRoomJoin(socket, room, "missing authenticated user");
+      return false;
+    }
+
+    if (room.startsWith("rehearsal_")) {
+      const rehearsalId = room.substring("rehearsal_".length);
+      if (!rehearsalId) {
+        this.logUnauthorizedRoomJoin(socket, room, "missing rehearsal identifier");
+        return false;
+      }
+
+      const allowed = await this.isUserAuthorizedForRehearsal(userId, rehearsalId);
+      if (!allowed) {
+        this.logUnauthorizedRoomJoin(socket, room, `user ${userId} is not allowed to join rehearsal ${rehearsalId}`);
+      }
+      return allowed;
+    }
+
+    if (room.startsWith("show_")) {
+      const showId = room.substring("show_".length);
+      if (!showId) {
+        this.logUnauthorizedRoomJoin(socket, room, "missing show identifier");
+        return false;
+      }
+
+      const allowed = await this.isUserAuthorizedForShow(userId, showId);
+      if (!allowed) {
+        this.logUnauthorizedRoomJoin(socket, room, `user ${userId} is not allowed to join show ${showId}`);
+      }
+      return allowed;
+    }
+
+    return true;
+  }
+
+  private async isUserAuthorizedForRehearsal(userId: string, rehearsalId: string): Promise<boolean> {
+    try {
+      const rehearsal = await prisma.rehearsal.findFirst({
+        where: {
+          id: rehearsalId,
+          OR: [
+            { attendance: { some: { userId } } },
+            { invitees: { some: { userId } } },
+            { createdBy: userId },
+          ],
+        },
+        select: { id: true },
+      });
+
+      return Boolean(rehearsal);
+    } catch (error) {
+      console.error(
+        `[Realtime] Failed to verify rehearsal access for user ${userId} and rehearsal ${rehearsalId}`,
+        error,
+      );
+      return false;
+    }
+  }
+
+  private async isUserAuthorizedForShow(userId: string, showId: string): Promise<boolean> {
+    try {
+      const show = await prisma.show.findFirst({
+        where: {
+          id: showId,
+          OR: [
+            { characters: { some: { castings: { some: { userId } } } } },
+            { rehearsals: { some: { attendance: { some: { userId } } } } },
+            { rehearsals: { some: { invitees: { some: { userId } } } } },
+          ],
+        },
+        select: { id: true },
+      });
+
+      return Boolean(show);
+    } catch (error) {
+      console.error(`[Realtime] Failed to verify show access for user ${userId} and show ${showId}`, error);
+      return false;
+    }
   }
 
   private emitRehearsalPresence(socket: IOSocket, room: RoomType, action: "join" | "leave"): void {
@@ -345,71 +461,6 @@ export class RealtimeService {
     this.emitToOnlineStatsSubscribers("online_stats_update", payload);
   }
 
-  private getOnlineStatsSnapshot(): OnlineStatsSnapshot {
-    return {
-      totalOnline: this.connectedUsers.size,
-      onlineUsers: Array.from(this.connectedUsers.entries()).map(([id, info]) => ({
-        id,
-        name: info.name,
-      })),
-    };
-  }
-
-  private emitToOnlineStatsSubscribers<E extends keyof ServerToClientEvents>(
-    event: E,
-    ...payload: Parameters<ServerToClientEvents[E]>
-  ): void {
-    if (!this.io) return;
-
-    this.onlineStatsSubscribers.forEach((socketId) => {
-      const subscriber = this.io!.sockets.sockets.get(socketId) as IOSocket | undefined;
-      if (subscriber) {
-        subscriber.emit(event, ...payload);
-      } else {
-        this.onlineStatsSubscribers.delete(socketId);
-      }
-    });
-  }
-
-  public isUserOnline(userId: string): boolean {
-    return this.connectedUsers.has(userId);
-  }
-
-  public getOnlineUsers(): string[] {
-    return Array.from(this.connectedUsers.keys());
-  }
-
-  public broadcastAttendanceUpdate(event: Omit<AttendanceUpdatedEvent, "timestamp">): void {
-    const io = this.io;
-    if (!io) return;
-
-    const fullEvent: AttendanceUpdatedEvent = {
-      ...event,
-      timestamp: new Date().toISOString(),
-    };
-
-    io.to(`rehearsal_${event.rehearsalId}`).emit("attendance_updated", fullEvent);
-    io.to(`user_${event.targetUserId}`).emit("attendance_updated", fullEvent);
-
-    console.log(`[Realtime] broadcast attendance update for rehearsal ${event.rehearsalId}`);
-  }
-
-  public broadcastRehearsalCreated(event: Omit<RehearsalCreatedEvent, "timestamp">): void {
-    const io = this.io;
-    if (!io) return;
-
-    const fullEvent: RehearsalCreatedEvent = {
-      ...event,
-      timestamp: new Date().toISOString(),
-    };
-
-    event.targetUserIds.forEach((userId) => {
-      io.to(`user_${userId}`).emit("rehearsal_created", fullEvent);
-    });
-
-    console.log(`[Realtime] broadcast rehearsal created ${event.rehearsal.id}`);
-  }
-
   public broadcastRehearsalUpdated(event: Omit<RehearsalUpdatedEvent, "timestamp">): void {
     const io = this.io;
     if (!io) return;
@@ -439,6 +490,32 @@ export class RealtimeService {
     io.to(`user_${event.targetUserId}`).emit("notification_created", fullEvent);
 
     console.log(`[Realtime] sent notification to user ${event.targetUserId}`);
+  }
+
+  private getOnlineStatsSnapshot(): OnlineStatsSnapshot {
+    return {
+      totalOnline: this.connectedUsers.size,
+      onlineUsers: Array.from(this.connectedUsers.entries()).map(([id, info]) => ({
+        id,
+        name: info.name,
+      })),
+    };
+  }
+
+  private emitToOnlineStatsSubscribers<E extends keyof ServerToClientEvents>(
+    event: E,
+    ...payload: Parameters<ServerToClientEvents[E]>
+  ): void {
+    if (!this.io) return;
+
+    this.onlineStatsSubscribers.forEach((socketId) => {
+      const subscriber = this.io!.sockets.sockets.get(socketId) as IOSocket | undefined;
+      if (subscriber) {
+        subscriber.emit(event, ...payload);
+      } else {
+        this.onlineStatsSubscribers.delete(socketId);
+      }
+    });
   }
 
   public broadcast<T extends RealtimeEvent>(event: T, rooms: RoomType[] | RoomType, excludeSocket?: string): void {
