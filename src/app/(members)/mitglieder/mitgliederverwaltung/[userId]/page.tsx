@@ -42,48 +42,66 @@ const relativeTimeFormatter = new Intl.RelativeTimeFormat("de-DE", { numeric: "a
 
 const ATTENDANCE_STATUS_ORDER: AttendanceStatus[] = ["yes", "maybe", "no", "emergency"];
 
+// Attendance UI labels and styles
 const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
   yes: "Zusage",
-  no: "Absage",
   maybe: "Unentschieden",
+  no: "Absage",
   emergency: "Notfall",
 };
 
 const ATTENDANCE_STATUS_BADGE_CLASSES: Record<AttendanceStatus, string> = {
-  yes: "border-emerald-300/70 bg-emerald-500/10 text-emerald-700",
-  no: "border-rose-300/70 bg-rose-500/10 text-rose-700",
-  maybe: "border-sky-300/70 bg-sky-500/10 text-sky-700",
-  emergency: "border-amber-300/70 bg-amber-500/10 text-amber-800",
+  yes: "border-emerald-200 bg-emerald-500/10 text-emerald-700",
+  maybe: "border-amber-200 bg-amber-500/10 text-amber-700",
+  no: "border-rose-200 bg-rose-500/10 text-rose-700",
+  emergency: "border-red-200 bg-red-500/10 text-red-700",
 };
 
 const ATTENDANCE_STATUS_DOT_CLASSES: Record<AttendanceStatus, string> = {
-  yes: "border-emerald-400 bg-emerald-500",
-  no: "border-rose-400 bg-rose-500",
-  maybe: "border-sky-400 bg-sky-500",
-  emergency: "border-amber-400 bg-amber-500",
+  yes: "bg-emerald-500",
+  maybe: "bg-amber-500",
+  no: "bg-rose-500",
+  emergency: "bg-red-500",
 };
 
 const ATTENDANCE_STATUS_SEGMENT_CLASSES: Record<AttendanceStatus, string> = {
-  yes: "bg-emerald-500/80",
-  no: "bg-rose-500/80",
-  maybe: "bg-sky-500/80",
-  emergency: "bg-amber-500/80",
+  yes: "bg-emerald-500/70",
+  maybe: "bg-amber-500/70",
+  no: "bg-rose-500/70",
+  emergency: "bg-red-500/70",
 };
 
-const DEFAULT_BADGE_CLASS = "border-border/60 bg-muted/50 text-muted-foreground";
-const DEFAULT_DOT_CLASS = "border-border/70 bg-muted-foreground/60";
-const DEFAULT_SEGMENT_CLASS = "bg-muted-foreground/40";
+const DEFAULT_BADGE_CLASS = "border-border/60 bg-muted/40 text-muted-foreground";
+const DEFAULT_DOT_CLASS = "bg-muted-foreground";
+const DEFAULT_SEGMENT_CLASS = "bg-muted/70";
 
+// Tasks UI labels
 const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   todo: "Offen",
   doing: "In Arbeit",
   done: "Erledigt",
 };
 
+// Onboarding focus labels
 const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
-  acting: "Fokus Bühne & Schauspiel",
-  tech: "Fokus Backstage & Technik",
-  both: "Bühne & Backstage kombiniert",
+  acting: "Schauspiel",
+  tech: "Gewerke",
+  both: "Schauspiel & Gewerke",
+};
+
+// Photo consent types and labels
+type PhotoConsentSelection = {
+  status: PhotoConsentStatus;
+  consentGiven: boolean;
+  updatedAt: Date | null;
+  approvedAt: Date | null;
+};
+
+type PhotoConsentInfo = {
+  label: string;
+  description: string;
+  className: string;
+  updatedAt: Date | null;
 };
 
 const PHOTO_STATUS_LABELS: Record<PhotoConsentStatus, string> = {
@@ -93,31 +111,15 @@ const PHOTO_STATUS_LABELS: Record<PhotoConsentStatus, string> = {
 };
 
 const PHOTO_STATUS_DESCRIPTIONS: Record<PhotoConsentStatus, string> = {
-  pending: "Formular liegt vor und wartet auf finale Freigabe.",
-  approved: "Die Freigabe wurde erteilt – Medien dürfen genutzt werden.",
-  rejected: "Antrag wurde abgelehnt. Bitte Rücksprache mit der Administration halten.",
+  pending: "Die Einverständniserklärung wird aktuell geprüft.",
+  approved: "Foto-/Videofreigabe ist erteilt.",
+  rejected: "Die Einverständniserklärung wurde abgelehnt.",
 };
 
 const PHOTO_STATUS_CLASSES: Record<PhotoConsentStatus, string> = {
-  pending: "border-warning/50 bg-warning/10 text-warning",
-  approved: "border-success/50 bg-success/10 text-success",
-  rejected: "border-destructive/50 bg-destructive/10 text-destructive",
-};
-
-type PageProps = { params: { userId: string } };
-
-type PhotoConsentInfo = {
-  label: string;
-  description: string;
-  className: string;
-  updatedAt: Date | null;
-};
-
-type PhotoConsentSelection = {
-  status: PhotoConsentStatus;
-  consentGiven: boolean;
-  updatedAt: Date;
-  approvedAt: Date | null;
+  pending: "border-warning/45 bg-warning/10 text-warning",
+  approved: "border-success/45 bg-success/10 text-success",
+  rejected: "border-destructive/45 bg-destructive/10 text-destructive",
 };
 
 function formatDate(value: Date | null | undefined) {
@@ -230,6 +232,8 @@ function formatRelativeTime(value: Date | null | undefined) {
   return relativeTimeFormatter.format(valueToFormat, unit);
 }
 
+type PageProps = { params: { userId: string | string[] } };
+
 type ActivityStatCardProps = {
   label: string;
   value: string;
@@ -275,7 +279,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
   const decodedId = decodeURIComponent(userId);
 
-  const member = await prisma.user.findUnique({
+  const member = (await prisma.user.findUnique({
     where: { id: decodedId },
     select: {
       id: true,
@@ -294,6 +298,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
       avatarImageUpdatedAt: true,
       createdAt: true,
       dateOfBirth: true,
+      deactivatedAt: true,
       onboardingProfile: {
         select: {
           memberSinceYear: true,
@@ -315,8 +320,8 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
           approvedAt: true,
         },
       },
-    },
-  });
+    } as any,
+  })) as any;
 
   if (!member) {
     notFound();
@@ -606,22 +611,24 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
 
   const systemRoles = sortRoles([
     member.role as Role,
-    ...member.roles.map((entry) => entry.role as Role),
+    ...member.roles.map((entry: { role: Role }) => entry.role as Role),
   ]);
 
   const customRoles = member.appRoles
-    .map((entry) => entry.role)
+    .map((entry: { role: { id: string; name: string; systemRole: Role | null; isSystem: boolean } | null }) => entry.role)
     .filter(
-      (role): role is { id: string; name: string; systemRole: Role | null; isSystem: boolean } => Boolean(role),
+      (role: { id: string; name: string; systemRole: Role | null; isSystem: boolean } | null): role is {
+        id: string; name: string; systemRole: Role | null; isSystem: boolean
+      } => Boolean(role),
     )
-    .filter((role) => !role.systemRole)
-    .map((role) => ({ id: role.id, name: role.name }));
+    .filter((role: { id: string; name: string; systemRole: Role | null; isSystem: boolean }) => !role.systemRole)
+    .map((role: { id: string; name: string }) => ({ id: role.id, name: role.name }));
 
-  const interestNames = Array.from(
-    new Set(
+  const interestNames: string[] = Array.from(
+    new Set<string>(
       member.interests
-        .map((entry) => entry.interest?.name?.trim())
-        .filter((value): value is string => Boolean(value && value.length > 0)),
+        .map((entry: { interest: { name: string | null } | null }) => entry.interest?.name?.trim() ?? null)
+        .filter((value: string | null): value is string => Boolean(value && value.length > 0)),
     ),
   );
 
@@ -632,7 +639,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     ? `Seit ${member.onboardingProfile.memberSinceYear}`
     : `Seit ${formatDate(member.createdAt)}`;
 
-  const onboardingFocus = member.onboardingProfile?.focus ?? null;
+  const onboardingFocus = (member.onboardingProfile?.focus ?? null) as OnboardingFocus | null;
   const onboardingFocusLabel = onboardingFocus ? ONBOARDING_FOCUS_LABELS[onboardingFocus] : "Kein Schwerpunkt hinterlegt";
 
   const onboardingBackground = member.onboardingProfile?.background?.trim() ?? null;
@@ -641,6 +648,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const email = member.email?.trim() ?? null;
   const dateOfBirthLabel = formatDate(member.dateOfBirth);
   const createdAtLabel = formatDateTime(member.createdAt);
+  const deactivatedAt = (member as any).deactivatedAt as Date | null | undefined;
+  const isDeactivated = Boolean(deactivatedAt);
+  const deactivatedAtLabel = formatDateTime(deactivatedAt);
 
   const pageTitle = `Profil von ${displayName}`;
 
@@ -663,7 +673,6 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
           </Button>
         }
       />
-
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="flex w-full justify-start overflow-x-auto rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
           <TabsTrigger value="overview" className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
@@ -695,11 +704,23 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                         className="h-[76px] w-[76px] border-border/80 text-xl shadow-sm"
                       />
                       <div className="space-y-1.5">
-                        <CardTitle className="text-xl font-semibold leading-tight text-foreground">{displayName}</CardTitle>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <CardTitle className="text-xl font-semibold leading-tight text-foreground">{displayName}</CardTitle>
+                          {isDeactivated && (
+                            <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
+                              Deaktiviert
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <CalendarDays className="h-4 w-4" aria-hidden />
                           {memberSinceLabel}
                         </div>
+                        {isDeactivated && (
+                          <div className="text-xs text-destructive">
+                            {deactivatedAtLabel ? `Konto deaktiviert seit ${deactivatedAtLabel}.` : "Konto ist aktuell deaktiviert."}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -725,7 +746,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
 
                   {customRoles.length ? (
                     <div className="flex flex-wrap gap-2">
-                      {customRoles.map((role) => (
+                      {customRoles.map((role: { id: string; name: string }) => (
                         <Badge key={role.id} variant="secondary" className="border-primary/30 bg-primary/10 text-primary">
                           {role.name}
                         </Badge>
@@ -882,7 +903,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Zusätzliche Rollen</div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {customRoles.length ? (
-                        customRoles.map((role) => (
+                        customRoles.map((role: { id: string; name: string }) => (
                           <Badge key={role.id} variant="outline" className="border-primary/30 bg-primary/5 text-primary">
                             {role.name}
                           </Badge>

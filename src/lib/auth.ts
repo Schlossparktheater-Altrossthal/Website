@@ -21,6 +21,8 @@ type MutableToken = JWT & {
   email?: string;
   avatarSource?: AvatarSource;
   avatarUpdatedAt?: string | null;
+  isDeactivated?: boolean;
+  deactivatedAt?: string | null;
 };
 
 type RoleSource = { role?: unknown; roles?: unknown };
@@ -257,6 +259,10 @@ const credentialsProvider = Credentials({
       throw new Error("Ungültige Zugangsdaten");
     }
 
+    if (user.deactivatedAt) {
+      throw new Error("Dieses Konto wurde deaktiviert.");
+    }
+
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       throw new Error("Ungültige Zugangsdaten");
@@ -300,6 +306,18 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: { signIn: "/login" },
   callbacks: {
+    async signIn({ user }) {
+      const userId = typeof user?.id === "string" ? user.id : null;
+      if (!userId) return false;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { deactivatedAt: true },
+      });
+      if (dbUser?.deactivatedAt) {
+        return "/login?error=AccessDenied&reason=deactivated";
+      }
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       const mutableToken = token as MutableToken;
       const applyRoles = (roles?: Role[]) => {
@@ -314,6 +332,8 @@ export const authOptions: NextAuthOptions = {
         if (id) mutableToken.id = id;
         const email = extractString(user.email);
         if (email) mutableToken.email = email;
+        mutableToken.deactivatedAt = null;
+        mutableToken.isDeactivated = false;
         applyNameFields(mutableToken, user);
         const userRoles = extractRolesFromSource(user as AdapterUser & RoleSource);
         if (userRoles) applyRoles(userRoles);
@@ -347,6 +367,7 @@ export const authOptions: NextAuthOptions = {
             roles: { select: { role: true } },
             avatarSource: true,
             avatarImageUpdatedAt: true,
+            deactivatedAt: true,
           },
         });
         if (dbUser) {
@@ -361,6 +382,13 @@ export const authOptions: NextAuthOptions = {
             mutableToken.email = dbEmail;
           }
           applyAvatarFields(mutableToken, dbUser as unknown as Record<string, unknown>);
+          if (dbUser.deactivatedAt) {
+            mutableToken.deactivatedAt = dbUser.deactivatedAt.toISOString();
+            mutableToken.isDeactivated = true;
+          } else {
+            mutableToken.deactivatedAt = null;
+            mutableToken.isDeactivated = false;
+          }
         }
       }
 
@@ -387,6 +415,8 @@ export const authOptions: NextAuthOptions = {
         }
         session.user.avatarSource = mutableToken.avatarSource ?? null;
         session.user.avatarUpdatedAt = mutableToken.avatarUpdatedAt ?? null;
+        session.user.isDeactivated = Boolean(mutableToken.isDeactivated);
+        session.user.deactivatedAt = mutableToken.deactivatedAt ?? null;
       }
       return session;
     },

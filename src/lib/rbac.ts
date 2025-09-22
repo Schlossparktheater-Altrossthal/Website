@@ -28,6 +28,7 @@ export function hasRole(user: { role?: Role; roles?: Role[] } | null | undefined
 export async function requireAuth(roles?: Role[]) {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
+  if (session.user.isDeactivated) redirect("/login?error=AccessDenied&reason=deactivated");
   if (roles && !hasRole(session.user, ...roles)) redirect("/");
   return session;
 }

@@ -53,7 +53,13 @@ function LoginContent() {
   // Surface NextAuth error from ?error=...
   useEffect(() => {
     const err = sp?.get("error");
+    const reason = sp?.get("reason");
     if (err) {
+      if (err === "AccessDenied" && reason === "deactivated") {
+        toast.error("Dieses Konto wurde deaktiviert. Bitte kontaktiere die Administration.");
+        setShowMagicSuggestion(false);
+        return;
+      }
       const map: Record<string, string> = {
         OAuthAccountNotLinked: "Account nicht verknüpft",
         CredentialsSignin: "Ungültige Zugangsdaten",
