@@ -11,7 +11,7 @@ import {
 import { addDays, format, parseISO, startOfMonth, isValid } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { toast } from "sonner";
-import { CalendarDays, CircleX } from "lucide-react";
+import { CalendarDays, CircleX, Star } from "lucide-react";
 
 import {
   MonthCalendar,
@@ -26,11 +26,52 @@ import type { HolidayRange } from "@/types/holidays";
 
 const DATE_FORMAT = "yyyy-MM-dd";
 
+export type BlockedDayKind = "BLOCKED" | "PREFERRED";
+
 export type BlockedDay = {
   id: string;
   date: string;
   reason: string | null;
+  kind: BlockedDayKind;
 };
+
+const KIND_OPTIONS: { kind: BlockedDayKind; title: string; description: string }[] = [
+  {
+    kind: "BLOCKED",
+    title: "Tag sperren",
+    description: "Du bist an diesem Tag nicht verfügbar.",
+  },
+  {
+    kind: "PREFERRED",
+    title: "Bevorzugt kommen",
+    description: "Du möchtest an diesem Tag besonders gern proben.",
+  },
+];
+
+const getSingleActionLabel = (kind: BlockedDayKind) =>
+  kind === "PREFERRED" ? "Bevorzugten Tag speichern" : "Sperrtermin eintragen";
+
+const getBulkActionLabel = (kind: BlockedDayKind, count: number) => {
+  if (kind === "PREFERRED") {
+    return count > 1 ? `${count} Tage bevorzugen` : "Tag bevorzugen";
+  }
+  return count > 1 ? `${count} Tage sperren` : "Tag sperren";
+};
+
+const getCreateToastMessage = (kind: BlockedDayKind, count: number) => {
+  if (kind === "PREFERRED") {
+    return count > 1
+      ? `${count} bevorzugte Tage eingetragen.`
+      : "Bevorzugter Tag eingetragen.";
+  }
+  return count > 1 ? `${count} Sperrtermine eingetragen.` : "Sperrtermin eingetragen.";
+};
+
+const getUpdateToastMessage = (kind: BlockedDayKind) =>
+  kind === "PREFERRED" ? "Eintrag gespeichert." : "Sperrtermin aktualisiert.";
+
+const getRemoveToastMessage = (count: number) =>
+  count > 1 ? `${count} Einträge entfernt.` : "Eintrag entfernt.";
 
 type HolidayDayInfo = HolidayRange & {
   date: string;
@@ -53,6 +94,8 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [reason, setReason] = useState("");
+  const [selectedKind, setSelectedKind] = useState<BlockedDayKind>("BLOCKED");
+  const [lastUsedKind, setLastUsedKind] = useState<BlockedDayKind>("BLOCKED");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -60,6 +103,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     () => new Set<string>()
   );
   const [bulkReason, setBulkReason] = useState("");
+  const [bulkKind, setBulkKind] = useState<BlockedDayKind>("BLOCKED");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
@@ -159,12 +203,25 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     [selectedDayKeys]
   );
 
-  const selectedBlockedCount = useMemo(
-    () => selectedKeys.filter((key) => blockedByDate.has(key)).length,
-    [selectedKeys, blockedByDate]
+  const selectedEntries = useMemo(
+    () =>
+      selectedKeys
+        .map((key) => blockedByDate.get(key))
+        .filter((entry): entry is BlockedDay => Boolean(entry)),
+    [blockedByDate, selectedKeys]
   );
 
-  const selectedFreeCount = selectedKeys.length - selectedBlockedCount;
+  const selectedBlockedCount = useMemo(
+    () => selectedEntries.filter((entry) => entry.kind === "BLOCKED").length,
+    [selectedEntries]
+  );
+
+  const selectedPreferredCount = useMemo(
+    () => selectedEntries.filter((entry) => entry.kind === "PREFERRED").length,
+    [selectedEntries]
+  );
+
+  const selectedFreeCount = selectedKeys.length - selectedEntries.length;
 
   // Planungsfenster: Sperrtermine erst ab einer Woche im Voraus
   const today = new Date();
@@ -224,10 +281,12 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     if (!modalOpen) return;
     if (selectedEntry) {
       setReason(selectedEntry.reason ?? "");
+      setSelectedKind(selectedEntry.kind);
     } else if (selectedDate) {
       setReason("");
+      setSelectedKind(lastUsedKind);
     }
-  }, [modalOpen, selectedEntry, selectedDate]);
+  }, [lastUsedKind, modalOpen, selectedDate, selectedEntry]);
 
   useEffect(() => {
     if (!selectionMode) {
@@ -255,7 +314,8 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     setSelectedDayKeys(new Set<string>());
     setBulkReason("");
     setBulkError(null);
-  }, [setBulkError, setBulkReason]);
+    setBulkKind(lastUsedKind);
+  }, [lastUsedKind]);
 
   const updateSelection = useCallback(
     (key: string, shouldSelect: boolean) => {
@@ -283,7 +343,8 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     setReason("");
     setError(null);
     setSubmitting(false);
-  }, []);
+    setSelectedKind(lastUsedKind);
+  }, [lastUsedKind]);
 
   const handleToggleSelectionMode = () => {
     const nextMode = !selectionMode;
@@ -291,16 +352,26 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     if (nextMode) {
       closeModal();
       clearSelection();
+      setBulkKind(lastUsedKind);
     } else {
       clearSelection();
     }
   };
 
-  const openDay = useCallback((day: Date) => {
-    setSelectedDate(day);
-    setError(null);
-    setModalOpen(true);
-  }, []);
+  const openDay = useCallback(
+    (day: Date, key: string) => {
+      setSelectedDate(day);
+      setError(null);
+      const entry = blockedByDate.get(key);
+      if (entry) {
+        setSelectedKind(entry.kind);
+      } else {
+        setSelectedKind(lastUsedKind);
+      }
+      setModalOpen(true);
+    },
+    [blockedByDate, lastUsedKind]
+  );
 
   const handleMonthChange = useCallback(
     (nextMonth: Date) => {
@@ -354,7 +425,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         updateSelection(key, !selectedDayKeys.has(key));
         return;
       }
-      openDay(day);
+      openDay(day, key);
     },
     [openDay, selectionMode, selectedDayKeys, updateSelection]
   );
@@ -362,6 +433,8 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
   const renderCalendarDay = useCallback(
     (day: CalendarDay): CalendarDayRenderResult => {
       const entry = blockedByDate.get(day.key);
+      const isBlockedEntry = entry?.kind === "BLOCKED";
+      const isPreferredEntry = entry?.kind === "PREFERRED";
       const isSelected = selectedDayKeys.has(day.key);
       const wasAdded = recentlyAdded.has(day.key);
       const wasRemoved = recentlyRemoved.has(day.key);
@@ -371,7 +444,9 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
       const ariaLabelParts = [
         format(day.date, "EEEE, d. MMMM yyyy", { locale: de }),
         entry
-          ? `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
+          ? isPreferredEntry
+            ? `, bevorzugt${entry.reason ? `: ${entry.reason}` : ""}`
+            : `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
           : ", frei",
       ];
 
@@ -416,7 +491,9 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         onPointerDown: (event) => handleDayPointerDown(event, day.key),
         onPointerEnter: (event) => handleDayPointerEnter(event, day.key),
         className: cn(
-          entry && "border-destructive/50 bg-destructive/10",
+          isBlockedEntry && "border-destructive/50 bg-destructive/10",
+          isPreferredEntry &&
+            "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-500/40 dark:bg-emerald-500/10",
           !entry && isHoliday &&
             "border-sky-400/60 bg-sky-50/80 dark:border-sky-500/40 dark:bg-sky-500/10",
           day.isToday && !isSelected && "ring-2 ring-primary/80",
@@ -431,10 +508,21 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
           <>
             {holidayContent}
             {entry ? (
-              <span className="mt-auto flex items-center gap-1 text-xs font-semibold text-destructive transition-opacity duration-300">
-                <CircleX className="h-4 w-4" />
+              <span
+                className={cn(
+                  "mt-auto flex items-center gap-1 text-xs font-semibold transition-opacity duration-300",
+                  isPreferredEntry
+                    ? "text-emerald-600 dark:text-emerald-200"
+                    : "text-destructive"
+                )}
+              >
+                {isPreferredEntry ? (
+                  <Star className="h-4 w-4" />
+                ) : (
+                  <CircleX className="h-4 w-4" />
+                )}
                 <span className="truncate" title={entry.reason ?? undefined}>
-                  {entry.reason ?? "Gesperrt"}
+                  {entry.reason ?? (isPreferredEntry ? "Bevorzugt" : "Gesperrt")}
                 </span>
               </span>
             ) : (
@@ -469,7 +557,11 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
       const response = await fetch("/api/block-days/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dates: keysToCreate, reason: trimmed || undefined }),
+        body: JSON.stringify({
+          dates: keysToCreate,
+          reason: trimmed || undefined,
+          kind: bulkKind,
+        }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
@@ -485,9 +577,8 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         });
         markRecent(created.map((c) => c.date), "added");
       }
-      toast.success(
-        created.length > 1 ? `${created.length} Sperrtermine eingetragen.` : "Sperrtermin eingetragen.",
-      );
+      toast.success(getCreateToastMessage(bulkKind, created.length));
+      setLastUsedKind(bulkKind);
       clearSelection();
     } catch (err) {
       setBulkError(err instanceof Error ? err.message : "Unbekannter Fehler");
@@ -521,7 +612,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         setBlockedDays((prev) => prev.filter((entry) => !entriesToRemove.some((e) => e.id === entry.id)));
         markRecent(entriesToRemove.map((e) => e.date), "removed");
       }
-      toast.success((deleted ?? 0) > 1 ? `${deleted} Sperrtermine entfernt.` : "Sperrtermin entfernt.");
+      toast.success(getRemoveToastMessage(deleted ?? 0));
       clearSelection();
     } catch (err) {
       setBulkError(err instanceof Error ? err.message : "Unbekannter Fehler");
@@ -546,14 +637,21 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
               {[
                 selectedFreeCount > 0
                   ? `${selectedFreeCount} ${
-                      selectedFreeCount === 1 ? "Tag ist" : "Tage sind"
-                    } frei`
+                      selectedFreeCount === 1 ? "Tag ist frei" : "Tage sind frei"
+                    }`
                   : null,
                 selectedBlockedCount > 0
                   ? `${selectedBlockedCount} ${
                       selectedBlockedCount === 1
                         ? "Tag ist gesperrt"
                         : "Tage sind gesperrt"
+                    }`
+                  : null,
+                selectedPreferredCount > 0
+                  ? `${selectedPreferredCount} ${
+                      selectedPreferredCount === 1
+                        ? "Tag ist bevorzugt"
+                        : "Tage sind bevorzugt"
                     }`
                   : null,
               ]
@@ -577,37 +675,69 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
       </div>
 
       {selectedFreeCount > 0 && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="sm:flex-1">
-            <label
-              htmlFor="bulk-reason"
-              className="mb-1 block text-sm font-medium uppercase tracking-wide text-muted-foreground sm:text-xs sm:leading-5"
+        <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3 dark:border-primary/30 dark:bg-primary/10">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-primary dark:text-primary sm:text-xs">
+              Aktion für freie Tage
+            </p>
+            <div
+              className="mt-2 grid gap-2 sm:grid-cols-2"
+              role="radiogroup"
+              aria-label="Aktion für ausgewählte Tage"
             >
-              Grund (optional)
-            </label>
-            <Input
-              id="bulk-reason"
-              value={bulkReason}
-              onChange={(event) => setBulkReason(event.target.value)}
-              placeholder="z. B. Urlaub, Familienfeier"
-              maxLength={200}
-              disabled={bulkSubmitting}
-            />
+              {KIND_OPTIONS.map((option) => {
+                const isActive = bulkKind === option.kind;
+                return (
+                  <button
+                    key={option.kind}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    onClick={() => setBulkKind(option.kind)}
+                    className={cn(
+                      "rounded-lg border border-border/60 bg-background/80 p-3 text-left transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      isActive && "border-primary bg-primary/10 shadow-sm"
+                    )}
+                  >
+                    <div className="text-sm font-semibold">{option.title}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {option.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <Button
-            type="button"
-            className="w-full sm:w-auto"
-            disabled={bulkSubmitting}
-            onClick={handleBulkCreate}
-          >
-            {selectedFreeCount > 1
-              ? `${selectedFreeCount} Tage sperren`
-              : "Tag sperren"}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="sm:flex-1">
+              <label
+                htmlFor="bulk-reason"
+                className="mb-1 block text-sm font-medium uppercase tracking-wide text-muted-foreground sm:text-xs sm:leading-5"
+              >
+                Grund (optional)
+              </label>
+              <Input
+                id="bulk-reason"
+                value={bulkReason}
+                onChange={(event) => setBulkReason(event.target.value)}
+                placeholder="z. B. Urlaub, Familienfeier"
+                maxLength={200}
+                disabled={bulkSubmitting}
+              />
+            </div>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              disabled={bulkSubmitting}
+              onClick={handleBulkCreate}
+            >
+              {getBulkActionLabel(bulkKind, selectedFreeCount)}
+            </Button>
+          </div>
         </div>
       )}
 
-      {selectedBlockedCount > 0 && (
+      {selectedEntries.length > 0 && (
         <div>
           <Button
             type="button"
@@ -616,9 +746,9 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
             onClick={handleBulkRemove}
             className="w-full sm:w-auto"
           >
-            {selectedBlockedCount > 1
-              ? `${selectedBlockedCount} Sperrtermine aufheben`
-              : "Sperrtermin aufheben"}
+            {selectedEntries.length > 1
+              ? `${selectedEntries.length} Einträge entfernen`
+              : "Eintrag entfernen"}
           </Button>
         </div>
       )}
@@ -669,6 +799,12 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     </div>
   ) : null;
 
+  const rehearsalHint = (
+    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm leading-6 text-primary dark:border-primary/30 dark:bg-primary/10">
+      Samstag und Sonntag sind unsere bevorzugten Probentage. Freitage planen wir nur in Ausnahmefällen – markiere sie bitte nur als bevorzugt, wenn du wirklich kommen kannst.
+    </div>
+  );
+
   const handleCreate = async () => {
     if (!selectedDateKey) return;
     const trimmed = reason.trim();
@@ -686,6 +822,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         body: JSON.stringify({
           date: selectedDateKey,
           reason: trimmed.length > 0 ? trimmed : undefined,
+          kind: selectedKind,
         }),
       });
 
@@ -701,7 +838,8 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         [...prev, data].sort((a, b) => a.date.localeCompare(b.date))
       );
       markRecent([data.date], "added");
-      toast.success("Sperrtermin eingetragen.");
+      toast.success(getCreateToastMessage(selectedKind, 1));
+      setLastUsedKind(selectedKind);
       closeModal();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler.");
@@ -720,7 +858,10 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
       const response = await fetch(`/api/block-days/${selectedEntry.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: trimmed.length > 0 ? trimmed : null }),
+        body: JSON.stringify({
+          reason: trimmed.length > 0 ? trimmed : null,
+          kind: selectedKind,
+        }),
       });
 
       if (!response.ok) {
@@ -734,8 +875,9 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
       setBlockedDays((prev) =>
         prev.map((entry) => (entry.id === data.id ? data : entry))
       );
-      toast.success("Sperrtermin aktualisiert.");
+      toast.success(getUpdateToastMessage(data.kind));
       setReason(data.reason ?? "");
+      setLastUsedKind(data.kind);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler.");
     } finally {
@@ -762,7 +904,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
 
       setBlockedDays((prev) => prev.filter((entry) => entry.id !== selectedEntry.id));
       markRecent([selectedEntry.date], "removed");
-      toast.success("Sperrtermin entfernt.");
+      toast.success(getRemoveToastMessage(1));
       closeModal();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler.");
@@ -778,7 +920,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         month={currentMonth}
         onMonthChange={handleMonthChange}
         transitionDirection={enterDir}
-        subtitle="Tippe auf einen Tag, um einen Sperrtermin hinzuzufügen oder zu bearbeiten."
+        subtitle="Tippe auf einen Tag, um ihn zu sperren oder als bevorzugt zu markieren."
         headerActions={
           <Button
             type="button"
@@ -793,6 +935,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         renderDay={renderCalendarDay}
         additionalContent={
           <>
+            {rehearsalHint}
             {selectionPanel}
             {holidayPanel}
           </>
@@ -809,11 +952,48 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
         }
         description={
           selectedEntry
-            ? "Dieser Tag ist derzeit gesperrt."
-            : "Trage einen Sperrtermin für diesen Tag ein."
+            ? selectedEntry.kind === "PREFERRED"
+              ? "Dieser Tag ist als bevorzugt markiert."
+              : "Dieser Tag ist derzeit gesperrt."
+            : selectedKind === "PREFERRED"
+              ? "Markiere den Tag als bevorzugten Probentermin."
+              : "Blocke den Tag, wenn du nicht verfügbar bist."
         }
       >
         <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Aktion wählen
+            </p>
+            <div
+              className="grid gap-2 sm:grid-cols-2"
+              role="radiogroup"
+              aria-label="Aktion für diesen Tag"
+            >
+              {KIND_OPTIONS.map((option) => {
+                const isActive = selectedKind === option.kind;
+                return (
+                  <button
+                    key={option.kind}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    onClick={() => setSelectedKind(option.kind)}
+                    className={cn(
+                      "rounded-lg border border-border/60 bg-background/80 p-3 text-left transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      isActive && "border-primary bg-primary/10 shadow-sm"
+                    )}
+                  >
+                    <div className="text-sm font-semibold">{option.title}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {option.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <label htmlFor="block-reason" className="block text-sm font-medium">
               Grund (optional)
@@ -842,7 +1022,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
                   disabled={submitting}
                   onClick={handleUpdate}
                 >
-                  Grund speichern
+                  Eintrag speichern
                 </Button>
                 <Button
                   type="button"
@@ -851,7 +1031,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
                   disabled={submitting}
                   onClick={handleRemove}
                 >
-                  Sperrtermin aufheben
+                  Eintrag entfernen
                 </Button>
               </>
             ) : (
@@ -861,7 +1041,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
                 disabled={submitting}
                 onClick={handleCreate}
               >
-                Sperrtermin eintragen
+                {getSingleActionLabel(selectedKind)}
               </Button>
             )}
           </div>

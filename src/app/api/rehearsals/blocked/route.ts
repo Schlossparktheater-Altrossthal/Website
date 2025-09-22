@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
         gte: dayStart,
         lt: dayEnd,
       },
+      kind: "BLOCKED",
     },
     select: { userId: true },
   });

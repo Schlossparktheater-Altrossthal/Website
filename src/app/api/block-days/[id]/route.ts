@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 import { normaliseReason, reasonSchema, toResponse } from "../utils";
+import { BlockedDayKind } from "@prisma/client";
 
 type SessionUser = { id?: string } | null | undefined;
 
@@ -15,6 +16,7 @@ type RouteParams = {
 
 const updateSchema = z.object({
   reason: reasonSchema,
+  kind: z.nativeEnum(BlockedDayKind).optional(),
 });
 
 type UpdatePayload = z.infer<typeof updateSchema>;
@@ -50,11 +52,22 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Sperrtermin wurde nicht gefunden." }, { status: 404 });
   }
 
+  const updateData: {
+    reason?: string | null;
+    kind?: BlockedDayKind;
+  } = {};
+
+  if ("reason" in payload) {
+    updateData.reason = normaliseReason(payload.reason);
+  }
+
+  if (payload.kind) {
+    updateData.kind = payload.kind;
+  }
+
   const updated = await prisma.blockedDay.update({
     where: { id: existing.id },
-    data: {
-      reason: normaliseReason(payload.reason),
-    },
+    data: updateData,
   });
 
   return NextResponse.json(toResponse(updated));

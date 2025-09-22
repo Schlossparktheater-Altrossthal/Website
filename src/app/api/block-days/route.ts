@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import { Prisma, BlockedDayKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -17,6 +17,7 @@ type SessionUser = { id?: string } | null | undefined;
 const blockDaySchema = z.object({
   date: z.string().regex(isoDate),
   reason: reasonSchema,
+  kind: z.nativeEnum(BlockedDayKind).optional(),
 });
 
 type BlockDayPayload = z.infer<typeof blockDaySchema>;
@@ -85,12 +86,15 @@ export async function POST(request: Request) {
     }
   } catch {}
 
+  const kind = payload.kind ?? BlockedDayKind.BLOCKED;
+
   try {
     const entry = await prisma.blockedDay.create({
       data: {
         userId,
         date: blockDate,
         reason: normaliseReason(payload.reason),
+        kind,
       },
     });
 

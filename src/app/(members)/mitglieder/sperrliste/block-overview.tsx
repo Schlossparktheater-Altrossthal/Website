@@ -104,6 +104,7 @@ function summarizeMembers(
     let memberTotal = 0;
     let memberUpcoming = 0;
     for (const entry of member.blockedDays) {
+      if (entry.kind !== "BLOCKED") continue;
       if (!keySet.has(entry.date)) continue;
       memberTotal += 1;
       total += 1;
@@ -163,12 +164,35 @@ export function BlockOverview({
     return eachDayOfInterval({ start: rangeStart, end: rangeEnd });
   }, [currentMonth]);
 
-  const dayKeys = useMemo(
-    () => daysInView.map((day) => format(day, DATE_FORMAT)),
-    [daysInView],
+  const preparedMembers = useMemo(() => prepareMembers(members), [members]);
+  const preferredDayKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const member of preparedMembers) {
+      for (const entry of member.blockedDays) {
+        if (entry.kind === "PREFERRED") {
+          set.add(entry.date);
+        }
+      }
+    }
+    return set;
+  }, [preparedMembers]);
+
+  const visibleDayInfo = useMemo(
+    () =>
+      daysInView
+        .map((day) => ({ day, key: format(day, DATE_FORMAT) }))
+        .filter(({ day, key }) => {
+          const weekday = day.getDay();
+          const isCoreDay = weekday === 5 || weekday === 6 || weekday === 0;
+          return isCoreDay || preferredDayKeys.has(key);
+        }),
+    [daysInView, preferredDayKeys],
   );
 
-  const preparedMembers = useMemo(() => prepareMembers(members), [members]);
+  const dayKeys = useMemo(
+    () => visibleDayInfo.map((item) => item.key),
+    [visibleDayInfo],
+  );
   const holidayMap = useMemo(() => createHolidayMap(holidays), [holidays]);
   const summary = useMemo(() => summarizeMembers(preparedMembers, dayKeys), [preparedMembers, dayKeys]);
 
@@ -282,13 +306,18 @@ export function BlockOverview({
       <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-muted-foreground lg:max-w-xl">
-            Tippe oder fahre über die Tageszellen, um Gründe und Ferieninfos zu sehen. Gesperrte Tage leuchten warm, freie Slots bleiben dezent – so erkennst du Engpässe auf einen Blick.
+            Tippe oder fahre über die Tageszellen, um Gründe und Ferieninfos zu sehen. Gesperrte Tage leuchten warm, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. Standardmäßig siehst du Freitag bis Sonntag; weitere Tage blenden wir nur ein, wenn jemand sie ausdrücklich bevorzugt.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <LegendItem
               label="Gesperrt"
               description="Eingetragene Abwesenheiten"
               className="border-destructive/70 bg-gradient-to-br from-destructive/80 via-destructive/60 to-destructive/30 shadow-[0_12px_30px_-18px_rgba(220,38,38,0.65)]"
+            />
+            <LegendItem
+              label="Bevorzugt"
+              description="Freiwillige Wunschtermine"
+              className="border-emerald-400/60 bg-gradient-to-br from-emerald-500/25 via-emerald-500/15 to-emerald-500/5 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.45)]"
             />
             <LegendItem
               label="Ferien"
@@ -312,10 +341,12 @@ export function BlockOverview({
                 <th className="sticky left-0 z-20 rounded-xl bg-background/95 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Mitglied
                 </th>
-                {daysInView.map((day, index) => {
-                  const key = dayKeys[index];
-                  const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                  const showDivider = day.getDay() === 1 && index !== 0;
+                {visibleDayInfo.map(({ day, key }, index) => {
+                  const weekday = day.getDay();
+                  const isWeekend = weekday === 0 || weekday === 6;
+                  const isCoreDay = weekday === 5 || weekday === 6 || weekday === 0;
+                  const isPreferredExtra = !isCoreDay;
+                  const showDivider = weekday === 5 && index !== 0;
                   const isFirstOfMonth = format(day, "d") === "1";
                   const holidayEntries = holidayMap.get(key) ?? [];
                   return (
@@ -325,6 +356,7 @@ export function BlockOverview({
                         "px-3 pb-3 text-center align-bottom text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80",
                         showDivider && "border-l border-border/60",
                         isWeekend && "text-rose-500/80",
+                        isPreferredExtra && "text-emerald-600",
                       )}
                     >
                       <div className="flex flex-col items-center gap-1">
@@ -385,17 +417,23 @@ export function BlockOverview({
                         </div>
                       </div>
                     </th>
-                    {daysInView.map((day, index) => {
-                      const key = dayKeys[index];
+                    {visibleDayInfo.map(({ day, key }, index) => {
                       const entry = member.blockedMap.get(key);
-                      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                      const showDivider = day.getDay() === 1 && index !== 0;
+                      const weekday = day.getDay();
+                      const showDivider = weekday === 5 && index !== 0;
+                      const isCoreDay = weekday === 5 || weekday === 6 || weekday === 0;
                       const holidayEntries = holidayMap.get(key) ?? [];
                       const isHoliday = holidayEntries.length > 0;
+                      const isBlocked = entry?.kind === "BLOCKED";
+                      const isPreferred = entry?.kind === "PREFERRED";
                       const label = [
                         format(day, "EEEE, d. MMMM yyyy", { locale: de }),
                         entry
-                          ? entry.reason
+                          ? isPreferred
+                            ? entry.reason
+                              ? `bevorzugt: ${entry.reason}`
+                              : "bevorzugt"
+                            : entry.reason
                             ? `gesperrt: ${entry.reason}`
                             : "gesperrt"
                           : "frei",
@@ -410,14 +448,16 @@ export function BlockOverview({
                           className={cn(
                             "px-2 py-2 text-center align-top text-xs",
                             showDivider && "border-l border-border/60",
-                            isWeekend && !entry && "bg-muted/30",
+                            isCoreDay && !entry && "bg-muted/30",
                           )}
                         >
                           <div
                             className={cn(
                               "flex h-full min-h-[64px] flex-col items-center justify-center rounded-xl border border-transparent px-2 py-3 text-xs leading-5 shadow-sm transition-all",
-                              entry &&
+                              isBlocked &&
                                 "border-destructive/70 bg-gradient-to-br from-destructive/80 via-destructive/60 to-destructive/25 text-destructive-foreground shadow-[0_12px_30px_-20px_rgba(220,38,38,0.65)]",
+                              isPreferred &&
+                                "border-emerald-400/50 bg-gradient-to-br from-emerald-500/25 via-emerald-500/15 to-emerald-500/10 text-emerald-900 shadow-[0_12px_30px_-20px_rgba(16,185,129,0.55)] dark:text-emerald-100",
                               !entry && isHoliday &&
                                 "border-sky-400/40 bg-gradient-to-br from-sky-500/20 via-sky-500/10 to-sky-500/5 text-sky-900 dark:text-sky-100",
                               !entry && !isHoliday && "bg-card/40 text-muted-foreground",
@@ -425,13 +465,21 @@ export function BlockOverview({
                               !isSameMonth(day, currentMonth) && "opacity-60",
                             )}
                             aria-label={label.join(". ")}
-                            title={entry?.reason ?? (isHoliday ? holidayEntries[0]?.title ?? "Ferien" : "Frei")}
+                            title={
+                              entry
+                                ? entry.reason ?? (isPreferred ? "Bevorzugt" : "Gesperrt")
+                                : isHoliday
+                                  ? holidayEntries[0]?.title ?? "Ferien"
+                                  : "Frei"
+                            }
                           >
                             {entry ? (
                               <>
-                                <span className="text-xs font-semibold uppercase tracking-wide">Gesperrt</span>
+                                <span className="text-xs font-semibold uppercase tracking-wide">
+                                  {isPreferred ? "Bevorzugt" : "Gesperrt"}
+                                </span>
                                 <span className="mt-1 line-clamp-3 text-xs leading-5">
-                                  {entry.reason ?? "Ohne Grund"}
+                                  {entry.reason ?? (isPreferred ? "Ohne Angabe" : "Ohne Grund")}
                                 </span>
                               </>
                             ) : isHoliday ? (
@@ -493,14 +541,19 @@ export function BlockOverview({
                   className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
                 />
                 <div className="flex gap-2 overflow-x-auto pb-1 pl-1 pr-4 [scrollbar-width:thin] snap-x snap-mandatory">
-                  {daysInView.map((day, index) => {
-                    const key = dayKeys[index];
+                  {visibleDayInfo.map(({ day, key }) => {
                     const entry = member.blockedMap.get(key);
                     const holidayEntries = holidayMap.get(key) ?? [];
                     const isHoliday = holidayEntries.length > 0;
+                    const isBlocked = entry?.kind === "BLOCKED";
+                    const isPreferred = entry?.kind === "PREFERRED";
                     const label = [
                       format(day, "EEEE, d. MMMM yyyy", { locale: de }),
-                      entry ? entry.reason ?? "gesperrt" : "frei",
+                      entry
+                        ? isPreferred
+                          ? entry.reason ?? "bevorzugt"
+                          : entry.reason ?? "gesperrt"
+                        : "frei",
                     ];
                     if (isHoliday) {
                       label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`);
@@ -511,13 +564,20 @@ export function BlockOverview({
                         key={key}
                         className={cn(
                           "flex min-w-[64px] shrink-0 snap-center flex-col items-center rounded-2xl border border-border/50 px-2 py-2 text-center text-xs leading-5 shadow-sm",
-                          entry && "border-destructive/60 bg-destructive/15 text-destructive",
+                          isBlocked && "border-destructive/60 bg-destructive/15 text-destructive",
+                          isPreferred && "border-emerald-400/50 bg-emerald-500/15 text-emerald-700 dark:text-emerald-100",
                           !entry && isHoliday && "border-sky-400/40 bg-sky-500/15 text-sky-800 dark:text-sky-100",
                           !entry && !isHoliday && "bg-muted/30 text-muted-foreground",
                           isToday(day) && "ring-2 ring-primary/70",
                         )}
                         aria-label={label.join(". ")}
-                        title={entry?.reason ?? (isHoliday ? holidayEntries[0]?.title ?? "Ferien" : "Frei")}
+                        title={
+                          entry
+                            ? entry.reason ?? (isPreferred ? "Bevorzugt" : "Gesperrt")
+                            : isHoliday
+                              ? holidayEntries[0]?.title ?? "Ferien"
+                              : "Frei"
+                        }
                       >
                         <span className="text-xs uppercase tracking-wide text-muted-foreground/90">
                           {format(day, "EE", { locale: de })}
@@ -526,7 +586,9 @@ export function BlockOverview({
                           {format(day, "d", { locale: de })}
                         </span>
                         {entry ? (
-                          <span className="mt-1 line-clamp-2 text-xs leading-4">{entry.reason ?? "Gesperrt"}</span>
+                          <span className="mt-1 line-clamp-2 text-xs leading-4">
+                            {entry.reason ?? (isPreferred ? "Ohne Angabe" : "Gesperrt")}
+                          </span>
                         ) : isHoliday ? (
                           <span className="mt-1 line-clamp-2 text-xs leading-4">{holidayEntries[0]?.title}</span>
                         ) : (

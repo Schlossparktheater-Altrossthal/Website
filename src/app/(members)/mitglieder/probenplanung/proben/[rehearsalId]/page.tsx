@@ -57,6 +57,7 @@ export default async function RehearsalEditorPage({ params }: { params: { rehear
         gte: dayStart,
         lt: dayEnd,
       },
+      kind: "BLOCKED",
     },
     select: { userId: true },
   });
