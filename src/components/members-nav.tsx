@@ -54,6 +54,7 @@ const FINANCE_ITEMS: Item[] = [
 const ADMIN_ITEMS: Item[] = [
   { href: "/mitglieder/mitgliederverwaltung", label: "Mitgliederverwaltung", permissionKey: "mitglieder.rollenverwaltung" },
   { href: "/mitglieder/onboarding-analytics", label: "Onboarding Analytics", permissionKey: "mitglieder.onboarding.analytics" },
+  { href: "/mitglieder/server-analytics", label: "Server-Statistiken", permissionKey: "mitglieder.server.analytics" },
   { href: "/mitglieder/rechte", label: "Rechteverwaltung", permissionKey: "mitglieder.rechte" },
   { href: "/mitglieder/fotoerlaubnisse", label: "Fotoerlaubnisse", permissionKey: "mitglieder.fotoerlaubnisse" },
 ];
@@ -209,6 +210,13 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l2-3h4l2 3h3a2 2 0 0 1 2 2Z" />
           <circle cx="12" cy="14" r="3" />
+        </svg>
+      );
+    case "/mitglieder/server-analytics":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 20h16" />
+          <path d="M6 16l4-6 3 4 4-7 3 5" />
         </svg>
       );
     case "/mitglieder/mystery/timer":
