@@ -164,5 +164,10 @@ export type InterServerEvents = Record<string, never>;
 export interface SocketData {
   userId?: string;
   userName?: string;
+  handshakeVerified?: boolean;
+  handshake?: {
+    issuedAt: number;
+    expiresAt: number;
+  };
   rooms: Set<RoomType>;
 }
