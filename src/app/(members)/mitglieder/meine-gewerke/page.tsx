@@ -16,6 +16,7 @@ import {
   PLANNING_FREEZE_DAYS,
   PLANNING_LOOKAHEAD_DAYS,
   type DepartmentMembershipWithDepartment,
+  isCastDepartmentUser,
 } from "./utils";
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-card";
 
@@ -55,7 +56,17 @@ export default async function MeineGewerkePage() {
           slug: true,
           memberships: {
             include: {
-              user: { select: { id: true, name: true, email: true } },
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                  roles: { select: { role: true } },
+                },
+              },
             },
           },
           tasks: {
@@ -85,20 +96,22 @@ export default async function MeineGewerkePage() {
   const costumeMemberships = memberships.filter((membership) => membership.department.slug === "kostuem");
 
   if (costumeMemberships.length) {
-    const costumeUserIds = new Set<string>();
+    costumeMeasurementsByUser = {};
+    const costumeCastUserIds = new Set<string>();
     for (const membership of costumeMemberships) {
       for (const entry of membership.department.memberships) {
-        costumeUserIds.add(entry.userId);
+        if (isCastDepartmentUser(entry.user)) {
+          costumeCastUserIds.add(entry.userId);
+        }
       }
     }
 
-    if (costumeUserIds.size) {
+    if (costumeCastUserIds.size) {
       const measurementRecords = await prisma.memberMeasurement.findMany({
-        where: { userId: { in: Array.from(costumeUserIds) } },
+        where: { userId: { in: Array.from(costumeCastUserIds) } },
         orderBy: { type: "asc" },
       });
 
-      costumeMeasurementsByUser = {};
       for (const record of measurementRecords) {
         const existing = costumeMeasurementsByUser[record.userId] ?? [];
         existing.push({

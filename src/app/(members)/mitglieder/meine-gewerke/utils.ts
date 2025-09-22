@@ -141,6 +141,10 @@ export type DepartmentMembershipWithDepartment = Prisma.DepartmentMembershipGetP
                 id: true;
                 name: true;
                 email: true;
+                firstName: true;
+                lastName: true;
+                role: true;
+                roles: { select: { role: true } };
               };
             };
           };
@@ -161,4 +165,16 @@ export type DepartmentMembershipWithDepartment = Prisma.DepartmentMembershipGetP
       };
     };
   };
-}>;
+}>; 
+
+export type DepartmentMemberUser = DepartmentMembershipWithDepartment["department"]["memberships"][number]["user"];
+
+export function isCastDepartmentUser(user: DepartmentMemberUser | null | undefined) {
+  if (!user) {
+    return false;
+  }
+  if (user.role === "cast") {
+    return true;
+  }
+  return user.roles?.some((entry) => entry.role === "cast") ?? false;
+}

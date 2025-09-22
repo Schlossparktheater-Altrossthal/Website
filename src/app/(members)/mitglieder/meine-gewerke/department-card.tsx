@@ -26,6 +26,7 @@ import {
   formatUserName,
   getDueMeta,
   hexToRgba,
+  isCastDepartmentUser,
 } from "./utils";
 
 export type DepartmentMeasurementEntry = {
@@ -69,9 +70,15 @@ export function DepartmentCard({
   const { department } = membership;
   const isEnsembleDepartment = department.slug?.toLowerCase() === "ensemble";
 
+  const isCostumeDepartment = department.slug === "kostuem";
+
   const sortedMembers = [...department.memberships].sort((a, b) =>
     formatUserName(a.user).localeCompare(formatUserName(b.user), "de", { sensitivity: "base" }),
   );
+
+  const measurementEligibleMembers = isCostumeDepartment
+    ? sortedMembers.filter((member) => isCastDepartmentUser(member.user))
+    : [];
 
   const sortedTasks = [...department.tasks].sort((a, b) => {
     const statusDiff = TASK_STATUS_ORDER[a.status] - TASK_STATUS_ORDER[b.status];
@@ -95,10 +102,9 @@ export function DepartmentCard({
   );
   const blockedDatesCount = countBlockedDays(memberIdsForDepartment, blockedByUser);
 
-  const isCostumeDepartment = department.slug === "kostuem";
   const measurementsForDepartment = isCostumeDepartment && measurementsByUser ? measurementsByUser : undefined;
   const membersWithMeasurements = measurementsForDepartment
-    ? sortedMembers.filter((member) => (measurementsForDepartment[member.userId]?.length ?? 0) > 0).length
+    ? measurementEligibleMembers.filter((member) => (measurementsForDepartment[member.userId]?.length ?? 0) > 0).length
     : 0;
 
   const accentStyle = {
@@ -261,63 +267,71 @@ export function DepartmentCard({
               </Badge>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Übersicht der in den Profilen hinterlegten Maße aller Schauspieler:innen dieses Gewerks.
+              Übersicht der in den Profilen hinterlegten Maße aller Ensemble-Mitglieder dieses Kostüm-Gewerks.
             </p>
-            <ul className="mt-4 space-y-3">
-              {sortedMembers.map((member) => {
-                const entries = measurementsForDepartment[member.userId]
-                  ? sortMeasurements(measurementsForDepartment[member.userId]!)
-                  : [];
-                if (!entries.length) {
+            {measurementEligibleMembers.length ? (
+              <ul className="mt-4 space-y-3">
+                {measurementEligibleMembers.map((member) => {
+                  const entries = measurementsForDepartment[member.userId]
+                    ? sortMeasurements(measurementsForDepartment[member.userId]!)
+                    : [];
+                  if (!entries.length) {
+                    return (
+                      <li key={member.id} className="rounded-xl border border-border/60 bg-background/90 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
+                          <span className="text-[11px] text-muted-foreground">Keine Angaben</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Noch keine Maße im Profil hinterlegt.
+                        </p>
+                      </li>
+                    );
+                  }
+
+                  const latestUpdate = formatMeasurementDate(entries);
+
                   return (
-                    <li key={member.id} className="rounded-xl border border-border/60 bg-background/90 p-3">
+                    <li key={member.id} className="space-y-2 rounded-xl border border-border/60 bg-background/90 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
-                        <span className="text-[11px] text-muted-foreground">Keine Angaben</span>
+                        {latestUpdate ? (
+                          <span className="text-[11px] text-muted-foreground">Stand: {latestUpdate}</span>
+                        ) : null}
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">Noch keine Maße im Profil hinterlegt.</p>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        {entries.map((entry) => (
+                          <span
+                            key={entry.id}
+                            className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2.5 py-1"
+                          >
+                            <span className="font-semibold text-foreground/80">
+                              {MEASUREMENT_TYPE_LABELS[entry.type]}:
+                            </span>
+                            <span>{formatMeasurementValue(entry.value, entry.unit)}</span>
+                          </span>
+                        ))}
+                      </div>
+                      {entries.some((entry) => entry.note) ? (
+                        <ul className="space-y-1 text-[11px] text-muted-foreground/85">
+                          {entries
+                            .filter((entry) => entry.note)
+                            .map((entry) => (
+                              <li key={`${entry.id}-note`}>
+                                {MEASUREMENT_TYPE_LABELS[entry.type]}: {entry.note}
+                              </li>
+                            ))}
+                        </ul>
+                      ) : null}
                     </li>
                   );
-                }
-
-                const latestUpdate = formatMeasurementDate(entries);
-
-                return (
-                  <li key={member.id} className="space-y-2 rounded-xl border border-border/60 bg-background/90 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
-                      {latestUpdate ? (
-                        <span className="text-[11px] text-muted-foreground">Stand: {latestUpdate}</span>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      {entries.map((entry) => (
-                        <span
-                          key={entry.id}
-                          className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2.5 py-1"
-                        >
-                          <span className="font-semibold text-foreground/80">
-                            {MEASUREMENT_TYPE_LABELS[entry.type]}:
-                          </span>
-                          <span>{formatMeasurementValue(entry.value, entry.unit)}</span>
-                        </span>
-                      ))}
-                    </div>
-                    {entries.some((entry) => entry.note) ? (
-                      <ul className="space-y-1 text-[11px] text-muted-foreground/85">
-                        {entries
-                          .filter((entry) => entry.note)
-                          .map((entry) => (
-                            <li key={`${entry.id}-note`}>
-                              {MEASUREMENT_TYPE_LABELS[entry.type]}: {entry.note}
-                            </li>
-                          ))}
-                      </ul>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
+                })}
+              </ul>
+            ) : (
+              <p className="mt-4 rounded-xl border border-dashed border-border/60 bg-background/80 p-4 text-sm text-muted-foreground">
+                Aktuell sind keine Ensemble-Mitglieder mit Kostüm-Bedarf in diesem Team hinterlegt.
+              </p>
+            )}
           </section>
         ) : null}
 
