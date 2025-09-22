@@ -78,8 +78,10 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
     return {
       radius: { base: radius },
       modes,
+      parameters: snapshot.theme.tokens.parameters,
+      meta: snapshot.theme.tokens.meta,
     } satisfies ThemeTokens;
-  }, [radius, modeValues]);
+  }, [modeValues, radius, snapshot.theme.tokens.meta, snapshot.theme.tokens.parameters]);
 
   const lastSavedIso = snapshot.theme.updatedAt ?? snapshot.updatedAt;
   const lastSavedLabel = lastSavedIso
