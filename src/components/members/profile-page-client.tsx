@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import type { ReactNode } from "react";
 import type { AllergyLevel, MeasurementType, MeasurementUnit, Role } from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
@@ -13,8 +14,7 @@ import { ProfileChecklistCard } from "@/components/members/profile-checklist-car
 import { ProfilePhotoConsentNotice } from "@/components/members/profile-photo-consent-notice";
 import { ProfileDietaryPreferences } from "@/components/members/profile-dietary-preferences";
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
-import type { ProfileChecklistItem } from "@/lib/profile-completion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ProfileChecklistItem, ProfileChecklistTarget } from "@/lib/profile-completion";
 import type { AvatarSource } from "@/components/user-avatar";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 import type {
@@ -31,6 +31,7 @@ import {
 } from "@/lib/roles";
 import {
   CheckCircle2,
+  ChevronDown,
   Crown,
   Gavel,
   PiggyBank,
@@ -107,6 +108,70 @@ const ROLE_ICON_ACCENTS: Record<Role, string> = {
 
 const ROLE_STATUS_BADGE_CLASSES =
   "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
+
+type ProfileSectionId = ProfileChecklistTarget | "interessen";
+
+interface ProfileSectionProps {
+  id: ProfileSectionId;
+  title: string;
+  description: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+}
+
+function ProfileSection({
+  id,
+  title,
+  description,
+  open,
+  onOpenChange,
+  children,
+}: ProfileSectionProps) {
+  const sectionDomId = `profile-section-${id}`;
+  const titleId = `${sectionDomId}-title`;
+  const contentId = `${sectionDomId}-content`;
+
+  return (
+    <section
+      id={sectionDomId}
+      aria-labelledby={titleId}
+      className="group relative rounded-3xl border border-border/60 bg-background/90 shadow-lg shadow-primary/10 transition focus:outline-none"
+      tabIndex={-1}
+    >
+      <div className="flex flex-col gap-4 border-b border-border/60 px-6 pb-5 pt-6 sm:flex-row sm:items-start sm:justify-between sm:px-7">
+        <div className="space-y-2">
+          <h3 id={titleId} className="text-lg font-semibold text-foreground">
+            {title}
+          </h3>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onOpenChange(!open)}
+          className="inline-flex items-center gap-2 self-start rounded-full border border-border/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition hover:border-primary/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          aria-expanded={open}
+          aria-controls={contentId}
+        >
+          {open ? "Zuklappen" : "Aufklappen"}
+          <ChevronDown
+            className={cn("h-4 w-4 transition-transform duration-200", open && "rotate-180")}
+            aria-hidden
+          />
+        </button>
+      </div>
+      <div
+        id={contentId}
+        role="region"
+        aria-labelledby={titleId}
+        hidden={!open}
+        className="px-6 pb-6 pt-5 sm:px-7"
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
 
 interface ProfilePageClientProps {
   user: ProfileUserSummary;
@@ -211,18 +276,57 @@ export function ProfilePageClient({
   allergies,
   photoConsent,
 }: ProfilePageClientProps) {
-  const [activeTab, setActiveTab] = useState("stammdaten");
+  const [openSections, setOpenSections] = useState<Record<ProfileSectionId, boolean>>({
+    stammdaten: true,
+    ernaehrung: false,
+    masse: false,
+    interessen: false,
+    freigaben: false,
+  });
   const [photoSummary, setPhotoSummary] = useState<PhotoConsentSummary | null>(
     photoConsent,
   );
 
-  const handleNavigateToTab = useCallback((tab: string) => {
-    setActiveTab(tab);
-  }, []);
+  const handleSectionOpenChange = useCallback(
+    (section: ProfileSectionId, open: boolean) => {
+      setOpenSections((prev) => ({ ...prev, [section]: open }));
+    },
+    [],
+  );
+
+  const handleNavigateToSection = useCallback(
+    (section: ProfileSectionId) => {
+      if (section === "masse" && !canManageMeasurements) {
+        return;
+      }
+
+      setOpenSections((prev) => {
+        if (prev[section]) {
+          return prev;
+        }
+        return { ...prev, [section]: true };
+      });
+
+      if (typeof window !== "undefined") {
+        window.requestAnimationFrame(() => {
+          const element = document.getElementById(`profile-section-${section}`);
+          if (element instanceof HTMLElement) {
+            element.focus({ preventScroll: true });
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+            element.classList.add("ring-2", "ring-primary/50");
+            window.setTimeout(() => {
+              element.classList.remove("ring-2", "ring-primary/50");
+            }, 1200);
+          }
+        });
+      }
+    },
+    [canManageMeasurements],
+  );
 
   const handleManagePhoto = useCallback(() => {
-    setActiveTab("freigaben");
-  }, []);
+    handleNavigateToSection("freigaben");
+  }, [handleNavigateToSection]);
 
   const handlePhotoSummaryChange = useCallback(
     (summary: PhotoConsentSummary | null) => {
@@ -270,56 +374,84 @@ export function ProfilePageClient({
 
             <ProfileRolesCard roles={user.roles} />
 
-            <ProfileChecklistCard onNavigateToTab={handleNavigateToTab} />
+            <ProfileChecklistCard onNavigateToSection={handleNavigateToSection} />
           </div>
 
-          <div className="space-y-6 xl:space-y-8">
-            <div className="rounded-3xl border border-border/60 bg-background/90 p-6 shadow-lg shadow-primary/10 sm:p-7">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="mb-6">
-                  <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-                  <TabsTrigger value="ernaehrung">Ernährung</TabsTrigger>
-                  {canManageMeasurements ? (
-                    <TabsTrigger value="masse">Maße</TabsTrigger>
-                  ) : null}
-                  <TabsTrigger value="interessen">Interessen</TabsTrigger>
-                  <TabsTrigger value="freigaben">Freigaben</TabsTrigger>
-                </TabsList>
+          <div className="space-y-10 xl:space-y-12">
+            <div className="space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Wichtigste Angaben
+              </p>
+              <ProfileSection
+                id="stammdaten"
+                title="Stammdaten &amp; Zugang"
+                description="Aktualisiere Namen, Kontaktadresse und Login-Daten."
+                open={openSections.stammdaten}
+                onOpenChange={(open) => handleSectionOpenChange("stammdaten", open)}
+              >
+                <ProfileForm
+                  userId={user.id}
+                  initialFirstName={user.firstName}
+                  initialLastName={user.lastName}
+                  initialName={user.name}
+                  initialEmail={user.email}
+                  initialAvatarSource={toAvatarSource(user.avatarSource)}
+                  initialAvatarUpdatedAt={user.avatarUpdatedAt}
+                  initialDateOfBirth={user.dateOfBirth}
+                />
+              </ProfileSection>
+            </div>
 
-                <TabsContent value="stammdaten" className="space-y-4">
-                  <ProfileForm
-                    userId={user.id}
-                    initialFirstName={user.firstName}
-                    initialLastName={user.lastName}
-                    initialName={user.name}
-                    initialEmail={user.email}
-                    initialAvatarSource={toAvatarSource(user.avatarSource)}
-                    initialAvatarUpdatedAt={user.avatarUpdatedAt}
-                    initialDateOfBirth={user.dateOfBirth}
-                  />
-                </TabsContent>
-
-                <TabsContent value="ernaehrung">
+            <div className="space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Weitere Bereiche
+              </p>
+              <div className="space-y-6 xl:space-y-8">
+                <ProfileSection
+                  id="ernaehrung"
+                  title="Ernährung &amp; Allergien"
+                  description="Hilft bei der Planung von Verpflegung und Events."
+                  open={openSections.ernaehrung}
+                  onOpenChange={(open) => handleSectionOpenChange("ernaehrung", open)}
+                >
                   <ProfileDietaryPreferences
                     initialPreference={dietaryPreference}
                     initialAllergies={allergies}
                   />
-                </TabsContent>
+                </ProfileSection>
 
                 {canManageMeasurements ? (
-                  <TabsContent value="masse">
+                  <ProfileSection
+                    id="masse"
+                    title="Maße &amp; Kostümplanung"
+                    description="Teile deine Körpermaße mit dem Kostüm-Team."
+                    open={openSections.masse}
+                    onOpenChange={(open) => handleSectionOpenChange("masse", open)}
+                  >
                     <MemberMeasurementsManager initialMeasurements={measurements} />
-                  </TabsContent>
+                  </ProfileSection>
                 ) : null}
 
-                <TabsContent value="interessen">
+                <ProfileSection
+                  id="interessen"
+                  title="Interessen &amp; Engagement"
+                  description="Zeige, wo du dich einbringen oder unterstützen möchtest."
+                  open={openSections.interessen}
+                  onOpenChange={(open) => handleSectionOpenChange("interessen", open)}
+                >
                   <ProfileInterestsCard />
-                </TabsContent>
+                </ProfileSection>
 
-                <TabsContent value="freigaben">
+                <ProfileSection
+                  id="freigaben"
+                  title="Freigaben &amp; Fotoeinverständnis"
+                  description="Verwalte Zustimmungen für Medienarbeit und Teamkommunikation."
+                  open={openSections.freigaben}
+                  onOpenChange={(open) => handleSectionOpenChange("freigaben", open)}
+                >
                   <PhotoConsentCard onSummaryChange={handlePhotoSummaryChange} />
-                </TabsContent>
-              </Tabs>
+                </ProfileSection>
+              </div>
             </div>
           </div>
         </div>
