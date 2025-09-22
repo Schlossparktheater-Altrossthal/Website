@@ -1,6 +1,6 @@
 import type { Show } from "@prisma/client";
 
-import rawChronikAltrossthal from "./chronik-altrossthal.json";
+import rawChronikAltrossthal from "./chronik-altrossthal.json" with { type: "json" };
 
 type RawChronikCastEntry = {
   role?: string | null;
