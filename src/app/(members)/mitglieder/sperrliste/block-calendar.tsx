@@ -853,7 +853,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     setSubmitting(true);
     setError(null);
     try {
-      if (isWithinFreeze(selectedDateKey)) {
+      if (selectedKind === "BLOCKED" && isWithinFreeze(selectedDateKey)) {
         throw new Error(
           `Aus Planungsgründen können Sperrtermine erst ab ${format(freezeUntil, "EEEE, d. MMMM yyyy", { locale: de })} eingetragen werden.`
         );
