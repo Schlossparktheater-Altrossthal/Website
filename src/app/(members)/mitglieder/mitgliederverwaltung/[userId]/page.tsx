@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { AttendanceStatus, OnboardingFocus, PhotoConsentStatus, TaskStatus } from "@prisma/client";
+import type { AttendanceStatus, OnboardingFocus, PhotoConsentStatus, TaskStatus, Prisma } from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -279,49 +279,50 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
   const decodedId = decodeURIComponent(userId);
 
-  const member = (await prisma.user.findUnique({
+  const memberSelect = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    name: true,
+    email: true,
+    role: true,
+    roles: { select: { role: true } },
+    appRoles: {
+      select: {
+        role: { select: { id: true, name: true, systemRole: true, isSystem: true } },
+      },
+    },
+    avatarSource: true,
+    avatarImageUpdatedAt: true,
+    createdAt: true,
+    dateOfBirth: true,
+    deactivatedAt: true,
+    onboardingProfile: {
+      select: {
+        memberSinceYear: true,
+        focus: true,
+        background: true,
+      },
+    },
+    interests: {
+      select: {
+        interest: { select: { id: true, name: true } },
+      },
+    },
+    photoConsent: {
+      select: {
+        status: true,
+        consentGiven: true,
+        updatedAt: true,
+        approvedAt: true,
+      },
+    },
+  } as const satisfies Prisma.UserSelect;
+
+  const member = await prisma.user.findUnique({
     where: { id: decodedId },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      name: true,
-      email: true,
-      role: true,
-      roles: { select: { role: true } },
-      appRoles: {
-        select: {
-          role: { select: { id: true, name: true, systemRole: true, isSystem: true } },
-        },
-      },
-      avatarSource: true,
-      avatarImageUpdatedAt: true,
-      createdAt: true,
-      dateOfBirth: true,
-      deactivatedAt: true,
-      onboardingProfile: {
-        select: {
-          memberSinceYear: true,
-          focus: true,
-          background: true,
-          notes: true,
-        },
-      },
-      interests: {
-        select: {
-          interest: { select: { id: true, name: true } },
-        },
-      },
-      photoConsent: {
-        select: {
-          status: true,
-          consentGiven: true,
-          updatedAt: true,
-          approvedAt: true,
-        },
-      },
-    } as any,
-  })) as any;
+    select: memberSelect,
+  });
 
   if (!member) {
     notFound();
@@ -643,12 +644,12 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const onboardingFocusLabel = onboardingFocus ? ONBOARDING_FOCUS_LABELS[onboardingFocus] : "Kein Schwerpunkt hinterlegt";
 
   const onboardingBackground = member.onboardingProfile?.background?.trim() ?? null;
-  const onboardingNotes = member.onboardingProfile?.notes?.trim() ?? null;
+  // Onboarding-Notizen werden nicht abgefragt
 
   const email = member.email?.trim() ?? null;
   const dateOfBirthLabel = formatDate(member.dateOfBirth);
   const createdAtLabel = formatDateTime(member.createdAt);
-  const deactivatedAt = (member as any).deactivatedAt as Date | null | undefined;
+  const deactivatedAt = member.deactivatedAt as Date | null | undefined;
   const isDeactivated = Boolean(deactivatedAt);
   const deactivatedAtLabel = formatDateTime(deactivatedAt);
 
@@ -784,9 +785,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                     {onboardingBackground ? (
                       <p className="mt-2 text-xs text-muted-foreground">{onboardingBackground}</p>
                     ) : null}
-                    {onboardingNotes ? (
-                      <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{onboardingNotes}</p>
-                    ) : null}
+                    {/* Onboarding-Notizen derzeit nicht angezeigt */}
                   </div>
 
                   <div className="rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm">
