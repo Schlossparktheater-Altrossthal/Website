@@ -523,10 +523,10 @@ export function BlockCalendar({
             "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-500/40 dark:bg-emerald-500/10",
           !entry && isHoliday &&
             "border-sky-400/60 bg-sky-50/80 dark:border-sky-500/40 dark:bg-sky-500/10",
-          !entry && !isHoliday && isPreferredDay &&
-            "border-primary/40 bg-primary/5 text-primary dark:border-primary/60 dark:bg-primary/10 dark:text-primary-foreground",
-          !entry && !isHoliday && isExceptionDay &&
-            "border-amber-300/60 bg-amber-100/60 text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-100",
+          !entry &&
+            !isHoliday &&
+            (isPreferredDay || isExceptionDay) &&
+            "border-primary/30 bg-[linear-gradient(135deg,_rgba(129,140,248,0.12),_rgba(129,140,248,0))] dark:border-primary/40 dark:bg-[linear-gradient(135deg,_rgba(99,102,241,0.18),_rgba(129,140,248,0.06))]",
           day.isToday && !isSelected && "ring-2 ring-primary/80",
           isSelected && "border-primary ring-2 ring-primary/60",
           "hover:shadow-sm hover:-translate-y-[1px]",
