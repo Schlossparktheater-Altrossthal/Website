@@ -1,5 +1,7 @@
 import { AttendanceStatus } from "@prisma/client";
 
+import type { ServerAnalytics } from "@/lib/server-analytics";
+
 // Base Event Interface
 export interface BaseRealtimeEvent {
   type: string;
@@ -80,6 +82,11 @@ export interface OnlineStatsUpdateEvent extends BaseRealtimeEvent {
   stats: OnlineStatsSnapshot;
 }
 
+export interface ServerAnalyticsRealtimeEvent extends BaseRealtimeEvent {
+  type: 'server_analytics_update';
+  analytics: ServerAnalytics;
+}
+
 export interface UserJoinedEvent extends BaseRealtimeEvent {
   type: 'user_joined';
   user: {
@@ -113,6 +120,7 @@ export type RealtimeEvent =
   | NotificationCreatedEvent
   | UserPresenceEvent
   | OnlineStatsUpdateEvent
+  | ServerAnalyticsRealtimeEvent
   | UserJoinedEvent
   | UserLeftEvent
   | RehearsalUsersListEvent;
@@ -132,6 +140,7 @@ export interface ClientToServerEvents {
   get_online_stats: () => void;
   unsubscribe_online_stats: () => void;
   get_rehearsal_users: (rehearsalId: string) => void;
+  get_server_analytics: () => void;
 }
 
 // Server to Client Events
@@ -142,6 +151,7 @@ export interface ServerToClientEvents {
   notification_created: (event: NotificationCreatedEvent) => void;
   user_presence: (event: UserPresenceEvent) => void;
   online_stats_update: (event: OnlineStatsUpdateEvent) => void;
+  server_analytics_update: (event: ServerAnalyticsRealtimeEvent) => void;
   user_joined: (event: UserJoinedEvent) => void;
   user_left: (event: UserLeftEvent) => void;
   rehearsal_users_list: (event: RehearsalUsersListEvent) => void;
