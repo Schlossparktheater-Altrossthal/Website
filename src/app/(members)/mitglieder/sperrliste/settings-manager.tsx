@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 
-import { AlertCircle, CheckCircle2, Loader2, PlugZap, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, Loader2, PlugZap, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,24 @@ type HolidayStatusMeta = {
   label: string;
   tone: "ok" | "warning" | "disabled" | "unknown";
   description: string;
+};
+
+const STATUS_CONTAINER_TONES: Record<HolidayStatusMeta["tone"], string> = {
+  ok: "border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-100",
+  warning:
+    "border-amber-400/60 bg-amber-100 text-amber-900 dark:border-amber-500/70 dark:bg-amber-500/10 dark:text-amber-100",
+  disabled: "border-border/60 bg-muted/40 text-muted-foreground",
+  unknown:
+    "border-slate-400/50 bg-slate-100 text-slate-700 dark:border-slate-600/60 dark:bg-slate-800/40 dark:text-slate-100",
+};
+
+const STATUS_BADGE_TONES: Record<HolidayStatusMeta["tone"], string> = {
+  ok: "bg-emerald-500/20 text-emerald-700 dark:bg-emerald-500/30 dark:text-emerald-100",
+  warning:
+    "bg-amber-500/20 text-amber-900 dark:bg-amber-500/30 dark:text-amber-100",
+  disabled: "bg-muted text-muted-foreground",
+  unknown:
+    "bg-slate-500/20 text-slate-700 dark:bg-slate-500/30 dark:text-slate-100",
 };
 
 function getStatusMeta(status: HolidaySourceStatus): HolidayStatusMeta {
@@ -75,6 +93,62 @@ function sortArray(values: Iterable<number>) {
     set.add(value);
   }
   return WEEKDAY_ORDER.filter((weekday) => set.has(weekday));
+}
+
+interface SettingsSectionProps {
+  title: string;
+  description?: string;
+  summary?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}
+
+function SettingsSection({ title, description, summary, defaultOpen = false, children }: SettingsSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  const contentId = useId();
+
+  const renderSummary = (className?: string) => {
+    if (summary === undefined || summary === null) return null;
+    return (
+      <span className={cn("flex flex-wrap items-center gap-2 text-sm", className)}>
+        {typeof summary === "string" ? <span className="text-muted-foreground">{summary}</span> : summary}
+      </span>
+    );
+  };
+
+  const summaryMobile = renderSummary();
+  const summaryDesktop = renderSummary("text-muted-foreground");
+
+  return (
+    <section className="rounded-lg border border-border/60 bg-card/50">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        aria-controls={contentId}
+        className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      >
+        <div className="flex-1 space-y-1">
+          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+          {summaryMobile ? <div className="sm:hidden">{summaryMobile}</div> : null}
+        </div>
+        <div className="flex items-center gap-3">
+          {summaryDesktop ? <div className="hidden sm:block">{summaryDesktop}</div> : null}
+          <ChevronDown
+            className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+            aria-hidden
+          />
+        </div>
+      </button>
+      <div
+        id={contentId}
+        className={cn("px-4 pb-4", open ? "block border-t border-border/60 pt-4" : "hidden")}
+      >
+        <div className="space-y-4">{children}</div>
+      </div>
+    </section>
+  );
 }
 
 export function SperrlisteSettingsManager({
@@ -122,6 +196,40 @@ export function SperrlisteSettingsManager({
     if (Number.isNaN(parsed.getTime())) return null;
     return CHECKED_AT_FORMATTER.format(parsed);
   }, [status.checkedAt]);
+
+  const holidayModeSummary = useMemo(() => {
+    switch (holidayMode) {
+      case "default":
+        return "Standardfeed (Schulferien Sachsen)";
+      case "custom": {
+        const trimmed = holidayUrl.trim();
+        if (!trimmed) return "Eigener Feed (URL fehlt)";
+        try {
+          const parsed = new URL(trimmed);
+          return `Eigener Feed (${parsed.hostname})`;
+        } catch {
+          return `Eigener Feed (${trimmed})`;
+        }
+      }
+      case "disabled":
+      default:
+        return "Keine externe Quelle";
+    }
+  }, [holidayMode, holidayUrl]);
+
+  const freezeDaysNumber = useMemo(() => {
+    if (!freezeDaysValue) return null;
+    const parsed = Number.parseInt(freezeDaysValue, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [freezeDaysValue]);
+
+  const freezeDaysSummary = useMemo(() => {
+    if (freezeDaysNumber === null) return "Nicht gesetzt";
+    const suffix = freezeDaysNumber === 1 ? "Tag" : "Tage";
+    return `${freezeDaysNumber} ${suffix}`;
+  }, [freezeDaysNumber]);
+
+  const statusChipClasses = STATUS_BADGE_TONES[statusMeta.tone];
 
   const togglePreferred = (weekday: number) => {
     setPreferredDays((prev) => {
@@ -273,44 +381,103 @@ export function SperrlisteSettingsManager({
         </Text>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <section className="space-y-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Ferienquelle</h3>
-                <p className="text-sm text-muted-foreground">
-                  Wähle, ob die Ferien automatisch geladen werden oder ob die Sperrliste ohne externe Quelle arbeitet.
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div
+              className={cn(
+                "flex items-start gap-3 rounded-lg border p-4 text-sm leading-relaxed",
+                STATUS_CONTAINER_TONES[statusMeta.tone],
+              )}
+            >
+              {statusMeta.tone === "ok" ? (
+                <CheckCircle2 className="mt-1 h-5 w-5 shrink-0" aria-hidden />
+              ) : statusMeta.tone === "warning" ? (
+                <AlertCircle className="mt-1 h-5 w-5 shrink-0" aria-hidden />
+              ) : statusMeta.tone === "disabled" ? (
+                <PlugZap className="mt-1 h-5 w-5 shrink-0" aria-hidden />
+              ) : (
+                <Loader2 className="mt-1 h-5 w-5 shrink-0 animate-spin" aria-hidden />
+              )}
+              <div className="space-y-1">
+                <p className="text-sm font-semibold uppercase tracking-wide">{statusMeta.label}</p>
+                <p className="text-sm opacity-90">
+                  {status.message ?? statusMeta.description}
                 </p>
-              </div>
-              <div
-                className={cn(
-                  "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm",
-                  statusMeta.tone === "ok" && "border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-100",
-                  statusMeta.tone === "warning" && "border-amber-400/60 bg-amber-100 text-amber-900 dark:border-amber-500/70 dark:bg-amber-500/10 dark:text-amber-100",
-                  statusMeta.tone === "disabled" && "border-border/60 bg-muted/50 text-muted-foreground",
-                  statusMeta.tone === "unknown" && "border-slate-400/50 bg-slate-100 text-slate-700 dark:border-slate-600/60 dark:bg-slate-800/40 dark:text-slate-100",
-                )}
-              >
-                {statusMeta.tone === "ok" ? (
-                  <CheckCircle2 className="h-4 w-4" aria-hidden />
-                ) : statusMeta.tone === "warning" ? (
-                  <AlertCircle className="h-4 w-4" aria-hidden />
-                ) : statusMeta.tone === "disabled" ? (
-                  <PlugZap className="h-4 w-4" aria-hidden />
-                ) : (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                )}
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold uppercase tracking-wide">{statusMeta.label}</span>
-                  <span className="text-xs text-muted-foreground/80 dark:text-inherit">
-                    {status.message ?? statusMeta.description}
-                    {formattedCheckedAt ? ` — geprüft am ${formattedCheckedAt}` : ""}
-                  </span>
-                </div>
+                {formattedCheckedAt ? (
+                  <p className="text-xs opacity-80">Zuletzt geprüft: {formattedCheckedAt}</p>
+                ) : null}
               </div>
             </div>
+            <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-4">
+              <Text variant="caption" uppercase className="text-muted-foreground">
+                Kurzüberblick
+              </Text>
+              <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Text variant="caption" uppercase className="text-muted-foreground">
+                    Ferienmodus
+                  </Text>
+                  <Text variant="small">{holidayModeSummary}</Text>
+                </div>
+                <div className="space-y-1">
+                  <Text variant="caption" uppercase className="text-muted-foreground">
+                    Bevorzugte Tage
+                  </Text>
+                  <Text variant="small">{preferredList}</Text>
+                </div>
+                <div className="space-y-1">
+                  <Text variant="caption" uppercase className="text-muted-foreground">
+                    Ausnahmeproben
+                  </Text>
+                  <Text variant="small">{exceptionList}</Text>
+                </div>
+                <div className="space-y-1">
+                  <Text variant="caption" uppercase className="text-muted-foreground">
+                    Sperrfrist
+                  </Text>
+                  <Text variant="small">{freezeDaysSummary}</Text>
+                </div>
+              </dl>
+            </div>
+          </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+          <SettingsSection
+            title="Ferienquelle"
+            description="Steuert, ob Ferien automatisch geladen werden oder die Sperrliste ohne externe Quelle arbeitet."
+            summary={
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <span>{holidayModeSummary}</span>
+                <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase", statusChipClasses)}>
+                  {statusMeta.label}
+                </span>
+              </span>
+            }
+            defaultOpen
+          >
+            <div
+              className={cn(
+                "flex items-start gap-3 rounded-md border border-dashed p-3 text-sm",
+                STATUS_CONTAINER_TONES[statusMeta.tone],
+              )}
+            >
+              {statusMeta.tone === "ok" ? (
+                <CheckCircle2 className="mt-1 h-4 w-4 shrink-0" aria-hidden />
+              ) : statusMeta.tone === "warning" ? (
+                <AlertCircle className="mt-1 h-4 w-4 shrink-0" aria-hidden />
+              ) : statusMeta.tone === "disabled" ? (
+                <PlugZap className="mt-1 h-4 w-4 shrink-0" aria-hidden />
+              ) : (
+                <Loader2 className="mt-1 h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              )}
+              <div className="space-y-1">
+                <p className="text-sm font-semibold uppercase tracking-wide">{statusMeta.label}</p>
+                <p className="text-xs opacity-80">
+                  {status.message ?? statusMeta.description}
+                  {formattedCheckedAt ? ` — geprüft am ${formattedCheckedAt}` : ""}
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="holiday-mode">Quelle auswählen</Label>
                 <Select value={holidayMode} onValueChange={(value) => setHolidayMode(value as HolidaySourceMode)}>
@@ -350,41 +517,49 @@ export function SperrlisteSettingsManager({
                 </Text>
               </div>
             </div>
-          </section>
+          </SettingsSection>
 
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Bevorzugte Probentage
-              </h3>
-              <Text variant="small" tone="muted">
-                Diese Tage werden im Kalender hervorgehoben und in der Übersicht standardmäßig angezeigt.
-              </Text>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {WEEKDAY_OPTIONS.map((option) =>
-                  renderWeekdayToggle("preferred", option.value, option.label, option.short),
-                )}
+          <SettingsSection
+            title="Probenplanung"
+            description="Lege fest, welche Wochentage bevorzugt oder nur als Ausnahme berücksichtigt werden."
+            summary={`Bevorzugt: ${preferredList} · Ausnahmen: ${exceptionList}`}
+            defaultOpen
+          >
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-3">
+                <Text variant="small" tone="muted">
+                  Bevorzugte Probentage
+                </Text>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAY_OPTIONS.map((option) =>
+                    renderWeekdayToggle("preferred", option.value, option.label, option.short),
+                  )}
+                </div>
+                <Text variant="caption" tone="muted">
+                  Aktuell: {preferredList}
+                </Text>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Aktuell: {preferredList}</p>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Ausnahmeproben
-              </h3>
-              <Text variant="small" tone="muted">
-                Tage, die nur in besonderen Fällen eingeplant werden. Sie erscheinen in der Übersicht in warmen Gelbtönen.
-              </Text>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {WEEKDAY_OPTIONS.map((option) =>
-                  renderWeekdayToggle("exception", option.value, option.label, option.short),
-                )}
+              <div className="space-y-3">
+                <Text variant="small" tone="muted">
+                  Ausnahmeproben
+                </Text>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAY_OPTIONS.map((option) =>
+                    renderWeekdayToggle("exception", option.value, option.label, option.short),
+                  )}
+                </div>
+                <Text variant="caption" tone="muted">
+                  Aktuell: {exceptionList}
+                </Text>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Aktuell: {exceptionList}</p>
             </div>
-          </section>
+          </SettingsSection>
 
-          <section className="space-y-3">
+          <SettingsSection
+            title="Sperrfrist"
+            description="Bestimme, wie viele Tage vor einer Probe neue Sperrtermine blockiert werden."
+            summary={`Vorlauf: ${freezeDaysSummary}`}
+          >
             <div className="space-y-2">
               <Label htmlFor="freeze-days">Vorlauf für Sperrtermine (Tage)</Label>
               <Input
@@ -401,12 +576,28 @@ export function SperrlisteSettingsManager({
                 weiterhin entfernen.
               </Text>
             </div>
-          </section>
+          </SettingsSection>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {success ? <p className="text-sm text-emerald-600 dark:text-emerald-300">{success}</p> : null}
+          <div className="space-y-3">
+            {error ? (
+              <div
+                role="alert"
+                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {error}
+              </div>
+            ) : null}
+            {success ? (
+              <div
+                role="status"
+                className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-200"
+              >
+                {success}
+              </div>
+            ) : null}
+          </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <Text variant="small" tone="muted">
               Änderungen beeinflussen sofort die Hinweise im Kalender und die Farbgebung der Sperrlisten-Übersicht.
             </Text>
