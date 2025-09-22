@@ -8,7 +8,7 @@ import { CalendarDays, CheckCircle2, ListTodo, Ruler, Sparkles, Users } from "lu
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
+import { hasAssignedRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { sortMeasurements, type MeasurementType, type MeasurementUnit } from "@/data/measurements";
 
@@ -29,7 +29,12 @@ type PageProps = { params: { slug: string } };
 export default async function GewerkDetailPage({ params }: PageProps) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
-  const canManageMeasurements = await hasPermission(session.user, "mitglieder.koerpermasse");
+  const hasMeasurementPermission = await hasPermission(
+    session.user,
+    "mitglieder.koerpermasse",
+  );
+  const isEnsembleMember = hasAssignedRole(session.user, "cast");
+  const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>;
   }

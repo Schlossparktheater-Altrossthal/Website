@@ -8,7 +8,7 @@ import type {
 
 import { ProfilePageClient } from "@/components/members/profile-page-client";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
+import { hasAssignedRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { sortRoles } from "@/lib/roles";
 import { buildPhotoConsentSummary } from "@/lib/photo-consent-summary";
@@ -34,10 +34,12 @@ export default async function ProfilePage() {
     notFound();
   }
 
-  const canManageMeasurements = await hasPermission(
+  const hasMeasurementPermission = await hasPermission(
     session.user,
     "mitglieder.koerpermasse",
   );
+  const isEnsembleMember = hasAssignedRole(session.user, "cast");
+  const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
 
   const [user, measurementRecords, allergyRecords] = await Promise.all([
     prisma.user.findUnique({

@@ -7,7 +7,7 @@ import { CalendarDays, CheckCircle2, Clock, ListTodo, Ruler, Sparkles, Users } f
 
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
+import { hasAssignedRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { sortMeasurements, type MeasurementType, type MeasurementUnit } from "@/data/measurements";
 
@@ -24,7 +24,12 @@ type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIc
 export default async function MeineGewerkePage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
-  const canManageMeasurements = await hasPermission(session.user, "mitglieder.koerpermasse");
+  const hasMeasurementPermission = await hasPermission(
+    session.user,
+    "mitglieder.koerpermasse",
+  );
+  const isEnsembleMember = hasAssignedRole(session.user, "cast");
+  const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>;
   }

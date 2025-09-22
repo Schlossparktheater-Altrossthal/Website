@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { requireAuth } from "@/lib/rbac";
+import { hasAssignedRole, requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 
@@ -77,7 +77,12 @@ type AttendanceHistoryEntry = {
 export default async function MeineProbenPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-proben");
-  const canManageMeasurements = await hasPermission(session.user, "mitglieder.koerpermasse");
+  const hasMeasurementPermission = await hasPermission(
+    session.user,
+    "mitglieder.koerpermasse",
+  );
+  const isEnsembleMember = hasAssignedRole(session.user, "cast");
+  const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Probenübersicht.</div>;
   }

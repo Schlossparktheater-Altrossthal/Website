@@ -5,11 +5,10 @@ import type { Role } from "@/lib/roles";
 
 export { ROLES, type Role } from "@/lib/roles";
 
-export function hasRole(user: { role?: Role; roles?: Role[] } | null | undefined, ...roles: Role[]) {
-  if (!roles.length) return true;
-  if (!user) return false;
-
+function collectAssignedRoles(user: { role?: Role; roles?: Role[] } | null | undefined) {
   const owned = new Set<Role>();
+  if (!user) return owned;
+
   if (user.role) owned.add(user.role);
   if (Array.isArray(user.roles)) {
     for (const role of user.roles) {
@@ -17,10 +16,31 @@ export function hasRole(user: { role?: Role; roles?: Role[] } | null | undefined
     }
   }
 
+  return owned;
+}
+
+export function hasRole(user: { role?: Role; roles?: Role[] } | null | undefined, ...roles: Role[]) {
+  if (!roles.length) return true;
+
+  const owned = collectAssignedRoles(user);
+
   if (owned.size === 0) return false;
 
   // Owners and Admins have full access (wildcard)
   if (owned.has("owner") || owned.has("admin")) return true;
+
+  return roles.some((role) => owned.has(role));
+}
+
+export function hasAssignedRole(
+  user: { role?: Role; roles?: Role[] } | null | undefined,
+  ...roles: Role[]
+) {
+  if (!roles.length) return true;
+
+  const owned = collectAssignedRoles(user);
+
+  if (owned.size === 0) return false;
 
   return roles.some((role) => owned.has(role));
 }
