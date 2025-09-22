@@ -31,6 +31,7 @@ export default async function MitgliederVerwaltungPage() {
         appRoles: { select: { role: { select: { id: true, name: true } } } },
         avatarSource: true,
         avatarImageUpdatedAt: true,
+        deactivatedAt: true,
       },
     }),
     prisma.appRole.findMany({ where: { isSystem: false, systemRole: null }, orderBy: { name: "asc" } }),
@@ -51,6 +52,8 @@ export default async function MitgliederVerwaltungPage() {
       customRoles: user.appRoles.map((ar) => ar.role),
       avatarSource: user.avatarSource,
       avatarUpdatedAt: user.avatarImageUpdatedAt?.toISOString() ?? null,
+      isDeactivated: Boolean(user.deactivatedAt),
+      deactivatedAt: user.deactivatedAt?.toISOString() ?? null,
     };
   });
 

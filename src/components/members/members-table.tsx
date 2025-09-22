@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Eye } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ export type MembersTableUser = {
   customRoles: { id: string; name: string }[];
   avatarSource?: AvatarSource | null;
   avatarUpdatedAt?: string | number | Date | null;
+  isDeactivated: boolean;
+  deactivatedAt?: string | null;
 };
 
 function getDisplayName(user: MembersTableUser): string {
@@ -43,6 +46,8 @@ export function MembersTable({
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<MembersTableUser[]>(users);
   const [roleFilter, setRoleFilter] = useState<Role | null>(null);
+  const [statusTarget, setStatusTarget] = useState<MembersTableUser | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MembersTableUser | null>(null);
 
   // keep local rows in sync when server re-fetches
   useEffect(() => {
@@ -123,7 +128,10 @@ export function MembersTable({
               const displayName = getDisplayName(u);
               const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
               return (
-                <div key={u.id} className="rounded-md border bg-card p-3">
+                <div
+                  key={u.id}
+                  className={cn("rounded-md border bg-card p-3", u.isDeactivated && "border-dashed bg-muted/40")}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <UserAvatar
@@ -138,7 +146,14 @@ export function MembersTable({
                         avatarUpdatedAt={u.avatarUpdatedAt}
                       />
                       <div>
-                        <div className="font-medium">{displayName || "—"}</div>
+                        <div className="flex flex-wrap items-center gap-2 font-medium">
+                          <span>{displayName || "—"}</span>
+                          {u.isDeactivated && (
+                            <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
+                              Deaktiviert
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
                         <div className="mt-2 flex flex-wrap gap-1">
                           {sorted.map((r) => (
@@ -166,8 +181,16 @@ export function MembersTable({
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
-                          onClick={() => alert("Löschen noch nicht implementiert")}
+                          variant={u.isDeactivated ? "secondary" : "outline"}
+                          onClick={() => setStatusTarget(u)}
+                        >
+                          {u.isDeactivated ? "Aktivieren" : "Deaktivieren"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setDeleteTarget(u)}
                         >
                           Löschen
                         </Button>
@@ -197,7 +220,7 @@ export function MembersTable({
                     const displayName = getDisplayName(u);
                     const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
                     return (
-                      <tr key={u.id} className="border-b hover:bg-accent/10">
+                      <tr key={u.id} className={cn("border-b hover:bg-accent/10", u.isDeactivated && "bg-muted/40")}>
                         <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <UserAvatar
@@ -212,7 +235,14 @@ export function MembersTable({
                               avatarUpdatedAt={u.avatarUpdatedAt}
                             />
                             <div>
-                              <div className="font-medium">{displayName || "—"}</div>
+                              <div className="flex flex-wrap items-center gap-2 font-medium">
+                                <span>{displayName || "—"}</span>
+                                {u.isDeactivated && (
+                                  <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
+                                    Deaktiviert
+                                  </Badge>
+                                )}
+                              </div>
                               <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
                             </div>
                           </div>
@@ -257,8 +287,16 @@ export function MembersTable({
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
-                              onClick={() => alert("Löschen noch nicht implementiert")}
+                              variant={u.isDeactivated ? "secondary" : "outline"}
+                              onClick={() => setStatusTarget(u)}
+                            >
+                              {u.isDeactivated ? "Aktivieren" : "Deaktivieren"}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setDeleteTarget(u)}
                             >
                               Löschen
                             </Button>
@@ -327,6 +365,303 @@ export function MembersTable({
           </div>
         </>
       )}
+      <MemberStatusModal
+        user={statusTarget}
+        onClose={() => setStatusTarget(null)}
+        onStatusChange={(id, deactivatedAt) => {
+          setRows((prev) =>
+            prev.map((row) =>
+              row.id === id
+                ? {
+                    ...row,
+                    isDeactivated: Boolean(deactivatedAt),
+                    deactivatedAt,
+                  }
+                : row,
+            ),
+          );
+          if (openFor === id && Boolean(deactivatedAt)) {
+            setOpenFor(null);
+          }
+        }}
+      />
+      <MemberDeleteModal
+        user={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={(id) => {
+          setRows((prev) => prev.filter((row) => row.id !== id));
+          setOpenFor((prev) => (prev === id ? null : prev));
+        }}
+      />
     </div>
+  );
+}
+
+type MemberStatusModalProps = {
+  user: MembersTableUser | null;
+  onClose: () => void;
+  onStatusChange: (id: string, deactivatedAt: string | null) => void;
+};
+
+function MemberStatusModal({ user, onClose, onStatusChange }: MemberStatusModalProps) {
+  const [loading, setLoading] = useState(false);
+  const open = Boolean(user);
+
+  if (!user) {
+    return null;
+  }
+
+  const displayName = getDisplayName(user) || user.email || "Unbekanntes Mitglied";
+  const targetWillDeactivate = !user.isDeactivated;
+  const title = targetWillDeactivate ? "Mitglied deaktivieren" : "Mitglied reaktivieren";
+  const description = targetWillDeactivate
+    ? "Das Mitglied kann sich nach der Deaktivierung nicht mehr anmelden. Alle aktiven Sitzungen werden beendet."
+    : "Das Mitglied erhält wieder Zugriff auf den Mitgliederbereich und kann sich erneut anmelden.";
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/members/${user.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deactivated: targetWillDeactivate }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        user?: { deactivatedAt?: string | null };
+      };
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Aktualisierung fehlgeschlagen");
+      }
+
+      const nextDeactivatedAt = data?.user?.deactivatedAt ?? null;
+      onStatusChange(user.id, nextDeactivatedAt);
+      toast.success(targetWillDeactivate ? "Mitglied deaktiviert" : "Mitglied reaktiviert");
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal open={open} title={title} description={description} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+          <div className="font-medium text-foreground">{displayName}</div>
+          <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
+        </div>
+        {targetWillDeactivate ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            Deaktivierte Profile bleiben in Listen sichtbar, verfügen jedoch über keinerlei Rechte mehr. Die
+            Reaktivierung ist jederzeit möglich.
+          </div>
+        ) : (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+            Das Mitglied kann nach der Reaktivierung sofort wieder alle zugewiesenen Funktionen nutzen.
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+            Abbrechen
+          </Button>
+          <Button
+            type="button"
+            variant={targetWillDeactivate ? "destructive" : "default"}
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                {targetWillDeactivate ? "Deaktivieren" : "Aktivieren"}
+              </span>
+            ) : (
+              targetWillDeactivate ? "Deaktivieren" : "Aktivieren"
+            )}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+type MemberUsageItem = { key: string; label: string; count: number; href?: string | null };
+type MemberUsageSection = { key: string; title: string; total: number; items: MemberUsageItem[] };
+
+type MemberUsageResponse = {
+  total: number;
+  sections: MemberUsageSection[];
+  user?: { id: string; name?: string | null; email?: string | null; deactivatedAt?: string | null };
+  error?: string;
+};
+
+type MemberDeleteModalProps = {
+  user: MembersTableUser | null;
+  onClose: () => void;
+  onDeleted: (id: string) => void;
+};
+
+function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps) {
+  const [loading, setLoading] = useState(false);
+  const [usage, setUsage] = useState<MemberUsageResponse | null>(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
+  const [usageError, setUsageError] = useState<string | null>(null);
+  const open = Boolean(user);
+
+  useEffect(() => {
+    if (!user) {
+      setUsage(null);
+      setUsageError(null);
+      setLoadingUsage(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingUsage(true);
+    setUsageError(null);
+
+    const load = async () => {
+      try {
+        const response = await fetch(`/api/members/${user.id}/usage`, { cache: "no-store" });
+        const data = (await response.json().catch(() => ({}))) as MemberUsageResponse;
+        if (cancelled) return;
+        if (!response.ok) {
+          setUsage(null);
+          setUsageError(data?.error ?? "Übersicht konnte nicht geladen werden");
+        } else {
+          setUsage(data);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Übersicht konnte nicht geladen werden";
+        setUsage(null);
+        setUsageError(message);
+      } finally {
+        if (!cancelled) {
+          setLoadingUsage(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  if (!user) {
+    return null;
+  }
+
+  const displayName = getDisplayName(user) || user.email || "Unbekanntes Mitglied";
+  const usageTotal = usage?.total ?? 0;
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/members/${user.id}`, { method: "DELETE" });
+      const data = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Löschen fehlgeschlagen");
+      }
+      toast.success("Mitglied erfolgreich gelöscht");
+      onDeleted(user.id);
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Löschen fehlgeschlagen";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      title="Mitglied löschen"
+      description="Prüfe vor dem Löschen, in welchen Bereichen dieses Profil eingebunden ist."
+      onClose={onClose}
+      allowContentOverflow
+    >
+      <div className="space-y-4">
+        <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+          <div className="font-medium text-foreground">{displayName}</div>
+          <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
+          {user.isDeactivated && (
+            <Badge variant="outline" className="mt-2 text-[10px] uppercase tracking-wide text-destructive">
+              Bereits deaktiviert
+            </Badge>
+          )}
+        </div>
+
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+          Dieser Vorgang kann nicht rückgängig gemacht werden. Alle verknüpften Daten werden entsprechend den
+          hinterlegten Löschregeln entfernt oder anonymisiert.
+        </div>
+
+        {loadingUsage ? (
+          <div className="flex items-center justify-center gap-2 rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            Lade Zuordnungen …
+          </div>
+        ) : usageError ? (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            {usageError}
+          </div>
+        ) : usage && usage.sections.length > 0 ? (
+          <div className="space-y-3">
+            {usage.sections.map((section) => (
+              <div key={section.key} className="rounded-md border border-border/60 bg-background p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">{section.title}</span>
+                  <span className="text-xs text-muted-foreground">{section.total} Einträge</span>
+                </div>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {section.items.map((item) => (
+                    <li key={item.key} className="flex items-center justify-between">
+                      <span>{item.label}</span>
+                      <span className="font-medium text-foreground">{item.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            Keine verknüpften Datensätze gefunden. Das Profil kann sicher gelöscht werden.
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          {usageTotal > 0 && !usageError && !loadingUsage && (
+            <div className="text-xs text-muted-foreground">
+              Insgesamt {usageTotal} Verknüpfungen werden entfernt oder neutralisiert.
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              Abbrechen
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Löschen
+                </span>
+              ) : (
+                "Endgültig löschen"
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }

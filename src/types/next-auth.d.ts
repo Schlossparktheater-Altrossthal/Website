@@ -14,6 +14,8 @@ declare module "next-auth" {
       avatarSource?: AvatarSource | null;
       avatarUpdatedAt?: string | null;
       dateOfBirth?: string | null;
+      isDeactivated?: boolean;
+      deactivatedAt?: string | null;
     };
   }
   interface User {
@@ -24,6 +26,8 @@ declare module "next-auth" {
     avatarSource?: AvatarSource | null;
     avatarUpdatedAt?: string | null;
     dateOfBirth?: string | null;
+    isDeactivated?: boolean;
+    deactivatedAt?: string | null;
   }
 }
 

@@ -131,7 +131,7 @@ model AvailabilityDay {
   availableFromMin Int?
   availableToMin   Int?
   note             String?
-  user             User             @relation(fields: [userId], references: [id])
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
 }
@@ -145,7 +145,7 @@ model AvailabilityTemplate {
   availableToMin   Int?
   validFrom        DateTime?
   validTo          DateTime?
-  user             User             @relation(fields: [userId], references: [id])
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum TaskStatus {
@@ -221,6 +221,7 @@ model User {
   passwordHash String?
   createdAt DateTime @default(now())
   dateOfBirth DateTime?
+  deactivatedAt DateTime?
   avatarSource        AvatarSource @default(GRAVATAR)
   avatarImage         Bytes?
   avatarImageMime     String?
@@ -917,9 +918,9 @@ model Issue {
   updatedAt      DateTime       @updatedAt
   lastActivityAt DateTime       @default(now())
   resolvedAt     DateTime?
-  createdById    String
+  createdById    String?
   updatedById    String?
-  createdBy      User           @relation("IssueCreatedBy", fields: [createdById], references: [id])
+  createdBy      User?          @relation("IssueCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy      User?          @relation("IssueUpdatedBy", fields: [updatedById], references: [id])
   comments       IssueComment[]
 

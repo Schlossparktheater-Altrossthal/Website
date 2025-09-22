@@ -146,3 +146,53 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await requireAuth();
+  if (!(await hasPermission(session.user, "mitglieder.rollenverwaltung"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      role: true,
+      roles: { select: { role: true } },
+    },
+  });
+
+  if (!target) {
+    return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+  }
+
+  const isOwner =
+    target.role === "owner" || target.roles.some((entry) => entry.role === "owner");
+
+  if (isOwner) {
+    const remainingOwners = await prisma.user.count({
+      where: {
+        id: { not: target.id },
+        deactivatedAt: null,
+        OR: [{ role: "owner" }, { roles: { some: { role: "owner" } } }],
+      },
+    });
+
+    if (remainingOwners === 0) {
+      return NextResponse.json({ error: "Es muss immer mindestens einen Owner geben" }, { status: 400 });
+    }
+  }
+
+  try {
+    await prisma.user.delete({ where: { id: target.id } });
+    return NextResponse.json({ ok: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Löschen fehlgeschlagen";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
