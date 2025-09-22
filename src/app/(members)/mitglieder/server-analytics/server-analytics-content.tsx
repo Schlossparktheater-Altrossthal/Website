@@ -4,9 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRealtime } from "@/hooks/useRealtime";
-import type { ServerAnalytics } from "@/lib/server-analytics";
-import { type OptimizationArea, type OptimizationImpact } from "@/lib/server-analytics";
+import type {
+  OptimizationArea,
+  OptimizationImpact,
+  ServerAnalytics,
+  ServerLogEvent,
+} from "@/lib/server-analytics";
 import type { ServerAnalyticsRealtimeEvent } from "@/lib/realtime/types";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +99,49 @@ function parseGeneratedAt(value: string | undefined) {
   return new Date();
 }
 
+function formatLogTimestamp(value: string | undefined) {
+  const parsed = Date.parse(value ?? "");
+  if (Number.isFinite(parsed)) {
+    return dateTimeFormat.format(new Date(parsed));
+  }
+  return "Zeitpunkt unbekannt";
+}
+
+const severityLabelMap: Record<ServerLogEvent["severity"], string> = {
+  info: "Info",
+  warning: "Warnung",
+  error: "Fehler",
+};
+
+function severityBadgeVariant(severity: ServerLogEvent["severity"]) {
+  switch (severity) {
+    case "error":
+      return "destructive" as const;
+    case "warning":
+      return "warning" as const;
+    default:
+      return "muted" as const;
+  }
+}
+
+const statusLabelMap: Record<ServerLogEvent["status"], string> = {
+  open: "Offen",
+  monitoring: "Beobachtung",
+  resolved: "Gelöst",
+};
+
+function statusBadgeVariant(status: ServerLogEvent["status"]) {
+  switch (status) {
+    case "open":
+      return "destructive" as const;
+    case "monitoring":
+      return "warning" as const;
+    case "resolved":
+    default:
+      return "success" as const;
+  }
+}
+
 type ServerAnalyticsContentProps = {
   initialAnalytics: ServerAnalytics;
 };
@@ -167,6 +215,47 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
     }
   }, [connectionStatus]);
 
+  const {
+    logs: relevantLogs,
+    warningCount,
+    errorCount,
+    openCount: openIncidents,
+    lastSeenLabel: lastLogSeenLabel,
+  } = useMemo(() => {
+    const entries = analytics.serverLogs ?? [];
+    const filtered = entries.filter((log) => log.severity === "warning" || log.severity === "error");
+    const sorted = [...filtered].sort((a, b) => {
+      const aTime = Date.parse(a.lastSeen);
+      const bTime = Date.parse(b.lastSeen);
+      if (!Number.isFinite(aTime) && !Number.isFinite(bTime)) {
+        return 0;
+      }
+      if (!Number.isFinite(aTime)) {
+        return 1;
+      }
+      if (!Number.isFinite(bTime)) {
+        return -1;
+      }
+      return bTime - aTime;
+    });
+
+    const warningTotal = sorted.filter((log) => log.severity === "warning").length;
+    const errorTotal = sorted.filter((log) => log.severity === "error").length;
+    const openTotal = sorted.filter((log) => log.status === "open").length;
+    const latest = sorted[0];
+
+    return {
+      logs: sorted,
+      warningCount: warningTotal,
+      errorCount: errorTotal,
+      openCount: openTotal,
+      lastSeenLabel: latest ? formatLogTimestamp(latest.lastSeen) : "Keine Meldungen",
+    };
+  }, [analytics.serverLogs]);
+
+  const latestLog = relevantLogs[0];
+  const hasLogs = relevantLogs.length > 0;
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -184,7 +273,20 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <Tabs defaultValue="overview" className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="overview">Kennzahlen</TabsTrigger>
+            <TabsTrigger value="logs">Serverlogs</TabsTrigger>
+          </TabsList>
+          <div className="text-xs text-muted-foreground sm:text-right">
+            <p className="font-medium text-foreground/80">Letzte Meldung</p>
+            <p>{hasLogs ? lastLogSeenLabel : "Keine Meldungen"}</p>
+          </div>
+        </div>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border border-border/70">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Verfügbarkeit</CardTitle>
@@ -558,6 +660,122 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        <TabsContent value="logs" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Warnungen</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold">{numberFormat.format(warningCount)}</p>
+                <p className="text-xs text-muted-foreground">letzte 48 Stunden</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Fehler</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold">{numberFormat.format(errorCount)}</p>
+                <p className="text-xs text-muted-foreground">letzte 48 Stunden</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Offene Vorfälle</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold">{numberFormat.format(openIncidents)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {openIncidents === 1 ? "Ticket in Bearbeitung" : "Tickets in Bearbeitung"}
+                </p>
+                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  {hasLogs ? (
+                    <>
+                      <p className="font-medium text-foreground/80">{latestLog?.message}</p>
+                      <p>{latestLog?.service}</p>
+                      <p>Zuletzt: {lastLogSeenLabel}</p>
+                    </>
+                  ) : (
+                    <p>Keine aktuellen Meldungen.</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border border-border/70">
+            <CardHeader>
+              <CardTitle>Warn- & Fehlermeldungen</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Automatisch aggregierte Serverlogs der letzten 48 Stunden.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {hasLogs ? (
+                <div className="space-y-4">
+                  {relevantLogs.map((log) => (
+                    <div key={log.id} className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
+                            <Badge variant={severityBadgeVariant(log.severity)} className="uppercase tracking-wide">
+                              {severityLabelMap[log.severity]}
+                            </Badge>
+                            <span>{log.service}</span>
+                          </div>
+                          <p className="text-sm font-semibold text-foreground">{log.message}</p>
+                          <p className="text-sm text-muted-foreground">{log.description}</p>
+                          {log.tags?.length ? (
+                            <div className="flex flex-wrap gap-2">
+                              {log.tags.map((tag) => (
+                                <Badge
+                                  key={`${log.id}-${tag}`}
+                                  variant="outline"
+                                  className="border-border/60 bg-transparent text-[11px] font-medium text-muted-foreground"
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-col items-start gap-2 sm:items-end">
+                          <Badge variant={statusBadgeVariant(log.status)} className="uppercase tracking-wide">
+                            {statusLabelMap[log.status]}
+                          </Badge>
+                          {log.recommendedAction ? (
+                            <p className="max-w-xs text-xs text-muted-foreground sm:text-right">{log.recommendedAction}</p>
+                          ) : null}
+                          <div className="flex flex-wrap justify-end gap-3 text-xs text-muted-foreground">
+                            <span>Vorkommen: {numberFormat.format(log.occurrences)}</span>
+                            {typeof log.affectedUsers === "number" ? (
+                              <span>Betroffene Nutzer:innen: {numberFormat.format(log.affectedUsers)}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span>Erstmals gesehen: {formatLogTimestamp(log.firstSeen)}</span>
+                        <span>Zuletzt gesehen: {formatLogTimestamp(log.lastSeen)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-md border border-success/40 bg-success/10 p-6 text-sm text-success">
+                  <p className="font-semibold">Keine aktiven Warn- oder Fehlermeldungen</p>
+                  <p className="mt-1 text-success/90">
+                    Innerhalb der letzten 48 Stunden wurden keine Warnungen oder Fehler registriert. Systeme laufen stabil.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
