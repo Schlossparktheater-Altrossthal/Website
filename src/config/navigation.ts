@@ -21,6 +21,12 @@ export const primaryNavigation: NavigationItem[] = [
     description: "Lade Bilder hoch und pflege das Archiv von 2009 bis heute.",
   },
   {
+    label: "Kochen & Essen",
+    href: "/kochen-und-essen",
+    description:
+      "Alle Ernährungshinweise und Verträglichkeiten des Ensembles für Küche und Orga.",
+  },
+  {
     label: "Unsere Schulkatze",
     href: "/unsere-schulkatze",
     description: "Lerne Minna kennen – Pausenbegleiterin und Herz unserer Schule.",
