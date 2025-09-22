@@ -344,13 +344,19 @@ export function PermissionMatrix() {
       const categoryKey = `category-${perm.categoryKey}-${categorySequence}`;
       categorySequence += 1;
       tableRows.push(
-        <tr key={categoryKey} className="bg-muted/40">
+        <tr key={categoryKey} className="bg-muted/50">
           <th
             scope="colgroup"
             colSpan={totalColumns}
-            className="px-3 py-2 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground"
+            className="border-y border-border/70 px-3 py-3 text-left text-muted-foreground"
           >
-            {perm.categoryLabel}
+            <div className="flex items-center gap-3">
+              <span className="hidden h-px flex-1 bg-border/60 sm:block" aria-hidden />
+              <span className="text-[0.65rem] font-semibold uppercase tracking-[0.3em]">
+                {perm.categoryLabel}
+              </span>
+              <span className="hidden h-px flex-1 bg-border/60 sm:block" aria-hidden />
+            </div>
           </th>
         </tr>,
       );
