@@ -14,6 +14,7 @@ export type AssignmentFocus = "none" | "rehearsals" | "departments" | "both";
 const GENERAL_ITEMS: Item[] = [
   { href: "/mitglieder", label: "Dashboard", permissionKey: "mitglieder.dashboard" },
   { href: "/mitglieder/profil", label: "Profil", permissionKey: "mitglieder.profil" },
+  { href: "/mitglieder/galerie", label: "Galerie", permissionKey: "mitglieder.galerie" },
   { href: "/mitglieder/sperrliste", label: "Sperrliste", permissionKey: "mitglieder.sperrliste" },
   { href: "/mitglieder/issues", label: "Feedback & Support", permissionKey: "mitglieder.issues" },
 ];
@@ -88,6 +89,14 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="8" r="4" />
           <path d="M6 20c0-3.314 2.686-6 6-6s6 2.686 6 6" />
+        </svg>
+      );
+    case "/mitglieder/galerie":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 8a2 2 0 0 1 2-2h2l1.2-2h5.6L15 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M7 8h2" />
         </svg>
       );
     case "/mitglieder/issues":

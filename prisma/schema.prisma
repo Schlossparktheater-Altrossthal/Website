@@ -59,6 +59,11 @@ enum AttendanceStatus {
   maybe
 }
 
+enum GalleryMediaType {
+  image
+  video
+}
+
 enum AvailabilityStatus {
   blocked
   available
@@ -267,6 +272,7 @@ model User {
   financeEntriesApproved FinanceEntry[]         @relation("FinanceEntryApprovedBy")
   financeEntriesPaidFor  FinanceEntry[]         @relation("FinanceEntryMemberPaidBy")
   financeLogsAuthored    FinanceLog[]           @relation("FinanceLogChangedBy")
+  galleryItems           GalleryItem[]
 }
 
 model Account {
@@ -966,6 +972,23 @@ model PhotoConsent {
   documentData     Bytes?
   user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   approvedBy       User?               @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
+}
+
+model GalleryItem {
+  id           String           @id @default(cuid())
+  year         Int
+  description  String?
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  mediaType    GalleryMediaType
+  data         Bytes
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  uploadedById String
+  uploadedBy   User             @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([year, createdAt])
 }
 
 model MemberInvite {
