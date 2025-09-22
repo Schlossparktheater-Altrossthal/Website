@@ -94,6 +94,11 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
   },
   {
+    key: "mitglieder.server.analytics",
+    label: "Server-Statistiken einsehen",
+    description: "Auslastung, Antwortzeiten und Nutzungsverhalten in der Server-Statistik abrufen.",
+  },
+  {
     key: "mitglieder.issues.manage",
     label: "Feedback-Anliegen verwalten",
     description: "Status, Priorität und Moderation für gemeldete Anliegen im Issue-Board übernehmen.",
