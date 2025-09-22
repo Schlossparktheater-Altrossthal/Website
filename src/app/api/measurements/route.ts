@@ -65,6 +65,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        role: true,
+        roles: { select: { role: true } },
+      },
+    });
+
+    if (!targetUser) {
+      return NextResponse.json({ error: "Mitglied nicht gefunden" }, { status: 404 });
+    }
+
+    const isTargetInEnsemble =
+      targetUser.role === "cast" || targetUser.roles.some((entry) => entry.role === "cast");
+
+    if (!isTargetInEnsemble) {
+      return NextResponse.json(
+        { error: "Körpermaße können nur für Ensemble-Mitglieder gepflegt werden." },
+        { status: 403 },
+      );
+    }
+
     const measurement = await prisma.memberMeasurement.upsert({
       where: {
         userId_type: {
