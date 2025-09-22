@@ -7,12 +7,84 @@ import { Server } from 'socket.io';
 import { URL } from 'url';
 
 import analyticsStaticData from '../../src/data/server-analytics-static.json' assert { type: 'json' };
-import {
-  applyPagePerformanceMetrics,
-  loadDeviceBreakdownFromDatabase,
-  loadPagePerformanceMetrics,
-  mergeDeviceBreakdown,
-} from '../../src/lib/server-analytics-data.js';
+
+const fallbackAnalyticsModule = {
+  applyPagePerformanceMetrics(baseEntries = []) {
+    if (!Array.isArray(baseEntries)) {
+      return [];
+    }
+    return baseEntries.map((entry) => ({ ...entry }));
+  },
+  mergeDeviceBreakdown(baseEntries = []) {
+    if (!Array.isArray(baseEntries)) {
+      return [];
+    }
+    return baseEntries.map((entry) => ({ ...entry }));
+  },
+};
+
+let analyticsModulePromise = null;
+let analyticsModuleMissingLogged = false;
+let analyticsModuleErrorLogged = false;
+
+function isModuleNotFoundError(error) {
+  if (!error) {
+    return false;
+  }
+  return error.code === 'ERR_MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_FOUND';
+}
+
+function logMissingAnalyticsModule(message, error) {
+  if (analyticsModuleMissingLogged) {
+    return;
+  }
+  analyticsModuleMissingLogged = true;
+  if (error) {
+    console.warn(message, error);
+    return;
+  }
+  console.warn(message);
+}
+
+function logAnalyticsModuleError(error) {
+  if (analyticsModuleErrorLogged) {
+    return;
+  }
+  analyticsModuleErrorLogged = true;
+  console.error('[Realtime] Failed to load optional server analytics module', error);
+}
+
+function resolveAnalyticsModule() {
+  if (!analyticsModulePromise) {
+    analyticsModulePromise = import('../../src/lib/server-analytics-data.js')
+      .then((module) => {
+        if (
+          !module ||
+          typeof module.applyPagePerformanceMetrics !== 'function' ||
+          typeof module.mergeDeviceBreakdown !== 'function'
+        ) {
+          logMissingAnalyticsModule(
+            '[Realtime] server-analytics-data module is missing expected exports. Falling back to static analytics.',
+          );
+          return null;
+        }
+        return module;
+      })
+      .catch((error) => {
+        if (isModuleNotFoundError(error)) {
+          logMissingAnalyticsModule(
+            '[Realtime] server-analytics-data module not found. Falling back to static analytics.',
+            error,
+          );
+          return null;
+        }
+        logAnalyticsModuleError(error);
+        return null;
+      });
+  }
+
+  return analyticsModulePromise;
+}
 
 function toISO(date) {
   return new Date(date).toISOString();
@@ -351,31 +423,49 @@ export function createRealtimeServer(options = {}) {
     let publicPages = base.publicPages ?? [];
     let memberPages = base.memberPages ?? [];
 
-    if (process.env.DATABASE_URL) {
+    const analyticsModule = await resolveAnalyticsModule();
+    const mergeDeviceBreakdownFn =
+      typeof analyticsModule?.mergeDeviceBreakdown === 'function'
+        ? analyticsModule.mergeDeviceBreakdown
+        : fallbackAnalyticsModule.mergeDeviceBreakdown;
+    const applyPagePerformanceMetricsFn =
+      typeof analyticsModule?.applyPagePerformanceMetrics === 'function'
+        ? analyticsModule.applyPagePerformanceMetrics
+        : fallbackAnalyticsModule.applyPagePerformanceMetrics;
+    const loadDeviceBreakdownFromDatabaseFn =
+      typeof analyticsModule?.loadDeviceBreakdownFromDatabase === 'function'
+        ? analyticsModule.loadDeviceBreakdownFromDatabase
+        : null;
+    const loadPagePerformanceMetricsFn =
+      typeof analyticsModule?.loadPagePerformanceMetrics === 'function'
+        ? analyticsModule.loadPagePerformanceMetrics
+        : null;
+
+    if (process.env.DATABASE_URL && loadDeviceBreakdownFromDatabaseFn && loadPagePerformanceMetricsFn) {
       const [deviceOverrides, pageMetrics] = await Promise.all([
-        loadDeviceBreakdownFromDatabase().catch((error) => {
+        loadDeviceBreakdownFromDatabaseFn().catch((error) => {
           logError('[Realtime] Failed to load device analytics', error);
           return null;
         }),
-        loadPagePerformanceMetrics().catch((error) => {
+        loadPagePerformanceMetricsFn().catch((error) => {
           logError('[Realtime] Failed to load page performance metrics', error);
           return [];
         }),
       ]);
 
-      deviceBreakdown = mergeDeviceBreakdown(deviceBreakdown, deviceOverrides ?? undefined);
+      deviceBreakdown = mergeDeviceBreakdownFn(deviceBreakdown, deviceOverrides ?? undefined);
 
       if (Array.isArray(pageMetrics) && pageMetrics.length > 0) {
-        publicPages = applyPagePerformanceMetrics(publicPages, pageMetrics, 'public');
-        memberPages = applyPagePerformanceMetrics(memberPages, pageMetrics, 'members');
+        publicPages = applyPagePerformanceMetricsFn(publicPages, pageMetrics, 'public');
+        memberPages = applyPagePerformanceMetricsFn(memberPages, pageMetrics, 'members');
       } else {
         publicPages = publicPages.map((entry) => ({ ...entry }));
         memberPages = memberPages.map((entry) => ({ ...entry }));
       }
     } else {
-      deviceBreakdown = deviceBreakdown.map((entry) => ({ ...entry }));
-      publicPages = publicPages.map((entry) => ({ ...entry }));
-      memberPages = memberPages.map((entry) => ({ ...entry }));
+      deviceBreakdown = mergeDeviceBreakdownFn(deviceBreakdown);
+      publicPages = applyPagePerformanceMetricsFn(publicPages, [], 'public');
+      memberPages = applyPagePerformanceMetricsFn(memberPages, [], 'members');
     }
 
     return {
