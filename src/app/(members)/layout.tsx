@@ -13,6 +13,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
 
   let assignmentFocus: AssignmentFocus = "none";
   const userId = session.user?.id;
+  let departmentAssignmentCount = 0;
   if (userId) {
     const [rehearsalAssignments, departmentAssignments] = await Promise.all([
       prisma.rehearsalAttendance.count({
@@ -20,6 +21,8 @@ export default async function MembersLayout({ children }: { children: React.Reac
       }),
       prisma.departmentMembership.count({ where: { userId } }),
     ]);
+
+    departmentAssignmentCount = departmentAssignments;
 
     if (rehearsalAssignments > 0 && departmentAssignments > 0) {
       assignmentFocus = "both";
@@ -29,6 +32,8 @@ export default async function MembersLayout({ children }: { children: React.Reac
       assignmentFocus = "rehearsals";
     }
   }
+
+  const hasDepartmentMemberships = departmentAssignmentCount > 0;
 
   return (
     <MembersPermissionsProvider permissions={permissions}>
@@ -41,6 +46,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               permissions={permissions}
               activeProduction={activeProduction ?? undefined}
               assignmentFocus={assignmentFocus}
+              hasDepartmentMemberships={hasDepartmentMemberships}
             />
           </aside>
           <section className="min-w-0 space-y-8">{children}</section>

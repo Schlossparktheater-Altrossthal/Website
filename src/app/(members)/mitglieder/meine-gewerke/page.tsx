@@ -19,6 +19,7 @@ import {
   isCastDepartmentUser,
 } from "./utils";
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-card";
+import { joinDepartmentAction } from "./actions";
 
 type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
 
@@ -95,6 +96,21 @@ export default async function MeineGewerkePage() {
   const memberships = membershipsRaw
     .sort((a, b) => a.department.name.localeCompare(b.department.name, "de", { sensitivity: "base" }))
     .map((membership) => membership as DepartmentMembershipWithDepartment);
+
+  const joinableDepartments = await prisma.department.findMany({
+    where: {
+      isCore: true,
+      memberships: { none: { userId } },
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      color: true,
+      slug: true,
+    },
+    orderBy: { name: "asc" },
+  });
 
   let costumeMeasurementsByUser: DepartmentMeasurementsByUser | undefined;
   const costumeMemberships = memberships.filter((membership) => membership.department.slug === "kostuem");
@@ -296,15 +312,64 @@ export default async function MeineGewerkePage() {
     </section>
   );
 
+  const joinSection = joinableDepartments.length ? (
+    <section className="rounded-3xl border border-border/60 bg-background/70 p-6 shadow-inner sm:p-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold text-foreground sm:text-xl">Weitere Gewerke beitreten</h2>
+          <p className="text-sm text-muted-foreground">
+            Verstärke zusätzliche Teams, um deren Aufgabenlisten, Ansprechpartner:innen und Terminvorschläge freizuschalten.
+          </p>
+        </div>
+      </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {joinableDepartments.map((department) => (
+          <form
+            key={department.id}
+            action={joinDepartmentAction}
+            className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm transition hover:border-primary/40"
+          >
+            <input type="hidden" name="departmentId" value={department.id} />
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="inline-flex h-2.5 w-2.5 rounded-full border border-border/60"
+                    style={{ backgroundColor: department.color ?? "#94a3b8" }}
+                  />
+                  <h3 className="text-sm font-semibold text-foreground">{department.name}</h3>
+                </div>
+                {department.description ? (
+                  <p className="text-xs text-muted-foreground">{department.description}</p>
+                ) : null}
+                {department.slug ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border/50 bg-background/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {department.slug}
+                  </span>
+                ) : null}
+              </div>
+              <Button type="submit" size="sm" className="rounded-full px-3">
+                Beitreten
+              </Button>
+            </div>
+          </form>
+        ))}
+      </div>
+    </section>
+  ) : null;
+
   if (memberships.length === 0) {
     return (
       <div className="space-y-10">
         {hero}
+        {joinSection}
         <section className="rounded-3xl border border-dashed border-primary/30 bg-background/70 p-6 text-sm text-muted-foreground shadow-inner sm:p-10 sm:text-base">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground sm:text-xl">Noch keine Gewerke</h2>
             <p>
-              Aktuell bist du keinem Gewerk zugeordnet. Sprich das Produktionsteam an, wenn du Verantwortung übernehmen möchtest.
+              Aktuell bist du keinem Gewerk zugeordnet. Wähle oben ein Gewerk aus, um beizutreten und sofort Zugriff auf Aufgaben{" "}
+              und Termine zu erhalten – bei Fragen hilft dir das Produktionsteam weiter.
             </p>
             <p>
               Du kannst jederzeit deine{" "}
@@ -330,6 +395,7 @@ export default async function MeineGewerkePage() {
   return (
     <div className="space-y-10">
       {hero}
+      {joinSection}
 
       <div className="space-y-8">
         {memberships.map((membership) => {

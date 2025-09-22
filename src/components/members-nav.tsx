@@ -39,6 +39,12 @@ const FINAL_WEEK_ITEMS: Item[] = [
   },
 ];
 
+const DEPARTMENT_TODO_ITEM: Item = {
+  href: "/mitglieder/meine-gewerke/todos",
+  label: "Meine Gewerke-Aufgaben",
+  permissionKey: "mitglieder.meine-gewerke",
+};
+
 const PRODUCTION_ITEMS: Item[] = [
   { href: "/mitglieder/produktionen", label: "Übersicht", permissionKey: "mitglieder.produktionen" },
   { href: "/mitglieder/produktionen/gewerke", label: "Gewerke & Teams", permissionKey: "mitglieder.produktionen" },
@@ -141,6 +147,17 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
           <path d="M8 14h8" />
           <path d="M8 18h5" />
           <path d="m6 15 1.8 1.8L10 14" />
+        </svg>
+      );
+    case "/mitglieder/meine-gewerke/todos":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 6l1.5 1.5L7 6" />
+          <path d="M4 12l1.5 1.5L7 12" />
+          <path d="M4 18l1.5 1.5L7 18" />
+          <path d="M9 6h11" />
+          <path d="M9 12h11" />
+          <path d="M9 18h11" />
         </svg>
       );
     case "/mitglieder/koerpermasse":
@@ -318,10 +335,12 @@ export function MembersNav({
   permissions,
   activeProduction,
   assignmentFocus = "none",
+  hasDepartmentMemberships = false,
 }: {
   permissions?: string[];
   activeProduction?: ActiveProductionNavInfo;
   assignmentFocus?: AssignmentFocus;
+  hasDepartmentMemberships?: boolean;
 }) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
@@ -335,16 +354,35 @@ export function MembersNav({
     [assignmentFocus, permissions],
   );
 
+  const assignmentItems = useMemo(() => {
+    if (!hasDepartmentMemberships) {
+      return ASSIGNMENT_ITEMS;
+    }
+
+    const items = [...ASSIGNMENT_ITEMS];
+    const alreadyIncluded = items.some((item) => item.href === DEPARTMENT_TODO_ITEM.href);
+    if (!alreadyIncluded) {
+      const baseIndex = items.findIndex((item) => item.href === "/mitglieder/meine-gewerke");
+      if (baseIndex >= 0) {
+        items.splice(baseIndex + 1, 0, DEPARTMENT_TODO_ITEM);
+      } else {
+        items.push(DEPARTMENT_TODO_ITEM);
+      }
+    }
+
+    return items;
+  }, [hasDepartmentMemberships]);
+
   const groupedConfig = useMemo<Group[]>(
     () => [
       { label: "Allgemein", items: GENERAL_ITEMS },
-      { label: assignmentLabel, items: ASSIGNMENT_ITEMS },
-      { label: "Endproben Woche", items: FINAL_WEEK_ITEMS },
+  { label: assignmentLabel, items: assignmentItems },
+  { label: "Endproben Woche", items: FINAL_WEEK_ITEMS },
       { label: "Produktion", items: PRODUCTION_ITEMS },
       { label: "Finanzen", items: FINANCE_ITEMS },
       { label: "Verwaltung", items: ADMIN_ITEMS },
     ],
-    [assignmentLabel],
+    [assignmentLabel, assignmentItems],
   );
 
   const { groups: availableGroups, flat: availableFlat } = useMemo(() => {
