@@ -392,7 +392,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
       }
 
       const holidayContent = isHoliday ? (
-        <div className="flex flex-wrap gap-1 text-[10px] font-medium sm:text-[11px]">
+        <div className="flex flex-wrap gap-1 text-[11px] leading-[1.1rem] font-medium sm:text-xs sm:leading-5">
           {holidayEntries.map((holiday) => (
             <span
               key={`${holiday.id}-${holiday.date}`}
@@ -438,7 +438,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
                 </span>
               </span>
             ) : (
-              <span className="mt-auto text-xs text-muted-foreground">Frei</span>
+              <span className="mt-auto text-xs leading-5 text-muted-foreground">Frei</span>
             )}
           </>
         ),
@@ -542,7 +542,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
                 } ausgewählt.`}
           </p>
           {selectedKeys.length > 0 && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[13px] leading-5 text-muted-foreground sm:text-xs sm:leading-5">
               {[
                 selectedFreeCount > 0
                   ? `${selectedFreeCount} ${
@@ -581,7 +581,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
           <div className="sm:flex-1">
             <label
               htmlFor="bulk-reason"
-              className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted-foreground"
+              className="mb-1 block text-sm font-medium uppercase tracking-wide text-muted-foreground sm:text-xs sm:leading-5"
             >
               Grund (optional)
             </label>
@@ -628,7 +628,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
   ) : null;
 
   const holidayPanel = upcomingHolidays.length ? (
-    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-xs sm:text-sm dark:border-sky-500/40 dark:bg-sky-500/10">
+    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-sky-500/40 dark:bg-sky-500/10">
       <div className="flex items-center gap-2 text-sky-800 dark:text-sky-100">
         <CalendarDays className="h-4 w-4" aria-hidden />
         <span className="font-semibold">Schulferien in Sachsen</span>
@@ -650,10 +650,10 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
               >
                 {holiday.title}
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs text-sky-900/80 dark:text-sky-100/80">
+              <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-sky-900/80 dark:text-sky-100/80">
                 <span>{rangeLabel}</span>
                 {isActive ? (
-                  <span className="inline-flex items-center rounded-full bg-sky-200/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900 dark:bg-sky-500/30 dark:text-sky-50">
+                  <span className="inline-flex items-center rounded-full bg-sky-200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-sky-900 dark:bg-sky-500/30 dark:text-sky-50">
                     Aktuell
                   </span>
                 ) : null}

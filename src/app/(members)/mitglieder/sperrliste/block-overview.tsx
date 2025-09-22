@@ -16,7 +16,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowRightLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
@@ -137,10 +137,10 @@ function LegendItem({
         )}
       />
       <div className="flex flex-col">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground/90">
+        <span className="text-xs font-semibold uppercase tracking-wide text-foreground/90">
           {label}
         </span>
-        <span className="text-[10px] text-muted-foreground/80">{description}</span>
+        <span className="text-[11px] leading-5 text-muted-foreground/80">{description}</span>
       </div>
     </div>
   );
@@ -380,7 +380,7 @@ export function BlockOverview({
                             {stats?.total ? `${stats.total} Sperrtermin${stats.total === 1 ? "" : "e"}` : "Keine Sperrtermine"}
                           </div>
                           {stats?.upcoming ? (
-                            <div className="text-[11px] text-primary">{stats.upcoming} bevorstehend</div>
+                            <div className="text-sm leading-5 text-primary">{stats.upcoming} bevorstehend</div>
                           ) : null}
                         </div>
                       </div>
@@ -415,7 +415,7 @@ export function BlockOverview({
                         >
                           <div
                             className={cn(
-                              "flex h-full min-h-[64px] flex-col items-center justify-center rounded-xl border border-transparent px-2 py-3 text-[11px] shadow-sm transition-all",
+                              "flex h-full min-h-[64px] flex-col items-center justify-center rounded-xl border border-transparent px-2 py-3 text-xs leading-5 shadow-sm transition-all",
                               entry &&
                                 "border-destructive/70 bg-gradient-to-br from-destructive/80 via-destructive/60 to-destructive/25 text-destructive-foreground shadow-[0_12px_30px_-20px_rgba(220,38,38,0.65)]",
                               !entry && isHoliday &&
@@ -430,19 +430,19 @@ export function BlockOverview({
                             {entry ? (
                               <>
                                 <span className="text-xs font-semibold uppercase tracking-wide">Gesperrt</span>
-                                <span className="mt-1 line-clamp-3 text-[11px]">
+                                <span className="mt-1 line-clamp-3 text-xs leading-5">
                                   {entry.reason ?? "Ohne Grund"}
                                 </span>
                               </>
                             ) : isHoliday ? (
                               <>
-                                <span className="text-[11px] font-semibold uppercase tracking-wide">Ferien</span>
-                                <span className="mt-1 line-clamp-3 text-[11px]">
+                                <span className="text-xs font-semibold uppercase tracking-wide">Ferien</span>
+                                <span className="mt-1 line-clamp-3 text-xs leading-5">
                                   {holidayEntries[0]?.title}
                                 </span>
                               </>
                             ) : (
-                              <span className="text-[11px] font-medium text-muted-foreground/80">Frei</span>
+                              <span className="text-xs font-medium leading-5 text-muted-foreground/80">Frei</span>
                             )}
                           </div>
                         </td>
@@ -479,53 +479,67 @@ export function BlockOverview({
                     {stats?.total ? `${stats.total} Sperrtermin${stats.total === 1 ? "" : "e"}` : "Keine Sperrtermine"}
                   </div>
                   {stats?.upcoming ? (
-                    <div className="text-[11px] text-primary">{stats.upcoming} bevorstehend</div>
+                    <div className="text-sm leading-5 text-primary">{stats.upcoming} bevorstehend</div>
                   ) : null}
                 </div>
               </div>
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin] snap-x snap-mandatory">
-                {daysInView.map((day, index) => {
-                  const key = dayKeys[index];
-                  const entry = member.blockedMap.get(key);
-                  const holidayEntries = holidayMap.get(key) ?? [];
-                  const isHoliday = holidayEntries.length > 0;
-                  const label = [
-                    format(day, "EEEE, d. MMMM yyyy", { locale: de }),
-                    entry ? entry.reason ?? "gesperrt" : "frei",
-                  ];
-                  if (isHoliday) {
-                    label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`);
-                  }
+              <div className="relative mt-3">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
+                />
+                <div className="flex gap-2 overflow-x-auto pb-1 pl-1 pr-4 [scrollbar-width:thin] snap-x snap-mandatory">
+                  {daysInView.map((day, index) => {
+                    const key = dayKeys[index];
+                    const entry = member.blockedMap.get(key);
+                    const holidayEntries = holidayMap.get(key) ?? [];
+                    const isHoliday = holidayEntries.length > 0;
+                    const label = [
+                      format(day, "EEEE, d. MMMM yyyy", { locale: de }),
+                      entry ? entry.reason ?? "gesperrt" : "frei",
+                    ];
+                    if (isHoliday) {
+                      label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`);
+                    }
 
-                  return (
-                    <div
-                      key={key}
-                      className={cn(
-                        "flex min-w-[60px] shrink-0 snap-center flex-col items-center rounded-2xl border border-border/50 px-2 py-2 text-center text-[10px] shadow-sm",
-                        entry && "border-destructive/60 bg-destructive/15 text-destructive",
-                        !entry && isHoliday && "border-sky-400/40 bg-sky-500/15 text-sky-800 dark:text-sky-100",
-                        !entry && !isHoliday && "bg-muted/30 text-muted-foreground",
-                        isToday(day) && "ring-2 ring-primary/70",
-                      )}
-                      aria-label={label.join(". ")}
-                      title={entry?.reason ?? (isHoliday ? holidayEntries[0]?.title ?? "Ferien" : "Frei")}
-                    >
-                      <span className="text-[10px] uppercase tracking-wide">
-                        {format(day, "EE", { locale: de })}
-                      </span>
-                      <span className="text-sm font-semibold">
-                        {format(day, "d", { locale: de })}
-                      </span>
-                      {entry ? (
-                        <span className="mt-1 line-clamp-2 text-[10px]">{entry.reason ?? "Gesperrt"}</span>
-                      ) : isHoliday ? (
-                        <span className="mt-1 line-clamp-2 text-[10px]">{holidayEntries[0]?.title}</span>
-                      ) : (
-                        <span className="mt-1 text-[10px] text-muted-foreground">frei</span>
-                      )}
-                    </div>
-                  );
-                })}
+                    return (
+                      <div
+                        key={key}
+                        className={cn(
+                          "flex min-w-[64px] shrink-0 snap-center flex-col items-center rounded-2xl border border-border/50 px-2 py-2 text-center text-xs leading-5 shadow-sm",
+                          entry && "border-destructive/60 bg-destructive/15 text-destructive",
+                          !entry && isHoliday && "border-sky-400/40 bg-sky-500/15 text-sky-800 dark:text-sky-100",
+                          !entry && !isHoliday && "bg-muted/30 text-muted-foreground",
+                          isToday(day) && "ring-2 ring-primary/70",
+                        )}
+                        aria-label={label.join(". ")}
+                        title={entry?.reason ?? (isHoliday ? holidayEntries[0]?.title ?? "Ferien" : "Frei")}
+                      >
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground/90">
+                          {format(day, "EE", { locale: de })}
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {format(day, "d", { locale: de })}
+                        </span>
+                        {entry ? (
+                          <span className="mt-1 line-clamp-2 text-xs leading-4">{entry.reason ?? "Gesperrt"}</span>
+                        ) : isHoliday ? (
+                          <span className="mt-1 line-clamp-2 text-xs leading-4">{holidayEntries[0]?.title}</span>
+                        ) : (
+                          <span className="mt-1 text-xs leading-4 text-muted-foreground">frei</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex items-center justify-center gap-2 text-xs leading-5 text-muted-foreground/90">
+                  <ArrowRightLeft className="h-4 w-4" aria-hidden />
+                  <span>Wische für weitere Tage</span>
+                </div>
               </div>
             </div>
           );
