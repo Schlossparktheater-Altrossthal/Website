@@ -736,7 +736,11 @@ export function MembersDashboard() {
           <div className="grid gap-3 sm:grid-cols-2">
             {(["acting", "crew"] as const).map((domain) => {
               const stats = onboarding.stats[domain];
-              const averageWeight = Math.max(0, Math.min(100, Math.round(stats.averageWeight)));
+              const normalizedWeight =
+                stats.averageWeight > 0 && stats.averageWeight <= 1
+                  ? stats.averageWeight * 100
+                  : stats.averageWeight;
+              const averageWeight = Math.max(0, Math.min(100, Math.round(normalizedWeight)));
               return (
                 <div key={domain} className="space-y-2 rounded-xl border border-border/60 bg-background/85 p-3">
                   <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
@@ -884,8 +888,6 @@ export function MembersDashboard() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)] xl:items-start">
         <div className="space-y-4">
-          {onboardingCard}
-
           <Card className="h-full bg-gradient-to-br from-accent/20 to-transparent">
             <CardContent className="flex h-full flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between xl:gap-6">
               <div>
@@ -920,6 +922,8 @@ export function MembersDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {onboardingCard}
         </div>
 
         <KeyMetricGrid>
@@ -961,36 +965,38 @@ export function MembersDashboard() {
         </KeyMetricGrid>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] xl:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] xl:gap-6">
-        <Card className="h-full">
-          <CardHeader className="pb-3">
-            <CardTitle>Aktive Mitglieder</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
-            </p>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {onlineList.length === 0 ? (
+      <div className="space-y-4 lg:space-y-6">
+        <div className="lg:flex lg:justify-end">
+          <Card className="h-full lg:w-full lg:max-w-md xl:max-w-lg">
+            <CardHeader className="pb-3">
+              <CardTitle>Aktive Mitglieder</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
+                Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
               </p>
-            ) : (
-              <ul className="space-y-3">
-                {onlineList.map((user) => (
-                  <li key={`${user.id}-${user.joinedAt.getTime()}`} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2.5 w-2.5 rounded-full bg-success" />
-                      <span className="text-sm font-medium">{user.name}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(user.joinedAt)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {onlineList.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {onlineList.map((user) => (
+                    <li key={`${user.id}-${user.joinedAt.getTime()}`} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-success" />
+                        <span className="text-sm font-medium">{user.name}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimeAgo(user.joinedAt)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card className="h-full">
           <CardHeader className="pb-3">
