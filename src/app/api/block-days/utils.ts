@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { z } from "zod";
+import { BlockedDayKind } from "@prisma/client";
 
 export const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -13,6 +14,7 @@ export type BlockDayResponse = {
   id: string;
   date: string;
   reason: string | null;
+  kind: BlockedDayKind;
 };
 
 export function normaliseReason(input?: string | null) {
@@ -29,10 +31,16 @@ export function toDateOnly(date: string) {
   return parsed;
 }
 
-export function toResponse(entry: { id: string; date: Date; reason: string | null }): BlockDayResponse {
+export function toResponse(entry: {
+  id: string;
+  date: Date;
+  reason: string | null;
+  kind: BlockedDayKind;
+}): BlockDayResponse {
   return {
     id: entry.id,
     date: format(entry.date, "yyyy-MM-dd"),
     reason: entry.reason,
+    kind: entry.kind,
   };
 }

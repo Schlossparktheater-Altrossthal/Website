@@ -3,12 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { z } from "zod";
 import { isoDate, normaliseReason, toDateOnly, toResponse } from "../utils";
+import { BlockedDayKind } from "@prisma/client";
 
 type SessionUser = { id?: string } | null | undefined;
 
 const bulkCreateSchema = z.object({
   dates: z.array(z.string().regex(isoDate)).min(1),
   reason: z.string().max(200).optional().nullable(),
+  kind: z.nativeEnum(BlockedDayKind).optional(),
 });
 
 const bulkDeleteSchema = z.object({
@@ -25,6 +27,7 @@ export async function POST(request: Request) {
 
   const uniqueDates = Array.from(new Set(parsed.data.dates));
   const reason = normaliseReason(parsed.data.reason);
+  const kind = parsed.data.kind ?? BlockedDayKind.BLOCKED;
 
   try {
     const todayKey = new Date().toISOString().slice(0, 10);
@@ -34,7 +37,7 @@ export async function POST(request: Request) {
     const allowed = parsedDates.filter((p) => p.date.getTime() >= cutoff.getTime());
     const skipped = parsedDates.filter((p) => p.date.getTime() < cutoff.getTime()).map((p) => p.key);
 
-    const payload = allowed.map((p) => ({ userId, date: p.date, reason }));
+    const payload = allowed.map((p) => ({ userId, date: p.date, reason, kind }));
     if (payload.length === 0) return NextResponse.json({ created: [], skipped });
 
     await prisma.blockedDay.createMany({ data: payload, skipDuplicates: true });

@@ -52,6 +52,7 @@ export default async function ProbenplanungPage() {
       include: {
         user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
       },
+      where: { kind: "BLOCKED" },
     }),
     prisma.user.count(),
     prisma.rehearsal.findMany({
@@ -74,6 +75,7 @@ export default async function ProbenplanungPage() {
       date: iso,
       dateKey: iso.slice(0, 10),
       reason: entry.reason,
+      kind: "BLOCKED",
       user: {
         id: entry.user.id,
         firstName: entry.user.firstName ?? null,

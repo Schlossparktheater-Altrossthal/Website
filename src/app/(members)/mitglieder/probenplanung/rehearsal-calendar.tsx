@@ -61,6 +61,7 @@ export type CalendarBlockedDay = {
   date: string;
   dateKey: string;
   reason: string | null;
+  kind: "BLOCKED";
   user: {
     id: string;
     firstName: string | null;

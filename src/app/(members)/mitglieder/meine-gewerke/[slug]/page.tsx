@@ -108,6 +108,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
         where: {
           userId: { in: memberIds },
           date: { gte: today, lte: planningEnd },
+          kind: "BLOCKED",
         },
         orderBy: { date: "asc" },
       })
@@ -115,6 +116,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
 
   const blockedByUser = new Map<string, Set<string>>();
   for (const entry of blockedDays) {
+    if (entry.kind !== "BLOCKED") continue;
     const key = format(entry.date, DATE_KEY_FORMAT);
     const existing = blockedByUser.get(entry.userId);
     if (existing) {
