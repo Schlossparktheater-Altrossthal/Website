@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 type Item = { href: string; label: string; permissionKey?: string };
@@ -292,6 +293,10 @@ export function MembersNav({
 }) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const isFiltering = normalizedQuery.length > 0;
+  const searchInputId = useId();
 
   const assignmentLabel = useMemo(
     () => resolveAssignmentLabel(assignmentFocus, permissions ?? []),
@@ -310,7 +315,7 @@ export function MembersNav({
     [assignmentLabel],
   );
 
-  const { groups, flat } = useMemo(() => {
+  const { groups: availableGroups, flat: availableFlat } = useMemo(() => {
     const permissionSet = new Set(permissions ?? []);
     const groups = groupedConfig
       .map((g) => ({
@@ -322,8 +327,35 @@ export function MembersNav({
     return { groups, flat } as { groups: Group[]; flat: Item[] };
   }, [groupedConfig, permissions]);
 
-  const activeItem = useMemo(() => flat.find((item) => isActive(pathname, item.href)), [flat, pathname]);
-  const activeHref = activeItem?.href ?? flat[0]?.href ?? "";
+  const activeItem = useMemo(
+    () => availableFlat.find((item) => isActive(pathname, item.href)),
+    [availableFlat, pathname],
+  );
+  const activeHref = activeItem?.href ?? availableFlat[0]?.href ?? "";
+
+  const { groups, flat } = useMemo(() => {
+    if (!isFiltering) {
+      return { groups: availableGroups, flat: availableFlat };
+    }
+
+    const filteredGroups = availableGroups
+      .map((group) => ({
+        label: group.label,
+        items: group.items.filter((item) => item.label.toLowerCase().includes(normalizedQuery)),
+      }))
+      .filter((group) => group.items.length > 0);
+
+    const filteredFlat = filteredGroups.flatMap((group) => group.items);
+
+    return { groups: filteredGroups, flat: filteredFlat };
+  }, [availableFlat, availableGroups, isFiltering, normalizedQuery]);
+
+  const hasResults = flat.length > 0;
+  const selectValue = hasResults && flat.some((item) => item.href === activeHref) ? activeHref : "";
+  const emptyStateMessage = isFiltering
+    ? "Keine Bereiche gefunden. Passe die Suche an."
+    : "Keine Bereiche verfügbar.";
+  const firstMatch = flat[0];
 
   const activeProductionTitle = activeProduction
     ? activeProduction.title && activeProduction.title.trim()
@@ -333,6 +365,36 @@ export function MembersNav({
 
   return (
     <div className="flex flex-col gap-4">
+      <div>
+        <label htmlFor={searchInputId} className="sr-only">
+          Mitgliederbereiche durchsuchen
+        </label>
+        <Input
+          id={searchInputId}
+          type="search"
+          inputMode="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && query) {
+              event.preventDefault();
+              setQuery("");
+              return;
+            }
+
+            if (event.key === "Enter" && firstMatch) {
+              event.preventDefault();
+              if (firstMatch.href && firstMatch.href !== pathname) {
+                router.push(firstMatch.href);
+              }
+            }
+          }}
+          placeholder="Bereiche suchen"
+          className="h-9 text-sm"
+          aria-label="Mitgliederbereiche durchsuchen"
+        />
+      </div>
+
       <div className="rounded-lg border border-border/50 bg-background/60 p-4 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -365,7 +427,7 @@ export function MembersNav({
         </label>
         <select
           id="members-navigation"
-          value={activeHref}
+          value={selectValue}
           onChange={(event) => {
             const next = event.target.value;
             if (next && next !== pathname) {
@@ -374,8 +436,15 @@ export function MembersNav({
           }}
           className="block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Mitgliederbereich"
-          disabled={flat.length === 0}
+          disabled={!hasResults}
         >
+          <option value="" disabled>
+            {hasResults
+              ? isFiltering
+                ? "Treffer auswählen"
+                : "Bereich wählen"
+              : emptyStateMessage}
+          </option>
           {groups.map((g) => (
             <optgroup key={g.label} label={g.label}>
               {g.items.map((item) => (
@@ -389,15 +458,20 @@ export function MembersNav({
       </div>
 
       <nav className="hidden lg:flex flex-col gap-4" aria-label="Mitglieder Navigation">
-        {groups.map((g) => (
-          <div key={g.label} className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/50 p-2">
-            <div className="px-1 text-[11px] uppercase tracking-wide text-foreground/60">{g.label}</div>
-            {g.items.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
+        {groups.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border/60 bg-background/40 p-4 text-sm text-muted-foreground">
+            {emptyStateMessage}
+          </div>
+        ) : (
+          groups.map((g) => (
+            <div key={g.label} className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/50 p-2">
+              <div className="px-1 text-[11px] uppercase tracking-wide text-foreground/60">{g.label}</div>
+              {g.items.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
                   className={cn(
                     "group flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
                     active
@@ -416,11 +490,12 @@ export function MembersNav({
                     )}
                     aria-hidden
                   />
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+                  </Link>
+                );
+              })}
+            </div>
+          ))
+        )}
       </nav>
     </div>
   );
