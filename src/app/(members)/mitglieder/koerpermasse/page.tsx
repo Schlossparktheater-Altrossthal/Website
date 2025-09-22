@@ -42,7 +42,7 @@ export default async function MemberMeasurementsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Körpermaße"
-        description="Pflege deine Maße für das Kostüm-Team und bevorstehende Anproben."
+        description="Pflege deine Maße direkt in deinem Profil – das Kostüm-Team sieht sie in der Gewerke-Übersicht und behält alle Schauspieler:innen im Blick."
       />
       <MemberMeasurementsManager initialMeasurements={initialMeasurements} />
     </div>
