@@ -27,7 +27,9 @@ function cloneThemeTokens(tokens: ThemeTokens): ThemeTokens {
   }
   return {
     radius: { base: tokens.radius.base },
+    parameters: designTokens.parameters,
     modes,
+    meta: tokens.meta ?? designTokens.meta,
   };
 }
 

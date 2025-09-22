@@ -8,20 +8,29 @@ Dieser Leitfaden bündelt die aktualisierten Design Tokens, Typografie- und Spac
 - **Formulare:** react-hook-form + zod
 - **Icons:** lucide-react
 - **Realtime:** Socket.io Hooks (`@/hooks/useRealtime`)
-- **Design-Tokens:** `src/design-system/tokens.json` ist die Single Source of Truth. Nach Anpassungen immer `pnpm design-system:tokens` ausführen – dadurch wird `src/app/design-tokens.css` neu erzeugt und die CSS-Custom-Properties aktualisiert.
+- **Design-Tokens:** `src/design-system/tokens.json` bündelt jetzt einen parametrischen Aufbau (`parameters` mit Farbfamilien und Token-Regeln) und die daraus berechneten `modes`. Nach jeder Änderung `pnpm design-system:tokens` ausführen – das aktualisiert sowohl `src/app/design-tokens.css` als auch die aufbereiteten Tokenwerte im JSON.
 
 ## Farbpalette
 
-Die Farbwerte liegen in OKLCH und sind für helle wie dunkle Modi gepflegt. Die Hex-Werte dienen zur schnellen visuellen Referenz (Swatches unter `docs/swatches`).
+Die Farbwerte liegen vollständig in OKLCH vor und werden parametriert aus Farbfamilien (Basis-Hue, Chroma, Lightness) generiert. Für helle und dunkle Modi sorgen dynamische Delta-Regeln für konsistente Kontrastabstände. Die Hex-Werte dienen zur schnellen visuellen Referenz (Swatches unter `docs/swatches`).
+
+## Parametrisches Farbsystem
+
+Die Token-Konfiguration besteht aus zwei Ebenen:
+
+1. **Farbfamilien (`parameters.families`)** definieren neutrale und farbige Grundwerte in OKLCH – z. B. `neutral`, `brand`, `accent`, `success`. Jede Familie besitzt pro Modus eine Ausgangs-Lightness, Chroma und Hue, was spätere Anpassungen (z. B. leicht andere Chroma-Werte im Dark-Mode) erlaubt.
+2. **Semantische Tokens (`parameters.tokens`)** greifen auf diese Familien zu und modifizieren sie parametrisch (`deltaL`, `scaleC`, absolute `l`/`c`/`h`-Werte). Dadurch bleiben Abstände wie „Primärfarbe ist 0.48 Lightness heller als die neutrale Ausgangsfläche“ nachvollziehbar und können zentral verändert werden.
+
+Der Build-Script schreibt daraus die finalen `modes` (Light/Dark) zurück ins JSON und erzeugt die CSS-Custom-Properties. Änderungen an Familienparametern wirken sich automatisch auf sämtliche abhängige Tokens aus – die Wartung reduziert sich auf wenige Kernwerte.
 
 | Rolle | Token | Vorschau |
 | --- | --- | --- |
 | Primär-CTA, Fokus | `--primary` / `--primary-foreground` | <img src="swatches/primary-500.svg" width="14" height="14" /> |
-| Primär-Tint | `primary` Soft (`Badge`, Sekundäraktionen) | <img src="swatches/primary-300.svg" width="14" height="14" /> |
+| Primär-Soft | `primary` Soft (`Badge`, Sekundäraktionen) | <img src="swatches/primary-300.svg" width="14" height="14" /> |
 | Sekundär-CTA | `--secondary` / `--secondary-foreground` | <img src="swatches/secondary-500.svg" width="14" height="14" /> |
-| Sekundär-Tint | `secondary` Soft-Flächen, Highlights | <img src="swatches/secondary-200.svg" width="14" height="14" /> |
+| Sekundär-Soft | `secondary` Soft-Flächen, Highlights | <img src="swatches/secondary-200.svg" width="14" height="14" /> |
 | Akzent/Interaktion | `--accent` / `--accent-foreground` | <img src="swatches/accent-500.svg" width="14" height="14" /> |
-| Akzent-Tint | `accent` Soft States, Pills | <img src="swatches/accent-200.svg" width="14" height="14" /> |
+| Akzent-Soft | `accent` Soft States, Pills | <img src="swatches/accent-200.svg" width="14" height="14" /> |
 | Erfolg | `--success` / `--success-foreground` | <img src="swatches/success-500.svg" width="14" height="14" /> |
 | Warnung | `--warning` / `--warning-foreground` | <img src="swatches/warning-500.svg" width="14" height="14" /> |
 | Info | `--info` / `--info-foreground` | <img src="swatches/info-500.svg" width="14" height="14" /> |

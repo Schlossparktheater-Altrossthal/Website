@@ -3,18 +3,19 @@ import tokens from "./tokens.json";
 type Modes = typeof tokens.modes;
 
 export type ThemeMode = keyof Modes;
-export type SemanticToken = keyof Modes["light"];
+export type SemanticToken = keyof Modes[ThemeMode];
 
 export const designTokens = tokens;
+export const designTokenParameters = tokens.parameters;
 
 export function getThemeTokens(mode: ThemeMode) {
-  return tokens.modes[mode];
+  return designTokens.modes[mode];
 }
 
 export function getSemanticToken(mode: ThemeMode, token: SemanticToken) {
-  return tokens.modes[mode][token];
+  return designTokens.modes[mode][token];
 }
 
 export function getBaseRadius() {
-  return tokens.radius.base;
+  return designTokens.radius.base;
 }
