@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -202,6 +202,7 @@ const steps = [
   { title: "Interessen" },
   { title: "Fotos" },
   { title: "Essen" },
+  { title: "Hinweise" },
   { title: "Check" },
 ];
 
@@ -363,6 +364,8 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     treatment: "",
     note: "",
   });
+
+  const notesHelpId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -875,6 +878,10 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       setStep(6);
       return;
     }
+    if (step === 6) {
+      setStep(7);
+      return;
+    }
   };
 
   const goBack = () => {
@@ -1154,19 +1161,6 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 />
               </label>
             </div>
-            <label className="space-y-1 text-sm">
-              <span className="font-medium">Gibt es noch etwas, das wir wissen sollten?</span>
-              <Textarea
-                value={form.notes}
-                onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-                placeholder="Optional: Besondere Erfahrungen, Wünsche oder Hinweise für das Team"
-                className="min-h-[120px]"
-                maxLength={1000}
-              />
-              <span className="text-xs text-muted-foreground">
-                Dieser Freitext hilft uns, dich besser kennenzulernen. Du kannst ihn später jederzeit anpassen.
-              </span>
-            </label>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Passwort</span>
@@ -1890,6 +1884,33 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       {step === 6 && (
         <Card className="border border-border/70">
           <CardHeader>
+            <CardTitle>Gibt es noch etwas, das wir wissen sollten?</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Teile besondere Erfahrungen, Wünsche oder Hinweise – alles, was uns beim Kennenlernen helfen kann.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 text-sm">
+              <Textarea
+                value={form.notes}
+                onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+                placeholder="Optional: Besondere Erfahrungen, Wünsche oder Hinweise für das Team"
+                className="min-h-[120px]"
+                maxLength={1000}
+                aria-label="Gibt es noch etwas, das wir wissen sollten?"
+                aria-describedby={notesHelpId}
+              />
+              <span id={notesHelpId} className="block text-xs text-muted-foreground">
+                Du kannst diesen Freitext später jederzeit in deinem Profil anpassen.
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 7 && (
+        <Card className="border border-border/70">
+          <CardHeader>
             <CardTitle>Zusammenfassung</CardTitle>
             <p className="text-sm text-muted-foreground">
               Schau alles noch einmal durch. Nach dem Absenden legen wir dein Profil an und melden uns mit den nächsten Schritten.
@@ -2130,7 +2151,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         </Card>
       )}
 
-      {step > 0 && step < 6 && (
+      {step > 0 && step < 7 && (
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="outline"
@@ -2146,7 +2167,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         </div>
       )}
 
-      {error && step !== 6 && <p className="text-sm text-destructive">{error}</p>}
+      {error && step !== 7 && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }
