@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { DragEvent } from "react";
+import type { DragEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { EditIcon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/modal";
@@ -14,7 +14,14 @@ type Role = {
   systemRole?: string | null;
   sortIndex: number;
 };
-type Permission = { id: string; key: string; label?: string | null; description?: string | null };
+type Permission = {
+  id: string;
+  key: string;
+  label: string | null;
+  description: string | null;
+  categoryKey: string;
+  categoryLabel: string;
+};
 
 export function PermissionMatrix() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -61,8 +68,28 @@ export function PermissionMatrix() {
         });
       setRoles(nonSystemRoles);
       setOrderError(null);
-      const fetchedPermissions = Array.isArray(data.permissions)
-        ? (data.permissions as Permission[])
+      const fetchedPermissions: Permission[] = Array.isArray(data.permissions)
+        ? (data.permissions as Array<Record<string, unknown>>)
+            .map((entry) => {
+              if (!entry || typeof entry !== "object") return null;
+              const key = typeof entry.key === "string" ? entry.key : null;
+              const categoryKey = typeof entry.categoryKey === "string" ? entry.categoryKey : null;
+              if (!key || !categoryKey) return null;
+              const id = typeof entry.id === "string" ? entry.id : key;
+              const label = typeof entry.label === "string" ? entry.label : null;
+              const description = typeof entry.description === "string" ? entry.description : null;
+              const categoryLabel =
+                typeof entry.categoryLabel === "string" ? entry.categoryLabel : categoryKey;
+              return {
+                id,
+                key,
+                label,
+                description,
+                categoryKey,
+                categoryLabel,
+              } as Permission;
+            })
+            .filter((value): value is Permission => Boolean(value))
         : [];
       setPerms(fetchedPermissions);
       const m: Record<string, Set<string>> = {};
@@ -304,6 +331,73 @@ export function PermissionMatrix() {
   if (loading) return <div>Laden…</div>;
   if (error) return <div className="text-red-600">{error}</div>;
 
+  const totalColumns = roles.length + 1;
+  const tableRows: ReactNode[] = [];
+  let lastCategoryKey: string | null = null;
+  let categorySequence = 0;
+  let rowIndexWithinCategory = 0;
+
+  for (const perm of perms) {
+    if (perm.categoryKey !== lastCategoryKey) {
+      lastCategoryKey = perm.categoryKey;
+      rowIndexWithinCategory = 0;
+      const categoryKey = `category-${perm.categoryKey}-${categorySequence}`;
+      categorySequence += 1;
+      tableRows.push(
+        <tr key={categoryKey} className="bg-muted/40">
+          <th
+            scope="colgroup"
+            colSpan={totalColumns}
+            className="px-3 py-2 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            {perm.categoryLabel}
+          </th>
+        </tr>,
+      );
+    }
+
+    const isEvenRow = rowIndexWithinCategory % 2 === 0;
+    rowIndexWithinCategory += 1;
+
+    tableRows.push(
+      <tr key={perm.key} className={isEvenRow ? "bg-muted/30" : undefined}>
+        <td className="sticky left-0 z-0 bg-inherit p-3 align-top shadow-[inset_-1px_0_0_0_var(--border)]">
+          <div className="font-medium">{perm.label ?? perm.key}</div>
+          {perm.label && perm.label !== perm.key ? (
+            <div className="text-xs text-muted-foreground">{perm.key}</div>
+          ) : null}
+          {perm.description ? (
+            <div className="text-xs text-muted-foreground">{perm.description}</div>
+          ) : null}
+        </td>
+        {roles.map((r) => {
+          const granted = grants[r.id]?.has(perm.key) ?? false;
+          return (
+            <td
+              key={r.id}
+              data-role-id={r.id}
+              className="p-3 align-middle"
+              onDragOver={(event) => handleDragOver(event, r.id)}
+              onDrop={(event) => handleDrop(event, r.id)}
+              onDragLeave={(event) => handleDragLeave(event, r.id)}
+            >
+              <button
+                type="button"
+                role="switch"
+                aria-checked={granted}
+                onClick={() => toggle(r.id, perm.key, !granted)}
+                className={`perm-toggle ${granted ? 'on' : 'off'}`}
+              >
+                <span className="sr-only">{granted ? 'Entziehen' : 'Gewähren'}</span>
+                <span className="knob" />
+              </button>
+            </td>
+          );
+        })}
+      </tr>,
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border bg-card/60 p-4 shadow-sm">
@@ -378,45 +472,7 @@ export function PermissionMatrix() {
               ))}
             </tr>
           </thead>
-          <tbody>
-            {perms.map((p, rowIdx) => (
-              <tr key={p.key} className={rowIdx % 2 === 0 ? "bg-muted/30" : undefined}>
-                <td className="sticky left-0 z-0 bg-inherit p-3 align-top shadow-[inset_-1px_0_0_0_var(--border)]">
-                  <div className="font-medium">{p.label ?? p.key}</div>
-                  {p.label && p.label !== p.key ? (
-                    <div className="text-xs text-muted-foreground">{p.key}</div>
-                  ) : null}
-                  {p.description ? (
-                    <div className="text-xs text-muted-foreground">{p.description}</div>
-                  ) : null}
-                </td>
-                {roles.map((r) => {
-                  const granted = grants[r.id]?.has(p.key) ?? false;
-                  return (
-                    <td
-                      key={r.id}
-                      data-role-id={r.id}
-                      className="p-3 align-middle"
-                      onDragOver={(event) => handleDragOver(event, r.id)}
-                      onDrop={(event) => handleDrop(event, r.id)}
-                      onDragLeave={(event) => handleDragLeave(event, r.id)}
-                    >
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={granted}
-                        onClick={() => toggle(r.id, p.key, !granted)}
-                        className={`perm-toggle ${granted ? 'on' : 'off'}`}
-                      >
-                        <span className="sr-only">{granted ? 'Entziehen' : 'Gewähren'}</span>
-                        <span className="knob" />
-                      </button>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
+          <tbody>{tableRows}</tbody>
         </table>
       </div>
       {orderError ? <p className="text-sm text-destructive">{orderError}</p> : null}

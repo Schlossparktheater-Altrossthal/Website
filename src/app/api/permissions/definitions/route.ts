@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_PERMISSION_DEFINITIONS,
+  PERMISSION_CATEGORY_LABELS,
   ensurePermissionDefinitions,
   ensureSystemRoles,
   hasPermission,
@@ -35,11 +36,14 @@ export async function GET() {
   const permissionMap = new Map(permissions.map((perm) => [perm.key, perm]));
   const orderedPermissions = DEFAULT_PERMISSION_DEFINITIONS.map((definition) => {
     const match = permissionMap.get(definition.key);
+    const categoryKey = definition.category;
     return {
       id: match?.id ?? definition.key,
       key: definition.key,
       label: match?.label ?? definition.label,
       description: match?.description ?? definition.description ?? null,
+      categoryKey,
+      categoryLabel: PERMISSION_CATEGORY_LABELS[categoryKey] ?? categoryKey,
     };
   });
 

@@ -2,7 +2,33 @@ import { prisma } from "@/lib/prisma";
 import { sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 
-type PermissionDefinition = { key: string; label: string; description?: string };
+type PermissionCategoryKey =
+  | "base"
+  | "communication"
+  | "self"
+  | "planning"
+  | "membership"
+  | "mystery"
+  | "finances"
+  | "analytics";
+
+export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> = {
+  base: "Basisbereiche & Start",
+  communication: "Kommunikation & Support",
+  self: "Persönliche Bereiche",
+  planning: "Planung & Produktionen",
+  membership: "Mitgliederverwaltung & Administration",
+  mystery: "Community & Mystery",
+  finances: "Finanzen & Controlling",
+  analytics: "Onboarding & Analysen",
+};
+
+type PermissionDefinition = {
+  key: string;
+  label: string;
+  description?: string;
+  category: PermissionCategoryKey;
+};
 
 type UserLike = { id?: string; role?: Role; roles?: Role[] } | null | undefined;
 
@@ -12,96 +38,119 @@ type ResolvedRoleContext = {
 };
 
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
-  { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen" },
-  { key: "mitglieder.profil", label: "Profilbereich aufrufen" },
+  { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen", category: "base" },
+  { key: "mitglieder.profil", label: "Profilbereich aufrufen", category: "base" },
   {
     key: "mitglieder.issues",
     label: "Feedback & Support nutzen",
     description:
       "Anliegen, Probleme oder Verbesserungsvorschläge im Mitglieder-Issue-Board melden und einsehen.",
+    category: "communication",
+  },
+  {
+    key: "mitglieder.issues.manage",
+    label: "Feedback-Anliegen verwalten",
+    description: "Status, Priorität und Moderation für gemeldete Anliegen im Issue-Board übernehmen.",
+    category: "communication",
+  },
+  {
+    key: "mitglieder.notifications.test",
+    label: "Testbenachrichtigungen senden",
+    description:
+      "Versendet Test-Nachrichten (normal oder Notfall) an Mitglieder, um Benachrichtigungskanäle zu prüfen.",
+    category: "communication",
   },
   {
     key: "mitglieder.meine-proben",
     label: "Eigene Probentermine einsehen",
     description: "Zugang zum Bereich \"Meine Proben\" mit persönlichen Terminen und Fristen.",
+    category: "self",
   },
   {
     key: "mitglieder.meine-gewerke",
     label: "Eigene Gewerke einsehen",
     description: "Zugang zum Bereich \"Meine Gewerke\" mit Aufgabenübersicht und Terminvorschlägen.",
+    category: "self",
   },
   {
     key: "mitglieder.koerpermasse",
     label: "Körpermaße pflegen",
     description:
       "Ermöglicht das Pflegen eigener Maße für Anproben und blendet den Menüpunkt \"Körpermaße\" in Proben & Gewerken ein, damit das Kostüm-Team die Angaben sieht.",
+    category: "self",
   },
-  { key: "mitglieder.probenplanung", label: "Probenplanung verwalten" },
+  { key: "mitglieder.probenplanung", label: "Probenplanung verwalten", category: "planning" },
   {
     key: "mitglieder.produktionen",
     label: "Produktionsplanung öffnen",
     description:
       "Bereich zur Verwaltung von Gewerken, Besetzungen, Szenen und Breakdown-Aufgaben im Produktionsmanagement.",
+    category: "planning",
   },
-  { key: "mitglieder.rollenverwaltung", label: "Mitgliederverwaltung öffnen" },
+  { key: "mitglieder.rollenverwaltung", label: "Mitgliederverwaltung öffnen", category: "membership" },
   {
     key: "mitglieder.einladungen",
     label: "Einladungslinks verwalten",
     description: "Mehrfach nutzbare Einladungslinks anlegen, deaktivieren und deren Status prüfen.",
+    category: "membership",
   },
-  { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen" },
+  { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen", category: "membership" },
+  { key: "mitglieder.sperrliste", label: "Sperrliste pflegen", category: "membership" },
+  {
+    key: "mitglieder.fotoerlaubnisse",
+    label: "Fotoerlaubnisse verwalten",
+    description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
+    category: "membership",
+  },
   {
     key: "mitglieder.mystery.timer",
     label: "Mystery-Timer verwalten",
     description: "Countdown und Hinweistext für das öffentliche Geheimnis pflegen.",
+    category: "mystery",
   },
   {
     key: "mitglieder.mystery.tips",
     label: "Mystery-Tipps verwalten",
     description: "Community-Tipps nach Rätsel auswerten und Punkte für richtige Ideen vergeben.",
-  },
-  { key: "mitglieder.sperrliste", label: "Sperrliste pflegen" },
-  {
-    key: "mitglieder.fotoerlaubnisse",
-    label: "Fotoerlaubnisse verwalten",
-    description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
+    category: "mystery",
   },
   {
     key: "mitglieder.finanzen",
     label: "Finanzbereich öffnen",
     description:
       "Dashboard für Einnahmen, Ausgaben, Rechnungen und Spenden im Mitgliederbereich einsehen.",
+    category: "finances",
   },
   {
     key: "mitglieder.finanzen.manage",
     label: "Finanzbuchungen verwalten",
     description:
       "Neue Finanzbuchungen anlegen, bearbeiten, Rechnungen erfassen und Spenden dokumentieren.",
+    category: "finances",
   },
   {
     key: "mitglieder.finanzen.approve",
     label: "Finanzbuchungen freigeben",
     description: "Prüfen und freigeben von Rechnungen, Auslagen und Auszahlungen im Finanzmodul.",
+    category: "finances",
   },
   {
     key: "mitglieder.finanzen.export",
     label: "Finanzdaten exportieren",
     description: "CSV- oder Excel-Exporte der Finanzbuchungen und Budgetübersichten erstellen.",
+    category: "finances",
   },
   {
     key: "mitglieder.onboarding.analytics",
     label: "Onboarding-Analytics öffnen",
     description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
+    category: "analytics",
   },
   {
     key: "mitglieder.server.analytics",
     label: "Server-Statistiken einsehen",
     description: "Auslastung, Antwortzeiten und Nutzungsverhalten in der Server-Statistik abrufen.",
-  },
-  {
-    key: "mitglieder.issues.manage",
-    label: "Feedback-Anliegen verwalten",
-    description: "Status, Priorität und Moderation für gemeldete Anliegen im Issue-Board übernehmen.",
+    category: "analytics",
   },
 ];
 

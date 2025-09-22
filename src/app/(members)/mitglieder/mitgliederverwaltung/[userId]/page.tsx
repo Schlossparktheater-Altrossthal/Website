@@ -14,6 +14,7 @@ import { requireAuth } from "@/lib/rbac";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/names";
+import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -103,7 +104,10 @@ function resolvePhotoConsent(consent: PhotoConsentSelection | null): PhotoConsen
 
 export default async function MemberProfileAdminPage({ params }: PageProps) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.rollenverwaltung");
+  const [allowed, canSendTestNotifications] = await Promise.all([
+    hasPermission(session.user, "mitglieder.rollenverwaltung"),
+    hasPermission(session.user, "mitglieder.notifications.test"),
+  ]);
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Mitgliederprofile.</div>;
   }
@@ -392,6 +396,14 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
               </dl>
             </CardContent>
           </Card>
+
+          {canSendTestNotifications ? (
+            <MemberTestNotificationCard
+              userId={member.id}
+              displayName={displayName}
+              hasEmail={Boolean(email)}
+            />
+          ) : null}
 
           <Card className="border border-border/70">
             <CardHeader className="space-y-2">
