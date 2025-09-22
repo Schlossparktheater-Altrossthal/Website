@@ -5,6 +5,38 @@ vi.mock("next/cache", () => ({
   unstable_cache: <T extends (...args: unknown[]) => unknown>(fn: T) => fn,
 }));
 
+const resolvedSettings = {
+  id: "default",
+  freezeDays: 7,
+  preferredWeekdays: [6, 0],
+  exceptionWeekdays: [5],
+  holidaySource: {
+    mode: "default" as const,
+    url: null,
+    effectiveUrl: "https://example.com/ferien.ics",
+  },
+  holidayStatus: {
+    status: "unknown" as const,
+    message: null,
+    checkedAt: null,
+  },
+  updatedAt: null,
+  cacheKey: "default|https://example.com/ferien.ics",
+};
+
+vi.mock("@/lib/sperrliste-settings", () => ({
+  readSperrlisteSettings: vi.fn().mockResolvedValue(null),
+  resolveSperrlisteSettings: vi
+    .fn()
+    .mockImplementation(() => ({
+      ...resolvedSettings,
+      holidaySource: { ...resolvedSettings.holidaySource },
+      holidayStatus: { ...resolvedSettings.holidayStatus },
+    })),
+  applyHolidaySourceStatus: vi.fn().mockResolvedValue(undefined),
+  getDefaultHolidaySourceUrl: vi.fn(() => resolvedSettings.holidaySource.effectiveUrl),
+}));
+
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
 import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 

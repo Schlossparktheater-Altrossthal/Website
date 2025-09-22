@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { format, isValid, parseISO } from "date-fns";
+import { addDays, format } from "date-fns";
 import { de } from "date-fns/locale/de";
 
 import { CalendarCheck2, UsersRound } from "lucide-react";
@@ -15,23 +15,28 @@ interface SperrlisteTabsProps {
   initialBlockedDays: BlockedDay[];
   holidays?: HolidayRange[];
   overviewMembers: OverviewMember[];
-  freezeUntil?: string | null;
+  freezeDays?: number;
+  preferredWeekdays?: number[];
+  exceptionWeekdays?: number[];
 }
 
 export function SperrlisteTabs({
   initialBlockedDays,
   holidays = [],
   overviewMembers,
-  freezeUntil,
+  freezeDays = 0,
+  preferredWeekdays = [],
+  exceptionWeekdays = [],
 }: SperrlisteTabsProps) {
   const formattedFreeze = useMemo(() => {
-    if (!freezeUntil) return null;
-    const parsed = parseISO(freezeUntil);
-    if (!isValid(parsed)) {
-      return freezeUntil;
+    if (!freezeDays || freezeDays <= 0) {
+      return null;
     }
-    return format(parsed, "EEEE, d. MMMM yyyy", { locale: de });
-  }, [freezeUntil]);
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const freezeUntil = addDays(startOfToday, freezeDays);
+    return format(freezeUntil, "EEEE, d. MMMM yyyy", { locale: de });
+  }, [freezeDays]);
 
   return (
     <Tabs defaultValue="personal" className="space-y-6">
@@ -52,11 +57,22 @@ export function SperrlisteTabs({
             Hinweis: Aus Planungsgründen können Sperrtermine erst ab {formattedFreeze} eingetragen werden.
           </div>
         ) : null}
-        <BlockCalendar initialBlockedDays={initialBlockedDays} holidays={holidays} />
+        <BlockCalendar
+          initialBlockedDays={initialBlockedDays}
+          holidays={holidays}
+          freezeDays={freezeDays}
+          preferredWeekdays={preferredWeekdays}
+          exceptionWeekdays={exceptionWeekdays}
+        />
       </TabsContent>
 
       <TabsContent value="overview">
-        <BlockOverview members={overviewMembers} holidays={holidays} />
+        <BlockOverview
+          members={overviewMembers}
+          holidays={holidays}
+          preferredWeekdays={preferredWeekdays}
+          exceptionWeekdays={exceptionWeekdays}
+        />
       </TabsContent>
     </Tabs>
   );

@@ -2,10 +2,16 @@ import { PageHeader } from "@/components/members/page-header";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import type { BlockedDay as BlockedDayDTO } from "./block-calendar";
 import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
-import { SperrlisteTabs } from "./sperrliste-tabs";
+import {
+  getDefaultHolidaySourceUrl,
+  readSperrlisteSettings,
+  resolveSperrlisteSettings,
+  toClientSperrlisteSettings,
+} from "@/lib/sperrliste-settings";
+import { SperrlistePageClient } from "./page-client";
 import type { OverviewMember } from "./block-overview";
 
 export default async function SperrlistePage() {
@@ -20,12 +26,15 @@ export default async function SperrlistePage() {
     throw new Error("Benutzerinformationen konnten nicht geladen werden.");
   }
 
-  const [personalBlockedDays, holidayRanges, overviewUsers] = await Promise.all([
+  const settingsRecord = await readSperrlisteSettings();
+  const resolvedSettingsBefore = resolveSperrlisteSettings(settingsRecord);
+
+  const [personalBlockedDays, holidayRanges, overviewUsers, canManageSettings] = await Promise.all([
     prisma.blockedDay.findMany({
       where: { userId },
       orderBy: { date: "asc" },
     }),
-    getSaxonySchoolHolidayRanges(),
+    getSaxonySchoolHolidayRanges(resolvedSettingsBefore.cacheKey),
     prisma.user.findMany({
       orderBy: [
         { firstName: "asc" },
@@ -50,7 +59,13 @@ export default async function SperrlistePage() {
         },
       },
     }),
+    hasPermission(session.user, "mitglieder.sperrliste.settings"),
   ]);
+
+  const refreshedSettingsRecord = await readSperrlisteSettings();
+  const resolvedSettings = resolveSperrlisteSettings(refreshedSettingsRecord);
+  const clientSettings = toClientSperrlisteSettings(resolvedSettings);
+  const defaultHolidaySourceUrl = getDefaultHolidaySourceUrl();
 
   const initialBlockedDays: BlockedDayDTO[] = personalBlockedDays.map((entry) => ({
     id: entry.id,
@@ -77,19 +92,19 @@ export default async function SperrlistePage() {
     })),
   }));
 
-  const freezeUntil = addDays(new Date(), 7);
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Sperrliste"
         description="Markiere Tage, an denen du nicht verfügbar bist, damit das Team die Planung im Blick behält."
       />
-      <SperrlisteTabs
+      <SperrlistePageClient
         initialBlockedDays={initialBlockedDays}
-        holidays={holidayRanges}
+        initialHolidays={holidayRanges}
         overviewMembers={overviewMembers}
-        freezeUntil={freezeUntil.toISOString()}
+        initialSettings={clientSettings}
+        canManageSettings={canManageSettings}
+        defaultHolidaySourceUrl={defaultHolidaySourceUrl}
       />
     </div>
   );
