@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { z } from "zod";
 import { AlertTriangle, Clock3, Filter, Search, Sparkles } from "lucide-react";
 
 import { MeasurementForm } from "@/components/forms/measurement-form";
@@ -19,9 +18,8 @@ import { UserAvatar, type AvatarSource } from "@/components/user-avatar";
 import {
   MEASUREMENT_TYPE_LABELS,
   MEASUREMENT_UNIT_LABELS,
-  measurementSchema,
+  measurementResponseSchema,
   measurementTypeEnum,
-  measurementUnitEnum,
   sortMeasurements,
   type MeasurementFormData,
   type MeasurementType,
@@ -98,19 +96,6 @@ const RELATIVE_TIME_UNITS: { unit: Intl.RelativeTimeFormatUnit; seconds: number 
   { unit: "minute", seconds: 60 },
   { unit: "second", seconds: 1 },
 ];
-
-const measurementResponseSchema = measurementSchema
-  .extend({
-    id: z.string(),
-    userId: z.string(),
-    updatedAt: z.string(),
-    note: z.string().nullable().optional(),
-  })
-  .extend({
-    type: measurementTypeEnum,
-    unit: measurementUnitEnum,
-    value: z.number(),
-  });
 
 export function MemberMeasurementsControlCenter({
   members,

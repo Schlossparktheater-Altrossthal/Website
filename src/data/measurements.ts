@@ -19,11 +19,21 @@ export const measurementUnitEnum = z.enum([
   "DE",
 ] as const);
 
+const measurementNoteSchema = z.string().max(500, "Notizen dürfen höchstens 500 Zeichen haben.");
+
 export const measurementSchema = z.object({
   type: measurementTypeEnum,
   value: z.number().min(0, "Der Wert muss positiv sein."),
   unit: measurementUnitEnum,
-  note: z.string().max(500, "Notizen dürfen höchstens 500 Zeichen haben.").optional(),
+  note: measurementNoteSchema.optional(),
+});
+
+export const measurementResponseSchema = measurementSchema.extend({
+  id: z.string(),
+  userId: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+  note: measurementNoteSchema.nullish(),
 });
 
 export type MeasurementType = z.infer<typeof measurementTypeEnum>;

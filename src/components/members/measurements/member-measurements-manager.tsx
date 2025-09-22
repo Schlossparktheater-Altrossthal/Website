@@ -10,7 +10,7 @@ import { useOptionalProfileCompletion } from "@/components/members/profile-compl
 import {
   MEASUREMENT_TYPE_LABELS,
   MEASUREMENT_UNIT_LABELS,
-  measurementSchema,
+  measurementResponseSchema,
   sortMeasurements,
   type MeasurementFormData,
   type MeasurementType,
@@ -76,19 +76,19 @@ export function MemberMeasurementsManager({
       }
 
       const payload = await response.json();
-      const parsed = measurementSchema.parse(payload);
+      const parsed = measurementResponseSchema.parse(payload);
       const saved: MeasurementEntry = {
         id:
-          typeof payload?.id === "string"
-            ? payload.id
+          typeof parsed?.id === "string"
+            ? parsed.id
             : `${parsed.type}-${Date.now()}`,
         type: parsed.type,
         value: parsed.value,
         unit: parsed.unit,
-        note: parsed.note,
+        note: parsed.note ?? null,
         updatedAt:
-          typeof payload?.updatedAt === "string"
-            ? payload.updatedAt
+          typeof parsed?.updatedAt === "string"
+            ? parsed.updatedAt
             : new Date().toISOString(),
       };
       setMeasurements((prev) => {
