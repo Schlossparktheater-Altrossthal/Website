@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,17 +20,7 @@ const UPDATED_AT_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   timeZone: "Europe/Berlin",
 });
 
-type MysteryTimerManagerProps = {
-  initialCountdownTarget: string | null;
-  initialExpirationMessage: string | null;
-  effectiveCountdownTarget: string;
-  effectiveExpirationMessage: string;
-  defaultCountdownTarget: string;
-  defaultExpirationMessage: string;
-  updatedAt: string | null;
-  hasCustomCountdown: boolean;
-  hasCustomMessage: boolean;
-};
+const MAX_MESSAGE_LENGTH = 500;
 
 function isoToLocalInputValue(iso: string | null) {
   if (!iso) return "";
@@ -56,7 +45,32 @@ function formatIsoForDisplay(iso: string | null, formatter: Intl.DateTimeFormat)
   return formatter.format(date);
 }
 
-export function MysteryTimerManager({
+export type MysteryTimerFormSavedSettings = {
+  countdownTarget: string | null;
+  expirationMessage: string | null;
+  effectiveCountdownTarget: string;
+  effectiveExpirationMessage: string;
+  updatedAt: string | null;
+  hasCustomCountdown: boolean;
+  hasCustomMessage: boolean;
+};
+
+export type MysteryTimerFormProps = {
+  scope: "public" | "members";
+  initialCountdownTarget: string | null;
+  initialExpirationMessage: string | null;
+  effectiveCountdownTarget: string;
+  effectiveExpirationMessage: string;
+  defaultCountdownTarget: string;
+  defaultExpirationMessage: string;
+  updatedAt: string | null;
+  hasCustomCountdown: boolean;
+  hasCustomMessage: boolean;
+  onSaved?: (settings: MysteryTimerFormSavedSettings) => void;
+};
+
+export function MysteryTimerForm({
+  scope,
   initialCountdownTarget,
   initialExpirationMessage,
   effectiveCountdownTarget,
@@ -66,7 +80,8 @@ export function MysteryTimerManager({
   updatedAt,
   hasCustomCountdown,
   hasCustomMessage,
-}: MysteryTimerManagerProps) {
+  onSaved,
+}: MysteryTimerFormProps) {
   const [countdownValue, setCountdownValue] = useState(() => isoToLocalInputValue(initialCountdownTarget));
   const [messageValue, setMessageValue] = useState(() => initialExpirationMessage ?? "");
   const [saving, setSaving] = useState(false);
@@ -107,21 +122,13 @@ export function MysteryTimerManager({
 
     setSaving(true);
     try {
-      const response = await fetch("/api/mystery/settings", {
+      const response = await fetch(`/api/mystery/settings?scope=${scope}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = (await response.json().catch(() => ({}))) as {
-        settings?: {
-          countdownTarget: string | null;
-          expirationMessage: string | null;
-          effectiveCountdownTarget: string;
-          effectiveExpirationMessage: string;
-          updatedAt: string | null;
-          hasCustomCountdown: boolean;
-          hasCustomMessage: boolean;
-        };
+        settings?: MysteryTimerFormSavedSettings;
         error?: string;
       };
 
@@ -138,6 +145,7 @@ export function MysteryTimerManager({
       setCustomMessage(data.settings.hasCustomMessage);
       setLastUpdated(data.settings.updatedAt ?? null);
       setSuccess("Die Mystery-Einstellungen wurden gespeichert.");
+      onSaved?.(data.settings);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler beim Speichern.");
     } finally {
@@ -146,85 +154,75 @@ export function MysteryTimerManager({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Mystery-Timer verwalten</CardTitle>
-        <Text variant="small" tone="muted">
-          Lege fest, wann das nächste Rätsel live geht und welcher Hinweis nach Ablauf angezeigt wird.
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="mystery-countdown">Countdown-Ziel</Label>
+        <Input
+          id="mystery-countdown"
+          type="datetime-local"
+          value={countdownValue}
+          onChange={(event) => setCountdownValue(event.target.value)}
+          aria-describedby="mystery-countdown-description"
+        />
+        <Text id="mystery-countdown-description" variant="small" tone="muted">
+          Zeitzone wird als lokale Zeit interpretiert. Besucher sehen den Countdown automatisch in ihrer Systemsprache.
         </Text>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="mystery-countdown">Countdown-Ziel</Label>
-            <Input
-              id="mystery-countdown"
-              type="datetime-local"
-              value={countdownValue}
-              onChange={(event) => setCountdownValue(event.target.value)}
-              aria-describedby="mystery-countdown-description"
-            />
-            <Text id="mystery-countdown-description" variant="small" tone="muted">
-              Zeitzone wird als lokale Zeit interpretiert. Mitglieder sehen den Countdown automatisch in ihrer Systemsprache.
-            </Text>
-            <Text variant="small" tone="muted">
-              {customCountdown
-                ? formattedEffectiveCountdown
-                  ? `Aktuelles Veröffentlichungsdatum: ${formattedEffectiveCountdown}`
-                  : "Aktuelles Veröffentlichungsdatum ist gesetzt."
-                : formattedDefaultCountdown
-                  ? `Kein eigenes Datum hinterlegt – Standard: ${formattedDefaultCountdown}`
-                  : "Kein eigenes Datum hinterlegt."}
-            </Text>
-          </div>
+        <Text variant="small" tone="muted">
+          {customCountdown
+            ? formattedEffectiveCountdown
+              ? `Aktuelles Veröffentlichungsdatum: ${formattedEffectiveCountdown}`
+              : "Aktuelles Veröffentlichungsdatum ist gesetzt."
+            : formattedDefaultCountdown
+                ? `Kein eigenes Datum hinterlegt – Standard: ${formattedDefaultCountdown}`
+                : "Kein eigenes Datum hinterlegt."}
+        </Text>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="mystery-message">Hinweis nach Ablauf</Label>
-            <Textarea
-              id="mystery-message"
-              value={messageValue}
-              onChange={(event) => setMessageValue(event.target.value)}
-              rows={4}
-              maxLength={500}
-              aria-describedby="mystery-message-description"
-            />
-            <Text id="mystery-message-description" variant="small" tone="muted">
-              Maximal 500 Zeichen. Dieser Text ersetzt die Standardmeldung, sobald der Countdown abgelaufen ist.
-            </Text>
-            <Text variant="small" tone="muted">
-              {customMessage
-                ? `Aktueller Hinweistext: ${effectiveMessage}`
-                : `Kein eigener Hinweistext hinterlegt – Standard: ${defaultExpirationMessage}`}
-            </Text>
-          </div>
+      <div className="space-y-2">
+        <Label htmlFor="mystery-message">Hinweis nach Ablauf</Label>
+        <Textarea
+          id="mystery-message"
+          value={messageValue}
+          onChange={(event) => setMessageValue(event.target.value)}
+          rows={4}
+          maxLength={MAX_MESSAGE_LENGTH}
+          aria-describedby="mystery-message-description"
+        />
+        <Text id="mystery-message-description" variant="small" tone="muted">
+          Maximal {MAX_MESSAGE_LENGTH} Zeichen. Dieser Text ersetzt die Standardmeldung, sobald der Countdown abgelaufen ist.
+        </Text>
+        <Text variant="small" tone="muted">
+          {customMessage
+            ? `Aktueller Hinweistext: ${effectiveMessage}`
+            : `Kein eigener Hinweistext hinterlegt – Standard: ${defaultExpirationMessage}`}
+        </Text>
+      </div>
 
-          {formattedUpdatedAt && (
-            <Text variant="small" tone="muted">
-              Zuletzt aktualisiert: {formattedUpdatedAt}
-            </Text>
-          )}
+      {formattedUpdatedAt && (
+        <Text variant="small" tone="muted">
+          Zuletzt aktualisiert: {formattedUpdatedAt}
+        </Text>
+      )}
 
-          {error && <Text tone="destructive">{error}</Text>}
-          {success && <Text tone="success">{success}</Text>}
+      {error && <Text tone="destructive">{error}</Text>}
+      {success && <Text tone="success">{success}</Text>}
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <Button type="submit" disabled={saving} aria-busy={saving}>
-              {saving ? "Speichern…" : "Einstellungen speichern"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={saving}
-              onClick={() => {
-                setCountdownValue(isoToLocalInputValue(null));
-                setMessageValue("");
-              }}
-            >
-              Zurücksetzen (Standard)
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <Button type="submit" disabled={saving} aria-busy={saving}>
+          {saving ? "Speichern…" : "Einstellungen speichern"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={saving}
+          onClick={() => {
+            setCountdownValue(isoToLocalInputValue(null));
+            setMessageValue("");
+          }}
+        >
+          Zurücksetzen (Standard)
+        </Button>
+      </div>
+    </form>
   );
 }

@@ -39,11 +39,6 @@ const PRODUCTION_ITEMS: Item[] = [
   },
 ];
 
-const MYSTERY_ITEMS: Item[] = [
-  { href: "/mitglieder/mystery/timer", label: "Mystery-Timer", permissionKey: "mitglieder.mystery.timer" },
-  { href: "/mitglieder/mystery/tipps", label: "Mystery-Tipps", permissionKey: "mitglieder.mystery.tips" },
-];
-
 const FINANCE_ITEMS: Item[] = [
   { href: "/mitglieder/finanzen", label: "Finanz-Dashboard", permissionKey: "mitglieder.finanzen" },
   { href: "/mitglieder/finanzen/buchungen", label: "Buchungen", permissionKey: "mitglieder.finanzen" },
@@ -219,22 +214,6 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
           <path d="M6 16l4-6 3 4 4-7 3 5" />
         </svg>
       );
-    case "/mitglieder/mystery/timer":
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v6l3 3" />
-          <path d="M9 3h6" />
-        </svg>
-      );
-    case "/mitglieder/mystery/tipps":
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m2 12 9-9 4 4-9 9-4 4z" />
-          <path d="M12.5 5.5 18 11" />
-          <path d="M4 20h7" />
-        </svg>
-      );
     case "/mitglieder/finanzen":
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -304,7 +283,6 @@ export function MembersNav({
       { label: assignmentLabel, items: ASSIGNMENT_ITEMS },
       { label: "Produktion", items: PRODUCTION_ITEMS },
       { label: "Finanzen", items: FINANCE_ITEMS },
-      { label: "Das Geheimnis", items: MYSTERY_ITEMS },
       { label: "Verwaltung", items: ADMIN_ITEMS },
     ],
     [assignmentLabel],
