@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import type { LucideIcon } from "lucide-react";
@@ -32,6 +32,10 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   const hasMeasurementPermission = await hasPermission(
     session.user,
     "mitglieder.koerpermasse",
+  );
+  const canManageDepartments = await hasPermission(
+    session.user,
+    "mitglieder.produktionen",
   );
   const isEnsembleMember = hasRole(session.user, "cast");
   const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
@@ -85,6 +89,10 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   }
 
   const membership = membershipRaw as DepartmentMembershipWithDepartment;
+
+  if (canManageDepartments) {
+    redirect(`/mitglieder/produktionen/gewerke/${membership.department.id}`);
+  }
 
   const today = startOfToday();
   const planningStart = addDays(today, PLANNING_FREEZE_DAYS);
