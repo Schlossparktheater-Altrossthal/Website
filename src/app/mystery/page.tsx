@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heading, Text } from "@/components/ui/typography";
 import {
+  DEFAULT_MYSTERY_COUNTDOWN_ISO,
   DEFAULT_MYSTERY_EXPIRATION_MESSAGE,
   readMysterySettings,
   resolveMysterySettings,
@@ -11,9 +12,9 @@ import { prisma } from "@/lib/prisma";
 import type { Clue, MysteryTip as MysteryTipModel, Prisma } from "@prisma/client";
 import { getMysteryClueSummaries, getMysteryScoreboard } from "@/lib/mystery-tips";
 
-import { Countdown } from "./_components/countdown";
 import { MysteryTipsBoard } from "./_components/mystery-tips-board";
 import { MysteryScoreboard } from "./_components/mystery-scoreboard";
+import { MysteryCountdownCard } from "./_components/mystery-countdown-card";
 
 type ClueContent = {
   text?: string;
@@ -32,12 +33,6 @@ function parseClueContent(content: Prisma.JsonValue | null | undefined): ClueCon
     alt: typeof record.alt === "string" ? record.alt : undefined,
   };
 }
-
-const COUNTDOWN_LABEL_FORMATTER = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "full",
-  timeStyle: "short",
-  timeZone: "Europe/Berlin",
-});
 
 function renderClueBody(clue: Clue, content: ClueContent) {
   if (clue.type === "image") {
@@ -90,8 +85,11 @@ export default async function MysteryPage() {
 
   const resolvedSettings = resolveMysterySettings(settingsRecord);
   const countdownTargetIso = resolvedSettings.effectiveCountdownTarget.toISOString();
-  const countdownLabel = COUNTDOWN_LABEL_FORMATTER.format(resolvedSettings.effectiveCountdownTarget);
-  const releaseMessage = resolvedSettings.effectiveExpirationMessage ?? DEFAULT_MYSTERY_EXPIRATION_MESSAGE;
+  const initialCountdownTargetIso = resolvedSettings.countdownTarget
+    ? resolvedSettings.countdownTarget.toISOString()
+    : null;
+  const effectiveExpirationMessage = resolvedSettings.effectiveExpirationMessage ?? DEFAULT_MYSTERY_EXPIRATION_MESSAGE;
+  const updatedAtIso = resolvedSettings.updatedAt ? resolvedSettings.updatedAt.toISOString() : null;
 
   const firstRiddle = clues.find((clue) => clue.index === 1) ?? null;
   const remainingClues = firstRiddle ? clues.filter((clue) => clue.id !== firstRiddle.id) : clues;
@@ -136,30 +134,18 @@ export default async function MysteryPage() {
           </Text>
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Nächstes Rätsel in</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!isFirstRiddleReleased ? (
-                <>
-                  <Countdown targetDate={countdownTargetIso} />
-                  <Text variant="small" tone="muted">
-                    Start am {countdownLabel}
-                  </Text>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <Text variant="lead" tone="success">
-                    {releaseMessage}
-                  </Text>
-                  <Text variant="small" tone="muted">
-                    Veröffentlicht am {countdownLabel}
-                  </Text>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <MysteryCountdownCard
+            initialCountdownTarget={initialCountdownTargetIso}
+            initialExpirationMessage={resolvedSettings.expirationMessage}
+            effectiveCountdownTarget={countdownTargetIso}
+            effectiveExpirationMessage={effectiveExpirationMessage}
+            defaultCountdownTarget={DEFAULT_MYSTERY_COUNTDOWN_ISO}
+            defaultExpirationMessage={DEFAULT_MYSTERY_EXPIRATION_MESSAGE}
+            updatedAt={updatedAtIso}
+            hasCustomCountdown={resolvedSettings.hasCustomCountdown}
+            hasCustomMessage={resolvedSettings.hasCustomMessage}
+            isFirstRiddleReleased={isFirstRiddleReleased}
+          />
           <Card className="flex flex-col">
             <CardHeader>
               <CardTitle>Das 1. Rätsel</CardTitle>

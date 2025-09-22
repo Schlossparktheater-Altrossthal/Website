@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   DEFAULT_MYSTERY_EXPIRATION_MESSAGE,
+  type MysterySettingsScope,
   readMysterySettings,
   resolveMysterySettings,
   saveMysterySettings,
@@ -19,6 +20,14 @@ const updateSchema = z.object({
     .transform((value) => (typeof value === "string" && value.length > 0 ? value : null)),
 });
 
+function resolveScope(request: NextRequest): MysterySettingsScope {
+  const scope = request.nextUrl.searchParams.get("scope");
+  if (scope === "public" || scope === "members") {
+    return scope;
+  }
+  return "members";
+}
+
 function serializeSettings(record: Awaited<ReturnType<typeof readMysterySettings>>) {
   const resolved = resolveMysterySettings(record);
   return {
@@ -32,7 +41,7 @@ function serializeSettings(record: Awaited<ReturnType<typeof readMysterySettings
   } as const;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "mitglieder.mystery.timer"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -43,7 +52,8 @@ export async function GET() {
   }
 
   try {
-    const record = await readMysterySettings("members");
+    const scope = resolveScope(request);
+    const record = await readMysterySettings(scope);
     return NextResponse.json({ settings: serializeSettings(record) });
   } catch (error) {
     console.error("Failed to load mystery settings", error);
@@ -76,7 +86,8 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const saved = await saveMysterySettings("members", {
+    const scope = resolveScope(request);
+    const saved = await saveMysterySettings(scope, {
       countdownTarget: parsed.data.countdownTarget,
       expirationMessage: parsed.data.expirationMessage,
     });

@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import * as React from "react";
 import { SessionProvider } from "next-auth/react";
 import { RealtimeProvider } from "@/hooks/useRealtime";
+import { FrontendEditingProvider } from "@/components/frontend-editing/frontend-editing-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = React.useState(() => new QueryClient());
@@ -11,14 +12,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <QueryClientProvider client={client}>
         <RealtimeProvider>
-          {children}
-          <Toaster 
-            richColors 
-            position="top-right" 
-            expand={true}
-            visibleToasts={5}
-            gap={8}
-          />
+          <FrontendEditingProvider>
+            {children}
+            <Toaster
+              richColors
+              position="top-right"
+              expand={true}
+              visibleToasts={5}
+              gap={8}
+            />
+          </FrontendEditingProvider>
         </RealtimeProvider>
       </QueryClientProvider>
     </SessionProvider>
