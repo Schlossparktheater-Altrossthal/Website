@@ -1,4 +1,4 @@
-import tokens from "./tokens.json";
+import tokens from "./tokens.json" with { type: "json" };
 
 type Modes = typeof tokens.modes;
 

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
 
-import staticAnalyticsData from "@/data/server-analytics-static.json";
+import staticAnalyticsData from "@/data/server-analytics-static.json" with { type: "json" };
 import {
   applyPagePerformanceMetrics,
   loadDeviceBreakdownFromDatabase,
