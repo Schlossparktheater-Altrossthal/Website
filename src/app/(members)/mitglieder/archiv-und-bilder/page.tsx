@@ -17,9 +17,9 @@ import {
 import { GalleryMediaType } from "@prisma/client";
 
 export const metadata: Metadata = {
-  title: "Mediengalerie",
+  title: "Archiv und Bilder",
   description:
-    "Verwalte Jahrgangsordner, lade neue Fotos oder Videos hoch und behalte den Überblick über das gemeinsame Medienarchiv.",
+    "Pflege Jahrgangsordner mit Fotos und Videos der vergangenen Spielzeiten und organisiere gemeinsam das Ensemble-Archiv.",
 };
 
 type FolderStats = {
@@ -41,23 +41,24 @@ function formatRelative(date: Date | null) {
   }).format(date);
 }
 
-export default async function GalleryOverviewPage() {
+export default async function ArchiveOverviewPage() {
   const session = await requireAuth();
-  const [canView, canUpload] = await Promise.all([
+  const [canView, canUpload, canModerate] = await Promise.all([
     hasPermission(session.user, "mitglieder.galerie"),
     hasPermission(session.user, "mitglieder.galerie.upload"),
+    hasPermission(session.user, "mitglieder.galerie.delete"),
   ]);
 
   if (!canView) {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Mediengalerie"
-          description="Du benötigst eine spezielle Berechtigung, um auf die Galerie zuzugreifen. Bitte wende dich an das Team für die Freischaltung."
+          title="Archiv und Bilder"
+          description="Du benötigst eine spezielle Berechtigung, um auf das Archiv zuzugreifen. Bitte wende dich an das Team für die Freischaltung."
         />
         <Card>
           <CardContent className="py-10 text-sm text-muted-foreground">
-            Ohne Freigabe ist die Galerie im Mitgliederbereich nicht sichtbar.
+            Ohne Freigabe ist das Archiv im Mitgliederbereich nicht sichtbar.
           </CardContent>
         </Card>
       </div>
@@ -130,18 +131,24 @@ export default async function GalleryOverviewPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Mediengalerie"
-        description="Ordne Bilder und Videos den passenden Jahrgängen zu, sieh alle Uploads auf einen Blick und ergänze das Archiv gemeinsam mit dem Team."
+        title="Archiv und Bilder"
+        description="Ordne Bilder und Videos den passenden Jahrgängen zu, entdecke Erinnerungen vergangener Spielzeiten und ergänze das Archiv gemeinsam mit dem Team."
       />
 
       <Card>
         <CardContent className="space-y-2 py-6 text-sm text-muted-foreground">
           <p>
-            In jedem Ordner findest du alle hochgeladenen Medien eines Jahrgangs. Du kannst bestehende Dateien öffnen
+            In jedem Ordner findest du hochgeladene Fotos und Videos eines Jahrgangs. Du kannst bestehende Dateien öffnen
             und – sofern freigeschaltet – eigene Inhalte mit kurzer Beschreibung ergänzen.
           </p>
-          {canUpload ? (
-            <p className="text-success">Du darfst neue Medien hochladen und deine eigenen Beiträge entfernen.</p>
+          {canUpload || canModerate ? (
+            <p className="text-success">
+              {canUpload && canModerate
+                ? "Du kannst neue Medien ergänzen und das gesamte Archiv moderieren – inklusive Löschen fremder Beiträge."
+                : canUpload
+                  ? "Du darfst neue Medien hochladen und deine eigenen Beiträge entfernen."
+                  : "Du darfst Beiträge aus allen Jahrgängen entfernen."}
+            </p>
           ) : (
             <p>Zum Hochladen benötigst du eine zusätzliche Berechtigung. Frage bei Bedarf im Admin-Team nach.</p>
           )}
@@ -185,11 +192,11 @@ export default async function GalleryOverviewPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button asChild>
-                    <Link href={`/mitglieder/galerie/${folder.year}`}>Ordner öffnen</Link>
+                    <Link href={`/mitglieder/archiv-und-bilder/${folder.year}`}>Ordner öffnen</Link>
                   </Button>
                   {canUpload ? (
                     <Button asChild variant="outline">
-                      <Link href={`/mitglieder/galerie/${folder.year}#upload`}>Direkt zum Upload</Link>
+                      <Link href={`/mitglieder/archiv-und-bilder/${folder.year}#upload`}>Direkt zum Upload</Link>
                     </Button>
                   ) : null}
                 </div>

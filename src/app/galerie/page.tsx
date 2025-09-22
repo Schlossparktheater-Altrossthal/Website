@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Galerie & Medienarchiv",
+  title: "Archiv und Bilder",
   description:
-    "Die Upload-Zentrale ist in den geschützten Mitgliederbereich umgezogen. Bitte melde dich an, um auf die Jahrgangsordner zuzugreifen.",
+    "Das Medienarchiv mit Upload-Funktion liegt im geschützten Mitgliederbereich. Melde dich an, um Fotos und Videos vergangener Jahre zu verwalten.",
 };
 
 export default function PublicGalleryPage() {
@@ -16,14 +16,14 @@ export default function PublicGalleryPage() {
       <Card className="max-w-2xl">
         <CardContent className="space-y-6 p-8 text-center">
           <div className="space-y-3">
-            <h1 className="text-3xl font-semibold">Galerie nur für Mitglieder</h1>
+            <h1 className="text-3xl font-semibold">Archiv und Bilder nur für Mitglieder</h1>
             <p className="text-sm text-muted-foreground">
-              Unsere Mediengalerie mit Upload-Bereich ist in den geschützten Mitgliederbereich umgezogen. Melde dich mit deinem
-              Konto an, um Bilder und Videos zu verwalten.
+              Unser Medienarchiv mit Jahrgangsordnern liegt im geschützten Mitgliederbereich. Dort kannst du Fotos und Videos aus
+              vergangenen Spielzeiten hochladen, beschreiben und ansehen.
             </p>
           </div>
           <Button asChild>
-            <Link href="/login?redirect=/mitglieder/galerie">Zum Login</Link>
+            <Link href="/login?redirect=/mitglieder/archiv-und-bilder">Zum Login</Link>
           </Button>
         </CardContent>
       </Card>

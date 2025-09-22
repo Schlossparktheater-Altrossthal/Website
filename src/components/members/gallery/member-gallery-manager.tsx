@@ -52,6 +52,7 @@ export type MemberGalleryItem = {
 type MemberGalleryManagerProps = {
   year: number;
   canUpload: boolean;
+  canModerate: boolean;
   initialItems: MemberGalleryItem[];
 };
 
@@ -107,7 +108,7 @@ function getUploaderLabel(uploadedBy: MemberGalleryItem["uploadedBy"]) {
   return uploadedBy.name?.trim() || uploadedBy.email?.trim() || "Unbekannt";
 }
 
-export function MemberGalleryManager({ year, canUpload, initialItems }: MemberGalleryManagerProps) {
+export function MemberGalleryManager({ year, canUpload, canModerate, initialItems }: MemberGalleryManagerProps) {
   const [items, setItems] = useState<MemberGalleryItem[]>(() => {
     return [...initialItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   });
@@ -344,6 +345,11 @@ export function MemberGalleryManager({ year, canUpload, initialItems }: MemberGa
           <span>
             {stats.latest ? `Letzter Upload: ${formatDateTime(stats.latest.toISOString())}` : "Noch keine Uploads"}
           </span>
+          {canModerate ? (
+            <span className="basis-full text-xs font-medium text-success">
+              Du darfst Uploads anderer Mitglieder entfernen.
+            </span>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -536,7 +542,7 @@ export function MemberGalleryManager({ year, canUpload, initialItems }: MemberGa
                         Öffnen
                       </a>
                     </Button>
-                    {item.canDelete ? (
+                    {item.canDelete || canModerate ? (
                       <Button
                         type="button"
                         variant="destructive"

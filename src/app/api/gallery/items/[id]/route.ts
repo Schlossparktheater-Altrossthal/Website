@@ -16,12 +16,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  const [canView, canUpload] = await Promise.all([
+  const [canView, canUpload, canModerate] = await Promise.all([
     hasPermission(session.user, "mitglieder.galerie"),
     hasPermission(session.user, "mitglieder.galerie.upload"),
+    hasPermission(session.user, "mitglieder.galerie.delete"),
   ]);
 
-  if (!canView || !canUpload) {
+  if (!canView || (!canUpload && !canModerate)) {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }
 
@@ -38,7 +39,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Datei nicht gefunden" }, { status: 404 });
   }
 
-  if (item.uploadedById !== userId) {
+  if (item.uploadedById !== userId && !canModerate) {
     return NextResponse.json({ error: "Nur eigene Uploads können gelöscht werden." }, { status: 403 });
   }
 
