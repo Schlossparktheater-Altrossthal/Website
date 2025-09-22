@@ -145,7 +145,19 @@ export type DepartmentMembershipWithDepartment = Prisma.DepartmentMembershipGetP
             };
           };
         };
-        tasks: true;
+        tasks: {
+          include: {
+            assignee: {
+              select: {
+                id: true;
+                name: true;
+                email: true;
+                firstName: true;
+                lastName: true;
+              };
+            };
+          };
+        };
       };
     };
   };

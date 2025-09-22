@@ -67,6 +67,7 @@ export function DepartmentCard({
   measurementsByUser,
 }: DepartmentCardProps) {
   const { department } = membership;
+  const isEnsembleDepartment = department.slug?.toLowerCase() === "ensemble";
 
   const sortedMembers = [...department.memberships].sort((a, b) =>
     formatUserName(a.user).localeCompare(formatUserName(b.user), "de", { sensitivity: "base" }),
@@ -81,8 +82,9 @@ export function DepartmentCard({
     return a.createdAt.getTime() - b.createdAt.getTime();
   });
 
-  const activeTasks = sortedTasks.filter((task) => task.status !== "done");
-  const completedTasks = sortedTasks.filter((task) => task.status === "done");
+  const tasksForDisplay = isEnsembleDepartment ? [] : sortedTasks;
+  const activeTasks = tasksForDisplay.filter((task) => task.status !== "done");
+  const completedTasks = tasksForDisplay.filter((task) => task.status === "done");
 
   const memberIdsForDepartment = department.memberships.map((entry) => entry.userId);
   const meetingSuggestions = findMeetingSuggestions(
@@ -321,15 +323,22 @@ export function DepartmentCard({
 
         <section className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-foreground">Meine Aufgaben</h3>
+            <h3 className="text-sm font-semibold text-foreground">Gewerk-Aufgaben</h3>
             <Badge variant="muted" size="sm">
-              {sortedTasks.length} Aufgaben
+              {isEnsembleDepartment
+                ? "Keine Aufgabenliste"
+                : `${tasksForDisplay.length} ${tasksForDisplay.length === 1 ? "Aufgabe" : "Aufgaben"}`}
             </Badge>
           </div>
-          {activeTasks.length ? (
+          {isEnsembleDepartment ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Für das Ensemble werden keine Aufgabenlisten geführt.
+            </p>
+          ) : activeTasks.length ? (
             <ul className="mt-4 grid gap-3 md:grid-cols-2">
               {activeTasks.map((task) => {
                 const dueMeta = task.dueAt ? getDueMeta(task.dueAt, now) : null;
+                const assigneeName = task.assignee ? formatUserName(task.assignee) : null;
                 return (
                   <li
                     key={task.id}
@@ -337,6 +346,22 @@ export function DepartmentCard({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2.5 py-0.5">
+                            Zuständig: {assigneeName ?? "Noch keine Zuordnung"}
+                          </span>
+                          {dueMeta ? (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full border border-border/60 px-2.5 py-0.5 transition",
+                                dueMeta.isOverdue ? "border-destructive/60 text-destructive" : "text-muted-foreground",
+                              )}
+                            >
+                              <Clock aria-hidden className="h-3.5 w-3.5" />
+                              {dueMeta.relative}
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="text-sm font-medium leading-6 text-foreground">{task.title}</p>
                         {task.description ? (
                           <p className="text-sm text-muted-foreground">{task.description}</p>
@@ -344,12 +369,11 @@ export function DepartmentCard({
                         {dueMeta ? (
                           <p
                             className={cn(
-                              "flex items-center gap-2 text-xs transition",
+                              "text-xs",
                               dueMeta.isOverdue ? "text-destructive" : "text-muted-foreground",
                             )}
                           >
-                            <Clock aria-hidden className="h-4 w-4" />
-                            Fällig {dueMeta.relative} ({dueMeta.absolute})
+                            Fällig am {dueMeta.absolute}
                           </p>
                         ) : null}
                       </div>
@@ -363,11 +387,11 @@ export function DepartmentCard({
             </ul>
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">
-              Keine offenen Aufgaben in diesem Gewerk – du bist auf dem aktuellen Stand.
+              Keine offenen Aufgaben in diesem Gewerk – ihr seid auf dem aktuellen Stand.
             </p>
           )}
 
-          {completedTasks.length ? (
+          {isEnsembleDepartment || !completedTasks.length ? null : (
             <details className="group mt-4 rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition open:border-primary/40">
               <summary className="flex cursor-pointer items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                 <span>Abgeschlossene Aufgaben</span>
@@ -377,11 +401,15 @@ export function DepartmentCard({
               <ul className="mt-4 space-y-3 text-sm">
                 {completedTasks.map((task) => {
                   const dueMeta = task.dueAt ? getDueMeta(task.dueAt, now) : null;
+                  const assigneeName = task.assignee ? formatUserName(task.assignee) : null;
                   return (
                     <li key={task.id} className="rounded-xl border border-border/60 bg-background/90 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <p className="font-medium text-foreground">{task.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Zuständig: {assigneeName ?? "Noch offen"}
+                          </p>
                           {dueMeta ? (
                             <p className="text-xs text-muted-foreground">Fällig war {dueMeta.absolute}</p>
                           ) : null}
@@ -395,7 +423,7 @@ export function DepartmentCard({
                 })}
               </ul>
             </details>
-          ) : null}
+          )}
         </section>
       </CardContent>
     </Card>

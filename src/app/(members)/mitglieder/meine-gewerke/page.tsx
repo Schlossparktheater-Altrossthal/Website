@@ -59,7 +59,17 @@ export default async function MeineGewerkePage() {
             },
           },
           tasks: {
-            where: { assigneeId: userId },
+            include: {
+              assignee: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
             orderBy: { createdAt: "asc" },
           },
         },
@@ -140,6 +150,10 @@ export default async function MeineGewerkePage() {
 
   const taskTotals: Record<"todo" | "doing" | "done", number> = { todo: 0, doing: 0, done: 0 };
   for (const membership of memberships) {
+    const isEnsembleDepartment = membership.department.slug?.toLowerCase() === "ensemble";
+    if (isEnsembleDepartment) {
+      continue;
+    }
     for (const task of membership.department.tasks) {
       taskTotals[task.status] += 1;
     }
@@ -152,8 +166,8 @@ export default async function MeineGewerkePage() {
 
   const summaryStats: SummaryStat[] = [
     { label: "Gewerke", value: memberships.length, hint: "Aktive Zuordnungen", icon: Users },
-    { label: "Aktive Aufgaben", value: openTaskCount, hint: "Status offen & in Arbeit", icon: ListTodo },
-    { label: "Abgeschlossen", value: taskTotals.done, hint: "Eigene erledigte Aufgaben", icon: CheckCircle2 },
+    { label: "Aktive Aufgaben", value: openTaskCount, hint: "Offen & in Arbeit in deinen Gewerken", icon: ListTodo },
+    { label: "Abgeschlossen", value: taskTotals.done, hint: "Erledigte Gewerke-Aufgaben", icon: CheckCircle2 },
   ];
 
   const headerActions = (
