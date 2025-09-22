@@ -74,3 +74,7 @@ export function useProfileCompletion() {
   }
   return context;
 }
+
+export function useOptionalProfileCompletion() {
+  return useContext(ProfileCompletionContext);
+}
