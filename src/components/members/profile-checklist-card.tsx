@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useProfileCompletion } from "@/components/members/profile-completion-context";
 import { cn } from "@/lib/utils";
+import type { ProfileChecklistTarget } from "@/lib/profile-completion";
 
 interface ProfileChecklistCardProps {
-  onNavigateToTab?: (tab: string) => void;
+  onNavigateToSection?: (section: ProfileChecklistTarget) => void;
 }
 
 export function ProfileChecklistCard({
-  onNavigateToTab,
+  onNavigateToSection,
 }: ProfileChecklistCardProps) {
   const { items, completed, total, isComplete } = useProfileCompletion();
 
@@ -71,15 +72,15 @@ export function ProfileChecklistCard({
                     </p>
                   </div>
                 </div>
-                {!item.complete && item.targetTab && onNavigateToTab ? (
+                {!item.complete && item.targetSection && onNavigateToSection ? (
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     className="whitespace-nowrap"
-                    onClick={() => onNavigateToTab(item.targetTab!)}
+                    onClick={() => onNavigateToSection(item.targetSection!)}
                   >
-                    Jetzt erledigen
+                    Bereich öffnen
                   </Button>
                 ) : null}
               </li>

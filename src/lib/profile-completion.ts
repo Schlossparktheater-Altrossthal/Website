@@ -5,12 +5,19 @@ export type ProfileChecklistItemId =
   | "measurements"
   | "photo-consent";
 
+export type ProfileChecklistTarget =
+  | "stammdaten"
+  | "ernaehrung"
+  | "masse"
+  | "interessen"
+  | "freigaben";
+
 export type ProfileChecklistItem = {
   id: ProfileChecklistItemId;
   label: string;
   description: string;
   complete: boolean;
-  targetTab?: string;
+  targetSection?: ProfileChecklistTarget;
 };
 
 export type ProfileCompletionSummary = {
@@ -37,21 +44,21 @@ export function buildProfileChecklist(
       label: "Stammdaten aktualisiert",
       description: "Vorname, Nachname und Kontaktadresse hinterlegt.",
       complete: input.hasBasicData,
-      targetTab: "stammdaten",
+      targetSection: "stammdaten",
     },
     {
       id: "birthdate",
       label: "Geburtsdatum eingetragen",
       description: "Hilft bei der Verwaltung notwendiger Einverständnisse.",
       complete: input.hasBirthdate,
-      targetTab: "stammdaten",
+      targetSection: "stammdaten",
     },
     {
       id: "dietary",
       label: "Ernährungsstil gepflegt",
       description: "Informationen für Verpflegung & Eventplanung.",
       complete: input.hasDietaryPreference,
-      targetTab: "ernaehrung",
+      targetSection: "ernaehrung",
     },
   ];
 
@@ -61,7 +68,7 @@ export function buildProfileChecklist(
       label: "Körpermaße hinterlegt",
       description: "Ermöglicht dem Kostüm-Team passgenaue Planung.",
       complete: Boolean(input.hasMeasurements),
-      targetTab: "masse",
+      targetSection: "masse",
     });
   }
 
@@ -71,7 +78,7 @@ export function buildProfileChecklist(
       label: "Fotoeinverständnis bestätigt",
       description: "Notwendig für Medienarbeit und Außendarstellung.",
       complete: Boolean(input.photoConsent.consentGiven),
-      targetTab: "freigaben",
+      targetSection: "freigaben",
     });
   }
 
