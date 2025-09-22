@@ -61,22 +61,19 @@ async function main() {
     if (shuttingDown) return;
     console.error('[Proxy] Error while proxying request', error);
 
-    if (res) {
-      const canWriteHead = typeof res.writeHead === 'function';
-      const canEnd = typeof res.end === 'function';
-      const canDestroy = typeof res.destroy === 'function';
-
-      if (canWriteHead && !res.headersSent) {
+    if (res instanceof http.ServerResponse) {
+      if (!res.headersSent) {
         res.writeHead(502, { 'Content-Type': 'text/plain' });
       }
-      if (canEnd && !res.writableEnded) {
+      if (!res.writableEnded) {
         res.end('Bad Gateway');
-        return;
       }
-      if (!canEnd && canDestroy) {
-        res.destroy();
-        return;
-      }
+      return;
+    }
+
+    if (res && typeof res.destroy === 'function') {
+      res.destroy();
+      return;
     }
 
     if (req && typeof req.destroy === 'function') {
