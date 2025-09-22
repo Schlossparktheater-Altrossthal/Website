@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   Hammer,
   PiggyBank,
+  UtensilsCrossed,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -168,6 +169,12 @@ const QUICK_ACTION_LINKS = [
     href: "/mitglieder/probenplanung",
     label: "Probenplanung",
     icon: CalendarCog,
+    roles: ["board", "admin", "tech", "owner"],
+  },
+  {
+    href: "/mitglieder/essenplanung",
+    label: "Essensplanung",
+    icon: UtensilsCrossed,
     roles: ["board", "admin", "tech", "owner"],
   },
   {
