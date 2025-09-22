@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { EditIcon } from "@/components/ui/icons";
 import { Modal } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
 import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,7 @@ export function PermissionMatrix() {
   } | null>(null);
   const [orderSaving, setOrderSaving] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   async function load() {
     setLoading(true);
@@ -109,6 +111,19 @@ export function PermissionMatrix() {
   useEffect(() => {
     load();
   }, []);
+
+  const filteredPerms = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return perms;
+    return perms.filter((perm) => {
+      if (perm.label && perm.label.toLowerCase().includes(query)) return true;
+      if (perm.key.toLowerCase().includes(query)) return true;
+      if (perm.description && perm.description.toLowerCase().includes(query)) return true;
+      if (perm.categoryLabel.toLowerCase().includes(query)) return true;
+      if (perm.categoryKey.toLowerCase().includes(query)) return true;
+      return false;
+    });
+  }, [perms, searchTerm]);
 
   const reorderRolesList = (
     current: Role[],
@@ -331,13 +346,14 @@ export function PermissionMatrix() {
   if (loading) return <div>Laden…</div>;
   if (error) return <div className="text-red-600">{error}</div>;
 
+  const hasSearch = searchTerm.trim().length > 0;
   const totalColumns = roles.length + 1;
   const tableRows: ReactNode[] = [];
   let lastCategoryKey: string | null = null;
   let categorySequence = 0;
   let rowIndexWithinCategory = 0;
 
-  for (const perm of perms) {
+  for (const perm of filteredPerms) {
     if (perm.categoryKey !== lastCategoryKey) {
       lastCategoryKey = perm.categoryKey;
       rowIndexWithinCategory = 0;
@@ -404,22 +420,46 @@ export function PermissionMatrix() {
     );
   }
 
+  if (tableRows.length === 0) {
+    tableRows.push(
+      <tr key="empty">
+        <td colSpan={totalColumns} className="p-6 text-center text-sm text-muted-foreground">
+          {hasSearch ? "Keine Rechte passen zu deiner Suche." : "Keine Rechte vorhanden."}
+        </td>
+      </tr>,
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border bg-card/60 p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-semibold">Rollen & Rechte</h3>
-            <p className="text-sm text-muted-foreground">Weise vorhandene Website‑Rechte deinen eigenen Rollen zu.</p>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold">Rollen & Rechte</h3>
+              <p className="text-sm text-muted-foreground">Weise vorhandene Website‑Rechte deinen eigenen Rollen zu.</p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="Neue Rolle (z. B. PR-Team)"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+              />
+              <Button size="sm" onClick={addRole}>Rolle anlegen</Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <input
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="Neue Rolle (z. B. PR-Team)"
-              value={newRoleName}
-              onChange={(e) => setNewRoleName(e.target.value)}
-            />
-            <Button size="sm" onClick={addRole}>Rolle anlegen</Button>
+          <div className="flex w-full justify-end">
+            <div className="w-full sm:w-72">
+              <Input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Rechte durchsuchen…"
+                aria-label="Rechte durchsuchen"
+                spellCheck={false}
+              />
+            </div>
           </div>
         </div>
       </div>
