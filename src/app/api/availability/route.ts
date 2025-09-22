@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 
+function sanitizeAvailabilityMinute(value: unknown): number | null | undefined {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    return undefined;
+  }
+
+  return value;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
@@ -16,7 +28,23 @@ export async function POST(request: NextRequest) {
     }
 
     const parsedDate = new Date(date);
-    
+
+    const sanitizedAvailableFromMin = sanitizeAvailabilityMinute(availableFromMin);
+    if (sanitizedAvailableFromMin === undefined) {
+      return NextResponse.json(
+        { error: "availableFromMin must be a non-negative integer or null" },
+        { status: 400 },
+      );
+    }
+
+    const sanitizedAvailableToMin = sanitizeAvailabilityMinute(availableToMin);
+    if (sanitizedAvailableToMin === undefined) {
+      return NextResponse.json(
+        { error: "availableToMin must be a non-negative integer or null" },
+        { status: 400 },
+      );
+    }
+
     // Upsert availability day
     const availability = await prisma.availabilityDay.upsert({
       where: {
@@ -27,16 +55,16 @@ export async function POST(request: NextRequest) {
       },
       update: {
         kind,
-        availableFromMin: availableFromMin || null,
-        availableToMin: availableToMin || null,
+        availableFromMin: sanitizedAvailableFromMin ?? null,
+        availableToMin: sanitizedAvailableToMin ?? null,
         note: note || null,
       },
       create: {
         userId,
         date: parsedDate,
         kind,
-        availableFromMin: availableFromMin || null,
-        availableToMin: availableToMin || null,
+        availableFromMin: sanitizedAvailableFromMin ?? null,
+        availableToMin: sanitizedAvailableToMin ?? null,
         note: note || null,
       },
     });
