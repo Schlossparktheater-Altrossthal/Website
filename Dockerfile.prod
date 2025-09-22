@@ -59,6 +59,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/realtime-server ./realtime-server
+COPY --from=builder /app/src/data ./src/data
 
 EXPOSE 3000
 
