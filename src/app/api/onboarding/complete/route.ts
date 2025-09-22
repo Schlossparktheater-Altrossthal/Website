@@ -123,7 +123,7 @@ const payloadSchema = z.object({
       skipDocument: z.boolean().optional(),
     })
     .optional()
-    .default({ consent: true, skipDocument: false }),
+    .default({ consent: true }),
   dietary: z.array(dietarySchema).optional().default([]),
 });
 
@@ -263,8 +263,7 @@ export async function POST(request: NextRequest) {
   }
 
   const age = calculateAge(dateOfBirth);
-  const photoConsent = payload.photoConsent ?? { consent: true, skipDocument: false };
-  const skipDocument = Boolean(photoConsent.skipDocument);
+  const photoConsent = payload.photoConsent ?? { consent: true };
 
   let documentBuffer: Buffer | null = null;
   let documentMime: string | null = null;
@@ -286,8 +285,12 @@ export async function POST(request: NextRequest) {
     documentSize = documentBuffer.length;
   }
 
-  if (age !== null && age < 18 && !skipDocument && !documentBuffer) {
-    return NextResponse.json({ error: "Bitte lade die unterschriebene Einverständniserklärung hoch oder überspringe den Upload" }, { status: 400 });
+  if (!documentBuffer) {
+    const missingDocumentMessage =
+      age !== null && age < 18
+        ? "Bitte lade die unterschriebene Einverständniserklärung deiner Erziehungsberechtigten hoch."
+        : "Bitte lade dein unterschriebenes Einverständnis hoch oder unterschreibe digital.";
+    return NextResponse.json({ error: missingDocumentMessage }, { status: 400 });
   }
 
   const redemption = await prisma.memberInviteRedemption.findUnique({
@@ -345,7 +348,6 @@ export async function POST(request: NextRequest) {
     dietary,
     photoConsent: {
       consent: photoConsent.consent,
-      skipDocument,
       hasDocument: Boolean(documentBuffer),
     },
   };

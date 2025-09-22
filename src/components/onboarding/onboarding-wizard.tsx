@@ -352,7 +352,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     nutritionStyle: "none" as DietaryStyleOption,
     nutritionCustomStyle: "",
     nutritionStrictness: "flexible" as DietaryStrictnessOption,
-    photoConsent: { consent: true, skipDocument: false },
+    photoConsent: { consent: true },
     dietary: [] as DietaryEntry[],
   });
 
@@ -449,7 +449,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   }, []);
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
-  const requiresDocument = age !== null && age < 18;
+  const isMinor = age !== null && age < 18;
   const requiresBackgroundClass = useMemo(() => requiresBszClass(form.background), [form.background]);
   const backgroundClassLabel = useMemo(() => {
     const trimmed = form.backgroundClass.trim();
@@ -503,17 +503,6 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       .filter((interest) => interest.name && !selected.has(interest.name.toLowerCase()))
       .slice(0, 12);
   }, [availableInterests, form.interests]);
-
-  useEffect(() => {
-    if (!requiresDocument) {
-      setDocumentFile(null);
-      setDocumentError(null);
-      setForm((prev) => ({
-        ...prev,
-        photoConsent: { ...prev.photoConsent, skipDocument: false },
-      }));
-    }
-  }, [requiresDocument]);
 
   const addInterest = useCallback(
     (interest: string) => {
@@ -653,17 +642,19 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     if (!form.photoConsent.consent) {
       return "Bitte bestätige dein Einverständnis, damit wir dich auf Fotos zeigen dürfen.";
     }
-    if (requiresDocument) {
-      if (form.photoConsent.skipDocument) {
-        return "Einverständnis erteilt – du reichst die unterschriebene Erklärung später nach.";
-      }
-      if (documentFile) {
-        return "Einverständnis erteilt – deine unterschriebene Erklärung wird mitgeschickt.";
-      }
-      return "Einverständnis erteilt – lade deine Unterschrift hoch oder entscheide dich fürs Nachreichen.";
+    if (!documentFile) {
+      return isMinor
+        ? "Die unterschriebene Zustimmung deiner Erziehungsberechtigten fehlt noch."
+        : "Bitte lade dein Einverständnis hoch oder unterschreibe digital.";
     }
-    return "Einverständnis erteilt – keine zusätzliche Unterschrift erforderlich.";
-  }, [documentFile, form.photoConsent.consent, form.photoConsent.skipDocument, requiresDocument]);
+    if (isMinor) {
+      return "Einverständnis deiner Erziehungsberechtigten ist hinterlegt.";
+    }
+    if (documentMode === "signature") {
+      return "Du hast die Fotoeinverständnis digital unterschrieben.";
+    }
+    return "Deine unterschriebene Fotoeinverständnis wird mitgeschickt.";
+  }, [documentFile, documentMode, form.photoConsent.consent, isMinor]);
 
   const handleAddDietary = () => {
     const trimmed = dietaryDraft.allergen.trim();
@@ -743,11 +734,24 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   };
 
   const handleSelectSignatureMode = () => {
-    if (documentMode === "signature") return;
+    if (isMinor || documentMode === "signature") return;
     setDocumentMode("signature");
     setSignatureDataUrl(null);
     setDocumentFromFile(null);
   };
+
+  useEffect(() => {
+    if (!isMinor) {
+      return;
+    }
+    if (documentMode === "signature") {
+      setDocumentMode("upload");
+      setDocumentFromFile(null);
+    }
+    if (signatureDataUrl) {
+      setSignatureDataUrl(null);
+    }
+  }, [documentMode, isMinor, setDocumentFromFile, signatureDataUrl]);
 
   const handleSignatureChange = (dataUrl: string | null) => {
     if (documentMode !== "signature") {
@@ -863,8 +867,12 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         setError("Wir benötigen deine Zustimmung zur Fotoerlaubnis, damit du beim Theater mitmachen kannst.");
         return;
       }
-      if (requiresDocument && !form.photoConsent.skipDocument && !documentFile) {
-        setError("Bitte lade das unterschriebene Dokument hoch oder wähle den späteren Upload.");
+      if (!documentFile) {
+        setError(
+          isMinor
+            ? "Bitte lade die unterschriebene Erklärung deiner Erziehungsberechtigten hoch."
+            : "Bitte lade dein unterschriebenes Einverständnis hoch oder unterschreibe digital.",
+        );
         return;
       }
       setStep(5);
@@ -954,7 +962,6 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         },
         photoConsent: {
           consent: form.photoConsent.consent,
-          skipDocument: form.photoConsent.skipDocument,
         },
         dietary: form.dietary.map((entry) => ({
           allergen: entry.allergen,
@@ -1607,83 +1614,92 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
               </div>
             </label>
 
-            {requiresDocument && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
+            {isMinor ? (
+              <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
                 <p className="font-medium">Du bist unter 18 Jahre alt</p>
                 <p>
-                  Wir benötigen eine unterschriebene Foto-Einverständniserklärung. Lade sie als Datei hoch oder unterschreibe
-                  direkt hier digital. Wenn es gerade nicht passt, kannst du die Unterschrift auch später im Profil nachreichen.
+                  Wir benötigen die unterschriebene Foto-Einverständniserklärung deiner Erziehungsberechtigten. Lade das Dokument
+                  als PDF oder Bilddatei hoch – ohne dieses Formular können wir dich leider nicht aufnehmen.
                 </p>
-                <label className="mt-3 flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={form.photoConsent.skipDocument}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        photoConsent: { ...prev.photoConsent, skipDocument: event.target.checked },
-                      }))
-                    }
-                    className="h-4 w-4"
-                  />
-                  <span>Upload bzw. Unterschrift später nachreichen</span>
-                </label>
+              </div>
+            ) : (
+              <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
+                <p className="font-medium">Du bist volljährig</p>
+                <p>Du kannst das Formular als Datei hochladen oder hier direkt digital unterschreiben.</p>
               </div>
             )}
 
-            {requiresDocument ? (
-              <div className="space-y-3 text-sm">
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={documentMode === "upload" ? "default" : "outline"}
-                    onClick={handleSelectUploadMode}
-                  >
-                    Dokument hochladen
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={documentMode === "signature" ? "default" : "outline"}
-                    onClick={handleSelectSignatureMode}
-                  >
-                    Digital unterschreiben
-                  </Button>
+            <div className="space-y-3 text-sm">
+              {isMinor ? (
+                <div className="space-y-2">
+                  <label className="block font-medium">Einverständnis der Erziehungsberechtigten (PDF, JPG, PNG)</label>
+                  <Input
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png"
+                    onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {documentFile
+                      ? `Ausgewählt: ${documentFile.name}`
+                      : "Lade die unterschriebene Zustimmung deiner Erziehungsberechtigten hoch."}
+                  </p>
                 </div>
-                {documentMode === "upload" ? (
-                  <div className="space-y-2">
-                    <label className="block font-medium">Einverständnis (PDF, JPG, PNG)</label>
-                    <Input
-                      type="file"
-                      accept="application/pdf,image/jpeg,image/png"
-                      onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {documentFile
-                        ? `Ausgewählt: ${documentFile.name}`
-                        : "Optional – wenn vorhanden, gleich hier hochladen."}
-                    </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={documentMode === "upload" ? "default" : "outline"}
+                      onClick={handleSelectUploadMode}
+                    >
+                      Dokument hochladen
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={documentMode === "signature" ? "default" : "outline"}
+                      onClick={handleSelectSignatureMode}
+                    >
+                      Digital unterschreiben
+                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <label className="block font-medium">Digital unterschreiben</label>
-                    <SignaturePad value={signatureDataUrl} onChange={handleSignatureChange} />
-                    <p className="text-xs text-muted-foreground">
-                      {documentFile
-                        ? "Deine digitale Unterschrift wird mitgeschickt."
-                        : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
-                    </p>
-                  </div>
-                )}
-                {documentError && <p className="text-xs text-destructive">{documentError}</p>}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
-                <p className="font-medium">Du bist volljährig</p>
-                <p>Deine Zustimmung reicht aus – eine zusätzliche Unterschrift ist nicht erforderlich.</p>
-              </div>
-            )}
+                  {documentMode === "upload" ? (
+                    <div className="space-y-2">
+                      <label className="block font-medium">Einverständnis (PDF, JPG, PNG)</label>
+                      <Input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png"
+                        onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {documentFile
+                          ? `Ausgewählt: ${documentFile.name}`
+                          : "Lade dein unterschriebenes Formular hoch."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block font-medium">Digital unterschreiben</label>
+                      <SignaturePad value={signatureDataUrl} onChange={handleSignatureChange} />
+                      <div className="space-y-1 text-xs text-muted-foreground leading-relaxed">
+                        <p>
+                          {documentFile
+                            ? "Deine digitale Unterschrift wird mitgeschickt."
+                            : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
+                        </p>
+                        <p>
+                          Mit meiner digitalen Unterschrift erlaube ich dem Schultheater, Fotos und Videos von mir im Rahmen
+                          von Proben, Aufführungen und der Öffentlichkeitsarbeit zu erstellen und zu veröffentlichen. Mir ist
+                          bewusst, dass ich diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen kann.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              {documentError && <p className="text-xs text-destructive">{documentError}</p>}
+            </div>
           </CardContent>
         </Card>
       )}
