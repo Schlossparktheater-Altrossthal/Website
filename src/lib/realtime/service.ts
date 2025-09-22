@@ -1,5 +1,6 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import type { Server as HTTPServer } from "http";
+import { resolveHandshakeSecret, verifyHandshakeToken } from "./handshake";
 import {
   AttendanceUpdatedEvent,
   ClientToServerEvents,
@@ -66,20 +67,19 @@ export class RealtimeService {
   private setupEventHandlers(): void {
     if (!this.io) return;
 
+    this.io.use((socket, next) => {
+      this.authenticateSocket(socket as IOSocket, next);
+    });
+
     this.io.on("connection", (socket) => {
       const client = socket as IOSocket;
       console.log(`[Realtime] socket connected: ${client.id}`);
 
       client.data.rooms = new Set<RoomType>();
 
-      const { userId, userName } = this.extractUserFromHandshake(client);
-
-      if (userId) {
-        client.data.userId = userId;
-        if (userName) {
-          client.data.userName = userName;
-        }
-
+      if (client.data.handshakeVerified && client.data.userId) {
+        const userId = client.data.userId;
+        const userName = client.data.userName;
         const userRoom: RoomType = `user_${userId}`;
         client.join(userRoom);
         client.data.rooms.add(userRoom);
@@ -90,6 +90,8 @@ export class RealtimeService {
         }
 
         this.emitOnlineStatsUpdate();
+      } else {
+        console.warn(`[Realtime] socket ${client.id} connected without verified handshake.`);
       }
 
       client.join("global");
@@ -99,21 +101,73 @@ export class RealtimeService {
     });
   }
 
-  private extractUserFromHandshake(socket: IOSocket): { userId?: string; userName?: string } {
+  private authenticateSocket(socket: IOSocket, next: (err?: Error) => void): void {
     const auth = socket.handshake?.auth ?? {};
+    const token = typeof auth.token === "string" ? auth.token : undefined;
     const userId = typeof auth.userId === "string" ? auth.userId : undefined;
     const userName = typeof auth.userName === "string" ? auth.userName : undefined;
-    return { userId, userName };
+
+    if (!userId) {
+      const address = socket.handshake?.address ?? "unknown";
+      console.warn(
+        `[Realtime] rejected socket ${socket.id} from ${address} - userId: ${userId ?? "unknown"} - reason: missing_user_id`,
+      );
+      next(new Error("Unauthorized"));
+      return;
+    }
+
+    const secret = resolveHandshakeSecret();
+    const verification = verifyHandshakeToken({ token, userId, secret });
+
+    if (!verification.valid) {
+      const address = socket.handshake?.address ?? "unknown";
+      console.warn(
+        `[Realtime] rejected socket ${socket.id} from ${address} - userId: ${userId} - reason: ${verification.reason}`,
+      );
+      next(new Error("Unauthorized"));
+      return;
+    }
+
+    socket.data.handshakeVerified = true;
+    socket.data.userId = userId;
+    if (userName) {
+      socket.data.userName = userName;
+    }
+    socket.data.handshake = {
+      issuedAt: verification.issuedAt,
+      expiresAt: verification.expiresAt,
+    };
+
+    next();
   }
 
   private registerCoreListeners(socket: IOSocket): void {
     socket.on("join_room", (room: RoomType) => {
+      let verifiedUserId: string | undefined;
+      if (room.startsWith("user_")) {
+        if (!socket.data.handshakeVerified || !socket.data.userId) {
+          console.warn(
+            `[Realtime] ${socket.id} attempted to join ${room} without verified handshake.`,
+          );
+          return;
+        }
+
+        const targetUserId = room.substring(5);
+        if (socket.data.userId !== targetUserId) {
+          console.warn(
+            `[Realtime] ${socket.id} attempted to join user room ${room} as ${socket.data.userId}.`,
+          );
+          return;
+        }
+
+        verifiedUserId = socket.data.userId;
+      }
+
       socket.join(room);
       socket.data.rooms.add(room);
 
       if (room.startsWith("user_")) {
-        const userId = room.substring(5);
-        socket.data.userId = userId;
+        const userId = verifiedUserId!;
         const becameOnline = this.addUserConnection(userId, socket.id, socket.data.userName);
         if (becameOnline) {
           this.notifyUserJoined(userId, socket.data.userName);
