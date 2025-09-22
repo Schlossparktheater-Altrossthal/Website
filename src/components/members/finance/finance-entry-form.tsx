@@ -111,6 +111,8 @@ function formatMemberLabel(member: { name: string | null; email: string | null }
   return member.name ?? member.email ?? "Unbekannt";
 }
 
+const EMPTY_SELECT_VALUE = "__none__";
+
 export function FinanceEntryForm({
   onCreated,
   showOptions,
@@ -430,14 +432,17 @@ export function FinanceEntryForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Produktion</FormLabel>
-                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                <Select
+                  value={field.value ? field.value : EMPTY_SELECT_VALUE}
+                  onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Produktion auswählen" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Keine Zuordnung</SelectItem>
+                    <SelectItem value={EMPTY_SELECT_VALUE}>Keine Zuordnung</SelectItem>
                     {showOptions.map((show) => (
                       <SelectItem key={show.id} value={show.id}>
                         {formatShowLabel(show)}
@@ -456,14 +461,17 @@ export function FinanceEntryForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Budget</FormLabel>
-                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                <Select
+                  value={field.value ? field.value : EMPTY_SELECT_VALUE}
+                  onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Budget auswählen" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Kein Budget</SelectItem>
+                    <SelectItem value={EMPTY_SELECT_VALUE}>Kein Budget</SelectItem>
                     {filteredBudgets.map((budget) => (
                       <SelectItem key={budget.id} value={budget.id}>
                         {budget.category} ({budget.currency})
@@ -485,14 +493,17 @@ export function FinanceEntryForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Zahlendes Mitglied</FormLabel>
-                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                <Select
+                  value={field.value ? field.value : EMPTY_SELECT_VALUE}
+                  onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Mitglied wählen" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Mitglied wählen</SelectItem>
+                    <SelectItem value={EMPTY_SELECT_VALUE}>Mitglied wählen</SelectItem>
                     {memberOptions.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {formatMemberLabel(member)}
