@@ -371,21 +371,7 @@ export function MonthCalendar({
         @keyframes calendarRemovedFlash { 0% { background-color: rgba(239,68,68,.15); } 100% { background-color: transparent; } }
         @keyframes calendarMonthInRight { 0% { opacity: 0; transform: translateX(24px);} 100% { opacity: 1; transform: translateX(0);} }
         @keyframes calendarMonthInLeft { 0% { opacity: 0; transform: translateX(-24px);} 100% { opacity: 1; transform: translateX(0);} }
-        .calendar-weekday[data-weekend="true"] {
-          background: linear-gradient(120deg, rgba(129,140,248,.14), rgba(129,140,248,.04));
-          color: rgba(67,56,202,.9);
-        }
-        .dark .calendar-weekday[data-weekend="true"] {
-          background: linear-gradient(120deg, rgba(129,140,248,.22), rgba(99,102,241,.08));
-          color: rgba(224,231,255,.92);
-        }
         .calendar-cell { position: relative; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-        .calendar-cell[data-weekend="true"] {
-          background-image: linear-gradient(135deg, rgba(129,140,248,.12), rgba(129,140,248,0));
-        }
-        .dark .calendar-cell[data-weekend="true"] {
-          background-image: linear-gradient(135deg, rgba(99,102,241,.18), rgba(129,140,248,.06));
-        }
         .calendar-cell:hover { border-color: rgba(99,102,241,.55); transform: translateY(-2px) scale(1.01); box-shadow: 0 16px 28px -18px rgba(79,70,229,.65); }
         .dark .calendar-cell:hover { border-color: rgba(165,180,252,.75); box-shadow: 0 16px 32px -16px rgba(30,64,175,.65); }
         .calendar-month-enter { will-change: transform, opacity; }
