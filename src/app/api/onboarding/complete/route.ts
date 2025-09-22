@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
     documentSize = documentBuffer.length;
   }
 
-  if (age !== null && age <= 18 && !skipDocument && !documentBuffer) {
+  if (age !== null && age < 18 && !skipDocument && !documentBuffer) {
     return NextResponse.json({ error: "Bitte lade die unterschriebene Einverständniserklärung hoch oder überspringe den Upload" }, { status: 400 });
   }
 
@@ -474,7 +474,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const shouldCreateConsent = photoConsent.consent || documentBuffer || (age !== null && age <= 18);
+      const shouldCreateConsent = photoConsent.consent || documentBuffer || (age !== null && age < 18);
       if (shouldCreateConsent) {
         await tx.photoConsent.create({
           data: {
