@@ -1,6 +1,7 @@
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 
 type ConsentRecord = {
+  id?: string;
   status: "pending" | "approved" | "rejected" | "none";
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -8,6 +9,7 @@ type ConsentRecord = {
   rejectionReason?: string | null;
   documentUploadedAt?: Date | null;
   documentName?: string | null;
+  documentMime?: string | null;
   approvedByName?: string | null;
 };
 
@@ -39,6 +41,11 @@ export function buildPhotoConsentSummary(
   const requiresDateOfBirth = !dateOfBirth;
 
   const status = consent?.status ?? "none";
+  const documentMime = consent?.documentMime ?? null;
+  const documentPreviewUrl =
+    consent?.documentUploadedAt && consent?.id && documentMime?.toLowerCase().startsWith("image/")
+      ? `/api/photo-consents/${consent.id}/document?mode=inline`
+      : null;
 
   return {
     status,
@@ -56,5 +63,7 @@ export function buildPhotoConsentSummary(
     documentUploadedAt: consent?.documentUploadedAt
       ? consent.documentUploadedAt.toISOString()
       : null,
+    documentMime,
+    documentPreviewUrl,
   };
 }

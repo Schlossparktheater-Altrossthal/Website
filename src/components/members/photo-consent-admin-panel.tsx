@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +62,32 @@ function formatDate(value: string | null | undefined) {
 
 function formatDateTime(value: string | null | undefined) {
   return formatWithFormatter(value, dateTimeFormatter);
+}
+
+type DocumentPreviewProps = {
+  previewUrl: string | null;
+  documentName: string | null;
+};
+
+function DocumentPreview({ previewUrl, documentName }: DocumentPreviewProps) {
+  if (!previewUrl) {
+    return null;
+  }
+  return (
+    <div className="mt-3 space-y-2">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dokumentvorschau</p>
+      <div className="relative h-60 w-full overflow-hidden rounded-lg border border-border/60 bg-background shadow-sm">
+        <Image
+          src={previewUrl}
+          alt={documentName ? `Dokumentvorschau: ${documentName}` : "Digitale Unterschrift"}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
+          className="object-contain bg-white"
+          unoptimized
+        />
+      </div>
+    </div>
+  );
 }
 
 function isPendingEntry(entry: PhotoConsentAdminEntry): entry is PendingEntry {
@@ -340,6 +367,7 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
               )}
             </div>
           )}
+          <DocumentPreview previewUrl={entry.documentPreviewUrl} documentName={entry.documentName} />
         </div>
         <div className="space-y-2">
           {allRequirementsMet ? (
@@ -463,25 +491,26 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
           )}
         </div>
 
-        <div className="space-y-1 text-xs text-foreground/70">
-          <div>Aktualisiert: {updatedAt}</div>
-          {approvedAt && <div>Freigegeben am {approvedAt}</div>}
-          {entry.approvedByName && <div>Bearbeitet durch {entry.approvedByName}</div>}
-          {entry.rejectionReason && <div className="text-destructive">Grund: {entry.rejectionReason}</div>}
-          {entry.documentName && (
-            <div>
-              Dokument: {entry.documentName}
-              {entry.documentUrl && (
-                <>
-                  {" "}
-                  <a className="underline" href={entry.documentUrl} target="_blank" rel="noreferrer">
-                    öffnen
-                  </a>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+      <div className="space-y-1 text-xs text-foreground/70">
+        <div>Aktualisiert: {updatedAt}</div>
+        {approvedAt && <div>Freigegeben am {approvedAt}</div>}
+        {entry.approvedByName && <div>Bearbeitet durch {entry.approvedByName}</div>}
+        {entry.rejectionReason && <div className="text-destructive">Grund: {entry.rejectionReason}</div>}
+        {entry.documentName && (
+          <div>
+            Dokument: {entry.documentName}
+            {entry.documentUrl && (
+              <>
+                {" "}
+                <a className="underline" href={entry.documentUrl} target="_blank" rel="noreferrer">
+                  öffnen
+                </a>
+              </>
+            )}
+          </div>
+        )}
+        <DocumentPreview previewUrl={entry.documentPreviewUrl} documentName={entry.documentName} />
+      </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
