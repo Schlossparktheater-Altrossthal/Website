@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { measurementSchema } from "@/data/measurements";
 import type { MeasurementType as PrismaMeasurementType, MeasurementUnit as PrismaMeasurementUnit } from "@prisma/client";
+
+const measurementRequestSchema = measurementSchema.extend({
+  userId: z.string().cuid().optional(),
+});
 
 // GET: Hole alle Maße eines Benutzers
 export async function GET() {
@@ -52,12 +57,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
     const payload = await request.json();
-    const data = measurementSchema.parse(payload);
+    const { userId: overrideUserId, ...data } = measurementRequestSchema.parse(payload);
+
+    const targetUserId = overrideUserId ?? userId;
+
+    if (!targetUserId) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+    }
 
     const measurement = await prisma.memberMeasurement.upsert({
       where: {
         userId_type: {
-          userId,
+          userId: targetUserId,
           type: data.type as PrismaMeasurementType,
         },
       },
@@ -67,7 +78,7 @@ export async function POST(request: NextRequest) {
         note: data.note ?? null,
       },
       create: {
-        userId,
+        userId: targetUserId,
         type: data.type as PrismaMeasurementType,
         value: data.value,
         unit: data.unit as PrismaMeasurementUnit,
