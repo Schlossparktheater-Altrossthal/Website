@@ -75,7 +75,7 @@ jobs:
           tags: ${{ matrix.metadata_tags }}
 
       - name: Build and push ${{ matrix.environment }} Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.dockerfile }}
