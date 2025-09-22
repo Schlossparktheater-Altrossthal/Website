@@ -21,9 +21,10 @@ type BuildInfo = {
 type SiteFooterProps = {
   buildInfo: BuildInfo;
   isDevBuild: boolean;
+  siteTitle: string;
 };
 
-export function SiteFooter({ buildInfo, isDevBuild }: SiteFooterProps) {
+export function SiteFooter({ buildInfo, isDevBuild, siteTitle }: SiteFooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -33,7 +34,7 @@ export function SiteFooter({ buildInfo, isDevBuild }: SiteFooterProps) {
           <div className="space-y-6">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">
-                Sommertheater im Schlosspark
+                {siteTitle}
               </p>
               <p className="mt-3 max-w-xl text-balance text-lg text-muted-foreground">
                 Open-Air-Aufführungen zwischen alten Baumkronen und modernen Inszenierungen.
@@ -105,7 +106,9 @@ export function SiteFooter({ buildInfo, isDevBuild }: SiteFooterProps) {
         </div>
 
         <div className="mt-12 flex flex-col gap-4 border-t border-border/50 pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {currentYear} Schultheater „Sommertheater im Schlosspark“</p>
+          <p>
+            © {currentYear} Schultheater „{siteTitle}“
+          </p>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link className="transition-colors hover:text-primary" href="/impressum">
               Impressum

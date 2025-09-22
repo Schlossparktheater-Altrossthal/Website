@@ -172,6 +172,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
+    key: "mitglieder.website.settings",
+    label: "Website-Einstellungen verwalten",
+    description:
+      "Theme-Farben, Branding und öffentliche Website-Parameter anpassen.",
+    category: "membership",
+  },
+  {
     key: "mitglieder.fotoerlaubnisse",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",

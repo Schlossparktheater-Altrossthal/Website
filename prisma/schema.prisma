@@ -521,6 +521,29 @@ model MysterySettings {
   updatedAt          DateTime @updatedAt
 }
 
+model WebsiteTheme {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  tokens      Json
+  isDefault   Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  settings    WebsiteSettings[]
+}
+
+model WebsiteSettings {
+  id        String   @id @default("public")
+  siteTitle String   @default("Sommertheater im Schlosspark")
+  colorMode String   @default("dark")
+  themeId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  theme     WebsiteTheme? @relation(fields: [themeId], references: [id], onDelete: SetNull)
+
+  @@index([themeId])
+}
+
 model SperrlisteSettings {
   id                     String   @id @default("default")
   holidaySourceMode      String   @default("default")
