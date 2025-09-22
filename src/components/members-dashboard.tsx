@@ -12,6 +12,7 @@ import { useOnlineStats } from "@/hooks/useOnlineStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useMembersPermissions } from "@/components/members/permissions-context";
 import {
   KeyMetricCard,
   KeyMetricGrid,
@@ -140,54 +141,61 @@ type QuickActionLink = {
   href: string;
   label: string;
   icon: LucideIcon;
-  roles?: string[];
+  permissionKey?: string;
 };
+
+interface MembersDashboardProps {
+  permissions?: readonly string[];
+}
 
 const QUICK_ACTION_LINKS = [
   {
     href: "/mitglieder/profil",
     label: "Profil öffnen",
     icon: UserRound,
+    permissionKey: "mitglieder.profil",
   },
   {
     href: "/mitglieder/meine-proben",
     label: "Meine Proben",
     icon: CalendarCheck,
+    permissionKey: "mitglieder.meine-proben",
   },
   {
     href: "/mitglieder/meine-gewerke",
     label: "Meine Gewerke",
     icon: Hammer,
+    permissionKey: "mitglieder.meine-gewerke",
   },
   {
     href: "/mitglieder/finanzen",
     label: "Finanzen",
     icon: PiggyBank,
-    roles: ["finance", "board", "admin", "owner"],
+    permissionKey: "mitglieder.finanzen",
   },
   {
     href: "/mitglieder/probenplanung",
     label: "Probenplanung",
     icon: CalendarCog,
-    roles: ["board", "admin", "tech", "owner"],
+    permissionKey: "mitglieder.probenplanung",
   },
   {
     href: "/mitglieder/essenplanung",
     label: "Essensplanung",
     icon: UtensilsCrossed,
-    roles: ["board", "admin", "tech", "owner"],
+    permissionKey: "mitglieder.essenplanung",
   },
   {
     href: "/mitglieder/mitgliederverwaltung",
     label: "Mitgliederverwaltung",
     icon: UsersRound,
-    roles: ["admin", "owner"],
+    permissionKey: "mitglieder.rollenverwaltung",
   },
   {
     href: "/mitglieder/rechte",
     label: "Rechteverwaltung",
     icon: ShieldCheck,
-    roles: ["admin", "owner"],
+    permissionKey: "mitglieder.rechte",
   },
 ] satisfies QuickActionLink[];
 
@@ -401,7 +409,7 @@ function parseProfileCompletion(value: unknown):
   return { complete, completed, total };
 }
 
-export function MembersDashboard() {
+export function MembersDashboard({ permissions: permissionsProp }: MembersDashboardProps = {}) {
   const { data: session } = useSession();
   const { connectionStatus } = useRealtime();
   const {
@@ -409,6 +417,8 @@ export function MembersDashboard() {
     onlineUsers,
     isLoading: onlineLoading,
   } = useOnlineStats();
+  const contextPermissions = useMembersPermissions();
+  const effectivePermissions = permissionsProp ?? contextPermissions;
 
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -543,6 +553,17 @@ export function MembersDashboard() {
   }, []);
 
   const onlineList = useMemo(() => onlineUsers.slice(0, 6), [onlineUsers]);
+
+  const availableQuickActions = useMemo(() => {
+    if (!effectivePermissions.length) {
+      return QUICK_ACTION_LINKS.filter((link) => !link.permissionKey);
+    }
+
+    const permissionSet = new Set(effectivePermissions);
+    return QUICK_ACTION_LINKS.filter(
+      (link) => !link.permissionKey || permissionSet.has(link.permissionKey),
+    );
+  }, [effectivePermissions]);
 
   const connectionMeta = useMemo(() => {
     if (connectionStatus === "connected") {
@@ -900,25 +921,17 @@ export function MembersDashboard() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {(() => {
-                  const userRoles = (session?.user?.roles as string[] | undefined) ?? (session?.user?.role ? [session.user.role] : []);
-                  const roleSet = new Set(userRoles);
-                  const links = QUICK_ACTION_LINKS.filter(
-                    (link) => !link.roles || link.roles.some((role) => roleSet.has(role))
+                {availableQuickActions.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <Button asChild key={link.href} variant="outline" size="sm">
+                      <Link href={link.href} title={link.label}>
+                        <Icon aria-hidden className="h-4 w-4" />
+                        <span className="sr-only sm:not-sr-only">{link.label}</span>
+                      </Link>
+                    </Button>
                   );
-
-                  return links.map((link) => {
-                    const Icon = link.icon;
-                    return (
-                      <Button asChild key={link.href} variant="outline" size="sm">
-                        <Link href={link.href} title={link.label}>
-                          <Icon aria-hidden className="h-4 w-4" />
-                          <span className="sr-only sm:not-sr-only">{link.label}</span>
-                        </Link>
-                      </Button>
-                    );
-                  });
-                })()}
+                })}
               </div>
             </CardContent>
           </Card>
