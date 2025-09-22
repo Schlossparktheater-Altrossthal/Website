@@ -19,6 +19,7 @@ type ConsentWithUser = {
   rejectionReason: string | null;
   documentUploadedAt: Date | null;
   documentName: string | null;
+  documentMime: string | null;
   userId: string;
   user: {
     id: string;
@@ -59,6 +60,10 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
     ? combineNameParts(consent.approvedBy.firstName, consent.approvedBy.lastName) ??
       (consent.approvedBy.name ?? null)
     : null;
+  const documentPreviewUrl =
+    consent.documentUploadedAt && consent.documentMime?.toLowerCase().startsWith("image/")
+      ? `/api/photo-consents/${consent.id}/document?mode=inline`
+      : null;
   return {
     id: consent.id,
     userId: consent.userId,
@@ -78,6 +83,8 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
     documentName: consent.documentName ?? null,
     documentUrl: consent.documentUploadedAt ? `/api/photo-consents/${consent.id}/document` : null,
     documentUploadedAt: consent.documentUploadedAt ? consent.documentUploadedAt.toISOString() : null,
+    documentMime: consent.documentMime ?? null,
+    documentPreviewUrl,
   };
 }
 

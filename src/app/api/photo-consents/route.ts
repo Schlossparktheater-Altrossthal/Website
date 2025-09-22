@@ -26,6 +26,7 @@ type ConsentRecord = {
   rejectionReason: string | null;
   documentUploadedAt: Date | null;
   documentName: string | null;
+  documentMime: string | null;
   approvedBy: { name: string | null } | null;
 };
 
@@ -72,6 +73,12 @@ function buildSummary(user: UserRecord): PhotoConsentSummary {
 
   const status: PhotoConsentSummary["status"] = consent?.status ?? "none";
 
+  const documentMime = consent?.documentMime ?? null;
+  const documentPreviewUrl =
+    consent?.documentUploadedAt && documentMime?.toLowerCase().startsWith("image/")
+      ? `/api/photo-consents/${consent.id}/document?mode=inline`
+      : null;
+
   return {
     status,
     requiresDocument,
@@ -86,6 +93,8 @@ function buildSummary(user: UserRecord): PhotoConsentSummary {
     dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
     documentName: consent?.documentName ?? null,
     documentUploadedAt: consent?.documentUploadedAt ? consent.documentUploadedAt.toISOString() : null,
+    documentMime,
+    documentPreviewUrl,
   };
 }
 
@@ -131,6 +140,7 @@ export async function GET() {
           rejectionReason: true,
           documentUploadedAt: true,
           documentName: true,
+          documentMime: true,
           approvedBy: { select: { name: true } },
         },
       },
@@ -304,6 +314,7 @@ export async function POST(request: NextRequest) {
         rejectionReason: true,
         documentUploadedAt: true,
         documentName: true,
+        documentMime: true,
         approvedBy: { select: { name: true } },
       },
     });

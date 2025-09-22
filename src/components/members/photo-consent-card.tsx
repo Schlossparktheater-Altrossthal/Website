@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
@@ -57,6 +58,8 @@ const EMPTY_SUMMARY: PhotoConsentSummary = {
   dateOfBirth: null,
   documentName: null,
   documentUploadedAt: null,
+  documentMime: null,
+  documentPreviewUrl: null,
 };
 
 function formatDate(value: string | null | undefined) {
@@ -64,6 +67,33 @@ function formatDate(value: string | null | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return null;
   return dateFormatter.format(date);
+}
+
+type ConsentDocumentPreviewProps = {
+  previewUrl: string | null;
+  documentName: string | null;
+};
+
+function ConsentDocumentPreview({ previewUrl, documentName }: ConsentDocumentPreviewProps) {
+  if (!previewUrl) {
+    return null;
+  }
+  return (
+    <div className="space-y-3 rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Digitale Unterschrift</p>
+      <div className="relative h-60 w-full overflow-hidden rounded-lg border border-border/50 bg-background">
+        <Image
+          src={previewUrl}
+          alt={documentName ? `Digitale Unterschrift: ${documentName}` : "Digitale Unterschrift"}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
+          className="object-contain bg-white"
+          unoptimized
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">Die Unterschrift ist nur für freigeschaltete Mitglieder sichtbar.</p>
+    </div>
+  );
 }
 
 interface PhotoConsentCardProps {
@@ -406,6 +436,13 @@ export function PhotoConsentCard({
                   )}
                 </div>
               </form>
+            )}
+
+            {summary?.documentPreviewUrl && (
+              <ConsentDocumentPreview
+                previewUrl={summary.documentPreviewUrl}
+                documentName={summary.documentName}
+              />
             )}
           </>
         )}

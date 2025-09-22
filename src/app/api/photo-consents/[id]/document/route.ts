@@ -9,7 +9,7 @@ function sanitizeForHeader(value: string): string {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const session = await requireAuth();
@@ -43,11 +43,14 @@ export async function GET(
   const safeFileName = sanitizeForHeader(fileName);
   const encodedFileName = encodeURIComponent(fileName);
 
+  const mode = request.nextUrl.searchParams.get("mode");
+  const disposition = mode === "inline" ? "inline" : "attachment";
+
   const response = new NextResponse(buffer, {
     headers: {
       "Content-Type": mime,
       "Content-Length": consent.documentSize ? String(consent.documentSize) : String(buffer.byteLength),
-      "Content-Disposition": `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodedFileName}`,
+      "Content-Disposition": `${disposition}; filename="${safeFileName}"; filename*=UTF-8''${encodedFileName}`,
       "Cache-Control": "no-store",
     },
   });

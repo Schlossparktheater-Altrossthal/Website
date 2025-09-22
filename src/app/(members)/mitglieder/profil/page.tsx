@@ -62,6 +62,7 @@ export default async function ProfilePage() {
         },
         photoConsent: {
           select: {
+            id: true,
             status: true,
             createdAt: true,
             updatedAt: true,
@@ -69,6 +70,7 @@ export default async function ProfilePage() {
             rejectionReason: true,
             documentUploadedAt: true,
             documentName: true,
+            documentMime: true,
             approvedBy: { select: { name: true } },
           },
         },
@@ -136,6 +138,7 @@ export default async function ProfilePage() {
     dateOfBirth: user.dateOfBirth,
     photoConsent: user.photoConsent
       ? {
+          id: user.photoConsent.id,
           status: user.photoConsent.status,
           createdAt: user.photoConsent.createdAt ?? undefined,
           updatedAt: user.photoConsent.updatedAt ?? undefined,
@@ -143,6 +146,7 @@ export default async function ProfilePage() {
           rejectionReason: user.photoConsent.rejectionReason ?? null,
           documentUploadedAt: user.photoConsent.documentUploadedAt ?? null,
           documentName: user.photoConsent.documentName ?? null,
+          documentMime: user.photoConsent.documentMime ?? null,
           approvedByName: user.photoConsent.approvedBy?.name ?? null,
         }
       : null,
