@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ComponentProps } from "react";
-import { AlertCircle, CheckCircle2, Loader2, PlugZap, Sparkles } from "lucide-react";
+import { useEffect, useId, useMemo, useState, type ComponentProps } from "react";
+import { AlertCircle, CheckCircle2, ChevronDown, Loader2, PlugZap, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,6 +138,7 @@ export function SperrlisteSettingsManager({
   defaultHolidaySourceUrl,
   onSettingsChange,
 }: SperrlisteSettingsManagerProps) {
+  const contentId = useId();
   const [freezeDaysValue, setFreezeDaysValue] = useState(String(settings.freezeDays));
   const [holidayModeState, setHolidayModeState] = useState<HolidaySourceMode>(settings.holidaySource.mode);
   const [holidayUrlState, setHolidayUrlState] = useState(settings.holidaySource.url ?? "");
@@ -149,6 +150,7 @@ export function SperrlisteSettingsManager({
   const [error, setError] = useState<ErrorState | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [defaults, setDefaults] = useState({ holidaySourceUrl: defaultHolidaySourceUrl });
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setFreezeDaysValue(String(settings.freezeDays));
@@ -465,6 +467,46 @@ export function SperrlisteSettingsManager({
     }
   };
 
+  const renderSummaryList = (layout: "compact" | "sidebar", className?: string) => (
+    <dl
+      className={cn(
+        "text-sm text-foreground",
+        layout === "compact"
+          ? "grid gap-x-6 gap-y-3 sm:grid-cols-2"
+          : "space-y-4",
+        className,
+      )}
+    >
+      <div className="space-y-1">
+        <Text variant="caption" uppercase className="text-muted-foreground">
+          Ferienquelle
+        </Text>
+        <div className="flex flex-wrap items-center gap-2">
+          <span>{holidayModeSummary}</span>
+          <Badge variant={STATUS_BADGE_VARIANTS[statusMeta.tone]}>{statusMeta.label}</Badge>
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Text variant="caption" uppercase className="text-muted-foreground">
+          Bevorzugte Tage
+        </Text>
+        <span>{preferredList}</span>
+      </div>
+      <div className="space-y-1">
+        <Text variant="caption" uppercase className="text-muted-foreground">
+          Ausnahmen
+        </Text>
+        <span>{exceptionList}</span>
+      </div>
+      <div className="space-y-1">
+        <Text variant="caption" uppercase className="text-muted-foreground">
+          Sperrfrist
+        </Text>
+        <span>{freezeDaysSummary}</span>
+      </div>
+    </dl>
+  );
+
   const renderWeekdayToggle = (
     type: "preferred" | "exception",
     weekday: number,
@@ -502,17 +544,49 @@ export function SperrlisteSettingsManager({
   const StatusIcon = STATUS_ICONS[statusMeta.tone];
 
   return (
-    <Card>
-      <CardHeader className="space-y-3">
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <Sparkles className="h-5 w-5 text-primary" aria-hidden />
-          Sperrlisten-Einstellungen
-        </CardTitle>
-        <Text variant="small" tone="muted">
-          Verwalte Ferienquelle, Probenplanung und Sperrfrist in einem kompakten Ablauf.
-        </Text>
+    <Card data-state={expanded ? "expanded" : "collapsed"}>
+      <CardHeader className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Sparkles className="h-5 w-5 text-primary" aria-hidden />
+              Sperrlisten-Einstellungen
+            </CardTitle>
+            <Text variant="small" tone="muted">
+              Verwalte Ferienquelle, Probenplanung und Sperrfrist in einem kompakten Ablauf.
+            </Text>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-expanded={expanded}
+            aria-controls={contentId}
+            className={cn(
+              "group inline-flex items-center gap-2 self-start rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:self-auto",
+              expanded ? "bg-muted/60 text-primary" : undefined,
+            )}
+          >
+            <span>{expanded ? "Einstellungen ausblenden" : "Einstellungen anzeigen"}</span>
+            <ChevronDown
+              className={cn("h-4 w-4 transition-transform", expanded ? "rotate-180" : "rotate-0")}
+              aria-hidden
+            />
+          </button>
+        </div>
+        {!expanded ? (
+          <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 p-4">
+            <Text variant="caption" uppercase className="text-muted-foreground">
+              Kurzüberblick
+            </Text>
+            {renderSummaryList("compact", "mt-3")}
+          </div>
+        ) : null}
       </CardHeader>
-      <CardContent>
+      <CardContent
+        id={contentId}
+        className={cn("space-y-6", !expanded && "hidden")}
+        aria-hidden={!expanded}
+      >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col gap-6 lg:flex-row">
             <div className="flex-1 space-y-6">
@@ -673,35 +747,7 @@ export function SperrlisteSettingsManager({
               <Text variant="caption" uppercase className="text-muted-foreground">
                 Kurzüberblick
               </Text>
-              <dl className="mt-3 space-y-4 text-sm">
-                <div className="space-y-1">
-                  <Text variant="caption" uppercase className="text-muted-foreground">
-                    Ferienquelle
-                  </Text>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span>{holidayModeSummary}</span>
-                    <Badge variant={STATUS_BADGE_VARIANTS[statusMeta.tone]}>{statusMeta.label}</Badge>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Text variant="caption" uppercase className="text-muted-foreground">
-                    Bevorzugte Tage
-                  </Text>
-                  <span>{preferredList}</span>
-                </div>
-                <div className="space-y-1">
-                  <Text variant="caption" uppercase className="text-muted-foreground">
-                    Ausnahmen
-                  </Text>
-                  <span>{exceptionList}</span>
-                </div>
-                <div className="space-y-1">
-                  <Text variant="caption" uppercase className="text-muted-foreground">
-                    Sperrfrist
-                  </Text>
-                  <span>{freezeDaysSummary}</span>
-                </div>
-              </dl>
+              {renderSummaryList("sidebar", "mt-3")}
             </aside>
           </div>
 
