@@ -20,7 +20,6 @@ import {
   PageHeaderStatus,
   PageHeaderTitle,
 } from "@/design-system/patterns";
-import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import {
   Users,
   Activity,
@@ -195,6 +194,7 @@ type OverviewResponse = {
   recentActivities?: unknown;
   onboarding?: unknown;
   finalRehearsalWeek?: unknown;
+  profileCompletion?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -372,6 +372,22 @@ function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null 
   };
 }
 
+function parseProfileCompletion(value: unknown):
+  | { complete: boolean; completed: number; total: number }
+  | null {
+  if (!isRecord(value)) return null;
+  const totalRaw = value.total;
+  const completedRaw = value.completed;
+  const complete = Boolean(value.complete);
+  const total =
+    typeof totalRaw === "number" && Number.isFinite(totalRaw) ? totalRaw : 0;
+  const completed =
+    typeof completedRaw === "number" && Number.isFinite(completedRaw)
+      ? completedRaw
+      : 0;
+  return { complete, completed, total };
+}
+
 export function MembersDashboard() {
   const { data: session } = useSession();
   const { connectionStatus } = useRealtime();
@@ -387,6 +403,9 @@ export function MembersDashboard() {
   const [onboarding, setOnboarding] = useState<OnboardingOverview | null>(null);
   const [onboardingLoaded, setOnboardingLoaded] = useState(false);
   const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(null);
+  const [profileCompletion, setProfileCompletion] = useState<
+    { complete: boolean; completed: number; total: number } | null
+  >(null);
 
   useEffect(() => {
     setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
@@ -428,6 +447,7 @@ export function MembersDashboard() {
 
         setOnboarding(parseOnboardingOverview(payload?.onboarding));
         setFinalRehearsalWeek(parseFinalRehearsalWeek(payload?.finalRehearsalWeek));
+        setProfileCompletion(parseProfileCompletion(payload?.profileCompletion));
         const activities = parseRecentActivities(payload?.recentActivities);
 
         setRecentActivities(activities.slice(0, 10));
@@ -812,6 +832,31 @@ export function MembersDashboard() {
         </PageHeaderActions>
       </PageHeader>
 
+      {profileCompletion && !profileCompletion.complete ? (
+        <div className="rounded-2xl border border-warning/45 bg-warning/10 p-4 text-sm text-warning shadow-[0_18px_48px_rgba(253,176,34,0.12)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold">Profilangaben unvollständig</p>
+              <p className="text-xs text-warning/90">
+                {`Du hast ${Math.max(
+                  profileCompletion.total - profileCompletion.completed,
+                  0,
+                )} von ${profileCompletion.total} Aufgaben offen.`}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-warning/40 text-warning hover:bg-warning/10"
+              asChild
+            >
+              <Link href="/mitglieder/profil">Profil aktualisieren</Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)] xl:items-start">
         <div className="space-y-4">
           {onboardingCard}
@@ -952,8 +997,6 @@ export function MembersDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      <PhotoConsentCard />
     </div>
   );
 }

@@ -66,7 +66,13 @@ function formatDate(value: string | null | undefined) {
   return dateFormatter.format(date);
 }
 
-export function PhotoConsentCard() {
+interface PhotoConsentCardProps {
+  onSummaryChange?: (summary: PhotoConsentSummary | null) => void;
+}
+
+export function PhotoConsentCard({
+  onSummaryChange,
+}: PhotoConsentCardProps = {}) {
   const [summary, setSummary] = useState<PhotoConsentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +82,10 @@ export function PhotoConsentCard() {
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    onSummaryChange?.(summary);
+  }, [summary, onSummaryChange]);
 
   const load = useCallback(async () => {
     setLoading(true);
