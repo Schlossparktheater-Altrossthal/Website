@@ -260,6 +260,51 @@ async function main() {
     });
   }
 
+  const profileAdminPermissionSeeds = [
+    {
+      key: "mitglieder.konfektionsgroessen",
+      label: "Konfektionsgrößen verwalten",
+      description:
+        "Erfasst und pflegt Konfektionsgrößen sowie zugehörige Passform-Notizen für Ensemble und Kostüm-Team.",
+    },
+    {
+      key: "mitglieder.ernaehrungshinweise",
+      label: "Ernährungshinweise verwalten",
+      description:
+        "Einsicht und Pflege von Allergien, Unverträglichkeiten und Ernährungspräferenzen zur sicheren Verpflegung.",
+    },
+  ];
+
+  for (const perm of profileAdminPermissionSeeds) {
+    await prisma.permission.upsert({
+      where: { key: perm.key },
+      update: { label: perm.label, description: perm.description },
+      create: perm,
+    });
+  }
+
+  const profilePermissionKeys = profileAdminPermissionSeeds.map((perm) => perm.key);
+
+  const [boardRoleForProfile, profilePermissions] = await Promise.all([
+    prisma.appRole.findUnique({ where: { name: "board" } }),
+    prisma.permission.findMany({ where: { key: { in: profilePermissionKeys } } }),
+  ]);
+
+  if (boardRoleForProfile) {
+    const permissionMap = new Map(profilePermissions.map((perm) => [perm.key, perm.id]));
+
+    for (const key of profilePermissionKeys) {
+      const permissionId = permissionMap.get(key);
+      if (!permissionId) continue;
+
+      await prisma.appRolePermission.upsert({
+        where: { roleId_permissionId: { roleId: boardRoleForProfile.id, permissionId } },
+        update: {},
+        create: { roleId: boardRoleForProfile.id, permissionId },
+      });
+    }
+  }
+
   const financePermissionKeys = financePermissionSeeds.map((perm) => perm.key);
   const boardPermissionKeys = ["mitglieder.finanzen", "mitglieder.finanzen.export"];
 

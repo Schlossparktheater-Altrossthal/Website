@@ -37,6 +37,17 @@ type ResolvedRoleContext = {
   customRoleIds: string[];
 };
 
+// Permissions that gate access to sensitive profile data sections. These keys are
+// shared with the profile access helpers to ensure a single source of truth.
+export const PROFILE_DATA_PERMISSION_KEYS = {
+  measurements: "mitglieder.koerpermasse",
+  sizes: "mitglieder.konfektionsgroessen",
+  dietary: "mitglieder.ernaehrungshinweise",
+} as const satisfies Record<
+  "measurements" | "sizes" | "dietary",
+  PermissionDefinition["key"]
+>;
+
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen", category: "base" },
   { key: "mitglieder.profil", label: "Profilbereich aufrufen", category: "base" },
@@ -87,10 +98,24 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "self",
   },
   {
-    key: "mitglieder.koerpermasse",
+    key: PROFILE_DATA_PERMISSION_KEYS.measurements,
     label: "Körpermaße verwalten",
     description:
       "Öffnet das Körpermaße-Control-Center für das Kostüm-Team, um alle Maße des Ensembles futuristisch zu überwachen, fehlende Angaben zu erkennen und Einträge live zu aktualisieren.",
+    category: "self",
+  },
+  {
+    key: PROFILE_DATA_PERMISSION_KEYS.sizes,
+    label: "Konfektionsgrößen verwalten",
+    description:
+      "Erfasst und pflegt Konfektionsgrößen sowie zugehörige Passform-Notizen für Ensemble und Kostüm-Team.",
+    category: "self",
+  },
+  {
+    key: PROFILE_DATA_PERMISSION_KEYS.dietary,
+    label: "Ernährungshinweise verwalten",
+    description:
+      "Einsicht und Pflege von Allergien, Unverträglichkeiten und Ernährungspräferenzen zur sicheren Verpflegung.",
     category: "self",
   },
   { key: "mitglieder.probenplanung", label: "Probenplanung verwalten", category: "planning" },
@@ -196,7 +221,12 @@ const FINANCE_BOARD_PERMISSION_KEYS = [
   "mitglieder.finanzen.export",
 ] as const satisfies PermissionDefinition["key"][];
 
-const MEASUREMENT_PERMISSION_KEY = "mitglieder.koerpermasse" as const satisfies PermissionDefinition["key"];
+const MEASUREMENT_PERMISSION_KEY = PROFILE_DATA_PERMISSION_KEYS.measurements;
+
+const PROFILE_ADMIN_PERMISSION_KEYS = [
+  PROFILE_DATA_PERMISSION_KEYS.sizes,
+  PROFILE_DATA_PERMISSION_KEYS.dietary,
+] as const satisfies PermissionDefinition["key"][];
 
 const MEASUREMENT_DEFAULT_ROLE_NAMES = [
   "member",
@@ -238,6 +268,7 @@ async function runEnsurePermissionDefinitions() {
   await prisma.permission.deleteMany({ where: { key: { notIn: Array.from(PERMISSION_KEY_SET) } } });
   await ensureFinanceRoleDefaultAssignments();
   await ensureMeasurementRoleDefaultAssignments();
+  await ensureProfileAdminDefaultAssignments();
 }
 
 export async function ensurePermissionDefinitions() {
@@ -357,6 +388,39 @@ async function ensureMeasurementRoleDefaultAssignments() {
       create: { roleId: role.id, permissionId: permission.id },
     }),
   );
+
+  if (operations.length) {
+    await prisma.$transaction(operations);
+  }
+}
+
+async function ensureProfileAdminDefaultAssignments() {
+  await ensureSystemRoles();
+
+  const [role, permissions] = await Promise.all([
+    prisma.appRole.findUnique({ where: { name: "board" } }),
+    prisma.permission.findMany({ where: { key: { in: Array.from(PROFILE_ADMIN_PERMISSION_KEYS) } } }),
+  ]);
+
+  if (!role || permissions.length === 0) {
+    return;
+  }
+
+  const permissionMap = new Map(permissions.map((permission) => [permission.key, permission.id]));
+  const operations: Prisma.PrismaPromise<unknown>[] = [];
+
+  for (const key of PROFILE_ADMIN_PERMISSION_KEYS) {
+    const permissionId = permissionMap.get(key);
+    if (!permissionId) continue;
+
+    operations.push(
+      prisma.appRolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId } },
+        update: {},
+        create: { roleId: role.id, permissionId },
+      }),
+    );
+  }
 
   if (operations.length) {
     await prisma.$transaction(operations);

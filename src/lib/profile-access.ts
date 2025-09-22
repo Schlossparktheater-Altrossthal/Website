@@ -1,48 +1,95 @@
-import { Role } from '@prisma/client';
+import { hasPermission, PROFILE_DATA_PERMISSION_KEYS } from '@/lib/permissions';
 
-// Definiert, wer auf welche Profilinformationen zugreifen darf
-export const profileAccessRights = {
-  // Maße (measurements)
+const PROFILE_PERMISSION_MATRIX = {
   measurements: {
-    read: (userRole: Role) => ['admin', 'board'].includes(userRole),
-    write: (userRole: Role) => ['admin', 'board'].includes(userRole),
+    read: PROFILE_DATA_PERMISSION_KEYS.measurements,
+    write: PROFILE_DATA_PERMISSION_KEYS.measurements,
   },
-  
-  // Konfektionsgrößen (sizes)
   sizes: {
-    read: (userRole: Role) => ['admin', 'board'].includes(userRole),
-    write: (userRole: Role) => ['admin', 'board'].includes(userRole),
+    read: PROFILE_DATA_PERMISSION_KEYS.sizes,
+    write: PROFILE_DATA_PERMISSION_KEYS.sizes,
   },
-  
-  // Allergien und Unverträglichkeiten (dietary)
   dietary: {
-    read: (userRole: Role) => ['admin', 'board'].includes(userRole),
-    write: (userRole: Role) => ['admin', 'board'].includes(userRole),
+    read: PROFILE_DATA_PERMISSION_KEYS.dietary,
+    write: PROFILE_DATA_PERMISSION_KEYS.dietary,
   },
-};
+} as const;
 
-// Prüft, ob ein Benutzer Zugriff auf bestimmte Profilinformationen hat
+type ProfilePermissionMatrix = typeof PROFILE_PERMISSION_MATRIX;
+
+type ProfilePermissionUser = Parameters<typeof hasPermission>[0];
+
+export type ProfileDataType = keyof ProfilePermissionMatrix;
+export type ProfilePermissionAction = keyof ProfilePermissionMatrix[ProfileDataType];
+
+function getProfilePermissionKey(
+  dataType: ProfileDataType,
+  action: ProfilePermissionAction
+) {
+  const entry = PROFILE_PERMISSION_MATRIX[dataType];
+  return entry?.[action];
+}
+
+function checkProfilePermission(
+  dataType: ProfileDataType,
+  action: ProfilePermissionAction,
+  user?: ProfilePermissionUser
+) {
+  const permissionKey = getProfilePermissionKey(dataType, action);
+  if (!permissionKey) {
+    return Promise.resolve(false);
+  }
+  return hasPermission(user, permissionKey);
+}
+
+export function canReadProfileData(
+  dataType: ProfileDataType,
+  user?: ProfilePermissionUser
+): Promise<boolean> {
+  return checkProfilePermission(dataType, 'read', user);
+}
+
+export function canWriteProfileData(
+  dataType: ProfileDataType,
+  user?: ProfilePermissionUser
+): Promise<boolean> {
+  return checkProfilePermission(dataType, 'write', user);
+}
+
 export function canAccessProfileData(
-  dataType: 'measurements' | 'sizes' | 'dietary',
-  action: 'read' | 'write',
-  userRole?: Role
-): boolean {
-  if (!userRole) return false;
-  
-  const accessRights = profileAccessRights[dataType];
-  if (!accessRights) return false;
-  
-  return accessRights[action](userRole);
+  dataType: ProfileDataType,
+  action: ProfilePermissionAction,
+  user?: ProfilePermissionUser
+): Promise<boolean> {
+  return checkProfilePermission(dataType, action, user);
 }
 
-// Prüft, ob ein Benutzer seine eigenen Daten bearbeiten darf
-export function canEditOwnProfileData(
-  dataType: 'measurements' | 'sizes' | 'dietary',
-  userRole?: Role
-): boolean {
-  // Eigene Allergien/Unverträglichkeiten darf jeder bearbeiten
-  if (dataType === 'dietary') return true;
-  
-  // Maße und Größen nur durch berechtigte Rollen
-  return canAccessProfileData(dataType, 'write', userRole);
+export async function canEditOwnProfileData(
+  dataType: ProfileDataType,
+  user?: ProfilePermissionUser
+): Promise<boolean> {
+  if (!user?.id) {
+    return false;
+  }
+
+  if (dataType === 'dietary') {
+    return true;
+  }
+
+  return canWriteProfileData(dataType, user);
 }
+
+export const profileAccessRights = {
+  measurements: {
+    read: (user?: ProfilePermissionUser) => canReadProfileData('measurements', user),
+    write: (user?: ProfilePermissionUser) => canWriteProfileData('measurements', user),
+  },
+  sizes: {
+    read: (user?: ProfilePermissionUser) => canReadProfileData('sizes', user),
+    write: (user?: ProfilePermissionUser) => canWriteProfileData('sizes', user),
+  },
+  dietary: {
+    read: (user?: ProfilePermissionUser) => canReadProfileData('dietary', user),
+    write: (user?: ProfilePermissionUser) => canWriteProfileData('dietary', user),
+  },
+} as const;
