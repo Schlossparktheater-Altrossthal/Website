@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MeasurementForm } from "@/components/forms/measurement-form";
-import { useProfileCompletion } from "@/components/members/profile-completion-context";
+import { useOptionalProfileCompletion } from "@/components/members/profile-completion-context";
 import {
   MEASUREMENT_TYPE_LABELS,
   MEASUREMENT_UNIT_LABELS,
@@ -42,7 +42,7 @@ export function MemberMeasurementsManager({
   );
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const { setItemComplete } = useProfileCompletion();
+  const profileCompletion = useOptionalProfileCompletion();
 
   const openCreateDialog = () => {
     setDialogState({ mode: "create" });
@@ -94,7 +94,7 @@ export function MemberMeasurementsManager({
       setMeasurements((prev) => {
         const withoutType = prev.filter((entry) => entry.type !== saved.type);
         const next = sortMeasurements([...withoutType, saved]);
-        setItemComplete("measurements", next.length > 0);
+        profileCompletion?.setItemComplete("measurements", next.length > 0);
         return next;
       });
       setDialogState(null);
