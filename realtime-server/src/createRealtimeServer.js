@@ -315,7 +315,7 @@ export function createRealtimeServer(options = {}) {
 
   const logError = typeof logger.error === 'function' ? (...args) => logger.error(...args) : (...args) => console.error(...args);
 
-  const defaultAnalyticsInterval = 15000;
+  const defaultAnalyticsInterval = 2000;
   const analyticsIntervalMsRaw = resolveNumber(
     explicitAnalyticsIntervalMs,
     resolveNumber(process.env.REALTIME_ANALYTICS_INTERVAL_MS, defaultAnalyticsInterval),
