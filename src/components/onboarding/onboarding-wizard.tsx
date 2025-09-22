@@ -504,7 +504,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       .slice(0, 12);
   }, [availableInterests, form.interests]);
 
-  const addInterest = useCallback(
+  const addInterestToForm = useCallback(
     (interest: string) => {
       const value = interest.trim();
       if (!value) return;
@@ -514,9 +514,41 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         }
         return { ...prev, interests: [...prev.interests, value] };
       });
-      setNewInterest("");
     },
     [setForm],
+  );
+
+  const addInterest = useCallback(
+    (interest: string) => {
+      addInterestToForm(interest);
+      setNewInterest("");
+    },
+    [addInterestToForm, setNewInterest],
+  );
+
+  const handleInterestInputChange = useCallback(
+    (value: string) => {
+      if (!value) {
+        setNewInterest("");
+        return;
+      }
+
+      if (!/[;,\n]/.test(value)) {
+        setNewInterest(value);
+        return;
+      }
+
+      const segments = value.split(/[,;\n]+/);
+      const remainder = segments.pop() ?? "";
+      segments.forEach((segment) => {
+        const clean = segment.trim();
+        if (clean) {
+          addInterestToForm(clean);
+        }
+      });
+      setNewInterest(remainder.replace(/^\s+/, ""));
+    },
+    [addInterestToForm, setNewInterest],
   );
 
   const removeInterest = useCallback((interest: string) => {
@@ -1547,7 +1579,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Input
                 value={newInterest}
-                onChange={(event) => setNewInterest(event.target.value)}
+                onChange={(event) => handleInterestInputChange(event.target.value)}
                 placeholder="z.B. Impro, Tanz, Requisite, Social Media …"
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
