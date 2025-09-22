@@ -30,12 +30,19 @@ export async function POST(request: Request) {
   const kind = parsed.data.kind ?? BlockedDayKind.BLOCKED;
 
   try {
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const today = toDateOnly(todayKey);
-    const cutoff = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     const parsedDates = uniqueDates.map((d) => ({ key: d, date: toDateOnly(d) }));
-    const allowed = parsedDates.filter((p) => p.date.getTime() >= cutoff.getTime());
-    const skipped = parsedDates.filter((p) => p.date.getTime() < cutoff.getTime()).map((p) => p.key);
+    let allowed = parsedDates;
+    let skipped: string[] = [];
+
+    if (kind === BlockedDayKind.BLOCKED) {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const today = toDateOnly(todayKey);
+      const cutoff = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      allowed = parsedDates.filter((p) => p.date.getTime() >= cutoff.getTime());
+      skipped = parsedDates
+        .filter((p) => p.date.getTime() < cutoff.getTime())
+        .map((p) => p.key);
+    }
 
     const payload = allowed.map((p) => ({ userId, date: p.date, reason, kind }));
     if (payload.length === 0) return NextResponse.json({ created: [], skipped });
