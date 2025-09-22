@@ -3,15 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { addDays, format } from "date-fns";
-import { de } from "date-fns/locale/de";
-import { BlockCalendar } from "./block-calendar";
+import type { BlockedDay as BlockedDayDTO } from "./block-calendar";
 import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
-
-type BlockedDayDTO = {
-  id: string;
-  date: string;
-  reason: string | null;
-};
+import { SperrlisteTabs } from "./sperrliste-tabs";
+import type { OverviewMember } from "./block-overview";
 
 export default async function SperrlistePage() {
   const session = await requireAuth();
@@ -25,17 +20,58 @@ export default async function SperrlistePage() {
     throw new Error("Benutzerinformationen konnten nicht geladen werden.");
   }
 
-  const blockedDays = await prisma.blockedDay.findMany({
-    where: { userId },
-    orderBy: { date: "asc" },
-  });
+  const [personalBlockedDays, holidayRanges, overviewUsers] = await Promise.all([
+    prisma.blockedDay.findMany({
+      where: { userId },
+      orderBy: { date: "asc" },
+    }),
+    getSaxonySchoolHolidayRanges(),
+    prisma.user.findMany({
+      orderBy: [
+        { firstName: "asc" },
+        { lastName: "asc" },
+      ],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        email: true,
+        avatarSource: true,
+        avatarImageUpdatedAt: true,
+        blockedDays: {
+          orderBy: { date: "asc" },
+          select: {
+            id: true,
+            date: true,
+            reason: true,
+          },
+        },
+      },
+    }),
+  ]);
 
-  const holidayRanges = await getSaxonySchoolHolidayRanges();
-
-  const initialBlockedDays: BlockedDayDTO[] = blockedDays.map((entry) => ({
+  const initialBlockedDays: BlockedDayDTO[] = personalBlockedDays.map((entry) => ({
     id: entry.id,
     date: format(entry.date, "yyyy-MM-dd"),
     reason: entry.reason,
+  }));
+
+  const overviewMembers: OverviewMember[] = overviewUsers.map((user) => ({
+    id: user.id,
+    firstName: user.firstName ?? null,
+    lastName: user.lastName ?? null,
+    name: user.name ?? null,
+    email: user.email ?? null,
+    avatarSource: user.avatarSource ?? null,
+    avatarUpdatedAt: user.avatarImageUpdatedAt
+      ? user.avatarImageUpdatedAt.toISOString()
+      : null,
+    blockedDays: user.blockedDays.map((entry) => ({
+      id: entry.id,
+      date: format(entry.date, "yyyy-MM-dd"),
+      reason: entry.reason,
+    })),
   }));
 
   const freezeUntil = addDays(new Date(), 7);
@@ -46,12 +82,12 @@ export default async function SperrlistePage() {
         title="Sperrliste"
         description="Markiere Tage, an denen du nicht verfügbar bist, damit das Team die Planung im Blick behält."
       />
-      <div className="rounded-md border p-3 text-sm
-        border-amber-300 bg-amber-50 text-amber-900
-        dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">
-        Hinweis: Aus Planungsgründen können Sperrtermine erst ab {format(freezeUntil, "EEEE, d. MMMM yyyy", { locale: de })} eingetragen werden.
-      </div>
-      <BlockCalendar initialBlockedDays={initialBlockedDays} holidays={holidayRanges} />
+      <SperrlisteTabs
+        initialBlockedDays={initialBlockedDays}
+        holidays={holidayRanges}
+        overviewMembers={overviewMembers}
+        freezeUntil={freezeUntil.toISOString()}
+      />
     </div>
   );
 }
