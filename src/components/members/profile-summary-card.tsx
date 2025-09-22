@@ -94,7 +94,7 @@ export function ProfileSummaryCard({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-4">
           <div className="rounded-xl border border-border/60 bg-background/85 p-4 shadow-sm backdrop-blur">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Primäre Adresse</div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
