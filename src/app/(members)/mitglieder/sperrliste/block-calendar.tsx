@@ -109,6 +109,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
   const [recentlyRemoved, setRecentlyRemoved] = useState<Set<string>>(new Set());
   const [enterDir, setEnterDir] = useState<"left" | "right">("right");
+  const [showHolidays, setShowHolidays] = useState(false);
 
   const dragIntentRef = useRef<SelectionIntent | null>(null);
   const draggingRef = useRef(false);
@@ -124,7 +125,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
 
   const holidaysByDate = useMemo(() => {
     const map = new Map<string, HolidayDayInfo[]>();
-    if (!holidays.length) {
+    if (!showHolidays || !holidays.length) {
       return map;
     }
 
@@ -161,7 +162,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     }
 
     return map;
-  }, [holidays]);
+  }, [holidays, showHolidays]);
 
   const markRecent = useCallback((keys: string[], type: "added" | "removed") => {
     if (!keys.length) return;
@@ -757,47 +758,88 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
     </div>
   ) : null;
 
-  const holidayPanel = upcomingHolidays.length ? (
-    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-sky-500/40 dark:bg-sky-500/10">
-      <div className="flex items-center gap-2 text-sky-800 dark:text-sky-100">
-        <CalendarDays className="h-4 w-4" aria-hidden />
-        <span className="font-semibold">Schulferien in Sachsen</span>
-      </div>
-      <ul className="space-y-2 text-sky-900/90 dark:text-sky-100/90">
-        {upcomingHolidays.map((holiday) => {
-          const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
-          const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
+  const holidayToggle = (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setShowHolidays((prev) => !prev)}
+        aria-pressed={showHolidays}
+        className={cn(
+          "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500",
+          showHolidays
+            ? "border-sky-300 bg-sky-50 text-sky-900 hover:bg-sky-100 dark:border-sky-500/60 dark:bg-sky-500/20 dark:text-sky-50 dark:hover:bg-sky-500/30"
+            : "border-border/60 bg-background/80 text-muted-foreground hover:border-sky-200 hover:bg-muted/60 hover:text-foreground dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-slate-900/60",
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4" aria-hidden />
+          <span>{showHolidays ? "Schulferien ausblenden" : "Schulferien anzeigen"}</span>
+        </span>
+        <span
+          className={cn(
+            "text-[10px] font-semibold uppercase tracking-wide",
+            showHolidays
+              ? "text-sky-800/80 dark:text-sky-100/80"
+              : "text-muted-foreground",
+          )}
+        >
+          Optional
+        </span>
+      </button>
+      <p className="text-xs leading-5 text-muted-foreground">
+        Blende die Schulferien bei Bedarf für deine persönliche Planung ein.
+      </p>
+    </div>
+  );
 
-          return (
-            <li key={holiday.id} className="space-y-1 rounded-md bg-white/60 p-2 shadow-sm ring-1 ring-sky-200/60 dark:bg-slate-950/40 dark:ring-sky-500/40">
-              <div
-                className={cn(
-                  "font-medium",
-                  isActive
-                    ? "text-sky-900 dark:text-sky-50"
-                    : "text-sky-900/90 dark:text-sky-100/90",
-                )}
-              >
-                {holiday.title}
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-sky-900/80 dark:text-sky-100/80">
-                <span>{rangeLabel}</span>
-                {isActive ? (
-                  <span className="inline-flex items-center rounded-full bg-sky-200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-sky-900 dark:bg-sky-500/30 dark:text-sky-50">
-                    Aktuell
-                  </span>
-                ) : null}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  ) : holidays.length === 0 ? (
-    <div className="rounded-lg border border-muted/40 bg-muted/30 p-4 text-xs text-muted-foreground">
-      Die Ferienübersicht wird eingeblendet, sobald der abonnierte Kalender Termine liefert.
-    </div>
-  ) : null;
+  const holidayPanel = !showHolidays
+    ? null
+    : upcomingHolidays.length
+      ? (
+          <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-sky-500/40 dark:bg-sky-500/10">
+            <div className="flex items-center gap-2 text-sky-800 dark:text-sky-100">
+              <CalendarDays className="h-4 w-4" aria-hidden />
+              <span className="font-semibold">Schulferien in Sachsen</span>
+            </div>
+            <ul className="space-y-2 text-sky-900/90 dark:text-sky-100/90">
+              {upcomingHolidays.map((holiday) => {
+                const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
+                const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
+
+                return (
+                  <li
+                    key={holiday.id}
+                    className="space-y-1 rounded-md bg-white/60 p-2 shadow-sm ring-1 ring-sky-200/60 dark:bg-slate-950/40 dark:ring-sky-500/40"
+                  >
+                    <div
+                      className={cn(
+                        "font-medium",
+                        isActive
+                          ? "text-sky-900 dark:text-sky-50"
+                          : "text-sky-900/90 dark:text-sky-100/90",
+                      )}
+                    >
+                      {holiday.title}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-sky-900/80 dark:text-sky-100/80">
+                      <span>{rangeLabel}</span>
+                      {isActive ? (
+                        <span className="inline-flex items-center rounded-full bg-sky-200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-sky-900 dark:bg-sky-500/30 dark:text-sky-50">
+                          Aktuell
+                        </span>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )
+      : (
+          <div className="rounded-lg border border-muted/40 bg-muted/30 p-4 text-xs text-muted-foreground">
+            Die Ferienübersicht wird eingeblendet, sobald der abonnierte Kalender Termine liefert.
+          </div>
+        );
 
   const rehearsalHint = (
     <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm leading-6 text-primary dark:border-primary/30 dark:bg-primary/10">
@@ -937,6 +979,7 @@ export function BlockCalendar({ initialBlockedDays, holidays = [] }: BlockCalend
           <>
             {rehearsalHint}
             {selectionPanel}
+            {holidayToggle}
             {holidayPanel}
           </>
         }
