@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Loader2 } from "lucide-react";
+import { Eye, Loader2, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -168,33 +168,14 @@ export function MembersTable({
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="flex flex-wrap gap-2">
-                        <Button asChild size="sm" variant="secondary" className="gap-1.5">
-                          <Link href={profileHref} title={`Profil von ${displayName} ansehen`}>
-                            <Eye className="h-4 w-4" aria-hidden />
-                            Profil
-                          </Link>
-                        </Button>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setOpenFor(u.id)}>
-                          Bearbeiten
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={u.isDeactivated ? "secondary" : "outline"}
-                          onClick={() => setStatusTarget(u)}
-                        >
-                          {u.isDeactivated ? "Aktivieren" : "Deaktivieren"}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteTarget(u)}
-                        >
-                          Löschen
-                        </Button>
-                      </div>
+                      <MemberActionButtons
+                        user={u}
+                        profileHref={profileHref}
+                        onEdit={() => setOpenFor(u.id)}
+                        onToggleStatus={() => setStatusTarget(u)}
+                        onDelete={() => setDeleteTarget(u)}
+                        className="justify-end"
+                      />
                     </div>
                   </div>
                 </div>
@@ -274,33 +255,14 @@ export function MembersTable({
                           )}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          <div className="flex flex-wrap items-center justify-end gap-2">
-                            <Button asChild size="sm" variant="secondary" className="gap-1.5">
-                              <Link href={profileHref} title={`Profil von ${displayName} ansehen`}>
-                                <Eye className="h-4 w-4" aria-hidden />
-                                Profil
-                              </Link>
-                            </Button>
-                            <Button type="button" size="sm" variant="ghost" onClick={() => setOpenFor(u.id)}>
-                              Bearbeiten
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={u.isDeactivated ? "secondary" : "outline"}
-                              onClick={() => setStatusTarget(u)}
-                            >
-                              {u.isDeactivated ? "Aktivieren" : "Deaktivieren"}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setDeleteTarget(u)}
-                            >
-                              Löschen
-                            </Button>
-                          </div>
+                          <MemberActionButtons
+                            user={u}
+                            profileHref={profileHref}
+                            onEdit={() => setOpenFor(u.id)}
+                            onToggleStatus={() => setStatusTarget(u)}
+                            onDelete={() => setDeleteTarget(u)}
+                            className="ml-auto justify-end"
+                          />
                           <Modal
                             open={openFor === u.id}
                             title="Benutzer bearbeiten"
@@ -393,6 +355,101 @@ export function MembersTable({
           setOpenFor((prev) => (prev === id ? null : prev));
         }}
       />
+    </div>
+  );
+}
+
+type MemberActionButtonsProps = {
+  user: MembersTableUser;
+  profileHref: string;
+  onEdit: () => void;
+  onToggleStatus: () => void;
+  onDelete: () => void;
+  className?: string;
+};
+
+function MemberActionButtons({
+  user,
+  profileHref,
+  onEdit,
+  onToggleStatus,
+  onDelete,
+  className,
+}: MemberActionButtonsProps) {
+  const displayName = getDisplayName(user);
+  const actionTarget = displayName || user.email || "dieses Mitglied";
+  const statusLabel = user.isDeactivated ? "Aktivieren" : "Deaktivieren";
+  const statusTitle = user.isDeactivated
+    ? `${actionTarget} reaktivieren`
+    : `${actionTarget} deaktivieren`;
+  const StatusIcon = user.isDeactivated ? UserCheck : UserX;
+  const baseButtonClass = "rounded-full border shadow-sm";
+  const statusButtonClass = user.isDeactivated
+    ? "border-success/60 bg-success/10 text-success hover:bg-success/20 hover:text-success-foreground"
+    : "border-warning/60 bg-warning/10 text-warning hover:bg-warning/20 hover:text-warning-foreground";
+
+  return (
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+      <Button
+        asChild
+        size="icon"
+        variant="ghost"
+        className={cn(
+          baseButtonClass,
+          "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
+        )}
+      >
+        <Link
+          href={profileHref}
+          aria-label={`Profil von ${actionTarget} öffnen`}
+          title={`Profil von ${actionTarget} öffnen`}
+        >
+          <Eye className="h-4 w-4" aria-hidden />
+          <span className="sr-only">Profil</span>
+        </Link>
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className={cn(
+          baseButtonClass,
+          "border-border/60 bg-muted/40 text-foreground/70 hover:bg-muted/60 hover:text-foreground",
+        )}
+        onClick={onEdit}
+        aria-label={`${actionTarget} bearbeiten`}
+        title={`${actionTarget} bearbeiten`}
+      >
+        <Pencil className="h-4 w-4" aria-hidden />
+        <span className="sr-only">Bearbeiten</span>
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className={cn(baseButtonClass, statusButtonClass)}
+        onClick={onToggleStatus}
+        aria-label={`${statusLabel} ${actionTarget}`}
+        title={statusTitle}
+      >
+        <StatusIcon className="h-4 w-4" aria-hidden />
+        <span className="sr-only">{statusLabel}</span>
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className={cn(
+          baseButtonClass,
+          "border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20",
+        )}
+        onClick={onDelete}
+        aria-label={`${actionTarget} löschen`}
+        title={`${actionTarget} löschen`}
+      >
+        <Trash2 className="h-4 w-4" aria-hidden />
+        <span className="sr-only">Löschen</span>
+      </Button>
     </div>
   );
 }
