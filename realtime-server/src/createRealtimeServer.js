@@ -7,6 +7,12 @@ import { Server } from 'socket.io';
 import { URL } from 'url';
 
 import analyticsStaticData from '../../src/data/server-analytics-static.json' assert { type: 'json' };
+import {
+  applyPagePerformanceMetrics,
+  loadDeviceBreakdownFromDatabase,
+  loadPagePerformanceMetrics,
+  mergeDeviceBreakdown,
+} from '../../src/lib/server-analytics-data.js';
 
 function toISO(date) {
   return new Date(date).toISOString();
@@ -341,10 +347,44 @@ export function createRealtimeServer(options = {}) {
       logError('[Realtime] Verwende statische Ressourcenwerte für Server-Analytics', error);
     }
 
+    let deviceBreakdown = base.deviceBreakdown ?? [];
+    let publicPages = base.publicPages ?? [];
+    let memberPages = base.memberPages ?? [];
+
+    if (process.env.DATABASE_URL) {
+      const [deviceOverrides, pageMetrics] = await Promise.all([
+        loadDeviceBreakdownFromDatabase().catch((error) => {
+          logError('[Realtime] Failed to load device analytics', error);
+          return null;
+        }),
+        loadPagePerformanceMetrics().catch((error) => {
+          logError('[Realtime] Failed to load page performance metrics', error);
+          return [];
+        }),
+      ]);
+
+      deviceBreakdown = mergeDeviceBreakdown(deviceBreakdown, deviceOverrides ?? undefined);
+
+      if (Array.isArray(pageMetrics) && pageMetrics.length > 0) {
+        publicPages = applyPagePerformanceMetrics(publicPages, pageMetrics, 'public');
+        memberPages = applyPagePerformanceMetrics(memberPages, pageMetrics, 'members');
+      } else {
+        publicPages = publicPages.map((entry) => ({ ...entry }));
+        memberPages = memberPages.map((entry) => ({ ...entry }));
+      }
+    } else {
+      deviceBreakdown = deviceBreakdown.map((entry) => ({ ...entry }));
+      publicPages = publicPages.map((entry) => ({ ...entry }));
+      memberPages = memberPages.map((entry) => ({ ...entry }));
+    }
+
     return {
       generatedAt: toISO(Date.now()),
       ...base,
       resourceUsage,
+      deviceBreakdown,
+      publicPages,
+      memberPages,
     };
   }
 
