@@ -180,7 +180,7 @@ export default async function ProfilePage() {
       }}
       checklist={checklist.items}
       canManageMeasurements={canManageMeasurements}
-      measurements={measurements}
+      measurements={canManageMeasurements ? measurements : undefined}
       dietaryPreference={{
         style: styleInfo.style,
         customLabel: styleInfo.customLabel,

@@ -177,7 +177,7 @@ interface ProfilePageClientProps {
   user: ProfileUserSummary;
   checklist: ProfileChecklistItem[];
   canManageMeasurements: boolean;
-  measurements: MeasurementEntry[];
+  measurements?: MeasurementEntry[];
   dietaryPreference: DietaryPreferenceState;
   allergies: AllergyEntry[];
   photoConsent: PhotoConsentSummary | null;
@@ -286,6 +286,7 @@ export function ProfilePageClient({
   const [photoSummary, setPhotoSummary] = useState<PhotoConsentSummary | null>(
     photoConsent,
   );
+  const measurementEntries = canManageMeasurements ? measurements ?? [] : null;
 
   const handleSectionOpenChange = useCallback(
     (section: ProfileSectionId, open: boolean) => {
@@ -428,7 +429,7 @@ export function ProfilePageClient({
                     open={openSections.masse}
                     onOpenChange={(open) => handleSectionOpenChange("masse", open)}
                   >
-                    <MemberMeasurementsManager initialMeasurements={measurements} />
+                    <MemberMeasurementsManager initialMeasurements={measurementEntries ?? []} />
                   </ProfileSection>
                 ) : null}
 
