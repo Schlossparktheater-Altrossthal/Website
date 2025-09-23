@@ -66,7 +66,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
       />
       <nav
         aria-label="Hauptnavigation"
-        className="layout-container flex flex-wrap items-center gap-3 px-3 py-3 sm:gap-4 md:gap-6 md:py-4"
+        className="layout-container flex flex-wrap items-center gap-3 py-3 sm:gap-4 md:gap-6 md:py-4"
       >
         <Link
           className={`font-serif text-lg transition-all duration-300 sm:text-xl ${
