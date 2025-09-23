@@ -19,6 +19,52 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { MailCheck } from "lucide-react";
+import { DEV_TEST_USERS } from "@/lib/auth-dev-test-users";
+
+type TestLoginOption = {
+  email: string;
+  label?: string;
+};
+
+const configuredTestLoginEmails = (() => {
+  const raw = process.env.NEXT_PUBLIC_AUTH_DEV_TEST_USERS;
+  if (!raw) return [] as string[];
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+})();
+
+const fallbackTestLoginOptions: TestLoginOption[] =
+  process.env.NODE_ENV !== "production"
+    ? DEV_TEST_USERS.map((user) => ({ email: user.email, label: user.label }))
+    : [];
+
+const TEST_LOGIN_OPTIONS: TestLoginOption[] = (() => {
+  if (!configuredTestLoginEmails.length) {
+    return fallbackTestLoginOptions;
+  }
+
+  const seen = new Set<string>();
+
+  return configuredTestLoginEmails
+    .map((email) => email.trim())
+    .filter((email) => {
+      if (!email) return false;
+      const normalized = email.toLowerCase();
+      if (seen.has(normalized)) return false;
+      seen.add(normalized);
+      return true;
+    })
+    .map((email) => {
+      const normalized = email.toLowerCase();
+      const preset = DEV_TEST_USERS.find((user) => user.email === normalized);
+      if (preset) {
+        return { email: preset.email, label: preset.label };
+      }
+      return { email };
+    });
+})();
 
 const magicSchema = z.object({ email: z.string().email() });
 const passwordSchema = z.object({
@@ -244,21 +290,21 @@ export function LoginPageClient() {
           </div>
         )}
 
-        {process.env.NEXT_PUBLIC_AUTH_DEV_TEST_USERS && (
+        {!devNoDb && TEST_LOGIN_OPTIONS.length > 0 && (
           <div className="space-y-2 rounded-xl border border-border/60 bg-muted/40 p-4 text-sm text-muted-foreground">
             <p className="font-semibold text-foreground">Test-Logins</p>
-            <p>Nur in der lokalen Entwicklungsumgebung verfügbar.</p>
+            <p>Nur in Entwicklungs- und Testumgebungen verfügbar.</p>
             <div className="flex flex-wrap gap-2 pt-1">
-              {process.env.NEXT_PUBLIC_AUTH_DEV_TEST_USERS.split(",").map((email) => (
+              {TEST_LOGIN_OPTIONS.map((option) => (
                 <Button
-                  key={email}
+                  key={option.email}
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => testLogin(email)}
+                  onClick={() => testLogin(option.email)}
                   disabled={loading}
                 >
-                  {email}
+                  {option.label ? `${option.label} (${option.email})` : option.email}
                 </Button>
               ))}
             </div>
