@@ -20,7 +20,14 @@ import {
 } from "@/components/calendar/month-calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { formatWeekdayList } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";
@@ -1035,77 +1042,87 @@ export function BlockCalendar({
         }
       />
 
-      <Modal
-        open={modalOpen && !!selectedDate}
-        onClose={closeModal}
-        title={
-          selectedDate
-            ? format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })
-            : "Sperrtermin"
-        }
-        description={
-          selectedEntry
-            ? selectedEntry.kind === "PREFERRED"
-              ? "Dieser Tag ist als bevorzugt markiert."
-              : "Dieser Tag ist derzeit gesperrt."
-            : selectedKind === "PREFERRED"
-              ? "Markiere den Tag als bevorzugten Probentermin."
-              : "Blocke den Tag, wenn du nicht verfügbar bist."
-        }
+      <Dialog
+        open={modalOpen && Boolean(selectedDate)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            closeModal();
+          }
+        }}
       >
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Aktion wählen
-            </p>
-            <div
-              className="grid gap-2 sm:grid-cols-2"
-              role="radiogroup"
-              aria-label="Aktion für diesen Tag"
-            >
-              {KIND_OPTIONS.map((option) => {
-                const isActive = selectedKind === option.kind;
-                return (
-                  <button
-                    key={option.kind}
-                    type="button"
-                    role="radio"
-                    aria-checked={isActive}
-                    onClick={() => setSelectedKind(option.kind)}
-                    className={cn(
-                      "rounded-lg border border-border/60 bg-background/80 p-3 text-left transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                      isActive && "border-primary bg-primary/10 shadow-sm"
-                    )}
-                  >
-                    <div className="text-sm font-semibold">{option.title}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {option.description}
-                    </div>
-                  </button>
-                );
-              })}
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDate
+                ? format(selectedDate, "EEEE, d. MMMM yyyy", { locale: de })
+                : "Sperrtermin"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedEntry
+                ? selectedEntry.kind === "PREFERRED"
+                  ? "Dieser Tag ist als bevorzugt markiert."
+                  : "Dieser Tag ist derzeit gesperrt."
+                : selectedKind === "PREFERRED"
+                  ? "Markiere den Tag als bevorzugten Probentermin."
+                  : "Blocke den Tag, wenn du nicht verfügbar bist."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Aktion wählen
+              </p>
+              <div
+                className="grid gap-2 sm:grid-cols-2"
+                role="radiogroup"
+                aria-label="Aktion für diesen Tag"
+              >
+                {KIND_OPTIONS.map((option) => {
+                  const isActive = selectedKind === option.kind;
+                  return (
+                    <button
+                      key={option.kind}
+                      type="button"
+                      role="radio"
+                      aria-checked={isActive}
+                      onClick={() => setSelectedKind(option.kind)}
+                      className={cn(
+                        "rounded-lg border border-border/60 bg-background/80 p-3 text-left transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                        isActive && "border-primary bg-primary/10 shadow-sm",
+                      )}
+                    >
+                      <div className="text-sm font-semibold">{option.title}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{option.description}</div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            <div>
+              <label htmlFor="block-reason" className="block text-sm font-medium">
+                Grund (optional)
+              </label>
+              <Input
+                id="block-reason"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="z. B. Urlaub, Familienfeier"
+                maxLength={200}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Die Angabe hilft der Planung, bleibt aber für andere Mitglieder kurz gehalten.
+              </p>
+            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
-
-          <div>
-            <label htmlFor="block-reason" className="block text-sm font-medium">
-              Grund (optional)
-            </label>
-            <Input
-              id="block-reason"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="z. B. Urlaub, Familienfeier"
-              maxLength={200}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Die Angabe hilft der Planung, bleibt aber für andere Mitglieder kurz gehalten.
-            </p>
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+          <DialogFooter
+            className={cn(
+              "flex-col gap-2 sm:flex-row",
+              selectedEntry ? "sm:justify-between sm:space-x-0" : "sm:justify-end",
+            )}
+          >
             {selectedEntry ? (
               <>
                 <Button
@@ -1137,9 +1154,9 @@ export function BlockCalendar({
                 {getSingleActionLabel(selectedKind)}
               </Button>
             )}
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

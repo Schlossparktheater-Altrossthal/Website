@@ -3,7 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { EditIcon } from "@/components/ui/icons";
-import { Modal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -525,47 +532,65 @@ export function PermissionMatrix() {
       {orderSaving ? (
         <p className="text-xs text-muted-foreground">Reihenfolge wird gespeichert…</p>
       ) : null}
-      <Modal
+      <Dialog
         open={editOpen}
-        onClose={closeEdit}
-        title="Rolle bearbeiten"
-        description="Passe den Namen der Rolle an oder lösche sie."
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            closeEdit();
+          }
+        }}
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium">Name</label>
-            <input
-              value={editRoleName}
-              onChange={(e) => setEditRoleName(e.target.value)}
-              className="mt-1 w-full rounded border px-3 py-2 text-sm"
-              placeholder="z. B. PR-Team"
-            />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rolle bearbeiten</DialogTitle>
+            <DialogDescription>Passe den Namen der Rolle an oder lösche sie.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium">Name</label>
+              <input
+                value={editRoleName}
+                onChange={(e) => setEditRoleName(e.target.value)}
+                className="mt-1 w-full rounded border px-3 py-2 text-sm"
+                placeholder="z. B. PR-Team"
+              />
+            </div>
+            {editError && <p className="text-sm text-destructive">{editError}</p>}
           </div>
-          {editError && <p className="text-sm text-destructive">{editError}</p>}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <DialogFooter className="mt-4 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-xs text-muted-foreground">
               Systemrollen können nicht bearbeitet oder gelöscht werden.
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={closeEdit} disabled={saving || deleting}>Abbrechen</Button>
-              <Button onClick={saveEdit} disabled={saving || deleting}>{saving ? "Speichern…" : "Speichern"}</Button>
+              <Button variant="outline" onClick={closeEdit} disabled={saving || deleting}>
+                Abbrechen
+              </Button>
+              <Button onClick={saveEdit} disabled={saving || deleting}>
+                {saving ? "Speichern…" : "Speichern"}
+              </Button>
             </div>
-          </div>
+          </DialogFooter>
           <div className="border-t pt-3">
             <div className="flex items-center justify-between">
               {!deleteConfirm ? (
-                <Button variant="destructive" onClick={() => setDeleteConfirm(true)} disabled={saving || deleting}>Rolle löschen…</Button>
+                <Button variant="destructive" onClick={() => setDeleteConfirm(true)} disabled={saving || deleting}>
+                  Rolle löschen…
+                </Button>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Sicher?</span>
-                  <Button variant="destructive" onClick={deleteRole} disabled={deleting}>{deleting ? "Lösche…" : "Ja, endgültig löschen"}</Button>
-                  <Button variant="ghost" onClick={() => setDeleteConfirm(false)} disabled={deleting}>Abbrechen</Button>
+                  <Button variant="destructive" onClick={deleteRole} disabled={deleting}>
+                    {deleting ? "Lösche…" : "Ja, endgültig löschen"}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setDeleteConfirm(false)} disabled={deleting}>
+                    Abbrechen
+                  </Button>
                 </div>
               )}
             </div>
           </div>
-        </div>
-      </Modal>
+        </DialogContent>
+      </Dialog>
       <style jsx global>{`
         .perm-toggle { position: relative; width: 40px; height: 22px; border-radius: 999px; border: 1px solid var(--border); background: color-mix(in oklab, var(--muted), transparent 20%); transition: background .2s ease, border-color .2s ease, box-shadow .2s ease; }
         .perm-toggle .knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--background); box-shadow: 0 1px 2px rgba(0,0,0,.15); transition: transform .2s ease; }

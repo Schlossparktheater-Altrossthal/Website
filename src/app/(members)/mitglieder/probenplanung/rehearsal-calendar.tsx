@@ -23,7 +23,13 @@ import {
 } from "@/components/calendar/month-calendar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/names";
 import { toast } from "sonner";
@@ -373,18 +379,25 @@ export function RehearsalCalendar({
         </p>
       </div>
 
-      {/* Planungs-Modal: Tagesplan + Blockierte Mitglieder zum ausgewählten Tag */}
-      <Modal
-        open={planOpen && !!selectedDate}
-        onClose={() => setPlanOpen(false)}
-        title={
-          selectedDate
-            ? format(selectedDate as Date, "EEEE, d. MMMM yyyy", { locale: de })
-            : "Tagesplan"
-        }
-        description={selectedSummary ?? undefined}
+      {/* Planungs-Dialog: Tagesplan + Blockierte Mitglieder zum ausgewählten Tag */}
+      <Dialog
+        open={planOpen && Boolean(selectedDate)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setPlanOpen(false);
+          }
+        }}
       >
-        <div className="space-y-6">
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDate
+                ? format(selectedDate as Date, "EEEE, d. MMMM yyyy", { locale: de })
+                : "Tagesplan"}
+            </DialogTitle>
+            {selectedSummary ? <DialogDescription>{selectedSummary}</DialogDescription> : null}
+          </DialogHeader>
+          <div className="space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full flex-col gap-3 sm:max-w-sm">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -490,7 +503,8 @@ export function RehearsalCalendar({
             )}
           </section>
         </div>
-      </Modal>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-8">
         {false && (

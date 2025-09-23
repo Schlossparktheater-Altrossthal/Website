@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Modal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -163,105 +170,114 @@ export function UserEditModal({ user, open, onOpenChange, onUpdated }: UserEditM
     }
   };
 
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true);
+    } else {
+      closeModal();
+    }
+  };
+
   return (
-    <Modal
-      open={open}
-      onClose={closeModal}
-      title="Benutzer bearbeiten"
-      description="Passe Kontaktinformationen und Zugangsdaten an"
-    >
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="flex items-center gap-4">
-            <UserAvatar
-              userId={user.id}
-              email={email}
-              firstName={firstName}
-              lastName={lastName}
-              name={displayName}
-              size={64}
-              className="h-16 w-16 text-lg"
-              avatarSource={user.avatarSource}
-              avatarUpdatedAt={user.avatarUpdatedAt}
-            />
-            <div>
-              <div className="text-sm font-medium">{headerDisplayName}</div>
-              <div className="text-xs text-muted-foreground">ID: {user.id}</div>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Benutzer bearbeiten</DialogTitle>
+          <DialogDescription>Passe Kontaktinformationen und Zugangsdaten an</DialogDescription>
+        </DialogHeader>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="flex items-center gap-4">
+              <UserAvatar
+                userId={user.id}
+                email={email}
+                firstName={firstName}
+                lastName={lastName}
+                name={displayName}
+                size={64}
+                className="h-16 w-16 text-lg"
+                avatarSource={user.avatarSource}
+                avatarUpdatedAt={user.avatarUpdatedAt}
+              />
+              <div>
+                <div className="text-sm font-medium">{headerDisplayName}</div>
+                <div className="text-xs text-muted-foreground">ID: {user.id}</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm">
+                <span>E-Mail</span>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="block text-sm">
+                  <span>Vorname</span>
+                  <Input
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    placeholder="Vorname"
+                    required
+                    autoComplete="given-name"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span>Nachname (optional)</span>
+                  <Input
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    placeholder="Nachname"
+                    autoComplete="family-name"
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm">
-              <span>E-Mail</span>
-              <Input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
-                required
-              />
-            </label>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <span className="text-sm font-medium">Neues Passwort (optional)</span>
+            <div className="grid gap-3 md:grid-cols-2">
               <label className="block text-sm">
-                <span>Vorname</span>
+                <span>Passwort</span>
                 <Input
-                  value={firstName}
-                  onChange={(event) => setFirstName(event.target.value)}
-                  placeholder="Vorname"
-                  required
-                  autoComplete="given-name"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Leer lassen, um das Passwort zu behalten"
+                  autoComplete="new-password"
                 />
               </label>
               <label className="block text-sm">
-                <span>Nachname (optional)</span>
+                <span>Passwort bestätigen</span>
                 <Input
-                  value={lastName}
-                  onChange={(event) => setLastName(event.target.value)}
-                  placeholder="Nachname"
-                  autoComplete="family-name"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="Nur bei Änderung erforderlich"
+                  autoComplete="new-password"
                 />
               </label>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <span className="text-sm font-medium">Neues Passwort (optional)</span>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-sm">
-              <span>Passwort</span>
-              <Input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Leer lassen, um das Passwort zu behalten"
-                autoComplete="new-password"
-              />
-            </label>
-            <label className="block text-sm">
-              <span>Passwort bestätigen</span>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="Nur bei Änderung erforderlich"
-                autoComplete="new-password"
-              />
-            </label>
-          </div>
-        </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={closeModal} disabled={saving}>
-            Abbrechen
-          </Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? "Speichern…" : "Speichern"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          <DialogFooter className="gap-2 sm:space-x-2">
+            <Button type="button" variant="outline" onClick={closeModal} disabled={saving}>
+              Abbrechen
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Speichern…" : "Speichern"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

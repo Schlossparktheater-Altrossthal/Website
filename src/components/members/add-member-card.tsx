@@ -5,7 +5,14 @@ import { Input } from "@/components/ui/input";
 import { describeRoles, ROLE_LABELS, ROLES, sortRoles, type Role } from "@/lib/roles";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Modal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { combineNameParts } from "@/lib/names";
 
 export function AddMemberModal() {
@@ -98,126 +105,132 @@ export function AddMemberModal() {
       <Button type="button" onClick={() => setOpen(true)}>
         Benutzer hinzufügen
       </Button>
-      <Modal
+      <Dialog
         open={open}
-        onClose={() => {
-          if (!saving) {
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            if (saving) return;
             setOpen(false);
             resetForm();
+          } else {
+            setOpen(true);
           }
         }}
-        title="Benutzer erstellen"
-        description="E-Mail, Passwort und Rollen festlegen"
       >
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="space-y-1 text-sm">
-              <span className="font-medium">E-Mail</span>
-              <Input
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="person@example.com"
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Benutzer erstellen</DialogTitle>
+            <DialogDescription>E-Mail, Passwort und Rollen festlegen</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="grid gap-3 md:grid-cols-2">
               <label className="space-y-1 text-sm">
-                <span className="font-medium">Vorname</span>
+                <span className="font-medium">E-Mail</span>
                 <Input
-                  value={firstName}
-                  onChange={(event) => setFirstName(event.target.value)}
-                  placeholder="Vorname"
+                  type="email"
                   required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="person@example.com"
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Vorname</span>
+                  <Input
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    placeholder="Vorname"
+                    required
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Nachname (optional)</span>
+                  <Input
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    placeholder="Nachname"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Passwort</span>
+                <Input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Mindestens 6 Zeichen"
+                  autoComplete="new-password"
                 />
               </label>
               <label className="space-y-1 text-sm">
-                <span className="font-medium">Nachname (optional)</span>
+                <span className="font-medium">Passwort bestätigen</span>
                 <Input
-                  value={lastName}
-                  onChange={(event) => setLastName(event.target.value)}
-                  placeholder="Nachname"
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="Nochmals eingeben"
+                  autoComplete="new-password"
                 />
               </label>
             </div>
-          </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="space-y-1 text-sm">
-              <span className="font-medium">Passwort</span>
-              <Input
-                type="password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Mindestens 6 Zeichen"
-                autoComplete="new-password"
-              />
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="font-medium">Passwort bestätigen</span>
-              <Input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="Nochmals eingeben"
-                autoComplete="new-password"
-              />
-            </label>
-          </div>
-
-          <div className="space-y-2">
-            <span className="text-sm font-medium">Rollen</span>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {ROLES.map((role) => {
-                const active = roles.includes(role);
-                return (
-                  <label
-                    key={role}
-                    className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border hover:bg-accent/30"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
-                      checked={active}
-                      onChange={() => toggleRole(role)}
-                    />
-                    <span>{ROLE_LABELS[role] ?? role}</span>
-                  </label>
-                );
-              })}
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Rollen</span>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {ROLES.map((role) => {
+                  const active = roles.includes(role);
+                  return (
+                    <label
+                      key={role}
+                      className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
+                        active
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:bg-accent/30"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
+                        checked={active}
+                        onChange={() => toggleRole(role)}
+                      />
+                      <span>{ROLE_LABELS[role] ?? role}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Zugewiesene Rollen: {describeRoles(roles)}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Zugewiesene Rollen: {describeRoles(roles)}
-            </p>
-          </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                if (!saving) {
+            <DialogFooter className="gap-2 sm:space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (saving) return;
                   setOpen(false);
                   resetForm();
-                }
-              }}
-            >
-              Abbrechen
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Erstelle…" : "Benutzer anlegen"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+                }}
+              >
+                Abbrechen
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Erstelle…" : "Benutzer anlegen"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
