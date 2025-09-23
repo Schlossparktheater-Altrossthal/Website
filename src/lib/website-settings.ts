@@ -61,6 +61,34 @@ export type ThemeTokens = {
 };
 
 const DEFAULT_MODE_KEYS = Object.keys(designTokens.modes).map((key) => key as ThemeModeKey);
+const LIGHT_MODE = "light" as ThemeModeKey;
+const DARK_MODE = "dark" as ThemeModeKey;
+
+type NumericOklch = {
+  l: number;
+  c: number;
+  h: number;
+  alpha: number;
+};
+
+function sortModeKeys(keys: ThemeModeKey[]): ThemeModeKey[] {
+  const priority = (mode: ThemeModeKey) => {
+    if (mode === LIGHT_MODE) {
+      return 0;
+    }
+    if (mode === DARK_MODE) {
+      return 1;
+    }
+    return 2;
+  };
+  return [...keys].sort((a, b) => {
+    const order = priority(a) - priority(b);
+    if (order !== 0) {
+      return order;
+    }
+    return a.localeCompare(b);
+  });
+}
 
 function deepClone<T>(value: T): T {
   if (value === undefined || value === null) {
@@ -73,6 +101,233 @@ const RESERVED_PARAMETER_KEYS = new Set(["family", "description", "notes", "tags
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function wrapHue(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  let result = value % 360;
+  if (result < 0) {
+    result += 360;
+  }
+  return result;
+}
+
+function toPrecision(value: number, precision: number) {
+  return Number.parseFloat(value.toFixed(precision));
+}
+
+function formatOklchValue(value: NumericOklch) {
+  const l = toPrecision(clamp(value.l, 0, 1), 3);
+  const c = toPrecision(Math.max(value.c, 0), 3);
+  const h = toPrecision(wrapHue(value.h), 1);
+  const alpha = clamp(value.alpha, 0, 1);
+  const prefix = `oklch(${l} ${c} ${h}`;
+  return alpha >= 0 && alpha < 1 ? `${prefix} / ${toPrecision(alpha, 2)})` : `${prefix})`;
+}
+
+function toNumericOklch(value: ThemeFamilyValue | undefined): NumericOklch | null {
+  if (!value) {
+    return null;
+  }
+  const l = typeof value.l === "number" ? clamp(value.l, 0, 1) : 0.5;
+  const c = typeof value.c === "number" ? Math.max(value.c, 0) : 0;
+  const h = typeof value.h === "number" ? value.h : 0;
+  const alpha = typeof value.alpha === "number" ? clamp(value.alpha, 0, 1) : 1;
+  return { l, c, h, alpha };
+}
+
+function applyAdjustments(base: NumericOklch, adjustments: ThemeTokenAdjustment | undefined): NumericOklch {
+  if (!adjustments || Object.keys(adjustments).length === 0) {
+    return { ...base };
+  }
+
+  const colour: NumericOklch = { ...base };
+
+  if (typeof adjustments.l === "number") {
+    colour.l = adjustments.l;
+  }
+  if (typeof adjustments.deltaL === "number") {
+    colour.l += adjustments.deltaL;
+  }
+  if (typeof adjustments.scaleL === "number") {
+    colour.l *= adjustments.scaleL;
+  }
+
+  if (typeof adjustments.c === "number") {
+    colour.c = adjustments.c;
+  }
+  if (typeof adjustments.deltaC === "number") {
+    colour.c += adjustments.deltaC;
+  }
+  if (typeof adjustments.scaleC === "number") {
+    colour.c *= adjustments.scaleC;
+  }
+
+  if (typeof adjustments.h === "number") {
+    colour.h = adjustments.h;
+  }
+  if (typeof adjustments.deltaH === "number") {
+    colour.h += adjustments.deltaH;
+  }
+
+  if (typeof adjustments.alpha === "number") {
+    colour.alpha = adjustments.alpha;
+  }
+  if (typeof adjustments.deltaAlpha === "number") {
+    colour.alpha += adjustments.deltaAlpha;
+  }
+  if (typeof adjustments.scaleAlpha === "number") {
+    colour.alpha *= adjustments.scaleAlpha;
+  }
+
+  colour.l = clamp(colour.l, 0, 1);
+  colour.c = Math.max(colour.c, 0);
+  colour.alpha = clamp(colour.alpha, 0, 1);
+
+  return colour;
+}
+
+function deriveModeKeysFromParameters(parameters: ThemeParameters | undefined): ThemeModeKey[] {
+  const modeSet = new Set<ThemeModeKey>(DEFAULT_MODE_KEYS);
+  if (!parameters) {
+    return sortModeKeys(Array.from(modeSet));
+  }
+
+  for (const familyModes of Object.values(parameters.families ?? {})) {
+    if (!familyModes) {
+      continue;
+    }
+    for (const key of Object.keys(familyModes)) {
+      modeSet.add(key as ThemeModeKey);
+    }
+  }
+
+  for (const definition of Object.values(parameters.tokens ?? {})) {
+    if (!definition || typeof definition !== "object") {
+      continue;
+    }
+    for (const key of Object.keys(definition)) {
+      if (!RESERVED_PARAMETER_KEYS.has(key)) {
+        modeSet.add(key as ThemeModeKey);
+      }
+    }
+  }
+
+  return sortModeKeys(Array.from(modeSet));
+}
+
+function resolveModesFromParameters(
+  parameters: ThemeParameters,
+  modeKeys: ThemeModeKey[],
+): Record<ThemeModeKey, Record<string, string>> {
+  const resolved: Record<ThemeModeKey, Record<string, string>> = {} as Record<
+    ThemeModeKey,
+    Record<string, string>
+  >;
+  const fallbackMode = modeKeys.includes(LIGHT_MODE)
+    ? LIGHT_MODE
+    : modeKeys.length > 0
+      ? modeKeys[0]
+      : null;
+
+  for (const mode of modeKeys) {
+    resolved[mode] = {};
+  }
+
+  const families = parameters.families ?? {};
+  const tokens = parameters.tokens ?? {};
+
+  for (const [tokenName, definition] of Object.entries(tokens)) {
+    const baseFamily =
+      typeof definition.family === "string" && definition.family.trim().length > 0
+        ? definition.family.trim()
+        : "neutral";
+
+    for (const mode of modeKeys) {
+      const rawAdjustments = definition[mode];
+      const adjustments =
+        rawAdjustments && typeof rawAdjustments === "object" && !Array.isArray(rawAdjustments)
+          ? (rawAdjustments as ThemeTokenAdjustment)
+          : undefined;
+
+      const familyOverride =
+        typeof adjustments?.family === "string" && adjustments.family.trim().length > 0
+          ? adjustments.family.trim()
+          : baseFamily;
+
+      const familyModes = families[familyOverride] ?? families[baseFamily];
+
+      const baseColourValue =
+        (familyModes?.[mode] as ThemeFamilyValue | undefined)
+        ?? (fallbackMode && familyModes
+          ? (familyModes[fallbackMode] as ThemeFamilyValue | undefined)
+          : undefined)
+        ?? (familyModes ? (Object.values(familyModes)[0] as ThemeFamilyValue | undefined) : undefined);
+
+      const normalisedBase = toNumericOklch(baseColourValue);
+      if (!normalisedBase) {
+        resolved[mode][tokenName] = "transparent";
+        continue;
+      }
+
+      if (adjustments && typeof adjustments.value === "string" && adjustments.value.trim()) {
+        resolved[mode][tokenName] = adjustments.value.trim();
+        continue;
+      }
+
+      const colour = applyAdjustments(normalisedBase, adjustments);
+      resolved[mode][tokenName] = formatOklchValue(colour);
+    }
+  }
+
+  return resolved;
+}
+
+function sanitiseManualModes(
+  candidate: unknown,
+  fallback: Record<ThemeModeKey, Record<string, string>>,
+): Record<ThemeModeKey, Record<string, string>> {
+  const fallbackRecord = fallback ?? ({} as Record<ThemeModeKey, Record<string, string>>);
+  const candidateRecord =
+    candidate && typeof candidate === "object" && !Array.isArray(candidate)
+      ? (candidate as Record<string, unknown>)
+      : {};
+
+  const modeNames = new Set<ThemeModeKey>(Object.keys(fallbackRecord).map((key) => key as ThemeModeKey));
+  for (const key of Object.keys(candidateRecord)) {
+    modeNames.add(key as ThemeModeKey);
+  }
+
+  const result: Record<ThemeModeKey, Record<string, string>> = {} as Record<
+    ThemeModeKey,
+    Record<string, string>
+  >;
+
+  for (const modeKey of modeNames) {
+    const fallbackTokens = fallbackRecord[modeKey] ?? {};
+    const manualTokensRaw = candidateRecord[modeKey];
+    const manualTokens =
+      manualTokensRaw && typeof manualTokensRaw === "object" && !Array.isArray(manualTokensRaw)
+        ? (manualTokensRaw as Record<string, unknown>)
+        : {};
+
+    const tokenNames = new Set<string>([
+      ...Object.keys(fallbackTokens),
+      ...Object.keys(manualTokens),
+    ]);
+
+    const resolvedTokens: Record<string, string> = {};
+    for (const tokenKey of tokenNames) {
+      const fallbackValue = fallbackTokens[tokenKey] ?? "transparent";
+      resolvedTokens[tokenKey] = sanitiseCssValue(manualTokens[tokenKey], fallbackValue);
+    }
+
+    result[modeKey] = resolvedTokens;
+  }
+
+  return result;
 }
 
 function sanitiseFamilyValue(
@@ -450,53 +705,31 @@ export function sanitiseThemeTokens(value: unknown): ThemeTokens {
     base.parameters = sanitiseParameters(record.parameters, base.parameters);
   }
 
-  const modesCandidate = record.modes;
-  if (modesCandidate && typeof modesCandidate === "object" && !Array.isArray(modesCandidate)) {
-    const modesRecord = modesCandidate as Record<string, unknown>;
-    const defaultModes = designTokens.modes as Record<string, Record<string, string>>;
-    const modeNames = new Set<ThemeModeKey>(DEFAULT_MODE_KEYS);
-    for (const key of Object.keys(modesRecord)) {
-      modeNames.add(key as ThemeModeKey);
-    }
+  const parameterModeKeys = deriveModeKeysFromParameters(base.parameters);
+  const derivedModes = base.parameters
+    ? resolveModesFromParameters(base.parameters, parameterModeKeys)
+    : (base.modes as Record<ThemeModeKey, Record<string, string>>);
 
-    for (const modeKey of modeNames) {
-      const candidate = modesRecord[modeKey];
-      const fallbackRecord = (base.modes[modeKey] as Record<string, string> | undefined)
-        ?? (defaultModes[modeKey] as Record<string, string> | undefined)
-        ?? {};
-
-      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
-        base.modes[modeKey] = { ...fallbackRecord } as Record<ThemeTokenKey, string>;
-        continue;
-      }
-
-      const candidateRecord = candidate as Record<string, unknown>;
-      const tokenNames = new Set<ThemeTokenKey>(
-        Object.keys(fallbackRecord).map((key) => key as ThemeTokenKey),
-      );
-      for (const key of Object.keys(candidateRecord)) {
-        tokenNames.add(key as ThemeTokenKey);
-      }
-
-      const resolvedTokens: Record<ThemeTokenKey, string> = {};
-      for (const tokenKey of tokenNames) {
-        const fallbackValue = fallbackRecord[tokenKey];
-        const fallbackString =
-          typeof fallbackValue === "string" && fallbackValue.trim().length > 0
-            ? fallbackValue
-            : "transparent";
-        resolvedTokens[tokenKey] = sanitiseCssValue(candidateRecord[tokenKey], fallbackString);
-      }
-
-      base.modes[modeKey] = resolvedTokens;
-    }
-  }
+  base.modes = sanitiseManualModes(record.modes, derivedModes) as Record<
+    ThemeModeKey,
+    Record<ThemeTokenKey, string>
+  >;
 
   const metaCandidate = record.meta;
+  let metaOverride: Record<string, unknown> | undefined;
   if (metaCandidate && typeof metaCandidate === "object" && !Array.isArray(metaCandidate)) {
-    const metaRecord = metaCandidate as Record<string, unknown>;
-    base.meta = { ...(base.meta ?? {}), ...metaRecord } as ThemeTokens["meta"];
+    metaOverride = metaCandidate as Record<string, unknown>;
   }
+
+  const resolvedModeKeys = sortModeKeys(
+    Object.keys(base.modes).map((key) => key as ThemeModeKey),
+  );
+
+  base.meta = {
+    ...(base.meta ?? {}),
+    ...(metaOverride ?? {}),
+    modes: resolvedModeKeys,
+  } as ThemeTokens["meta"];
 
   return base;
 }

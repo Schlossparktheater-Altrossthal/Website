@@ -75,15 +75,18 @@ const tokensMetaSchema = z
 
 const modeValuesSchema = createModeSchema();
 
+const themeModesSchema = z
+  .object({
+    light: modeValuesSchema.optional(),
+    dark: modeValuesSchema.optional(),
+  })
+  .catchall(modeValuesSchema)
+  .optional();
+
 const themeTokensSchema = z.object({
   radius: z.object({ base: z.string().trim().min(1).max(120) }),
   parameters: parametersSchema,
-  modes: z
-    .object({
-      light: modeValuesSchema,
-      dark: modeValuesSchema,
-    })
-    .catchall(modeValuesSchema),
+  modes: themeModesSchema,
   meta: tokensMetaSchema,
 });
 
