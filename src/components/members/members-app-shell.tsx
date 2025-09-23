@@ -223,13 +223,17 @@ function useMembersAppShellContext() {
 
 function SidebarMobileAutoClose() {
   const pathname = usePathname();
-  const { isMobile, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   React.useEffect(() => {
-    if (isMobile && openMobile) {
-      setOpenMobile(false);
+    if (!isMobile) {
+      return;
     }
-  }, [isMobile, openMobile, pathname, setOpenMobile]);
+
+    // Close the mobile sheet after navigation so the menu remains usable while
+    // it is open and collapses once a new page is shown.
+    setOpenMobile(false);
+  }, [isMobile, pathname, setOpenMobile]);
 
   return null;
 }
