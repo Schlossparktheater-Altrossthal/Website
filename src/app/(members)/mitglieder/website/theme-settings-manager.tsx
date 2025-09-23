@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ChevronDown, ChevronRight, Info } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { hexToOklch, oklchToHex, type OklchColor } from "@/lib/color";
 import { createThemeCss } from "@/lib/theme-css";
 import { cn } from "@/lib/utils";
 import type {
   ClientWebsiteSettings,
+  ClientWebsiteTheme,
+  ClientWebsiteThemeSummary,
   ThemeColorMode,
   ThemeModeKey,
   ThemeTokenAdjustment,
@@ -107,6 +111,28 @@ type NormalisedParameters = {
 };
 
 const DEFAULT_FAMILY_COLOR: NumericOklch = { l: 0.5, c: 0, h: 0, alpha: 1 };
+
+function sortThemeSummaries(themes: ClientWebsiteThemeSummary[]): ClientWebsiteThemeSummary[] {
+  return [...themes].sort((a, b) => {
+    if (a.isDefault && !b.isDefault) {
+      return -1;
+    }
+    if (!a.isDefault && b.isDefault) {
+      return 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function themeToSummary(theme: ClientWebsiteTheme): ClientWebsiteThemeSummary {
+  return {
+    id: theme.id,
+    name: theme.name,
+    description: theme.description,
+    isDefault: theme.isDefault,
+    updatedAt: theme.updatedAt,
+  };
+}
 
 function formatTokenLabel(token: string) {
   return token
@@ -691,12 +717,35 @@ function resolveThemeModes(
 
 export type WebsiteThemeSettingsManagerProps = {
   initialSettings: ClientWebsiteSettings;
+  initialThemes: ClientWebsiteThemeSummary[];
 };
 
-export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSettingsManagerProps) {
-  const [snapshot, setSnapshot] = useState<ClientWebsiteSettings>(initialSettings);
+export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: WebsiteThemeSettingsManagerProps) {
+  const mergedThemeSummaries = sortThemeSummaries(
+    Array.from(
+      new Map(
+        [
+          ...initialThemes.map((theme) => [theme.id, theme] as const),
+          [initialSettings.theme.id, themeToSummary(initialSettings.theme)] as const,
+        ],
+      ).values(),
+    ),
+  );
+
+  const [siteSnapshot, setSiteSnapshot] = useState(() => ({
+    id: initialSettings.id,
+    siteTitle: initialSettings.siteTitle,
+    colorMode: initialSettings.colorMode,
+    updatedAt: initialSettings.updatedAt,
+    activeThemeId: initialSettings.theme.id,
+  }));
   const [siteTitle, setSiteTitle] = useState(initialSettings.siteTitle);
   const [colorMode, setColorMode] = useState<ThemeColorMode>(initialSettings.colorMode);
+  const [availableThemes, setAvailableThemes] = useState<ClientWebsiteThemeSummary[]>(mergedThemeSummaries);
+  const [themeBaselines, setThemeBaselines] = useState<Record<string, ClientWebsiteTheme>>({
+    [initialSettings.theme.id]: initialSettings.theme,
+  });
+  const [currentTheme, setCurrentTheme] = useState<ClientWebsiteTheme>(initialSettings.theme);
   const [themeName, setThemeName] = useState(initialSettings.theme.name);
   const [themeDescription, setThemeDescription] = useState(initialSettings.theme.description ?? "");
   const [radius, setRadius] = useState(initialSettings.theme.tokens.radius.base);
@@ -716,15 +765,27 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
   const [familyHexDrafts, setFamilyHexDrafts] = useState<FamilyHexDraftState>({});
   const [expandedFamilies, setExpandedFamilies] = useState<Record<string, boolean>>({});
   const [showSemanticTokens, setShowSemanticTokens] = useState(false);
+  const [isLoadingTheme, setIsLoadingTheme] = useState(false);
+  const [isCreatingTheme, setIsCreatingTheme] = useState(false);
+  const [isDuplicatingTheme, setIsDuplicatingTheme] = useState(false);
+  const [isActivatingTheme, setIsActivatingTheme] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  const activeThemeSummary = useMemo(
+    () => availableThemes.find((theme) => theme.id === siteSnapshot.activeThemeId),
+    [availableThemes, siteSnapshot.activeThemeId],
+  );
 
   const modeKeys = useMemo(
-    () => deriveModeKeysFromTokens(snapshot.theme.tokens),
-    [snapshot.theme.tokens],
+    () => deriveModeKeysFromTokens(currentTheme.tokens),
+    [currentTheme.tokens],
   );
- 
+
   const fallbackParameters = useMemo(
-    () => normaliseParameters(snapshot.theme.tokens, modeKeys),
-    [snapshot.theme.tokens, modeKeys],
+    () => normaliseParameters(currentTheme.tokens, modeKeys),
+    [currentTheme.tokens, modeKeys],
   );
 
   const formParameters = useMemo(
@@ -755,32 +816,32 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
         parameters: parameters as unknown as ThemeTokens["parameters"],
         modes: previewModes as unknown as ThemeTokens["modes"],
         meta: {
-          ...(snapshot.theme.tokens.meta ?? {}),
+          ...(currentTheme.tokens.meta ?? {}),
           modes: modeKeys,
         },
       }) as ThemeTokens,
-    [parameters, previewModes, radius, snapshot.theme.tokens.meta, modeKeys],
+    [parameters, previewModes, radius, currentTheme.tokens.meta, modeKeys],
   );
 
-  const lastSavedIso = snapshot.theme.updatedAt ?? snapshot.updatedAt;
+  const lastSavedIso = currentTheme.updatedAt ?? siteSnapshot.updatedAt;
   const lastSavedLabel = lastSavedIso
     ? UPDATED_AT_FORMATTER.format(new Date(lastSavedIso))
     : "Noch nie gespeichert";
 
   const isDirty = useMemo(() => {
-    if (siteTitle.trim() !== snapshot.siteTitle.trim()) {
+    if (siteTitle.trim() !== siteSnapshot.siteTitle.trim()) {
       return true;
     }
-    if (colorMode !== snapshot.colorMode) {
+    if (colorMode !== siteSnapshot.colorMode) {
       return true;
     }
-    if (themeName.trim() !== snapshot.theme.name.trim()) {
+    if (themeName.trim() !== currentTheme.name.trim()) {
       return true;
     }
-    if ((themeDescription ?? "").trim() !== (snapshot.theme.description ?? "").trim()) {
+    if ((themeDescription ?? "").trim() !== (currentTheme.description ?? "").trim()) {
       return true;
     }
-    if (radius.trim() !== snapshot.theme.tokens.radius.base.trim()) {
+    if (radius.trim() !== currentTheme.tokens.radius.base.trim()) {
       return true;
     }
     const familiesChanged =
@@ -803,8 +864,11 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
     formParameters,
     fallbackParameters,
     showSemanticTokens,
-    snapshot,
+    siteSnapshot,
+    currentTheme,
   ]);
+
+  const renameDisabled = isRenaming || isSaving || isLoadingTheme || currentTheme.isDefault;
 
   useEffect(() => {
     const styleElement = document.getElementById("website-theme-style") as HTMLStyleElement | null;
@@ -815,7 +879,7 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
   }, [previewTokens]);
 
   useEffect(() => {
-    const savedCss = createThemeCss(snapshot.theme.tokens);
+    const savedCss = createThemeCss(currentTheme.tokens);
     return () => {
       const styleElement = document.getElementById("website-theme-style") as HTMLStyleElement | null;
       if (!styleElement) {
@@ -823,7 +887,7 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
       }
       styleElement.textContent = savedCss;
     };
-  }, [snapshot]);
+  }, [currentTheme]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -839,7 +903,7 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
   useEffect(() => {
     const root = document.documentElement;
     return () => {
-      if (snapshot.colorMode === "dark") {
+      if (siteSnapshot.colorMode === "dark") {
         root.classList.add("dark");
         root.style.colorScheme = "dark";
       } else {
@@ -847,7 +911,7 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
         root.style.colorScheme = "light";
       }
     };
-  }, [snapshot.colorMode]);
+  }, [siteSnapshot.colorMode]);
 
   const familyNames = useMemo(
     () => Object.keys(familiesState).sort((a, b) => a.localeCompare(b)),
@@ -929,19 +993,32 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
     }
   }
 
-  function applySettings(next: ClientWebsiteSettings, updateSnapshot = false) {
-    setSiteTitle(next.siteTitle);
-    setColorMode(next.colorMode);
-    setThemeName(next.theme.name);
-    setThemeDescription(next.theme.description ?? "");
-    setRadius(next.theme.tokens.radius.base);
-    const nextModeKeys = deriveModeKeysFromTokens(next.theme.tokens);
-    setFamiliesState(createFamilyFormState(next.theme.tokens.parameters, nextModeKeys));
-    setTokensState(createTokenFormState(next.theme.tokens.parameters, nextModeKeys));
+  function populateFormFromTheme(theme: ClientWebsiteTheme) {
+    setThemeName(theme.name);
+    setThemeDescription(theme.description ?? "");
+    setRadius(theme.tokens.radius.base);
+    const nextModeKeys = deriveModeKeysFromTokens(theme.tokens);
+    setFamiliesState(createFamilyFormState(theme.tokens.parameters, nextModeKeys));
+    setTokensState(createTokenFormState(theme.tokens.parameters, nextModeKeys));
     setFamilyHexDrafts({});
-    if (updateSnapshot) {
-      setSnapshot(next);
+    setExpandedFamilies({});
+  }
+
+  function applyThemeBaseline(theme: ClientWebsiteTheme, { updateMap = true } = {}) {
+    if (updateMap) {
+      setThemeBaselines((prev) => ({
+        ...prev,
+        [theme.id]: theme,
+      }));
     }
+    setCurrentTheme(theme);
+    populateFormFromTheme(theme);
+  }
+
+  function resetToBaseline() {
+    setSiteTitle(siteSnapshot.siteTitle);
+    setColorMode(siteSnapshot.colorMode);
+    populateFormFromTheme(currentTheme);
   }
 
   function handleFamilyChange(
@@ -1012,19 +1089,208 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
     }));
   }
 
-  async function handleSave() {
-    setIsSaving(true);
+  async function handleThemeSelect(themeId: string) {
+    if (themeId === currentTheme.id) {
+      return;
+    }
+    const cachedTheme = themeBaselines[themeId];
+    if (cachedTheme) {
+      applyThemeBaseline(cachedTheme, { updateMap: false });
+      return;
+    }
+
+    setIsLoadingTheme(true);
+    try {
+      const response = await fetch(`/api/website/themes/${themeId}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.theme) {
+        const message = data?.error ?? "Theme konnte nicht geladen werden.";
+        throw new Error(message);
+      }
+
+      const theme = data.theme as ClientWebsiteTheme;
+      setAvailableThemes((prev) => {
+        const map = new Map(prev.map((entry) => [entry.id, entry] as const));
+        map.set(theme.id, themeToSummary(theme));
+        return sortThemeSummaries(Array.from(map.values()));
+      });
+      applyThemeBaseline(theme);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Theme konnte nicht geladen werden.");
+    } finally {
+      setIsLoadingTheme(false);
+    }
+  }
+
+  async function handleCreateThemeClick() {
+    setIsCreatingTheme(true);
+    try {
+      const response = await fetch("/api/website/themes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.theme) {
+        const message = data?.error ?? "Theme konnte nicht erstellt werden.";
+        throw new Error(message);
+      }
+      const theme = data.theme as ClientWebsiteTheme;
+      setAvailableThemes((prev) => {
+        const map = new Map(prev.map((entry) => [entry.id, entry] as const));
+        map.set(theme.id, themeToSummary(theme));
+        return sortThemeSummaries(Array.from(map.values()));
+      });
+      applyThemeBaseline(theme);
+      toast.success("Neues Theme angelegt.");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Theme konnte nicht erstellt werden.");
+    } finally {
+      setIsCreatingTheme(false);
+    }
+  }
+
+  async function handleDuplicateThemeClick() {
+    setIsDuplicatingTheme(true);
+    try {
+      const response = await fetch("/api/website/themes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceThemeId: currentTheme.id }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.theme) {
+        const message = data?.error ?? "Theme konnte nicht dupliziert werden.";
+        throw new Error(message);
+      }
+      const theme = data.theme as ClientWebsiteTheme;
+      setAvailableThemes((prev) => {
+        const map = new Map(prev.map((entry) => [entry.id, entry] as const));
+        map.set(theme.id, themeToSummary(theme));
+        return sortThemeSummaries(Array.from(map.values()));
+      });
+      applyThemeBaseline(theme);
+      toast.success("Theme dupliziert.");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Theme konnte nicht dupliziert werden.");
+    } finally {
+      setIsDuplicatingTheme(false);
+    }
+  }
+
+  function openRenameDialog() {
+    if (currentTheme.isDefault) {
+      toast.info("Das Standard-Theme kann nicht umbenannt werden.");
+      return;
+    }
+    setRenameValue(themeName);
+    setRenameDialogOpen(true);
+  }
+
+  async function handleRenameSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!renameValue.trim()) {
+      toast.error("Der Theme-Name darf nicht leer sein.");
+      return;
+    }
+    if (currentTheme.isDefault) {
+      toast.error("Das Standard-Theme kann nicht umbenannt werden.");
+      setRenameDialogOpen(false);
+      return;
+    }
+    setIsRenaming(true);
+    try {
+      const response = await fetch(`/api/website/themes/${currentTheme.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: renameValue }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.theme) {
+        const message = data?.error ?? "Theme konnte nicht umbenannt werden.";
+        throw new Error(message);
+      }
+      const theme = data.theme as ClientWebsiteTheme;
+      setRenameValue(theme.name);
+      setAvailableThemes((prev) => {
+        const map = new Map(prev.map((entry) => [entry.id, entry] as const));
+        map.set(theme.id, themeToSummary(theme));
+        return sortThemeSummaries(Array.from(map.values()));
+      });
+      applyThemeBaseline(theme);
+      toast.success("Theme umbenannt.");
+      setRenameDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Theme konnte nicht umbenannt werden.");
+    } finally {
+      setIsRenaming(false);
+    }
+  }
+
+  async function handleActivateThemeClick() {
+    setIsActivatingTheme(true);
     try {
       const response = await fetch("/api/website/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          settings: {
-            siteTitle,
-            colorMode,
-          },
+          settings: { themeId: currentTheme.id },
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.settings) {
+        const message = data?.error ?? "Theme konnte nicht aktiviert werden.";
+        throw new Error(message);
+      }
+      const nextSettings = data.settings as ClientWebsiteSettings;
+      setSiteSnapshot({
+        id: nextSettings.id,
+        siteTitle: nextSettings.siteTitle,
+        colorMode: nextSettings.colorMode,
+        updatedAt: nextSettings.updatedAt,
+        activeThemeId: nextSettings.theme.id,
+      });
+      setSiteTitle(nextSettings.siteTitle);
+      setColorMode(nextSettings.colorMode);
+      setAvailableThemes((prev) => {
+        const map = new Map(prev.map((entry) => [entry.id, entry] as const));
+        map.set(nextSettings.theme.id, themeToSummary(nextSettings.theme));
+        return sortThemeSummaries(Array.from(map.values()));
+      });
+      if (nextSettings.theme.id === currentTheme.id) {
+        applyThemeBaseline(nextSettings.theme);
+      }
+      toast.success("Theme aktiviert.");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Theme konnte nicht aktiviert werden.");
+    } finally {
+      setIsActivatingTheme(false);
+    }
+  }
+
+  async function handleSave(activateTheme = currentTheme.id === siteSnapshot.activeThemeId) {
+    setIsSaving(true);
+    try {
+      const settingsPayload: Record<string, unknown> = {
+        siteTitle,
+        colorMode,
+      };
+      if (activateTheme) {
+        settingsPayload.themeId = currentTheme.id;
+      }
+
+      const response = await fetch("/api/website/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          settings: settingsPayload,
           theme: {
-            id: snapshot.theme.id,
+            id: currentTheme.id,
             name: themeName,
             description: themeDescription.length > 0 ? themeDescription : null,
             tokens: {
@@ -1032,12 +1298,13 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
               parameters,
               modes: previewModes,
               meta: {
-                ...(snapshot.theme.tokens.meta ?? {}),
+                ...(currentTheme.tokens.meta ?? {}),
                 modes: modeKeys,
                 generatedAt: new Date().toISOString(),
               },
             },
           },
+          activateTheme,
         }),
       });
 
@@ -1051,8 +1318,38 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
         throw new Error("Die Einstellungen konnten nicht gespeichert werden.");
       }
 
-      applySettings(data.settings as ClientWebsiteSettings, true);
-      toast.success("Website-Theme gespeichert.");
+      const nextSettings = data.settings as ClientWebsiteSettings;
+      const savedTheme = (data.theme as ClientWebsiteTheme | undefined) ?? null;
+      const activeTheme = nextSettings.theme;
+
+      setSiteSnapshot({
+        id: nextSettings.id,
+        siteTitle: nextSettings.siteTitle,
+        colorMode: nextSettings.colorMode,
+        updatedAt: nextSettings.updatedAt,
+        activeThemeId: nextSettings.theme.id,
+      });
+      setSiteTitle(nextSettings.siteTitle);
+      setColorMode(nextSettings.colorMode);
+
+      setAvailableThemes((prev) => {
+        const map = new Map(prev.map((theme) => [theme.id, theme] as const));
+        map.set(activeTheme.id, themeToSummary(activeTheme));
+        if (savedTheme) {
+          map.set(savedTheme.id, themeToSummary(savedTheme));
+        }
+        return sortThemeSummaries(Array.from(map.values()));
+      });
+
+      if (savedTheme && savedTheme.id === currentTheme.id) {
+        applyThemeBaseline(savedTheme);
+      } else if (activeTheme.id === currentTheme.id) {
+        applyThemeBaseline(activeTheme);
+      } else {
+        populateFormFromTheme(currentTheme);
+      }
+
+      toast.success(activateTheme ? "Theme gespeichert und aktiviert." : "Website-Theme gespeichert.");
     } catch (error) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : "Fehler beim Speichern.");
@@ -1063,6 +1360,114 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader className="space-y-2">
+          <CardTitle>Theme-Verwaltung</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Verwalte mehrere Themes, lege Varianten an und aktiviere die gewünschte Gestaltung.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="theme-select">Theme auswählen</Label>
+            <Select
+              value={currentTheme.id}
+              onValueChange={handleThemeSelect}
+              disabled={isLoadingTheme || isCreatingTheme || isDuplicatingTheme || isSaving}
+            >
+              <SelectTrigger id="theme-select">
+                <SelectValue placeholder="Theme auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableThemes.map((theme) => (
+                  <SelectItem key={theme.id} value={theme.id}>
+                    {theme.name}
+                    {theme.id === siteSnapshot.activeThemeId ? " • Aktiv" : ""}
+                    {theme.isDefault ? " • Standard" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              onClick={handleCreateThemeClick}
+              disabled={isCreatingTheme || isDuplicatingTheme || isSaving}
+              data-state={isCreatingTheme ? "loading" : undefined}
+            >
+              {isCreatingTheme ? "Theme wird erstellt…" : "Neues Theme"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDuplicateThemeClick}
+              disabled={isDuplicatingTheme || isCreatingTheme || isSaving}
+              data-state={isDuplicatingTheme ? "loading" : undefined}
+            >
+              {isDuplicatingTheme ? "Theme wird dupliziert…" : "Theme duplizieren"}
+            </Button>
+            {currentTheme.isDefault ? (
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={openRenameDialog}
+                        disabled={renameDisabled}
+                        data-state={isRenaming ? "loading" : undefined}
+                      >
+                        Umbenennen
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="center" className="max-w-xs text-center">
+                    Standard-Themes können nicht umbenannt werden.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openRenameDialog}
+                disabled={renameDisabled}
+                data-state={isRenaming ? "loading" : undefined}
+              >
+                Umbenennen
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleActivateThemeClick}
+              disabled={
+                isActivatingTheme
+                || isSaving
+                || isLoadingTheme
+                || currentTheme.id === siteSnapshot.activeThemeId
+              }
+              data-state={isActivatingTheme ? "loading" : undefined}
+            >
+              {isActivatingTheme ? "Aktiviere…" : "Theme aktivieren"}
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span>
+              Aktives Theme:{" "}
+              <span className="font-medium text-foreground">
+                {activeThemeSummary?.name ?? "Unbekannt"}
+              </span>
+            </span>
+            {currentTheme.isDefault ? <Badge variant="outline">Standard</Badge> : null}
+            <Badge variant={currentTheme.id === siteSnapshot.activeThemeId ? "default" : "outline"}>
+              {currentTheme.id === siteSnapshot.activeThemeId ? "Aktuell ausgewählt" : "Inaktiv"}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader className="space-y-2">
           <CardTitle>Allgemeine Einstellungen</CardTitle>
@@ -1657,21 +2062,80 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
           <Button
             type="button"
             variant="outline"
-            onClick={() => applySettings(snapshot)}
-            disabled={isSaving || !isDirty}
+            onClick={resetToBaseline}
+            disabled={isSaving || !isDirty || isLoadingTheme}
           >
             Änderungen verwerfen
           </Button>
+          {currentTheme.id !== siteSnapshot.activeThemeId ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleSave(true)}
+              disabled={isSaving || !isDirty || isLoadingTheme}
+              data-state={isSaving ? "loading" : undefined}
+            >
+              {isSaving ? "Speichern…" : "Speichern & aktivieren"}
+            </Button>
+          ) : null}
           <Button
             type="button"
-            onClick={handleSave}
-            disabled={isSaving || !isDirty}
+            onClick={() => handleSave()}
+            disabled={isSaving || !isDirty || isLoadingTheme}
             data-state={isSaving ? "loading" : undefined}
           >
             {isSaving ? "Speichern…" : "Theme speichern"}
           </Button>
         </div>
       </div>
+      <Dialog
+        open={renameDialogOpen}
+        onOpenChange={(open) => {
+          setRenameDialogOpen(open);
+          if (!open) {
+            setRenameValue(themeName);
+          }
+        }}
+      >
+        <DialogContent>
+          <form onSubmit={handleRenameSubmit} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Theme umbenennen</DialogTitle>
+              <DialogDescription>
+                Vergib einen neuen Namen für <span className="font-medium text-foreground">{currentTheme.name}</span>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="theme-rename">Neuer Theme-Name</Label>
+              <Input
+                id="theme-rename"
+                value={renameValue}
+                onChange={(event) => setRenameValue(event.target.value)}
+                maxLength={120}
+                placeholder="Theme-Bezeichnung"
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRenameDialogOpen(false)}
+                disabled={isRenaming}
+              >
+                Abbrechen
+              </Button>
+              <Button
+                type="submit"
+                disabled={isRenaming}
+                data-state={isRenaming ? "loading" : undefined}
+              >
+                {isRenaming ? "Speichern…" : "Umbenennen"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 import { designTokens } from "@/design-system";
 import { prisma } from "@/lib/prisma";
 import type { Prisma, WebsiteSettings, WebsiteTheme } from "@prisma/client";
@@ -662,6 +664,248 @@ function cloneDefaultTokens(): ThemeTokens {
   return cloneThemeTokens(designTokens);
 }
 
+type FamilyAdjuster = (value: ThemeFamilyValue, mode: ThemeModeKey) => ThemeFamilyValue;
+
+function adjustFamily(tokens: ThemeTokens, family: string, adjuster: FamilyAdjuster) {
+  const families = (tokens.parameters?.families ?? {}) as ThemeFamilies;
+  const familyModes = families[family];
+  if (!familyModes) {
+    return;
+  }
+
+  for (const entry of Object.entries(familyModes)) {
+    const mode = entry[0] as ThemeModeKey;
+    const current = entry[1] as ThemeFamilyValue | undefined;
+    if (!current) {
+      continue;
+    }
+
+    const next = adjuster({ ...current }, mode);
+    const nextAlpha = next.alpha ?? current.alpha;
+    familyModes[mode] = {
+      l: clamp(next.l, 0, 1),
+      c: Math.max(next.c, 0),
+      h: wrapHue(next.h),
+      ...(nextAlpha !== undefined ? { alpha: clamp(nextAlpha, 0, 1) } : {}),
+    } as ThemeFamilyValue;
+  }
+}
+
+function createSunsetPresetTokens(): ThemeTokens {
+  const tokens = cloneDefaultTokens();
+
+  adjustFamily(tokens, "brand", (value, mode) => ({
+    ...value,
+    h: value.h + 22,
+    c: mode === LIGHT_MODE ? value.c + 0.08 : value.c + 0.05,
+    l: mode === LIGHT_MODE ? value.l * 0.94 : value.l * 1.05,
+  }));
+
+  adjustFamily(tokens, "accent", (value, mode) => ({
+    ...value,
+    h: value.h + 28,
+    c: mode === LIGHT_MODE ? value.c + 0.06 : value.c + 0.07,
+    l: mode === LIGHT_MODE ? value.l * 0.97 : value.l * 1.04,
+  }));
+
+  adjustFamily(tokens, "neutral", (value, mode) => ({
+    ...value,
+    h: value.h + 6,
+    l: mode === LIGHT_MODE ? value.l * 1.02 : value.l * 0.95,
+  }));
+
+  tokens.radius.base = "0.75rem";
+  return tokens;
+}
+
+function createNightSkyPresetTokens(): ThemeTokens {
+  const tokens = cloneDefaultTokens();
+
+  adjustFamily(tokens, "brand", (value, mode) => ({
+    ...value,
+    h: 228,
+    c: mode === LIGHT_MODE ? Math.min(value.c + 0.05, 0.24) : Math.min(value.c + 0.08, 0.28),
+    l: mode === LIGHT_MODE ? value.l * 0.86 : value.l * 1.08,
+  }));
+
+  adjustFamily(tokens, "accent", (value, mode) => ({
+    ...value,
+    h: 208,
+    c: mode === LIGHT_MODE ? value.c + 0.04 : value.c + 0.06,
+    l: mode === LIGHT_MODE ? value.l * 0.9 : value.l * 1.06,
+  }));
+
+  adjustFamily(tokens, "neutral", (value, mode) => ({
+    ...value,
+    h: value.h + 4,
+    l: mode === LIGHT_MODE ? value.l * 0.9 : value.l * 1.05,
+  }));
+
+  tokens.radius.base = "0.5rem";
+  return tokens;
+}
+
+function createPastelPresetTokens(): ThemeTokens {
+  const tokens = cloneDefaultTokens();
+
+  adjustFamily(tokens, "brand", (value) => ({
+    ...value,
+    c: value.c * 0.6,
+    l: value.l * 1.05,
+  }));
+
+  adjustFamily(tokens, "accent", (value) => ({
+    ...value,
+    c: value.c * 0.58,
+    l: value.l * 1.07,
+  }));
+
+  adjustFamily(tokens, "neutral", (value, mode) => ({
+    ...value,
+    l: mode === LIGHT_MODE ? value.l * 1.04 : value.l * 0.96,
+  }));
+
+  tokens.radius.base = "1rem";
+  return tokens;
+}
+
+function createForestPresetTokens(): ThemeTokens {
+  const tokens = cloneDefaultTokens();
+
+  adjustFamily(tokens, "brand", (value, mode) => ({
+    ...value,
+    h: 140,
+    c: mode === LIGHT_MODE ? Math.min(value.c + 0.06, 0.24) : Math.min(value.c + 0.08, 0.28),
+    l: mode === LIGHT_MODE ? value.l * 0.9 : value.l * 1.08,
+  }));
+
+  adjustFamily(tokens, "accent", (value, mode) => ({
+    ...value,
+    h: 165,
+    c: mode === LIGHT_MODE ? Math.min(value.c + 0.04, 0.22) : Math.min(value.c + 0.06, 0.26),
+    l: mode === LIGHT_MODE ? value.l * 0.95 : value.l * 1.04,
+  }));
+
+  adjustFamily(tokens, "neutral", (value, mode) => ({
+    ...value,
+    h: value.h - 10,
+    l: mode === LIGHT_MODE ? value.l * 0.92 : value.l * 1.03,
+  }));
+
+  adjustFamily(tokens, "neutral-strong", (value, mode) => ({
+    ...value,
+    h: value.h - 12,
+    l: mode === LIGHT_MODE ? value.l * 0.88 : value.l * 1.05,
+  }));
+
+  tokens.radius.base = "0.875rem";
+  return tokens;
+}
+
+function createVelvetPresetTokens(): ThemeTokens {
+  const tokens = cloneDefaultTokens();
+
+  adjustFamily(tokens, "brand", (value, mode) => ({
+    ...value,
+    h: 288,
+    c: mode === LIGHT_MODE ? Math.min(value.c + 0.05, 0.24) : Math.min(value.c + 0.08, 0.3),
+    l: mode === LIGHT_MODE ? value.l * 0.9 : value.l * 1.1,
+  }));
+
+  adjustFamily(tokens, "accent", (value, mode) => ({
+    ...value,
+    h: 316,
+    c: mode === LIGHT_MODE ? Math.min(value.c + 0.04, 0.22) : Math.min(value.c + 0.06, 0.26),
+    l: mode === LIGHT_MODE ? value.l * 0.94 : value.l * 1.06,
+  }));
+
+  adjustFamily(tokens, "neutral", (value, mode) => ({
+    ...value,
+    h: value.h + 14,
+    l: mode === LIGHT_MODE ? value.l * 0.95 : value.l * 1.04,
+  }));
+
+  tokens.radius.base = "0.6rem";
+  return tokens;
+}
+
+function createFestivalPresetTokens(): ThemeTokens {
+  const tokens = cloneDefaultTokens();
+
+  adjustFamily(tokens, "brand", (value, mode) => ({
+    ...value,
+    h: value.h + 12,
+    c: mode === LIGHT_MODE ? Math.min(value.c + 0.07, 0.26) : Math.min(value.c + 0.09, 0.3),
+    l: mode === LIGHT_MODE ? value.l * 1.02 : value.l * 1.04,
+  }));
+
+  adjustFamily(tokens, "accent", (value, mode) => ({
+    ...value,
+    h: value.h - 20,
+    c: mode === LIGHT_MODE ? Math.min(value.c + 0.09, 0.28) : Math.min(value.c + 0.11, 0.32),
+    l: mode === LIGHT_MODE ? value.l * 1.04 : value.l * 1.05,
+  }));
+
+  adjustFamily(tokens, "neutral", (value, mode) => ({
+    ...value,
+    l: mode === LIGHT_MODE ? value.l * 1.05 : value.l * 0.94,
+  }));
+
+  adjustFamily(tokens, "neutral-strong", (value, mode) => ({
+    ...value,
+    l: mode === LIGHT_MODE ? value.l * 0.95 : value.l * 1.08,
+  }));
+
+  tokens.radius.base = "1.1rem";
+  return tokens;
+}
+
+type WebsiteThemePresetDefinition = {
+  id: string;
+  name: string;
+  description: string;
+  createTokens: () => ThemeTokens;
+};
+
+const PRESET_THEME_DEFINITIONS: WebsiteThemePresetDefinition[] = [
+  {
+    id: "theatre-sunset-glow",
+    name: "Sommertheater Sonnenuntergang",
+    description: "Warme Orange- und Goldtöne für stimmungsvolle Abendvorstellungen.",
+    createTokens: createSunsetPresetTokens,
+  },
+  {
+    id: "theatre-night-sky",
+    name: "Sommertheater Nachtblau",
+    description: "Kühle Blaunuancen mit hoher Kontrastwirkung für nächtliche Events.",
+    createTokens: createNightSkyPresetTokens,
+  },
+  {
+    id: "theatre-pastel-dream",
+    name: "Sommertheater Pastell",
+    description: "Sanfte Pastellfarben für festliche Sommermatineen.",
+    createTokens: createPastelPresetTokens,
+  },
+  {
+    id: "theatre-forest-canopy",
+    name: "Sommertheater Waldlichtung",
+    description: "Natürliche Grün- und Moostöne für Freilicht-Bühnenbilder.",
+    createTokens: createForestPresetTokens,
+  },
+  {
+    id: "theatre-velvet-spotlight",
+    name: "Sommertheater Samt & Scheinwerfer",
+    description: "Dramatische Purpurakzente für Gala-Abende und Premieren.",
+    createTokens: createVelvetPresetTokens,
+  },
+  {
+    id: "theatre-festival-lights",
+    name: "Sommertheater Festivallichter",
+    description: "Strahlende Festivalfarben mit verspieltem Charakter für Sommerfeste.",
+    createTokens: createFestivalPresetTokens,
+  },
+];
+
 function sanitiseCssValue(value: unknown, fallback: string): string {
   if (typeof value !== "string") {
     return fallback;
@@ -818,6 +1062,15 @@ export type ClientWebsiteTheme = {
   name: string;
   description: string | null;
   tokens: ThemeTokens;
+  isDefault: boolean;
+  updatedAt: string | null;
+};
+
+export type ClientWebsiteThemeSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  isDefault: boolean;
   updatedAt: string | null;
 };
 
@@ -829,19 +1082,36 @@ export type ClientWebsiteSettings = {
   theme: ClientWebsiteTheme;
 };
 
+export function toClientWebsiteTheme(resolved: ResolvedWebsiteTheme): ClientWebsiteTheme {
+  return {
+    id: resolved.id,
+    name: resolved.name,
+    description: resolved.description,
+    tokens: cloneThemeTokens(resolved.tokens),
+    isDefault: resolved.isDefault,
+    updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
+  };
+}
+
+export function toClientWebsiteThemeSummary(
+  resolved: ResolvedWebsiteTheme,
+): ClientWebsiteThemeSummary {
+  return {
+    id: resolved.id,
+    name: resolved.name,
+    description: resolved.description,
+    isDefault: resolved.isDefault,
+    updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
+  };
+}
+
 export function toClientWebsiteSettings(resolved: ResolvedWebsiteSettings): ClientWebsiteSettings {
   return {
     id: resolved.id,
     siteTitle: resolved.siteTitle,
     colorMode: resolved.colorMode,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
-    theme: {
-      id: resolved.theme.id,
-      name: resolved.theme.name,
-      description: resolved.theme.description,
-      tokens: cloneThemeTokens(resolved.theme.tokens),
-      updatedAt: resolved.theme.updatedAt ? resolved.theme.updatedAt.toISOString() : null,
-    },
+    theme: toClientWebsiteTheme(resolved.theme),
   };
 }
 
@@ -987,4 +1257,85 @@ export async function saveWebsiteTheme(id: string, input: WebsiteThemeInput) {
       isDefault: id === DEFAULT_THEME_ID,
     },
   });
+}
+
+export type CreateWebsiteThemeOptions = {
+  name?: string | null;
+  description?: string | null;
+  sourceThemeId?: string | null;
+};
+
+function sortResolvedThemes(themes: ResolvedWebsiteTheme[]) {
+  return [...themes].sort((a, b) => {
+    if (a.isDefault && !b.isDefault) {
+      return -1;
+    }
+    if (!a.isDefault && b.isDefault) {
+      return 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
+export async function ensurePresetWebsiteThemes() {
+  const presetIds = PRESET_THEME_DEFINITIONS.map((preset) => preset.id);
+  const existing = await prisma.websiteTheme.findMany({
+    where: { id: { in: presetIds } },
+    select: { id: true },
+  });
+  const existingIds = new Set(existing.map((theme) => theme.id));
+
+  for (const preset of PRESET_THEME_DEFINITIONS) {
+    if (existingIds.has(preset.id)) {
+      continue;
+    }
+    await prisma.websiteTheme.create({
+      data: {
+        id: preset.id,
+        name: preset.name,
+        description: preset.description,
+        tokens: tokensToJson(preset.createTokens()),
+        isDefault: false,
+      },
+    });
+  }
+}
+
+export async function listWebsiteThemes(): Promise<ClientWebsiteThemeSummary[]> {
+  await ensurePresetWebsiteThemes();
+  const themes = await prisma.websiteTheme.findMany();
+  const resolved = themes.map((theme) => resolveWebsiteTheme(theme));
+  const sorted = sortResolvedThemes(resolved);
+  return sorted.map((theme) => toClientWebsiteThemeSummary(theme));
+}
+
+export async function getWebsiteTheme(id: string) {
+  const record = await prisma.websiteTheme.findUnique({ where: { id } });
+  if (!record) {
+    return null;
+  }
+  return toClientWebsiteTheme(resolveWebsiteTheme(record));
+}
+
+export async function createWebsiteTheme(
+  options: CreateWebsiteThemeOptions = {},
+): Promise<ClientWebsiteTheme> {
+  await ensurePresetWebsiteThemes();
+
+  const sourceId = options.sourceThemeId?.trim() ? options.sourceThemeId.trim() : null;
+  const sourceTheme = sourceId
+    ? await prisma.websiteTheme.findUnique({ where: { id: sourceId } })
+    : null;
+
+  const baseTokens = sourceTheme?.tokens ?? cloneDefaultTokens();
+  const fallbackName = sourceTheme ? `${sourceTheme.name} Kopie` : "Neues Theme";
+  const newId = randomUUID();
+
+  const created = await saveWebsiteTheme(newId, {
+    name: options.name ?? fallbackName,
+    description: options.description ?? sourceTheme?.description ?? null,
+    tokens: baseTokens,
+  });
+
+  return toClientWebsiteTheme(resolveWebsiteTheme(created));
 }

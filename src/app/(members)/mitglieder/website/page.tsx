@@ -2,6 +2,8 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import {
   ensureWebsiteSettingsRecord,
+  ensurePresetWebsiteThemes,
+  listWebsiteThemes,
   resolveWebsiteSettings,
   toClientWebsiteSettings,
 } from "@/lib/website-settings";
@@ -25,9 +27,11 @@ export default async function WebsiteSettingsPage() {
   }
 
   try {
+    await ensurePresetWebsiteThemes();
     const record = await ensureWebsiteSettingsRecord();
     const resolved = resolveWebsiteSettings(record);
     const clientSettings = toClientWebsiteSettings(resolved);
+    const themes = await listWebsiteThemes();
 
     return (
       <div className="space-y-8">
@@ -37,7 +41,10 @@ export default async function WebsiteSettingsPage() {
             Passe Farben, Branding und Darstellung der öffentlichen Website an. Änderungen werden sofort im aktuellen Fenster sichtbar.
           </p>
         </div>
-        <WebsiteThemeSettingsManager initialSettings={clientSettings} />
+        <WebsiteThemeSettingsManager
+          initialSettings={clientSettings}
+          initialThemes={themes}
+        />
       </div>
     );
   } catch (error) {

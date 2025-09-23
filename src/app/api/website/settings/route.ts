@@ -1,110 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { themeDescriptionSchema, themeIdSchema, themeNameSchema, themeTokensSchema } from "../theme-schemas";
+
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import {
-  DEFAULT_THEME_ID,
   ensureWebsiteSettingsRecord,
   readWebsiteSettings,
   resolveWebsiteSettings,
+  resolveWebsiteTheme,
   saveWebsiteSettings,
   saveWebsiteTheme,
   toClientWebsiteSettings,
+  toClientWebsiteTheme,
 } from "@/lib/website-settings";
 
 const colorModeSchema = z.enum(["light", "dark"]);
-
-function createModeSchema() {
-  return z
-    .record(z.string().trim().min(1), z.string().trim().min(1).max(200))
-    .refine((value) => Object.keys(value).length > 0, {
-      message: "Jeder Modus benötigt mindestens ein Token.",
-    });
-}
-
-const oklchSchema = z.object({
-  l: z.number(),
-  c: z.number(),
-  h: z.number(),
-  alpha: z.number().min(0).max(1).optional(),
-});
-
-const familyModesSchema = z.record(z.string().min(1), oklchSchema);
-
-const familiesSchema = z.record(z.string().min(1), familyModesSchema);
-
-const tokenAdjustmentSchema = z.object({
-  deltaL: z.number().optional(),
-  l: z.number().optional(),
-  scaleL: z.number().optional(),
-  deltaC: z.number().optional(),
-  c: z.number().optional(),
-  scaleC: z.number().optional(),
-  h: z.number().optional(),
-  deltaH: z.number().optional(),
-  alpha: z.number().optional(),
-  deltaAlpha: z.number().optional(),
-  scaleAlpha: z.number().optional(),
-  value: z.string().trim().min(1).optional(),
-  family: z.string().trim().min(1).optional(),
-});
-
-const tokenMetaSchema = z.object({
-  description: z.string().trim().max(400).optional(),
-  notes: z.string().trim().max(1000).optional(),
-  tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
-});
-
-const semanticTokenSchema = tokenMetaSchema
-  .extend({ family: z.string().trim().min(1) })
-  .catchall(tokenAdjustmentSchema);
-
-const parametersSchema = z.object({
-  families: familiesSchema,
-  tokens: z.record(z.string().min(1), semanticTokenSchema),
-});
-
-const tokensMetaSchema = z
-  .object({
-    modes: z.array(z.string().trim().min(1)).optional(),
-    generatedAt: z.string().trim().optional(),
-  })
-  .catchall(z.any())
-  .optional();
-
-const modeValuesSchema = createModeSchema();
-
-const themeModesSchema = z
-  .object({
-    light: modeValuesSchema.optional(),
-    dark: modeValuesSchema.optional(),
-  })
-  .catchall(modeValuesSchema)
-  .optional();
-
-const themeTokensSchema = z.object({
-  radius: z.object({ base: z.string().trim().min(1).max(120) }),
-  parameters: parametersSchema,
-  modes: themeModesSchema,
-  meta: tokensMetaSchema,
-});
 
 const updateSchema = z.object({
   settings: z
     .object({
       siteTitle: z.string().trim().min(1).max(160).optional(),
       colorMode: colorModeSchema.optional(),
+      themeId: themeIdSchema.optional(),
     })
     .optional(),
   theme: z
     .object({
-      id: z.string().trim().min(1),
-      name: z.string().trim().min(2).max(120).optional(),
-      description: z.string().trim().max(500).optional().nullable(),
+      id: themeIdSchema,
+      name: themeNameSchema.optional(),
+      description: themeDescriptionSchema,
       tokens: themeTokensSchema,
     })
     .optional(),
+  activateTheme: z.boolean().optional(),
 });
 
 async function ensurePermission() {
@@ -160,35 +90,47 @@ export async function PUT(request: NextRequest) {
 
   const themePayload = parsed.data.theme;
   const settingsPayload = parsed.data.settings;
+  const explicitThemeId = settingsPayload?.themeId;
+  const activateTheme = parsed.data.activateTheme ?? Boolean(explicitThemeId !== undefined || themePayload);
 
   if (!themePayload && !settingsPayload) {
     return NextResponse.json({ error: "Keine Änderungen übermittelt." }, { status: 400 });
   }
 
   try {
-    const record = await ensureWebsiteSettingsRecord();
-    const targetThemeId = themePayload?.id ?? record.theme?.id ?? DEFAULT_THEME_ID;
+    await ensureWebsiteSettingsRecord();
+    let savedTheme = null;
 
     if (themePayload) {
-      await saveWebsiteTheme(targetThemeId, {
+      savedTheme = await saveWebsiteTheme(themePayload.id, {
         name: themePayload.name ?? undefined,
         description: themePayload.description ?? undefined,
         tokens: themePayload.tokens,
       });
     }
 
-    if (settingsPayload || themePayload) {
+    const desiredThemeId =
+      explicitThemeId !== undefined
+        ? explicitThemeId
+        : activateTheme && themePayload
+          ? themePayload.id
+          : undefined;
+
+    if (settingsPayload || desiredThemeId !== undefined) {
       await saveWebsiteSettings({
         siteTitle: settingsPayload?.siteTitle ?? undefined,
         colorMode: settingsPayload?.colorMode ?? undefined,
-        themeId: targetThemeId,
+        themeId: desiredThemeId,
       });
     }
 
     const refreshed = await readWebsiteSettings();
     const resolved = resolveWebsiteSettings(refreshed);
 
-    return NextResponse.json({ settings: toClientWebsiteSettings(resolved) });
+    return NextResponse.json({
+      settings: toClientWebsiteSettings(resolved),
+      theme: savedTheme ? toClientWebsiteTheme(resolveWebsiteTheme(savedTheme)) : undefined,
+    });
   } catch (error) {
     console.error("Failed to save website settings", error);
     return NextResponse.json({ error: "Die Einstellungen konnten nicht gespeichert werden." }, { status: 500 });
