@@ -1,7 +1,9 @@
-import { Share2 } from "lucide-react";
+import Link from "next/link";
+import { ChefHat, Share2 } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
 import { ShoppingListBoard } from "@/components/members/shopping-list-board";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -44,6 +46,7 @@ export default async function EinkaufslistePage() {
     recipes: DISH_LIBRARY,
     participantCount: defaultParticipantCount,
   });
+  const hasGeneratedItems = shoppingList.length > 0;
 
   return (
     <div className="space-y-6">
@@ -51,15 +54,51 @@ export default async function EinkaufslistePage() {
         title="Einkaufsliste"
         description="Die automatisch aggregierten Mengen aus der Essensplanung – inklusive eigener Ergänzungen und optionalem Sharing-Link."
         quickActions={
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Share2 className="h-4 w-4" />
-            <span>{shoppingList.length} Artikel · {totalParticipants} versorgte Personen</span>
-          </div>
+          hasGeneratedItems ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Share2 className="h-4 w-4" />
+              <span>{shoppingList.length} Artikel · {totalParticipants} versorgte Personen</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <ChefHat className="h-4 w-4" />
+              <span>Noch keine Rezepte fixiert – starte in der Essensplanung.</span>
+            </div>
+          )
         }
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)] xl:items-start">
         <div className="space-y-4">
+          {!hasGeneratedItems ? (
+            <Card className="border border-dashed border-border/60 bg-background/80">
+              <CardHeader className="space-y-2">
+                <div className="flex items-center gap-2 text-primary">
+                  <ChefHat className="h-5 w-5" />
+                  <CardTitle className="text-base font-semibold text-primary">Noch keine Einkaufsliste verfügbar</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Aktuell wurden noch keine Menüs für die Endprobenwoche festgelegt. Sobald du in der Essensplanung konkrete
+                  Gerichte fixierst, erzeugen wir automatisch eine gebündelte Einkaufsliste.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  Den Zeitraum der Endprobenwoche definierst du direkt bei der Produktionserstellung im Bereich{' '}
+                  <Link
+                    href="/mitglieder/produktionen"
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    „Produktionen“
+                  </Link>
+                  .
+                </p>
+                <Button asChild size="sm" variant="outline" className="w-fit">
+                  <Link href="/mitglieder/endproben-woche/essenplanung">Essensplanung öffnen</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
           <ShoppingListBoard initialItems={shoppingList} />
         </div>
         <div className="space-y-4">

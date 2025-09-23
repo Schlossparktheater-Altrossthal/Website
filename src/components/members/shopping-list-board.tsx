@@ -370,7 +370,8 @@ export function ShoppingListBoard({ initialItems }: ShoppingListBoardProps) {
       <CardContent className="space-y-6">
         {categoryBuckets.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border/60 bg-background/70 p-6 text-center text-sm text-muted-foreground">
-            Aktuell sind keine Einträge vorhanden. Füge neue Positionen hinzu oder lade eine geteilte Liste.
+            Aktuell sind keine Einträge vorhanden. Sobald du in der Essensplanung konkrete Gerichte festlegst, füllen wir
+            die Einkaufsliste automatisch. Eigene Ergänzungen oder geteilte Listen kannst du anschließend ergänzen.
           </p>
         ) : (
           categoryBuckets.map((bucket) => (
