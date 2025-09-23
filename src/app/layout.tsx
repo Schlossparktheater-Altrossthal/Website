@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 import "./globals.css";
 import type { Viewport } from "next";
+import { getServerSession } from "next-auth";
+import type { Session } from "next-auth";
 import { ThemeStyleRegistry } from "@/components/theme/theme-style-registry";
 import { geistSans, geistMono } from "./fonts";
 import {
@@ -10,6 +12,7 @@ import {
   resolveWebsiteSettings,
 } from "@/lib/website-settings";
 import { cn } from "@/lib/utils";
+import { authOptions } from "@/lib/auth";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
@@ -55,7 +58,16 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  let session: Session | null = null;
+  try {
+    session = await getServerSession(authOptions);
+  } catch (error) {
+    console.error("Failed to load session", error);
+  }
+
   let resolvedSettings = resolveWebsiteSettings(null);
 
   if (process.env.DATABASE_URL) {
@@ -82,7 +94,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeStyleRegistry tokens={themeTokens} />
       </head>
       <body className="antialiased bg-background text-foreground">
-        <Providers>
+        <Providers session={session}>
           <a
             href="#main"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-card/90 focus:px-3 focus:py-2"
