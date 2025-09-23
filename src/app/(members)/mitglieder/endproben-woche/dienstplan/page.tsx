@@ -417,8 +417,8 @@ export default async function FinalRehearsalDutyPlanPage() {
             <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
-                Hinterlege in der Produktionsplanung den Start der Endprobenwoche, um den Dienstplan zeitlich
-                einzuordnen.
+                Hinterlege bei der Produktionserstellung im Bereich „Produktionen“ den Start der Endprobenwoche, um den
+                Dienstplan zeitlich einzuordnen.
               </div>
             </div>
           ) : null}
@@ -558,8 +558,8 @@ export default async function FinalRehearsalDutyPlanPage() {
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <p>
-              Hinterlege in der Produktionsplanung den Beginn der Endprobenwoche. Danach kannst du die Dienste pro
-              Tag strukturieren und Verantwortliche zuweisen.
+              Hinterlege bei der Produktionserstellung im Bereich „Produktionen“ den Beginn der Endprobenwoche. Danach
+              kannst du die Dienste pro Tag strukturieren und Verantwortliche zuweisen.
             </p>
           </CardContent>
         </Card>
