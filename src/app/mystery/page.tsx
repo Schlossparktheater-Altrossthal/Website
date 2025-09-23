@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,36 @@ import { getMysteryClueSummaries, getMysteryScoreboard } from "@/lib/mystery-tip
 import { MysteryTipsBoard } from "./_components/mystery-tips-board";
 import { MysteryScoreboard } from "./_components/mystery-scoreboard";
 import { MysteryCountdownCard } from "./_components/mystery-countdown-card";
+
+export const metadata: Metadata = {
+  title: "Das Geheimnis des Sommertheaters",
+  description:
+    "Entschlüssele Hinweise, verfolge das Countdown-Ritual und teile deine Tipps für das große Sommertheater-Mysterium im Schlosspark.",
+  alternates: {
+    canonical: "/mystery",
+  },
+  openGraph: {
+    title: "Das Geheimnis des Sommertheaters",
+    description:
+      "Alle freigeschalteten Rätsel, das Countdown-Ritual und die Bestenliste des Sommertheater-Mysteriums auf einen Blick.",
+    url: "/mystery",
+    type: "website",
+    images: [
+      {
+        url: "/images/RuJ_3.png",
+        alt: "Verschlungene Wege im nächtlichen Schlosspark",
+      },
+    ],
+    siteName: "Sommertheater Altrossthal",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Das Geheimnis des Sommertheaters",
+    description:
+      "Tauche in die mystische Rätselreihe des Sommertheaters Altrossthal ein und begleite die Community bei der Lösung.",
+    images: ["/images/RuJ_3.png"],
+  },
+};
 
 type ClueContent = {
   text?: string;
