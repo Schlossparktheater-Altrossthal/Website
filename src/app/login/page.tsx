@@ -32,8 +32,10 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={null}>
-      <LoginPageClient />
-    </Suspense>
+    <main id="main" className="min-h-svh px-4 py-16">
+      <Suspense fallback={null}>
+        <LoginPageClient />
+      </Suspense>
+    </main>
   );
 }

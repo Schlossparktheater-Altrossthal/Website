@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { Providers } from "./providers";
 import "./globals.css";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { MysticBackground } from "@/components/mystic-background";
 import type { Viewport } from "next";
-import { execSync } from "node:child_process";
 import { ThemeStyleRegistry } from "@/components/theme/theme-style-registry";
 import { geistSans, geistMono } from "./fonts";
 import {
@@ -59,65 +55,6 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-type CommitInfo = {
-  short: string;
-  full: string;
-};
-
-const buildInfo = getBuildInfo();
-const isDevBuild = process.env.NODE_ENV === "development";
-
-function getBuildInfo() {
-  const buildDate = new Date();
-  const timestamp = new Intl.DateTimeFormat("de-DE", {
-    timeZone: "Europe/Berlin",
-    dateStyle: "short",
-    timeStyle: "medium",
-  }).format(buildDate);
-  const isoTimestamp = buildDate.toISOString();
-
-  const commit = getCommitInfo();
-
-  return {
-    commit,
-    timestamp,
-    isoTimestamp,
-  } satisfies {
-    commit: CommitInfo | null;
-    timestamp: string;
-    isoTimestamp: string;
-  };
-}
-
-function getCommitInfo(): CommitInfo | null {
-  const envCommit =
-    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
-    process.env.VERCEL_GIT_COMMIT_SHA ??
-    process.env.GITHUB_SHA ??
-    process.env.COMMIT_REF ??
-    null;
-
-  if (envCommit) {
-    const normalizedCommit = envCommit.trim();
-
-    return {
-      short: normalizedCommit.slice(0, 7),
-      full: normalizedCommit,
-    } satisfies CommitInfo;
-  }
-
-  try {
-    const fullCommitHash = execSync("git rev-parse HEAD").toString().trim();
-
-    return {
-      short: fullCommitHash.slice(0, 7),
-      full: fullCommitHash,
-    } satisfies CommitInfo;
-  } catch {
-    return null;
-  }
-}
-
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let resolvedSettings = resolveWebsiteSettings(null);
 
@@ -137,7 +74,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     geistSans.variable,
     geistMono.variable,
   );
-  const siteTitle = resolvedSettings.siteTitle;
   const themeTokens = resolvedSettings.theme.tokens;
 
   return (
@@ -153,14 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           >
             Zum Inhalt springen
           </a>
-          <div className="app-shell">
-            <MysticBackground />
-            <SiteHeader siteTitle={siteTitle} />
-            <main id="main" className="site-main">
-              {children}
-            </main>
-            <SiteFooter buildInfo={buildInfo} isDevBuild={isDevBuild} siteTitle={siteTitle} />
-          </div>
+          {children}
         </Providers>
       </body>
     </html>

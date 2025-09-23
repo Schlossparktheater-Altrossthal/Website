@@ -26,26 +26,26 @@ export default async function OnboardingInvitePage({ params }: { params: { token
 
   if (!invite) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 py-16 text-center">
+      <main id="main" className="mx-auto max-w-3xl space-y-6 py-16 text-center">
         <h1 className="text-3xl font-semibold">Einladung nicht gefunden</h1>
         <p className="text-muted-foreground">
           Dieser Einladungslink ist nicht gültig oder wurde bereits entfernt. Bitte wende dich an die Theaterleitung für einen
           neuen Link.
         </p>
-      </div>
+      </main>
     );
   }
 
   const status = calculateInviteStatus(invite);
   if (!status.isActive) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 py-16 text-center">
+      <main id="main" className="mx-auto max-w-3xl space-y-6 py-16 text-center">
         <h1 className="text-3xl font-semibold">Einladung nicht mehr aktiv</h1>
         <p className="text-muted-foreground">
           Diese Einladung kann nicht mehr verwendet werden. Sie ist entweder abgelaufen, deaktiviert oder es wurden alle Plätze
           genutzt.
         </p>
-      </div>
+      </main>
     );
   }
 
@@ -58,7 +58,7 @@ export default async function OnboardingInvitePage({ params }: { params: { token
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+    <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <OnboardingWizard
         sessionToken={redemption.sessionToken}
         invite={{
@@ -72,6 +72,6 @@ export default async function OnboardingInvitePage({ params }: { params: { token
           remainingUses: status.remainingUses,
         }}
       />
-    </div>
+    </main>
   );
 }

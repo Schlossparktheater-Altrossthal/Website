@@ -42,7 +42,7 @@ export default async function OwnerSetupPage({ params }: OwnerSetupPageProps) {
   }
 
   return (
-    <main className="mx-auto flex min-h-[70vh] max-w-2xl flex-col justify-center gap-8 px-4 py-16">
+    <main id="main" className="mx-auto flex min-h-[70vh] max-w-2xl flex-col justify-center gap-8 px-4 py-16">
       <div className="space-y-4">
         <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Erstkonfiguration</p>
         <h1 className="font-serif text-4xl">Owner-Zugang anlegen</h1>
@@ -79,7 +79,7 @@ interface InvalidTokenProps {
 
 function InvalidToken({ message }: InvalidTokenProps) {
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-xl flex-col justify-center gap-6 px-4 py-16 text-center">
+    <main id="main" className="mx-auto flex min-h-[60vh] max-w-xl flex-col justify-center gap-6 px-4 py-16 text-center">
       <h1 className="font-serif text-4xl">Owner-Link ungültig</h1>
       <p className="text-base text-muted-foreground">{message}</p>
       <p className="text-sm text-muted-foreground">

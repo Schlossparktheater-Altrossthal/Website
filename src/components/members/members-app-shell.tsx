@@ -52,7 +52,7 @@ export function MembersAppShell({
         />
         <SidebarRail />
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset id="main">
         <div className="flex min-h-svh flex-col">
           <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border/60 bg-background/90 px-4 backdrop-blur-sm sm:px-6 lg:px-8">
             <SidebarTrigger className="-ml-1 text-foreground/80 hover:text-foreground" />
