@@ -83,6 +83,7 @@ export const revalidate = 30;
 
 export default async function MysteryPage() {
   const now = new Date();
+  const initialNow = now.getTime();
   let clues: Clue[] = [];
   let tips: MysteryTipModel[] = [];
   let settingsRecord: Awaited<ReturnType<typeof readMysterySettings>> = null;
@@ -176,6 +177,7 @@ export default async function MysteryPage() {
             hasCustomCountdown={resolvedSettings.hasCustomCountdown}
             hasCustomMessage={resolvedSettings.hasCustomMessage}
             isFirstRiddleReleased={isFirstRiddleReleased}
+            initialNow={initialNow}
           />
           <Card className="flex flex-col">
             <CardHeader>

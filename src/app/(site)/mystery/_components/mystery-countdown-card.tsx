@@ -36,6 +36,7 @@ type MysteryCountdownCardProps = {
   hasCustomCountdown: boolean;
   hasCustomMessage: boolean;
   isFirstRiddleReleased: boolean;
+  initialNow: number;
 };
 
 type TimerState = {
@@ -61,6 +62,7 @@ export function MysteryCountdownCard({
   hasCustomCountdown,
   hasCustomMessage,
   isFirstRiddleReleased,
+  initialNow,
 }: MysteryCountdownCardProps) {
   const router = useRouter();
   const { hasFeature, toggleFeature, activeFeature } = useFrontendEditing();
@@ -142,7 +144,7 @@ export function MysteryCountdownCard({
       <CardContent className="space-y-4">
         {showCountdown ? (
           <>
-            <Countdown targetDate={state.effectiveCountdownTarget} />
+            <Countdown targetDate={state.effectiveCountdownTarget} initialNow={initialNow} />
             {countdownLabel ? (
               <Text variant="small" tone="muted">
                 Start am {countdownLabel}

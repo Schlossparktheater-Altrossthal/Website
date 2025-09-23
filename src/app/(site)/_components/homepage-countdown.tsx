@@ -24,6 +24,7 @@ type HomepageCountdownProps = {
   defaultCountdownTarget: string;
   updatedAt: string | null;
   hasCustomCountdown: boolean;
+  initialNow: number;
 };
 
 type CountdownSettingsState = {
@@ -84,6 +85,7 @@ export function HomepageCountdown({
   defaultCountdownTarget,
   updatedAt,
   hasCustomCountdown,
+  initialNow,
 }: HomepageCountdownProps) {
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
   const canEdit = hasFeature("site.countdown");
@@ -198,7 +200,7 @@ export function HomepageCountdown({
             Das Ensemble steht auf der Bühne – wir sehen uns im Schlosspark!
           </Text>
         ) : (
-          <Countdown targetDate={settings.effectiveCountdownTarget} />
+          <Countdown targetDate={settings.effectiveCountdownTarget} initialNow={initialNow} />
         )}
         <Text variant="small" tone="muted">
           {countdownLabel
