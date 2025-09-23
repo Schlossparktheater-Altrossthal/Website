@@ -184,6 +184,56 @@ const Sidebar = React.forwardRef<
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
+    const touchStartPoint = React.useRef<{ x: number; y: number } | null>(null);
+    const touchCurrentPoint = React.useRef<{ x: number; y: number } | null>(null);
+
+    const resetTouch = () => {
+      touchStartPoint.current = null;
+      touchCurrentPoint.current = null;
+    };
+
+    const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      touchStartPoint.current = { x: touch.clientX, y: touch.clientY };
+      touchCurrentPoint.current = null;
+    };
+
+    const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+      if (!touchStartPoint.current) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      touchCurrentPoint.current = { x: touch.clientX, y: touch.clientY };
+    };
+
+    const handleTouchEnd = () => {
+      if (!touchStartPoint.current) {
+        resetTouch();
+        return;
+      }
+
+      const start = touchStartPoint.current;
+      const end = touchCurrentPoint.current ?? start;
+
+      const deltaX = end.x - start.x;
+      const deltaY = Math.abs(end.y - start.y);
+      const horizontalDistance = Math.abs(deltaX);
+
+      const isSwipeHorizontal = horizontalDistance > 40 && horizontalDistance > deltaY;
+      const isClosingSwipe =
+        (side === "left" && deltaX < 0) || (side === "right" && deltaX > 0);
+
+      if (isSwipeHorizontal && isClosingSwipe) {
+        setOpenMobile(false);
+      }
+
+      resetTouch();
+    };
+
+    const handleTouchCancel = () => {
+      resetTouch();
+    };
+
     if (collapsible === "none") {
       return (
         <div
@@ -208,9 +258,14 @@ const Sidebar = React.forwardRef<
             className={cn(
               "bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden",
               "w-[min(100dvw,var(--sidebar-width))] max-w-[100dvw]",
+              "portrait:max-w-none portrait:w-[100dvw]",
             )}
             style={{ "--sidebar-width": SIDEBAR_WIDTH_MOBILE } as React.CSSProperties}
             side={side}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchCancel}
           >
             <SheetHeader className="sr-only">
               <SheetTitle>Sidebar</SheetTitle>
