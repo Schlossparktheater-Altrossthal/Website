@@ -18,6 +18,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Text } from "@/components/ui/typography";
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   defaultMembersNavIcon,
@@ -114,7 +115,7 @@ export function MembersNav({
     <>
       {!isCollapsed && (
         <>
-          <SidebarHeader className="gap-3">
+          <SidebarHeader className="gap-[var(--space-xs)]">
             <label htmlFor={searchInputId} className="sr-only">
               Mitgliederbereiche durchsuchen
             </label>
@@ -145,44 +146,60 @@ export function MembersNav({
           <SidebarSeparator />
         </>
       )}
-      <SidebarContent className={cn("pb-4", isCollapsed && "px-2 py-4")}>
+      <SidebarContent
+        className={cn(
+          "pb-[var(--space-sm)]",
+          isCollapsed && "px-[var(--space-2xs)] py-[var(--space-sm)]",
+        )}
+      >
         {!isCollapsed && (
-          <div className="px-3">
-            <div className="rounded-lg border border-sidebar-border/60 bg-sidebar/70 p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
+          <div className="px-[var(--space-xs)]">
+            <div className="rounded-lg border border-sidebar-border/60 bg-sidebar/70 p-[var(--space-sm)] shadow-sm">
+              <div className="flex items-start justify-between gap-[var(--space-xs)]">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/60">
+                  <Text variant="eyebrow" className="block text-sidebar-foreground/60">
                     Aktive Produktion
-                  </div>
+                  </Text>
                   {activeProduction && activeProductionTitle ? (
                     <>
-                      <div className="mt-1 text-sm font-semibold text-sidebar-foreground">
+                      <Text
+                        variant="body"
+                        weight="semibold"
+                        className="mt-[var(--space-3xs)] text-sidebar-foreground"
+                      >
                         {activeProductionTitle}
-                      </div>
-                      <div className="text-xs text-sidebar-foreground/70">
+                      </Text>
+                      <Text variant="caption" className="block text-sidebar-foreground/70">
                         Jahrgang {activeProduction.year}
-                      </div>
+                      </Text>
                     </>
                   ) : (
-                    <p className="mt-1 text-xs text-sidebar-foreground/70">
+                    <Text
+                      variant="caption"
+                      className="mt-[var(--space-3xs)] block text-sidebar-foreground/70"
+                    >
                       Noch keine Produktion ausgewählt. Wähle in der Übersicht eine aktive Produktion aus.
-                    </p>
+                    </Text>
                   )}
                 </div>
-                <Link
-                  href="/mitglieder/produktionen"
-                  className="text-xs font-medium text-sidebar-foreground/80 transition hover:text-sidebar-foreground"
+                <Text
+                  asChild
+                  variant="caption"
+                  weight="medium"
+                  className="text-sidebar-foreground/80 transition hover:text-sidebar-foreground"
                 >
-                  Übersicht öffnen
-                </Link>
+                  <Link href="/mitglieder/produktionen">Übersicht öffnen</Link>
+                </Text>
               </div>
             </div>
           </div>
         )}
 
         {groups.length === 0 ? (
-          <div className="mx-3 rounded-lg border border-dashed border-sidebar-border/60 bg-sidebar/40 p-3 text-sm text-sidebar-foreground/70">
-            {emptyStateMessage}
+          <div className="mx-[var(--space-xs)] rounded-lg border border-dashed border-sidebar-border/60 bg-sidebar/40 p-[var(--space-xs)] text-sidebar-foreground/70">
+            <Text variant="small" className="text-sidebar-foreground/70">
+              {emptyStateMessage}
+            </Text>
           </div>
         ) : (
           groups.map((group) => (
@@ -209,7 +226,10 @@ export function MembersNav({
                           asChild
                           isActive={active}
                           tooltip={item.label}
-                          className={cn("gap-2", isCollapsed && "justify-center")}
+                          className={cn(
+                            "gap-[var(--space-2xs)]",
+                            isCollapsed && "justify-center",
+                          )}
                         >
                           <Link
                             href={item.href}
@@ -225,7 +245,7 @@ export function MembersNav({
                             <span className={cn("truncate", isCollapsed && "sr-only")}>{item.label}</span>
                             {showBadge ? (
                               isPrimitiveBadge ? (
-                                <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/70">
+                                <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">
                                   {badgeContent}
                                 </SidebarMenuBadge>
                               ) : (
