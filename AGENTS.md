@@ -1,43 +1,53 @@
 # AGENTS.md
 
-## Überblick
-- Dieses Projekt basiert auf Next.js 15 mit App Router, TypeScript und React 19; der App-Code liegt unter `src/app` und nutzt den globalen Provider-Wrapper aus `src/app/providers.tsx`. 
-- Zusätzlich existiert im Ordner `realtime-server` ein eigenständiger Socket.io-Dienst, der mit dem Web-Frontend interagiert.
+## Stack & Einstieg
+- Der Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion (siehe Dockerfiles); aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
+- App-Code liegt im `src`-Ordner. Wichtige Bereiche: `src/app` (Routing & Server Components), `src/components` (UI-Bausteine inkl. shadcn/ui), `src/lib` (Domänenlogik & Hilfsfunktionen), `prisma` (Schema & Seeds) sowie `realtime-server` (Socket.io-Dienst).
+- Globale Provider für Session, React Query, Frontend-Editing und Realtime kommen aus `src/app/providers.tsx`. Ergänzende Kontexte bitte dort integrieren, nicht lokal verschachteln.
+- Legacy-Endpunkte unter `src/pages/api` existieren nur für die Socket-Bridge. Neue APIs gehören in `src/app/api` oder als dedizierte Server Actions.
 
 ## Tooling & lokale Entwicklung
-- Verwende konsequent `pnpm` (Lockfile vorhanden). Neue Abhängigkeiten installierst du mit `pnpm add <pkg>`.
-- Wichtige Skripte:
-  - `pnpm dev` startet die App und sorgt automatisch dafür, dass Prisma-Migrationen ausgeführt werden (per `scripts/run-prisma-migrate.mjs`).
-  - `pnpm lint`, `pnpm test` und `pnpm build` müssen vor jedem Commit fehlerfrei laufen.
-  - Für Datenbankarbeiten stehen `pnpm prisma:generate`, `pnpm db:migrate` und `pnpm db:seed` bereit.
-- Wenn du Prisma-Schemas änderst, führe `pnpm prisma:generate` aus und dokumentiere neue ENV-Variablen.
+- Installiere Abhängigkeiten mit `pnpm install --frozen-lockfile`. Für neue Pakete gilt `pnpm add <pkg>` (bzw. `pnpm add -D <pkg>` für Dev-Deps).
+- `pnpm dev` startet den Turbopack-Devserver, führt Prisma-Migrationen über `scripts/run-prisma-migrate.mjs` aus und synchronisiert Seeds bei Bedarf.
+- Weitere zentrale Skripte:
+  - `pnpm lint`, `pnpm test` (Vitest) und `pnpm build` müssen vor jedem Commit sauber durchlaufen.
+  - `pnpm prisma:generate`, `pnpm db:migrate`, `pnpm db:seed` für Datenbankarbeiten.
+  - `pnpm start:combined` bzw. `pnpm start:proxy` spiegeln das Docker-Setup ohne Container.
+  - Design-Token-Workflows: `pnpm swatches:gen` und `pnpm design-system:tokens`.
+- Docker-Compose-Stacks (siehe `README.md`) stellen Postgres & Mailpit bereit. Bei lokalen Datenbankänderungen immer auch `.env.example` aktualisieren.
 
-## Architektur- und Code-Konventionen
-- Standardmäßig Server Components nutzen; `use client` nur setzen, wenn zwingend nötig (z. B. Hooks wie React Query, NextAuth oder Realtime).
-- Gemeinsame Wrapper wie Session-, Query- und Realtime-Kontext kommen über `Providers` (`src/app/providers.tsx`).
-- Pfad-Alias `@/*` verwenden statt relativer Importketten.
-- Für Datenbankzugriffe ausschließlich den in `@/lib/prisma` bereitgestellten Proxy nutzen und keine eigenen `PrismaClient`-Instanzen anlegen.
-- Realtime-Funktionalität greift über `@/hooks/useRealtime` auf Socket.io zu; halte dich an die bestehende Handshake-/Room-Logik und pflege neue Events sowohl im Frontend als auch im Server (`realtime-server/src/server.js`). Beachte die ENV-Variablen (`NEXT_PUBLIC_REALTIME_URL`, `REALTIME_AUTH_TOKEN`, `REALTIME_HANDSHAKE_SECRET` usw.).
+## Architektur- & Code-Richtlinien
+- Standardmäßig React Server Components verwenden. `"use client"` nur bei zwingenden interaktiven Szenarien (Formulare, Drag & Drop, React Query etc.) setzen.
+- Server Actions liegen direkt neben den konsumierenden Komponenten (`actions.ts`). Bevorzugt Actions + React Server Components statt API-Mutationen, sofern Sessions oder Revalidierung (`revalidatePath`, `revalidateTag`) nicht entgegenstehen.
+- Datenbankzugriffe ausschließlich über den Proxy aus `@/lib/prisma`. Wiederverwendbare Queries in `@/lib/prisma-helpers` oder modularen Services kapseln.
+- Validierungen & Parsing mit `zod`. Für HTTP-Handler immer typed Schemas und eindeutige Fehlerantworten nutzen.
+- Verwende den Pfad-Alias `@/*` statt relativer Importketten. Helpers wie `cn` aus `@/lib/utils` für Klassenketten einsetzen.
+- Nutze Flat-Config-ESLint (`eslint.config.mjs`) und Prettier 3. Vor PRs `pnpm lint --fix` und ggf. `pnpm dlx prettier --check .` verwenden, um Formatierungsfehler früh zu erkennen.
 
-## UI- und UX-Richtlinien
-- Tailwind CSS und shadcn/ui sind die Basis. Nutze bestehende Komponenten aus `src/components/ui` und erweitere sie nur, wenn nötig.
-- Klassenketten mit dem `cn`-Helper aus `@/lib/utils` zusammenführen, statt manuell Strings zu konkatinieren.
-- Farben, Typografie und Interaktionsmuster richten sich nach den Dokumenten in `docs/design-system.md` und den generierten Swatches in `docs/swatches`.
-- Achte auf Barrierefreiheit (Skip-Link, Fokuszustände, Kontraste) im Sinne des bestehenden Layouts (`src/app/layout.tsx`).
-- Wenn du Screenshots aus dem Mitgliederbereich benötigst, melde dich vorher im Mitgliederbereich an; Screenshots dürfen nicht nur die Login-Seite zeigen.
+## Daten, Backend & Realtime
+- Schemaänderungen in `prisma/schema.prisma` stets mit Migration (`pnpm db:migrate`) begleiten, danach `pnpm prisma:generate` ausführen. Neue Tabellen/Felder im Seed (`prisma/seed.mjs`) und in Tests berücksichtigen.
+- Relevante ENV-Variablen (`DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_REALTIME_URL`, `REALTIME_AUTH_TOKEN`, `REALTIME_HANDSHAKE_SECRET` usw.) konsequent dokumentieren und in `.env.example` sowie README ergänzen.
+- Route Handler unter `src/app/api/**/route.ts` folgen der `NextRequest`/`NextResponse`-API. Gemeinsame Logik in `@/lib` auslagern, Fehler zentral über Hilfsfunktionen serialisieren.
+- Realtime-Ereignisse laufen über `@/hooks/useRealtime` und den Socket.io-Server (`realtime-server/src`). Neue Events gleichzeitig im Frontend (`@/lib/realtime`, Hooks oder Stores) und Backend pflegen, inklusive Auth-/Room-Validierung.
 
-## Tests & Qualitätssicherung
-- Vor Abgabe immer `pnpm lint`, `pnpm test` und `pnpm build` ausführen; Fehler müssen behoben werden.
-- Änderungen am Realtime-Server lokal über `npm start` (oder `node src/server.js`) überprüfen; halte die Server-Logs im Blick.
+## UI, UX & Content
+- Tailwind CSS und shadcn/ui bilden die Basis. Baue auf Komponenten aus `src/components/ui` auf und erweitere sie konsistent mit `tailwind-variants` bzw. `class-variance-authority`.
+- Designentscheidungen, Farbpaletten und Typografie folgen den Vorgaben in `docs/design-system.md` sowie den generierten Swatches (`docs/swatches`). Bei Änderungen Token neu generieren.
+- Barrierefreiheit hat Priorität: semantische HTML-Strukturen, beschreibende `aria`-Attribute, sichtbare Fokuszustände und ausreichende Kontraste gemäß bestehendem Layout (`src/app/layout.tsx`).
+- Toaster/Feedback-Komponenten laufen über `sonner`. Bei neuen Interaktionen sparsame, zugängliche Rückmeldungen implementieren.
 
-### Ausnahmen vom Standardprozedere
-- Reine Dokumentations- oder Organisationsänderungen (z. B. Updates an `README.md`, Dateien in `docs/`, `AGENTS.md` oder ähnlichen Markdown-Notizen) dürfen ohne `pnpm lint`, `pnpm test` und `pnpm build` abgeschlossen werden. Weise im Abschlussbericht ausdrücklich darauf hin, dass nur redaktionelle Inhalte angepasst wurden.
-- Für Aufgaben, die ausschließlich Assets unter `docs/swatches` oder anderen statischen Download-Ressourcen betreffen, sind ebenfalls keine Build- oder Testläufe nötig.
-- Wenn die Arbeit ausschließlich den eigenständigen Socket.io-Dienst im Ordner `realtime-server` betrifft und keinerlei Code im Next.js-Frontend geändert wurde, musst du lediglich die für diesen Dienst relevanten Checks ausführen (z. B. vorhandene npm-Skripte); die Next.js-Pipeline kann entfallen.
-- Sollten lokale Gegebenheiten (fehlende Binärabhängigkeiten, Zugriffsrechte o. Ä.) das Ausführen der genannten Tools unmöglich machen, dokumentiere die Blockade im finalen Bericht und liefere – sofern möglich – alternative Nachweise (z. B. statische Analyse, manuelle Tests).
+## Tests, Qualitätssicherung & Reviews
+- Vor jedem Commit `pnpm lint`, `pnpm test` und `pnpm build` ausführen; Fehler müssen behoben werden.
+- Vitest-Tests (`*.test.ts`, `__tests__`) liegen nahe am Quellcode. Für React-Komponenten `@testing-library/react` + Vitest verwenden, für Logik reine Unit-Tests.
+- Realtime-Änderungen zusätzlich durch `node realtime-server/src/server.js` bzw. bestehende npm-Skripte prüfen und Konsolen-Logs beobachten.
+- Nutze Preview-Deployments oder lokale Storybook-artige Seiten (sofern vorhanden), um UI-Änderungen visuell abzusichern.
 
 ## Dokumentation & Kommunikation
-- Aktualisiere bei relevanten Änderungen README, Docs oder ENV-Beispiele.
-- Notiere Design- oder Architekturentscheidungen im passenden Dokument im `docs/`-Ordner.
-- Überarbeite diese `AGENTS.md`, sofern es die Umstände erlauben und dadurch bessere Code- oder Kollaborationsmuster
-  entstehen beziehungsweise alte Anti-Patterns abgelöst werden; halte Anpassungen nachvollziehbar fest.
+- README, `docs/**` und `.env.example` bei relevanten Änderungen aktualisieren. Architektur- oder Designentscheidungen bitte im passenden Dokument notieren.
+- Tickets oder PR-Beschreibungen sollten Kontext, Entscheidungspunkte und QA-Schritte enthalten. Verweise auf Monitoring/Analytics ergänzen, falls betroffen.
+- Diese `AGENTS.md` bei Bedarf fortschreiben, wenn bessere Kollaborationsmuster oder neue Tooling-Standards entstehen. Änderungen nachvollziehbar begründen.
+
+## Ausnahmen & Sonderfälle
+- Reine Dokumentations-, Kommunikations- oder Organisationsänderungen (z. B. Updates an Markdown-Dateien) dürfen ohne `pnpm lint/test/build` abgeschlossen werden – im Abschlussbericht explizit darauf hinweisen.
+- Arbeiten ausschließlich am Socket.io-Dienst im Ordner `realtime-server` erfordern nur die dort relevanten Checks. Frontend-Builds können entfallen.
+- Wenn lokale Rahmenbedingungen (fehlende Binärabhängigkeiten, Rechteprobleme etc.) das Ausführen von Checks verhindern, Blockade dokumentieren und – wenn möglich – manuelle Tests oder statische Analysen beilegen.
