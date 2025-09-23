@@ -25,6 +25,9 @@ HTTP endpoint.
    app **without** a trailing slash. NextAuth uses it for callback URLs while
    notification emails and cron jobs rely on `NEXT_PUBLIC_BASE_URL`.
 5. Configure your email transport via `EMAIL_SERVER` or `EMAIL_SERVICE` + API key.
+6. Toggle offline support with `NEXT_PUBLIC_PWA_ENABLED` (set to `1` to register
+   the service worker) and adjust the background sync throughput with
+   `SYNC_BATCH_LIMIT`.
 
 ## Installation
 
@@ -135,6 +138,10 @@ Important environment variables:
   must use an absolute host instead of the relative `REALTIME_BASE_PATH`.
 - `REALTIME_AUTH_TOKEN` and `REALTIME_HANDSHAKE_SECRET` protect the realtime
   handshake and admin events.
+- `NEXT_PUBLIC_PWA_ENABLED` controls whether the client registers the PWA
+  service worker and offline caches.
+- `SYNC_BATCH_LIMIT` caps how many queued mutations get flushed per background
+  sync cycle when offline work reconnects.
 - `APP_SERVER_PORT` (default `PORT + 1`) sets the internal port where the
   combined Next.js/Socket.IO server listens when the reverse proxy is enabled.
 
