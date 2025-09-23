@@ -24,6 +24,7 @@ type HomepageCountdownProps = {
   defaultCountdownTarget: string;
   updatedAt: string | null;
   hasCustomCountdown: boolean;
+  serverNow: string;
 };
 
 type CountdownSettingsState = {
@@ -55,6 +56,11 @@ const UPDATED_AT_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   timeZone: "Europe/Berlin",
 });
 
+function parseTimestamp(iso: string) {
+  const timestamp = Date.parse(iso);
+  return Number.isNaN(timestamp) ? Date.now() : timestamp;
+}
+
 function isoToLocalInputValue(iso: string | null) {
   if (!iso) return "";
   const date = new Date(iso);
@@ -84,11 +90,14 @@ export function HomepageCountdown({
   defaultCountdownTarget,
   updatedAt,
   hasCustomCountdown,
+  serverNow,
 }: HomepageCountdownProps) {
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
   const canEdit = hasFeature("site.countdown");
   const editorOpen = canEdit && activeFeature === "site.countdown";
 
+  const serverNowTimestamp = useMemo(() => parseTimestamp(serverNow), [serverNow]);
+  const [currentTimestamp, setCurrentTimestamp] = useState(serverNowTimestamp);
   const [settings, setSettings] = useState<CountdownSettingsState>(() => ({
     countdownTarget: initialCountdownTarget,
     effectiveCountdownTarget,
@@ -117,6 +126,13 @@ export function HomepageCountdown({
     }
   }, [editorOpen]);
 
+  useEffect(() => {
+    const updateTimestamp = () => setCurrentTimestamp(Date.now());
+    updateTimestamp();
+    const interval = window.setInterval(updateTimestamp, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const countdownLabel = useMemo(
     () => formatIsoForDisplay(settings.effectiveCountdownTarget, COUNTDOWN_LABEL_FORMATTER),
     [settings.effectiveCountdownTarget],
@@ -135,8 +151,8 @@ export function HomepageCountdown({
   const countdownReached = useMemo(() => {
     const target = new Date(settings.effectiveCountdownTarget);
     if (Number.isNaN(target.getTime())) return false;
-    return target.getTime() <= Date.now();
-  }, [settings.effectiveCountdownTarget]);
+    return target.getTime() <= currentTimestamp;
+  }, [settings.effectiveCountdownTarget, currentTimestamp]);
 
   function handleToggleEditor() {
     if (!canEdit) return;
@@ -198,7 +214,10 @@ export function HomepageCountdown({
             Das Ensemble steht auf der Bühne – wir sehen uns im Schlosspark!
           </Text>
         ) : (
-          <Countdown targetDate={settings.effectiveCountdownTarget} />
+          <Countdown
+            targetDate={settings.effectiveCountdownTarget}
+            initialNow={serverNowTimestamp}
+          />
         )}
         <Text variant="small" tone="muted">
           {countdownLabel

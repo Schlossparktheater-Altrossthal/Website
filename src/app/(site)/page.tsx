@@ -31,6 +31,7 @@ export default async function Home() {
     ? resolvedCountdown.countdownTarget.toISOString()
     : null;
   const updatedAtIso = resolvedCountdown.updatedAt ? resolvedCountdown.updatedAt.toISOString() : null;
+  const serverNowIso = new Date().toISOString();
   const faqs = [
     {
       question: "Was ist das Sommertheater im Schlosspark?",
@@ -74,6 +75,7 @@ export default async function Home() {
               defaultCountdownTarget={DEFAULT_HOMEPAGE_COUNTDOWN_ISO}
               updatedAt={updatedAtIso}
               hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
+              serverNow={serverNowIso}
             />
             <Text variant="bodyLg" align="center" tone="muted">
               Ein einziges Wochenende. Ein Sommer. Ein Stück.

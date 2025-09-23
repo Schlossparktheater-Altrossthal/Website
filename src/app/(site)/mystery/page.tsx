@@ -176,6 +176,7 @@ export default async function MysteryPage() {
             hasCustomCountdown={resolvedSettings.hasCustomCountdown}
             hasCustomMessage={resolvedSettings.hasCustomMessage}
             isFirstRiddleReleased={isFirstRiddleReleased}
+            serverNow={now.toISOString()}
           />
           <Card className="flex flex-col">
             <CardHeader>

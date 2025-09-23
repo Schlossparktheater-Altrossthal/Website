@@ -25,6 +25,11 @@ function formatLabel(iso: string) {
   return COUNTDOWN_LABEL_FORMATTER.format(date);
 }
 
+function parseTimestamp(iso: string) {
+  const timestamp = Date.parse(iso);
+  return Number.isNaN(timestamp) ? Date.now() : timestamp;
+}
+
 type MysteryCountdownCardProps = {
   initialCountdownTarget: string | null;
   initialExpirationMessage: string | null;
@@ -36,6 +41,7 @@ type MysteryCountdownCardProps = {
   hasCustomCountdown: boolean;
   hasCustomMessage: boolean;
   isFirstRiddleReleased: boolean;
+  serverNow: string;
 };
 
 type TimerState = {
@@ -61,9 +67,12 @@ export function MysteryCountdownCard({
   hasCustomCountdown,
   hasCustomMessage,
   isFirstRiddleReleased,
+  serverNow,
 }: MysteryCountdownCardProps) {
   const router = useRouter();
   const { hasFeature, toggleFeature, activeFeature } = useFrontendEditing();
+  const serverNowTimestamp = useMemo(() => parseTimestamp(serverNow), [serverNow]);
+  const [currentTimestamp, setCurrentTimestamp] = useState(serverNowTimestamp);
   const [state, setState] = useState<TimerState>(() => ({
     countdownTarget: initialCountdownTarget,
     expirationMessage: initialExpirationMessage,
@@ -105,8 +114,15 @@ export function MysteryCountdownCard({
   const countdownReached = useMemo(() => {
     const target = new Date(state.effectiveCountdownTarget);
     if (Number.isNaN(target.getTime())) return false;
-    return target.getTime() <= Date.now();
-  }, [state.effectiveCountdownTarget]);
+    return target.getTime() <= currentTimestamp;
+  }, [state.effectiveCountdownTarget, currentTimestamp]);
+
+  useEffect(() => {
+    const updateTimestamp = () => setCurrentTimestamp(Date.now());
+    updateTimestamp();
+    const interval = window.setInterval(updateTimestamp, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const showCountdown = !isFirstRiddleReleased && !countdownReached;
 
@@ -142,7 +158,10 @@ export function MysteryCountdownCard({
       <CardContent className="space-y-4">
         {showCountdown ? (
           <>
-            <Countdown targetDate={state.effectiveCountdownTarget} />
+            <Countdown
+              targetDate={state.effectiveCountdownTarget}
+              initialNow={serverNowTimestamp}
+            />
             {countdownLabel ? (
               <Text variant="small" tone="muted">
                 Start am {countdownLabel}
