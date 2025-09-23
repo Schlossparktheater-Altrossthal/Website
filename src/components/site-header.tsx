@@ -4,7 +4,9 @@ import Link from "next/link";
 import {
   type CSSProperties,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
@@ -103,12 +105,77 @@ const heroGradientStyles = {
 } satisfies CSSProperties;
 
 export function SiteHeader({ siteTitle }: { siteTitle: string }) {
+  const headerRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const isHomePage = pathname === "/";
 
   const navigationItems = useMemo(() => primaryNavigation, []);
+
+  useLayoutEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const headerElement = headerRef.current;
+    if (!headerElement) {
+      return;
+    }
+
+    const root = document.documentElement;
+
+    const updateHeight = () => {
+      const { height } = headerElement.getBoundingClientRect();
+      root.style.setProperty("--header-height", `${height}px`);
+    };
+
+    updateHeight();
+
+    let resizeObserver: ResizeObserver | null = null;
+    let cleanupResizeListener: (() => void) | null = null;
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+
+        const borderBoxSize = Array.isArray(entry.borderBoxSize)
+          ? entry.borderBoxSize[0]
+          : entry.borderBoxSize;
+        const height =
+          borderBoxSize?.blockSize ??
+          entry.contentRect?.height ??
+          headerElement.getBoundingClientRect().height;
+
+        root.style.setProperty("--header-height", `${height}px`);
+      });
+      resizeObserver.observe(headerElement);
+    } else {
+      const target = globalThis as typeof globalThis & {
+        addEventListener?: Window["addEventListener"];
+        removeEventListener?: Window["removeEventListener"];
+      };
+
+      if (
+        typeof target.addEventListener === "function" &&
+        typeof target.removeEventListener === "function"
+      ) {
+        const add = target.addEventListener.bind(target);
+        const remove = target.removeEventListener.bind(target);
+        add("resize", updateHeight);
+        cleanupResizeListener = () => {
+          remove("resize", updateHeight);
+        };
+      }
+    }
+
+    return () => {
+      resizeObserver?.disconnect();
+      cleanupResizeListener?.();
+      root.style.removeProperty("--header-height");
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -122,6 +189,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <header
+        ref={headerRef}
         className={`fixed top-0 z-50 w-full transition-all duration-300 ${
           scrolled || !isHomePage
             ? "border-b border-border/50 bg-background/95 backdrop-blur-md shadow-lg"
@@ -139,15 +207,16 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
         <nav
           aria-label="Hauptnavigation"
           style={navSpacingStyles}
-          className="layout-container flex flex-wrap items-center gap-[var(--nav-gap)] py-[var(--nav-padding-y)] sm:[--nav-gap:var(--space-sm)] md:[--nav-gap:var(--space-md)] md:[--nav-padding-y:var(--space-sm)]"
+          className="layout-container flex flex-nowrap items-center gap-[var(--nav-gap)] py-[var(--nav-padding-y)] sm:[--nav-gap:var(--space-sm)] md:[--nav-gap:var(--space-md)] md:[--nav-padding-y:var(--space-sm)]"
         >
           <Link
-            className={`font-serif text-lg transition-all duration-300 sm:text-xl ${
+            className={`flex-1 min-w-0 truncate font-serif text-lg transition-all duration-300 sm:text-xl ${
               scrolled || !isHomePage
                 ? "text-primary hover:opacity-90"
                 : "text-foreground drop-shadow-lg hover:text-primary/90"
             }`}
             href="/"
+            title={siteTitle}
           >
             {siteTitle}
           </Link>
@@ -181,17 +250,17 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
 
           <div
             style={actionsSpacingStyles}
-            className="ml-auto flex items-center gap-[var(--header-actions-gap)] sm:[--header-actions-gap:var(--space-xs)]"
+            className="ml-auto flex flex-shrink-0 items-center gap-[var(--header-actions-gap)] sm:[--header-actions-gap:var(--space-xs)]"
           >
-            <NotificationBell />
-            <UserNav className="relative" />
+            <NotificationBell className="flex-shrink-0" />
+            <UserNav className="flex-shrink-0" />
 
             {/* Mobile menu button */}
             <SheetTrigger asChild>
               <button
                 type="button"
                 aria-label="Menü öffnen"
-                className={`inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring md:hidden ${
+                className={`inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] flex-shrink-0 items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring md:hidden ${
                   scrolled || !isHomePage
                     ? "border border-border/60 text-foreground hover:bg-accent/30"
                     : "border border-border/60 text-foreground drop-shadow-lg hover:bg-accent/20"
