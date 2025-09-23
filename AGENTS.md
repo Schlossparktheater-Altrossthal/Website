@@ -39,3 +39,5 @@
 ## Dokumentation & Kommunikation
 - Aktualisiere bei relevanten Änderungen README, Docs oder ENV-Beispiele.
 - Notiere Design- oder Architekturentscheidungen im passenden Dokument im `docs/`-Ordner.
+- Überarbeite diese `AGENTS.md`, sofern es die Umstände erlauben und dadurch bessere Code- oder Kollaborationsmuster
+  entstehen beziehungsweise alte Anti-Patterns abgelöst werden; halte Anpassungen nachvollziehbar fest.
