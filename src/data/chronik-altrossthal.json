@@ -300,6 +300,28 @@
       "https://www.facebook.com/BSZ.AE.DD/posts/-jedes-jahr-ein-highlightso-schrieb-uns-ein-treuer-theatergast-und-wir-freuen-un/1267896945341938/",
       "https://www.felix-hitzig.de/personen/19-juni-2025-sommertheater-im-schlosspark"
     ],
+    "cast": [
+      { "role": "Poseidon", "players": ["Anton Jakob"] },
+      { "role": "Demodoka/Sirene", "players": ["Augusta Hohmann"] },
+      { "role": "Penelope/Nausikaa", "players": ["Bashi Deutsch"] },
+      { "role": "Nausikabe", "players": ["Bianca Milke"] },
+      { "role": "Athene/Sirene", "players": ["Cosima Werner"] },
+      { "role": "Sirene", "players": ["Helena Pörner"] },
+      { "role": "Polyphem/Antinoos", "players": ["Jairus Behrisch"] },
+      { "role": "Odysseus", "players": ["Jannes Helbig"] },
+      { "role": "Zeus", "players": ["Jonas Fehrmann"] },
+      { "role": "Koch/Sirene", "players": ["Julia Hanke"] },
+      { "role": "Koch", "players": ["Lina Irmer"] },
+      { "role": "Telemachos", "players": ["Lennart Neumeister"] },
+      { "role": "Alkinoos", "players": ["Louis Skaletzki"] },
+      { "role": "Kalypso/Sirene", "players": ["Nadja Becker"] },
+      { "role": "Hermes/Sirene", "players": ["Nicklas Gretzel"] },
+      { "role": "Nausikace", "players": ["Paola Jung"] },
+      { "role": "Mentes", "players": ["Yann Lindemann"] },
+      { "role": "Eurymachos", "players": ["Sebastian Seifert"] },
+      { "role": "Ensemble", "players": ["Than Ahn Dinh", "Justus Schmeling"] },
+      { "role": "Flöte", "players": ["Marit Böhm"] }
+    ],
     "posterUrl": "/images/Odysseus_Flyer.jpg"
   }
 ]
