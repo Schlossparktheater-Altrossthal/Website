@@ -21,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 const allergyLevelLabels: Record<AllergyLevel, string> = {
@@ -366,6 +368,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   });
 
   const notesHelpId = useId();
+  const photoConsentCheckboxId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -1629,22 +1632,27 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
-            <label className="flex items-start gap-3 rounded-lg border border-border/70 p-4">
-              <input
-                type="checkbox"
+            <Label
+              htmlFor={photoConsentCheckboxId}
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/70 p-4 text-sm"
+            >
+              <Checkbox
+                id={photoConsentCheckboxId}
                 checked={form.photoConsent.consent}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, photoConsent: { ...prev.photoConsent, consent: event.target.checked } }))
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    photoConsent: { ...prev.photoConsent, consent: checked === true },
+                  }))
                 }
-                className="mt-1 h-4 w-4"
               />
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1">
                 <p className="font-medium">Ich bin einverstanden, dass Fotos/Videos von mir für das Schultheater genutzt werden.</p>
                 <p className="text-xs text-muted-foreground">
                   Die Zustimmung kann jederzeit im Profil angepasst werden.
                 </p>
               </div>
-            </label>
+            </Label>
 
             {isMinor ? (
               <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">

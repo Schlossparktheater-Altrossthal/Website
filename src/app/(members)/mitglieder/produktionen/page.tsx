@@ -17,6 +17,7 @@ import {
   createProductionAction,
   setActiveProductionAction,
 } from "./actions";
+import { FormCheckboxField } from "./set-active-checkbox";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
   if (show.title && show.title.trim()) {
@@ -234,15 +235,11 @@ export default async function ProduktionenPage() {
               </details>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    name="setActive"
-                    defaultChecked={shouldSetActiveByDefault}
-                    className="mt-1 h-4 w-4 rounded border border-border bg-background text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  />
-                  <span className="leading-snug">Nach dem Anlegen als aktive Produktion setzen</span>
-                </label>
+                <FormCheckboxField
+                  name="setActive"
+                  defaultChecked={shouldSetActiveByDefault}
+                  label="Nach dem Anlegen als aktive Produktion setzen"
+                />
                 <Button type="submit" className="sm:w-auto">
                   Produktion erstellen
                 </Button>

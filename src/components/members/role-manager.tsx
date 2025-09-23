@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditIcon } from "@/components/ui/icons";
@@ -9,6 +10,8 @@ import { UserEditModal } from "@/components/members/user-edit-modal";
 import { RolePicker } from "@/components/members/role-picker";
 import { UserAvatar } from "@/components/user-avatar";
 import { combineNameParts } from "@/lib/names";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export function RoleManager({
   userId,
@@ -213,26 +216,30 @@ export function RoleManager({
                 {availableCustomRoles.map((r) => {
                   const active = selectedCustomIds.includes(r.id);
                   return (
-                    <label
+                    <Label
                       key={r.id}
+                      htmlFor={`custom-role-${r.id}`}
                       className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-all ${
-                        active 
-                          ? "border-primary bg-primary/10 text-primary" 
+                        active
+                          ? "border-primary bg-primary/10 text-primary"
                           : "border-border hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      <Checkbox
+                        id={`custom-role-${r.id}`}
                         checked={active}
-                        onChange={() =>
-                          setSelectedCustomIds((prev) =>
-                            prev.includes(r.id) ? prev.filter((id) => id !== r.id) : [...prev, r.id],
-                          )
+                        onCheckedChange={(checked: CheckedState) =>
+                          setSelectedCustomIds((prev) => {
+                            const shouldAdd = checked === true;
+                            if (shouldAdd) {
+                              return prev.includes(r.id) ? prev : [...prev, r.id];
+                            }
+                            return prev.filter((id) => id !== r.id);
+                          })
                         }
                       />
                       <span className="font-medium">{r.name}</span>
-                    </label>
+                    </Label>
                   );
                 })}
               </div>

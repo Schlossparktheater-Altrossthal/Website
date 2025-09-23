@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -10,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { ROLE_LABELS, ROLES } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
@@ -166,13 +169,13 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
 
   const selectedSet = useMemo(() => new Set(selectedInvitees), [selectedInvitees]);
 
-  const toggleInvitee = useCallback((memberId: string) => {
+  const handleInviteeCheckedChange = useCallback((memberId: string, checked: CheckedState) => {
     setSelectedInvitees((prev) => {
       const set = new Set(prev);
-      if (set.has(memberId)) {
-        set.delete(memberId);
-      } else {
+      if (checked === true) {
         set.add(memberId);
+      } else {
+        set.delete(memberId);
       }
       return Array.from(set);
     });
@@ -452,18 +455,19 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
                     const extraRoles = Array.from(new Set(member.extraRoles)).filter((extra) => extra !== member.role);
 
                     return (
-                      <label
+                      <Label
                         key={member.id}
+                        htmlFor={`invitee-${member.id}`}
                         className={cn(
                           "flex cursor-pointer items-start gap-3 rounded-lg border bg-background/70 px-3 py-3 text-sm shadow-sm transition",
                           isSelected ? "border-primary/70 ring-1 ring-primary/40" : "border-border/60 hover:border-primary/40",
                         )}
                       >
-                        <input
-                          type="checkbox"
-                          className="mt-1 h-4 w-4"
+                        <Checkbox
+                          id={`invitee-${member.id}`}
+                          className="mt-1"
                           checked={isSelected}
-                          onChange={() => toggleInvitee(member.id)}
+                          onCheckedChange={(checked) => handleInviteeCheckedChange(member.id, checked)}
                         />
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -483,7 +487,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
                             </div>
                           )}
                         </div>
-                      </label>
+                      </Label>
                     );
                   })}
                 </div>

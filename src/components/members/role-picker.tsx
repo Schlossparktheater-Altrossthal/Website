@@ -1,7 +1,10 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, ROLES, type Role } from "@/lib/roles";
 
 export function RolePicker({
@@ -38,10 +41,21 @@ export function RolePicker({
     return ROLES.filter((r) => (ROLE_LABELS[r] ?? r).toLowerCase().includes(q));
   }, [query]);
 
-  const toggle = (role: Role) => {
-    if (role === "owner" && !canEditOwner) return;
+  const roleIdPrefix = useId();
+
+  const handleRoleCheckedChange = (role: Role, checked: CheckedState) => {
+    if (role === "owner" && !canEditOwner) {
+      return;
+    }
+
+    const shouldAdd = checked === true;
     const isActive = selected.has(role);
-    const next = isActive ? value.filter((r) => r !== role) : [...value, role];
+
+    if (shouldAdd === isActive) {
+      return;
+    }
+
+    const next = shouldAdd ? [...value, role] : value.filter((r) => r !== role);
     onChange(next);
   };
 
@@ -85,18 +99,18 @@ export function RolePicker({
               const active = selected.has(role);
               const disabled = role === "owner" && !canEditOwner;
               return (
-                <label
+                <Label
                   key={role}
+                  htmlFor={`${roleIdPrefix}-${role}`}
                   className={`flex cursor-pointer items-center justify-between rounded-md px-2 py-1 text-sm hover:bg-accent/40 ${
-                    disabled ? "opacity-50 cursor-not-allowed" : ""
+                    disabled ? "cursor-not-allowed opacity-50" : ""
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
+                    <Checkbox
+                      id={`${roleIdPrefix}-${role}`}
                       checked={active}
-                      onChange={() => toggle(role)}
+                      onCheckedChange={(checked) => handleRoleCheckedChange(role, checked)}
                       disabled={disabled}
                     />
                     <span>{ROLE_LABELS[role] ?? role}</span>
@@ -104,7 +118,7 @@ export function RolePicker({
                   <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[role]}`}>
                     {role}
                   </span>
-                </label>
+                </Label>
               );
             })}
             {filtered.length === 0 && (

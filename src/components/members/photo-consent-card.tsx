@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 
@@ -112,6 +114,7 @@ export function PhotoConsentCard({
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const confirmCheckboxId = useId();
 
   useEffect(() => {
     onSummaryChange?.(summary);
@@ -373,18 +376,21 @@ export function PhotoConsentCard({
                 )}
 
                 <div className="rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
+                  <Label
+                    htmlFor={confirmCheckboxId}
+                    className="flex cursor-pointer items-start gap-3 text-left text-sm !font-normal leading-relaxed text-foreground/80"
+                  >
+                    <Checkbox
+                      id={confirmCheckboxId}
+                      className="mt-1 h-5 w-5"
                       checked={confirm}
-                      onChange={(event) => setConfirm(event.target.checked)}
-                      className="mt-1 h-5 w-5 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onCheckedChange={(checked) => setConfirm(checked === true)}
                     />
-                    <span className="text-foreground/80">
+                    <span>
                       <span className="font-semibold text-foreground">Ja, ich bin einverstanden,</span>{" "}
                       dass im Rahmen unseres Schultheaters Fotos von mir erstellt und für interne sowie öffentliche Kommunikationszwecke genutzt werden dürfen.
                     </span>
-                  </label>
+                  </Label>
                   <p className="mt-3 text-xs text-foreground/60">Du kannst dein Okay hier jederzeit widerrufen.</p>
                 </div>
 

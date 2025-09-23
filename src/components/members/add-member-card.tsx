@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { describeRoles, ROLE_LABELS, ROLES, sortRoles, type Role } from "@/lib/roles";
@@ -7,6 +8,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
 import { combineNameParts } from "@/lib/names";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export function AddMemberModal() {
   const router = useRouter();
@@ -20,10 +23,17 @@ export function AddMemberModal() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const toggleRole = (role: Role) => {
+  const handleRoleCheckedChange = (role: Role, checked: CheckedState) => {
     setError(null);
     setRoles((prev) => {
-      const next = prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role];
+      const hasRole = prev.includes(role);
+      const shouldAdd = checked === true;
+      let next = prev;
+      if (shouldAdd && !hasRole) {
+        next = [...prev, role];
+      } else if (!shouldAdd && hasRole) {
+        next = prev.filter((r) => r !== role);
+      }
       return sortRoles(next.length ? next : ["member"]);
     });
   };
@@ -173,22 +183,22 @@ export function AddMemberModal() {
               {ROLES.map((role) => {
                 const active = roles.includes(role);
                 return (
-                  <label
+                  <Label
                     key={role}
+                    htmlFor={`add-member-role-${role}`}
                     className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
                       active
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border hover:bg-accent/30"
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
+                    <Checkbox
+                      id={`add-member-role-${role}`}
                       checked={active}
-                      onChange={() => toggleRole(role)}
+                      onCheckedChange={(checked) => handleRoleCheckedChange(role, checked)}
                     />
                     <span>{ROLE_LABELS[role] ?? role}</span>
-                  </label>
+                  </Label>
                 );
               })}
             </div>

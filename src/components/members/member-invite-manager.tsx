@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Role } from "@prisma/client";
 import { ChevronDown, ChevronUp, Copy, Download, ExternalLink, Power, Trash2 } from "lucide-react";
+
+import type { CheckedState } from "@radix-ui/react-checkbox";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { ROLE_LABELS, ROLES, sortRoles } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
@@ -309,10 +313,20 @@ export function MemberInviteManager() {
     setError(null);
   };
 
-  const toggleRole = (role: Role) => {
+  const formRoleIdPrefix = useId();
+
+  const handleRoleCheckedChange = (role: Role, checked: CheckedState) => {
     setForm((prev) => {
       const has = prev.roles.includes(role);
-      const nextRoles = has ? prev.roles.filter((r) => r !== role) : [...prev.roles, role];
+      const shouldAdd = checked === true;
+      let nextRoles = prev.roles;
+
+      if (shouldAdd && !has) {
+        nextRoles = [...prev.roles, role];
+      } else if (!shouldAdd && has) {
+        nextRoles = prev.roles.filter((r) => r !== role);
+      }
+
       const normalized = sortRoles(nextRoles.length ? nextRoles : ["member"]);
       return { ...prev, roles: normalized };
     });
@@ -897,21 +911,21 @@ export function MemberInviteManager() {
               {ASSIGNABLE_ROLES.map((role) => {
                 const checked = form.roles.includes(role);
                 return (
-                  <label
+                  <Label
                     key={role}
+                    htmlFor={`${formRoleIdPrefix}-${role}`}
                     className={cn(
                       "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition",
                       checked ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/60",
                     )}
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
+                      id={`${formRoleIdPrefix}-${role}`}
                       checked={checked}
-                      onChange={() => toggleRole(role)}
-                      className="h-4 w-4"
+                      onCheckedChange={(next) => handleRoleCheckedChange(role, next)}
                     />
                     <span>{ROLE_LABELS[role] ?? role}</span>
-                  </label>
+                  </Label>
                 );
               })}
             </div>
