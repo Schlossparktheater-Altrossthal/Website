@@ -85,6 +85,45 @@ Weitere Layout-Konstanten:
 
 ## Komponentenrichtlinien
 
+### Mitgliederbereich: App Shell & Seitenaufbau
+
+- `MembersAppShell` organisiert den Mitgliederbereich nun semantisch: Die Topbar sitzt oberhalb eines `main`-Containers, der konsequent in `header`, `section` und `footer` gegliedert ist. Alle Bereiche nutzen weiterhin die etablierten Containerbreiten (`max-w-screen-2xl`, `px-4` → `sm:px-6` → `lg:px-8`).
+- Die Topbar wird über `MembersTopbar` konfiguriert und stellt Slots für Brotkrumen (`MembersTopbarBreadcrumbs`), den Seitentitel (`MembersTopbarTitle`), optionale Schnellaktionen (`MembersTopbarQuickActions`) sowie Status-Badges (`MembersTopbarStatus`) bereit. Unterhalb von `lg` erscheint der Sidebar-Trigger automatisch, auf größeren Viewports rückt an dessen Stelle der Titel.
+- Seiten können ihren Header deklarativ über `MembersContentHeader` und `MembersPageActions` aufbauen. Der Bereich landet automatisch im semantischen `header` des Layouts und behält dadurch konsistente Abstände.
+- Ein optionaler `MembersContentFooter` ermöglicht nachgelagerte Hinweise oder sekundäre Aktionen, die am Ende der Seite stehen sollen.
+- Der Mitglieder-spezifische `PageHeader` (`@/components/members/page-header`) registriert Topbar- und Header-Inhalte automatisch, solange `variant="page"` verwendet wird. Für abschnittsweise Zwischenüberschriften kann `variant="section"` gesetzt werden – dann bleibt der Eintrag lokal im Content.
+
+**Beispiel:**
+
+```tsx
+<MembersTopbar>
+  <MembersTopbarBreadcrumbs>Mitglieder · Probenplanung</MembersTopbarBreadcrumbs>
+  <MembersTopbarTitle>Probenplanung</MembersTopbarTitle>
+  <MembersTopbarStatus>
+    <Badge variant="info">Planung aktiv</Badge>
+  </MembersTopbarStatus>
+  <MembersTopbarQuickActions>
+    <Button size="sm">Neue Probe</Button>
+  </MembersTopbarQuickActions>
+</MembersTopbar>
+
+<MembersContentHeader>
+  <PageHeader>
+    <div className="space-y-1.5">
+      <PageHeaderTitle>Probenplanung</PageHeaderTitle>
+      <PageHeaderDescription>
+        Termine anlegen, veröffentlichen und Rückmeldungen im Blick behalten.
+      </PageHeaderDescription>
+    </div>
+  </PageHeader>
+</MembersContentHeader>
+
+{/* Hauptinhalt folgt im Section-Bereich */}
+<div className="space-y-6">
+  …
+</div>
+```
+
 ### Buttons (`@/components/ui/button`)
 - **Varianten:** `primary` (alias `default`), `secondary`, `accent`, `outline`, `ghost`, `subtle`, `link`, `destructive`, `success`, `info`.
 - **States:** Hover reduziert Deckkraft bzw. hebt Konturen hervor; `focus-visible` nutzt `ring` + Offset, `disabled` setzt `opacity-60` und deaktiviert Pointer Events.
