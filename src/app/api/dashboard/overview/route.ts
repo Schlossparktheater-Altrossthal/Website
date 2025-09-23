@@ -2,11 +2,23 @@ import { NextResponse } from "next/server";
 
 import { endOfWeek, startOfWeek } from "date-fns";
 
+import { Prisma } from "@prisma/client";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { buildProfileChecklist } from "@/lib/profile-completion";
+
+const onboardingProfileSelect = Prisma.validator<Prisma.MemberOnboardingProfileSelect>()({
+  focus: true,
+  background: true,
+  backgroundClass: true,
+  notes: true,
+  createdAt: true,
+  updatedAt: true,
+  dietaryPreference: true,
+  dietaryPreferenceStrictness: true,
+});
 
 export async function GET() {
   try {
@@ -117,45 +129,9 @@ export async function GET() {
           },
         },
       }),
-      (
-        prisma as unknown as {
-          memberOnboardingProfile: {
-            findUnique: (args: {
-              where: { userId: string };
-              select: {
-                focus: true;
-                background: true;
-                backgroundClass: true;
-                notes: true;
-                createdAt: true;
-                updatedAt: true;
-                dietaryPreference: true;
-                dietaryPreferenceStrictness: true;
-              };
-            }) => Promise<{
-              focus: string;
-              background: string | null;
-              backgroundClass: string | null;
-              notes: string | null;
-              createdAt: Date;
-              updatedAt: Date;
-              dietaryPreference: string | null;
-              dietaryPreferenceStrictness: string | null;
-            } | null>;
-          };
-        }
-      ).memberOnboardingProfile.findUnique({
+      prisma.memberOnboardingProfile.findUnique({
         where: { userId },
-        select: {
-          focus: true,
-          background: true,
-          backgroundClass: true,
-          notes: true,
-          createdAt: true,
-          updatedAt: true,
-          dietaryPreference: true,
-          dietaryPreferenceStrictness: true,
-        },
+        select: onboardingProfileSelect,
       }),
       prisma.memberRolePreference.findMany({
         where: { userId },

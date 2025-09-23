@@ -1,4 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import {
+  aggregateMysteryTipSubmissionScores,
+  groupMysteryTipSubmissionsByPlayer,
+  mysterySubmissionWithRelationsInclude,
+  type MysterySubmissionWithRelations,
+} from "@/lib/prisma-helpers";
+export type { MysterySubmissionWithRelations } from "@/lib/prisma-helpers";
 
 function resolveAggregateCount(value: number | { _all?: number } | null | undefined): number {
   if (typeof value === "number") return value;
@@ -17,61 +24,26 @@ export type MysteryScoreboardEntry = {
 export async function getMysteryScoreboard(limit?: number): Promise<MysteryScoreboardEntry[]> {
   if (!process.env.DATABASE_URL) return [];
 
-  type GroupTotals = {
-    playerName: string;
-    _sum: { score: number | null };
-    _count: { _all: number | null };
-    _max: { updatedAt: Date | null };
-  };
-
-  const totals = (await (prisma as unknown as {
-    mysteryTipSubmission: {
-      groupBy: (args: {
-        by: ["playerName"];
-        _sum: { score: true };
-        _count: { _all: true };
-        _max: { updatedAt: true };
-      }) => Promise<GroupTotals[]>;
-    };
-  }).mysteryTipSubmission.groupBy({
-    by: ["playerName"],
-    _sum: { score: true },
-    _count: { _all: true },
-    _max: { updatedAt: true },
-  })) as GroupTotals[];
-
-  type CorrectCount = { playerName: string; _count: { _all: number | null } };
-  const correctCounts = (await (prisma as unknown as {
-    mysteryTipSubmission: {
-      groupBy: (args: {
-        by: ["playerName"];
-        _count: { _all: true };
-        where: { isCorrect: true };
-      }) => Promise<CorrectCount[]>;
-    };
-  }).mysteryTipSubmission.groupBy({
-    by: ["playerName"],
-    _count: { _all: true },
-    where: { isCorrect: true },
-  })) as CorrectCount[];
+  const totals = await groupMysteryTipSubmissionsByPlayer();
+  const correctCounts = await groupMysteryTipSubmissionsByPlayer({ isCorrect: true });
 
   const correctMap = new Map<string, number>();
   for (const entry of correctCounts) {
-    correctMap.set(entry.playerName, entry._count._all ?? 0);
+    correctMap.set(entry.playerName, entry._count?._all ?? 0);
   }
 
   const scoreboard = totals
-    .map<MysteryScoreboardEntry | null>((entry: GroupTotals) => {
+    .map<MysteryScoreboardEntry | null>((entry) => {
       const playerName = entry.playerName.trim();
       const totalScore = entry._sum.score ?? 0;
-      const totalSubmissions = entry._count._all ?? 0;
+      const totalSubmissions = entry._count?._all ?? 0;
       if (!playerName || totalScore <= 0) return null;
       return {
         playerName,
         totalScore,
         totalSubmissions,
         correctCount: correctMap.get(playerName) ?? 0,
-        lastUpdated: entry._max.updatedAt ?? null,
+        lastUpdated: entry._max?.updatedAt ?? null,
       };
     })
     .filter((entry): entry is MysteryScoreboardEntry => Boolean(entry));
@@ -92,33 +64,9 @@ export async function getMysteryScoreboardEntry(playerName: string): Promise<Mys
   if (!trimmed) return null;
   if (!process.env.DATABASE_URL) return null;
 
-  type AggregateTotals = {
-    _sum: { score: number | null };
-    _count: number | { _all?: number } | null;
-    _max: { updatedAt: Date | null };
-  };
-
   const [totals, correctCount] = await Promise.all([
-    (prisma as unknown as {
-      mysteryTipSubmission: {
-        aggregate: (args: {
-          where: { playerName: string };
-          _sum: { score: true };
-          _count: true;
-          _max: { updatedAt: true };
-        }) => Promise<AggregateTotals>;
-      };
-    }).mysteryTipSubmission.aggregate({
-      where: { playerName: trimmed },
-      _sum: { score: true },
-      _count: true,
-      _max: { updatedAt: true },
-    }),
-    (prisma as unknown as {
-      mysteryTipSubmission: {
-        count: (args: { where: { playerName: string; isCorrect: true } }) => Promise<number>;
-      };
-    }).mysteryTipSubmission.count({ where: { playerName: trimmed, isCorrect: true } }),
+    aggregateMysteryTipSubmissionScores({ playerName: trimmed }),
+    prisma.mysteryTipSubmission.count({ where: { playerName: trimmed, isCorrect: true } }),
   ]);
 
   const totalScore = totals._sum.score ?? 0;
@@ -130,7 +78,7 @@ export async function getMysteryScoreboardEntry(playerName: string): Promise<Mys
     totalScore,
     correctCount,
     totalSubmissions,
-    lastUpdated: totals._max.updatedAt ?? null,
+    lastUpdated: totals._max?.updatedAt ?? null,
   };
 }
 
@@ -142,39 +90,11 @@ export async function getMysteryClueSummaries() {
   });
 }
 
-const mysterySubmissionInclude = {
-  tip: { select: { text: true, count: true } },
-  clue: { select: { id: true, index: true, points: true, releaseAt: true, published: true } },
-} as const;
-
-export type MysterySubmissionWithRelations = {
-  id: string;
-  tipId: string;
-  clueId: string | null;
-  playerName: string;
-  tipText: string;
-  normalizedText: string;
-  isCorrect: boolean;
-  score: number;
-  createdAt: Date;
-  updatedAt: Date;
-  tip: { text: string; count: number };
-  clue: { id: string; index: number; points: number; releaseAt: Date | null; published: boolean } | null;
-};
-
 export async function getMysterySubmissionsForClue(clueId: string): Promise<MysterySubmissionWithRelations[]> {
   if (!process.env.DATABASE_URL) return [] as MysterySubmissionWithRelations[];
-  return (prisma as unknown as {
-    mysteryTipSubmission: {
-      findMany: (args: {
-        where: { clueId: string };
-        include: typeof mysterySubmissionInclude;
-        orderBy: Array<{ createdAt: "desc" }>;
-      }) => Promise<MysterySubmissionWithRelations[]>;
-    };
-  }).mysteryTipSubmission.findMany({
+  return prisma.mysteryTipSubmission.findMany({
     where: { clueId },
-    include: mysterySubmissionInclude,
+    include: mysterySubmissionWithRelationsInclude,
     orderBy: [{ createdAt: "desc" }],
   });
 }
