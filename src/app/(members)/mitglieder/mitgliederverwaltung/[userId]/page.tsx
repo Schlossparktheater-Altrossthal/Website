@@ -26,6 +26,7 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { formatRelativeFromNow } from "@/lib/datetime";
 import { getUserDisplayName } from "@/lib/names";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 
@@ -38,7 +39,6 @@ const percentFormatter = new Intl.NumberFormat("de-DE", {
   maximumFractionDigits: 1,
 });
 const monthFormatter = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" });
-const relativeTimeFormatter = new Intl.RelativeTimeFormat("de-DE", { numeric: "auto" });
 
 const ATTENDANCE_STATUS_ORDER: AttendanceStatus[] = ["yes", "maybe", "no", "emergency"];
 
@@ -191,45 +191,7 @@ function describeAttendanceChange(
 
 function formatRelativeTime(value: Date | null | undefined) {
   if (!value) return null;
-  const now = Date.now();
-  const diffMs = value.getTime() - now;
-  const diffSeconds = Math.round(diffMs / 1000);
-  const absSeconds = Math.abs(diffSeconds);
-
-  const minute = 60;
-  const hour = minute * 60;
-  const day = hour * 24;
-  const week = day * 7;
-  const month = day * 30;
-  const year = day * 365;
-
-  let unit: Intl.RelativeTimeFormatUnit;
-  let valueToFormat: number;
-
-  if (absSeconds < minute) {
-    unit = "second";
-    valueToFormat = diffSeconds;
-  } else if (absSeconds < hour) {
-    unit = "minute";
-    valueToFormat = Math.round(diffSeconds / minute);
-  } else if (absSeconds < day) {
-    unit = "hour";
-    valueToFormat = Math.round(diffSeconds / hour);
-  } else if (absSeconds < week) {
-    unit = "day";
-    valueToFormat = Math.round(diffSeconds / day);
-  } else if (absSeconds < month) {
-    unit = "week";
-    valueToFormat = Math.round(diffSeconds / week);
-  } else if (absSeconds < year) {
-    unit = "month";
-    valueToFormat = Math.round(diffSeconds / month);
-  } else {
-    unit = "year";
-    valueToFormat = Math.round(diffSeconds / year);
-  }
-
-  return relativeTimeFormatter.format(valueToFormat, unit);
+  return formatRelativeFromNow(value);
 }
 
 type PageProps = { params: { userId: string | string[] } };

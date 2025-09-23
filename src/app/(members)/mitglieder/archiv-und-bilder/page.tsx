@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/members/page-header";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { formatRelativeWithAbsolute } from "@/lib/datetime";
 import {
   GALLERY_START_YEAR,
   createGalleryYearRange,
@@ -31,14 +32,16 @@ type FolderStats = {
   totalSize: number;
 };
 
+const latestUploadFormatter = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 function formatRelative(date: Date | null) {
   if (!date) {
     return "Noch keine Uploads";
   }
-  return new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return formatRelativeWithAbsolute(date, { absoluteFormatter: latestUploadFormatter }).combined;
 }
 
 export default async function ArchiveOverviewPage() {
