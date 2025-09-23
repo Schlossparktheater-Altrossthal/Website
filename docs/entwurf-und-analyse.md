@@ -13,8 +13,8 @@ Inhaltsverzeichnis
   - [4.3. Organisations-Module](#_organisations_module)
 - [5. Anwendungsbeschreibung & Workflows
   (Mitglieder/Planung)](#_anwendungsbeschreibung_workflows_mitgliederplanung)
-  - [5.1. Schauspieler\*innen-Sicht: Verfügbarkeiten, Zusagen,
-    Kalender](#_schauspielerinnen_sicht_verfügbarkeiten_zusagen_kalender)
+  - [5.1. Ensemble-Sicht: Verfügbarkeiten, Zusagen,
+    Kalender](#_ensemble_sicht_verfügbarkeiten_zusagen_kalender)
   - [5.2. Planungs-Sicht: Serien, Status,
     Calltimes](#_planungs_sicht_serien_status_calltimes)
   - [5.3. Szenen, Besetzung und
@@ -113,14 +113,14 @@ Inhaltsverzeichnis
 
 | Stakeholder                       | Interessen                                                                     | Spezifische Anforderungen                                                                            |
 |-----------------------------------|--------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
-| Schauspieler\*innen & Ensemble    | Lückenlose Planungssicherheit trotz wechselnder Verfügbarkeiten                | Persönlicher Kalender für Blocker & Zusagen, Rollen- und Szenentracking, transparente Probenhistorie |
+| Schauspielensemble               | Lückenlose Planungssicherheit trotz wechselnder Verfügbarkeiten                | Persönlicher Kalender für Blocker & Zusagen, Rollen- und Szenentracking, transparente Probenhistorie |
 | Technik (Licht, Ton, Multimedia)  | Frühzeitige Abstimmung, wer wann anwesend ist und welches Setup gebraucht wird | Dienst- & Einsatzpläne, technische Checklisten pro Probe, Notizen zu Szenenanforderungen             |
 | Bühnenbau & Requisiten            | Aufgaben und Materialien priorisieren, Engpässe vermeiden                      | Aufgabenmanagement mit Materiallisten, Inventarstatus, Freigaben für Aus- und Rückgaben              |
 | Kostümteam                        | Kostüme, Änderungen, Budget im Blick behalten                                  | Maße, Änderungen, Wasch-/Reparaturpläne, Ausleih-Tracking, Budgetzuordnung                           |
-| Organisation & Produktionsleitung | Gesamtkoordination, Finanzen, Sponsor\*innenpflege, Kommunikation              | Übergreifende Dashboards, Rechteverwaltung, Budget- & Sponsorenreporting, Schnittstellen zu PR       |
-| ↳ Catering (Sub)                  | Allergien, Essenspläne, Helfer\*innenplanung                                   | Einsehbare Präferenzen & Allergielisten, Wochenpläne, Einkaufslisten                                 |
+| Organisation & Produktionsleitung | Gesamtkoordination, Finanzen, Sponsorbetreuung, Kommunikation              | Übergreifende Dashboards, Rechteverwaltung, Budget- & Sponsorenreporting, Schnittstellen zu PR       |
+| ↳ Catering (Sub)                  | Allergien, Essenspläne, Planung für Helferinnen und Helfer                                   | Einsehbare Präferenzen & Allergielisten, Wochenpläne, Einkaufslisten                                 |
 | ↳ Presse & PR (Sub)               | Öffentlichkeitsarbeit, Storytelling                                            | Redaktionskalender, Content-Freigaben, Zugriff auf Medienassets                                      |
-| ↳ Sponsoring & Förderverein (Sub) | Sichtbarkeit, Vertragspflege                                                   | Sponsor\*innen-Module mit Logoplatzierungen, Reporting, Vertrags- und Rechnungsablage                |
+| ↳ Sponsoring & Förderverein (Sub) | Sichtbarkeit, Vertragspflege                                                   | Module für Sponsorinnen und Sponsoren mit Logoplatzierungen, Reporting, Vertrags- und Rechnungsablage                |
 
 ### 3.2. Externe Stakeholder
 
@@ -129,7 +129,7 @@ Inhaltsverzeichnis
 | Publikum                                               | Informationen zu Aufführungen, Ticketzugang, das „Mysterium“-Erlebnis | Termine, Countdown, Reservierung & Follow-up-Kommunikation          |
 | Sponsoren & Förderverein                               | Sichtbarkeit und Ergebnisberichte                                     | Eigener Info-Bereich, Reporting-Dashboards, Branding-Optionen       |
 | Schule/Institution                                     | Reibungslose Organisation, Reputation                                 | Veranstaltungsübersichten, Sicherheits- und Dokumentationsnachweise |
-| Lieferanten & Partner (Technikverleih, Druckerei etc.) | Klare Anforderungen, rechtzeitige Abstimmung                          | Auftrags- & Lieferkalender, Ansprechpartner\*innen, Dateiuploads    |
+| Lieferanten & Partner (Technikverleih, Druckerei etc.) | Klare Anforderungen, rechtzeitige Abstimmung                          | Auftrags- & Lieferkalender, Ansprechpartnerinnen und Ansprechpartner, Dateiuploads    |
 
 ## 4. Funktionale Anforderungen
 
@@ -154,24 +154,24 @@ Inhaltsverzeichnis
 
     <div class="ulist">
 
-    - Sichtbarkeitslogik: Schauspieler\*innen sehen maximal 4 Wochen im
+    - Sichtbarkeitslogik: Ensemblemitglieder sehen maximal 4 Wochen im
       Voraus, andere Rollen alle Termine.
 
     - Anzeige "letzte Änderung" je Probe (Feld `updatedAt` existiert
       bereits) im UI.
 
-    - Persönlicher Blocker-Kalender: Schauspieler\*innen markieren
+    - Persönlicher Blocker-Kalender: Ensemblemitglieder markieren
       Nicht-Verfügbarkeiten per Drag & Drop, automatisch abgeglichen mit
       vorgeschlagenen Probeterminen.
 
     - Zusage-Status mit Historie: jede Zu-/Absage erzeugt eine Logzeile
-      inkl. Zeitpunkt, Nutzer\*in und optionalem Kommentar; "Keine
+      inkl. Zeitpunkt, Nutzerin oder Nutzer und optionalem Kommentar; "Keine
       Reaktion" zählt als "geplant".
 
     - Planungsstatus je Probe: Entwurf (Template), Vorschlag (noch
       anpassbar), Final (veröffentlicht) mit eigener Farbe im Kalender.
 
-    - Ankunftsplanung: Probenplaner\*innen sehen, wer durch
+    - Ankunftsplanung: Probenplanerinnen und Probenplaner sehen, wer durch
       Blocker/Absagen eingeschränkt ist und können individuelle
       Calltimes festlegen.
 
@@ -265,7 +265,7 @@ Inhaltsverzeichnis
 
 ## 5. Anwendungsbeschreibung & Workflows (Mitglieder/Planung)
 
-### 5.1. Schauspieler\*innen-Sicht: Verfügbarkeiten, Zusagen, Kalender
+### 5.1. Ensemble-Sicht: Verfügbarkeiten, Zusagen, Kalender
 
 Ziel: Ein zentraler Kalender zeigt alle potenziellen Proben sowie
 persönliche Blocker. Der Standard ist „geplant“ (eingerechnet), bis man
@@ -873,7 +873,7 @@ verbessern Planung und Filtern.
   statt RBAC‑`Role`.
 
 - `RoleAssignment` nach Einsatzzweck splitten: `CrewAssignment`
-  (Abteilung/Team) vs. `CharacterCasting` (Figur ↔ Nutzer\*in).
+  (Abteilung/Team) vs. `CharacterCasting` (Figur ↔ Nutzerin oder Nutzer).
 
 - `Scene` um optionale Felder erweitern (Ort/Tageszeit/INT‑EXT), keine
   Breaking Changes nötig.
@@ -1240,7 +1240,7 @@ berücksichtigt - \[ \] Jede Statusänderung erzeugt einen Logeintrag - \[
 - [ ] API: `PUT /api/rehearsals/[id]/calltimes` (Upsert Liste) +
   Rückgabe in Rehearsal-GET
 
-- [ ] UI: Calltimes anzeigen und für Planer\*innen editieren
+- [ ] UI: Calltimes anzeigen und für Planerinnen und Planer editieren
   (Table/Drawer)
 
 - [ ] Finalisierung: Statuswechsel „Final“ löst Benachrichtigungen aus

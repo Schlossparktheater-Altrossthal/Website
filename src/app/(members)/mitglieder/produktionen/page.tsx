@@ -203,7 +203,7 @@ export default async function ProduktionenPage() {
                     name="synopsis"
                     rows={3}
                     maxLength={600}
-                    placeholder="Optionaler Teaser, Autor*in oder kurzes Motto."
+                    placeholder="Optionaler Teaser, Autor oder kurzes Motto."
                   />
                 </div>
               </fieldset>

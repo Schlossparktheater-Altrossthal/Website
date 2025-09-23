@@ -284,7 +284,7 @@ export function ShoppingListBoard({ initialItems }: ShoppingListBoardProps) {
           <div className="space-y-1">
             <CardTitle className="text-xl font-semibold">Einkaufsliste</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Ergänze individuelle Positionen, hake erledigte Besorgungen ab und teile die Liste bequem mit Helfer\*innen.
+              Ergänze individuelle Positionen, hake erledigte Besorgungen ab und teile die Liste bequem mit Helferinnen und Helfern.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

@@ -36,17 +36,17 @@ export default async function Home() {
     {
       question: "Was ist das Sommertheater im Schlosspark?",
       answer:
-        "Unser Sommertheater vereint Musik, Schauspiel und eine Prise Geheimnis vor der einzigartigen Kulisse des Schlossparks. Wir gestalten jedes Jahr ein neues Stück, das Besucher*innen aller Altersgruppen begeistert und zum Staunen einlädt.",
+        "Unser Sommertheater vereint Musik, Schauspiel und eine Prise Geheimnis vor der einzigartigen Kulisse des Schlossparks. Wir gestalten jedes Jahr ein neues Stück, das Publikum aller Altersgruppen begeistert und zum Staunen einlädt.",
     },
     {
       question: "Wann startet der Ticketverkauf?",
       answer:
-        "Der genaue Starttermin wird in Kürze bekannt gegeben. Trag dich am besten in unseren Newsletter ein oder folge uns auf Social Media, damit du den Verkaufsbeginn und mögliche Frühbucher*innen-Aktionen nicht verpasst.",
+        "Der genaue Starttermin wird in Kürze bekannt gegeben. Trag dich am besten in unseren Newsletter ein oder folge uns auf Social Media, damit du den Verkaufsbeginn und mögliche Frühbucheraktionen nicht verpasst.",
     },
     {
       question: "Benötige ich Vorkenntnisse, um das Stück zu genießen?",
       answer:
-        "Nein – unsere Inszenierungen sind so konzipiert, dass alle Gäste ohne Vorkenntnisse direkt eintauchen können. Dank moderner Regie und einer leicht zugänglichen Handlung findet jede*r schnell in die Geschichte hinein.",
+        "Nein – unsere Inszenierungen sind so konzipiert, dass alle Gäste ohne Vorkenntnisse direkt eintauchen können. Dank moderner Regie und einer leicht zugänglichen Handlung finden alle schnell in die Geschichte hinein.",
     },
     {
       question: "Gibt es Ermäßigungen für Gruppen oder Familien?",
@@ -56,7 +56,7 @@ export default async function Home() {
     {
       question: "Wie kann ich mich kreativ einbringen oder ehrenamtlich helfen?",
       answer:
-        "Wir freuen uns immer über helfende Hände und kreative Köpfe – ob beim Bühnenbau, in der Öffentlichkeitsarbeit oder als Gastspielpartner*in. Schreib uns einfach eine Nachricht über das Kontaktformular, und wir melden uns bei dir.",
+        "Wir freuen uns immer über helfende Hände und kreative Köpfe – ob beim Bühnenbau, in der Öffentlichkeitsarbeit oder als Gastspielpartner. Schreib uns einfach eine Nachricht über das Kontaktformular, und wir melden uns bei dir.",
     },
   ];
 
