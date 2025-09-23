@@ -30,6 +30,7 @@ const LIGHT_MODE = "light" as ThemeModeKey;
 const DARK_MODE = "dark" as ThemeModeKey;
 
 const COLOR_MODE_OPTIONS: { value: ThemeColorMode; label: string }[] = [
+  { value: "system", label: "Systemmodus" },
   { value: "dark", label: "Dunkelmodus" },
   { value: "light", label: "Hellmodus" },
 ];
@@ -891,25 +892,13 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
 
   useEffect(() => {
     const root = document.documentElement;
-    if (colorMode === "dark") {
-      root.classList.add("dark");
-      root.style.colorScheme = "dark";
-    } else {
-      root.classList.remove("dark");
-      root.style.colorScheme = "light";
-    }
+    root.setAttribute("data-color-mode", colorMode);
   }, [colorMode]);
 
   useEffect(() => {
-    const root = document.documentElement;
+    const modeOnUnmount = siteSnapshot.colorMode;
     return () => {
-      if (siteSnapshot.colorMode === "dark") {
-        root.classList.add("dark");
-        root.style.colorScheme = "dark";
-      } else {
-        root.classList.remove("dark");
-        root.style.colorScheme = "light";
-      }
+      document.documentElement.setAttribute("data-color-mode", modeOnUnmount);
     };
   }, [siteSnapshot.colorMode]);
 
