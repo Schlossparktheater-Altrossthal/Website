@@ -11,6 +11,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 import { MembersNav, type AssignmentFocus } from "@/components/members-nav";
 import { cn } from "@/lib/utils";
 
@@ -239,57 +240,62 @@ function MembersTopbarContent({
   const hasBreadcrumbs = Boolean(content.breadcrumbs);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-      <div className={containerClassName}>
-        <div className="flex flex-wrap items-center justify-between gap-3 py-3 sm:py-4">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            {isMobile ? (
-              <SidebarTrigger
-                className="-ml-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition hover:border-primary/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                aria-label="Navigationsmenü öffnen"
-              />
-            ) : null}
-            <div className="min-w-0 flex flex-col gap-1">
-              {hasBreadcrumbs ? (
-                <div className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {content.breadcrumbs}
-                </div>
-              ) : null}
-              <div className="min-w-0 truncate text-sm font-semibold text-foreground">
-                {content.title ?? (
-                  <span className="truncate text-sm font-semibold text-foreground">
-                    Mitgliederbereich
-                  </span>
-                )}
-              </div>
+    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div
+        className={cn(
+          "flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12",
+          containerClassName,
+        )}
+      >
+        <SidebarTrigger className="-ml-1" aria-label="Navigationsmenü umschalten" />
+        <Separator
+          orientation="vertical"
+          className="mr-2 data-[orientation=vertical]:h-4"
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          {hasBreadcrumbs ? (
+            <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {content.breadcrumbs}
             </div>
+          ) : null}
+          <div className="flex min-w-0 items-center gap-2">
+            {content.title ?? (
+              <span className="truncate text-sm font-semibold text-foreground">
+                Mitgliederbereich
+              </span>
+            )}
           </div>
-          {!isMobile && (hasStatus || hasQuickActions) ? (
-            <div className="flex flex-shrink-0 items-center gap-2">
-              {hasStatus ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {content.status}
-                </div>
-              ) : null}
-              {hasQuickActions ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {content.quickActions}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          {isMobile && hasQuickActions ? (
-            <div className="flex flex-shrink-0 items-center gap-2">
-              {content.quickActions}
-            </div>
-          ) : null}
         </div>
-        {isMobile && hasStatus ? (
-          <div className="flex flex-wrap items-center gap-2 pb-3">
-            {content.status}
+        {!isMobile && (hasStatus || hasQuickActions) ? (
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {hasStatus ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {content.status}
+              </div>
+            ) : null}
+            {hasQuickActions ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {content.quickActions}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {isMobile && hasQuickActions ? (
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {content.quickActions}
           </div>
         ) : null}
       </div>
+      {isMobile && hasStatus ? (
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-2 pb-3",
+            containerClassName,
+          )}
+        >
+          {content.status}
+        </div>
+      ) : null}
     </header>
   );
 }
@@ -394,43 +400,41 @@ export function MembersAppShell({
         <SidebarRail />
       </Sidebar>
       <MembersAppShellContext.Provider value={contextValue}>
-        <SidebarInset id="main">
-          <div className="flex min-h-svh flex-col">
-            <MembersTopbarContent
-              content={topbarContent}
-              containerClassName={contentClasses.container}
-            />
-            <main className="flex-1 pb-12">
-              {contentHeader ? (
-                <header className="border-b border-border/60 bg-background/60">
-                  <div
-                    className={cn(contentClasses.container, "py-6 sm:py-8")}
-                  >
-                    {contentHeader}
-                  </div>
-                </header>
-              ) : null}
-              <section className={contentClasses.section}>
+        <SidebarInset id="main" className="min-h-svh">
+          <MembersTopbarContent
+            content={topbarContent}
+            containerClassName={contentClasses.container}
+          />
+          <main className="flex-1 pb-12">
+            {contentHeader ? (
+              <header className="border-b border-border/60 bg-background/60">
                 <div
-                  className={cn(
-                    contentClasses.container,
-                    contentClasses.stack,
-                  )}
+                  className={cn(contentClasses.container, "py-6 sm:py-8")}
                 >
-                  {children}
+                  {contentHeader}
                 </div>
-              </section>
-              {contentFooter ? (
-                <footer className="border-t border-border/60 bg-background/60">
-                  <div
-                    className={cn(contentClasses.container, "py-6 sm:py-8")}
-                  >
-                    {contentFooter}
-                  </div>
-                </footer>
-              ) : null}
-            </main>
-          </div>
+              </header>
+            ) : null}
+            <section className={contentClasses.section}>
+              <div
+                className={cn(
+                  contentClasses.container,
+                  contentClasses.stack,
+                )}
+              >
+                {children}
+              </div>
+            </section>
+            {contentFooter ? (
+              <footer className="border-t border-border/60 bg-background/60">
+                <div
+                  className={cn(contentClasses.container, "py-6 sm:py-8")}
+                >
+                  {contentFooter}
+                </div>
+              </footer>
+            ) : null}
+          </main>
         </SidebarInset>
       </MembersAppShellContext.Provider>
     </>
