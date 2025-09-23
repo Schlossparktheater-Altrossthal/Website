@@ -1,4 +1,36 @@
+import type { Metadata } from "next";
+
 import { Heading, Text } from "@/components/ui/typography";
+
+export const metadata: Metadata = {
+  title: "Impressum",
+  description:
+    "Rechtliche Informationen, Kontaktangaben und Verantwortlichkeiten des Sommertheaters Altrossthal auf einen Blick.",
+  alternates: {
+    canonical: "/impressum",
+  },
+  openGraph: {
+    title: "Impressum",
+    description:
+      "Verantwortliche Stelle, Kontakt und rechtliche Hinweise des Sommertheaters Altrossthal.",
+    url: "/impressum",
+    type: "website",
+    images: [
+      {
+        url: "/images/SNT_2.png",
+        alt: "Historische Schlossmauern im Abendlicht",
+      },
+    ],
+    siteName: "Sommertheater Altrossthal",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Impressum",
+    description:
+      "Alle gesetzlichen Angaben zum Sommertheater Altrossthal.",
+    images: ["/images/SNT_2.png"],
+  },
+};
 
 export default function ImpressumPage() {
   return (

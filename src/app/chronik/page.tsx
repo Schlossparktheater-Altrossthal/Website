@@ -1,10 +1,41 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { Heading, Text } from "@/components/ui/typography";
 
 import { ChronikStacked } from "./stacked";
 import { ChronikTimeline } from "./timeline";
 import { getChronikItems } from "./data";
+
+export const metadata: Metadata = {
+  title: "Chronik vergangener Sommer",
+  description:
+    "Erkunde die Chronik vergangener Sommertheater-Saisons und entdecke Aufführungen, Highlights und Geschichten aus dem Schlosspark.",
+  alternates: {
+    canonical: "/chronik",
+  },
+  openGraph: {
+    title: "Chronik vergangener Sommer",
+    description:
+      "Jahreschronik des Sommertheaters Altrossthal mit prägnanten Momenten, Inszenierungen und Bildern vergangener Spielzeiten.",
+    url: "/chronik",
+    type: "website",
+    images: [
+      {
+        url: "/images/SNT_1.png",
+        alt: "Sommerliche Bühne vor Schlosskulisse",
+      },
+    ],
+    siteName: "Sommertheater Altrossthal",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Chronik vergangener Sommer",
+    description:
+      "Blättere durch die Archive des Sommertheaters Altrossthal und lass vergangene Sommerabende wieder lebendig werden.",
+    images: ["/images/SNT_1.png"],
+  },
+};
 
 export default async function ChronikPage() {
   const items = await getChronikItems();
