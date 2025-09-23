@@ -27,6 +27,7 @@ import {
 } from "@/data/measurements";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, type Role } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { formatRelativeWithAbsolute } from "@/lib/datetime";
 
 type MeasurementEntry = {
   id: string;
@@ -83,20 +84,6 @@ const ABSOLUTE_DATE_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   month: "2-digit",
   year: "numeric",
 });
-const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat("de-DE", {
-  numeric: "auto",
-});
-
-const RELATIVE_TIME_UNITS: { unit: Intl.RelativeTimeFormatUnit; seconds: number }[] = [
-  { unit: "year", seconds: 60 * 60 * 24 * 365 },
-  { unit: "month", seconds: 60 * 60 * 24 * 30 },
-  { unit: "week", seconds: 60 * 60 * 24 * 7 },
-  { unit: "day", seconds: 60 * 60 * 24 },
-  { unit: "hour", seconds: 60 * 60 },
-  { unit: "minute", seconds: 60 },
-  { unit: "second", seconds: 1 },
-];
-
 export function MemberMeasurementsControlCenter({
   members,
 }: MemberMeasurementsControlCenterProps) {
@@ -676,15 +663,7 @@ function formatLastUpdated(value: string | null) {
   if (Number.isNaN(timestamp)) {
     return "Letzte Aktualisierung unbekannt";
   }
-  const now = Date.now();
-  const diffInSeconds = Math.round((timestamp - now) / 1000);
-  for (const { unit, seconds } of RELATIVE_TIME_UNITS) {
-    if (Math.abs(diffInSeconds) >= seconds || unit === "second") {
-      const relative = RELATIVE_TIME_FORMATTER.format(Math.round(diffInSeconds / seconds), unit);
-      const absolute = ABSOLUTE_DATE_FORMATTER.format(new Date(timestamp));
-      return `${relative} • ${absolute}`;
-    }
-  }
-  return ABSOLUTE_DATE_FORMATTER.format(new Date(timestamp));
+  const date = new Date(timestamp);
+  return formatRelativeWithAbsolute(date, { absoluteFormatter: ABSOLUTE_DATE_FORMATTER }).combined;
 }
 

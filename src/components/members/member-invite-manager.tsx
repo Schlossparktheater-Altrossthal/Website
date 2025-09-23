@@ -21,6 +21,7 @@ import {
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS, ROLES, sortRoles } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { formatRelativeFromNow } from "@/lib/datetime";
 
 const ASSIGNABLE_ROLES = ROLES.filter((role) => role !== "admin" && role !== "owner");
 
@@ -31,52 +32,12 @@ const statusLabelMap = {
   exhausted: { label: "Verbraucht", variant: "outline" as const },
 };
 
-const RECENT_RELATIVE_FORMATTER = new Intl.RelativeTimeFormat("de-DE", { numeric: "auto" });
 const RECENT_ABSOLUTE_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
 });
 
-const SECOND = 1;
-const MINUTE = 60 * SECOND;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-const WEEK = 7 * DAY;
-const MONTH = 30.4375 * DAY;
-const YEAR = 365.25 * DAY;
-
 type RecentClickDescriptor = { iso: string; relative: string; absolute: string };
-
-function formatRelativeFromNow(date: Date) {
-  const diffInSeconds = (date.getTime() - Date.now()) / 1000;
-  const absoluteDiff = Math.abs(diffInSeconds);
-
-  if (absoluteDiff < MINUTE) {
-    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / SECOND), "second");
-  }
-
-  if (absoluteDiff < HOUR) {
-    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / MINUTE), "minute");
-  }
-
-  if (absoluteDiff < DAY) {
-    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / HOUR), "hour");
-  }
-
-  if (absoluteDiff < WEEK) {
-    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / DAY), "day");
-  }
-
-  if (absoluteDiff < MONTH) {
-    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / WEEK), "week");
-  }
-
-  if (absoluteDiff < YEAR) {
-    return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / MONTH), "month");
-  }
-
-  return RECENT_RELATIVE_FORMATTER.format(Math.round(diffInSeconds / YEAR), "year");
-}
 
 function buildRecentClickDetails(timestamps: string[]): RecentClickDescriptor[] {
   return timestamps
