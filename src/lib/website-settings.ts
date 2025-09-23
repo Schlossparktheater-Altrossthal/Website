@@ -9,7 +9,7 @@ export const DEFAULT_WEBSITE_SETTINGS_ID = "public" as const;
 export const DEFAULT_SITE_TITLE = "Sommertheater im Schlosspark" as const;
 export const DEFAULT_COLOR_MODE = "dark" as const;
 
-export const THEME_COLOR_MODES = ["light", "dark"] as const;
+export const THEME_COLOR_MODES = ["light", "dark", "system"] as const;
 export type ThemeColorMode = (typeof THEME_COLOR_MODES)[number];
 
 type BrandedString<Brand extends string> = string & { readonly __brand: Brand };

@@ -4,6 +4,7 @@ import "./globals.css";
 import type { Viewport } from "next";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
+import { ColorModeScript } from "@/components/theme/color-mode-script";
 import { ThemeStyleRegistry } from "@/components/theme/theme-style-registry";
 import { geistSans, geistMono } from "./fonts";
 import {
@@ -55,7 +56,7 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "oklch(0.75 0.14 63.3)" },
     { color: "oklch(0.78 0.146 63.3)" },
   ],
-  colorScheme: "dark",
+  colorScheme: "light dark",
 };
 
 export const dynamic = "force-dynamic";
@@ -88,9 +89,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   );
   const themeTokens = resolvedSettings.theme.tokens;
 
+  const initialColorScheme =
+    resolvedSettings.colorMode === "system" ? "light dark" : resolvedSettings.colorMode;
+
   return (
-    <html lang="de" className={htmlClassName}>
+    <html
+      lang="de"
+      className={htmlClassName}
+      data-color-mode={resolvedSettings.colorMode}
+      style={{ colorScheme: initialColorScheme }}
+    >
       <head>
+        <ColorModeScript mode={resolvedSettings.colorMode} />
         <ThemeStyleRegistry tokens={themeTokens} />
       </head>
       <body className="antialiased bg-background text-foreground">

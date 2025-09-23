@@ -16,7 +16,7 @@ import {
   toClientWebsiteTheme,
 } from "@/lib/website-settings";
 
-const colorModeSchema = z.enum(["light", "dark"]);
+const colorModeSchema = z.enum(["light", "dark", "system"]);
 
 const updateSchema = z.object({
   settings: z
