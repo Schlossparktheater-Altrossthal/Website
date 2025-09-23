@@ -15,6 +15,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const isHomePage = pathname === "/";
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
 
   const navigationItems = useMemo(() => primaryNavigation, []);
 
@@ -22,10 +23,53 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
     const handleScroll = () => {
       setScrolled(window.scrollY > 100);
     };
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const headerElement = headerRef.current;
+    if (!headerElement) return;
+
+    const root = document.documentElement;
+    const updateHeight = () => {
+      root.style.setProperty("--header-height", `${headerElement.offsetHeight}px`);
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => updateHeight());
+      observer.observe(headerElement);
+
+      return () => {
+        observer.disconnect();
+        root.style.removeProperty("--header-height");
+      };
+    }
+
+    window.addEventListener("resize", updateHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      root.style.removeProperty("--header-height");
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const headerElement = headerRef.current;
+    if (!headerElement) return;
+
+    document.documentElement.style.setProperty(
+      "--header-height",
+      `${headerElement.offsetHeight}px`,
+    );
+  }, [open, scrolled]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -51,6 +95,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
 
   return (
     <header
+      ref={headerRef}
       className={`fixed top-0 z-50 w-full transition-all duration-300 ${
         scrolled || !isHomePage
           ? "border-b border-border/50 bg-background/95 backdrop-blur-md shadow-lg"
