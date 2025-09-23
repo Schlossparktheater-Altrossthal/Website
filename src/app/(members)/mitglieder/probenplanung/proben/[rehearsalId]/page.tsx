@@ -6,6 +6,7 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
 import { RehearsalEditor } from "../../rehearsal-editor";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 type MemberOption = {
   id: string;
@@ -70,6 +71,11 @@ export default async function RehearsalEditorPage({ params }: { params: { rehear
     extraRoles: member.roles.map((entry) => entry.role),
   }));
 
+  const breadcrumbs = [
+    membersNavigationBreadcrumb("/mitglieder/probenplanung"),
+    { id: rehearsal.id, label: rehearsal.title || "Probe", isCurrent: true },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -79,6 +85,7 @@ export default async function RehearsalEditorPage({ params }: { params: { rehear
             ? "Passe Titel, Termine, Beschreibung und Teilnehmer deines Entwurfs an."
             : "Bearbeite diese veröffentlichte Probe. Alle Teilnehmer erhalten eine Benachrichtigung über Änderungen."
         }
+        breadcrumbs={breadcrumbs}
       />
 
       <RehearsalEditor

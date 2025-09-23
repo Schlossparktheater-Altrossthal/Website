@@ -16,6 +16,7 @@ import {
   getGalleryYearDescription,
 } from "@/lib/gallery";
 import { GalleryMediaType } from "@prisma/client";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 export const metadata: Metadata = {
   title: "Archiv und Bilder",
@@ -52,12 +53,15 @@ export default async function ArchiveOverviewPage() {
     hasPermission(session.user, "mitglieder.galerie.delete"),
   ]);
 
+  const baseBreadcrumb = membersNavigationBreadcrumb("/mitglieder/archiv-und-bilder");
+
   if (!canView) {
     return (
       <div className="space-y-6">
         <PageHeader
           title="Archiv und Bilder"
           description="Du benötigst eine spezielle Berechtigung, um auf das Archiv zuzugreifen. Bitte wende dich an das Team für die Freischaltung."
+          breadcrumbs={[baseBreadcrumb]}
         />
         <Card>
           <CardContent className="py-10 text-sm text-muted-foreground">
@@ -136,6 +140,7 @@ export default async function ArchiveOverviewPage() {
       <PageHeader
         title="Archiv und Bilder"
         description="Ordne Bilder und Videos den passenden Jahrgängen zu, entdecke Erinnerungen vergangener Spielzeiten und ergänze das Archiv gemeinsam mit dem Team."
+        breadcrumbs={[baseBreadcrumb]}
       />
 
       <Card>

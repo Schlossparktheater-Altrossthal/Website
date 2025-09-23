@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { MembersBreadcrumbs } from "@/components/members/breadcrumbs";
 import {
   MembersContentHeader,
   MembersPageActions,
@@ -11,6 +12,10 @@ import {
   MembersTopbarStatus,
   MembersTopbarTitle,
 } from "@/components/members/members-app-shell";
+import {
+  createMembersBreadcrumbItems,
+  type MembersBreadcrumbItem,
+} from "@/lib/members-breadcrumbs";
 import { Heading, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +23,9 @@ interface PageHeaderProps {
   title: string;
   description?: React.ReactNode;
   actions?: React.ReactNode;
-  breadcrumbs?: React.ReactNode;
+  breadcrumbs?:
+    | readonly (MembersBreadcrumbItem | null | undefined | false)[]
+    | null;
   quickActions?: React.ReactNode;
   status?: React.ReactNode;
   variant?: "page" | "section";
@@ -35,6 +42,15 @@ export function PageHeader({
   variant = "page",
   className,
 }: PageHeaderProps) {
+  const breadcrumbItems = React.useMemo(
+    () =>
+      breadcrumbs
+        ? createMembersBreadcrumbItems(breadcrumbs)
+        : ([] as MembersBreadcrumbItem[]),
+    [breadcrumbs],
+  );
+  const hasBreadcrumbs = breadcrumbItems.length > 0;
+
   if (variant === "section") {
     return (
       <div
@@ -78,8 +94,10 @@ export function PageHeader({
   return (
     <>
       <MembersTopbar>
-        {breadcrumbs ? (
-          <MembersTopbarBreadcrumbs>{breadcrumbs}</MembersTopbarBreadcrumbs>
+        {hasBreadcrumbs ? (
+          <MembersTopbarBreadcrumbs>
+            <MembersBreadcrumbs items={breadcrumbItems} />
+          </MembersTopbarBreadcrumbs>
         ) : null}
         <MembersTopbarTitle>{title}</MembersTopbarTitle>
         {status ? <MembersTopbarStatus>{status}</MembersTopbarStatus> : null}

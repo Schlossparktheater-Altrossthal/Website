@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { sortRoles, type Role } from "@/lib/roles";
 import type { MeasurementType, MeasurementUnit } from "@/data/measurements";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 export default async function MemberMeasurementsPage() {
   const session = await requireAuth();
@@ -73,11 +74,14 @@ export default async function MemberMeasurementsPage() {
     })),
   }));
 
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/koerpermasse")];
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Körpermaße"
         description="Futuristisches Control Center für das Kostüm-Team: Synchronisiere, vergleiche und aktualisiere die Körpermaße des gesamten Ensembles in einem Blick."
+        breadcrumbs={breadcrumbs}
       />
       <MemberMeasurementsControlCenter members={normalizedMembers} />
     </div>

@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import type { Prisma } from "@prisma/client";
 import { mapIssueSummary } from "@/app/api/issues/utils";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 function createEmptyCounts(): IssueStatusCounts {
   return {
@@ -66,12 +67,14 @@ export default async function IssuesPage() {
   }, createEmptyCounts());
 
   const initialIssues: IssueSummary[] = issuesRaw.map(mapIssueSummary);
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/issues")];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Feedback & Support"
         description="Melde Probleme, Bugs oder Verbesserungsvorschläge und verfolge den Bearbeitungsstand im Mitglieder-Issue-Board."
+        breadcrumbs={breadcrumbs}
       />
       <IssueOverview
         initialIssues={initialIssues}

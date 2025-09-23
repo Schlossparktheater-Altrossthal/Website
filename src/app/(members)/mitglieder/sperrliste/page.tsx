@@ -13,6 +13,7 @@ import {
 } from "@/lib/sperrliste-settings";
 import { SperrlistePageClient } from "./page-client";
 import type { OverviewMember } from "./block-overview";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 export default async function SperrlistePage() {
   const session = await requireAuth();
@@ -92,11 +93,14 @@ export default async function SperrlistePage() {
     })),
   }));
 
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/sperrliste")];
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Sperrliste"
         description="Markiere Tage, an denen du nicht verfügbar bist, damit das Team die Planung im Blick behält."
+        breadcrumbs={breadcrumbs}
       />
       <SperrlistePageClient
         initialBlockedDays={initialBlockedDays}

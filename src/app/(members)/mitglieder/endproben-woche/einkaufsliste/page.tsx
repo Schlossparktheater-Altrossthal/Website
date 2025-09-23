@@ -15,6 +15,7 @@ import {
   STYLE_BADGE_VARIANTS,
   loadMealPlanningContext,
 } from "../essenplanung/meal-plan-context";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -47,12 +48,16 @@ export default async function EinkaufslistePage() {
     participantCount: defaultParticipantCount,
   });
   const hasGeneratedItems = shoppingList.length > 0;
+  const breadcrumbs = [
+    membersNavigationBreadcrumb("/mitglieder/endproben-woche/einkaufsliste"),
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Einkaufsliste"
         description="Die automatisch aggregierten Mengen aus der Essensplanung – inklusive eigener Ergänzungen und optionalem Sharing-Link."
+        breadcrumbs={breadcrumbs}
         quickActions={
           hasGeneratedItems ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">

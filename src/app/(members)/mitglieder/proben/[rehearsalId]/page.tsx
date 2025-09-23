@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { getUserDisplayName } from "@/lib/names";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 const STATUS_LABELS: Record<string, string> = {
   PLANNED: "Geplant",
@@ -112,11 +113,17 @@ export default async function RehearsalDetailPage({ params }: { params: { rehear
     };
   });
 
+  const breadcrumbs = [
+    membersNavigationBreadcrumb("/mitglieder/meine-proben"),
+    { id: rehearsal.id, label: rehearsal.title || "Probe", isCurrent: true },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={rehearsal.title || "Probe"}
         description="Alle Details, Teilnehmer und Rückmeldungen zu diesem Termin."
+        breadcrumbs={breadcrumbs}
       />
 
       <Card>
