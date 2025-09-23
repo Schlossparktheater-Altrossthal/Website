@@ -1,6 +1,6 @@
 import { hasPermission } from "@/lib/permissions";
 
-export type FrontendEditingFeatureKey = "mystery.timer";
+export type FrontendEditingFeatureKey = "mystery.timer" | "site.countdown";
 
 export type FrontendEditingFeature = {
   key: FrontendEditingFeatureKey;
@@ -18,6 +18,12 @@ const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     label: "Mystery-Timer",
     description: "Countdown und Hinweistext für die Mystery-Startseite verwalten.",
     permissionKey: "mitglieder.mystery.timer",
+  },
+  {
+    key: "site.countdown",
+    label: "Premieren-Countdown",
+    description: "Countdown für die öffentliche Startseite anpassen.",
+    permissionKey: "mitglieder.website.countdown",
   },
 ];
 

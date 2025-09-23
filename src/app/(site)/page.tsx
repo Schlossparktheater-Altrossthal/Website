@@ -4,12 +4,33 @@ import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
 import { TextLink } from "@/components/ui/text-link";
 import { getHeroImages, pickHeroForNow } from "@/lib/hero-images";
+import { HomepageCountdown } from "./_components/homepage-countdown";
+import {
+  DEFAULT_HOMEPAGE_COUNTDOWN_ISO,
+  readHomepageCountdown,
+  resolveHomepageCountdown,
+} from "@/lib/homepage-countdown";
 import React from "react";
 
-export default function Home() {
+export default async function Home() {
   const files = getHeroImages();
   const picked = pickHeroForNow(files) ?? "https://picsum.photos/id/1069/1600/900";
   const heroImages = files.length > 0 ? files.slice(0, 5) : [picked];
+  let countdownRecord = null;
+  const hasDatabase = Boolean(process.env.DATABASE_URL);
+  if (hasDatabase) {
+    try {
+      countdownRecord = await readHomepageCountdown();
+    } catch (error) {
+      console.error("Failed to load homepage countdown settings", error);
+    }
+  }
+  const resolvedCountdown = resolveHomepageCountdown(countdownRecord);
+  const effectiveCountdownTargetIso = resolvedCountdown.effectiveCountdownTarget.toISOString();
+  const initialCountdownTargetIso = resolvedCountdown.countdownTarget
+    ? resolvedCountdown.countdownTarget.toISOString()
+    : null;
+  const updatedAtIso = resolvedCountdown.updatedAt ? resolvedCountdown.updatedAt.toISOString() : null;
   const faqs = [
     {
       question: "Was ist das Sommertheater im Schlosspark?",
@@ -43,13 +64,17 @@ export default function Home() {
       <Hero images={heroImages} />
       <div className="layout-container">
         <div className="space-y-12 py-16">
-          <section className="flex flex-col items-center gap-4 text-center">
+          <section className="flex flex-col items-center gap-6 text-center">
             <Text variant="eyebrow" uppercase tone="primary">
               Sommertheater Altrossthal
             </Text>
-            <Heading level="h3" align="center" tone="default">
-              Countdown: bald verfügbar…
-            </Heading>
+            <HomepageCountdown
+              initialCountdownTarget={initialCountdownTargetIso}
+              effectiveCountdownTarget={effectiveCountdownTargetIso}
+              defaultCountdownTarget={DEFAULT_HOMEPAGE_COUNTDOWN_ISO}
+              updatedAt={updatedAtIso}
+              hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
+            />
             <Text variant="bodyLg" align="center" tone="muted">
               Ein einziges Wochenende. Ein Sommer. Ein Stück.
             </Text>

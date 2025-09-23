@@ -179,6 +179,12 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
+    key: "mitglieder.website.countdown",
+    label: "Premieren-Countdown verwalten",
+    description: "Countdown zur ersten Aufführung auf der öffentlichen Startseite einstellen.",
+    category: "membership",
+  },
+  {
     key: "mitglieder.fotoerlaubnisse",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",

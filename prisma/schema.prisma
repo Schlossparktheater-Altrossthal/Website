@@ -513,6 +513,13 @@ model Clue {
   @@index([showId, published, releaseAt])
 }
 
+model HomepageCountdown {
+  id              String   @id @default("public")
+  countdownTarget DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 model MysterySettings {
   id                 String   @id @default("default")
   countdownTarget    DateTime?
