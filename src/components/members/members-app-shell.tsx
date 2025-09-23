@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import { cva, type VariantProps } from "class-variance-authority";
 
 import {
   Sidebar,
@@ -13,12 +14,165 @@ import {
 import { MembersNav, type AssignmentFocus } from "@/components/members-nav";
 import { cn } from "@/lib/utils";
 
+const membersContentSectionVariants = cva("py-6 sm:py-8", {
+  variants: {
+    spacing: {
+      none: "py-0",
+      compact: "py-4 sm:py-6",
+      comfortable: "py-6 sm:py-8",
+      relaxed: "py-8 sm:py-12",
+    },
+  },
+  defaultVariants: {
+    spacing: "comfortable",
+  },
+});
+
+const membersContentContainerVariants = cva("mx-auto w-full px-4 sm:px-6 lg:px-8", {
+  variants: {
+    width: {
+      sm: "max-w-screen-sm",
+      md: "max-w-screen-md",
+      lg: "max-w-screen-lg",
+      xl: "max-w-screen-xl",
+      "2xl": "max-w-screen-2xl",
+      full: "max-w-none",
+    },
+    padding: {
+      none: "px-0",
+      compact: "px-3 sm:px-4 lg:px-6",
+      default: "px-4 sm:px-6 lg:px-8",
+      relaxed: "px-6 sm:px-8 lg:px-12",
+    },
+  },
+  defaultVariants: {
+    width: "2xl",
+    padding: "default",
+  },
+});
+
+const membersContentStackVariants = cva("space-y-8", {
+  variants: {
+    gap: {
+      none: "space-y-0",
+      xs: "space-y-4",
+      sm: "space-y-6",
+      md: "space-y-8",
+      lg: "space-y-10",
+      xl: "space-y-12",
+    },
+  },
+  defaultVariants: {
+    gap: "md",
+  },
+});
+
+type MembersContentSpacing = NonNullable<
+  VariantProps<typeof membersContentSectionVariants>["spacing"]
+>;
+type MembersContentWidth = NonNullable<
+  VariantProps<typeof membersContentContainerVariants>["width"]
+>;
+type MembersContentPadding = NonNullable<
+  VariantProps<typeof membersContentContainerVariants>["padding"]
+>;
+type MembersContentGap = NonNullable<
+  VariantProps<typeof membersContentStackVariants>["gap"]
+>;
+
+export interface MembersContentLayoutConfig {
+  spacing?: MembersContentSpacing;
+  width?: MembersContentWidth;
+  padding?: MembersContentPadding;
+  gap?: MembersContentGap;
+}
+
+type MembersContentLayoutState = Required<MembersContentLayoutConfig>;
+
+export type MembersContentLayoutSnapshot = MembersContentLayoutState;
+
+const DEFAULT_CONTENT_LAYOUT: MembersContentLayoutState = {
+  spacing: "comfortable",
+  width: "2xl",
+  padding: "default",
+  gap: "md",
+};
+
+function mergeContentLayout(
+  base: MembersContentLayoutState,
+  patch?: MembersContentLayoutConfig | null,
+): MembersContentLayoutState {
+  if (!patch) {
+    return base;
+  }
+
+  let changed = false;
+  const next: MembersContentLayoutState = { ...base };
+
+  if (patch.spacing && patch.spacing !== next.spacing) {
+    next.spacing = patch.spacing;
+    changed = true;
+  }
+
+  if (patch.width && patch.width !== next.width) {
+    next.width = patch.width;
+    changed = true;
+  }
+
+  if (patch.padding && patch.padding !== next.padding) {
+    next.padding = patch.padding;
+    changed = true;
+  }
+
+  if (patch.gap && patch.gap !== next.gap) {
+    next.gap = patch.gap;
+    changed = true;
+  }
+
+  return changed ? next : base;
+}
+
+function isContentLayoutEqual(
+  a: MembersContentLayoutState,
+  b: MembersContentLayoutState,
+) {
+  return (
+    a.spacing === b.spacing &&
+    a.width === b.width &&
+    a.padding === b.padding &&
+    a.gap === b.gap
+  );
+}
+
+function computeContentLayout(
+  base: MembersContentLayoutState,
+  overrides: Iterable<MembersContentLayoutConfig>,
+): MembersContentLayoutState {
+  let layout = base;
+  for (const override of overrides) {
+    layout = mergeContentLayout(layout, override);
+  }
+  return layout;
+}
+
+function getContentClasses(layout: MembersContentLayoutState) {
+  return {
+    section: membersContentSectionVariants({ spacing: layout.spacing }),
+    container: membersContentContainerVariants({
+      width: layout.width,
+      padding: layout.padding,
+    }),
+    stack: membersContentStackVariants({ gap: layout.gap }),
+  };
+}
+
 interface MembersAppShellProps {
   children: React.ReactNode;
   permissions: readonly string[];
   activeProduction?: { id: string; title: string | null; year: number };
   assignmentFocus: AssignmentFocus;
   hasDepartmentMemberships: boolean;
+  contentLayout?: MembersContentLayoutConfig;
 }
 
 interface MembersTopbarSlots {
@@ -39,6 +193,10 @@ interface MembersAppShellContextValue {
   setTopbarContent: (content: MembersTopbarSlots | null) => void;
   setContentHeader: (content: React.ReactNode | null) => void;
   setContentFooter: (content: React.ReactNode | null) => void;
+  registerContentLayout: (
+    layout: MembersContentLayoutConfig,
+  ) => () => void;
+  contentLayout: MembersContentLayoutState;
 }
 
 const MembersAppShellContext =
@@ -70,8 +228,10 @@ function SidebarMobileAutoClose() {
 
 function MembersTopbarContent({
   content,
+  containerClassName,
 }: {
   content: MembersTopbarSlots;
+  containerClassName: string;
 }) {
   const { isMobile } = useSidebar();
   const hasQuickActions = Boolean(content.quickActions);
@@ -80,7 +240,7 @@ function MembersTopbarContent({
 
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-      <div className="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+      <div className={containerClassName}>
         <div className="flex flex-wrap items-center justify-between gap-3 py-3 sm:py-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             {isMobile ? (
@@ -140,6 +300,7 @@ export function MembersAppShell({
   activeProduction,
   assignmentFocus,
   hasDepartmentMemberships,
+  contentLayout,
 }: MembersAppShellProps) {
   const [topbarContent, setTopbarContentState] =
     React.useState<MembersTopbarSlots>(INITIAL_TOPBAR);
@@ -147,6 +308,49 @@ export function MembersAppShell({
     React.useState<React.ReactNode>(null);
   const [contentFooter, setContentFooterState] =
     React.useState<React.ReactNode>(null);
+
+  const baseContentLayout = React.useMemo(
+    () => mergeContentLayout(DEFAULT_CONTENT_LAYOUT, contentLayout),
+    [contentLayout],
+  );
+  const [contentLayoutState, setContentLayoutState] =
+    React.useState<MembersContentLayoutState>(baseContentLayout);
+  const layoutOverridesRef = React.useRef<
+    Map<number, MembersContentLayoutConfig>
+  >(new Map());
+  const layoutOverrideIdRef = React.useRef(0);
+
+  const updateContentLayout = React.useCallback(() => {
+    const merged = computeContentLayout(
+      baseContentLayout,
+      layoutOverridesRef.current.values(),
+    );
+    setContentLayoutState((current) =>
+      isContentLayoutEqual(current, merged) ? current : merged,
+    );
+  }, [baseContentLayout]);
+
+  React.useEffect(() => {
+    updateContentLayout();
+  }, [updateContentLayout]);
+
+  const registerContentLayout = React.useCallback(
+    (options: MembersContentLayoutConfig) => {
+      const id = ++layoutOverrideIdRef.current;
+      layoutOverridesRef.current.set(id, options);
+      updateContentLayout();
+      return () => {
+        layoutOverridesRef.current.delete(id);
+        updateContentLayout();
+      };
+    },
+    [updateContentLayout],
+  );
+
+  const contentClasses = React.useMemo(
+    () => getContentClasses(contentLayoutState),
+    [contentLayoutState],
+  );
 
   const setTopbarContent = React.useCallback((value: MembersTopbarSlots | null) => {
     setTopbarContentState(value ?? INITIAL_TOPBAR);
@@ -165,8 +369,16 @@ export function MembersAppShell({
       setTopbarContent,
       setContentHeader,
       setContentFooter,
+      registerContentLayout,
+      contentLayout: contentLayoutState,
     }),
-    [setTopbarContent, setContentHeader, setContentFooter],
+    [
+      setTopbarContent,
+      setContentHeader,
+      setContentFooter,
+      registerContentLayout,
+      contentLayoutState,
+    ],
   );
 
   return (
@@ -184,23 +396,35 @@ export function MembersAppShell({
       <MembersAppShellContext.Provider value={contextValue}>
         <SidebarInset id="main">
           <div className="flex min-h-svh flex-col">
-            <MembersTopbarContent content={topbarContent} />
+            <MembersTopbarContent
+              content={topbarContent}
+              containerClassName={contentClasses.container}
+            />
             <main className="flex-1 pb-12">
               {contentHeader ? (
                 <header className="border-b border-border/60 bg-background/60">
-                  <div className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+                  <div
+                    className={cn(contentClasses.container, "py-6 sm:py-8")}
+                  >
                     {contentHeader}
                   </div>
                 </header>
               ) : null}
-              <section className="py-6 sm:py-8">
-                <div className="mx-auto w-full max-w-screen-2xl space-y-8 px-4 sm:px-6 lg:px-8">
+              <section className={contentClasses.section}>
+                <div
+                  className={cn(
+                    contentClasses.container,
+                    contentClasses.stack,
+                  )}
+                >
                   {children}
                 </div>
               </section>
               {contentFooter ? (
                 <footer className="border-t border-border/60 bg-background/60">
-                  <div className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+                  <div
+                    className={cn(contentClasses.container, "py-6 sm:py-8")}
+                  >
                     {contentFooter}
                   </div>
                 </footer>
@@ -418,6 +642,66 @@ export function MembersContentFooter({
     setContentFooter(content);
     return () => setContentFooter(null);
   }, [content, setContentFooter]);
+
+  return null;
+}
+
+function normalizeContentLayoutConfig(
+  config: MembersContentLayoutConfig,
+): MembersContentLayoutConfig | null {
+  const normalized: MembersContentLayoutConfig = {};
+
+  if (config.spacing) {
+    normalized.spacing = config.spacing;
+  }
+
+  if (config.width) {
+    normalized.width = config.width;
+  }
+
+  if (config.padding) {
+    normalized.padding = config.padding;
+  }
+
+  if (config.gap) {
+    normalized.gap = config.gap;
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : null;
+}
+
+export function useMembersContentLayout(): MembersContentLayoutSnapshot {
+  const { contentLayout } = useMembersAppShellContext();
+  return contentLayout;
+}
+
+export function MembersContentLayout({
+  spacing,
+  width,
+  padding,
+  gap,
+}: MembersContentLayoutConfig) {
+  const { registerContentLayout } = useMembersAppShellContext();
+
+  const options = React.useMemo(
+    () =>
+      normalizeContentLayoutConfig({
+        spacing,
+        width,
+        padding,
+        gap,
+      }),
+    [spacing, width, padding, gap],
+  );
+
+  React.useEffect(() => {
+    if (!options) {
+      return;
+    }
+
+    const unregister = registerContentLayout(options);
+    return unregister;
+  }, [options, registerContentLayout]);
 
   return null;
 }
