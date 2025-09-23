@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ListChecks, Plus, Trash2 } from "lucide-react";
+import { ChefHat, ListChecks, NotebookPen, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import type { DietaryStyleOption } from "@/data/dietary-preferences";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,10 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -53,6 +56,7 @@ export function MealPlanRecipeWorkbench({
   styleBadgeVariants,
 }: MealPlanRecipeWorkbenchProps) {
   const [recipes, setRecipes] = useState<PlannerRecipe[]>(library);
+  const [customRecipeIds, setCustomRecipeIds] = useState<string[]>([]);
   const [participantInput, setParticipantInput] = useState<string>(() =>
     String(Math.max(defaultParticipants, 1)),
   );
@@ -90,6 +94,22 @@ export function MealPlanRecipeWorkbench({
   const recipeMap = useMemo(() => {
     return new Map(recipes.map((recipe) => [recipe.id, recipe]));
   }, [recipes]);
+
+  const { libraryRecipes, customRecipes } = useMemo(() => {
+    const customSet = new Set(customRecipeIds);
+    const libraryEntries: PlannerRecipe[] = [];
+    const customEntries: PlannerRecipe[] = [];
+    for (const recipe of recipes) {
+      if (customSet.has(recipe.id)) {
+        customEntries.push(recipe);
+      } else {
+        libraryEntries.push(recipe);
+      }
+    }
+    return { libraryRecipes: libraryEntries, customRecipes: customEntries };
+  }, [recipes, customRecipeIds]);
+  const customRecipeIdSet = useMemo(() => new Set(customRecipeIds), [customRecipeIds]);
+  const hasCustomRecipes = customRecipes.length > 0;
 
   const numberFormatter = useMemo(
     () =>
@@ -263,6 +283,7 @@ export function MealPlanRecipeWorkbench({
       }
       return next;
     });
+    setCustomRecipeIds((prev) => (prev.includes(recipeId) ? prev : [...prev, recipeId]));
 
     setNewRecipe({
       title: "",
@@ -276,14 +297,41 @@ export function MealPlanRecipeWorkbench({
     setShowCustomForm(false);
   };
 
+  const renderRecipeOption = (recipe: PlannerRecipe, origin: "library" | "custom") => (
+    <SelectItem
+      key={`${origin}-${recipe.id}`}
+      value={recipe.id}
+      className="items-start whitespace-normal py-2 pl-2 pr-8 text-left"
+    >
+      <span className="flex flex-col gap-1">
+        <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+          {recipe.title}
+          {origin === "custom" ? (
+            <span className="rounded-full border border-fuchsia-400/60 bg-fuchsia-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fuchsia-500">
+              Eigen
+            </span>
+          ) : null}
+        </span>
+        <span className="text-xs text-muted-foreground">{recipe.description}</span>
+      </span>
+    </SelectItem>
+  );
+
   return (
-    <div className="space-y-4">
-      <Card className="border border-border/60 bg-background/80">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-base font-semibold">Rezeptplanung</CardTitle>
+    <div className="space-y-6">
+      <Card className="border border-border/70 bg-background/95 shadow-[0_18px_50px_rgba(15,23,42,0.24)]">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2 text-primary">
+              <NotebookPen className="h-5 w-5" />
+              <CardTitle className="text-base font-semibold">Rezeptplanung</CardTitle>
+            </div>
+            <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
+              {numberFormatter.format(participantCount)} Personen
+            </Badge>
+          </div>
           <p className="text-sm text-muted-foreground">
-            Wähle Vorschläge aus der Bibliothek oder ergänze eigene Rezepte pro Slot – die Mengen werden automatisch auf eure
-            Gruppengröße skaliert.
+            Wähle Vorschläge aus der Bibliothek oder ergänze eigene Rezepte pro Slot – die Mengen werden automatisch auf eure Gruppengröße skaliert.
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -304,14 +352,51 @@ export function MealPlanRecipeWorkbench({
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setShowCustomForm((prev) => !prev)}>
-                {showCustomForm ? "Formular schließen" : "Eigenes Rezept hinzufügen"}
+              <Button variant="outline" className="gap-2" onClick={() => setShowCustomForm((prev) => !prev)}>
+                <Sparkles className="h-4 w-4" />
+                {showCustomForm ? "Formular schließen" : "Eigenes Rezept anlegen"}
               </Button>
             </div>
           </div>
 
+          <div className="rounded-2xl border border-dashed border-border/60 bg-background/85 p-4 text-xs text-muted-foreground">
+            {hasCustomRecipes ? (
+              <>
+                <div className="flex items-center gap-2 text-primary">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="text-sm font-semibold text-foreground">Eigene Rezeptbibliothek</span>
+                </div>
+                <p className="mt-2">
+                  Deine gespeicherten Gerichte findest du jetzt in jedem Dropdown unter „Eigene Rezepte“.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {customRecipes.map((recipe) => (
+                    <Badge
+                      key={recipe.id}
+                      variant="muted"
+                      size="sm"
+                      className="border-border/40 bg-background/95 text-[11px] text-foreground"
+                    >
+                      {recipe.title}
+                    </Badge>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <ChefHat className="h-4 w-4" />
+                  <span className="text-sm font-semibold text-muted-foreground">Noch keine eigenen Rezepte</span>
+                </div>
+                <p className="mt-2">
+                  Speichere eure Favoriten über das Formular – sie stehen danach sofort für alle Slots bereit.
+                </p>
+              </>
+            )}
+          </div>
+
           {showCustomForm ? (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-background/80 p-4">
+            <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1">
                   <Label htmlFor="custom-title">Rezeptname</Label>
@@ -383,7 +468,7 @@ export function MealPlanRecipeWorkbench({
                   {newRecipe.ingredients.map((ingredient, index) => (
                     <div
                       key={index}
-                      className="grid gap-2 rounded-lg border border-border/60 bg-background/70 p-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,0.6fr)_minmax(0,1fr)_auto]"
+                      className="grid gap-2 rounded-xl border border-border/60 bg-background/90 p-3 md:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)_minmax(0,1fr)_auto]"
                     >
                       <Input
                         placeholder="Menge"
@@ -466,7 +551,7 @@ export function MealPlanRecipeWorkbench({
             {days.map((day) => (
               <div
                 key={day.key}
-                className="flex h-full flex-col gap-3 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm"
+                className="flex h-full flex-col gap-3 rounded-2xl border border-border/60 bg-background/95 p-4 shadow-sm"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <div>
@@ -479,20 +564,33 @@ export function MealPlanRecipeWorkbench({
                 <div className="space-y-3">
                   {day.slots.map((slot) => {
                     const selectedId = selectedRecipes[day.key]?.[slot.slot];
-                    const matchingRecipes = recipes.filter(
-                      (recipe) => !recipe.idealSlots || recipe.idealSlots.includes(slot.slot),
-                    );
-                    const fallbackRecipes = recipes.filter(
-                      (recipe) => recipe.idealSlots && !recipe.idealSlots.includes(slot.slot),
-                    );
-                    const recipeOptions = [...matchingRecipes, ...fallbackRecipes];
+                    const isCustomRecipe = selectedId ? customRecipeIdSet.has(selectedId) : false;
+
+                    const prioritizedOptions = (entries: PlannerRecipe[]) => {
+                      const matches = entries.filter(
+                        (recipe) => !recipe.idealSlots || recipe.idealSlots.includes(slot.slot),
+                      );
+                      const fallbacks = entries.filter(
+                        (recipe) => recipe.idealSlots && !recipe.idealSlots.includes(slot.slot),
+                      );
+                      return [...matches, ...fallbacks];
+                    };
+
+                    const libraryOptions = prioritizedOptions(libraryRecipes);
+                    const customOptions = prioritizedOptions(customRecipes);
+
                     const recipe = selectedId ? recipeMap.get(selectedId) : null;
                     const scaleFactor = recipe ? participantCount / (recipe.servings > 0 ? recipe.servings : 1) : 1;
+                    const scaledParticipantCount = recipe ? numberFormatter.format(participantCount) : null;
+                    const baseServings = recipe ? numberFormatter.format(recipe.servings) : null;
+                    const scaleFactorLabel = recipe ? numberFormatter.format(scaleFactor) : null;
+
                     return (
                       <div
                         key={`${day.key}-${slot.slot}`}
-                        className="space-y-3 rounded-xl border border-border/60 bg-background/90 p-3 shadow-sm"
+                        className="relative space-y-3 rounded-xl border border-border/60 bg-background/98 p-4 shadow-sm"
                       >
+                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" aria-hidden />
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{slot.slot}</div>
@@ -507,60 +605,97 @@ export function MealPlanRecipeWorkbench({
                               </p>
                             )}
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "self-start border-transparent text-[11px]",
-                              styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
-                            )}
-                          >
-                            {slot.focusLabel}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1.5">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "border-transparent text-[11px]",
+                                styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
+                              )}
+                            >
+                              {slot.focusLabel}
+                            </Badge>
+                            {isCustomRecipe ? (
+                              <Badge
+                                variant="outline"
+                                size="sm"
+                                className="border-fuchsia-400/60 bg-fuchsia-500/15 text-fuchsia-500"
+                              >
+                                Eigenes Rezept
+                              </Badge>
+                            ) : null}
+                          </div>
                         </div>
                         <Select
                           value={selectedId ?? undefined}
                           onValueChange={(value) => handleRecipeSelect(day.key, slot.slot, value)}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11 text-left">
                             <SelectValue placeholder="Rezept auswählen" />
                           </SelectTrigger>
-                          <SelectContent>
-                            {recipeOptions.map((option) => (
-                              <SelectItem key={option.id} value={option.id}>
-                                {option.title}
-                              </SelectItem>
-                            ))}
+                          <SelectContent className="max-h-[320px] w-[280px] p-1">
+                            <SelectGroup>
+                              <SelectLabel>Bibliothek</SelectLabel>
+                              {libraryOptions.length === 0 ? (
+                                <SelectItem value="__library-empty" disabled className="whitespace-normal text-xs">
+                                  Keine passenden Vorschläge
+                                </SelectItem>
+                              ) : (
+                                libraryOptions.map((entry) => renderRecipeOption(entry, "library"))
+                              )}
+                            </SelectGroup>
+                            {customOptions.length ? (
+                              <>
+                                <SelectSeparator />
+                                <SelectGroup>
+                                  <SelectLabel>Eigene Rezepte</SelectLabel>
+                                  {customOptions.map((entry) => renderRecipeOption(entry, "custom"))}
+                                </SelectGroup>
+                              </>
+                            ) : null}
                           </SelectContent>
                         </Select>
                         {recipe ? (
                           <div className="space-y-3">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <Sparkles className="h-3.5 w-3.5 text-primary" />
+                              <span>
+                                Basis: {baseServings} Portionen · skaliert auf {scaledParticipantCount} ({scaleFactorLabel}×)
+                              </span>
+                            </div>
                             <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
                               {recipe.highlights.map((highlight) => (
-                                <span
+                                <Badge
                                   key={`${recipe.id}-highlight-${highlight}`}
-                                  className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-primary"
+                                  variant="muted"
+                                  size="sm"
+                                  className="border-primary/30 bg-primary/10 text-primary"
                                 >
                                   {highlight}
-                                </span>
+                                </Badge>
                               ))}
                               {recipe.avoids.map((avoid) => (
-                                <span
+                                <Badge
                                   key={`${recipe.id}-avoid-${avoid}`}
-                                  className="rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-500"
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-emerald-300/40 bg-emerald-500/10 text-emerald-500"
                                 >
                                   ohne {avoid}
-                                </span>
+                                </Badge>
                               ))}
                             </div>
                             {recipe.caution && recipe.caution.length ? (
-                              <div className="flex flex-wrap gap-1.5 text-[11px] text-destructive">
+                              <div className="flex flex-wrap gap-1.5 text-[11px]">
                                 {recipe.caution.map((entry) => (
-                                  <span
+                                  <Badge
                                     key={`${recipe.id}-caution-${entry}`}
-                                    className="rounded-full border border-destructive/50 bg-destructive/10 px-2 py-0.5"
+                                    variant="destructive"
+                                    size="sm"
+                                    className="bg-destructive/15 text-destructive"
                                   >
                                     Achtung: {entry}
-                                  </span>
+                                  </Badge>
                                 ))}
                               </div>
                             ) : null}
@@ -573,11 +708,14 @@ export function MealPlanRecipeWorkbench({
                                   const scaledAmount = ingredient.amount * scaleFactor;
                                   const rounded = Math.round(scaledAmount * 100) / 100;
                                   return (
-                                    <li key={`${recipe.id}-${ingredient.name}-${ingredient.unit}`}>
+                                    <li
+                                      key={`${recipe.id}-${ingredient.name}-${ingredient.unit}`}
+                                      className="flex items-baseline justify-between gap-2"
+                                    >
                                       <span className="font-medium text-foreground">
                                         {numberFormatter.format(rounded)} {ingredient.unit}
-                                      </span>{" "}
-                                      {ingredient.name}
+                                      </span>
+                                      <span className="text-right">{ingredient.name}</span>
                                     </li>
                                   );
                                 })}
@@ -602,15 +740,14 @@ export function MealPlanRecipeWorkbench({
               </div>
             ))}
           </div>
-
         </CardContent>
       </Card>
 
-      <Card className="border border-border/60 bg-background/80">
-        <CardHeader className="space-y-2">
+      <Card className="border border-border/70 bg-background/95 shadow-sm">
+        <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2 text-primary">
+              <ListChecks className="h-5 w-5" />
               <CardTitle className="text-base font-semibold">Einkaufsliste</CardTitle>
             </div>
             <Button asChild variant="outline" size="sm" className="gap-1">
@@ -633,7 +770,7 @@ export function MealPlanRecipeWorkbench({
                 return (
                   <li
                     key={`${entry.name}-${entry.unit}`}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background/90 px-3 py-2"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background/98 px-3 py-2"
                   >
                     <span>
                       <span className="font-semibold text-foreground">
@@ -642,7 +779,7 @@ export function MealPlanRecipeWorkbench({
                       {entry.name}
                     </span>
                     {entry.category ? (
-                      <Badge variant="outline" className="border-border/60 bg-background/70 text-[11px]">
+                      <Badge variant="outline" className="border-border/60 bg-background/80 text-[11px]">
                         {entry.category}
                       </Badge>
                     ) : null}
