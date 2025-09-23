@@ -1,10 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 
 import { Heading, Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 
 import { PosterSlideshow } from "./poster-slideshow";
 import type { ChronikCastEntry, ChronikMeta, ChronikPreparedItem } from "./types";
@@ -28,9 +27,8 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
   const posterSources = item.posterSources;
   const detailHref = `/chronik/${item.id}`;
   const headingId = `chronik-${item.id}-heading`;
-  const castListId = `chronik-${item.id}-cast`;
   const isBunburySeason = item.id === "altrossthal-2024";
-  const [isCastVisible, setIsCastVisible] = useState(() => !isBunburySeason);
+  const shouldRenderCast = castEntries.length > 0 && !isBunburySeason;
 
   const isInteractiveTarget = (target: EventTarget | null) => {
     if (!target || typeof (target as HTMLElement).closest !== "function") {
@@ -40,7 +38,7 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
     return Boolean((target as HTMLElement).closest("a, button, [role='button']"));
   };
 
-  const handleCardClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleCardClick = (event: MouseEvent<HTMLElement>) => {
     if (event.defaultPrevented || isInteractiveTarget(event.target)) {
       return;
     }
@@ -48,7 +46,7 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
     router.push(detailHref);
   };
 
-  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.defaultPrevented || isInteractiveTarget(event.target)) {
       return;
     }
@@ -140,90 +138,32 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
                   {item.synopsis}
                 </Text>
               )}
-              {castEntries.length > 0 && (
+              {shouldRenderCast && (
                 <div className="mt-6 text-left">
-                  {isBunburySeason ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setIsCastVisible((prev) => !prev)}
-                        className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-background/70 px-5 py-4 text-left shadow-inner backdrop-blur-sm transition-all duration-200 hover:border-primary/50 hover:bg-background/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                        aria-expanded={isCastVisible}
-                        aria-controls={castListId}
+                  <Heading
+                    level="h3"
+                    className="text-lg font-semibold text-foreground [text-shadow:_1px_1px_3px_rgba(0,0,0,0.35)] sm:text-xl"
+                  >
+                    Ensemble
+                  </Heading>
+                  <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {castEntries.map((entry, entryIndex) => (
+                      <div
+                        key={`${entry.role}-${entryIndex}`}
+                        className="rounded-xl border border-border/50 bg-background/70 p-3 shadow-inner backdrop-blur-sm"
                       >
-                        <span className="flex flex-col text-left">
-                          <Heading level="h3" asChild>
-                            <span className="text-lg font-semibold text-foreground [text-shadow:_1px_1px_3px_rgba(0,0,0,0.35)] sm:text-xl">
-                              Ensemble
-                            </span>
-                          </Heading>
-                          <Text variant="small" tone="muted" asChild>
-                            <span className="mt-1 text-left [text-shadow:_1px_1px_3px_rgba(0,0,0,0.25)]">
-                              {isCastVisible ? "Tippen, um Rollen auszublenden" : "Tippen, um Rollen anzuzeigen"}
-                            </span>
-                          </Text>
-                        </span>
-                        <svg
-                          className={cn(
-                            "h-5 w-5 text-primary transition-transform duration-300",
-                            isCastVisible ? "rotate-180" : "rotate-0",
-                          )}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                      {isCastVisible && (
-                        <dl id={castListId} className="mt-4 grid gap-3 sm:grid-cols-2">
-                          {castEntries.map((entry, entryIndex) => (
-                            <div
-                              key={`${entry.role}-${entryIndex}`}
-                              className="rounded-xl border border-border/50 bg-background/70 p-3 shadow-inner backdrop-blur-sm"
-                            >
-                              <dt className="text-sm font-semibold text-foreground">
-                                {entry.role}
-                              </dt>
-                            <dd className="mt-1 text-sm text-foreground/80">
-                              {entry.players
-                                .map((player) => formatChronikPlayerName(player))
-                                .filter(Boolean)
-                                .join(", ")}
-                            </dd>
-                            </div>
-                          ))}
-                        </dl>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <Heading
-                        level="h3"
-                        className="text-lg font-semibold text-foreground [text-shadow:_1px_1px_3px_rgba(0,0,0,0.35)] sm:text-xl"
-                      >
-                        Ensemble
-                      </Heading>
-                      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                        {castEntries.map((entry, entryIndex) => (
-                          <div
-                            key={`${entry.role}-${entryIndex}`}
-                            className="rounded-xl border border-border/50 bg-background/70 p-3 shadow-inner backdrop-blur-sm"
-                          >
-                            <dt className="text-sm font-semibold text-foreground">
-                              {entry.role}
-                            </dt>
-                            <dd className="mt-1 text-sm text-foreground/80">
-                              {entry.players
-                                .map((player) => formatChronikPlayerName(player))
-                                .filter(Boolean)
-                                .join(", ")}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </>
-                  )}
+                        <dt className="text-sm font-semibold text-foreground">
+                          {entry.role}
+                        </dt>
+                        <dd className="mt-1 text-sm text-foreground/80">
+                          {entry.players
+                            .map((player) => formatChronikPlayerName(player))
+                            .filter(Boolean)
+                            .join(", ")}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
                 </div>
               )}
               <div className="mt-8 flex flex-wrap items-center gap-3">
