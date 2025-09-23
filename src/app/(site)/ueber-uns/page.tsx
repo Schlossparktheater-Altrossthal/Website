@@ -12,6 +12,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heading, Text } from "@/components/ui/typography";
+import { getCurrentProductionEnsembleStats } from "@/lib/ensemble";
 
 export const metadata: Metadata = {
   title: "Über uns",
@@ -29,7 +30,15 @@ export const metadata: Metadata = {
   },
 };
 
-const highlights = [
+type Highlight = {
+  label: string;
+  value: string;
+  detail: string;
+};
+
+const NUMBER_FORMATTER = new Intl.NumberFormat("de-DE");
+
+const baseHighlights: Highlight[] = [
   {
     label: "Gründung",
     value: "2009",
@@ -142,8 +151,20 @@ const engagement = [
   },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+  const ensembleStats = await getCurrentProductionEnsembleStats();
+  const highlights = baseHighlights.map<Highlight>((item) => {
+    if (item.label !== "Ensemble" || !ensembleStats) {
+      return item;
+    }
+
+    return {
+      ...item,
+      value: NUMBER_FORMATTER.format(ensembleStats.memberCount),
+      detail: "Mitglieder in der aktuellen Produktion – Darstellende, Musiker:innen und helfende Hände",
+    };
+  });
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "PerformingGroup",
