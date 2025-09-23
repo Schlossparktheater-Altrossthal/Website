@@ -1,12 +1,101 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePathname } from "next/navigation";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
 import { ctaNavigation, primaryNavigation } from "@/config/navigation";
+
+const HEADER_SPACING = {
+  gradientHeight: "var(--header-gradient-height)",
+  nav: {
+    gap: {
+      base: "var(--space-xs)",
+      sm: "var(--space-sm)",
+      md: "var(--space-md)",
+    },
+    paddingY: {
+      base: "var(--space-xs)",
+      md: "var(--space-sm)",
+    },
+  },
+  desktopLinksGap: "var(--space-md)",
+  actions: {
+    gap: {
+      base: "var(--space-2xs)",
+      sm: "var(--space-xs)",
+    },
+  },
+  mobile: {
+    triggerSize: "var(--header-mobile-trigger-size)",
+    iconSize: "var(--header-mobile-icon-size)",
+    panelWidth: "var(--header-drawer-width)",
+    panelMaxWidth: "calc(100vw - 2 * var(--layout-gutter))",
+    panelGap: "var(--space-sm)",
+    panelPadding: "var(--space-md)",
+    panelPaddingTop: "var(--header-drawer-padding-top)",
+    linkGroupGap: "var(--space-2xs)",
+    linkPaddingInline: "var(--space-sm)",
+    linkPaddingBlock: "var(--space-xs)",
+    linkDescriptionMarginTop: "var(--space-3xs)",
+    footerSpace: "var(--space-xs)",
+    footerPaddingTop: "var(--space-sm)",
+    ctaPaddingInline: "var(--space-sm)",
+    ctaPaddingBlock: "var(--space-xs)",
+  },
+} as const;
+
+const navSpacingStyles = {
+  "--nav-gap": HEADER_SPACING.nav.gap.base,
+  "--nav-padding-y": HEADER_SPACING.nav.paddingY.base,
+} as CSSProperties;
+
+const actionsSpacingStyles = {
+  "--header-actions-gap": HEADER_SPACING.actions.gap.base,
+} as CSSProperties;
+
+const drawerPanelStyles = {
+  "--drawer-gap": HEADER_SPACING.mobile.panelGap,
+  "--drawer-padding": HEADER_SPACING.mobile.panelPadding,
+  "--drawer-padding-top": HEADER_SPACING.mobile.panelPaddingTop,
+  width: HEADER_SPACING.mobile.panelWidth,
+  maxWidth: HEADER_SPACING.mobile.panelMaxWidth,
+} as CSSProperties;
+
+const drawerLinkGroupStyles = {
+  "--drawer-link-gap": HEADER_SPACING.mobile.linkGroupGap,
+} as CSSProperties;
+
+const drawerFooterStyles = {
+  "--drawer-footer-space": HEADER_SPACING.mobile.footerSpace,
+  "--drawer-footer-padding-top": HEADER_SPACING.mobile.footerPaddingTop,
+} as CSSProperties;
+
+const drawerLinkPaddingStyles = {
+  paddingInline: HEADER_SPACING.mobile.linkPaddingInline,
+  paddingBlock: HEADER_SPACING.mobile.linkPaddingBlock,
+} satisfies CSSProperties;
+
+const drawerLinkDescriptionStyles = {
+  marginTop: HEADER_SPACING.mobile.linkDescriptionMarginTop,
+} satisfies CSSProperties;
+
+const drawerCtaPaddingStyles = {
+  paddingInline: HEADER_SPACING.mobile.ctaPaddingInline,
+  paddingBlock: HEADER_SPACING.mobile.ctaPaddingBlock,
+} satisfies CSSProperties;
+
+const heroGradientStyles = {
+  height: HEADER_SPACING.gradientHeight,
+} satisfies CSSProperties;
 
 export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const [open, setOpen] = useState(false);
@@ -58,15 +147,17 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
       }`}
     >
       <div
+        style={!scrolled && isHomePage ? heroGradientStyles : undefined}
         className={`${
           !scrolled && isHomePage
-            ? "absolute inset-x-0 top-full h-32 bg-gradient-to-b from-transparent via-transparent to-transparent"
+            ? "absolute inset-x-0 top-full bg-gradient-to-b from-transparent via-transparent to-transparent"
             : ""
         }`}
       />
       <nav
         aria-label="Hauptnavigation"
-        className="layout-container flex flex-wrap items-center gap-3 py-3 sm:gap-4 md:gap-6 md:py-4"
+        style={navSpacingStyles}
+        className="layout-container flex flex-wrap items-center gap-[var(--nav-gap)] py-[var(--nav-padding-y)] sm:[--nav-gap:var(--space-sm)] md:[--nav-gap:var(--space-md)] md:[--nav-padding-y:var(--space-sm)]"
       >
         <Link
           className={`font-serif text-lg transition-all duration-300 sm:text-xl ${
@@ -79,7 +170,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
           {siteTitle}
         </Link>
 
-        <div className="hidden items-center gap-6 md:flex">
+        <div className="hidden items-center gap-[var(--space-md)] md:flex">
           {navigationItems.map((item) => {
             const isActive =
               pathname === item.href || pathname?.startsWith(`${item.href}/`);
@@ -101,7 +192,10 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
           })}
         </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div
+          style={actionsSpacingStyles}
+          className="ml-auto flex items-center gap-[var(--header-actions-gap)] sm:[--header-actions-gap:var(--space-xs)]"
+        >
           <NotificationBell />
           <UserNav className="relative" />
 
@@ -113,14 +207,22 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
             aria-controls="mobile-menu"
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring md:hidden ${
+            className={`inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring md:hidden ${
               scrolled || !isHomePage
                 ? "border border-border/60 text-foreground hover:bg-accent/30"
                 : "border border-border/60 text-foreground drop-shadow-lg hover:bg-accent/20"
             }`}
           >
             <span className="sr-only">Menü</span>
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              className="h-[var(--header-mobile-icon-size)] w-[var(--header-mobile-icon-size)]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="18" x2="21" y2="18" />
@@ -136,9 +238,13 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
           <div
             ref={panelRef}
             id="mobile-menu"
-            className="absolute right-0 top-0 flex h-screen w-64 max-w-[80vw] flex-col gap-4 border-l border-border/60 bg-card/95 p-6 pt-20 shadow-2xl backdrop-blur-md"
+            style={drawerPanelStyles}
+            className="absolute right-0 top-0 flex h-screen flex-col gap-[var(--drawer-gap)] border-l border-border/60 bg-card/95 p-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl backdrop-blur-md"
           >
-            <div className="flex flex-col gap-2">
+            <div
+              style={drawerLinkGroupStyles}
+              className="flex flex-col gap-[var(--drawer-link-gap)]"
+            >
               {navigationItems.map((item) => {
                 const isActive =
                   pathname === item.href || pathname?.startsWith(`${item.href}/`);
@@ -147,7 +253,8 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
                   <Link
                     key={item.href}
                     onClick={() => setOpen(false)}
-                    className={`block rounded-lg px-4 py-3 text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-foreground ${
+                    style={drawerLinkPaddingStyles}
+                    className={`block rounded-lg text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-foreground ${
                       isActive ? "bg-accent/20 font-semibold" : ""
                     }`}
                     href={item.href}
@@ -155,7 +262,10 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
                   >
                     <span className="block font-medium">{item.label}</span>
                     {item.description ? (
-                      <span className="mt-1 block text-sm text-muted-foreground">
+                      <span
+                        style={drawerLinkDescriptionStyles}
+                        className="block text-sm text-muted-foreground"
+                      >
                         {item.description}
                       </span>
                     ) : null}
@@ -164,13 +274,17 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
               })}
             </div>
 
-            <div className="mt-auto space-y-3 border-t border-border/60 pt-4 text-sm text-muted-foreground">
+            <div
+              style={drawerFooterStyles}
+              className="mt-auto space-y-[var(--drawer-footer-space)] border-t border-border/60 pt-[var(--drawer-footer-padding-top)] text-sm text-muted-foreground"
+            >
               <span className="block text-xs uppercase tracking-[0.12em] text-foreground/70">
                 Bleib verbunden
               </span>
               <Link
                 href={ctaNavigation.href}
-                className="block rounded-lg border border-dashed border-primary/50 bg-primary/10 px-4 py-3 text-foreground transition-colors hover:border-primary hover:bg-primary/20"
+                style={drawerCtaPaddingStyles}
+                className="block rounded-lg border border-dashed border-primary/50 bg-primary/10 text-foreground transition-colors hover:border-primary hover:bg-primary/20"
                 onClick={() => setOpen(false)}
               >
                 {ctaNavigation.label}
