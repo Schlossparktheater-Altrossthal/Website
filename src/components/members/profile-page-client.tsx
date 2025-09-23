@@ -349,6 +349,7 @@ export function ProfilePageClient({
         />
         <section className="rounded-3xl border border-border/60 bg-background/90 px-6 py-8 shadow-lg shadow-primary/10 sm:px-8">
           <PageHeader
+            variant="section"
             title="Mein Profil"
             description="Halte deine Angaben aktuell, damit Teams und Kolleg:innen optimal planen können."
           />

@@ -12,12 +12,18 @@ import { useOnlineStats } from "@/hooks/useOnlineStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  MembersContentHeader,
+  MembersTopbar,
+  MembersTopbarStatus,
+  MembersTopbarTitle,
+} from "@/components/members/members-app-shell";
 import { useMembersPermissions } from "@/components/members/permissions-context";
 import {
   KeyMetricCard,
   KeyMetricGrid,
   PageHeader,
-  PageHeaderActions,
+  PageHeaderDescription,
   PageHeaderStatus,
   PageHeaderTitle,
 } from "@/design-system/patterns";
@@ -877,49 +883,59 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:space-y-8 lg:p-0 lg:pt-2 lg:pb-10">
-      <PageHeader>
-        <div className="space-y-1.5">
-          <PageHeaderTitle>Mitglieder-Dashboard</PageHeaderTitle>
-        </div>
-        <PageHeaderActions>
+    <>
+      <MembersTopbar>
+        <MembersTopbarTitle>Mitglieder-Dashboard</MembersTopbarTitle>
+        <MembersTopbarStatus>
           <PageHeaderStatus state={connectionMeta.state} icon={connectionMeta.icon}>
             {connectionMeta.label}
           </PageHeaderStatus>
-        </PageHeaderActions>
-      </PageHeader>
+        </MembersTopbarStatus>
+      </MembersTopbar>
 
-      {profileCompletion && !profileCompletion.complete ? (
-        <div className="rounded-2xl border border-warning/45 bg-warning/10 p-4 text-sm text-warning shadow-[0_18px_48px_rgba(253,176,34,0.12)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-semibold">Profilangaben unvollständig</p>
-              <p className="text-xs text-warning/90">
-                {`Du hast ${Math.max(
-                  profileCompletion.total - profileCompletion.completed,
-                  0,
-                )} von ${profileCompletion.total} Aufgaben offen.`}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="border-warning/40 text-warning hover:bg-warning/10"
-              asChild
-            >
-              <Link href="/mitglieder/profil">Profil aktualisieren</Link>
-            </Button>
+      <MembersContentHeader>
+        <PageHeader>
+          <div className="space-y-1.5">
+            <PageHeaderTitle>Mitglieder-Dashboard</PageHeaderTitle>
+            <PageHeaderDescription>
+              Aktuelle Kennzahlen, Aktivitäten und Schnellzugriffe auf einen Blick.
+            </PageHeaderDescription>
           </div>
-        </div>
-      ) : null}
+        </PageHeader>
+      </MembersContentHeader>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)] xl:items-start">
-        <div className="space-y-4">
-          <Card className="h-full bg-gradient-to-br from-accent/20 to-transparent">
-            <CardContent className="flex h-full flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between xl:gap-6">
+      <div className="space-y-6 lg:space-y-8">
+        {profileCompletion && !profileCompletion.complete ? (
+          <div className="rounded-2xl border border-warning/45 bg-warning/10 p-4 text-sm text-warning shadow-[0_18px_48px_rgba(253,176,34,0.12)]">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-sm text-muted-foreground">Willkommen zurück</div>
+                <p className="font-semibold">Profilangaben unvollständig</p>
+                <p className="text-xs text-warning/90">
+                  {`Du hast ${Math.max(
+                    profileCompletion.total - profileCompletion.completed,
+                    0,
+                  )} von ${profileCompletion.total} Aufgaben offen.`}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-warning/40 text-warning hover:bg-warning/10"
+                asChild
+              >
+                <Link href="/mitglieder/profil">Profil aktualisieren</Link>
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)] xl:items-start">
+          <div className="space-y-4">
+            <Card className="h-full bg-gradient-to-br from-accent/20 to-transparent">
+              <CardContent className="flex h-full flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between xl:gap-6">
+                <div>
+                  <div className="text-sm text-muted-foreground">Willkommen zurück</div>
                 <h2 className="text-xl font-semibold">
                   {session?.user?.name || session?.user?.email || "Mitglied"}
                 </h2>
@@ -1047,7 +1063,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
