@@ -29,7 +29,10 @@ function getTimeRemaining(targetTimestamp: number): CountdownState {
   const totalSeconds = Math.floor(totalMilliseconds / MILLISECONDS_PER_SECOND);
 
   const days = Math.floor(totalSeconds / (HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE));
-  const hours = Math.floor((totalSeconds % (HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE)) / (MINUTES_PER_HOUR * SECONDS_PER_MINUTE));
+  const hours = Math.floor(
+    (totalSeconds % (HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE)) /
+      (MINUTES_PER_HOUR * SECONDS_PER_MINUTE),
+  );
   const minutes = Math.floor((totalSeconds % (MINUTES_PER_HOUR * SECONDS_PER_MINUTE)) / SECONDS_PER_MINUTE);
   const seconds = totalSeconds % SECONDS_PER_MINUTE;
 

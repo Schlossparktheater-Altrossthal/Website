@@ -80,6 +80,17 @@ async function main() {
     },
   });
 
+  await prisma.homepageCountdown.upsert({
+    where: { id: "public" },
+    update: {
+      countdownTarget: new Date("2026-06-18T17:00:00.000Z"),
+    },
+    create: {
+      id: "public",
+      countdownTarget: new Date("2026-06-18T17:00:00.000Z"),
+    },
+  });
+
   // --- Chronik: use ONLY the provided Altroßthal data below ---
 
   // Altroßthal data provided (curated demo -> replace with real assets later)
