@@ -241,6 +241,42 @@ export function SperrlisteSettingsManager({
     }
   }, [holidayMode, holidayUrl]);
 
+  const holidaySourceDetails = useMemo(() => {
+    if (holidayMode === "disabled") {
+      return null;
+    }
+
+    const rawUrl =
+      holidayMode === "custom" ? holidayUrl : defaults.holidaySourceUrl ?? "";
+    const trimmed = rawUrl.trim();
+
+    if (!trimmed) {
+      return null;
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+      const label = `${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`.replace(/\/$/, "");
+
+      return {
+        href: parsed.toString(),
+        label: label || parsed.hostname,
+      };
+    } catch {
+      if (/^https?:\/\//i.test(trimmed)) {
+        return {
+          href: trimmed,
+          label: trimmed,
+        };
+      }
+
+      return {
+        href: null,
+        label: trimmed,
+      };
+    }
+  }, [defaults.holidaySourceUrl, holidayMode, holidayUrl]);
+
   const freezeDaysNumber = useMemo(() => {
     const parsed = Number.parseInt(freezeDaysValue, 10);
     return Number.isFinite(parsed) ? parsed : null;
@@ -472,37 +508,59 @@ export function SperrlisteSettingsManager({
       className={cn(
         "text-sm text-foreground",
         layout === "compact"
-          ? "grid gap-x-6 gap-y-3 sm:grid-cols-2"
-          : "space-y-4",
+          ? "grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-10"
+          : "grid grid-cols-1 gap-y-6",
         className,
       )}
     >
-      <div className="space-y-1">
-        <Text variant="caption" uppercase className="text-muted-foreground">
-          Ferienquelle
-        </Text>
-        <div className="flex flex-wrap items-center gap-2">
-          <span>{holidayModeSummary}</span>
-          <Badge variant={STATUS_BADGE_VARIANTS[statusMeta.tone]}>{statusMeta.label}</Badge>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Text asChild variant="caption" uppercase className="text-muted-foreground">
+            <dt>Bevorzugte Tage</dt>
+          </Text>
+          <dd className="leading-5">{preferredList}</dd>
+        </div>
+        <div className="space-y-2">
+          <Text asChild variant="caption" uppercase className="text-muted-foreground">
+            <dt>Ausnahmen</dt>
+          </Text>
+          <dd className="leading-5">{exceptionList}</dd>
         </div>
       </div>
-      <div className="space-y-1">
-        <Text variant="caption" uppercase className="text-muted-foreground">
-          Bevorzugte Tage
-        </Text>
-        <span>{preferredList}</span>
-      </div>
-      <div className="space-y-1">
-        <Text variant="caption" uppercase className="text-muted-foreground">
-          Ausnahmen
-        </Text>
-        <span>{exceptionList}</span>
-      </div>
-      <div className="space-y-1">
-        <Text variant="caption" uppercase className="text-muted-foreground">
-          Sperrfrist
-        </Text>
-        <span>{freezeDaysSummary}</span>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Text asChild variant="caption" uppercase className="text-muted-foreground">
+            <dt>Ferienquelle</dt>
+          </Text>
+          <dd className="space-y-2 leading-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span>{holidayModeSummary}</span>
+              <Badge variant={STATUS_BADGE_VARIANTS[statusMeta.tone]}>{statusMeta.label}</Badge>
+            </div>
+            {holidaySourceDetails ? (
+              holidaySourceDetails.href ? (
+                <a
+                  href={holidaySourceDetails.href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="block break-words text-xs text-muted-foreground underline-offset-2 hover:underline sm:text-sm"
+                >
+                  {holidaySourceDetails.label}
+                </a>
+              ) : (
+                <span className="block break-words text-xs text-muted-foreground sm:text-sm">
+                  {holidaySourceDetails.label}
+                </span>
+              )
+            ) : null}
+          </dd>
+        </div>
+        <div className="space-y-2">
+          <Text asChild variant="caption" uppercase className="text-muted-foreground">
+            <dt>Sperrfrist</dt>
+          </Text>
+          <dd className="leading-5">{freezeDaysSummary}</dd>
+        </div>
       </div>
     </dl>
   );
