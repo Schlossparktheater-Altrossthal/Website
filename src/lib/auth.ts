@@ -10,7 +10,8 @@ import type { CredentialInput } from "next-auth/providers/credentials";
 import { sortRoles, ROLES } from "@/lib/roles";
 import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
 import { verifyPassword } from "@/lib/password";
-import { combineNameParts, splitFullName } from "@/lib/names";
+import { combineNameParts } from "@/lib/names";
+import { ensureDevTestUser } from "@/lib/dev-auth";
 
 type MutableToken = JWT & {
   id?: string;
@@ -193,43 +194,7 @@ const credentialsProvider = Credentials({
       if (!DEV_TEST_USER_EMAILS.includes(email)) return null;
       const role = DEV_TEST_USER_ROLE_MAP[email];
       if (!role) return null;
-      const friendlyName = email.split("@")[0] ?? "";
-      const trimmedName = friendlyName.trim();
-      const { firstName: derivedFirstName, lastName: derivedLastName } = splitFullName(trimmedName);
-      const combinedName = combineNameParts(derivedFirstName, derivedLastName) ?? (trimmedName || null);
-
-      const user = await prisma.user.upsert({
-        where: { email },
-        update: {
-          firstName: derivedFirstName,
-          lastName: derivedLastName,
-          name: combinedName,
-          role,
-        },
-        create: {
-          email,
-          firstName: derivedFirstName,
-          lastName: derivedLastName,
-          name: combinedName,
-          role,
-        },
-      });
-      await prisma.userRole.upsert({
-        where: { userId_role: { userId: user.id, role } },
-        update: {},
-        create: { userId: user.id, role },
-      });
-      return {
-        id: user.id,
-        email: user.email!,
-        firstName: user.firstName ?? null,
-        lastName: user.lastName ?? null,
-        name: combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null),
-        role: role,
-        roles: [role],
-        avatarSource: user.avatarSource,
-        avatarImageUpdatedAt: user.avatarImageUpdatedAt,
-      };
+      return ensureDevTestUser(email, role);
     }
 
     if (!password) {

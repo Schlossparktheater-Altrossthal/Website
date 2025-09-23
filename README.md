@@ -67,6 +67,19 @@ pnpm build
 (Documentation-only changes can skip these checks but should mention it in the
 PR description.)
 
+### Dev-only screenshot sessions
+
+For local screenshot automation the endpoint
+`/api/dev/screenshot-session` can mint a temporary NextAuth session for any of
+the predefined development roles. The helper is only available when
+`NODE_ENV !== "production"`. Visit a URL such as
+`http://localhost:3000/api/dev/screenshot-session?role=owner&target=/mitglieder`
+to set the session cookie and get redirected to the protected page. Append
+`mode=json` to receive a JSON payload instead of a redirect or pass a custom
+`email` query parameter to reuse a specific test account. The route reuses the
+test users from `@/lib/auth-dev-test-users` and relies on `AUTH_SECRET` for JWT
+signing.
+
 ## Docker overview
 
 - `Dockerfile.dev` builds the development image that serves the Next.js app via
