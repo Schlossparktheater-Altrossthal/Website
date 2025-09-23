@@ -190,6 +190,10 @@ const INITIAL_TOPBAR: MembersTopbarSlots = {
   status: null,
 };
 
+const MEMBERS_TOPBAR_STICKY_STYLE: React.CSSProperties = {
+  top: "var(--members-topbar-offset, 0px)",
+};
+
 interface MembersAppShellContextValue {
   setTopbarContent: (content: MembersTopbarSlots | null) => void;
   setContentHeader: (content: React.ReactNode | null) => void;
@@ -240,7 +244,10 @@ function MembersTopbarContent({
   const hasBreadcrumbs = Boolean(content.breadcrumbs);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header
+      className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      style={MEMBERS_TOPBAR_STICKY_STYLE}
+    >
       <div
         className={cn(
           "flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12",
