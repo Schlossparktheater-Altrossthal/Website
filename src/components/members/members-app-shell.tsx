@@ -177,6 +177,7 @@ interface MembersAppShellProps {
   assignmentFocus: AssignmentFocus;
   hasDepartmentMemberships: boolean;
   contentLayout?: MembersContentLayoutConfig;
+  globalFooter?: React.ReactNode;
 }
 
 interface MembersTopbarSlots {
@@ -338,6 +339,7 @@ export function MembersAppShell({
   assignmentFocus,
   hasDepartmentMemberships,
   contentLayout,
+  globalFooter,
 }: MembersAppShellProps) {
   const [topbarContent, setTopbarContentState] =
     React.useState<MembersTopbarSlots>(INITIAL_TOPBAR);
@@ -466,6 +468,7 @@ export function MembersAppShell({
               </footer>
             ) : null}
           </main>
+          {globalFooter}
         </SidebarInset>
       </MembersAppShellContext.Provider>
     </>

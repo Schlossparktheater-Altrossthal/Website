@@ -145,17 +145,19 @@ export default async function MembersLayout({ children }: { children: React.Reac
               activeProduction={activeProduction ?? undefined}
               assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
+              globalFooter={
+                <SiteFooter
+                  buildInfo={buildInfo}
+                  isDevBuild={isDevBuild}
+                  siteTitle={siteTitle}
+                />
+              }
             >
               {children}
             </MembersAppShell>
           </MembersPermissionsProvider>
         </SidebarProvider>
       </main>
-      <SiteFooter
-        buildInfo={buildInfo}
-        isDevBuild={isDevBuild}
-        siteTitle={siteTitle}
-      />
     </div>
   );
 }
