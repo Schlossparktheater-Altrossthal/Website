@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ListChecks, Plus, Trash2 } from "lucide-react";
 
@@ -17,42 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { buildShoppingList } from "@/lib/meal-planning/shopping-list";
+import type { PlannerAssignments, PlannerDay, PlannerRecipe } from "@/lib/meal-planning/types";
 import { cn } from "@/lib/utils";
-
-export type PlannerIngredient = {
-  name: string;
-  amount: number;
-  unit: string;
-  category?: string;
-};
-
-export type PlannerRecipe = {
-  id: string;
-  title: string;
-  description: string;
-  suitableFor: DietaryStyleOption[];
-  highlights: string[];
-  avoids: string[];
-  caution?: string[];
-  servings: number;
-  ingredients: PlannerIngredient[];
-  instructions: string[];
-  idealSlots?: readonly string[];
-};
-
-export type PlannerSlot = {
-  slot: string;
-  focusLabel: string;
-  focusStyle: DietaryStyleOption;
-  dishId?: string | null;
-};
-
-export type PlannerDay = {
-  key: string;
-  label: string;
-  dateLabel: string | null;
-  slots: PlannerSlot[];
-};
 
 type MealPlanRecipeWorkbenchProps = {
   library: PlannerRecipe[];
@@ -95,10 +63,10 @@ export function MealPlanRecipeWorkbench({
     }
     return parsed;
   }, [participantInput]);
-  const [selectedRecipes, setSelectedRecipes] = useState<Record<string, Record<string, string>>>(() => {
-    const mapping: Record<string, Record<string, string>> = {};
+  const [selectedRecipes, setSelectedRecipes] = useState<PlannerAssignments>(() => {
+    const mapping: PlannerAssignments = {};
     for (const day of days) {
-      const slotMap: Record<string, string> = {};
+      const slotMap: Record<string, string | null | undefined> = {};
       for (const slot of day.slots) {
         if (slot.dishId) {
           slotMap[slot.slot] = slot.dishId;
@@ -132,43 +100,15 @@ export function MealPlanRecipeWorkbench({
     [],
   );
 
-  const shoppingList = useMemo(() => {
-    const totals = new Map<
-      string,
-      { name: string; unit: string; amount: number; category?: string }
-    >();
-    for (const day of days) {
-      const daySelection = selectedRecipes[day.key] ?? {};
-      for (const slot of day.slots) {
-        const recipeId = daySelection[slot.slot];
-        if (!recipeId) {
-          continue;
-        }
-        const recipe = recipeMap.get(recipeId);
-        if (!recipe) {
-          continue;
-        }
-        const servings = recipe.servings > 0 ? recipe.servings : 1;
-        const scaleFactor = participantCount / servings;
-        for (const ingredient of recipe.ingredients) {
-          const key = `${ingredient.name.toLowerCase()}__${ingredient.unit.toLowerCase()}`;
-          const existing = totals.get(key);
-          const scaledAmount = ingredient.amount * scaleFactor;
-          if (existing) {
-            existing.amount += scaledAmount;
-          } else {
-            totals.set(key, {
-              name: ingredient.name,
-              unit: ingredient.unit,
-              amount: scaledAmount,
-              category: ingredient.category,
-            });
-          }
-        }
-      }
-    }
-    return Array.from(totals.values()).sort((a, b) => a.name.localeCompare(b.name, "de-DE"));
-  }, [days, participantCount, recipeMap, selectedRecipes]);
+  const shoppingList = useMemo(
+    () =>
+      buildShoppingList({
+        assignments: selectedRecipes,
+        recipes,
+        participantCount,
+      }),
+    [participantCount, recipes, selectedRecipes],
+  );
 
   const handleParticipantChange = (value: string) => {
     const sanitized = value.replace(/[^0-9]/g, "");
@@ -183,9 +123,14 @@ export function MealPlanRecipeWorkbench({
 
   const handleRecipeSelect = (dayKey: string, slotLabel: string, recipeId: string) => {
     setSelectedRecipes((prev) => {
-      const next: Record<string, Record<string, string>> = {};
+      const next: PlannerAssignments = {};
       for (const day of days) {
-        next[day.key] = { ...(prev[day.key] ?? {}) };
+        const slotAssignments: PlannerAssignments[string] = {};
+        const previous = prev[day.key];
+        if (previous) {
+          Object.assign(slotAssignments, previous);
+        }
+        next[day.key] = slotAssignments;
       }
       next[dayKey][slotLabel] = recipeId;
       return next;
@@ -298,9 +243,14 @@ export function MealPlanRecipeWorkbench({
 
     setRecipes((prev) => [...prev, recipe]);
     setSelectedRecipes((prev) => {
-      const next: Record<string, Record<string, string>> = {};
+      const next: PlannerAssignments = {};
       for (const day of days) {
-        next[day.key] = { ...(prev[day.key] ?? {}) };
+        const slotAssignments: PlannerAssignments[string] = {};
+        const previous = prev[day.key];
+        if (previous) {
+          Object.assign(slotAssignments, previous);
+        }
+        next[day.key] = slotAssignments;
       }
       const targetSlot = recipe.idealSlots?.[0];
       if (targetSlot) {
@@ -337,330 +287,335 @@ export function MealPlanRecipeWorkbench({
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-xs space-y-1">
-            <Label htmlFor="planner-participants">Personenanzahl</Label>
-            <Input
-              id="planner-participants"
-              inputMode="numeric"
-              min={1}
-              value={participantInput}
-              onChange={(event) => handleParticipantChange(event.target.value)}
-              onBlur={ensureParticipantMinimum}
-              placeholder="z. B. 24"
-            />
-            <p className="text-xs text-muted-foreground">
-              Zutatenmengen werden auf diese Gruppengröße hochgerechnet.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => setShowCustomForm((prev) => !prev)}>
-              {showCustomForm ? "Formular schließen" : "Eigenes Rezept hinzufügen"}
-            </Button>
-          </div>
-        </div>
-
-        {showCustomForm ? (
-          <div className="rounded-2xl border border-dashed border-border/70 bg-background/80 p-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="custom-title">Rezeptname</Label>
-                <Input
-                  id="custom-title"
-                  value={newRecipe.title}
-                  onChange={(event) => setNewRecipe((prev) => ({ ...prev, title: event.target.value }))}
-                  placeholder="z. B. Sonnendeck-Porridge"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="custom-servings">Standardportionen</Label>
-                <Input
-                  id="custom-servings"
-                  inputMode="numeric"
-                  min={1}
-                  value={newRecipe.servings}
-                  onChange={(event) =>
-                    setNewRecipe((prev) => ({
-                      ...prev,
-                      servings: event.target.value.replace(/[^0-9]/g, ""),
-                    }))
-                  }
-                  placeholder="6"
-                />
-              </div>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-xs space-y-1">
+              <Label htmlFor="planner-participants">Personenanzahl</Label>
+              <Input
+                id="planner-participants"
+                inputMode="numeric"
+                min={1}
+                value={participantInput}
+                onChange={(event) => handleParticipantChange(event.target.value)}
+                onBlur={ensureParticipantMinimum}
+                placeholder="z. B. 24"
+              />
+              <p className="text-xs text-muted-foreground">
+                Zutatenmengen werden auf diese Gruppengröße hochgerechnet.
+              </p>
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="custom-description">Kurzbeschreibung</Label>
-                <Textarea
-                  id="custom-description"
-                  value={newRecipe.description}
-                  onChange={(event) =>
-                    setNewRecipe((prev) => ({ ...prev, description: event.target.value }))
-                  }
-                  placeholder="Was macht das Rezept besonders?"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="custom-slot">Bevorzugter Slot</Label>
-                <Select
-                  value={newRecipe.slot}
-                  onValueChange={(value) => setNewRecipe((prev) => ({ ...prev, slot: value }))}
-                >
-                  <SelectTrigger id="custom-slot">
-                    <SelectValue placeholder="Slot auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mealSlots.map((slot) => (
-                      <SelectItem key={slot} value={slot}>
-                        {slot}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Zutaten</Label>
-                <Button variant="ghost" size="sm" onClick={addIngredientRow}>
-                  <Plus className="mr-2 h-4 w-4" /> Neue Zutat
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {newRecipe.ingredients.map((ingredient, index) => (
-                  <div
-                    key={index}
-                    className="grid gap-2 rounded-lg border border-border/60 bg-background/70 p-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,0.6fr)_minmax(0,1fr)_auto]"
-                  >
-                    <Input
-                      placeholder="Menge"
-                      inputMode="decimal"
-                      value={ingredient.amount}
-                      onChange={(event) =>
-                        updateIngredientRow(index, "amount", event.target.value.replace(/[^0-9.,]/g, ""))
-                      }
-                    />
-                    <Input
-                      placeholder="Einheit"
-                      value={ingredient.unit}
-                      onChange={(event) => updateIngredientRow(index, "unit", event.target.value)}
-                    />
-                    <Input
-                      placeholder="Zutat"
-                      value={ingredient.name}
-                      onChange={(event) => updateIngredientRow(index, "name", event.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground"
-                      onClick={() => removeIngredientRow(index)}
-                      disabled={newRecipe.ingredients.length <= 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Zubereitungsschritte</Label>
-                <Button variant="ghost" size="sm" onClick={addInstructionRow}>
-                  <Plus className="mr-2 h-4 w-4" /> Neuer Schritt
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {newRecipe.instructions.map((instruction, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <Textarea
-                      value={instruction}
-                      onChange={(event) => updateInstructionRow(index, event.target.value)}
-                      placeholder={`Schritt ${index + 1}`}
-                      rows={2}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="mt-1 text-muted-foreground"
-                      onClick={() => removeInstructionRow(index)}
-                      disabled={newRecipe.instructions.length <= 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {formError ? (
-              <p className="mt-4 text-sm text-destructive">{formError}</p>
-            ) : null}
-
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowCustomForm(false)}>
-                Abbrechen
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setShowCustomForm((prev) => !prev)}>
+                {showCustomForm ? "Formular schließen" : "Eigenes Rezept hinzufügen"}
               </Button>
-              <Button onClick={handleAddCustomRecipe}>Rezept speichern</Button>
             </div>
           </div>
-        ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          {days.map((day) => (
-            <div
-              key={day.key}
-              className="flex h-full flex-col gap-3 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm"
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{day.label}</div>
-                  {day.dateLabel ? (
-                    <div className="text-xs text-muted-foreground/80">{day.dateLabel}</div>
-                  ) : null}
+          {showCustomForm ? (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-background/80 p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="custom-title">Rezeptname</Label>
+                  <Input
+                    id="custom-title"
+                    value={newRecipe.title}
+                    onChange={(event) => setNewRecipe((prev) => ({ ...prev, title: event.target.value }))}
+                    placeholder="z. B. Sonnendeck-Porridge"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="custom-servings">Standardportionen</Label>
+                  <Input
+                    id="custom-servings"
+                    inputMode="numeric"
+                    min={1}
+                    value={newRecipe.servings}
+                    onChange={(event) =>
+                      setNewRecipe((prev) => ({
+                        ...prev,
+                        servings: event.target.value.replace(/[^0-9]/g, ""),
+                      }))
+                    }
+                    placeholder="6"
+                  />
                 </div>
               </div>
-              <div className="space-y-3">
-                {day.slots.map((slot) => {
-                  const selectedId = selectedRecipes[day.key]?.[slot.slot];
-                  const matchingRecipes = recipes.filter(
-                    (recipe) => !recipe.idealSlots || recipe.idealSlots.includes(slot.slot),
-                  );
-                  const fallbackRecipes = recipes.filter(
-                    (recipe) => recipe.idealSlots && !recipe.idealSlots.includes(slot.slot),
-                  );
-                  const recipeOptions = [...matchingRecipes, ...fallbackRecipes];
-                  const recipe = selectedId ? recipeMap.get(selectedId) : null;
-                  const scaleFactor = recipe ? participantCount / (recipe.servings > 0 ? recipe.servings : 1) : 1;
-                  return (
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="custom-description">Kurzbeschreibung</Label>
+                  <Textarea
+                    id="custom-description"
+                    value={newRecipe.description}
+                    onChange={(event) =>
+                      setNewRecipe((prev) => ({ ...prev, description: event.target.value }))
+                    }
+                    placeholder="Was macht das Rezept besonders?"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="custom-slot">Bevorzugter Slot</Label>
+                  <Select
+                    value={newRecipe.slot}
+                    onValueChange={(value) => setNewRecipe((prev) => ({ ...prev, slot: value }))}
+                  >
+                    <SelectTrigger id="custom-slot">
+                      <SelectValue placeholder="Slot auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {mealSlots.map((slot) => (
+                        <SelectItem key={slot} value={slot}>
+                          {slot}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Zutaten</Label>
+                  <Button variant="ghost" size="sm" onClick={addIngredientRow}>
+                    <Plus className="mr-2 h-4 w-4" /> Neue Zutat
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {newRecipe.ingredients.map((ingredient, index) => (
                     <div
-                      key={`${day.key}-${slot.slot}`}
-                      className="space-y-3 rounded-xl border border-border/60 bg-background/90 p-3 shadow-sm"
+                      key={index}
+                      className="grid gap-2 rounded-lg border border-border/60 bg-background/70 p-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,0.6fr)_minmax(0,1fr)_auto]"
                     >
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{slot.slot}</div>
-                          <div className="text-sm font-semibold text-foreground">
-                            {recipe ? recipe.title : "Rezept auswählen"}
-                          </div>
-                          {recipe ? (
-                            <p className="text-xs text-muted-foreground">{recipe.description}</p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              Wähle ein Rezept, um Details und Mengen zu sehen.
-                            </p>
-                          )}
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "self-start border-transparent text-[11px]",
-                            styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
-                          )}
-                        >
-                          {slot.focusLabel}
-                        </Badge>
-                      </div>
-                      <Select
-                        value={selectedId ?? undefined}
-                        onValueChange={(value) => handleRecipeSelect(day.key, slot.slot, value)}
+                      <Input
+                        placeholder="Menge"
+                        inputMode="decimal"
+                        value={ingredient.amount}
+                        onChange={(event) =>
+                          updateIngredientRow(index, "amount", event.target.value.replace(/[^0-9.,]/g, ""))
+                        }
+                      />
+                      <Input
+                        placeholder="Einheit"
+                        value={ingredient.unit}
+                        onChange={(event) => updateIngredientRow(index, "unit", event.target.value)}
+                      />
+                      <Input
+                        placeholder="Zutat"
+                        value={ingredient.name}
+                        onChange={(event) => updateIngredientRow(index, "name", event.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground"
+                        onClick={() => removeIngredientRow(index)}
+                        disabled={newRecipe.ingredients.length <= 1}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Rezept auswählen" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {recipeOptions.map((option) => (
-                            <SelectItem key={option.id} value={option.id}>
-                              {option.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {recipe ? (
-                        <div className="space-y-3">
-                          <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-                            {recipe.highlights.map((highlight) => (
-                              <span
-                                key={`${recipe.id}-highlight-${highlight}`}
-                                className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-primary"
-                              >
-                                {highlight}
-                              </span>
-                            ))}
-                            {recipe.avoids.map((avoid) => (
-                              <span
-                                key={`${recipe.id}-avoid-${avoid}`}
-                                className="rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-500"
-                              >
-                                ohne {avoid}
-                              </span>
-                            ))}
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Zubereitungsschritte</Label>
+                  <Button variant="ghost" size="sm" onClick={addInstructionRow}>
+                    <Plus className="mr-2 h-4 w-4" /> Neuer Schritt
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {newRecipe.instructions.map((instruction, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <Textarea
+                        value={instruction}
+                        onChange={(event) => updateInstructionRow(index, event.target.value)}
+                        placeholder={`Schritt ${index + 1}`}
+                        rows={2}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="mt-1 text-muted-foreground"
+                        onClick={() => removeInstructionRow(index)}
+                        disabled={newRecipe.instructions.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {formError ? (
+                <p className="mt-4 text-sm text-destructive">{formError}</p>
+              ) : null}
+
+              <div className="mt-4 flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setShowCustomForm(false)}>
+                  Abbrechen
+                </Button>
+                <Button onClick={handleAddCustomRecipe}>Rezept speichern</Button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            {days.map((day) => (
+              <div
+                key={day.key}
+                className="flex h-full flex-col gap-3 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{day.label}</div>
+                    {day.dateLabel ? (
+                      <div className="text-xs text-muted-foreground/80">{day.dateLabel}</div>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {day.slots.map((slot) => {
+                    const selectedId = selectedRecipes[day.key]?.[slot.slot];
+                    const matchingRecipes = recipes.filter(
+                      (recipe) => !recipe.idealSlots || recipe.idealSlots.includes(slot.slot),
+                    );
+                    const fallbackRecipes = recipes.filter(
+                      (recipe) => recipe.idealSlots && !recipe.idealSlots.includes(slot.slot),
+                    );
+                    const recipeOptions = [...matchingRecipes, ...fallbackRecipes];
+                    const recipe = selectedId ? recipeMap.get(selectedId) : null;
+                    const scaleFactor = recipe ? participantCount / (recipe.servings > 0 ? recipe.servings : 1) : 1;
+                    return (
+                      <div
+                        key={`${day.key}-${slot.slot}`}
+                        className="space-y-3 rounded-xl border border-border/60 bg-background/90 p-3 shadow-sm"
+                      >
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{slot.slot}</div>
+                            <div className="text-sm font-semibold text-foreground">
+                              {recipe ? recipe.title : "Rezept auswählen"}
+                            </div>
+                            {recipe ? (
+                              <p className="text-xs text-muted-foreground">{recipe.description}</p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                Wähle ein Rezept, um Details und Mengen zu sehen.
+                              </p>
+                            )}
                           </div>
-                          {recipe.caution && recipe.caution.length ? (
-                            <div className="flex flex-wrap gap-1.5 text-[11px] text-destructive">
-                              {recipe.caution.map((entry) => (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "self-start border-transparent text-[11px]",
+                              styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
+                            )}
+                          >
+                            {slot.focusLabel}
+                          </Badge>
+                        </div>
+                        <Select
+                          value={selectedId ?? undefined}
+                          onValueChange={(value) => handleRecipeSelect(day.key, slot.slot, value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Rezept auswählen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {recipeOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {recipe ? (
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+                              {recipe.highlights.map((highlight) => (
                                 <span
-                                  key={`${recipe.id}-caution-${entry}`}
-                                  className="rounded-full border border-destructive/50 bg-destructive/10 px-2 py-0.5"
+                                  key={`${recipe.id}-highlight-${highlight}`}
+                                  className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-primary"
                                 >
-                                  Achtung: {entry}
+                                  {highlight}
+                                </span>
+                              ))}
+                              {recipe.avoids.map((avoid) => (
+                                <span
+                                  key={`${recipe.id}-avoid-${avoid}`}
+                                  className="rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-500"
+                                >
+                                  ohne {avoid}
                                 </span>
                               ))}
                             </div>
-                          ) : null}
-                          <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                              Skalierte Zutaten
+                            {recipe.caution && recipe.caution.length ? (
+                              <div className="flex flex-wrap gap-1.5 text-[11px] text-destructive">
+                                {recipe.caution.map((entry) => (
+                                  <span
+                                    key={`${recipe.id}-caution-${entry}`}
+                                    className="rounded-full border border-destructive/50 bg-destructive/10 px-2 py-0.5"
+                                  >
+                                    Achtung: {entry}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Skalierte Zutaten
+                              </div>
+                              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                                {recipe.ingredients.map((ingredient) => {
+                                  const scaledAmount = ingredient.amount * scaleFactor;
+                                  const rounded = Math.round(scaledAmount * 100) / 100;
+                                  return (
+                                    <li key={`${recipe.id}-${ingredient.name}-${ingredient.unit}`}>
+                                      <span className="font-medium text-foreground">
+                                        {numberFormatter.format(rounded)} {ingredient.unit}
+                                      </span>{" "}
+                                      {ingredient.name}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
                             </div>
-                            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                              {recipe.ingredients.map((ingredient) => {
-                                const scaledAmount = ingredient.amount * scaleFactor;
-                                const rounded = Math.round(scaledAmount * 100) / 100;
-                                return (
-                                  <li key={`${recipe.id}-${ingredient.name}-${ingredient.unit}`}>
-                                    <span className="font-medium text-foreground">
-                                      {numberFormatter.format(rounded)} {ingredient.unit}
-                                    </span>{" "}
-                                    {ingredient.name}
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                          <div className="rounded-xl border border-border/50 bg-muted/10 p-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                              Zubereitung
+                            <div className="rounded-xl border border-border/50 bg-muted/10 p-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Zubereitung
+                              </div>
+                              <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+                                {recipe.instructions.map((instruction, index) => (
+                                  <li key={`${recipe.id}-instruction-${index}`}>{instruction}</li>
+                                ))}
+                              </ol>
                             </div>
-                            <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
-                              {recipe.instructions.map((instruction, index) => (
-                                <li key={`${recipe.id}-instruction-${index}`}>{instruction}</li>
-                              ))}
-                            </ol>
                           </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
         </CardContent>
       </Card>
 
       <Card className="border border-border/60 bg-background/80">
         <CardHeader className="space-y-2">
-          <div className="flex items-center gap-2">
-            <ListChecks className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base font-semibold">Einkaufsliste</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ListChecks className="h-5 w-5 text-primary" />
+              <CardTitle className="text-base font-semibold">Einkaufsliste</CardTitle>
+            </div>
+            <Button asChild variant="outline" size="sm" className="gap-1">
+              <Link href="/mitglieder/endproben-woche/einkaufsliste">Zur detaillierten Liste</Link>
+            </Button>
           </div>
           <p className="text-sm text-muted-foreground">
             Alle benötigten Zutaten der ausgewählten Rezepte – perfekt zum Teilen mit Einkaufsteams.

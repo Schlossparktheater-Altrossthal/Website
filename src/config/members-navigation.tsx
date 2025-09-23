@@ -166,6 +166,16 @@ const CateringIcon = createMembersNavIcon(
   </>,
 );
 
+const ShoppingListIcon = createMembersNavIcon(
+  <>
+    <path d="M6 4h12a2 2 0 0 1 2 2v14H4V6a2 2 0 0 1 2-2Z" />
+    <path d="M9 2v4" />
+    <path d="M15 2v4" />
+    <path d="m9 11 2 2 4-4" />
+    <path d="M9 17h6" />
+  </>,
+);
+
 const ProductionIcon = createMembersNavIcon(
   <>
     <path d="M3 4h18v4H3z" />
@@ -369,6 +379,12 @@ export const membersNavigation = [
         label: "Essensplanung",
         permissionKey: "mitglieder.essenplanung",
         icon: CateringIcon,
+      },
+      {
+        href: "/mitglieder/endproben-woche/einkaufsliste",
+        label: "Einkaufsliste",
+        permissionKey: "mitglieder.essenplanung",
+        icon: ShoppingListIcon,
       },
     ],
   },
