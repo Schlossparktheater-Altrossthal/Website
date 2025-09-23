@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { hexToOklch, oklchToHex, type OklchColor } from "@/lib/color";
 import { createThemeCss } from "@/lib/theme-css";
 import type {
   ClientWebsiteSettings,
@@ -41,13 +43,14 @@ const UPDATED_AT_FORMATTER = new Intl.DateTimeFormat("de-DE", {
 });
 
 type FamilyFormFields = {
-  l: string;
-  c: string;
-  h: string;
-  alpha: string;
+  l: string | number;
+  c: string | number;
+  h: string | number;
+  alpha: string | number;
 };
 
 type FamiliesState = Record<string, Record<ThemeModeKey, FamilyFormFields>>;
+type FamilyHexDraftState = Record<string, Partial<Record<ThemeModeKey, string>>>;
 
 type TokenModeFields = {
   l: string;
@@ -98,6 +101,8 @@ type NormalisedParameters = {
   families: Record<string, Record<ThemeModeKey, NumericOklch>>;
   tokens: Record<string, NormalisedToken>;
 };
+
+const DEFAULT_FAMILY_COLOR: NumericOklch = { l: 0.5, c: 0, h: 0, alpha: 1 };
 
 function formatTokenLabel(token: string) {
   return token
@@ -161,6 +166,13 @@ function formatOklchValue(value: NumericOklch) {
   const alpha = clamp(value.alpha, 0, 1);
   const prefix = `oklch(${l} ${c} ${h}`;
   return alpha >= 0 && alpha < 1 ? `${prefix} / ${toPrecision(alpha, 2)})` : `${prefix})`;
+}
+
+function toFormNumber(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Number.parseFloat(value.toFixed(6));
 }
 
 function sortModeKeys(keys: ThemeModeKey[]): ThemeModeKey[] {
@@ -321,6 +333,16 @@ function parseNumberWithFallback(value: string | undefined, fallback: number): n
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function resolveFamilyNumber(value: string | number | undefined, fallback: number): number {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : fallback;
+  }
+  if (typeof value === "string") {
+    return parseNumberWithFallback(value, fallback);
+  }
+  return fallback;
+}
+
 function parseAdjustmentValue(value: string | undefined, fallback?: number): number | undefined {
   if (value === undefined) {
     return fallback;
@@ -470,13 +492,13 @@ function buildNormalisedParameters(
     const formModes = familiesState[familyName];
     families[familyName] = {} as Record<ThemeModeKey, NumericOklch>;
     for (const mode of modeKeys) {
-      const fallbackValue = fallbackModes?.[mode] ?? { l: 0.5, c: 0, h: 0, alpha: 1 };
+      const fallbackValue = fallbackModes?.[mode] ?? DEFAULT_FAMILY_COLOR;
       const formValue = formModes?.[mode];
       families[familyName][mode] = {
-        l: parseNumberWithFallback(formValue?.l, fallbackValue.l),
-        c: parseNumberWithFallback(formValue?.c, fallbackValue.c),
-        h: parseNumberWithFallback(formValue?.h, fallbackValue.h),
-        alpha: parseNumberWithFallback(formValue?.alpha, fallbackValue.alpha),
+        l: resolveFamilyNumber(formValue?.l, fallbackValue.l),
+        c: resolveFamilyNumber(formValue?.c, fallbackValue.c),
+        h: resolveFamilyNumber(formValue?.h, fallbackValue.h),
+        alpha: resolveFamilyNumber(formValue?.alpha, fallbackValue.alpha),
       };
     }
   }
@@ -687,6 +709,8 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
     ),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [familyHexDrafts, setFamilyHexDrafts] = useState<FamilyHexDraftState>({});
+  const [expandedFamilies, setExpandedFamilies] = useState<Record<string, boolean>>({});
 
   const modeKeys = useMemo(
     () => deriveModeKeysFromTokens(snapshot.theme.tokens),
@@ -810,6 +834,77 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
     [tokensState],
   );
 
+  function clearFamilyHexDraft(familyName: string, mode: ThemeModeKey) {
+    setFamilyHexDrafts((prev) => {
+      const familyDraft = prev[familyName];
+      if (!familyDraft || familyDraft[mode] === undefined) {
+        return prev;
+      }
+      const nextFamily = { ...familyDraft };
+      delete nextFamily[mode];
+      const nextState = { ...prev };
+      if (Object.keys(nextFamily).length > 0) {
+        nextState[familyName] = nextFamily;
+      } else {
+        delete nextState[familyName];
+      }
+      return nextState;
+    });
+  }
+
+  function applyFamilyOklch(familyName: string, mode: ThemeModeKey, colour: OklchColor) {
+    const nextColour: NumericOklch = {
+      l: toFormNumber(clamp(colour.l, 0, 1)),
+      c: toFormNumber(Math.max(colour.c, 0)),
+      h: toFormNumber(wrapHue(colour.h)),
+      alpha: toFormNumber(clamp(colour.alpha ?? 1, 0, 1)),
+    };
+    setFamiliesState((prev) => ({
+      ...prev,
+      [familyName]: {
+        ...(prev[familyName] ?? {}),
+        [mode]: {
+          l: nextColour.l,
+          c: nextColour.c,
+          h: nextColour.h,
+          alpha: nextColour.alpha,
+        },
+      },
+    }));
+  }
+
+  function handleFamilyColorInput(familyName: string, mode: ThemeModeKey, hexValue: string) {
+    const parsed = hexToOklch(hexValue);
+    if (!parsed) {
+      return;
+    }
+    applyFamilyOklch(familyName, mode, parsed);
+    clearFamilyHexDraft(familyName, mode);
+  }
+
+  function handleFamilyHexInput(familyName: string, mode: ThemeModeKey, hexValue: string) {
+    setFamilyHexDrafts((prev) => ({
+      ...prev,
+      [familyName]: {
+        ...(prev[familyName] ?? {}),
+        [mode]: hexValue,
+      },
+    }));
+    const parsed = hexToOklch(hexValue);
+    if (!parsed) {
+      return;
+    }
+    applyFamilyOklch(familyName, mode, parsed);
+    clearFamilyHexDraft(familyName, mode);
+  }
+
+  function handleFamilyHexBlur(familyName: string, mode: ThemeModeKey, hexValue: string) {
+    const parsed = hexToOklch(hexValue);
+    if (!parsed) {
+      clearFamilyHexDraft(familyName, mode);
+    }
+  }
+
   function applySettings(next: ClientWebsiteSettings, updateSnapshot = false) {
     setSiteTitle(next.siteTitle);
     setColorMode(next.colorMode);
@@ -819,6 +914,7 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
     const nextModeKeys = deriveModeKeysFromTokens(next.theme.tokens);
     setFamiliesState(createFamilyFormState(next.theme.tokens.parameters, nextModeKeys));
     setTokensState(createTokenFormState(next.theme.tokens.parameters, nextModeKeys));
+    setFamilyHexDrafts({});
     if (updateSnapshot) {
       setSnapshot(next);
     }
@@ -840,6 +936,7 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
         },
       },
     }));
+    clearFamilyHexDraft(familyName, mode);
   }
 
   function handleTokenFamilyChange(tokenName: string, family: string) {
@@ -1030,106 +1127,181 @@ export function WebsiteThemeSettingsManager({ initialSettings }: WebsiteThemeSet
               </p>
             </div>
             <div className="space-y-4">
-              {familyNames.map((family) => (
-                <div key={family} className="space-y-4 rounded-lg border p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="text-sm font-medium">{formatFamilyLabel(family)}</span>
-                    <div className="flex gap-2">
-                      {modeKeys.map((mode) => (
-                        <span
-                          key={`${family}-${mode}-swatch`}
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60"
-                          style={{
-                            backgroundColor: formatOklchValue(parameters.families[family]?.[mode] ?? {
-                              l: 0.5,
-                              c: 0,
-                              h: 0,
-                              alpha: 1,
-                            }),
-                          }}
-                          aria-label={`${formatFamilyLabel(family)} ${getModeLabel(mode)} Vorschau`}
-                        />
-                      ))}
+              {familyNames.map((family) => {
+                const isAdvancedVisible = expandedFamilies[family] ?? false;
+                return (
+                  <div key={family} className="space-y-4 rounded-lg border p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-sm font-medium">{formatFamilyLabel(family)}</span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+                          onClick={() =>
+                            setExpandedFamilies((prev) => ({
+                              ...prev,
+                              [family]: !isAdvancedVisible,
+                            }))
+                          }
+                        >
+                          <span>Erweitert</span>
+                          {isAdvancedVisible ? (
+                            <ChevronDown className="h-4 w-4" aria-hidden />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" aria-hidden />
+                          )}
+                        </Button>
+                        <div className="flex gap-2">
+                          {modeKeys.map((mode) => {
+                            const previewColour =
+                              parameters.families[family]?.[mode] ??
+                              fallbackParameters.families[family]?.[mode] ??
+                              DEFAULT_FAMILY_COLOR;
+                            return (
+                              <span
+                                key={`${family}-${mode}-swatch`}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60"
+                                style={{
+                                  backgroundColor: formatOklchValue(previewColour),
+                                }}
+                                aria-label={`${formatFamilyLabel(family)} ${getModeLabel(mode)} Vorschau`}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {modeKeys.map((mode) => {
+                        const modeState = familiesState[family]?.[mode];
+                        const baseId = `${family}-${mode}`;
+                        const resolvedColour =
+                          parameters.families[family]?.[mode] ??
+                          fallbackParameters.families[family]?.[mode] ??
+                          DEFAULT_FAMILY_COLOR;
+                        const showAlpha = (resolvedColour.alpha ?? 1) < 0.999;
+                        const hexDraft = familyHexDrafts[family]?.[mode];
+                        const hexValue =
+                          hexDraft ??
+                          oklchToHex(resolvedColour, {
+                            includeAlpha: showAlpha,
+                          });
+                        const colorInputValue = oklchToHex(
+                          { ...resolvedColour, alpha: 1 },
+                          { includeAlpha: false },
+                        );
+                        return (
+                          <div key={`${family}-${mode}`} className="space-y-3 rounded-md border p-3">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              {getModeLabel(mode)}
+                            </div>
+                            <div className="space-y-3">
+                              <div className="space-y-1">
+                                <Label htmlFor={`${baseId}-hex`} className="text-xs">
+                                  Hex-Farbe
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    id={`${baseId}-color`}
+                                    type="color"
+                                    value={colorInputValue}
+                                    aria-label={`${formatFamilyLabel(family)} ${getModeLabel(mode)} Farbwahl`}
+                                    className="h-10 w-12 min-w-[3rem] cursor-pointer rounded-md px-1 py-1"
+                                    onChange={(event) =>
+                                      handleFamilyColorInput(family, mode, event.target.value)
+                                    }
+                                  />
+                                  <Input
+                                    id={`${baseId}-hex`}
+                                    value={hexValue}
+                                    onChange={(event) =>
+                                      handleFamilyHexInput(family, mode, event.target.value)
+                                    }
+                                    onBlur={(event) =>
+                                      handleFamilyHexBlur(family, mode, event.target.value)
+                                    }
+                                    placeholder="#RRGGBB"
+                                    spellCheck={false}
+                                    autoComplete="off"
+                                    className="font-mono uppercase"
+                                  />
+                                </div>
+                              </div>
+                              {isAdvancedVisible ? (
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`${baseId}-l`} className="text-xs">
+                                      L
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-l`}
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      max="1"
+                                      value={modeState?.l ?? ""}
+                                      onChange={(event) =>
+                                        handleFamilyChange(family, mode, "l", event.target.value)
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`${baseId}-c`} className="text-xs">
+                                      Chroma
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-c`}
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={modeState?.c ?? ""}
+                                      onChange={(event) =>
+                                        handleFamilyChange(family, mode, "c", event.target.value)
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`${baseId}-h`} className="text-xs">
+                                      Hue
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-h`}
+                                      type="number"
+                                      step="0.1"
+                                      value={modeState?.h ?? ""}
+                                      onChange={(event) =>
+                                        handleFamilyChange(family, mode, "h", event.target.value)
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`${baseId}-alpha`} className="text-xs">
+                                      Alpha
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-alpha`}
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      max="1"
+                                      value={modeState?.alpha ?? ""}
+                                      onChange={(event) =>
+                                        handleFamilyChange(family, mode, "alpha", event.target.value)
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {modeKeys.map((mode) => {
-                      const modeState = familiesState[family]?.[mode];
-                      const baseId = `${family}-${mode}`;
-                      return (
-                        <div key={`${family}-${mode}`} className="space-y-3 rounded-md border p-3">
-                          <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                            <span>{getModeLabel(mode)}</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label htmlFor={`${baseId}-l`} className="text-xs">
-                                L
-                              </Label>
-                              <Input
-                                id={`${baseId}-l`}
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="1"
-                                value={modeState?.l ?? ""}
-                                onChange={(event) =>
-                                  handleFamilyChange(family, mode, "l", event.target.value)
-                                }
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label htmlFor={`${baseId}-c`} className="text-xs">
-                                Chroma
-                              </Label>
-                              <Input
-                                id={`${baseId}-c`}
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={modeState?.c ?? ""}
-                                onChange={(event) =>
-                                  handleFamilyChange(family, mode, "c", event.target.value)
-                                }
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label htmlFor={`${baseId}-h`} className="text-xs">
-                                Hue
-                              </Label>
-                              <Input
-                                id={`${baseId}-h`}
-                                type="number"
-                                step="0.1"
-                                value={modeState?.h ?? ""}
-                                onChange={(event) =>
-                                  handleFamilyChange(family, mode, "h", event.target.value)
-                                }
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label htmlFor={`${baseId}-alpha`} className="text-xs">
-                                Alpha
-                              </Label>
-                              <Input
-                                id={`${baseId}-alpha`}
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="1"
-                                value={modeState?.alpha ?? ""}
-                                onChange={(event) =>
-                                  handleFamilyChange(family, mode, "alpha", event.target.value)
-                                }
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
