@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cva, type VariantProps } from "class-variance-authority";
+import { ArrowLeft } from "lucide-react";
 
 import {
   Sidebar,
@@ -11,6 +13,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MembersNav, type AssignmentFocus } from "@/components/members-nav";
 import { cn } from "@/lib/utils";
@@ -239,6 +242,34 @@ function MembersTopbarContent({
   const hasStatus = Boolean(content.status);
   const hasBreadcrumbs = Boolean(content.breadcrumbs);
 
+  const desktopStatus = hasStatus ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {content.status}
+    </div>
+  ) : null;
+
+  const desktopQuickActions = hasQuickActions ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {content.quickActions}
+    </div>
+  ) : null;
+
+  const mobileQuickActions = hasQuickActions ? content.quickActions : null;
+
+  const homeLink = (
+    <Button
+      asChild
+      variant="ghost"
+      size="sm"
+      className="gap-1.5 whitespace-nowrap"
+    >
+      <Link href="/" aria-label="Zur Hauptseite">
+        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>Zur Hauptseite</span>
+      </Link>
+    </Button>
+  );
+
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div
@@ -266,25 +297,18 @@ function MembersTopbarContent({
             )}
           </div>
         </div>
-        {!isMobile && (hasStatus || hasQuickActions) ? (
+        {!isMobile ? (
           <div className="flex flex-shrink-0 items-center gap-2">
-            {hasStatus ? (
-              <div className="flex flex-wrap items-center gap-2">
-                {content.status}
-              </div>
-            ) : null}
-            {hasQuickActions ? (
-              <div className="flex flex-wrap items-center gap-2">
-                {content.quickActions}
-              </div>
-            ) : null}
+            {desktopStatus}
+            {desktopQuickActions}
+            {homeLink}
           </div>
-        ) : null}
-        {isMobile && hasQuickActions ? (
+        ) : (
           <div className="flex flex-shrink-0 items-center gap-2">
-            {content.quickActions}
+            {mobileQuickActions}
+            {homeLink}
           </div>
-        ) : null}
+        )}
       </div>
       {isMobile && hasStatus ? (
         <div
