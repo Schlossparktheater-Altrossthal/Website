@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -348,7 +349,7 @@ export function MembersNav({
   assignmentFocus = "none",
   hasDepartmentMemberships = false,
 }: {
-  permissions?: string[];
+  permissions?: readonly string[];
   activeProduction?: ActiveProductionNavInfo;
   assignmentFocus?: AssignmentFocus;
   hasDepartmentMemberships?: boolean;
@@ -359,6 +360,8 @@ export function MembersNav({
   const normalizedQuery = query.trim().toLowerCase();
   const isFiltering = normalizedQuery.length > 0;
   const searchInputId = useId();
+  const { state, isMobile } = useSidebar();
+  const isCollapsed = !isMobile && state === "collapsed";
 
   const assignmentLabel = useMemo(
     () => resolveAssignmentLabel(assignmentFocus, permissions ?? []),
@@ -387,8 +390,8 @@ export function MembersNav({
   const groupedConfig = useMemo<Group[]>(
     () => [
       { label: "Allgemein", items: GENERAL_ITEMS },
-  { label: assignmentLabel, items: assignmentItems },
-  { label: "Endproben Woche", items: FINAL_WEEK_ITEMS },
+      { label: assignmentLabel, items: assignmentItems },
+      { label: "Endproben Woche", items: FINAL_WEEK_ITEMS },
       { label: "Produktion", items: PRODUCTION_ITEMS },
       { label: "Finanzen", items: FINANCE_ITEMS },
       { label: "Verwaltung", items: ADMIN_ITEMS },
@@ -438,67 +441,73 @@ export function MembersNav({
 
   return (
     <>
-      <SidebarHeader className="gap-3">
-        <label htmlFor={searchInputId} className="sr-only">
-          Mitgliederbereiche durchsuchen
-        </label>
-        <SidebarInput
-          id={searchInputId}
-          type="search"
-          inputMode="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && query) {
-              event.preventDefault();
-              setQuery("");
-              return;
-            }
+      {!isCollapsed && (
+        <>
+          <SidebarHeader className="gap-3">
+            <label htmlFor={searchInputId} className="sr-only">
+              Mitgliederbereiche durchsuchen
+            </label>
+            <SidebarInput
+              id={searchInputId}
+              type="search"
+              inputMode="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && query) {
+                  event.preventDefault();
+                  setQuery("");
+                  return;
+                }
 
-            if (event.key === "Enter" && firstMatch) {
-              event.preventDefault();
-              if (firstMatch.href && firstMatch.href !== pathname) {
-                router.push(firstMatch.href);
-              }
-            }
-          }}
-          placeholder="Bereiche suchen"
-          aria-label="Mitgliederbereiche durchsuchen"
-        />
-      </SidebarHeader>
-      <SidebarSeparator />
-      <SidebarContent className="pb-4">
-        <div className="px-3">
-          <div className="rounded-lg border border-sidebar-border/60 bg-sidebar/70 p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/60">
-                  Aktive Produktion
+                if (event.key === "Enter" && firstMatch) {
+                  event.preventDefault();
+                  if (firstMatch.href && firstMatch.href !== pathname) {
+                    router.push(firstMatch.href);
+                  }
+                }
+              }}
+              placeholder="Bereiche suchen"
+              aria-label="Mitgliederbereiche durchsuchen"
+            />
+          </SidebarHeader>
+          <SidebarSeparator />
+        </>
+      )}
+      <SidebarContent className={cn("pb-4", isCollapsed && "px-2 py-4")}>
+        {!isCollapsed && (
+          <div className="px-3">
+            <div className="rounded-lg border border-sidebar-border/60 bg-sidebar/70 p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/60">
+                    Aktive Produktion
+                  </div>
+                  {activeProduction && activeProductionTitle ? (
+                    <>
+                      <div className="mt-1 text-sm font-semibold text-sidebar-foreground">
+                        {activeProductionTitle}
+                      </div>
+                      <div className="text-xs text-sidebar-foreground/70">
+                        Jahrgang {activeProduction.year}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-xs text-sidebar-foreground/70">
+                      Noch keine Produktion ausgewählt. Wähle in der Übersicht eine aktive Produktion aus.
+                    </p>
+                  )}
                 </div>
-                {activeProduction && activeProductionTitle ? (
-                  <>
-                    <div className="mt-1 text-sm font-semibold text-sidebar-foreground">
-                      {activeProductionTitle}
-                    </div>
-                    <div className="text-xs text-sidebar-foreground/70">
-                      Jahrgang {activeProduction.year}
-                    </div>
-                  </>
-                ) : (
-                  <p className="mt-1 text-xs text-sidebar-foreground/70">
-                    Noch keine Produktion ausgewählt. Wähle in der Übersicht eine aktive Produktion aus.
-                  </p>
-                )}
+                <Link
+                  href="/mitglieder/produktionen"
+                  className="text-xs font-medium text-sidebar-foreground/80 transition hover:text-sidebar-foreground"
+                >
+                  Übersicht öffnen
+                </Link>
               </div>
-              <Link
-                href="/mitglieder/produktionen"
-                className="text-xs font-medium text-sidebar-foreground/80 transition hover:text-sidebar-foreground"
-              >
-                Übersicht öffnen
-              </Link>
             </div>
           </div>
-        </div>
+        )}
 
         {groups.length === 0 ? (
           <div className="mx-3 rounded-lg border border-dashed border-sidebar-border/60 bg-sidebar/40 p-3 text-sm text-sidebar-foreground/70">
@@ -518,14 +527,19 @@ export function MembersNav({
                           asChild
                           isActive={active}
                           tooltip={item.label}
-                          className="gap-2"
+                          className={cn("gap-2", isCollapsed && "justify-center")}
                         >
-                          <Link href={item.href}>
+                          <Link href={item.href} aria-label={item.label}>
                             <NavIcon
                               name={item.href}
-                              className={cn("h-4 w-4 shrink-0 transition-opacity", active ? "opacity-100" : "opacity-70")}
+                              className={cn(
+                                "h-4 w-4 shrink-0 transition-opacity",
+                                active ? "opacity-100" : "opacity-70",
+                              )}
                             />
-                            <span className="truncate">{item.label}</span>
+                            <span className={cn("truncate", isCollapsed && "sr-only")}>
+                              {item.label}
+                            </span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
