@@ -10,6 +10,7 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { GalleryMediaType } from "@prisma/client";
 import { getGalleryYearDescription, isValidGalleryYear } from "@/lib/gallery";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 export default async function ArchiveYearPage({ params }: { params: { year: string } }) {
   const session = await requireAuth();
@@ -26,12 +27,17 @@ export default async function ArchiveYearPage({ params }: { params: { year: stri
     hasPermission(session.user, "mitglieder.galerie.delete"),
   ]);
 
+  const baseBreadcrumb = membersNavigationBreadcrumb(
+    "/mitglieder/archiv-und-bilder",
+  );
+
   if (!canView) {
     return (
       <div className="space-y-6">
         <PageHeader
           title={`Archiv und Bilder ${year}`}
           description="Du benötigst eine spezielle Berechtigung, um auf diesen Jahrgang zuzugreifen."
+          breadcrumbs={[baseBreadcrumb, { id: `year-${year}`, label: String(year) }]}
           actions={
             <Button asChild variant="outline">
               <Link href="/mitglieder/archiv-und-bilder">
@@ -76,6 +82,7 @@ export default async function ArchiveYearPage({ params }: { params: { year: stri
       <PageHeader
         title={`Archiv und Bilder ${year}`}
         description={description}
+        breadcrumbs={[baseBreadcrumb, { id: `year-${year}`, label: String(year), isCurrent: true }]}
         actions={
           <Button asChild variant="outline">
             <Link href="/mitglieder/archiv-und-bilder">

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 import {
   createFinalRehearsalDutyAction,
@@ -323,6 +324,9 @@ export default async function FinalRehearsalDutyPlanPage() {
         new Date(finalWeekStart.getTime() + 6 * 86_400_000),
       )}`
     : null;
+  const breadcrumbs = [
+    membersNavigationBreadcrumb("/mitglieder/endproben-woche/dienstplan"),
+  ];
 
   if (!show) {
     return (
@@ -330,6 +334,7 @@ export default async function FinalRehearsalDutyPlanPage() {
         <PageHeader
           title="Dienstplan"
           description="Organisiere Aufgaben und Verantwortlichkeiten für die Endprobenwoche."
+          breadcrumbs={breadcrumbs}
         />
         <Card className="border border-dashed border-border/60 bg-background/70">
           <CardHeader>
@@ -356,6 +361,7 @@ export default async function FinalRehearsalDutyPlanPage() {
       <PageHeader
         title="Dienstplan"
         description="Koordiniere Dienste, Verantwortlichkeiten und Tagesaufgaben der Endprobenwoche."
+        breadcrumbs={breadcrumbs}
       />
 
       <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background/80 shadow-[0_25px_60px_rgba(59,130,246,0.18)]">

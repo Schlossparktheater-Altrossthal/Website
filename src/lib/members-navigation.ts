@@ -170,3 +170,24 @@ export function filterMembersNavigationByQuery(
   const flat = filteredGroups.flatMap((group) => group.items);
   return { groups: filteredGroups, flat };
 }
+
+export interface MembersNavigationItemMatch {
+  group: MembersNavGroup;
+  item: MembersNavItem;
+}
+
+export function findMembersNavigationItem(
+  href: string,
+  options: { groups?: readonly MembersNavGroup[] } = {},
+): MembersNavigationItemMatch | null {
+  const groupsToSearch = options.groups ?? membersNavigation;
+
+  for (const group of groupsToSearch) {
+    const item = group.items.find((candidate) => candidate.href === href);
+    if (item) {
+      return { group, item };
+    }
+  }
+
+  return null;
+}

@@ -15,6 +15,7 @@ import {
   loadMealPlanningContext,
 } from "./meal-plan-context";
 import { cn } from "@/lib/utils";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -96,12 +97,16 @@ export default async function EssensplanungPage() {
       hint: finalWeekCountdown !== null ? "Tage bis Start" : "Bitte Termin definieren",
     },
   ];
+  const breadcrumbs = [
+    membersNavigationBreadcrumb("/mitglieder/endproben-woche/essenplanung"),
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Essensplanung"
         description={`Plane kompakt die Verpflegung der Endprobenwoche – gebündelt nach Ernährungsstilen, Strengegraden und Allergierisiken. Dienste und Verantwortliche koordinierst du im Bereich "Dienstplan".`}
+        breadcrumbs={breadcrumbs}
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.66fr)_minmax(0,0.34fr)] xl:items-start">

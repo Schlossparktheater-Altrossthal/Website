@@ -17,6 +17,7 @@ import {
 } from "./rehearsal-calendar";
 import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
 import { combineNameParts } from "@/lib/names";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 export default async function ProbenplanungPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
@@ -106,12 +107,14 @@ export default async function ProbenplanungPage() {
   const now = new Date();
   const total = publishedRehearsals.length;
   const upcoming = publishedRehearsals.filter((r) => r.start >= now).length;
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/probenplanung")];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Probenplanung"
         description="Lege neue Proben an, verwalte Termine und Einladungen."
+        breadcrumbs={breadcrumbs}
       />
 
       <div className="rounded-xl border bg-card/60 p-4 shadow-sm">

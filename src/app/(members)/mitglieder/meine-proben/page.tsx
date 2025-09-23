@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 type AttendanceStatus = "yes" | "no" | "emergency" | "maybe";
 const STATUS_KEYS = ["yes", "no", "emergency", "maybe"] as const satisfies readonly AttendanceStatus[];
@@ -207,14 +208,16 @@ export default async function MeineProbenPage() {
 
   const pendingDeadlines = upcoming
     .filter((item) => !item.myStatus && item.registrationDeadline && item.registrationDeadline > now)
-    .sort((a, b) => (a.registrationDeadline!.getTime() - b.registrationDeadline!.getTime()));
+    .sort((a, b) => a.registrationDeadline!.getTime() - b.registrationDeadline!.getTime());
   const nextPendingDeadline = pendingDeadlines[0] ?? null;
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/meine-proben")];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Meine Proben"
         description="Persönliche Übersicht über deine nächsten Probentermine, Fristen und Rückmeldungen."
+        breadcrumbs={breadcrumbs}
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.68fr)_minmax(0,0.32fr)] xl:gap-8">

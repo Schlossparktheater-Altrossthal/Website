@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { formatRelativeFromNow } from "@/lib/datetime";
 import { getUserDisplayName } from "@/lib/names";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -617,12 +618,17 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const deactivatedAtLabel = formatDateTime(deactivatedAt);
 
   const pageTitle = `Profil von ${displayName}`;
+  const breadcrumbs = [
+    membersNavigationBreadcrumb("/mitglieder/mitgliederverwaltung"),
+    { id: member.id, label: displayName, isCurrent: true },
+  ];
 
   return (
     <div className="space-y-8">
       <PageHeader
         title={pageTitle}
         description="Einblick in Kontaktdaten, Rollen und Engagement des Mitglieds."
+        breadcrumbs={breadcrumbs}
         actions={
           <Button
             asChild
