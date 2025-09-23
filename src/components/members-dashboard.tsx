@@ -42,6 +42,13 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type {
+  DashboardOverviewActivity,
+  DashboardOverviewData,
+  DashboardOverviewFinalRehearsalWeek,
+  DashboardOverviewOnboarding,
+  DashboardOverviewProfileCompletion,
+} from "@/lib/dashboard-overview";
 
 interface RecentActivity {
   id: string;
@@ -147,6 +154,7 @@ type QuickActionLink = {
 
 interface MembersDashboardProps {
   permissions?: readonly string[];
+  initialData: DashboardOverviewData;
 }
 
 const QUICK_ACTION_LINKS = [
@@ -206,217 +214,100 @@ const QUICK_ACTION_LINKS = [
   },
 ] satisfies QuickActionLink[];
 
-type OverviewStatsPayload = {
-  totalMembers?: unknown;
-  rehearsalsThisWeek?: unknown;
-  unreadNotifications?: unknown;
-};
+const RECENT_ACTIVITY_LIMIT = 10;
 
-type OverviewResponse = {
-  stats?: OverviewStatsPayload;
-  recentActivities?: unknown;
-  onboarding?: unknown;
-  finalRehearsalWeek?: unknown;
-  profileCompletion?: unknown;
-};
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+function parseDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function parseRecentActivities(value: unknown): RecentActivity[] {
-  if (!Array.isArray(value)) return [];
+function normalizeRecentActivities(activities: DashboardOverviewActivity[] | undefined): RecentActivity[] {
+  if (!activities?.length) return [];
 
-  const fallbackTimestamp = () => new Date();
-
-  return value
-    .map((entry) => {
-      if (!isRecord(entry)) return null;
-
-      const rawId = entry.id;
-      const rawType = entry.type;
-      const rawMessage = entry.message;
-      const rawTimestamp = entry.timestamp;
-
-      const timestampCandidate =
-        typeof rawTimestamp === "string" || rawTimestamp instanceof Date
-          ? new Date(rawTimestamp)
-          : fallbackTimestamp();
-      const timestamp = Number.isNaN(timestampCandidate.getTime())
-        ? fallbackTimestamp()
-        : timestampCandidate;
-
-      let id: string;
-      if (typeof rawId === "string" && rawId.trim()) {
-        id = rawId;
-      } else if (typeof rawId === "number" && Number.isFinite(rawId)) {
-        id = String(rawId);
-      } else {
-        id = `activity_${timestamp.getTime()}`;
-      }
-
-      const message = typeof rawMessage === "string" && rawMessage.trim()
-        ? rawMessage
-        : "Aktualisierung";
-
-      const type: RecentActivity["type"] =
-        rawType === "rehearsal" || rawType === "attendance" || rawType === "notification"
-          ? rawType
-          : "notification";
-
-      return { id, type, message, timestamp } satisfies RecentActivity;
+  return activities
+    .map((activity) => {
+      const timestamp = parseDate(activity.timestamp) ?? new Date();
+      return {
+        id: activity.id,
+        type: activity.type,
+        message: activity.message,
+        timestamp,
+      } satisfies RecentActivity;
     })
-    .filter((entry): entry is RecentActivity => entry !== null)
-    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    .slice(0, RECENT_ACTIVITY_LIMIT);
 }
 
-const isFocusValue = (value: unknown): value is "acting" | "tech" | "both" =>
-  value === "acting" || value === "tech" || value === "both";
-
-const isPhotoStatus = (value: unknown): value is OnboardingPhotoStatus =>
-  value === "pending" || value === "approved" || value === "rejected" || value === "none";
-
-function parseIsoDate(value: unknown): Date | null {
-  if (value instanceof Date && !Number.isNaN(value.valueOf())) {
-    return value;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const parsed = new Date(trimmed);
-    if (!Number.isNaN(parsed.valueOf())) {
-      return parsed;
-    }
-  }
-  return null;
-}
-
-function parseStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
-    .filter((entry): entry is string => Boolean(entry));
-}
-
-function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
-  if (!isRecord(value)) return null;
-
-  const completed = Boolean(value.completed);
-  const focusRaw = value.focus;
-  const focus = isFocusValue(focusRaw) ? focusRaw : null;
-  const background = typeof value.background === "string" && value.background.trim() ? value.background : null;
-  const backgroundClass =
-    typeof value.backgroundClass === "string" && value.backgroundClass.trim()
-      ? value.backgroundClass
-      : null;
-  const notes = typeof value.notes === "string" && value.notes.trim() ? value.notes : null;
-  const completedAt = parseIsoDate(value.completedAt);
-
-  const statsRecord = isRecord(value.stats) ? value.stats : {};
-  const parseDomain = (entry: unknown): OnboardingDomainStats => {
-    if (!isRecord(entry)) return { count: 0, averageWeight: 0 };
-    const count = typeof entry.count === "number" && Number.isFinite(entry.count) ? entry.count : 0;
-    const averageWeight = typeof entry.averageWeight === "number" && Number.isFinite(entry.averageWeight)
-      ? entry.averageWeight
-      : 0;
-    return { count, averageWeight };
-  };
-
-  const actingStats = parseDomain(statsRecord.acting);
-  const crewStats = parseDomain(statsRecord.crew);
-
-  const interestsRecord = isRecord(statsRecord.interests) ? statsRecord.interests : {};
-  const interestCount = typeof interestsRecord.count === "number" && Number.isFinite(interestsRecord.count)
-    ? interestsRecord.count
-    : 0;
-  const interestTop = parseStringArray(interestsRecord.top);
-
-  const dietaryRecord = isRecord(statsRecord.dietary) ? statsRecord.dietary : {};
-  const dietaryCount = typeof dietaryRecord.count === "number" && Number.isFinite(dietaryRecord.count)
-    ? dietaryRecord.count
-    : 0;
-  const dietaryHighlights = Array.isArray(dietaryRecord.highlights)
-    ? dietaryRecord.highlights
-        .map((entry) => {
-          if (!isRecord(entry)) return null;
-          const name = typeof entry.name === "string" && entry.name.trim() ? entry.name : null;
-          const level = typeof entry.level === "string" && entry.level.trim() ? entry.level : null;
-          if (!name) return null;
-          return { name, level };
-        })
-        .filter((entry): entry is { name: string; level: string | null } => entry !== null)
-    : [];
-
-  const photoRecord = isRecord(value.photoConsent) ? value.photoConsent : {};
-  const statusRaw = photoRecord.status;
-  const status: OnboardingPhotoStatus = isPhotoStatus(statusRaw) ? statusRaw : "none";
-  const consentGiven = Boolean(photoRecord.consentGiven);
-  const hasDocument = Boolean(photoRecord.hasDocument);
-  const updatedAt = parseIsoDate(photoRecord.updatedAt);
-
-  const passwordSet = Boolean(value.passwordSet);
+function normalizeOnboarding(value: DashboardOverviewOnboarding | null | undefined): OnboardingOverview | null {
+  if (!value) return null;
 
   return {
-    completed,
-    completedAt,
-    focus,
-    background,
-    backgroundClass,
-    notes,
+    completed: value.completed,
+    completedAt: parseDate(value.completedAt),
+    focus: value.focus ?? null,
+    background: value.background ?? null,
+    backgroundClass: value.backgroundClass ?? null,
+    notes: value.notes ?? null,
     stats: {
-      acting: actingStats,
-      crew: crewStats,
-      interests: { count: interestCount, top: interestTop },
-      dietary: { count: dietaryCount, highlights: dietaryHighlights },
+      acting: { ...value.stats.acting },
+      crew: { ...value.stats.crew },
+      interests: { count: value.stats.interests.count, top: [...value.stats.interests.top] },
+      dietary: {
+        count: value.stats.dietary.count,
+        highlights: value.stats.dietary.highlights.map((entry) => ({
+          name: entry.name,
+          level: entry.level ?? null,
+        })),
+      },
     },
-    photoConsent: { status, consentGiven, hasDocument, updatedAt },
-    passwordSet,
-  };
+    photoConsent: {
+      status: value.photoConsent.status,
+      consentGiven: value.photoConsent.consentGiven,
+      hasDocument: value.photoConsent.hasDocument,
+      updatedAt: parseDate(value.photoConsent.updatedAt),
+    },
+    passwordSet: value.passwordSet,
+  } satisfies OnboardingOverview;
 }
 
-function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null {
-  if (!isRecord(value)) return null;
-
-  const rawShowId = value.showId;
-  if (typeof rawShowId !== "string") return null;
-  const showId = rawShowId.trim();
-  if (!showId) return null;
-
-  const startDate = parseIsoDate(value.startDate);
+function normalizeFinalRehearsalWeek(
+  value: DashboardOverviewFinalRehearsalWeek | null | undefined,
+): FinalRehearsalWeekInfo | null {
+  if (!value) return null;
+  const startDate = parseDate(value.startDate);
   if (!startDate) return null;
-
-  const title = typeof value.title === "string" && value.title.trim() ? value.title : null;
-  const yearRaw = value.year;
-  const year =
-    typeof yearRaw === "number" && Number.isFinite(yearRaw)
-      ? yearRaw
-      : startDate.getFullYear();
-
   return {
-    showId,
-    title,
-    year,
+    showId: value.showId,
+    title: value.title ?? null,
+    year: value.year,
     startDate,
-  };
+  } satisfies FinalRehearsalWeekInfo;
 }
 
-function parseProfileCompletion(value: unknown):
-  | { complete: boolean; completed: number; total: number }
-  | null {
-  if (!isRecord(value)) return null;
-  const totalRaw = value.total;
-  const completedRaw = value.completed;
-  const complete = Boolean(value.complete);
-  const total =
-    typeof totalRaw === "number" && Number.isFinite(totalRaw) ? totalRaw : 0;
-  const completed =
-    typeof completedRaw === "number" && Number.isFinite(completedRaw)
-      ? completedRaw
-      : 0;
-  return { complete, completed, total };
+function normalizeProfileCompletion(
+  value: DashboardOverviewProfileCompletion | null | undefined,
+): DashboardOverviewProfileCompletion | null {
+  if (!value) return null;
+  return { complete: value.complete, completed: value.completed, total: value.total };
 }
 
-export function MembersDashboard({ permissions: permissionsProp }: MembersDashboardProps = {}) {
+function deriveInitialStats(data: DashboardOverviewData | undefined): DashboardStats {
+  if (!data) {
+    return { ...INITIAL_STATS };
+  }
+  return {
+    totalOnline: 0,
+    totalMembers: data.stats.totalMembers,
+    rehearsalsThisWeek: data.stats.rehearsalsThisWeek,
+    unreadNotifications: data.stats.unreadNotifications,
+  } satisfies DashboardStats;
+}
+
+export function MembersDashboard({
+  permissions: permissionsProp,
+  initialData,
+}: MembersDashboardProps) {
   const { data: session } = useSession();
   const { connectionStatus } = useRealtime();
   const {
@@ -427,80 +318,42 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   const contextPermissions = useMembersPermissions();
   const effectivePermissions = permissionsProp ?? contextPermissions;
 
-  const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [onboarding, setOnboarding] = useState<OnboardingOverview | null>(null);
-  const [onboardingLoaded, setOnboardingLoaded] = useState(false);
-  const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(null);
-  const [profileCompletion, setProfileCompletion] = useState<
-    { complete: boolean; completed: number; total: number } | null
-  >(null);
+  const [stats, setStats] = useState<DashboardStats>(() => deriveInitialStats(initialData));
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(() =>
+    normalizeRecentActivities(initialData.recentActivities),
+  );
+  const [onboarding, setOnboarding] = useState<OnboardingOverview | null>(() =>
+    normalizeOnboarding(initialData.onboarding),
+  );
+  const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(() =>
+    normalizeFinalRehearsalWeek(initialData.finalRehearsalWeek),
+  );
+  const [profileCompletion, setProfileCompletion] = useState<DashboardOverviewProfileCompletion | null>(() =>
+    normalizeProfileCompletion(initialData.profileCompletion),
+  );
+  const isLoading = false;
 
   useEffect(() => {
     setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
   }, [liveOnline]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setIsLoading(true);
-      try {
-        const response = await fetch("/api/dashboard/overview", { cache: "no-store" });
-        if (!response.ok) {
-          console.error("[Dashboard] Failed to load overview", response.status);
-          return;
-        }
-        const payload = (await response.json()) as OverviewResponse;
-        if (cancelled) return;
-
-        setStats((prev) => {
-          const statsPayload = isRecord(payload?.stats) ? payload.stats : {};
-          const next: DashboardStats = {
-            totalOnline: prev.totalOnline,
-            totalMembers:
-              typeof statsPayload.totalMembers === "number"
-                ? statsPayload.totalMembers
-                : prev.totalMembers,
-            rehearsalsThisWeek:
-              typeof statsPayload.rehearsalsThisWeek === "number"
-                ? statsPayload.rehearsalsThisWeek
-                : prev.rehearsalsThisWeek,
-            unreadNotifications:
-              typeof statsPayload.unreadNotifications === "number"
-                ? statsPayload.unreadNotifications
-                : prev.unreadNotifications,
-          };
-          return next;
-        });
-
-        setOnboarding(parseOnboardingOverview(payload?.onboarding));
-        setFinalRehearsalWeek(parseFinalRehearsalWeek(payload?.finalRehearsalWeek));
-        setProfileCompletion(parseProfileCompletion(payload?.profileCompletion));
-        const activities = parseRecentActivities(payload?.recentActivities);
-
-        setRecentActivities(activities.slice(0, 10));
-      } catch (error) {
-        console.error("[Dashboard] Error loading overview", error);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-          setOnboardingLoaded(true);
-        }
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    setStats((prev) => ({
+      ...prev,
+      totalMembers: initialData.stats.totalMembers,
+      rehearsalsThisWeek: initialData.stats.rehearsalsThisWeek,
+      unreadNotifications: initialData.stats.unreadNotifications,
+    }));
+    setRecentActivities(normalizeRecentActivities(initialData.recentActivities));
+    setOnboarding(normalizeOnboarding(initialData.onboarding));
+    setFinalRehearsalWeek(normalizeFinalRehearsalWeek(initialData.finalRehearsalWeek));
+    setProfileCompletion(normalizeProfileCompletion(initialData.profileCompletion));
+  }, [initialData]);
 
   const addActivity = useCallback((activity: RecentActivity) => {
     setRecentActivities((prev) => {
       const filtered = prev.filter((entry) => entry.id !== activity.id);
-      return [activity, ...filtered].slice(0, 10);
+      return [activity, ...filtered].slice(0, RECENT_ACTIVITY_LIMIT);
     });
   }, []);
 
@@ -656,16 +509,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     : `Aktualisiert ${formatTimeAgo(new Date())}`;
 
   const onboardingCard = useMemo(() => {
-    if (!onboardingLoaded) {
-      return (
-        <Card className="border border-dashed border-border/60 bg-background/80">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            Onboarding-Status wird geladen …
-          </CardContent>
-        </Card>
-      );
-    }
-
     if (!onboarding) {
       return (
         <Card className="border border-dashed border-border/60 bg-background/80">
@@ -860,7 +703,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         </CardContent>
       </Card>
     );
-  }, [onboarding, onboardingLoaded]);
+  }, [onboarding]);
 
   if (!session?.user) {
     return (
