@@ -1,9 +1,11 @@
-import { AlertTriangle, ChefHat, CheckCircle2, Sparkles } from "lucide-react";
+import { ChefHat, CheckCircle2, ListPlus, Sparkles } from "lucide-react";
+import Link from "next/link";
 import type { AllergyLevel } from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
 import { MealPlanRecipeWorkbench } from "@/components/members/meal-plan-recipe-workbench";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -11,7 +13,6 @@ import {
   DISH_LIBRARY,
   MEAL_SLOTS,
   STYLE_BADGE_VARIANTS,
-  STYLE_LABELS,
   loadMealPlanningContext,
 } from "./meal-plan-context";
 import { cn } from "@/lib/utils";
@@ -53,7 +54,6 @@ export default async function EssensplanungPage() {
     styleSummaries,
     allergenSummaries,
     criticalAllergens,
-    mealPlan,
     plannerDays,
     defaultParticipantCount,
     priorityProfiles,
@@ -61,7 +61,6 @@ export default async function EssensplanungPage() {
 
   const finalWeekStart = show?.finalRehearsalWeekStart ?? null;
   const numberFormatter = new Intl.NumberFormat("de-DE");
-  const dayDateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
   const finalWeekStartLabel = finalWeekStart
     ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(finalWeekStart)
     : null;
@@ -158,106 +157,44 @@ export default async function EssensplanungPage() {
 
           <Card className="border border-border/60 bg-background/70">
             <CardHeader className="space-y-2">
-              <CardTitle className="text-lg font-semibold">Meal-Plan Vorschlag</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <ListPlus className="h-5 w-5 text-primary" />
+                Eigene Rezepte planen
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Automatisch generierte Menüideen pro Tag – ausgerichtet auf die stärksten Ernährungscluster und unter Berücksichtigung kritischer Allergene.
+                Statt automatischer Vorschläge setzt du jetzt auf eure eigene Kreativität: Mit der Rezeptwerkbank lassen sich individuelle Menüs, Mengen und Abläufe zusammenstellen.
               </p>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {totalParticipants === 0 ? (
-                <div className="rounded-lg border border-dashed border-border/70 bg-background/60 p-6 text-center text-sm text-muted-foreground">
-                  Noch keine Ernährungsprofile hinterlegt. Sobald Angaben vorhanden sind, erscheinen hier Vorschläge.
-                </div>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {mealPlan.map((day) => (
-                    <div
-                      key={day.key}
-                      className="flex h-full flex-col gap-3 rounded-2xl border border-border/60 bg-gradient-to-br from-foreground/[0.03] via-background to-background p-4 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{day.label}</div>
-                          {day.date ? (
-                            <div className="text-xs text-muted-foreground/80">
-                              {dayDateFormatter.format(day.date)}
-                            </div>
-                          ) : null}
-                        </div>
-                        <Badge variant="outline" className="border-border/50 bg-background/80 text-xs text-muted-foreground">
-                          {day.entries.map((entry) => entry.focusLabel).join(" • ")}
-                        </Badge>
-                      </div>
-                      <div className="space-y-3">
-                        {day.entries.map((entry) => (
-                          <div
-                            key={`${day.key}-${entry.slot}`}
-                            className="rounded-xl border border-border/50 bg-background/80 p-3 shadow-sm"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{entry.slot}</div>
-                                <p className="text-sm font-semibold text-foreground">{entry.dish.title}</p>
-                              </div>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "border-transparent text-[11px]",
-                                  STYLE_BADGE_VARIANTS[entry.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
-                                )}
-                              >
-                                {STYLE_LABELS[entry.focusStyle]}
-                              </Badge>
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">{entry.dish.description}</p>
-                            <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-                              {entry.dish.highlights.map((highlight) => (
-                                <span
-                                  key={`${entry.dish.id}-${highlight}`}
-                                  className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-primary"
-                                >
-                                  {highlight}
-                                </span>
-                              ))}
-                              {entry.dish.avoids.map((avoid) => (
-                                <span
-                                  key={`${entry.dish.id}-avoid-${avoid}`}
-                                  className="rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-500"
-                                >
-                                  ohne {avoid}
-                                </span>
-                              ))}
-                            </div>
-                            {entry.cautionMatches.length ? (
-                              <div className="mt-2 flex items-center gap-2 text-xs text-destructive">
-                                <AlertTriangle className="h-4 w-4" />
-                                <span>
-                                  Allergiewarnung: {entry.cautionMatches.join(", ")}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="mt-2 flex items-center gap-2 text-xs text-emerald-500">
-                                <CheckCircle2 className="h-4 w-4" />
-                                <span>Kritische Allergene werden vermieden.</span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <CardContent className="space-y-4">
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+                  <span>Lege Zutaten, Portionen und Beschreibungen exakt für eure Gruppe fest.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+                  <span>Kombiniere Rezepte aus der Bibliothek mit komplett eigenen Kreationen.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+                  <span>Automatisch generierte Einkaufslisten helfen beim Delegieren der Aufgaben.</span>
+                </li>
+              </ul>
+              <Button asChild className="w-full sm:w-auto">
+                <Link href="#rezeptwerkbank">Rezept erstellen</Link>
+              </Button>
             </CardContent>
           </Card>
 
-          <MealPlanRecipeWorkbench
-            library={DISH_LIBRARY}
-            days={plannerDays}
-            defaultParticipants={defaultParticipantCount}
-            mealSlots={MEAL_SLOTS}
-            styleBadgeVariants={STYLE_BADGE_VARIANTS}
-          />
+          <section id="rezeptwerkbank" className="scroll-mt-24">
+            <MealPlanRecipeWorkbench
+              library={DISH_LIBRARY}
+              days={plannerDays}
+              defaultParticipants={defaultParticipantCount}
+              mealSlots={MEAL_SLOTS}
+              styleBadgeVariants={STYLE_BADGE_VARIANTS}
+            />
+          </section>
         </div>
 
         <div className="space-y-4">
