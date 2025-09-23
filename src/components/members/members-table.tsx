@@ -6,7 +6,14 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, ROLES, sortRoles, type Role } from "@/lib/roles";
 import { RoleManager } from "@/components/members/role-manager";
@@ -263,60 +270,67 @@ export function MembersTable({
                             onDelete={() => setDeleteTarget(u)}
                             className="ml-auto justify-end"
                           />
-                          <Modal
+                          <Dialog
                             open={openFor === u.id}
-                            title="Benutzer bearbeiten"
-                            description="Rollen und Daten bearbeiten"
-                            onClose={() => setOpenFor(null)}
-                            allowContentOverflow
+                            onOpenChange={(nextOpen) => {
+                              if (!nextOpen) {
+                                setOpenFor((prev) => (prev === u.id ? null : prev));
+                              }
+                            }}
                           >
-                            <RoleManager
-                              userId={u.id}
-                              email={u.email}
-                              firstName={u.firstName}
-                              lastName={u.lastName}
-                              name={displayName}
-                              initialRoles={u.roles}
-                              canEditOwner={canEditOwner}
-                              availableCustomRoles={availableCustomRoles}
-                              initialCustomRoleIds={u.customRoles.map((r) => r.id)}
-                              onSaved={({ roles, customRoleIds }) => {
-                                setRows((prev) =>
-                                  prev.map((row) =>
-                                    row.id === u.id
-                                      ? {
-                                          ...row,
-                                          roles,
-                                          customRoles: availableCustomRoles.filter((cr) =>
-                                            customRoleIds.includes(cr.id),
-                                          ),
-                                        }
-                                      : row,
-                                  ),
-                                );
-                              }}
-                              onUserUpdated={({ email, firstName, lastName, name }) => {
-                                setRows((prev) =>
-                                  prev.map((row) =>
-                                    row.id === u.id
-                                      ? {
-                                          ...row,
-                                          email: email ?? row.email,
-                                          firstName: firstName !== undefined ? firstName : row.firstName,
-                                          lastName: lastName !== undefined ? lastName : row.lastName,
-                                          name:
-                                            name ??
-                                            combineNameParts(
-                                              firstName !== undefined ? firstName : row.firstName,
-                                              lastName !== undefined ? lastName : row.lastName,
-                                            ) ?? row.name,
-                                        }
-                                      : row,
-                                  ),
-                                );
-                              }}
-                            />
-                          </Modal>
+                            <DialogContent className="sm:max-w-3xl overflow-visible">
+                              <DialogHeader>
+                                <DialogTitle>Benutzer bearbeiten</DialogTitle>
+                                <DialogDescription>Rollen und Daten bearbeiten</DialogDescription>
+                              </DialogHeader>
+                              <RoleManager
+                                userId={u.id}
+                                email={u.email}
+                                firstName={u.firstName}
+                                lastName={u.lastName}
+                                name={displayName}
+                                initialRoles={u.roles}
+                                canEditOwner={canEditOwner}
+                                availableCustomRoles={availableCustomRoles}
+                                initialCustomRoleIds={u.customRoles.map((r) => r.id)}
+                                onSaved={({ roles, customRoleIds }) => {
+                                  setRows((prev) =>
+                                    prev.map((row) =>
+                                      row.id === u.id
+                                        ? {
+                                            ...row,
+                                            roles,
+                                            customRoles: availableCustomRoles.filter((cr) =>
+                                              customRoleIds.includes(cr.id),
+                                            ),
+                                          }
+                                        : row,
+                                    ),
+                                  );
+                                }}
+                                onUserUpdated={({ email, firstName, lastName, name }) => {
+                                  setRows((prev) =>
+                                    prev.map((row) =>
+                                      row.id === u.id
+                                        ? {
+                                            ...row,
+                                            email: email ?? row.email,
+                                            firstName: firstName !== undefined ? firstName : row.firstName,
+                                            lastName: lastName !== undefined ? lastName : row.lastName,
+                                            name:
+                                              name ??
+                                              combineNameParts(
+                                                firstName !== undefined ? firstName : row.firstName,
+                                                lastName !== undefined ? lastName : row.lastName,
+                                              ) ?? row.name,
+                                          }
+                                        : row,
+                                    ),
+                                  );
+                                }}
+                              />
+                            </DialogContent>
+                          </Dialog>
                         </td>
                       </tr>
                     );
@@ -506,23 +520,36 @@ function MemberStatusModal({ user, onClose, onStatusChange }: MemberStatusModalP
   };
 
   return (
-    <Modal open={open} title={title} description={description} onClose={onClose}>
-      <div className="space-y-4">
-        <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
-          <div className="font-medium text-foreground">{displayName}</div>
-          <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          onClose();
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+            <div className="font-medium text-foreground">{displayName}</div>
+            <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
+          </div>
+          {targetWillDeactivate ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              Deaktivierte Profile bleiben in Listen sichtbar, verfügen jedoch über keinerlei Rechte mehr. Die
+              Reaktivierung ist jederzeit möglich.
+            </div>
+          ) : (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+              Das Mitglied kann nach der Reaktivierung sofort wieder alle zugewiesenen Funktionen nutzen.
+            </div>
+          )}
         </div>
-        {targetWillDeactivate ? (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-            Deaktivierte Profile bleiben in Listen sichtbar, verfügen jedoch über keinerlei Rechte mehr. Die
-            Reaktivierung ist jederzeit möglich.
-          </div>
-        ) : (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
-            Das Mitglied kann nach der Reaktivierung sofort wieder alle zugewiesenen Funktionen nutzen.
-          </div>
-        )}
-        <div className="flex justify-end gap-2">
+        <DialogFooter className="gap-2 sm:space-x-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             Abbrechen
           </Button>
@@ -541,9 +568,9 @@ function MemberStatusModal({ user, onClose, onStatusChange }: MemberStatusModalP
               targetWillDeactivate ? "Deaktivieren" : "Aktivieren"
             )}
           </Button>
-        </div>
-      </div>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -618,6 +645,7 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
 
   const displayName = getDisplayName(user) || user.email || "Unbekanntes Mitglied";
   const usageTotal = usage?.total ?? 0;
+  const showUsageNotice = usageTotal > 0 && !usageError && !loadingUsage;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -639,69 +667,82 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
   };
 
   return (
-    <Modal
+    <Dialog
       open={open}
-      title="Mitglied löschen"
-      description="Prüfe vor dem Löschen, in welchen Bereichen dieses Profil eingebunden ist."
-      onClose={onClose}
-      allowContentOverflow
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          onClose();
+        }
+      }}
     >
-      <div className="space-y-4">
-        <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
-          <div className="font-medium text-foreground">{displayName}</div>
-          <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
-          {user.isDeactivated && (
-            <Badge variant="outline" className="mt-2 text-[10px] uppercase tracking-wide text-destructive">
-              Bereits deaktiviert
-            </Badge>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Mitglied löschen</DialogTitle>
+          <DialogDescription>
+            Prüfe vor dem Löschen, in welchen Bereichen dieses Profil eingebunden ist.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+            <div className="font-medium text-foreground">{displayName}</div>
+            <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
+            {user.isDeactivated && (
+              <Badge variant="outline" className="mt-2 text-[10px] uppercase tracking-wide text-destructive">
+                Bereits deaktiviert
+              </Badge>
+            )}
+          </div>
+
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            Dieser Vorgang kann nicht rückgängig gemacht werden. Alle verknüpften Daten werden entsprechend den
+            hinterlegten Löschregeln entfernt oder anonymisiert.
+          </div>
+
+          {loadingUsage ? (
+            <div className="flex items-center justify-center gap-2 rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Lade Zuordnungen …
+            </div>
+          ) : usageError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+              {usageError}
+            </div>
+          ) : usage && usage.sections.length > 0 ? (
+            <div className="space-y-3">
+              {usage.sections.map((section) => (
+                <div key={section.key} className="rounded-md border border-border/60 bg-background p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-foreground">{section.title}</span>
+                    <span className="text-xs text-muted-foreground">{section.total} Einträge</span>
+                  </div>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    {section.items.map((item) => (
+                      <li key={item.key} className="flex items-center justify-between">
+                        <span>{item.label}</span>
+                        <span className="font-medium text-foreground">{item.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              Keine verknüpften Datensätze gefunden. Das Profil kann sicher gelöscht werden.
+            </div>
           )}
         </div>
-
-        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-          Dieser Vorgang kann nicht rückgängig gemacht werden. Alle verknüpften Daten werden entsprechend den
-          hinterlegten Löschregeln entfernt oder anonymisiert.
-        </div>
-
-        {loadingUsage ? (
-          <div className="flex items-center justify-center gap-2 rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Lade Zuordnungen …
-          </div>
-        ) : usageError ? (
-          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-            {usageError}
-          </div>
-        ) : usage && usage.sections.length > 0 ? (
-          <div className="space-y-3">
-            {usage.sections.map((section) => (
-              <div key={section.key} className="rounded-md border border-border/60 bg-background p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">{section.title}</span>
-                  <span className="text-xs text-muted-foreground">{section.total} Einträge</span>
-                </div>
-                <ul className="space-y-1 text-xs text-muted-foreground">
-                  {section.items.map((item) => (
-                    <li key={item.key} className="flex items-center justify-between">
-                      <span>{item.label}</span>
-                      <span className="font-medium text-foreground">{item.count}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            Keine verknüpften Datensätze gefunden. Das Profil kann sicher gelöscht werden.
-          </div>
-        )}
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          {usageTotal > 0 && !usageError && !loadingUsage && (
+        <DialogFooter
+          className={cn(
+            "mt-4 flex-col gap-3 sm:flex-row sm:items-center",
+            showUsageNotice ? "sm:justify-between" : "sm:justify-end",
+          )}
+        >
+          {showUsageNotice ? (
             <div className="text-xs text-muted-foreground">
               Insgesamt {usageTotal} Verknüpfungen werden entfernt oder neutralisiert.
             </div>
-          )}
+          ) : null}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Abbrechen
@@ -717,8 +758,8 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
               )}
             </Button>
           </div>
-        </div>
-      </div>
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

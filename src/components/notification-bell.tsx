@@ -5,7 +5,13 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { AlertTriangle, Bell, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useNotificationRealtime } from "@/hooks/useRealtime";
@@ -405,14 +411,15 @@ export function NotificationBell({ className }: { className?: string }) {
       </button>
 
       {isMobile ? (
-        <Modal
-          open={open}
-          title="Benachrichtigungen"
-          description={loading ? "Aktualisiere…" : undefined}
-          onClose={() => setOpen(false)}
-        >
-          {content}
-        </Modal>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Benachrichtigungen</DialogTitle>
+              {loading ? <DialogDescription>Aktualisiere…</DialogDescription> : null}
+            </DialogHeader>
+            {content}
+          </DialogContent>
+        </Dialog>
       ) : (
         open && (
           <div

@@ -10,7 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Modal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS, ROLES, sortRoles } from "@/lib/roles";
 import { cn } from "@/lib/utils";
@@ -849,77 +856,92 @@ export function MemberInviteManager() {
         {error && <p className="text-sm text-destructive">{error}</p>}
       </CardContent>
 
-      <Modal
+      <Dialog
         open={modalOpen}
-        onClose={() => {
-          if (creating) return;
-          setModalOpen(false);
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            if (creating) return;
+            setModalOpen(false);
+            resetForm();
+          } else {
+            setModalOpen(true);
+          }
         }}
-        title="Einladung erstellen"
-        description="Lege optional Ablaufdatum oder maximale Nutzungen fest."
       >
-        <div className="space-y-4">
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Titel (optional)</span>
-            <Input value={form.label} onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))} placeholder="z.B. Sommercrew 2025" />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Notiz (optional)</span>
-            <Textarea
-              value={form.note}
-              onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
-              placeholder="Internes Memo für die Verwaltung"
-            />
-          </label>
-          <div className="grid gap-4 md:grid-cols-2">
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Einladung erstellen</DialogTitle>
+            <DialogDescription>
+              Lege optional Ablaufdatum oder maximale Nutzungen fest.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
             <label className="space-y-1 text-sm">
-              <span className="font-medium">Gültig bis</span>
+              <span className="font-medium">Titel (optional)</span>
               <Input
-                type="date"
-                value={form.expiresAt}
-                onChange={(event) => setForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
+                value={form.label}
+                onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
+                placeholder="z.B. Sommercrew 2025"
               />
             </label>
             <label className="space-y-1 text-sm">
-              <span className="font-medium">Max. Nutzungen</span>
-              <Input
-                type="number"
-                min={1}
-                value={form.maxUses}
-                onChange={(event) => setForm((prev) => ({ ...prev, maxUses: event.target.value }))}
-                placeholder="Unbegrenzt"
+              <span className="font-medium">Notiz (optional)</span>
+              <Textarea
+                value={form.note}
+                onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
+                placeholder="Internes Memo für die Verwaltung"
               />
             </label>
-          </div>
-          <div className="space-y-2">
-            <span className="text-sm font-medium">Rollen bei Erstellung</span>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {ASSIGNABLE_ROLES.map((role) => {
-                const checked = form.roles.includes(role);
-                return (
-                  <label
-                    key={role}
-                    className={cn(
-                      "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition",
-                      checked ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/60",
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleRole(role)}
-                      className="h-4 w-4"
-                    />
-                    <span>{ROLE_LABELS[role] ?? role}</span>
-                  </label>
-                );
-              })}
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Gültig bis</span>
+                <Input
+                  type="date"
+                  value={form.expiresAt}
+                  onChange={(event) => setForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Max. Nutzungen</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.maxUses}
+                  onChange={(event) => setForm((prev) => ({ ...prev, maxUses: event.target.value }))}
+                  placeholder="Unbegrenzt"
+                />
+              </label>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Standard ist „Mitglied“. Weitere Rollen können nach dem Onboarding vergeben werden.
-            </p>
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Rollen bei Erstellung</span>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {ASSIGNABLE_ROLES.map((role) => {
+                  const checked = form.roles.includes(role);
+                  return (
+                    <label
+                      key={role}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition",
+                        checked ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/60",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleRole(role)}
+                        className="h-4 w-4"
+                      />
+                      <span>{ROLE_LABELS[role] ?? role}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Standard ist „Mitglied“. Weitere Rollen können nach dem Onboarding vergeben werden.
+              </p>
+            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-4">
+          <DialogFooter className="gap-2 pt-4 sm:space-x-2">
             <Button
               type="button"
               variant="outline"
@@ -934,9 +956,9 @@ export function MemberInviteManager() {
             <Button onClick={handleCreate} disabled={creating}>
               {creating ? "Erstelle …" : "Link erzeugen"}
             </Button>
-          </div>
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
