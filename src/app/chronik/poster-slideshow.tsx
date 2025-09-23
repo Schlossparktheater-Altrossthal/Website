@@ -81,6 +81,7 @@ export function PosterSlideshow({
           src={src}
           alt={alt}
           fill
+          sizes="100vw"
           priority={priority && index === 0}
           className={cn(
             "object-cover transition-opacity duration-1000 ease-in-out",

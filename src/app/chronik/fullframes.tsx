@@ -175,7 +175,13 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
                       return (
                         <div key={i} className="relative h-28 sm:h-32 md:h-36 rounded overflow-hidden border border-border/40">
                           {isImg ? (
-                            <Image src={url} alt={`${s.title ?? s.year} – Bild ${i + 1}`} fill className="object-cover" />
+                            <Image
+                              src={url}
+                              alt={`${s.title ?? s.year} – Bild ${i + 1}`}
+                              fill
+                              sizes="(min-width: 1280px) 400px, (min-width: 640px) 33vw, 50vw"
+                              className="object-cover"
+                            />
                           ) : (
                             <a
                               href={url}
@@ -192,7 +198,13 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
                     })
                   ) : posterSources.length > 0 ? (
                     <div className="relative col-span-2 sm:col-span-3 h-56 md:h-72 rounded overflow-hidden border border-border/40">
-                      <Image src={posterSources[0]} alt={s.title ?? String(s.year)} fill className="object-cover" />
+                      <Image
+                        src={posterSources[0]}
+                        alt={s.title ?? String(s.year)}
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                      />
                     </div>
                   ) : null}
                 </div>
