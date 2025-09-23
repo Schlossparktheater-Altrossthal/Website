@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
 import { ctaNavigation, primaryNavigation } from "@/config/navigation";
+import { cn } from "@/lib/utils";
 
 const HEADER_SPACING = {
   gradientHeight: "var(--header-gradient-height)",
@@ -178,13 +179,18 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
             return (
               <Link
                 key={item.href}
-                className={`transition-all duration-300 ${
+                className={cn(
+                  "relative inline-flex items-center font-medium transition-all duration-300",
+                  "after:absolute after:-bottom-[var(--space-3xs)] after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-[var(--primary)] after:opacity-95 after:transition-transform after:duration-300 after:content-[''] after:transform",
+                  "hover:text-[var(--primary)] hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-[var(--primary)] focus-visible:after:scale-x-100",
+                  "data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:after:scale-x-100",
                   scrolled || !isHomePage
-                    ? "text-foreground/90 hover:text-primary"
-                    : "text-foreground/90 drop-shadow-lg hover:text-foreground"
-                } ${isActive ? "font-semibold" : ""}`}
+                    ? "text-foreground/90"
+                    : "text-foreground/90 drop-shadow-lg"
+                )}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
+                data-active={isActive ? "true" : undefined}
               >
                 {item.label}
               </Link>
@@ -254,11 +260,13 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
                     key={item.href}
                     onClick={() => setOpen(false)}
                     style={drawerLinkPaddingStyles}
-                    className={`block rounded-lg text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-foreground ${
-                      isActive ? "bg-accent/20 font-semibold" : ""
-                    }`}
+                    className={cn(
+                      "block rounded-lg text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      "data-[active=true]:bg-accent/20 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:ring-1 data-[active=true]:ring-inset data-[active=true]:ring-[var(--primary)]"
+                    )}
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}
+                    data-active={isActive ? "true" : undefined}
                   >
                     <span className="block font-medium">{item.label}</span>
                     {item.description ? (
