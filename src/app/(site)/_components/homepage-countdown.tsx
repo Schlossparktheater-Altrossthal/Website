@@ -250,7 +250,7 @@ export function HomepageCountdown({
                 aria-describedby="homepage-countdown-description"
               />
               <Text id="homepage-countdown-description" variant="small" tone="muted">
-                Zeiten werden als lokale Zeit gespeichert. Besucher*innen sehen den Countdown in ihrer Systemsprache.
+                Zeiten werden als lokale Zeit gespeichert. Gäste sehen den Countdown in ihrer Systemsprache.
               </Text>
               <Text variant="small" tone="muted">
                 {settings.hasCustomCountdown
