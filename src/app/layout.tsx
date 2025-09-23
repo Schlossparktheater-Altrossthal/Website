@@ -7,11 +7,13 @@ import { MysticBackground } from "@/components/mystic-background";
 import type { Viewport } from "next";
 import { execSync } from "node:child_process";
 import { ThemeStyleRegistry } from "@/components/theme/theme-style-registry";
+import { geistSans, geistMono } from "./fonts";
 import {
   DEFAULT_SITE_TITLE,
   readWebsiteSettings,
   resolveWebsiteSettings,
 } from "@/lib/website-settings";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
@@ -130,7 +132,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     }
   }
 
-  const htmlClassName = resolvedSettings.colorMode === "dark" ? "dark" : undefined;
+  const htmlClassName = cn(
+    resolvedSettings.colorMode === "dark" ? "dark" : undefined,
+    geistSans.variable,
+    geistMono.variable,
+  );
   const siteTitle = resolvedSettings.siteTitle;
   const themeTokens = resolvedSettings.theme.tokens;
 
