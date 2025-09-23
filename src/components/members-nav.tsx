@@ -3,7 +3,18 @@
 import { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
+import {
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInput,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type Item = { href: string; label: string; permissionKey?: string };
@@ -397,12 +408,6 @@ export function MembersNav({
     return { groups, flat } as { groups: Group[]; flat: Item[] };
   }, [groupedConfig, permissions]);
 
-  const activeItem = useMemo(
-    () => availableFlat.find((item) => isActive(pathname, item.href)),
-    [availableFlat, pathname],
-  );
-  const activeHref = activeItem?.href ?? availableFlat[0]?.href ?? "";
-
   const { groups, flat } = useMemo(() => {
     if (!isFiltering) {
       return { groups: availableGroups, flat: availableFlat };
@@ -420,8 +425,6 @@ export function MembersNav({
     return { groups: filteredGroups, flat: filteredFlat };
   }, [availableFlat, availableGroups, isFiltering, normalizedQuery]);
 
-  const hasResults = flat.length > 0;
-  const selectValue = hasResults && flat.some((item) => item.href === activeHref) ? activeHref : "";
   const emptyStateMessage = isFiltering
     ? "Keine Bereiche gefunden. Passe die Suche an."
     : "Keine Bereiche verfügbar.";
@@ -434,12 +437,12 @@ export function MembersNav({
     : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <>
+      <SidebarHeader className="gap-3">
         <label htmlFor={searchInputId} className="sr-only">
           Mitgliederbereiche durchsuchen
         </label>
-        <Input
+        <SidebarInput
           id={searchInputId}
           type="search"
           inputMode="search"
@@ -460,113 +463,81 @@ export function MembersNav({
             }
           }}
           placeholder="Bereiche suchen"
-          className="h-9 text-sm"
           aria-label="Mitgliederbereiche durchsuchen"
         />
-      </div>
-
-      <div className="rounded-lg border border-border/50 bg-background/60 p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground/50">
-              Aktive Produktion
+      </SidebarHeader>
+      <SidebarSeparator />
+      <SidebarContent className="pb-4">
+        <div className="px-3">
+          <div className="rounded-lg border border-sidebar-border/60 bg-sidebar/70 p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/60">
+                  Aktive Produktion
+                </div>
+                {activeProduction && activeProductionTitle ? (
+                  <>
+                    <div className="mt-1 text-sm font-semibold text-sidebar-foreground">
+                      {activeProductionTitle}
+                    </div>
+                    <div className="text-xs text-sidebar-foreground/70">
+                      Jahrgang {activeProduction.year}
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-1 text-xs text-sidebar-foreground/70">
+                    Noch keine Produktion ausgewählt. Wähle in der Übersicht eine aktive Produktion aus.
+                  </p>
+                )}
+              </div>
+              <Link
+                href="/mitglieder/produktionen"
+                className="text-xs font-medium text-sidebar-foreground/80 transition hover:text-sidebar-foreground"
+              >
+                Übersicht öffnen
+              </Link>
             </div>
-            {activeProduction && activeProductionTitle ? (
-              <>
-                <div className="mt-1 text-sm font-semibold text-foreground">{activeProductionTitle}</div>
-                <div className="text-xs text-muted-foreground">Jahrgang {activeProduction.year}</div>
-              </>
-            ) : (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Noch keine Produktion ausgewählt. Wähle in der Übersicht eine aktive Produktion aus.
-              </p>
-            )}
           </div>
-          <Link
-            href="/mitglieder/produktionen"
-            className="text-xs font-medium text-primary transition hover:text-primary/80"
-          >
-            Übersicht öffnen
-          </Link>
         </div>
-      </div>
 
-      <div className="lg:hidden">
-        <label htmlFor="members-navigation" className="sr-only">
-          Bereich im Mitgliederbereich wählen
-        </label>
-        <select
-          id="members-navigation"
-          value={selectValue}
-          onChange={(event) => {
-            const next = event.target.value;
-            if (next && next !== pathname) {
-              router.push(next);
-            }
-          }}
-          className="block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Mitgliederbereich"
-          disabled={!hasResults}
-        >
-          <option value="" disabled>
-            {hasResults
-              ? isFiltering
-                ? "Treffer auswählen"
-                : "Bereich wählen"
-              : emptyStateMessage}
-          </option>
-          {groups.map((g) => (
-            <optgroup key={g.label} label={g.label}>
-              {g.items.map((item) => (
-                <option key={item.href} value={item.href}>
-                  {item.label}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      </div>
-
-      <nav className="hidden lg:flex flex-col gap-4" aria-label="Mitglieder Navigation">
         {groups.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border/60 bg-background/40 p-4 text-sm text-muted-foreground">
+          <div className="mx-3 rounded-lg border border-dashed border-sidebar-border/60 bg-sidebar/40 p-3 text-sm text-sidebar-foreground/70">
             {emptyStateMessage}
           </div>
         ) : (
-          groups.map((g) => (
-            <div key={g.label} className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/50 p-2">
-              <div className="px-1 text-[11px] uppercase tracking-wide text-foreground/60">{g.label}</div>
-              {g.items.map((item) => {
-                const active = isActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                  className={cn(
-                    "group flex items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "border-border bg-accent/40 text-foreground shadow-sm"
-                      : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-accent/20 hover:text-foreground"
-                  )}
-                >
-                  <span className={cn("mr-2 opacity-75", active && "opacity-100")}>
-                    <NavIcon name={item.href} />
-                  </span>
-                  <span>{item.label}</span>
-                  <span
-                    className={cn(
-                      "ml-auto hidden h-4 w-1 rounded bg-primary/70 transition-opacity group-hover:opacity-100",
-                      active ? "opacity-100" : "opacity-0"
-                    )}
-                    aria-hidden
-                  />
-                  </Link>
-                );
-              })}
-            </div>
+          groups.map((group) => (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const active = isActive(pathname, item.href);
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={item.label}
+                          className="gap-2"
+                        >
+                          <Link href={item.href}>
+                            <NavIcon
+                              name={item.href}
+                              className={cn("h-4 w-4 shrink-0 transition-opacity", active ? "opacity-100" : "opacity-70")}
+                            />
+                            <span className="truncate">{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           ))
         )}
-      </nav>
-    </div>
+      </SidebarContent>
+    </>
   );
 }
+
