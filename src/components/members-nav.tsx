@@ -163,13 +163,19 @@ export function MembersNav({
                   {activeProduction && activeProductionTitle ? (
                     <>
                       <Text
-                        variant="body"
+                        asChild
+                        variant="small"
                         weight="semibold"
-                        className="mt-[var(--space-3xs)] text-sidebar-foreground"
+                        tone="primary"
+                        className="mt-[var(--space-3xs)] inline-flex max-w-full items-center gap-[var(--space-3xs)] rounded-full border border-primary/30 bg-primary/10 px-[var(--space-xs)] py-0.5 shadow-sm"
                       >
-                        {activeProductionTitle}
+                        <span className="truncate">{activeProductionTitle}</span>
                       </Text>
-                      <Text variant="caption" className="block text-sidebar-foreground/70">
+                      <Text
+                        variant="caption"
+                        tone="muted"
+                        className="mt-0.5 block"
+                      >
                         Jahrgang {activeProduction.year}
                       </Text>
                     </>
