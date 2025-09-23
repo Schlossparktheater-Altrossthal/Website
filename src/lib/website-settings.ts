@@ -691,6 +691,21 @@ function adjustFamily(tokens: ThemeTokens, family: string, adjuster: FamilyAdjus
   }
 }
 
+function normalisePresetTokens(tokens: ThemeTokens): ThemeTokens {
+  if (!tokens.parameters) {
+    return tokens;
+  }
+
+  const modeKeys = deriveModeKeysFromParameters(tokens.parameters);
+  tokens.modes = resolveModesFromParameters(tokens.parameters, modeKeys) as ThemeTokens["modes"];
+  tokens.meta = {
+    ...(tokens.meta ?? {}),
+    modes: modeKeys,
+  } as ThemeTokens["meta"];
+
+  return tokens;
+}
+
 function createSunsetPresetTokens(): ThemeTokens {
   const tokens = cloneDefaultTokens();
 
@@ -715,7 +730,7 @@ function createSunsetPresetTokens(): ThemeTokens {
   }));
 
   tokens.radius.base = "0.75rem";
-  return tokens;
+  return normalisePresetTokens(tokens);
 }
 
 function createNightSkyPresetTokens(): ThemeTokens {
@@ -742,7 +757,7 @@ function createNightSkyPresetTokens(): ThemeTokens {
   }));
 
   tokens.radius.base = "0.5rem";
-  return tokens;
+  return normalisePresetTokens(tokens);
 }
 
 function createPastelPresetTokens(): ThemeTokens {
@@ -766,7 +781,7 @@ function createPastelPresetTokens(): ThemeTokens {
   }));
 
   tokens.radius.base = "1rem";
-  return tokens;
+  return normalisePresetTokens(tokens);
 }
 
 function createForestPresetTokens(): ThemeTokens {
@@ -799,7 +814,7 @@ function createForestPresetTokens(): ThemeTokens {
   }));
 
   tokens.radius.base = "0.875rem";
-  return tokens;
+  return normalisePresetTokens(tokens);
 }
 
 function createVelvetPresetTokens(): ThemeTokens {
@@ -826,7 +841,7 @@ function createVelvetPresetTokens(): ThemeTokens {
   }));
 
   tokens.radius.base = "0.6rem";
-  return tokens;
+  return normalisePresetTokens(tokens);
 }
 
 function createFestivalPresetTokens(): ThemeTokens {
@@ -857,7 +872,7 @@ function createFestivalPresetTokens(): ThemeTokens {
   }));
 
   tokens.radius.base = "1.1rem";
-  return tokens;
+  return normalisePresetTokens(tokens);
 }
 
 type WebsiteThemePresetDefinition = {
@@ -1279,23 +1294,47 @@ function sortResolvedThemes(themes: ResolvedWebsiteTheme[]) {
 
 export async function ensurePresetWebsiteThemes() {
   const presetIds = PRESET_THEME_DEFINITIONS.map((preset) => preset.id);
-  const existing = await prisma.websiteTheme.findMany({
+  const existingThemes = await prisma.websiteTheme.findMany({
     where: { id: { in: presetIds } },
-    select: { id: true },
+    select: { id: true, tokens: true },
   });
-  const existingIds = new Set(existing.map((theme) => theme.id));
+  const existingMap = new Map(existingThemes.map((theme) => [theme.id, theme] as const));
+  const fallbackTokens = sanitiseThemeTokens(cloneDefaultTokens());
 
   for (const preset of PRESET_THEME_DEFINITIONS) {
-    if (existingIds.has(preset.id)) {
+    const desiredTokens = sanitiseThemeTokens(preset.createTokens());
+    const existing = existingMap.get(preset.id);
+
+    if (!existing) {
+      await prisma.websiteTheme.create({
+        data: {
+          id: preset.id,
+          name: preset.name,
+          description: preset.description,
+          tokens: tokensToJson(desiredTokens),
+          isDefault: false,
+        },
+      });
       continue;
     }
-    await prisma.websiteTheme.create({
+
+    const existingTokens = sanitiseThemeTokens(existing.tokens ?? cloneDefaultTokens());
+    const desiredModesJson = JSON.stringify(desiredTokens.modes);
+    const existingModesJson = JSON.stringify(existingTokens.modes);
+
+    if (existingModesJson === desiredModesJson) {
+      continue;
+    }
+
+    const fallbackModesJson = JSON.stringify(fallbackTokens.modes);
+    if (existingModesJson !== fallbackModesJson) {
+      continue;
+    }
+
+    await prisma.websiteTheme.update({
+      where: { id: preset.id },
       data: {
-        id: preset.id,
-        name: preset.name,
-        description: preset.description,
-        tokens: tokensToJson(preset.createTokens()),
-        isDefault: false,
+        tokens: tokensToJson(desiredTokens),
       },
     });
   }
