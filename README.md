@@ -153,6 +153,19 @@ you can instead run:
 pnpm run start:proxy
 ```
 
+## Members navigation configuration
+
+The sidebar for the members area is configured centrally in
+`@/config/members-navigation.ts`. The file exports typed groups and items
+(`MembersNavGroup`, `MembersNavItem`) including icon components, permission
+keys and optional accessibility helpers such as `ariaLabel` or badges. Dynamic
+entries – for example the department todo list or active production shortcuts –
+are injected by `selectMembersNavigation` from `@/lib/members-navigation` based
+on the user context. When adding new sections, extend the configuration and
+consider updating `selectMembersNavigation` plus the accompanying tests in
+`src/lib/__tests__/members-navigation.test.ts` so typical roles (finance, only
+departments, etc.) remain covered.
+
 ## Creating the initial owner account
 
 On a fresh database the application does not contain any users yet. During the
