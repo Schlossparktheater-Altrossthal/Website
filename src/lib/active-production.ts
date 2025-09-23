@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
@@ -10,7 +11,7 @@ export async function getActiveProductionId() {
   return value ?? null;
 }
 
-export async function getActiveProduction() {
+export const getActiveProduction = cache(async () => {
   const activeProductionId = await getActiveProductionId();
   if (!activeProductionId) {
     return null;
@@ -31,4 +32,4 @@ export async function getActiveProduction() {
   }
 
   return show;
-}
+});
