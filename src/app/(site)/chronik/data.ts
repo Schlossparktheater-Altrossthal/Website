@@ -188,6 +188,30 @@ const CHRONIK_SUPPLEMENTS: Record<string, Partial<ChronikMeta>> = {
       { role: "Gäste", players: ["Sebastian Seifert", "Lennart Neumeister", "Justus Schmeling"] },
     ],
   },
+  "altrossthal-2025": {
+    cast: [
+      { role: "Poseidon", players: ["Anton Jakob"] },
+      { role: "Demodoka/Sirene", players: ["Augusta Hohmann"] },
+      { role: "Penelope/Nausikaa", players: ["Bashi Deutsch"] },
+      { role: "Nausikabe", players: ["Bianca Milke"] },
+      { role: "Athene/Sirene", players: ["Cosima Werner"] },
+      { role: "Sirene", players: ["Helena Pörner"] },
+      { role: "Polyphem/Antinoos", players: ["Jairus Behrisch"] },
+      { role: "Odysseus", players: ["Jannes Helbig"] },
+      { role: "Zeus", players: ["Jonas Fehrmann"] },
+      { role: "Koch/Sirene", players: ["Julia Hanke"] },
+      { role: "Koch", players: ["Lina Irmer"] },
+      { role: "Telemachos", players: ["Lennart Neumeister"] },
+      { role: "Alkinoos", players: ["Louis Skaletzki"] },
+      { role: "Kalypso/Sirene", players: ["Nadja Becker"] },
+      { role: "Hermes/Sirene", players: ["Nicklas Gretzel"] },
+      { role: "Nausikace", players: ["Paola Jung"] },
+      { role: "Mentes", players: ["Yann Lindemann"] },
+      { role: "Eurymachos", players: ["Sebastian Seifert"] },
+      { role: "Ensemble", players: ["Than Ahn Dinh", "Justus Schmeling"] },
+      { role: "Flöte", players: ["Marit Böhm"] },
+    ],
+  },
 };
 
 function applyChronikSupplements(id: string, meta: ChronikMeta | null): ChronikMeta | null {
