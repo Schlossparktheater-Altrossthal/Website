@@ -87,7 +87,8 @@ Weitere Layout-Konstanten:
 
 ### Mitgliederbereich: App Shell & Seitenaufbau
 
-- `MembersAppShell` organisiert den Mitgliederbereich nun semantisch: Die Topbar sitzt oberhalb eines `main`-Containers, der konsequent in `header`, `section` und `footer` gegliedert ist. Alle Bereiche nutzen weiterhin die etablierten Containerbreiten (`max-w-screen-2xl`, `px-4` → `sm:px-6` → `lg:px-8`).
+- `MembersAppShell` organisiert den Mitgliederbereich semantisch: Die Topbar sitzt oberhalb eines `main`-Containers, der konsequent in `header`, `section` und `footer` gegliedert ist. Standardmäßig greifen alle Bereiche auf die bekannten Containerbreiten (`max-w-screen-2xl`, `px-4` → `sm:px-6` → `lg:px-8`) zurück, über das optionale `contentLayout`-Prop lassen sich Breite, Innenabstände und vertikale Polster aber pro Layout variieren.
+- Für Seitenspezifika steht zusätzlich die Client-Komponente `MembersContentLayout` bereit. Sie registriert geänderte `width`-, `padding`-, `spacing`- oder `gap`-Parameter beim App-Shell-Kontext und sorgt automatisch für konsistente Header-, Content- und Footer-Container. Mit `useMembersContentLayout` lassen sich die effektiven Werte auslesen, um z. B. Sektionen oder Grid-Komponenten daran auszurichten.
 - Die Topbar wird über `MembersTopbar` konfiguriert und stellt Slots für Brotkrumen (`MembersTopbarBreadcrumbs`), den Seitentitel (`MembersTopbarTitle`), optionale Schnellaktionen (`MembersTopbarQuickActions`) sowie Status-Badges (`MembersTopbarStatus`) bereit. Unterhalb von `lg` erscheint der Sidebar-Trigger automatisch, auf größeren Viewports rückt an dessen Stelle der Titel.
 - Seiten können ihren Header deklarativ über `MembersContentHeader` und `MembersPageActions` aufbauen. Der Bereich landet automatisch im semantischen `header` des Layouts und behält dadurch konsistente Abstände.
 - Ein optionaler `MembersContentFooter` ermöglicht nachgelagerte Hinweise oder sekundäre Aktionen, die am Ende der Seite stehen sollen.

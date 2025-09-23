@@ -12,6 +12,7 @@ import {
   SidebarHeader,
   SidebarInput,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
@@ -193,8 +194,14 @@ export function MembersNav({
                     const active = isActive(pathname, item.href);
                     const Icon = item.icon ?? defaultMembersNavIcon;
                     const badgeContent = item.badge;
-                    const showBadge =
-                      !isCollapsed && badgeContent !== undefined && badgeContent !== null && badgeContent !== false;
+                    const hasBadgeValue =
+                      badgeContent !== undefined &&
+                      badgeContent !== null &&
+                      badgeContent !== false;
+                    const showBadge = !isCollapsed && hasBadgeValue;
+                    const isPrimitiveBadge =
+                      typeof badgeContent === "string" ||
+                      typeof badgeContent === "number";
 
                     return (
                       <SidebarMenuItem key={item.href}>
@@ -204,7 +211,11 @@ export function MembersNav({
                           tooltip={item.label}
                           className={cn("gap-2", isCollapsed && "justify-center")}
                         >
-                          <Link href={item.href} aria-label={item.ariaLabel ?? item.label}>
+                          <Link
+                            href={item.href}
+                            aria-label={item.ariaLabel ?? item.label}
+                            aria-current={active ? "page" : undefined}
+                          >
                             <Icon
                               className={cn(
                                 "h-4 w-4 shrink-0 transition-opacity",
@@ -213,10 +224,10 @@ export function MembersNav({
                             />
                             <span className={cn("truncate", isCollapsed && "sr-only")}>{item.label}</span>
                             {showBadge ? (
-                              typeof badgeContent === "string" || typeof badgeContent === "number" ? (
-                                <span className="ml-auto inline-flex items-center rounded-full border border-sidebar-border/60 bg-sidebar/50 px-2 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/70">
+                              isPrimitiveBadge ? (
+                                <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/70">
                                   {badgeContent}
-                                </span>
+                                </SidebarMenuBadge>
                               ) : (
                                 <span className="ml-auto flex items-center">{badgeContent}</span>
                               )
