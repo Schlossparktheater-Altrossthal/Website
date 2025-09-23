@@ -1,18 +1,79 @@
 # Theater Website
 
-This project contains the Next.js based theater website together with the Socket.IO
-realtime server. Both pieces always run inside the same Node.js process and the
-realtime API is exposed under `/realtime` (websocket path `/realtime/socket.io`).
-The published Docker images additionally ship an internal reverse proxy so
-external deployments only have to expose a single HTTP endpoint.
+This repository combines the public Next.js 15 website and the Socket.IO based
+realtime server for the theater collective. Both services run inside the same
+Node.js process and expose the realtime API under `/realtime` (websocket path
+`/realtime/socket.io`). The published Docker images wrap the combined server in a
+lightweight reverse proxy so external deployments only have to expose a single
+HTTP endpoint.
+
+## Prerequisites
+
+- Node.js 24 LTS (matches the `Dockerfile.*` images)
+- [`pnpm` 9](https://pnpm.io/) via `corepack enable`
+- PostgreSQL 16 for local development (Docker compose setup provided)
+- Mailpit (optional) to preview transactional emails
+- Docker + Docker Compose (optional but recommended for a full local stack)
+
+## Environment configuration
+
+1. Copy `.env.example` to `.env.local` for Next.js (and `.env` when using Docker).
+2. Provide strong secrets for `AUTH_SECRET`, `REALTIME_AUTH_TOKEN`,
+   `REALTIME_HANDSHAKE_SECRET` and (optionally) `REALTIME_SERVER_TOKEN`.
+3. Point `DATABASE_URL` to your PostgreSQL instance.
+4. Set both `NEXTAUTH_URL` and `NEXT_PUBLIC_BASE_URL` to the public origin of the
+   app **without** a trailing slash. NextAuth uses it for callback URLs while
+   notification emails and cron jobs rely on `NEXT_PUBLIC_BASE_URL`.
+5. Configure your email transport via `EMAIL_SERVER` or `EMAIL_SERVICE` + API key.
+
+## Installation
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+```
+
+## Local development
+
+```bash
+pnpm dev
+```
+
+The `dev` script executes `scripts/run-prisma-migrate.mjs`, applies pending
+Prisma migrations, runs the seed script (when necessary) and finally launches the
+Next.js turbopack dev server together with the realtime bridge. The app listens
+on [http://localhost:3000](http://localhost:3000).
+
+### Useful scripts
+
+- `pnpm prisma:generate` – regenerate the Prisma client after schema changes.
+- `pnpm db:migrate` – create and apply local development migrations.
+- `pnpm db:seed` – repopulate the database with seed data.
+- `pnpm start:combined` – run the production build and realtime server without Docker.
+- `pnpm start:proxy` – emulate the Docker proxy setup locally.
+- `pnpm swatches:gen` / `pnpm design-system:tokens` – update color palettes and
+  design tokens.
+
+### Quality checks
+
+Before committing, ensure that the following commands succeed:
+
+```bash
+pnpm lint
+pnpm test
+pnpm build
+```
+
+(Documentation-only changes can skip these checks but should mention it in the
+PR description.)
 
 ## Docker overview
 
-- `Dockerfile.dev` builds the development image that serves the Next.js app via the
-  bundled dev server and proxies the realtime routes below `/realtime`.
-- `Dockerfile.prod` produces the production image with the statically built Next.js
-  output. The runtime launches the combined server and proxies it so the realtime
-  API stays on the same host.
+- `Dockerfile.dev` builds the development image that serves the Next.js app via
+the bundled dev server and proxies the realtime routes below `/realtime`.
+- `Dockerfile.prod` produces the production image with the statically built
+Next.js output. The runtime launches the combined server and proxies it so the
+realtime API stays on the same host.
 
 Both images execute `scripts/start-with-proxy.mjs`. The script first prepares
 Next.js via `scripts/start-combined-server.mjs`, attaches the Socket.IO server to
@@ -21,11 +82,6 @@ proxy (default external port `3000`). During boot it configures
 `NEXT_PUBLIC_REALTIME_URL`, `NEXT_PUBLIC_REALTIME_PATH` and
 `REALTIME_SERVER_EVENT_PATH` automatically based on `REALTIME_BASE_PATH`
 (default `/realtime`).
-
-> [!TIP]
-> Both Dockerfiles accept an optional build argument `GIT_COMMIT_SHA`. Providing
-> the current commit hash ensures the footer in development builds shows the
-> correct revision even when the `.git` directory is not part of the image.
 
 ### Local development stack
 
@@ -37,7 +93,9 @@ The default `docker-compose.yml` builds the development image from the current
 workspace, runs Prisma migrations/seeding and exposes the app on
 `http://localhost:3000`. Postgres (database `theater_dev`) and Mailpit are part
 of this stack. Hot reloading works because the repository is bind-mounted into
-the container.
+the container. Override `NEXTAUTH_URL`, `NEXT_PUBLIC_BASE_URL` and
+`NEXT_PUBLIC_REALTIME_URL` before starting the stack when you want to serve the
+app via a reverse proxy.
 
 ### Building the production image from source
 
@@ -51,6 +109,8 @@ docker run --rm -p 3000:3000 \
   -e DATABASE_URL="postgresql://postgres:postgres@db:5432/theater_prod?schema=public" \
   -e AUTH_SECRET="replace-me" \
   -e REALTIME_AUTH_TOKEN="replace-me" \
+  -e NEXTAUTH_URL="https://example.com" \
+  -e NEXT_PUBLIC_BASE_URL="https://example.com" \
   theater-website:prod
 ```
 
@@ -93,21 +153,7 @@ you can instead run:
 pnpm run start:proxy
 ```
 
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-### Create the initial owner account
+## Creating the initial owner account
 
 On a fresh database the application does not contain any users yet. During the
 first server startup a one-time setup link is printed to the console, for
@@ -121,25 +167,7 @@ Open the URL in a browser to create the first owner account. The link becomes
 invalid as soon as it has been used. Restart the server to generate a new link
 whenever you need to add another owner.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-:)
+After authentication you can browse to
+[http://localhost:3000](http://localhost:3000) to explore the site. The landing
+page is primarily composed of server components; UI patterns live under
+`src/components` and `src/design-system`.
