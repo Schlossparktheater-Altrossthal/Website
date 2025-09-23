@@ -26,6 +26,7 @@ export default async function Home() {
     }
   }
   const resolvedCountdown = resolveHomepageCountdown(countdownRecord);
+  const countdownInitialNow = Date.now();
   const effectiveCountdownTargetIso = resolvedCountdown.effectiveCountdownTarget.toISOString();
   const initialCountdownTargetIso = resolvedCountdown.countdownTarget
     ? resolvedCountdown.countdownTarget.toISOString()
@@ -74,6 +75,7 @@ export default async function Home() {
               defaultCountdownTarget={DEFAULT_HOMEPAGE_COUNTDOWN_ISO}
               updatedAt={updatedAtIso}
               hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
+              initialNow={countdownInitialNow}
             />
             <Text variant="bodyLg" align="center" tone="muted">
               Ein einziges Wochenende. Ein Sommer. Ein Stück.

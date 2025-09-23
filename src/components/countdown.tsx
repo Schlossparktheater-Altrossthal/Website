@@ -7,6 +7,7 @@ import { Text } from "@/components/ui/typography";
 
 type CountdownProps = {
   targetDate: string;
+  initialNow: number;
   className?: string;
 };
 
@@ -23,8 +24,15 @@ const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 
-function getTimeRemaining(targetTimestamp: number): CountdownState {
-  const now = Date.now();
+const EMPTY_COUNTDOWN_STATE: CountdownState = {
+  totalMilliseconds: 0,
+  days: 0,
+  hours: 0,
+  minutes: 0,
+  seconds: 0,
+};
+
+function getTimeRemaining(targetTimestamp: number, now: number): CountdownState {
   const totalMilliseconds = Math.max(0, targetTimestamp - now);
   const totalSeconds = Math.floor(totalMilliseconds / MILLISECONDS_PER_SECOND);
 
@@ -49,20 +57,30 @@ function formatNumber(value: number) {
   return value.toString().padStart(2, "0");
 }
 
-export function Countdown({ targetDate, className }: CountdownProps) {
+export function Countdown({ targetDate, initialNow, className }: CountdownProps) {
   const targetTimestamp = useMemo(() => new Date(targetDate).getTime(), [targetDate]);
-  const [state, setState] = useState<CountdownState>(() => getTimeRemaining(targetTimestamp));
+  const [state, setState] = useState<CountdownState>(() => {
+    if (Number.isNaN(targetTimestamp) || !Number.isFinite(initialNow)) {
+      return EMPTY_COUNTDOWN_STATE;
+    }
+
+    return getTimeRemaining(targetTimestamp, initialNow);
+  });
 
   useEffect(() => {
     if (Number.isNaN(targetTimestamp)) {
       return;
     }
 
-    setState(getTimeRemaining(targetTimestamp));
+    const update = () => {
+      setState(getTimeRemaining(targetTimestamp, Date.now()));
+    };
+
+    update();
 
     const interval = window.setInterval(() => {
       setState((previous) => {
-        const next = getTimeRemaining(targetTimestamp);
+        const next = getTimeRemaining(targetTimestamp, Date.now());
         if (next.totalMilliseconds === 0 && previous.totalMilliseconds === 0) {
           window.clearInterval(interval);
         }
