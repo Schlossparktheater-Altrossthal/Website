@@ -4,7 +4,10 @@ import type { Prisma, Show } from "@prisma/client";
 
 import type { ChronikMeta, ChronikPreparedItem } from "./types";
 
-type ChronikShowRecord = Pick<Show, "id" | "year" | "title" | "synopsis" | "posterUrl" | "meta">;
+type ChronikShowRecord = Pick<
+  Show,
+  "id" | "year" | "title" | "synopsis" | "posterUrl" | "meta" | "dates"
+>;
 
 type PosterOverride =
   | { strategy: "replace"; sources: string[] }
@@ -78,6 +81,50 @@ function getChronikPosterSources(show: ChronikShowRecord) {
   }
 
   return sanitizePosterSources([...baseSources, ...overrideSources]);
+}
+
+function parseChronikDates(value: Prisma.JsonValue | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+      .filter((entry) => entry.length > 0);
+
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    return normalized.join(" · ");
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const label = typeof record.label === "string" ? record.label.trim() : "";
+
+    if (label) {
+      return label;
+    }
+
+    const start = typeof record.start === "string" ? record.start.trim() : "";
+    const end = typeof record.end === "string" ? record.end.trim() : "";
+    const time = typeof record.time === "string" ? record.time.trim() : "";
+    const parts = [start, end].filter(Boolean);
+
+    if (parts.length > 0) {
+      const range = parts.join(" – ");
+      return time ? `${range} ${time}` : range;
+    }
+  }
+
+  return null;
 }
 
 function sanitizeStringArray(value: unknown): string[] | null {
@@ -249,6 +296,7 @@ async function fetchChronikRecords(): Promise<ChronikShowRecord[]> {
         synopsis: true,
         posterUrl: true,
         meta: true,
+        dates: true,
       },
     });
 
@@ -268,6 +316,7 @@ function mapChronikRecord(record: ChronikShowRecord): ChronikPreparedItem {
     year: record.year,
     title: record.title ?? null,
     synopsis: record.synopsis ?? null,
+    dates: parseChronikDates(record.dates),
     posterSources: getChronikPosterSources(record),
     meta: applyChronikSupplements(record.id, parseShowMeta(record.meta)),
   };
@@ -291,6 +340,7 @@ export async function getChronikItem(id: string): Promise<ChronikPreparedItem | 
         synopsis: true,
         posterUrl: true,
         meta: true,
+        dates: true,
       },
     });
 
