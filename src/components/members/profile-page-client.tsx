@@ -136,10 +136,10 @@ function ProfileSection({
     <section
       id={sectionDomId}
       aria-labelledby={titleId}
-      className="group relative rounded-3xl border border-border/60 bg-background/90 shadow-lg shadow-primary/10 transition focus:outline-none"
+      className="group relative rounded-3xl border border-border bg-card shadow-lg shadow-primary/10 transition focus:outline-none"
       tabIndex={-1}
     >
-      <div className="flex flex-col gap-4 border-b border-border/60 px-6 pb-5 pt-6 sm:flex-row sm:items-start sm:justify-between sm:px-7">
+      <div className="flex flex-col gap-4 border-b border-border px-6 pb-5 pt-6 sm:flex-row sm:items-start sm:justify-between sm:px-7">
         <div className="space-y-2">
           <h3 id={titleId} className="text-lg font-semibold text-foreground">
             {title}
@@ -149,7 +149,7 @@ function ProfileSection({
         <button
           type="button"
           onClick={() => onOpenChange(!open)}
-          className="inline-flex items-center gap-2 self-start rounded-full border border-border/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition hover:border-primary/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="inline-flex items-center gap-2 self-start rounded-full border border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition hover:border-primary/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           aria-expanded={open}
           aria-controls={contentId}
         >
@@ -186,7 +186,7 @@ interface ProfilePageClientProps {
 function ProfileRolesCard({ roles }: { roles: Role[] }) {
   if (!roles.length) {
     return (
-      <Card className="rounded-2xl border border-border/60 bg-background/85 p-6 shadow-lg shadow-primary/10">
+      <Card className="rounded-2xl border border-border bg-card p-6 shadow-lg shadow-primary/10">
         <CardHeader className="px-0 pt-0">
           <CardTitle>Rollen &amp; Berechtigungen</CardTitle>
         </CardHeader>
@@ -200,7 +200,7 @@ function ProfileRolesCard({ roles }: { roles: Role[] }) {
   }
 
   return (
-    <Card className="rounded-2xl border border-border/60 bg-background/85 p-0 shadow-lg shadow-primary/10">
+    <Card className="rounded-2xl border border-border bg-card p-0 shadow-lg shadow-primary/10">
       <CardHeader className="space-y-2 px-6 pb-4 pt-6 sm:px-7">
         <CardTitle>Rollen &amp; Berechtigungen</CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -229,7 +229,7 @@ function ProfileRolesCard({ roles }: { roles: Role[] }) {
             return (
               <li
                 key={role}
-                className="flex gap-3 rounded-xl border border-border/60 bg-background/70 p-3 shadow-sm backdrop-blur"
+                className="flex gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
               >
                 <div
                   className={cn(
@@ -347,7 +347,7 @@ export function ProfilePageClient({
           aria-hidden="true"
           className="pointer-events-none absolute -bottom-40 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-secondary/15 blur-3xl dark:bg-secondary/20"
         />
-        <section className="rounded-3xl border border-border/60 bg-background/90 px-6 py-8 shadow-lg shadow-primary/10 sm:px-8">
+        <section className="rounded-3xl border border-border bg-card px-6 py-8 shadow-lg shadow-primary/10 sm:px-8">
           <PageHeader
             variant="section"
             title="Mein Profil"

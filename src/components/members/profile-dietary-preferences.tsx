@@ -249,7 +249,7 @@ export function ProfileDietaryPreferences({
   };
 
   return (
-    <Card className="rounded-2xl border border-border/60 bg-background/85 shadow-lg shadow-primary/5">
+    <Card className="rounded-2xl border border-border bg-card shadow-lg shadow-primary/5">
       <CardHeader className="space-y-3 px-6 pb-4 pt-6 sm:px-7">
         <div className="text-xs font-semibold uppercase tracking-wider text-primary">
           Ernährung &amp; Verträglichkeiten
@@ -261,7 +261,7 @@ export function ProfileDietaryPreferences({
         </p>
       </CardHeader>
       <CardContent className="space-y-6 px-6 pb-6 sm:px-7">
-        <section className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-4 shadow-sm">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground/90">
@@ -328,7 +328,7 @@ export function ProfileDietaryPreferences({
               </div>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border/50 bg-muted/20 p-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
             <div>
               <p className="font-medium text-foreground/80">Vorschau</p>
               <p>{preferenceLabel}</p>
@@ -354,7 +354,7 @@ export function ProfileDietaryPreferences({
           ) : null}
         </section>
 
-        <section className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-4 shadow-sm">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
@@ -373,7 +373,7 @@ export function ProfileDietaryPreferences({
               {allergies.map((entry) => (
                 <li
                   key={entry.allergen}
-                  className="flex flex-col gap-3 rounded-lg border border-border/50 bg-background/80 p-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -438,7 +438,7 @@ export function ProfileDietaryPreferences({
               ))}
             </ul>
           ) : (
-            <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
               Noch keine Allergien hinterlegt.
             </div>
           )}
