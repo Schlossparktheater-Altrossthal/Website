@@ -22,6 +22,7 @@ export type ChronikPreparedItem = {
   year: number;
   title: string | null;
   synopsis: string | null;
+  dates: string | null;
   posterSources: string[];
   meta: ChronikMeta | null;
 };

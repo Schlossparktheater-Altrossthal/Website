@@ -16,6 +16,7 @@ type RawChronikEntry = {
   year: number;
   title?: string | null;
   author?: string | null;
+  dates?: string | null;
   location?: string | null;
   director?: string | null;
   organizer?: string | null;
@@ -29,7 +30,19 @@ type RawChronikEntry = {
   posterUrl?: string | null;
 };
 
-type ChronikShowRecord = Pick<Show, "id" | "year" | "title" | "synopsis" | "posterUrl" | "meta">;
+type ChronikShowRecord = Pick<
+  Show,
+  "id" | "year" | "title" | "synopsis" | "posterUrl" | "meta" | "dates"
+>;
+
+function sanitizeDates(dates: RawChronikEntry["dates"]): string | null {
+  if (typeof dates !== "string") {
+    return null;
+  }
+
+  const trimmed = dates.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 function sanitizeCast(entry: RawChronikEntry["cast"]): ChronikCastEntry[] | null {
   if (!Array.isArray(entry)) {
@@ -84,6 +97,7 @@ function toChronikShowRecord(entry: RawChronikEntry): ChronikShowRecord | null {
     year: entry.year,
     title: typeof entry.title === "string" ? entry.title : null,
     synopsis: entry.author ? `${entry.author}` : null,
+    dates: sanitizeDates(entry.dates ?? null),
     posterUrl: typeof entry.posterUrl === "string" && entry.posterUrl.trim()
       ? entry.posterUrl.trim()
       : `https://picsum.photos/seed/${entry.year}/800/1200`,

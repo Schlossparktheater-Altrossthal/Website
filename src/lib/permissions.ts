@@ -185,6 +185,12 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
+    key: "mitglieder.website.chronik",
+    label: "Chronik-Termine pflegen",
+    description: "Aufführungstermine der öffentlichen Chronik direkt im Frontend bearbeiten.",
+    category: "membership",
+  },
+  {
     key: "mitglieder.fotoerlaubnisse",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",

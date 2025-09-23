@@ -10,6 +10,7 @@ import { PosterSlideshow } from "../poster-slideshow";
 import { getChronikItem } from "../data";
 import { formatChronikPlayerName } from "../formatters";
 import type { ChronikCastEntry, ChronikMeta } from "../types";
+import { ChronikPerformanceDatesCard } from "../performance-dates-card";
 
 type ChronikDetailPageProps = {
   params: {
@@ -128,23 +129,25 @@ export default async function ChronikDetailPage({ params }: ChronikDetailPagePro
                   </Text>
                 )}
 
-                {primaryDetails.length > 0 && (
-                  <dl className="grid gap-4 sm:grid-cols-2">
-                    {primaryDetails.map((detail) => (
-                      <div
-                        key={`${item.id}-${detail.label}`}
-                        className="rounded-2xl border border-border/60 bg-muted/40 p-4 text-foreground/90 shadow-inner"
-                      >
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                          {detail.label}
-                        </dt>
-                        <dd className="mt-1 text-base font-semibold md:text-lg">
-                          {detail.value}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  <ChronikPerformanceDatesCard
+                    showId={item.id}
+                    initialDates={item.dates}
+                  />
+                  {primaryDetails.map((detail) => (
+                    <div
+                      key={`${item.id}-${detail.label}`}
+                      className="rounded-2xl border border-border/60 bg-muted/40 p-4 text-foreground/90 shadow-inner"
+                    >
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                        {detail.label}
+                      </dt>
+                      <dd className="mt-1 text-base font-semibold md:text-lg">
+                        {detail.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
             </div>
           </div>
