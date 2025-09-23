@@ -6,8 +6,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { Heading, Text } from "@/components/ui/typography";
 
 import { PosterSlideshow } from "./poster-slideshow";
-import type { ChronikCastEntry, ChronikMeta, ChronikPreparedItem } from "./types";
-import { formatChronikPlayerName } from "./formatters";
+import type { ChronikMeta, ChronikPreparedItem } from "./types";
 
 type ChronikItem = ChronikPreparedItem;
 
@@ -15,20 +14,13 @@ function toStringArray(value: ChronikMeta["sources"]) {
   return Array.isArray(value) ? [...value] : [];
 }
 
-function toCastEntries(value: ChronikMeta["cast"]) {
-  return Array.isArray(value) ? value : ([] as ChronikCastEntry[]);
-}
-
 function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number }) {
   const router = useRouter();
   const meta: ChronikMeta = item.meta ?? {};
   const sources = toStringArray(meta.sources);
-  const castEntries = toCastEntries(meta.cast);
   const posterSources = item.posterSources;
   const detailHref = `/chronik/${item.id}`;
   const headingId = `chronik-${item.id}-heading`;
-  const isBunburySeason = item.id === "altrossthal-2024";
-  const shouldRenderCast = castEntries.length > 0 && !isBunburySeason;
 
   const isInteractiveTarget = (target: EventTarget | null) => {
     if (!target || typeof (target as HTMLElement).closest !== "function") {
@@ -137,34 +129,6 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
                 <Text className="mt-6 max-w-4xl text-base leading-relaxed text-foreground/90 [text-shadow:_1px_1px_3px_rgba(0,0,0,0.45)] lg:text-lg xl:text-xl">
                   {item.synopsis}
                 </Text>
-              )}
-              {shouldRenderCast && (
-                <div className="mt-6 text-left">
-                  <Heading
-                    level="h3"
-                    className="text-lg font-semibold text-foreground [text-shadow:_1px_1px_3px_rgba(0,0,0,0.35)] sm:text-xl"
-                  >
-                    Ensemble
-                  </Heading>
-                  <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                    {castEntries.map((entry, entryIndex) => (
-                      <div
-                        key={`${entry.role}-${entryIndex}`}
-                        className="rounded-xl border border-border/50 bg-background/70 p-3 shadow-inner backdrop-blur-sm"
-                      >
-                        <dt className="text-sm font-semibold text-foreground">
-                          {entry.role}
-                        </dt>
-                        <dd className="mt-1 text-sm text-foreground/80">
-                          {entry.players
-                            .map((player) => formatChronikPlayerName(player))
-                            .filter(Boolean)
-                            .join(", ")}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
               )}
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 {sources.slice(0, 3).map((src, i) => (
