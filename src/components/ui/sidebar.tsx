@@ -96,7 +96,17 @@ const SidebarProvider = React.forwardRef<
     );
 
     const toggleSidebar = React.useCallback(() => {
-      return isMobile ? setOpenMobile((next) => !next) : setOpen((next) => !next);
+      const shouldUseMobile =
+        isMobile ||
+        (typeof window !== "undefined" &&
+          window.matchMedia(SIDEBAR_MOBILE_BREAKPOINT).matches);
+
+      if (shouldUseMobile) {
+        setOpenMobile((next) => !next);
+        return;
+      }
+
+      setOpen((next) => !next);
     }, [isMobile, setOpen, setOpenMobile]);
 
     React.useEffect(() => {
