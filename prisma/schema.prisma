@@ -1193,6 +1193,18 @@ enum AnalyticsRequestArea {
   unknown
 }
 
+enum AnalyticsServerLogSeverity {
+  info
+  warning
+  error
+}
+
+enum AnalyticsServerLogStatus {
+  open
+  monitoring
+  resolved
+}
+
 model AnalyticsHttpRequest {
   id           String                @id @default(cuid())
   timestamp    DateTime              @default(now())
@@ -1422,4 +1434,27 @@ model AnalyticsRealtimeSummary {
 
   @@map("analytics_realtime_summary")
   @@index([windowEnd])
+}
+
+model AnalyticsServerLog {
+  id                String                    @id @default(cuid())
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  severity          AnalyticsServerLogSeverity
+  service           String
+  message           String
+  description       String?
+  metadata          Json?
+  tags              String[]                  @default([])
+  status            AnalyticsServerLogStatus  @default(open)
+  occurrences       Int                       @default(1)
+  affectedUsers     Int?
+  recommendedAction String?
+  firstSeenAt       DateTime                  @default(now())
+  lastSeenAt        DateTime                  @default(now())
+  fingerprint       String                    @unique
+
+  @@map("analytics_server_logs")
+  @@index([severity, lastSeenAt])
+  @@index([status, lastSeenAt])
 }

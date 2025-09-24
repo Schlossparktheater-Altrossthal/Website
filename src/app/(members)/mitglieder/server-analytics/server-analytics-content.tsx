@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRealtime } from "@/hooks/useRealtime";
@@ -14,6 +15,7 @@ import type {
 } from "@/lib/server-analytics";
 import type { ServerAnalyticsRealtimeEvent } from "@/lib/realtime/types";
 import { cn } from "@/lib/utils";
+import { updateServerLogStatusAction } from "./actions";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const decimalFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -249,6 +251,14 @@ function statusBadgeVariant(status: ServerLogEvent["status"]) {
   }
 }
 
+const statusActionLabelMap: Record<ServerLogEvent["status"], string> = {
+  open: "Auf offen setzen",
+  monitoring: "Auf Beobachtung setzen",
+  resolved: "Als gelöst markieren",
+};
+
+const statusUpdateOrder: ServerLogEvent["status"][] = ["open", "monitoring", "resolved"];
+
 type ServerAnalyticsContentProps = {
   initialAnalytics: ServerAnalytics;
 };
@@ -258,6 +268,8 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
   const [analytics, setAnalytics] = useState<ServerAnalytics>(initialAnalytics);
   const [generatedAt, setGeneratedAt] = useState<Date>(() => parseGeneratedAt(initialAnalytics.generatedAt));
   const [hasLiveUpdate, setHasLiveUpdate] = useState(false);
+  const [pendingLogId, setPendingLogId] = useState<string | null>(null);
+  const [isStatusUpdating, startStatusUpdate] = useTransition();
   const displayAnalytics = useAnimatedAnalytics(analytics);
 
   useEffect(() => {
@@ -322,6 +334,42 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         return "bg-muted-foreground/60";
     }
   }, [connectionStatus]);
+
+  const handleStatusUpdate = (logId: string, status: ServerLogEvent["status"]) => {
+    setPendingLogId(logId);
+    startStatusUpdate(async () => {
+      try {
+        const result = await updateServerLogStatusAction({ logId, status });
+        if (result.success) {
+          setAnalytics((previous) => {
+            const currentLogs = previous.serverLogs ?? [];
+            const updatedLogs = currentLogs.some((entry) => entry.id === logId)
+              ? currentLogs.map((entry) =>
+                  entry.id === logId
+                    ? {
+                        ...entry,
+                        ...result.log,
+                        tags: Array.isArray(result.log.tags) ? [...result.log.tags] : [],
+                      }
+                    : entry,
+                )
+              : [...currentLogs, { ...result.log, tags: Array.isArray(result.log.tags) ? [...result.log.tags] : [] }];
+
+            return {
+              ...previous,
+              serverLogs: updatedLogs,
+            };
+          });
+        } else {
+          console.error(`[server-analytics] Status update failed for log ${logId}: ${result.error}`);
+        }
+      } catch (error) {
+        console.error(`[server-analytics] Status update threw for log ${logId}`, error);
+      } finally {
+        setPendingLogId((current) => (current === logId ? null : current));
+      }
+    });
+  };
 
   const {
     logs: relevantLogs,
@@ -881,7 +929,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
                             <Badge variant={severityBadgeVariant(log.severity)} className="uppercase tracking-wide">
-                              {severityLabelMap[log.severity]}
+                              {severityLabelMap[log.severity as keyof typeof severityLabelMap]}
                             </Badge>
                             <span>{log.service}</span>
                           </div>
@@ -889,7 +937,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                           <p className="text-sm text-muted-foreground">{log.description}</p>
                           {log.tags?.length ? (
                             <div className="flex flex-wrap gap-2">
-                              {log.tags.map((tag) => (
+                              {log.tags.map((tag: string) => (
                                 <Badge
                                   key={`${log.id}-${tag}`}
                                   variant="outline"
@@ -902,9 +950,34 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                           ) : null}
                         </div>
                         <div className="flex flex-col items-start gap-2 sm:items-end">
-                          <Badge variant={statusBadgeVariant(log.status)} className="uppercase tracking-wide">
-                            {statusLabelMap[log.status]}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant={statusBadgeVariant(log.status)} className="uppercase tracking-wide">
+                              {statusLabelMap[log.status as keyof typeof statusLabelMap]}
+                            </Badge>
+                            <div className="flex flex-wrap gap-1">
+                              {statusUpdateOrder
+                                .filter((statusOption) => statusOption !== log.status)
+                                .map((statusOption) => {
+                                  const isLogUpdating = pendingLogId === log.id && isStatusUpdating;
+                                  const disableOtherLogs =
+                                    isStatusUpdating && pendingLogId !== null && pendingLogId !== log.id;
+                                  const isDisabled = isLogUpdating || disableOtherLogs;
+                                  return (
+                                    <Button
+                                      key={`${log.id}-${statusOption}`}
+                                      size="xs"
+                                      variant="outline"
+                                      className="text-[11px]"
+                                      data-state={isLogUpdating ? "loading" : undefined}
+                                      disabled={isDisabled}
+                                      onClick={() => handleStatusUpdate(log.id, statusOption)}
+                                    >
+                                      {statusActionLabelMap[statusOption]}
+                                    </Button>
+                                  );
+                                })}
+                            </div>
+                          </div>
                           {log.recommendedAction ? (
                             <p className="max-w-xs text-xs text-muted-foreground sm:text-right">{log.recommendedAction}</p>
                           ) : null}

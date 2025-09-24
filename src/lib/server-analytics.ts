@@ -11,6 +11,8 @@ import type {
 } from "@prisma/client";
 
 import staticAnalyticsData from "@/data/server-analytics-static.json" with { type: "json" };
+import type { LoadedServerLog } from "@/lib/analytics/load-server-logs";
+import { loadLatestCriticalServerLogs } from "@/lib/analytics/load-server-logs";
 import { loadDeviceBreakdownFromDatabase, loadPagePerformanceMetrics } from "@/lib/server-analytics-data";
 import type { PagePerformanceMetricOverride } from "@/lib/server-analytics-data";
 import { prisma } from "@/lib/prisma";
@@ -18,23 +20,13 @@ import { prisma } from "@/lib/prisma";
 export type OptimizationImpact = "Hoch" | "Mittel" | "Niedrig";
 export type OptimizationArea = "Frontend" | "Mitgliederbereich" | "Infrastruktur";
 
-export type ServerLogSeverity = "info" | "warning" | "error";
-export type ServerLogStatus = "open" | "monitoring" | "resolved";
+type ServerLogEvent = LoadedServerLog;
 
-export type ServerLogEvent = {
-  id: string;
-  severity: ServerLogSeverity;
-  service: string;
-  message: string;
-  description: string;
-  occurrences: number;
-  firstSeen: string;
-  lastSeen: string;
-  status: ServerLogStatus;
-  recommendedAction?: string;
-  affectedUsers?: number;
-  tags?: string[];
-};
+export type {
+  ServerLogSeverity,
+  ServerLogStatus,
+  LoadedServerLog as ServerLogEvent,
+} from "@/lib/analytics/load-server-logs";
 
 export type ServerSummary = {
   uptimePercentage: number;
@@ -556,6 +548,10 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   let deviceBreakdown = cloneDeviceStats(STATIC_ANALYTICS.deviceBreakdown);
   let publicPages = clonePageEntries(STATIC_ANALYTICS.publicPages);
   let memberPages = clonePageEntries(STATIC_ANALYTICS.memberPages);
+  let serverLogs: LoadedServerLog[] = (STATIC_ANALYTICS.serverLogs ?? []).map((entry) => ({
+    ...entry,
+    tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
+  }));
   let summary: ServerSummary = { ...STATIC_ANALYTICS.summary };
   let requestBreakdown: RequestBreakdown = {
     frontend: { ...STATIC_ANALYTICS.requestBreakdown.frontend },
@@ -588,6 +584,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       sessionInsightsRows,
       trafficSourceRows,
       realtimeSummaryRow,
+      criticalLogs,
     ] = await Promise.all([
       loadHttpAggregationsFromDatabase().catch((error) => {
         console.error("[server-analytics] Failed to load HTTP analytics summary", error);
@@ -621,6 +618,10 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
           console.error("[server-analytics] Failed to load realtime analytics summary", error);
           return null;
         }),
+      loadLatestCriticalServerLogs({ limit: 25 }).catch((error) => {
+        console.error("[server-analytics] Failed to load critical server logs", error);
+        return null;
+      }),
     ]);
 
     if (httpAggregates?.summary) {
@@ -657,10 +658,26 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     if (realtimeSummaryRow) {
       summary = applyRealtimeSummaryOverride(summary, realtimeSummaryRow);
     }
+
+    if (Array.isArray(criticalLogs) && criticalLogs.length > 0) {
+      serverLogs = criticalLogs.map((entry) => ({
+        ...entry,
+        tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
+      }));
+    } else {
+      serverLogs = serverLogs.map((entry) => ({
+        ...entry,
+        tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
+      }));
+    }
   } else {
     deviceBreakdown = cloneDeviceStats(deviceBreakdown);
     publicPages = clonePageEntries(publicPages);
     memberPages = clonePageEntries(memberPages);
+    serverLogs = serverLogs.map((entry) => ({
+      ...entry,
+      tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
+    }));
   }
 
   return {
@@ -675,5 +692,6 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     memberPages,
     trafficSources,
     sessionInsights,
+    serverLogs,
   };
 }
