@@ -2,7 +2,13 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
 
-import type { AnalyticsHttpPeakHour, AnalyticsHttpSummary } from "@prisma/client";
+import type {
+  AnalyticsHttpPeakHour,
+  AnalyticsHttpSummary,
+  AnalyticsRealtimeSummary,
+  AnalyticsSessionInsight,
+  AnalyticsTrafficSource,
+} from "@prisma/client";
 
 import staticAnalyticsData from "@/data/server-analytics-static.json" with { type: "json" };
 import { loadDeviceBreakdownFromDatabase, loadPagePerformanceMetrics } from "@/lib/server-analytics-data";
@@ -329,6 +335,44 @@ function convertHttpPeakHours(rows: AnalyticsHttpPeakHour[]): PeakHour[] {
   }));
 }
 
+function convertSessionInsightsFromDatabase(rows: AnalyticsSessionInsight[]): SessionInsight[] {
+  return rows.map((row) => ({
+    segment: row.segment,
+    avgSessionDurationSeconds: Math.max(0, Math.round(Number(row.avgSessionDurationSeconds ?? 0))),
+    pagesPerSession: Number.isFinite(row.pagesPerSession)
+      ? Number(Number(row.pagesPerSession).toFixed(2))
+      : 0,
+    retentionRate: clamp(Number(row.retentionRate ?? 0), 0, 1),
+    share: clamp(Number(row.share ?? 0), 0, 1),
+    conversionRate: clamp(Number(row.conversionRate ?? 0), 0, 1),
+  }));
+}
+
+function convertTrafficSourcesFromDatabase(rows: AnalyticsTrafficSource[]): TrafficSource[] {
+  return rows
+    .map((row) => ({
+      channel: row.channel,
+      sessions: Math.max(0, row.sessions),
+      avgSessionDurationSeconds: Math.max(0, Math.round(Number(row.avgSessionDurationSeconds ?? 0))),
+      conversionRate: clamp(Number(row.conversionRate ?? 0), 0, 1),
+      changePercent: Number.isFinite(row.changePercent) ? Number(row.changePercent) : 0,
+    }))
+    .sort((a, b) => b.sessions - a.sessions || a.channel.localeCompare(b.channel));
+}
+
+function applyRealtimeSummaryOverride(
+  summary: ServerSummary,
+  row: AnalyticsRealtimeSummary | null,
+): ServerSummary {
+  if (!row) {
+    return summary;
+  }
+  return {
+    ...summary,
+    realtimeEventsLast24h: Math.max(0, row.totalEvents),
+  };
+}
+
 async function loadHttpAggregationsFromDatabase() {
   const [summary, peakHours] = await Promise.all([
     prisma.analyticsHttpSummary.findFirst({
@@ -519,6 +563,8 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     api: { ...STATIC_ANALYTICS.requestBreakdown.api },
   };
   let peakHours: PeakHour[] = (STATIC_ANALYTICS.peakHours ?? []).map((entry) => ({ ...entry }));
+  let trafficSources: TrafficSource[] = STATIC_ANALYTICS.trafficSources.map((entry) => ({ ...entry }));
+  let sessionInsights: SessionInsight[] = STATIC_ANALYTICS.sessionInsights.map((entry) => ({ ...entry }));
 
   const pageMetadata = new Map<string, PagePerformanceEntry>();
   for (const entry of STATIC_ANALYTICS.publicPages) {
@@ -535,7 +581,14 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   }
 
   if (process.env.DATABASE_URL) {
-    const [httpAggregates, deviceOverrides, pageMetricsResult] = await Promise.all([
+    const [
+      httpAggregates,
+      deviceOverrides,
+      pageMetricsResult,
+      sessionInsightsRows,
+      trafficSourceRows,
+      realtimeSummaryRow,
+    ] = await Promise.all([
       loadHttpAggregationsFromDatabase().catch((error) => {
         console.error("[server-analytics] Failed to load HTTP analytics summary", error);
         return null;
@@ -548,6 +601,26 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         console.error("[server-analytics] Failed to load page performance metrics", error);
         return null;
       }),
+      prisma.analyticsSessionInsight.findMany({
+        orderBy: { generatedAt: "desc" },
+      }).catch((error) => {
+        console.error("[server-analytics] Failed to load session insights", error);
+        return null;
+      }),
+      prisma.analyticsTrafficSource.findMany({
+        orderBy: { generatedAt: "desc" },
+      }).catch((error) => {
+        console.error("[server-analytics] Failed to load traffic sources", error);
+        return null;
+      }),
+      prisma.analyticsRealtimeSummary
+        .findFirst({
+          orderBy: { windowEnd: "desc" },
+        })
+        .catch((error) => {
+          console.error("[server-analytics] Failed to load realtime analytics summary", error);
+          return null;
+        }),
     ]);
 
     if (httpAggregates?.summary) {
@@ -572,6 +645,18 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         memberPages = [];
       }
     }
+
+    if (Array.isArray(sessionInsightsRows) && sessionInsightsRows.length > 0) {
+      sessionInsights = convertSessionInsightsFromDatabase(sessionInsightsRows);
+    }
+
+    if (Array.isArray(trafficSourceRows) && trafficSourceRows.length > 0) {
+      trafficSources = convertTrafficSourcesFromDatabase(trafficSourceRows);
+    }
+
+    if (realtimeSummaryRow) {
+      summary = applyRealtimeSummaryOverride(summary, realtimeSummaryRow);
+    }
   } else {
     deviceBreakdown = cloneDeviceStats(deviceBreakdown);
     publicPages = clonePageEntries(publicPages);
@@ -588,5 +673,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     deviceBreakdown,
     publicPages,
     memberPages,
+    trafficSources,
+    sessionInsights,
   };
 }

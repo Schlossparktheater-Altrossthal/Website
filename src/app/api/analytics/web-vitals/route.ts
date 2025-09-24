@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
+import { recordSessionPath } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 type Scope = "public" | "members" | null;
@@ -50,14 +51,48 @@ const metricsSchema = z
     return hasLoad || hasLcp;
   }, "At least one metric must be provided");
 
+const trafficSchema = z
+  .object({
+    path: z.string().trim().min(1).max(512).optional().nullable(),
+    referrer: z.string().trim().max(2048).optional().nullable(),
+    utm: z
+      .object({
+        source: z.string().trim().max(160).optional().nullable(),
+        medium: z.string().trim().max(160).optional().nullable(),
+        campaign: z.string().trim().max(200).optional().nullable(),
+        term: z.string().trim().max(200).optional().nullable(),
+        content: z.string().trim().max(200).optional().nullable(),
+      })
+      .partial()
+      .optional()
+      .nullable(),
+  })
+  .optional()
+  .nullable();
+
 const payloadSchema = z.object({
   sessionId: z.string().trim().min(3).max(64),
+  analyticsSessionId: z.string().trim().min(6).max(64).optional().nullable(),
   path: z.string().trim().min(1).max(512),
   scope: z.enum(["public", "members"]).optional().nullable(),
   weight: z.number().int().positive().max(100_000).optional(),
   metrics: metricsSchema,
   device: deviceSchema,
+  traffic: trafficSchema,
 });
+
+const DEFAULT_RETENTION_DAYS = 60;
+
+function resolveRetentionDays(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_RETENTION_DAYS;
+  }
+  if (parsed <= 0) {
+    return 0;
+  }
+  return Math.round(parsed);
+}
 
 function normalizePath(rawPath: string): string {
   let path = rawPath.trim();
@@ -136,6 +171,77 @@ function sanitizeString(value: string | null | undefined, max = 255): string | n
   return trimmed.slice(0, max);
 }
 
+function sanitizeAnalyticsSessionId(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < 6 || trimmed.length > 128) {
+    return null;
+  }
+  return trimmed;
+}
+
+function sanitizeReferrer(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim().slice(0, 2048);
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed;
+}
+
+function extractDomain(referrer: string | null): string | null {
+  if (!referrer) {
+    return null;
+  }
+  try {
+    const url = new URL(referrer);
+    return url.hostname ? url.hostname.toLowerCase() : null;
+  } catch {
+    try {
+      const fallback = new URL(referrer.startsWith("http") ? referrer : `https://${referrer}`);
+      return fallback.hostname ? fallback.hostname.toLowerCase() : null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function sanitizeUtm(value: string | null | undefined, max = 180): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.slice(0, max);
+}
+
+function buildTrafficRecord(
+  traffic: z.infer<typeof trafficSchema>,
+  path: string,
+  analyticsSessionId: string | null,
+) {
+  const referrer = sanitizeReferrer(traffic?.referrer ?? null);
+  const utm = traffic?.utm ?? {};
+
+  return {
+    analyticsSessionId,
+    path,
+    referrer,
+    referrerDomain: extractDomain(referrer),
+    utmSource: sanitizeUtm((utm as { source?: string | null }).source ?? null, 160),
+    utmMedium: sanitizeUtm((utm as { medium?: string | null }).medium ?? null, 160),
+    utmCampaign: sanitizeUtm((utm as { campaign?: string | null }).campaign ?? null, 200),
+    utmTerm: sanitizeUtm((utm as { term?: string | null }).term ?? null, 200),
+    utmContent: sanitizeUtm((utm as { content?: string | null }).content ?? null, 200),
+  };
+}
+
 export async function POST(request: NextRequest) {
   let parsed: z.infer<typeof payloadSchema>;
   try {
@@ -154,6 +260,8 @@ export async function POST(request: NextRequest) {
   const lcpMs = normalizeDurationMs(parsed.metrics.lcp);
   const weight = clamp(Math.round(parsed.weight ?? 1), 1, 10_000);
   const now = new Date();
+  const analyticsSessionId = sanitizeAnalyticsSessionId(parsed.analyticsSessionId ?? null);
+  const retentionDays = resolveRetentionDays(process.env.ANALYTICS_PAGE_RETENTION_DAYS);
 
   const pageViewData = {
     sessionId: parsed.sessionId,
@@ -165,6 +273,7 @@ export async function POST(request: NextRequest) {
     loadTimeMs,
     weight,
     createdAt: now,
+    analyticsSessionId,
   } as const;
 
   const connection = parsed.device.connection ?? null;
@@ -205,6 +314,7 @@ export async function POST(request: NextRequest) {
           lcpMs: pageViewData.lcpMs,
           loadTimeMs: pageViewData.loadTimeMs,
           weight: pageViewData.weight,
+          analyticsSessionId: pageViewData.analyticsSessionId,
         },
         create: pageViewData,
       });
@@ -233,7 +343,50 @@ export async function POST(request: NextRequest) {
         },
         create: deviceSnapshotData,
       });
+
+      const trafficRecord = buildTrafficRecord(parsed.traffic, path, analyticsSessionId);
+
+      await tx.analyticsTrafficAttribution.upsert({
+        where: { sessionId: parsed.sessionId },
+        update: {
+          analyticsSessionId: trafficRecord.analyticsSessionId,
+          path: trafficRecord.path,
+          referrer: trafficRecord.referrer,
+          referrerDomain: trafficRecord.referrerDomain,
+          utmSource: trafficRecord.utmSource,
+          utmMedium: trafficRecord.utmMedium,
+          utmCampaign: trafficRecord.utmCampaign,
+          utmTerm: trafficRecord.utmTerm,
+          utmContent: trafficRecord.utmContent,
+        },
+        create: {
+          sessionId: parsed.sessionId,
+          ...trafficRecord,
+        },
+      });
+
+      if (retentionDays > 0) {
+        const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
+        await tx.analyticsPageView.deleteMany({
+          where: {
+            createdAt: { lt: cutoff },
+          },
+        });
+        await tx.analyticsDeviceSnapshot.deleteMany({
+          where: {
+            createdAt: { lt: cutoff },
+          },
+        });
+        await tx.analyticsTrafficAttribution.deleteMany({
+          where: {
+            createdAt: { lt: cutoff },
+          },
+        });
+      }
     });
+    if (analyticsSessionId) {
+      await recordSessionPath({ analyticsSessionId }, path, now);
+    }
   } catch (error) {
     console.error("[analytics] Failed to persist web vitals", error);
     return NextResponse.json({ error: "Failed to store analytics" }, { status: 500 });

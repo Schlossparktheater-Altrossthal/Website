@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { NextAuthOptions } from "next-auth";
@@ -12,6 +13,7 @@ import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-tes
 import { verifyPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
 import { ensureDevTestUser } from "@/lib/dev-auth";
+import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
 
 type MutableToken = JWT & {
   id?: string;
@@ -25,6 +27,7 @@ type MutableToken = JWT & {
   avatarUpdatedAt?: string | null;
   isDeactivated?: boolean;
   deactivatedAt?: string | null;
+  analyticsSessionId?: string | null;
 };
 
 type RoleSource = { role?: unknown; roles?: unknown };
@@ -279,6 +282,7 @@ export const authOptions: NextAuthOptions = {
       };
 
       if (user && isRecord(user)) {
+        mutableToken.analyticsSessionId = randomUUID();
         const id = extractString(user.id);
         if (id) mutableToken.id = id;
         const email = extractString(user.email);
@@ -304,6 +308,10 @@ export const authOptions: NextAuthOptions = {
           if (updatedRoles) applyRoles(updatedRoles);
           applyAvatarFields(mutableToken, updateSource);
         }
+      }
+
+      if (!mutableToken.analyticsSessionId) {
+        mutableToken.analyticsSessionId = randomUUID();
       }
 
       if (mutableToken.id && !mutableToken.roles) {
@@ -369,7 +377,31 @@ export const authOptions: NextAuthOptions = {
         session.user.isDeactivated = Boolean(mutableToken.isDeactivated);
         session.user.deactivatedAt = mutableToken.deactivatedAt ?? null;
       }
+      session.analyticsSessionId =
+        typeof (token as MutableToken).analyticsSessionId === "string"
+          ? (token as MutableToken).analyticsSessionId
+          : null;
       return session;
+    },
+  },
+  events: {
+    async session({ token }) {
+      const mutableToken = token as MutableToken;
+      const roles = Array.isArray(mutableToken.roles)
+        ? (mutableToken.roles.filter((role): role is Role => typeof role === "string") as Role[])
+        : undefined;
+
+      await recordSessionStart({
+        analyticsSessionId: mutableToken.analyticsSessionId ?? null,
+        userId: typeof mutableToken.id === "string" ? mutableToken.id : null,
+        roles,
+      });
+    },
+    async signOut({ token }) {
+      const mutableToken = token as MutableToken;
+      await recordSessionEnd({
+        analyticsSessionId: mutableToken.analyticsSessionId ?? null,
+      });
     },
   },
   secret: process.env.AUTH_SECRET,

@@ -1270,11 +1270,14 @@ model AnalyticsPageView {
   loadTimeMs Float?
   weight     Int      @default(1)
   createdAt  DateTime @default(now())
+  analyticsSessionId String?
+  analyticsSession   AnalyticsSession? @relation(fields: [analyticsSessionId], references: [id], onDelete: SetNull)
 
   @@index([path])
   @@index([scope])
   @@index([deviceHint])
   @@index([createdAt])
+  @@index([analyticsSessionId])
 }
 
 model AnalyticsDeviceSnapshot {
@@ -1328,4 +1331,95 @@ model AnalyticsDeviceMetric {
 
   @@map("analytics_device_metrics")
   @@index([device])
+}
+
+model AnalyticsSession {
+  id               String   @id
+  userId           String?
+  membershipRole   String?
+  isMember         Boolean  @default(false)
+  startedAt        DateTime @default(now())
+  lastSeenAt       DateTime @default(now())
+  endedAt          DateTime?
+  durationSeconds  Int?
+  pagePaths        String[] @default([])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  pageViews        AnalyticsPageView[]
+  trafficAttribution AnalyticsTrafficAttribution[]
+
+  @@index([userId])
+  @@index([lastSeenAt])
+}
+
+model AnalyticsTrafficAttribution {
+  id                 String   @id @default(cuid())
+  sessionId          String   @unique
+  analyticsSessionId String?
+  path               String
+  referrer           String?
+  referrerDomain     String?
+  utmSource          String?
+  utmMedium          String?
+  utmCampaign        String?
+  utmTerm            String?
+  utmContent         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  analyticsSession   AnalyticsSession? @relation(fields: [analyticsSessionId], references: [id], onDelete: SetNull)
+
+  @@index([analyticsSessionId])
+  @@index([path])
+  @@index([referrerDomain])
+  @@index([utmSource])
+  @@index([utmMedium])
+}
+
+model AnalyticsRealtimeEvent {
+  id         String   @id @default(cuid())
+  eventType  String
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([occurredAt])
+  @@index([eventType, occurredAt])
+}
+
+model AnalyticsSessionInsight {
+  id                        String   @id @default(cuid())
+  segment                   String
+  avgSessionDurationSeconds Float
+  pagesPerSession           Float
+  retentionRate             Float
+  share                     Float
+  conversionRate            Float
+  generatedAt               DateTime @default(now())
+
+  @@map("analytics_session_insights")
+  @@index([segment])
+}
+
+model AnalyticsTrafficSource {
+  id                        String   @id @default(cuid())
+  channel                   String
+  sessions                  Int
+  avgSessionDurationSeconds Float
+  conversionRate            Float
+  changePercent             Float
+  generatedAt               DateTime @default(now())
+
+  @@map("analytics_traffic_sources")
+  @@index([channel])
+}
+
+model AnalyticsRealtimeSummary {
+  id          String   @id @default(cuid())
+  windowStart DateTime
+  windowEnd   DateTime
+  totalEvents Int
+  eventCounts Json?
+  generatedAt DateTime @default(now())
+
+  @@map("analytics_realtime_summary")
+  @@index([windowEnd])
 }

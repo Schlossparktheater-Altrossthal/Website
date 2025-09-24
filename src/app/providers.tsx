@@ -10,6 +10,11 @@ import { RealtimeProvider } from "@/hooks/useRealtime";
 import { OfflineSyncStatusProvider } from "@/lib/offline/hooks";
 import { OfflineSyncProvider as OfflineStorageProvider } from "@/lib/offline/storage";
 
+function WebVitalsInitializer({ analyticsSessionId }: { analyticsSessionId?: string | null }) {
+  useWebVitals({ analyticsSessionId });
+  return null;
+}
+
 export function Providers({
   children,
   session,
@@ -18,9 +23,9 @@ export function Providers({
   session?: Session | null;
 }) {
   const [client] = React.useState(() => new QueryClient());
-  useWebVitals();
   return (
     <SessionProvider session={session}>
+      <WebVitalsInitializer analyticsSessionId={session?.analyticsSessionId ?? null} />
       <QueryClientProvider client={client}>
         <OfflineStorageProvider>
           <OfflineSyncStatusProvider>
