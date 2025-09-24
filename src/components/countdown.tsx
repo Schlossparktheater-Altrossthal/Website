@@ -5,10 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/typography";
 
+type CountdownVariant = "default" | "highlight";
+
 type CountdownProps = {
   targetDate: string;
   initialNow: number;
   className?: string;
+  variant?: CountdownVariant;
 };
 
 type CountdownState = {
@@ -57,7 +60,7 @@ function formatNumber(value: number) {
   return value.toString().padStart(2, "0");
 }
 
-export function Countdown({ targetDate, initialNow, className }: CountdownProps) {
+export function Countdown({ targetDate, initialNow, className, variant = "default" }: CountdownProps) {
   const targetTimestamp = useMemo(() => new Date(targetDate).getTime(), [targetDate]);
   const [state, setState] = useState<CountdownState>(() => {
     if (Number.isNaN(targetTimestamp) || !Number.isFinite(initialNow)) {
@@ -102,12 +105,27 @@ export function Countdown({ targetDate, initialNow, className }: CountdownProps)
     { label: "Sekunden", value: state.seconds },
   ];
 
+  const containerClassName = cn("grid w-full grid-cols-2 gap-3 sm:grid-cols-4", className);
+  const cellClassName =
+    variant === "highlight"
+      ? "rounded-lg border border-primary/50 bg-primary/10 px-4 py-3 text-center shadow-sm text-primary"
+      : "rounded-lg border border-border bg-card px-4 py-3 text-center shadow-sm";
+  const numberClassName = cn(
+    "text-3xl font-semibold tabular-nums sm:text-4xl",
+    variant === "highlight" ? "text-primary" : undefined,
+  );
+  const labelTone = variant === "highlight" ? "primary" : "muted";
+
   return (
-    <div className={cn("grid w-full grid-cols-2 gap-3 sm:grid-cols-4", className)} aria-live="polite">
+    <div className={containerClassName} aria-live="polite">
       {timeParts.map((part) => (
-        <div key={part.label} className="rounded-lg border border-border bg-card px-4 py-3 text-center shadow-sm">
-          <div className="text-3xl font-semibold tabular-nums sm:text-4xl">{formatNumber(part.value)}</div>
-          <Text variant="small" tone="muted" className="mt-1 uppercase tracking-[0.2em]">
+        <div key={part.label} className={cellClassName}>
+          <div className={numberClassName}>{formatNumber(part.value)}</div>
+          <Text
+            variant="small"
+            tone={labelTone}
+            className={cn("mt-1 uppercase tracking-[0.2em]", variant === "highlight" ? "text-primary/80" : undefined)}
+          >
             {part.label}
           </Text>
         </div>
