@@ -1258,3 +1258,74 @@ model AnalyticsHttpPeakHour {
   @@map("analytics_http_peak_hours")
   @@index([bucketStart])
 }
+
+model AnalyticsPageView {
+  id         String   @id @default(cuid())
+  sessionId  String?  @unique
+  path       String
+  scope      String?
+  userAgent  String?
+  deviceHint String?
+  lcpMs      Float?
+  loadTimeMs Float?
+  weight     Int      @default(1)
+  createdAt  DateTime @default(now())
+
+  @@index([path])
+  @@index([scope])
+  @@index([deviceHint])
+  @@index([createdAt])
+}
+
+model AnalyticsDeviceSnapshot {
+  id                    String   @id @default(cuid())
+  sessionId             String?  @unique
+  deviceHint            String?
+  userAgent             String?
+  platform              String?
+  hardwareConcurrency   Int?
+  deviceMemoryGb        Float?
+  touchSupport          Int?
+  reducedMotion         Boolean?
+  prefersDarkMode       Boolean?
+  colorScheme           String?
+  connectionType        String?
+  connectionEffectiveType String?
+  connectionRttMs       Float?
+  connectionDownlinkMbps Float?
+  viewportWidth         Int?
+  viewportHeight        Int?
+  pixelRatio            Float?
+  language              String?
+  timezone              String?
+  createdAt             DateTime @default(now())
+
+  @@index([deviceHint])
+  @@index([createdAt])
+}
+
+model AnalyticsPageMetric {
+  id         String   @id @default(cuid())
+  path       String
+  scope      String?
+  avgLoadMs  Float    @map("avg_load")
+  lcpMs      Float?   @map("lcp")
+  weight     Int      @default(0)
+  generatedAt DateTime @default(now())
+
+  @@map("analytics_page_metrics")
+  @@index([path])
+  @@index([scope])
+}
+
+model AnalyticsDeviceMetric {
+  id         String   @id @default(cuid())
+  device     String
+  sessions   Int
+  avgLoadMs  Float   @map("avg_load")
+  share      Float
+  generatedAt DateTime @default(now())
+
+  @@map("analytics_device_metrics")
+  @@index([device])
+}

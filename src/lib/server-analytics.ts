@@ -5,12 +5,7 @@ import { setTimeout as wait } from "node:timers/promises";
 import type { AnalyticsHttpPeakHour, AnalyticsHttpSummary } from "@prisma/client";
 
 import staticAnalyticsData from "@/data/server-analytics-static.json" with { type: "json" };
-import {
-  applyPagePerformanceMetrics,
-  loadDeviceBreakdownFromDatabase,
-  loadPagePerformanceMetrics,
-  mergeDeviceBreakdown,
-} from "@/lib/server-analytics-data";
+import { loadDeviceBreakdownFromDatabase, loadPagePerformanceMetrics } from "@/lib/server-analytics-data";
 import type { PagePerformanceMetricOverride } from "@/lib/server-analytics-data";
 import { prisma } from "@/lib/prisma";
 
@@ -146,6 +141,68 @@ type StaticAnalyticsData = Omit<ServerAnalytics, "generatedAt">;
 const STATIC_ANALYTICS = staticAnalyticsData as StaticAnalyticsData;
 
 const previousResourceUsage = new Map<string, number>();
+
+function clonePageEntries(entries: PagePerformanceEntry[]): PagePerformanceEntry[] {
+  return entries.map((entry) => ({ ...entry }));
+}
+
+function cloneDeviceStats(entries: DeviceStat[]): DeviceStat[] {
+  return entries.map((entry) => ({ ...entry }));
+}
+
+function determineMetricScope(metric: PagePerformanceMetricOverride): "public" | "members" {
+  if (metric.scope === "members" || metric.scope === "public") {
+    return metric.scope;
+  }
+  const lower = metric.path.toLowerCase();
+  if (lower.startsWith("/mitglieder") || lower.startsWith("/members")) {
+    return "members";
+  }
+  return "public";
+}
+
+function buildAggregatedPageEntries(
+  metrics: PagePerformanceMetricOverride[],
+  scope: "public" | "members",
+  metadata: Map<string, PagePerformanceEntry>,
+): PagePerformanceEntry[] {
+  const entries: PagePerformanceEntry[] = [];
+
+  for (const metric of metrics) {
+    const resolvedScope = determineMetricScope(metric);
+    if (scope === "members" && resolvedScope !== "members") {
+      continue;
+    }
+    if (scope === "public" && resolvedScope === "members") {
+      continue;
+    }
+
+    const base = metadata.get(metric.path);
+    const weight = Number.isFinite(metric.weight) ? Math.max(0, Math.round(metric.weight ?? 0)) : 0;
+    const views = weight > 0 ? weight : base?.views ?? 0;
+
+    entries.push({
+      path: metric.path,
+      title: base?.title ?? metric.path,
+      views,
+      uniqueVisitors: base?.uniqueVisitors ?? views,
+      avgTimeOnPageSeconds: base?.avgTimeOnPageSeconds ?? 0,
+      loadTimeMs: metric.avgPageLoadMs,
+      lcpMs: metric.lcpMs ?? base?.lcpMs ?? 0,
+      bounceRate: base?.bounceRate ?? 0,
+      exitRate: base?.exitRate ?? 0,
+      avgScrollDepth: base?.avgScrollDepth ?? 0,
+      goalCompletionRate: base?.goalCompletionRate ?? 0,
+    });
+  }
+
+  return entries.sort((a, b) => {
+    if (b.views !== a.views) {
+      return b.views - a.views;
+    }
+    return a.path.localeCompare(b.path);
+  });
+}
 
 type ResourceMeasurement = Pick<ServerResourceUsage, "id" | "label" | "usagePercent" | "capacity">;
 
@@ -452,9 +509,9 @@ async function collectSystemResourceUsage(): Promise<ServerResourceUsage[]> {
 
 export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   let resourceUsage = STATIC_ANALYTICS.resourceUsage;
-  let deviceBreakdown = STATIC_ANALYTICS.deviceBreakdown;
-  let publicPages = STATIC_ANALYTICS.publicPages;
-  let memberPages = STATIC_ANALYTICS.memberPages;
+  let deviceBreakdown = cloneDeviceStats(STATIC_ANALYTICS.deviceBreakdown);
+  let publicPages = clonePageEntries(STATIC_ANALYTICS.publicPages);
+  let memberPages = clonePageEntries(STATIC_ANALYTICS.memberPages);
   let summary: ServerSummary = { ...STATIC_ANALYTICS.summary };
   let requestBreakdown: RequestBreakdown = {
     frontend: { ...STATIC_ANALYTICS.requestBreakdown.frontend },
@@ -462,6 +519,14 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     api: { ...STATIC_ANALYTICS.requestBreakdown.api },
   };
   let peakHours: PeakHour[] = (STATIC_ANALYTICS.peakHours ?? []).map((entry) => ({ ...entry }));
+
+  const pageMetadata = new Map<string, PagePerformanceEntry>();
+  for (const entry of STATIC_ANALYTICS.publicPages) {
+    pageMetadata.set(entry.path, entry);
+  }
+  for (const entry of STATIC_ANALYTICS.memberPages) {
+    pageMetadata.set(entry.path, entry);
+  }
 
   try {
     resourceUsage = await collectSystemResourceUsage();
@@ -481,7 +546,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       }),
       loadPagePerformanceMetrics().catch((error) => {
         console.error("[server-analytics] Failed to load page performance metrics", error);
-        return [] as PagePerformanceMetricOverride[];
+        return null;
       }),
     ]);
 
@@ -494,21 +559,23 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       peakHours = convertHttpPeakHours(httpAggregates.peakHours);
     }
 
-    deviceBreakdown = mergeDeviceBreakdown(deviceBreakdown, deviceOverrides ?? undefined);
+    if (Array.isArray(deviceOverrides)) {
+      deviceBreakdown = deviceOverrides.map((entry) => ({ ...entry }));
+    }
 
-    const pageMetrics = Array.isArray(pageMetricsResult) ? pageMetricsResult : [];
-
-    if (pageMetrics.length > 0) {
-      publicPages = applyPagePerformanceMetrics(publicPages, pageMetrics, "public");
-      memberPages = applyPagePerformanceMetrics(memberPages, pageMetrics, "members");
-    } else {
-      publicPages = publicPages.map((entry) => ({ ...entry }));
-      memberPages = memberPages.map((entry) => ({ ...entry }));
+    if (Array.isArray(pageMetricsResult)) {
+      if (pageMetricsResult.length > 0) {
+        publicPages = buildAggregatedPageEntries(pageMetricsResult, "public", pageMetadata);
+        memberPages = buildAggregatedPageEntries(pageMetricsResult, "members", pageMetadata);
+      } else {
+        publicPages = [];
+        memberPages = [];
+      }
     }
   } else {
-    deviceBreakdown = deviceBreakdown.map((entry) => ({ ...entry }));
-    publicPages = publicPages.map((entry) => ({ ...entry }));
-    memberPages = memberPages.map((entry) => ({ ...entry }));
+    deviceBreakdown = cloneDeviceStats(deviceBreakdown);
+    publicPages = clonePageEntries(publicPages);
+    memberPages = clonePageEntries(memberPages);
   }
 
   return {

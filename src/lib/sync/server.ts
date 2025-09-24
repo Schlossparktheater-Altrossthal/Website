@@ -395,7 +395,7 @@ export async function applyIncomingEvents(
           clientMutationId: mutation.clientMutationId,
           dedupeKey: event.dedupeKey,
           type: event.type,
-          payload: event.payload,
+          payload: event.payload as Prisma.InputJsonValue,
           occurredAt: new Date(event.occurredAt),
         },
       });

@@ -114,6 +114,14 @@ function formatTableName(schema, table) {
   return `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
 }
 
+function isTableMissingError(error) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const code = error.code || error.code?.code;
+  return typeof code === "string" && code.toUpperCase() === "42P01";
+}
+
 function groupTableMetadata(rows) {
   const tableMap = new Map();
 
@@ -485,10 +493,110 @@ function normalizeScope(value, path) {
   return null;
 }
 
+async function loadDeviceMetricsFromDedicatedView(prisma) {
+  try {
+    const rows = await prisma.$queryRawUnsafe(
+      "SELECT device, sessions, avg_load, share FROM analytics_device_metrics",
+    );
+    if (!Array.isArray(rows)) {
+      return [];
+    }
+
+    const buckets = [];
+    let totalSessions = 0;
+
+    for (const row of rows) {
+      const deviceKey = normalizeDeviceKey(row?.device ?? row?.DEVICE ?? row?.device_key);
+      const sessions = Math.max(0, Math.round(toNumber(row?.sessions ?? row?.SESSIONS ?? row?.count)));
+      if (!Number.isFinite(sessions) || sessions <= 0) {
+        continue;
+      }
+
+      const avgLoadMs = normalizeDurationToMs(row?.avg_load ?? row?.AVG_LOAD ?? row?.avgLoad);
+      const share = Number(row?.share ?? row?.SHARE);
+      buckets.push({ key: deviceKey, sessions, avgLoadMs, share });
+      totalSessions += sessions;
+    }
+
+    return buckets.map((bucket) => ({
+      device: deviceDisplayName(bucket.key),
+      sessions: bucket.sessions,
+      avgPageLoadMs: Math.max(0, Math.round(bucket.avgLoadMs ?? 0)),
+      share: clampNumber(
+        Number.isFinite(bucket.share) && bucket.share > 0
+          ? bucket.share
+          : totalSessions > 0
+            ? bucket.sessions / totalSessions
+            : 0,
+        0,
+        1,
+      ),
+    }));
+  } catch (error) {
+    if (isTableMissingError(error)) {
+      return null;
+    }
+    console.error("[server-analytics] Failed to query analytics_device_metrics", error);
+    return null;
+  }
+}
+
+async function loadPageMetricsFromDedicatedView(prisma) {
+  try {
+    const rows = await prisma.$queryRawUnsafe(
+      "SELECT path, scope, avg_load, lcp, weight FROM analytics_page_metrics",
+    );
+    if (!Array.isArray(rows)) {
+      return [];
+    }
+
+    const metrics = [];
+
+    for (const row of rows) {
+      const normalizedPath = normalizePath(row?.path ?? row?.PATH ?? row?.url);
+      if (!normalizedPath) {
+        continue;
+      }
+
+      const avgLoadMs = normalizeDurationToMs(
+        row?.avg_load ?? row?.AVG_LOAD ?? row?.avgLoad ?? row?.avg_page_load,
+      );
+      if (!Number.isFinite(avgLoadMs) || avgLoadMs <= 0) {
+        continue;
+      }
+
+      const scope = normalizeScope(row?.scope ?? row?.SCOPE ?? null, normalizedPath);
+      const lcpMsRaw = normalizeDurationToMs(row?.lcp ?? row?.LCP ?? row?.largest_contentful_paint);
+      const weight = Math.max(0, Math.round(toNumber(row?.weight ?? row?.WEIGHT ?? row?.samples)));
+
+      metrics.push({
+        path: normalizedPath,
+        avgPageLoadMs: Math.max(0, Math.round(avgLoadMs)),
+        lcpMs: lcpMsRaw > 0 ? Math.max(0, Math.round(lcpMsRaw)) : null,
+        scope,
+        weight: weight > 0 ? weight : undefined,
+      });
+    }
+
+    return metrics;
+  } catch (error) {
+    if (isTableMissingError(error)) {
+      return null;
+    }
+    console.error("[server-analytics] Failed to query analytics_page_metrics", error);
+    return null;
+  }
+}
+
 export async function loadDeviceBreakdownFromDatabase() {
   const prisma = getAnalyticsPrisma();
   if (!prisma) {
     return null;
+  }
+
+  const dedicated = await loadDeviceMetricsFromDedicatedView(prisma);
+  if (dedicated !== null) {
+    return dedicated;
   }
 
   const match = await resolveDeviceTable(prisma).catch((error) => {
@@ -572,6 +680,11 @@ export async function loadPagePerformanceMetrics() {
   const prisma = getAnalyticsPrisma();
   if (!prisma) {
     return [];
+  }
+
+  const dedicated = await loadPageMetricsFromDedicatedView(prisma);
+  if (dedicated !== null) {
+    return dedicated;
   }
 
   const match = await resolvePageTable(prisma).catch((error) => {
@@ -666,6 +779,7 @@ export async function loadPagePerformanceMetrics() {
       avgPageLoadMs: Math.max(0, Math.round(avgLoad)),
       lcpMs: avgLcp !== null ? Math.max(0, Math.round(avgLcp)) : null,
       scope: bucket.scope,
+      weight: bucket.totalWeight,
     });
   }
 
