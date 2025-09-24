@@ -225,6 +225,7 @@ export function MembersNav({
                     const isPrimitiveBadge =
                       typeof badgeContent === "string" ||
                       typeof badgeContent === "number";
+                    const reserveBadgeSpace = showBadge && isPrimitiveBadge;
 
                     return (
                       <SidebarMenuItem key={item.href}>
@@ -246,16 +247,28 @@ export function MembersNav({
                               className={cn(
                                 "h-4 w-4 shrink-0 transition-opacity",
                                 active ? "opacity-100" : "opacity-70",
+                                !isCollapsed && "mt-0.5",
                               )}
                             />
-                            <span className={cn("truncate", isCollapsed && "sr-only")}>{item.label}</span>
+                            {!isCollapsed ? (
+                              <div
+                                className={cn(
+                                  "flex min-w-0 flex-1 flex-col",
+                                  reserveBadgeSpace && "pr-8",
+                                )}
+                              >
+                                <span className="break-words text-sidebar-foreground leading-5">
+                                  {item.label}
+                                </span>
+                              </div>
+                            ) : null}
                             {showBadge ? (
                               isPrimitiveBadge ? (
                                 <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">
                                   {badgeContent}
                                 </SidebarMenuBadge>
                               ) : (
-                                <span className="ml-auto flex items-center">{badgeContent}</span>
+                                <span className="ml-auto flex shrink-0 items-center">{badgeContent}</span>
                               )
                             ) : null}
                           </Link>
