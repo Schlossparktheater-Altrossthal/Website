@@ -4,8 +4,9 @@ import { Toaster } from "sonner";
 import * as React from "react";
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
-import { RealtimeProvider } from "@/hooks/useRealtime";
 import { FrontendEditingProvider } from "@/components/frontend-editing/frontend-editing-provider";
+import { RealtimeProvider } from "@/hooks/useRealtime";
+import { OfflineSyncProvider } from "@/lib/offline/storage";
 
 export function Providers({
   children,
@@ -18,18 +19,20 @@ export function Providers({
   return (
     <SessionProvider session={session}>
       <QueryClientProvider client={client}>
-        <RealtimeProvider>
-          <FrontendEditingProvider>
-            {children}
-            <Toaster
-              richColors
-              position="top-right"
-              expand={true}
-              visibleToasts={5}
-              gap={8}
-            />
-          </FrontendEditingProvider>
-        </RealtimeProvider>
+        <OfflineSyncProvider>
+          <RealtimeProvider>
+            <FrontendEditingProvider>
+              {children}
+              <Toaster
+                richColors
+                position="top-right"
+                expand={true}
+                visibleToasts={5}
+                gap={8}
+              />
+            </FrontendEditingProvider>
+          </RealtimeProvider>
+        </OfflineSyncProvider>
       </QueryClientProvider>
     </SessionProvider>
   );
