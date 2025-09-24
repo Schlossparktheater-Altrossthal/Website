@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ interface MeasurementEntry {
 
 interface MemberMeasurementsManagerProps {
   initialMeasurements: MeasurementEntry[];
+  onMeasurementsChange?: (measurements: MeasurementEntry[]) => void;
 }
 
 type DialogState =
@@ -36,6 +37,7 @@ type DialogState =
 
 export function MemberMeasurementsManager({
   initialMeasurements,
+  onMeasurementsChange,
 }: MemberMeasurementsManagerProps) {
   const [measurements, setMeasurements] = useState(() =>
     sortMeasurements(initialMeasurements),
@@ -43,6 +45,13 @@ export function MemberMeasurementsManager({
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const profileCompletion = useOptionalProfileCompletion();
+
+  const notifyMeasurementsChange = useCallback(
+    (next: MeasurementEntry[]) => {
+      onMeasurementsChange?.(next);
+    },
+    [onMeasurementsChange],
+  );
 
   const openCreateDialog = () => {
     setDialogState({ mode: "create" });
@@ -95,6 +104,7 @@ export function MemberMeasurementsManager({
         const withoutType = prev.filter((entry) => entry.type !== saved.type);
         const next = sortMeasurements([...withoutType, saved]);
         profileCompletion?.setItemComplete("measurements", next.length > 0);
+        notifyMeasurementsChange(next);
         return next;
       });
       setDialogState(null);

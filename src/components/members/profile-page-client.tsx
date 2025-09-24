@@ -16,22 +16,24 @@ import { ProfileDietaryPreferences } from "@/components/members/profile-dietary-
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import type { ProfileChecklistItem, ProfileChecklistTarget } from "@/lib/profile-completion";
 import type { AvatarSource } from "@/components/user-avatar";
-import type { PhotoConsentSummary } from "@/types/photo-consent";
+import type { PhotoConsentStatus, PhotoConsentSummary } from "@/types/photo-consent";
 import type {
   DietaryStrictnessOption,
   DietaryStyleOption,
 } from "@/data/dietary-preferences";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   ROLE_BADGE_VARIANTS,
   ROLE_DESCRIPTIONS,
   ROLE_LABELS,
 } from "@/lib/roles";
+import { getUserDisplayName } from "@/lib/names";
 import {
   CheckCircle2,
-  ChevronDown,
   Crown,
   Gavel,
   PiggyBank,
@@ -41,6 +43,15 @@ import {
   Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  MEASUREMENT_TYPE_LABELS,
+  MEASUREMENT_UNIT_LABELS,
+  sortMeasurements,
+} from "@/data/measurements";
+import {
+  resolveDietaryStrictnessLabel,
+  resolveDietaryStyleLabel,
+} from "@/data/dietary-preferences";
 
 interface MeasurementEntry {
   id: string;
@@ -109,67 +120,144 @@ const ROLE_ICON_ACCENTS: Record<Role, string> = {
 const ROLE_STATUS_BADGE_CLASSES =
   "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
 
-type ProfileSectionId = ProfileChecklistTarget | "interessen";
+type ProfileTabId = ProfileChecklistTarget | "interessen";
 
-interface ProfileSectionProps {
-  id: ProfileSectionId;
-  title: string;
-  description: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+const summaryDateFormatter = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+});
+
+const EMPTY_VALUE_LABEL = "Nicht hinterlegt";
+
+const AVATAR_SOURCE_LABELS: Record<AvatarSource, string> = {
+  GRAVATAR: "Gravatar",
+  INITIALS: "Initialen",
+  UPLOAD: "Eigenes Bild",
+};
+
+const ALLERGY_LEVEL_STYLES: Record<AllergyLevel, string> = {
+  MILD: "border-emerald-400/40 bg-emerald-500/10 text-emerald-600",
+  MODERATE: "border-amber-400/40 bg-amber-500/10 text-amber-600",
+  SEVERE: "border-rose-400/40 bg-rose-500/10 text-rose-600",
+  LETHAL: "border-red-500/50 bg-red-500/10 text-red-600",
+};
+
+const PHOTO_STATUS_BADGES: Record<PhotoConsentStatus, string> = {
+  none: "border-border/60 bg-muted/30 text-muted-foreground",
+  pending: "border-amber-400/40 bg-amber-500/10 text-amber-700",
+  approved: "border-emerald-400/40 bg-emerald-500/10 text-emerald-700",
+  rejected: "border-rose-400/40 bg-rose-500/10 text-rose-700",
+};
+
+const PHOTO_STATUS_LABELS: Record<PhotoConsentStatus, string> = {
+  none: "Keine Angaben",
+  pending: "In Prüfung",
+  approved: "Freigegeben",
+  rejected: "Abgelehnt",
+};
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return null;
+  return summaryDateFormatter.format(date);
+}
+
+function formatMeasurementValue(value: number) {
+  return Number.isFinite(value)
+    ? value.toLocaleString("de-DE", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1,
+      })
+    : "-";
+}
+
+function calculateAge(date: string | null) {
+  if (!date) return null;
+  const birthday = new Date(date);
+  if (Number.isNaN(birthday.valueOf())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birthday.getFullYear();
+  const monthDiff = today.getMonth() - birthday.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthday.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+}
+
+function renderText(value: string | null | undefined): ReactNode {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) {
+    return <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>;
+  }
+  return <span>{trimmed}</span>;
+}
+
+interface SummaryFieldProps {
+  label: string;
+  onClick?: () => void;
+  description?: string;
   children: ReactNode;
 }
 
-function ProfileSection({
-  id,
-  title,
-  description,
-  open,
-  onOpenChange,
-  children,
-}: ProfileSectionProps) {
-  const sectionDomId = `profile-section-${id}`;
-  const titleId = `${sectionDomId}-title`;
-  const contentId = `${sectionDomId}-content`;
+function SummaryField({ label, onClick, description, children }: SummaryFieldProps) {
+  const content = (
+    <>
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <div className="text-sm text-foreground">{children}</div>
+      {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+      {onClick ? (
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/60 transition group-hover:text-primary">
+          Zum Bearbeiten tippen
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "group flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-background/80 p-4 text-left shadow-sm transition",
+          "hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        )}
+      >
+        {content}
+      </button>
+    );
+  }
 
   return (
-    <section
-      id={sectionDomId}
-      aria-labelledby={titleId}
-      className="group relative rounded-3xl border border-border/60 bg-background/90 shadow-lg shadow-primary/10 transition focus:outline-none"
-      tabIndex={-1}
-    >
-      <div className="flex flex-col gap-4 border-b border-border/60 px-6 pb-5 pt-6 sm:flex-row sm:items-start sm:justify-between sm:px-7">
-        <div className="space-y-2">
-          <h3 id={titleId} className="text-lg font-semibold text-foreground">
-            {title}
-          </h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-background/80 p-4 text-left shadow-sm">
+      {content}
+    </div>
+  );
+}
+
+interface EditorPanelProps {
+  title: string;
+  description?: string;
+  onClose: () => void;
+  children: ReactNode;
+}
+
+function EditorPanel({ title, description, onClose, children }: EditorPanelProps) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-background/95 p-6 shadow-lg shadow-primary/10">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h4 className="text-lg font-semibold text-foreground">{title}</h4>
+          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </div>
-        <button
-          type="button"
-          onClick={() => onOpenChange(!open)}
-          className="inline-flex items-center gap-2 self-start rounded-full border border-border/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition hover:border-primary/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          aria-expanded={open}
-          aria-controls={contentId}
-        >
-          {open ? "Zuklappen" : "Aufklappen"}
-          <ChevronDown
-            className={cn("h-4 w-4 transition-transform duration-200", open && "rotate-180")}
-            aria-hidden
-          />
-        </button>
+        <Button type="button" size="sm" variant="ghost" onClick={onClose}>
+          Schließen
+        </Button>
       </div>
-      <div
-        id={contentId}
-        role="region"
-        aria-labelledby={titleId}
-        hidden={!open}
-        className="px-6 pb-6 pt-5 sm:px-7"
-      >
-        {children}
-      </div>
-    </section>
+      <div className="mt-6 space-y-6">{children}</div>
+    </div>
   );
 }
 
@@ -276,47 +364,79 @@ export function ProfilePageClient({
   allergies,
   photoConsent,
 }: ProfilePageClientProps) {
-  const [openSections, setOpenSections] = useState<Record<ProfileSectionId, boolean>>({
-    stammdaten: true,
-    ernaehrung: false,
-    masse: false,
-    interessen: false,
-    freigaben: false,
-  });
+  const [activeTab, setActiveTab] = useState<ProfileTabId>("stammdaten");
+  const [activeEditor, setActiveEditor] = useState<ProfileTabId | null>(null);
+  const [profileUser, setProfileUser] = useState<ProfileUserSummary>(user);
+  const [preferenceState, setPreferenceState] =
+    useState<DietaryPreferenceState>(dietaryPreference);
+  const [allergyState, setAllergyState] = useState<AllergyEntry[]>(allergies);
   const [photoSummary, setPhotoSummary] = useState<PhotoConsentSummary | null>(
     photoConsent,
   );
-  const measurementEntries = canManageMeasurements ? measurements ?? [] : null;
-
-  const handleSectionOpenChange = useCallback(
-    (section: ProfileSectionId, open: boolean) => {
-      setOpenSections((prev) => ({ ...prev, [section]: open }));
-    },
-    [],
+  const [measurementState, setMeasurementState] = useState<MeasurementEntry[]>(() =>
+    canManageMeasurements ? sortMeasurements(measurements ?? []) : [],
   );
 
+  const measurementEntries = canManageMeasurements ? measurementState : [];
+
+  const displayName = getUserDisplayName(
+    {
+      firstName: profileUser.firstName,
+      lastName: profileUser.lastName,
+      name: profileUser.name,
+      email: profileUser.email,
+    },
+    "",
+  );
+
+  const birthdate = formatDate(profileUser.dateOfBirth);
+  const avatarSource = toAvatarSource(profileUser.avatarSource);
+  const avatarSourceLabel = avatarSource
+    ? AVATAR_SOURCE_LABELS[avatarSource]
+    : "Automatisch";
+  const avatarUpdatedAt = formatDate(profileUser.avatarUpdatedAt);
+
+  const dietaryStyle = resolveDietaryStyleLabel(
+    preferenceState.style,
+    preferenceState.customLabel,
+  );
+  const dietaryStrictness = resolveDietaryStrictnessLabel(
+    preferenceState.style,
+    preferenceState.strictness,
+  );
+
+  const latestMeasurementUpdate = measurementEntries.reduce<string | null>(
+    (latest, entry) => {
+      if (!entry.updatedAt) return latest;
+      if (!latest) return entry.updatedAt;
+      const current = new Date(entry.updatedAt).getTime();
+      const previous = new Date(latest).getTime();
+      return current > previous ? entry.updatedAt : latest;
+    },
+    null,
+  );
+
+  const handleTabChange = useCallback((value: string) => {
+    const next = value as ProfileTabId;
+    setActiveTab(next);
+    setActiveEditor((current) => (current === next ? current : null));
+  }, []);
+
   const handleNavigateToSection = useCallback(
-    (section: ProfileSectionId) => {
+    (section: ProfileTabId) => {
       if (section === "masse" && !canManageMeasurements) {
         return;
       }
-
-      setOpenSections((prev) => {
-        if (prev[section]) {
-          return prev;
-        }
-        return { ...prev, [section]: true };
-      });
-
+      setActiveTab(section);
+      setActiveEditor((current) => (current === section ? current : null));
       if (typeof window !== "undefined") {
         window.requestAnimationFrame(() => {
-          const element = document.getElementById(`profile-section-${section}`);
+          const element = document.getElementById("profile-tabs");
           if (element instanceof HTMLElement) {
-            element.focus({ preventScroll: true });
             element.scrollIntoView({ behavior: "smooth", block: "start" });
-            element.classList.add("ring-2", "ring-primary/50");
+            element.classList.add("ring-2", "ring-primary/40");
             window.setTimeout(() => {
-              element.classList.remove("ring-2", "ring-primary/50");
+              element.classList.remove("ring-2", "ring-primary/40");
             }, 1200);
           }
         });
@@ -325,15 +445,37 @@ export function ProfilePageClient({
     [canManageMeasurements],
   );
 
+  const openEditor = useCallback(
+    (section: ProfileTabId) => {
+      if (section === "masse" && !canManageMeasurements) {
+        return;
+      }
+      setActiveTab(section);
+      setActiveEditor(section);
+    },
+    [canManageMeasurements],
+  );
+
+  const closeEditor = useCallback(() => {
+    setActiveEditor(null);
+  }, []);
+
   const handleManagePhoto = useCallback(() => {
-    handleNavigateToSection("freigaben");
-  }, [handleNavigateToSection]);
+    openEditor("freigaben");
+  }, [openEditor]);
 
   const handlePhotoSummaryChange = useCallback(
     (summary: PhotoConsentSummary | null) => {
       setPhotoSummary(summary);
     },
     [],
+  );
+
+  const photoStatus: PhotoConsentStatus = photoSummary?.status ?? "none";
+  const photoStatusLabel = PHOTO_STATUS_LABELS[photoStatus];
+  const photoStatusBadge = PHOTO_STATUS_BADGES[photoStatus];
+  const photoUpdatedAt = formatDate(
+    photoSummary?.updatedAt ?? photoSummary?.submittedAt ?? null,
   );
 
   return (
@@ -364,17 +506,17 @@ export function ProfilePageClient({
         <div className="grid gap-6 lg:gap-8 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)] xl:items-start xl:gap-10 2xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)] 2xl:gap-12">
           <div className="space-y-6 xl:space-y-8">
             <ProfileSummaryCard
-              userId={user.id}
-              firstName={user.firstName}
-              lastName={user.lastName}
-              name={user.name}
-              email={user.email}
-              roles={user.roles}
-              avatarSource={user.avatarSource}
-              avatarUpdatedAt={user.avatarUpdatedAt}
+              userId={profileUser.id}
+              firstName={profileUser.firstName}
+              lastName={profileUser.lastName}
+              name={profileUser.name}
+              email={profileUser.email}
+              roles={profileUser.roles}
+              avatarSource={profileUser.avatarSource}
+              avatarUpdatedAt={profileUser.avatarUpdatedAt}
             />
 
-            <ProfileRolesCard roles={user.roles} />
+            <ProfileRolesCard roles={profileUser.roles} />
 
             <ProfileChecklistCard onNavigateToSection={handleNavigateToSection} />
           </div>
@@ -382,77 +524,397 @@ export function ProfilePageClient({
           <div className="space-y-10 xl:space-y-12">
             <div className="space-y-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Wichtigste Angaben
+                Profilbereiche
               </p>
-              <ProfileSection
-                id="stammdaten"
-                title="Stammdaten &amp; Zugang"
-                description="Aktualisiere Namen, Kontaktadresse und Login-Daten."
-                open={openSections.stammdaten}
-                onOpenChange={(open) => handleSectionOpenChange("stammdaten", open)}
+              <div
+                id="profile-tabs"
+                className="rounded-3xl border border-border/60 bg-background/90 p-6 shadow-lg shadow-primary/10 sm:p-8"
               >
-                <ProfileForm
-                  userId={user.id}
-                  initialFirstName={user.firstName}
-                  initialLastName={user.lastName}
-                  initialName={user.name}
-                  initialEmail={user.email}
-                  initialAvatarSource={toAvatarSource(user.avatarSource)}
-                  initialAvatarUpdatedAt={user.avatarUpdatedAt}
-                  initialDateOfBirth={user.dateOfBirth}
-                />
-              </ProfileSection>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Weitere Bereiche
-              </p>
-              <div className="space-y-6 xl:space-y-8">
-                <ProfileSection
-                  id="ernaehrung"
-                  title="Ernährung &amp; Allergien"
-                  description="Hilft bei der Planung von Verpflegung und Events."
-                  open={openSections.ernaehrung}
-                  onOpenChange={(open) => handleSectionOpenChange("ernaehrung", open)}
+                <Tabs
+                  value={activeTab}
+                  onValueChange={handleTabChange}
+                  className="space-y-6"
                 >
-                  <ProfileDietaryPreferences
-                    initialPreference={dietaryPreference}
-                    initialAllergies={allergies}
-                  />
-                </ProfileSection>
+                  <TabsList className="flex flex-wrap gap-2">
+                    <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
+                    <TabsTrigger value="ernaehrung">Ernährung</TabsTrigger>
+                    {canManageMeasurements ? (
+                      <TabsTrigger value="masse">Maße</TabsTrigger>
+                    ) : null}
+                    <TabsTrigger value="interessen">Interessen</TabsTrigger>
+                    <TabsTrigger value="freigaben">Freigaben</TabsTrigger>
+                  </TabsList>
 
-                {canManageMeasurements ? (
-                  <ProfileSection
-                    id="masse"
-                    title="Maße &amp; Kostümplanung"
-                    description="Teile deine Körpermaße mit dem Kostüm-Team."
-                    open={openSections.masse}
-                    onOpenChange={(open) => handleSectionOpenChange("masse", open)}
-                  >
-                    <MemberMeasurementsManager initialMeasurements={measurementEntries ?? []} />
-                  </ProfileSection>
-                ) : null}
+                  <TabsContent value="stammdaten" className="space-y-6 pt-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <SummaryField
+                        label="Vorname"
+                        onClick={() => openEditor("stammdaten")}
+                      >
+                        {renderText(profileUser.firstName)}
+                      </SummaryField>
+                      <SummaryField
+                        label="Nachname"
+                        onClick={() => openEditor("stammdaten")}
+                      >
+                        {renderText(profileUser.lastName)}
+                      </SummaryField>
+                      <SummaryField
+                        label="Anzeigename"
+                        onClick={() => openEditor("stammdaten")}
+                      >
+                        {renderText(displayName || null)}
+                      </SummaryField>
+                      <SummaryField
+                        label="E-Mail-Adresse"
+                        description="Wir verwenden diese Adresse für Login und Benachrichtigungen."
+                        onClick={() => openEditor("stammdaten")}
+                      >
+                        {renderText(profileUser.email)}
+                      </SummaryField>
+                      <SummaryField
+                        label="Geburtsdatum"
+                        description="Hilft bei der Verwaltung notwendiger Einverständnisse."
+                        onClick={() => openEditor("stammdaten")}
+                      >
+                        {birthdate ? (
+                          <span>{birthdate}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {EMPTY_VALUE_LABEL}
+                          </span>
+                        )}
+                      </SummaryField>
+                      <SummaryField
+                        label="Profilbild"
+                        description="Quelle und Aktualisierung deines Avatars."
+                        onClick={() => openEditor("stammdaten")}
+                      >
+                        <div className="space-y-1">
+                          <span>{avatarSourceLabel}</span>
+                          {avatarUpdatedAt ? (
+                            <span className="text-xs text-muted-foreground">
+                              Aktualisiert am {avatarUpdatedAt}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Noch kein Upload gespeichert.
+                            </span>
+                          )}
+                        </div>
+                      </SummaryField>
+                    </div>
 
-                <ProfileSection
-                  id="interessen"
-                  title="Interessen &amp; Engagement"
-                  description="Zeige, wo du dich einbringen oder unterstützen möchtest."
-                  open={openSections.interessen}
-                  onOpenChange={(open) => handleSectionOpenChange("interessen", open)}
-                >
-                  <ProfileInterestsCard />
-                </ProfileSection>
+                    {activeEditor === "stammdaten" ? (
+                      <EditorPanel
+                        title="Stammdaten bearbeiten"
+                        description="Passe Name, Kontaktadresse und Login-Daten an."
+                        onClose={closeEditor}
+                      >
+                        <ProfileForm
+                          userId={profileUser.id}
+                          initialFirstName={profileUser.firstName}
+                          initialLastName={profileUser.lastName}
+                          initialName={profileUser.name}
+                          initialEmail={profileUser.email}
+                          initialAvatarSource={toAvatarSource(
+                            profileUser.avatarSource,
+                          )}
+                          initialAvatarUpdatedAt={profileUser.avatarUpdatedAt}
+                          initialDateOfBirth={profileUser.dateOfBirth}
+                          onProfileChange={(next) => {
+                            setProfileUser((prev) => ({
+                              ...prev,
+                              firstName: next.firstName,
+                              lastName: next.lastName,
+                              name: next.name,
+                              email: next.email,
+                              avatarSource: next.avatarSource ?? null,
+                              avatarUpdatedAt: next.avatarUpdatedAt,
+                              dateOfBirth: next.dateOfBirth,
+                            }));
+                            setPhotoSummary((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    dateOfBirth: next.dateOfBirth,
+                                    age: calculateAge(next.dateOfBirth),
+                                  }
+                                : prev,
+                            );
+                          }}
+                        />
+                      </EditorPanel>
+                    ) : null}
+                  </TabsContent>
 
-                <ProfileSection
-                  id="freigaben"
-                  title="Freigaben &amp; Fotoeinverständnis"
-                  description="Verwalte Zustimmungen für Medienarbeit und Teamkommunikation."
-                  open={openSections.freigaben}
-                  onOpenChange={(open) => handleSectionOpenChange("freigaben", open)}
-                >
-                  <PhotoConsentCard onSummaryChange={handlePhotoSummaryChange} />
-                </ProfileSection>
+                  <TabsContent value="ernaehrung" className="space-y-6 pt-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <SummaryField
+                        label="Ernährungsstil"
+                        onClick={() => openEditor("ernaehrung")}
+                      >
+                        <div className="space-y-1">
+                          <span>{dietaryStyle.label}</span>
+                          {preferenceState.customLabel ? (
+                            <span className="text-xs text-muted-foreground">
+                              Eigene Beschreibung: {preferenceState.customLabel}
+                            </span>
+                          ) : null}
+                        </div>
+                      </SummaryField>
+                      <SummaryField
+                        label="Strenge"
+                        onClick={() => openEditor("ernaehrung")}
+                      >
+                        {renderText(dietaryStrictness)}
+                      </SummaryField>
+                    </div>
+
+                    <SummaryField
+                      label="Allergien & Unverträglichkeiten"
+                      onClick={() => openEditor("ernaehrung")}
+                    >
+                      {allergyState.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {allergyState.slice(0, 6).map((entry) => (
+                            <Badge
+                              key={entry.allergen}
+                              variant="outline"
+                              className={cn(
+                                "text-xs",
+                                ALLERGY_LEVEL_STYLES[entry.level],
+                              )}
+                            >
+                              {entry.allergen}
+                            </Badge>
+                          ))}
+                          {allergyState.length > 6 ? (
+                            <span className="text-xs text-muted-foreground">
+                              +{allergyState.length - 6} weitere
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {EMPTY_VALUE_LABEL}
+                        </span>
+                      )}
+                    </SummaryField>
+
+                    {activeEditor === "ernaehrung" ? (
+                      <EditorPanel
+                        title="Ernährung & Allergien bearbeiten"
+                        description="Pflege Ernährungsstil und medizinische Hinweise."
+                        onClose={closeEditor}
+                      >
+                        <ProfileDietaryPreferences
+                          initialPreference={preferenceState}
+                          initialAllergies={allergyState}
+                          onDietaryChange={({ preference, allergies: nextAllergies }) => {
+                            setPreferenceState(preference);
+                            setAllergyState(nextAllergies);
+                          }}
+                        />
+                      </EditorPanel>
+                    ) : null}
+                  </TabsContent>
+
+                  {canManageMeasurements ? (
+                    <TabsContent value="masse" className="space-y-6 pt-4">
+                      <SummaryField
+                        label="Erfasste Maße"
+                        description="Gib dem Kostüm-Team aktuelle Werte an die Hand."
+                        onClick={() => openEditor("masse")}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="border-primary/40 bg-primary/10 text-primary"
+                          >
+                            {measurementEntries.length} Werte
+                          </Badge>
+                          {measurementEntries.length && latestMeasurementUpdate ? (
+                            <span className="text-xs text-muted-foreground">
+                              Aktualisiert am {formatDate(latestMeasurementUpdate)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Noch keine Werte hinterlegt.
+                            </span>
+                          )}
+                        </div>
+                      </SummaryField>
+
+                      {measurementEntries.length ? (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {measurementEntries.slice(0, 4).map((entry) => (
+                            <SummaryField
+                              key={entry.type}
+                              label={MEASUREMENT_TYPE_LABELS[entry.type]}
+                              onClick={() => openEditor("masse")}
+                            >
+                              <div className="flex flex-wrap items-baseline gap-2">
+                                <span className="text-base font-semibold text-foreground">
+                                  {formatMeasurementValue(entry.value)}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit}
+                                </span>
+                              </div>
+                              {entry.note ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {entry.note}
+                                </p>
+                              ) : null}
+                              <p className="text-[11px] text-muted-foreground">
+                                Aktualisiert am {formatDate(entry.updatedAt) ?? "-"}
+                              </p>
+                            </SummaryField>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Erfasse deine Maße, damit das Kostüm-Team planen kann.
+                        </p>
+                      )}
+
+                      {measurementEntries.length > 4 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Weitere Maße findest du im Bearbeitungsmodus.
+                        </p>
+                      ) : null}
+
+                      {activeEditor === "masse" ? (
+                        <EditorPanel
+                          title="Maße & Kostümplanung"
+                          description="Erfasse oder aktualisiere deine Körpermaße."
+                          onClose={closeEditor}
+                        >
+                          <MemberMeasurementsManager
+                            initialMeasurements={measurementEntries}
+                            onMeasurementsChange={(entries) =>
+                              setMeasurementState(sortMeasurements(entries))
+                            }
+                          />
+                        </EditorPanel>
+                      ) : null}
+                    </TabsContent>
+                  ) : null}
+
+                  <TabsContent value="interessen" className="space-y-6 pt-4">
+                    <SummaryField
+                      label="Status"
+                      description="Tippe, um deine Interessen zu pflegen."
+                      onClick={() => openEditor("interessen")}
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        Interessen werden beim Öffnen geladen.
+                      </span>
+                    </SummaryField>
+
+                    {activeEditor === "interessen" ? (
+                      <EditorPanel
+                        title="Interessen & Engagement"
+                        description="Pflege Schlagworte, um passende Aufgaben zu finden."
+                        onClose={closeEditor}
+                      >
+                        <ProfileInterestsCard />
+                      </EditorPanel>
+                    ) : null}
+                  </TabsContent>
+
+                  <TabsContent value="freigaben" className="space-y-6 pt-4">
+                    <SummaryField
+                      label="Status"
+                      onClick={() => openEditor("freigaben")}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={cn("text-xs", photoStatusBadge)}
+                        >
+                          {photoStatusLabel}
+                        </Badge>
+                        {photoUpdatedAt ? (
+                          <span className="text-xs text-muted-foreground">
+                            Aktualisiert am {photoUpdatedAt}
+                          </span>
+                        ) : null}
+                      </div>
+                    </SummaryField>
+
+                    <SummaryField
+                      label="Geburtsdatum & Alter"
+                      onClick={() => openEditor("freigaben")}
+                    >
+                      {photoSummary?.dateOfBirth ? (
+                        <div className="space-y-1">
+                          <span>{formatDate(photoSummary.dateOfBirth)}</span>
+                          {photoSummary.age !== null ? (
+                            <span className="text-xs text-muted-foreground">
+                              {photoSummary.age} Jahre
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {photoSummary?.requiresDateOfBirth
+                            ? "Bitte ergänze dein Geburtsdatum."
+                            : EMPTY_VALUE_LABEL}
+                        </span>
+                      )}
+                    </SummaryField>
+
+                    <SummaryField
+                      label="Dokumente"
+                      onClick={() => openEditor("freigaben")}
+                    >
+                      {photoSummary ? (
+                        <div className="space-y-1">
+                          <span>
+                            {photoSummary.requiresDocument
+                              ? photoSummary.hasDocument
+                                ? "Dokument liegt vor."
+                                : "Dokument erforderlich – bitte hochladen."
+                              : "Kein Dokument notwendig."}
+                          </span>
+                          {photoSummary.documentUploadedAt ? (
+                            <span className="text-xs text-muted-foreground">
+                              Hochgeladen am {" "}
+                              {formatDate(photoSummary.documentUploadedAt)}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {EMPTY_VALUE_LABEL}
+                        </span>
+                      )}
+                    </SummaryField>
+
+                    {photoSummary?.rejectionReason ? (
+                      <SummaryField
+                        label="Hinweis"
+                        onClick={() => openEditor("freigaben")}
+                      >
+                        <span className="text-sm text-destructive">
+                          {photoSummary.rejectionReason}
+                        </span>
+                      </SummaryField>
+                    ) : null}
+
+                    {activeEditor === "freigaben" ? (
+                      <EditorPanel
+                        title="Freigaben & Fotoeinverständnis"
+                        description="Verwalte Einverständnisse und lade Dokumente hoch."
+                        onClose={closeEditor}
+                      >
+                        <PhotoConsentCard onSummaryChange={handlePhotoSummaryChange} />
+                      </EditorPanel>
+                    ) : null}
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
           </div>
