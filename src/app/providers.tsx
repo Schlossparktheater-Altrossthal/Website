@@ -9,6 +9,7 @@ import { useWebVitals } from "@/hooks/useWebVitals";
 import { RealtimeProvider } from "@/hooks/useRealtime";
 import { OfflineSyncStatusProvider } from "@/lib/offline/hooks";
 import { OfflineSyncProvider as OfflineStorageProvider } from "@/lib/offline/storage";
+import { PwaProvider } from "@/lib/pwa/register-sw";
 
 function WebVitalsInitializer({ analyticsSessionId }: { analyticsSessionId?: string | null }) {
   useWebVitals({ analyticsSessionId });
@@ -29,18 +30,20 @@ export function Providers({
       <QueryClientProvider client={client}>
         <OfflineStorageProvider>
           <OfflineSyncStatusProvider>
-            <RealtimeProvider>
-              <FrontendEditingProvider>
-                {children}
-                <Toaster
-                  richColors
-                  position="top-right"
-                  expand={true}
-                  visibleToasts={5}
-                  gap={8}
-                />
-              </FrontendEditingProvider>
-            </RealtimeProvider>
+            <PwaProvider>
+              <RealtimeProvider>
+                <FrontendEditingProvider>
+                  {children}
+                  <Toaster
+                    richColors
+                    position="top-right"
+                    expand={true}
+                    visibleToasts={5}
+                    gap={8}
+                  />
+                </FrontendEditingProvider>
+              </RealtimeProvider>
+            </PwaProvider>
           </OfflineSyncStatusProvider>
         </OfflineStorageProvider>
       </QueryClientProvider>

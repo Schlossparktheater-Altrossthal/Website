@@ -23,7 +23,7 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_FLUSH_LIMIT = 50;
 const BASE_BACKOFF_MS = 400;
 const MAX_BACKOFF_MS = 10_000;
-const BACKGROUND_SYNC_TAG = "sync:offline-events";
+const BACKGROUND_SYNC_TAG = "workbox-background-sync:offline-events";
 const CLIENT_ID_STORAGE_KEY = "offline.sync.clientId";
 
 export type SyncActivity =
