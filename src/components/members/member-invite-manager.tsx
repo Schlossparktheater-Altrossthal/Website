@@ -27,6 +27,37 @@ import { formatRelativeFromNow } from "@/lib/datetime";
 const ASSIGNABLE_ROLES = ROLES.filter((role) => role !== "admin" && role !== "owner");
 const ASSIGNABLE_ROLE_SET = new Set<Role>(ASSIGNABLE_ROLES);
 
+function extractErrorMessage(payload: unknown): string | null {
+  if (!payload) return null;
+  if (typeof payload === "string") {
+    const trimmed = payload.trim();
+    return trimmed ? trimmed : null;
+  }
+  if (Array.isArray(payload)) {
+    for (const entry of payload) {
+      const message = extractErrorMessage(entry);
+      if (message) return message;
+    }
+    return null;
+  }
+  if (typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    if ("message" in record) {
+      const message = extractErrorMessage(record.message);
+      if (message) return message;
+    }
+    if ("error" in record) {
+      const nested = extractErrorMessage(record.error);
+      if (nested) return nested;
+    }
+    for (const value of Object.values(record)) {
+      const message = extractErrorMessage(value);
+      if (message) return message;
+    }
+  }
+  return null;
+}
+
 const statusLabelMap = {
   active: { label: "Aktiv", variant: "default" as const },
   disabled: { label: "Deaktiviert", variant: "secondary" as const },
@@ -304,7 +335,12 @@ export function MemberInviteManager() {
       const response = await fetch("/api/member-invites", { cache: "no-store" });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.error ?? "Einladungen konnten nicht geladen werden");
+        const message =
+          extractErrorMessage(data?.error ?? null) ??
+          extractErrorMessage(data) ??
+          response.statusText ??
+          "Einladungen konnten nicht geladen werden";
+        throw new Error(message);
       }
       const invitesPayload = Array.isArray(data?.invites)
         ? (data.invites as (InviteSummaryPayload & { show?: ProductionSummary | null })[])
@@ -348,7 +384,13 @@ export function MemberInviteManager() {
       });
     } catch (err) {
       console.error("[MemberInviteManager] load", err);
-      setError("Einladungen konnten nicht geladen werden.");
+      const fallback = "Einladungen konnten nicht geladen werden.";
+      if (err instanceof Error) {
+        const trimmed = err.message.trim();
+        setError(trimmed ? trimmed : fallback);
+      } else {
+        setError(fallback);
+      }
     } finally {
       setLoading(false);
     }
