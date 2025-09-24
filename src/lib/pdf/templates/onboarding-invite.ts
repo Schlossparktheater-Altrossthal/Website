@@ -90,8 +90,8 @@ function formatDateTime(date: Date) {
 
 export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
   id: "onboarding-invite",
-  label: "Onboarding-Link Poster",
-  description: "Erzeugt ein A4-PDF mit QR-Code für einen Onboarding-Link.",
+  label: "Backstage-Pass Poster",
+  description: "Erzeugt ein farbenfrohes A4-PDF mit QR-Code für neue Gesichter beim Sommertheater Altrossthal.",
   filename: (data) => {
     const slug = slugify(data.inviteLabel ?? data.headline ?? null);
     return slug ? `onboarding-${slug}.pdf` : "onboarding-link.pdf";
@@ -99,66 +99,147 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
   schema: onboardingInviteSchema,
   async render(doc, data) {
     const QRCode = await loadQrCode();
-    const title = data.headline ?? data.inviteLabel ?? "Onboarding starten";
-    const greetingHeadline = "Willkommen an Bord!";
+    const theatreName = "Sommertheater Altrossthal";
+    const palette = {
+      background: "#fff7ed",
+      sunrise: "#f97316",
+      twilight: "#0ea5e9",
+      rose: "#f43f5e",
+      highlight: "#fde68a",
+      text: "#1f2937",
+      textMuted: "#4b5563",
+      textSoft: "#6b7280",
+      qrDark: "#7c2d12",
+      qrLight: "#fffbeb",
+    } as const;
+
+    const title = data.headline ?? data.inviteLabel ?? "Dein Backstage-Start";
+    const greetingHeadline = `Willkommen im ${theatreName}`;
     const warmIntro = data.inviteLabel
-      ? `Schön, dass du beim Onboarding „${data.inviteLabel}“ dabei bist!`
-      : "Schön, dass du bei uns bist!";
+      ? `Wie schön, dass du für „${data.inviteLabel}“ unsere Bühnenfamilie verstärkst.`
+      : "Wie schön, dass du Teil unserer Bühnenfamilie wirst!";
     const actionLine = data.inviteLabel
-      ? `Scanne den QR-Code oder nutze den Link, um ganz entspannt mit deinem Onboarding „${data.inviteLabel}“ zu starten.`
-      : "Scanne den QR-Code oder nutze den Link, um ganz entspannt mit deinem Onboarding zu starten.";
+      ? `Scanne den Code oder folge dem Link und hol dir deinen Backstage-Zugang zum ${theatreName}.`
+      : "Scanne den Code oder folge dem Link und sichere dir deinen Backstage-Zugang.";
+    const storyLine = `${theatreName} lebt von Menschen, die Ideen mitbringen, mit anpacken und das Publikum verzaubern – schnapp dir alle Infos und leg los.`;
 
     doc.info.Title = title;
-    doc.info.Subject = "Einladung zum Onboarding";
+    doc.info.Subject = `Einladung ins Ensemble des ${theatreName}`;
 
-    doc.font("Helvetica-Bold").fontSize(32).fillColor("#0f172a").text(greetingHeadline, { align: "center" });
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const { left: marginLeft, right: marginRight, top: marginTop, bottom: marginBottom } = doc.page.margins;
+    const availableWidth = pageWidth - marginLeft - marginRight;
+
+    doc.save();
+    doc.rect(0, 0, pageWidth, pageHeight).fill(palette.background);
+    doc.restore();
+
+    doc.save();
+    doc.opacity(0.12);
+    doc.fillColor(palette.sunrise);
+    doc.circle(pageWidth - 90, marginTop - 30, 150).fill();
+    doc.restore();
+
+    doc.save();
+    doc.opacity(0.1);
+    doc.fillColor(palette.twilight);
+    doc.circle(90, pageHeight - marginBottom + 40, 170).fill();
+    doc.restore();
+
+    doc.save();
+    doc.opacity(0.18);
+    doc.fillColor(palette.highlight);
+    doc.rect(marginLeft, marginTop - 24, availableWidth, 48).fill();
+    doc.restore();
+
+    doc.save();
+    doc.opacity(0.12);
+    doc.fillColor(palette.rose);
+    doc.rect(marginLeft, pageHeight - marginBottom - 52, availableWidth, 44).fill();
+    doc.restore();
+
+    doc.opacity(1);
+    doc.y = marginTop;
+
+    doc.font("Helvetica-Bold").fontSize(32).fillColor(palette.sunrise).text(greetingHeadline, { align: "center" });
 
     doc.moveDown(0.3);
-    doc.font("Helvetica-Bold").fontSize(26).fillColor("#111827").text(title, { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(26).fillColor(palette.text).text(title, { align: "center" });
 
     doc.moveDown(0.55);
-    doc.font("Helvetica").fontSize(14).fillColor("#1f2937").text(warmIntro, { align: "center" });
+    doc.font("Helvetica").fontSize(14).fillColor(palette.text).text(warmIntro, { align: "center" });
 
     doc.moveDown(0.25);
-    doc.font("Helvetica").fontSize(13).fillColor("#1f2937").text(actionLine, { align: "center" });
+    doc.font("Helvetica").fontSize(13).fillColor(palette.textMuted).text(actionLine, { align: "center" });
+
+    doc.moveDown(0.35);
+    doc.font("Helvetica").fontSize(12).fillColor(palette.textMuted).text(storyLine, { align: "center" });
 
     if (data.note) {
-      doc.moveDown(0.5);
-      doc
-        .font("Helvetica-Oblique")
-        .fontSize(12)
-        .fillColor("#374151")
-        .text(data.note, {
-          align: "center",
-          width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
-        });
+      doc.moveDown(0.8);
+      const noteBoxWidth = Math.min(availableWidth, 360);
+      const noteX = marginLeft + (availableWidth - noteBoxWidth) / 2;
+      const noteY = doc.y;
+      const noteTextWidth = noteBoxWidth - 24;
+      const noteHeight = doc.heightOfString(data.note, { width: noteTextWidth });
+
+      doc.save();
+      doc.roundedRect(noteX, noteY - 14, noteBoxWidth, noteHeight + 28, 18).fillColor("#ffe4e6").fill();
+      doc.restore();
+
+      doc.save();
+      doc.font("Helvetica-Oblique").fontSize(12).fillColor(palette.rose);
+      doc.text(data.note, noteX + 12, noteY, {
+        width: noteTextWidth,
+        align: "center",
+      });
+      doc.restore();
+
+      doc.y = noteY + noteHeight + 14;
     }
 
-    const qrImage = await QRCode.toBuffer(data.link, { margin: 1, width: 512 });
-    const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const qrSize = Math.min(availableWidth, 280);
-    const qrX = doc.page.margins.left + (availableWidth - qrSize) / 2;
-    const qrY = doc.y + 24;
+    doc.moveDown(0.8);
+    doc.font("Helvetica-Bold").fontSize(16).fillColor(palette.sunrise).text("Backstage-Check-in", { align: "center" });
 
-    doc.moveDown(1.2);
+    doc.moveDown(0.4);
+    const qrImage = await QRCode.toBuffer(data.link, {
+      margin: 1,
+      width: 512,
+      color: { dark: palette.qrDark, light: palette.qrLight },
+    });
+    const qrSize = Math.min(availableWidth, 280);
+    const qrX = marginLeft + (availableWidth - qrSize) / 2;
+    const qrY = doc.y;
+
+    doc.save();
+    doc.roundedRect(qrX - 24, qrY - 24, qrSize + 48, qrSize + 48, 28).fillColor("#fff1f2").fill();
+    doc.restore();
+
+    doc.save();
+    doc.lineWidth(4);
+    doc.strokeColor(palette.sunrise);
+    doc.roundedRect(qrX - 24, qrY - 24, qrSize + 48, qrSize + 48, 28).stroke();
+    doc.restore();
+
     doc.image(qrImage, qrX, qrY, { width: qrSize, height: qrSize });
     doc.y = qrY + qrSize;
 
-    doc.moveDown(1);
-    doc.font("Helvetica-Bold").fontSize(14).fillColor("#111827").text("Direkt zum Start", { align: "center" });
+    doc.moveDown(0.9);
+    doc.font("Helvetica-Bold").fontSize(14).fillColor(palette.text).text("Direkter Zugang", { align: "center" });
     doc.moveDown(0.25);
     doc
       .font("Helvetica")
       .fontSize(12)
-      .fillColor("#1d4ed8")
+      .fillColor(palette.sunrise)
       .text(data.link, { align: "center", link: data.link, underline: true });
 
     doc.moveDown(0.4);
     doc
       .font("Helvetica")
       .fontSize(11)
-      .fillColor("#374151")
-      .text("Wenn der QR-Code einmal zickt, gib den Link einfach im Browser ein.", { align: "center" });
+      .fillColor(palette.textMuted)
+      .text("Falls die Kamera streikt, gib den Link einfach im Browser ein.", { align: "center" });
 
     const detailEntries: Array<{ label: string; value: string }> = [];
     if (data.inviteLabel && data.inviteLabel !== title) {
@@ -176,25 +257,25 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
 
     if (detailEntries.length) {
       doc.moveDown(1);
-      doc.font("Helvetica-Bold").fontSize(12).fillColor("#111827").text("Organisatorisches", { align: "left" });
+      doc.font("Helvetica-Bold").fontSize(12).fillColor(palette.sunrise).text("Backstage-Fakten", { align: "left" });
       doc.moveDown(0.2);
       doc
         .font("Helvetica")
         .fontSize(11)
-        .fillColor("#4b5563")
-        .text("Damit du planen kannst, findest du hier die wichtigsten Rahmendaten:", {
+        .fillColor(palette.textMuted)
+        .text("Damit deine erste Probe stressfrei läuft, findest du hier die wichtigsten Eckdaten:", {
           align: "left",
-          width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+          width: availableWidth,
         });
       doc.moveDown(0.35);
-      doc.font("Helvetica").fontSize(11).fillColor("#374151");
       for (const entry of detailEntries) {
-        doc.text(`${entry.label}: ${entry.value}`);
+        doc.font("Helvetica-Bold").fontSize(11).fillColor(palette.rose).text(`${entry.label}: `, { continued: true });
+        doc.font("Helvetica").fontSize(11).fillColor(palette.text).text(entry.value);
       }
     }
 
     doc.moveDown(0.9);
-    doc.font("Helvetica").fontSize(11).fillColor("#1f2937").text("Wir freuen uns auf dich – bis bald!", {
+    doc.font("Helvetica").fontSize(11).fillColor(palette.text).text("Wir sehen uns auf und hinter der Bühne!", {
       align: "center",
     });
 
@@ -203,7 +284,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc
       .font("Helvetica")
       .fontSize(9)
-      .fillColor("#6b7280")
+      .fillColor(palette.textSoft)
       .text(`Erstellt am ${generatedAt}`, { align: "right" });
   },
 };
