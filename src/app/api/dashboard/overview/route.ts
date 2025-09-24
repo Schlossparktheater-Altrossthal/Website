@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { buildProfileChecklist } from "@/lib/profile-completion";
+import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
 const onboardingProfileSelect = Prisma.validator<Prisma.MemberOnboardingProfileSelect>()({
   focus: true,
@@ -18,6 +19,7 @@ const onboardingProfileSelect = Prisma.validator<Prisma.MemberOnboardingProfileS
   updatedAt: true,
   dietaryPreference: true,
   dietaryPreferenceStrictness: true,
+  show: { select: { meta: true } },
 });
 
 export async function GET() {
@@ -213,6 +215,8 @@ export async function GET() {
       level: entry.level,
     }));
 
+    const whatsappLink = getOnboardingWhatsAppLink(onboardingProfile?.show?.meta ?? null);
+
     const onboarding = {
       completed: Boolean(onboardingProfile),
       completedAt: onboardingProfile?.createdAt?.toISOString() ?? null,
@@ -220,6 +224,7 @@ export async function GET() {
       background: onboardingProfile?.background ?? null,
       backgroundClass: onboardingProfile?.backgroundClass ?? null,
       notes: onboardingProfile?.notes ?? null,
+      whatsappLink,
       stats: {
         acting: { count: actingPreferences.length, averageWeight: averageWeight(actingPreferences) },
         crew: { count: crewPreferences.length, averageWeight: averageWeight(crewPreferences) },

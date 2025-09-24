@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus, generateInviteToken, hashInviteToken } from "@/lib/member-invites";
+import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export default async function OnboardingInvitePage({
     where: { tokenHash },
     include: {
       createdBy: { select: { name: true, email: true } },
-      show: { select: { id: true, title: true, year: true } },
+      show: { select: { id: true, title: true, year: true, meta: true } },
     },
   });
 
@@ -65,6 +66,8 @@ export default async function OnboardingInvitePage({
     },
   });
 
+  const whatsappLink = getOnboardingWhatsAppLink(invite.show?.meta);
+
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <OnboardingWizard
@@ -78,7 +81,10 @@ export default async function OnboardingInvitePage({
           expiresAt: invite.expiresAt ? invite.expiresAt.toISOString() : null,
           usageCount: invite.usageCount,
           remainingUses: status.remainingUses,
-          production: invite.show,
+          production: invite.show
+            ? { id: invite.show.id, title: invite.show.title, year: invite.show.year }
+            : null,
+          whatsappLink,
         }}
       />
     </main>
