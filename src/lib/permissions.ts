@@ -52,6 +52,7 @@ export const PROFILE_DATA_PERMISSION_KEYS = {
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen", category: "base" },
   { key: "mitglieder.profil", label: "Profilbereich aufrufen", category: "base" },
+  { key: "mitglieder.scan", label: "Scanner & Check-in nutzen", category: "base" },
   {
     key: "mitglieder.galerie",
     label: "Archiv und Bilder öffnen",

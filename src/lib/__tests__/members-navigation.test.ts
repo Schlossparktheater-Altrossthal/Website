@@ -15,6 +15,7 @@ import {
 const BASE_PERMISSIONS = [
   "mitglieder.dashboard",
   "mitglieder.profil",
+  "mitglieder.scan",
   "mitglieder.galerie",
   "mitglieder.sperrliste",
   "mitglieder.issues",

@@ -370,11 +370,38 @@ export class SyncClient {
       } satisfies PullResult;
     }
 
-    const delta = this.buildDeltaFromEvents(scope, data.events);
+    if (scope === "inventory") {
+      const delta = this.buildDeltaFromEvents("inventory", data.events);
+
+      if (delta.upserts?.length || delta.deletes?.length) {
+        const offlineDelta: OfflineDelta = {
+          scope: "inventory",
+          serverSeq: data.serverSeq,
+          upserts: delta.upserts,
+          deletes: delta.deletes,
+        };
+
+        await applyDeltas(offlineDelta);
+      } else {
+        await this.touchSyncState(db, "inventory", data.serverSeq);
+      }
+
+      return {
+        scope: "inventory",
+        events: data.events.length,
+        applied:
+          (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0),
+        serverSeq: data.serverSeq,
+        completedAt: new Date().toISOString(),
+        hasMore: data.hasMore,
+      } satisfies PullResult;
+    }
+
+    const delta = this.buildDeltaFromEvents("tickets", data.events);
 
     if (delta.upserts?.length || delta.deletes?.length) {
       const offlineDelta: OfflineDelta = {
-        scope,
+        scope: "tickets",
         serverSeq: data.serverSeq,
         upserts: delta.upserts,
         deletes: delta.deletes,
@@ -382,11 +409,11 @@ export class SyncClient {
 
       await applyDeltas(offlineDelta);
     } else {
-      await this.touchSyncState(db, scope, data.serverSeq);
+      await this.touchSyncState(db, "tickets", data.serverSeq);
     }
 
     return {
-      scope,
+      scope: "tickets",
       events: data.events.length,
       applied:
         (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0),
@@ -537,12 +564,14 @@ export class SyncClient {
     try {
       const registration = await navigator.serviceWorker.ready;
 
-      if (
-        "sync" in registration &&
-        registration.sync &&
-        typeof registration.sync.register === "function"
-      ) {
-        await registration.sync.register(BACKGROUND_SYNC_TAG);
+      const syncManager = (
+        registration as ServiceWorkerRegistration & {
+          sync?: { register?: (tag: string) => Promise<void> };
+        }
+      ).sync;
+
+      if (typeof syncManager?.register === "function") {
+        await syncManager.register(BACKGROUND_SYNC_TAG);
         return;
       }
 
@@ -686,7 +715,7 @@ export class SyncClient {
   private buildDeltaFromEvents(
     scope: OfflineScope,
     events: ServerSyncEvent[],
-  ) {
+  ): { upserts?: InventoryItemRecord[] | TicketRecord[]; deletes?: string[] } {
     if (scope === "inventory") {
       return this.buildInventoryDelta(events);
     }

@@ -8,7 +8,7 @@ export interface InventoryItemRecord {
   updatedAt: string;
 }
 
-export type TicketStatus = "unused" | "checked_in" | "invalid";
+export type TicketStatus = "unused" | "checked_in" | "invalid" | "pending";
 
 export interface TicketRecord {
   id: string;
