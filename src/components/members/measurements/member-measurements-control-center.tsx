@@ -73,6 +73,14 @@ type PreparedMember = MeasurementMember & {
   measurementMap: Map<MeasurementType, MeasurementEntry>;
 };
 
+type MeasurementRow = {
+  type: MeasurementType;
+  label: string;
+  entries: { memberId: string; entry: MeasurementEntry | null }[];
+  missingCount: number;
+  isComplete: boolean;
+};
+
 const TOTAL_TYPES = measurementTypeEnum.options.length;
 const NUMBER_FORMATTER = new Intl.NumberFormat("de-DE");
 const PERCENT_FORMATTER = new Intl.NumberFormat("de-DE", {
@@ -84,6 +92,7 @@ const ABSOLUTE_DATE_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   month: "2-digit",
   year: "numeric",
 });
+
 export function MemberMeasurementsControlCenter({
   members,
 }: MemberMeasurementsControlCenterProps) {
@@ -93,15 +102,17 @@ export function MemberMeasurementsControlCenter({
       measurements: sortMeasurements(member.measurements),
     })),
   );
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState<"all" | "complete" | "missing">("all");
-  const [selectedId, setSelectedId] = useState<string | null>(() => members[0]?.id ?? null);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberFilter, setMemberFilter] = useState<"all" | "complete" | "missing">("all");
+  const [measurementSearch, setMeasurementSearch] = useState("");
+  const [measurementFilter, setMeasurementFilter] = useState<"all" | "complete" | "missing">("all");
+  const [memberDialogId, setMemberDialogId] = useState<string | null>(null);
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!members.length) {
-      setSelectedId(null);
+      setMemberDialogId(null);
     }
   }, [members.length]);
 
@@ -140,18 +151,19 @@ export function MemberMeasurementsControlCenter({
     });
   }, [memberItems]);
 
-  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const normalizedMemberSearch = memberSearch.trim().toLowerCase();
+  const normalizedMeasurementSearch = measurementSearch.trim().toLowerCase();
 
   const filteredMembers = useMemo(() => {
     return preparedMembers.filter((member) => {
-      if (filter === "complete" && member.stats.missing > 0) return false;
-      if (filter === "missing" && member.stats.missing === 0) return false;
-      if (normalizedSearch && !member.searchText.includes(normalizedSearch)) {
+      if (memberFilter === "complete" && member.stats.missing > 0) return false;
+      if (memberFilter === "missing" && member.stats.missing === 0) return false;
+      if (normalizedMemberSearch && !member.searchText.includes(normalizedMemberSearch)) {
         return false;
       }
       return true;
     });
-  }, [preparedMembers, filter, normalizedSearch]);
+  }, [preparedMembers, memberFilter, normalizedMemberSearch]);
 
   const sortedMembers = useMemo(() => {
     return [...filteredMembers].sort((a, b) => {
@@ -166,46 +178,59 @@ export function MemberMeasurementsControlCenter({
   }, [filteredMembers]);
 
   useEffect(() => {
-    if (!sortedMembers.length) {
-      setSelectedId(null);
-      return;
+    if (memberDialogId && !sortedMembers.some((member) => member.id === memberDialogId)) {
+      setMemberDialogId(null);
     }
-    if (!selectedId || !sortedMembers.some((member) => member.id === selectedId)) {
-      setSelectedId(sortedMembers[0]?.id ?? null);
+  }, [memberDialogId, sortedMembers]);
+
+  useEffect(() => {
+    if (dialogState && !preparedMembers.some((member) => member.id === dialogState.memberId)) {
+      setDialogState(null);
     }
-  }, [sortedMembers, selectedId]);
+  }, [dialogState, preparedMembers]);
 
-  const activeMember = sortedMembers.find((member) => member.id === selectedId) ?? sortedMembers[0] ?? null;
+  const measurementRows = useMemo<MeasurementRow[]>(() => {
+    return measurementTypeEnum.options
+      .map<MeasurementRow | null>((type) => {
+        const label = MEASUREMENT_TYPE_LABELS[type] ?? type;
+        if (normalizedMeasurementSearch && !label.toLowerCase().includes(normalizedMeasurementSearch)) {
+          return null;
+        }
+        const entries = sortedMembers.map((member) => ({
+          memberId: member.id,
+          entry: member.measurementMap.get(type) ?? null,
+        }));
+        const missingCount = entries.reduce((count, item) => (!item.entry ? count + 1 : count), 0);
+        const isComplete = sortedMembers.length > 0 && missingCount === 0;
 
-  const globalStats = useMemo(() => {
-    const totalMembers = memberItems.length;
-    const totalMeasurements = memberItems.reduce((sum, member) => sum + member.measurements.length, 0);
-    const completedMembers = memberItems.reduce(
-      (count, member) => (member.measurements.length === TOTAL_TYPES ? count + 1 : count),
-      0,
-    );
-    const averageCompletion =
-      totalMembers === 0
-        ? 0
-        : memberItems.reduce((sum, member) => sum + member.measurements.length / Math.max(1, TOTAL_TYPES), 0) /
-          totalMembers;
+        if (measurementFilter === "complete" && !isComplete) {
+          return null;
+        }
+        if (measurementFilter === "missing" && missingCount === 0) {
+          return null;
+        }
 
-    return {
-      totalMembers,
-      totalMeasurements,
-      completedMembers,
-      missingMembers: Math.max(0, totalMembers - completedMembers),
-      averageCompletion,
-    };
-  }, [memberItems]);
+        return { type, label, entries, missingCount, isComplete };
+      })
+      .filter((row): row is MeasurementRow => row !== null);
+  }, [measurementFilter, normalizedMeasurementSearch, sortedMembers]);
 
   const dialogMember = dialogState
     ? preparedMembers.find((member) => member.id === dialogState.memberId) ?? null
     : null;
 
+  const memberModalMember = memberDialogId
+    ? preparedMembers.find((member) => member.id === memberDialogId) ?? null
+    : null;
+
   const handleDialogClose = () => {
     if (saving) return;
     setDialogState(null);
+  };
+
+  const handleMemberDialogClose = () => {
+    if (saving) return;
+    setMemberDialogId(null);
   };
 
   const handleSubmit = async (memberId: string, data: MeasurementFormData) => {
@@ -257,301 +282,409 @@ export function MemberMeasurementsControlCenter({
     }
   };
 
-  const renderMemberList = () => {
-    if (!sortedMembers.length) {
-      return (
-        <div className="rounded-2xl border border-border/60 bg-muted/20 p-6 text-sm text-muted-foreground">
-          Keine passenden Mitglieder gefunden. Passe die Filter an oder entferne die Suche.
-        </div>
-      );
-    }
-
-    return (
-      <div className="mt-4 space-y-2 overflow-hidden">
-        <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
-          {sortedMembers.map((member) => {
-            const isActive = member.id === selectedId;
-            const completionPercent = Math.round(member.stats.completion * 100);
-            return (
-              <button
-                type="button"
-                key={member.id}
-                onClick={() => setSelectedId(member.id)}
-                className={cn(
-                  "group relative w-full overflow-hidden rounded-2xl border border-border/40 px-4 py-3 text-left transition",
-                  isActive
-                    ? "border-primary/50 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent shadow-[0_10px_30px_-12px_rgba(59,130,246,0.45)]"
-                    : "bg-background/70 hover:border-primary/30 hover:bg-primary/5",
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <UserAvatar
-                    userId={member.id}
-                    firstName={member.firstName}
-                    lastName={member.lastName}
-                    name={member.name}
-                    avatarSource={member.avatarSource}
-                    avatarUpdatedAt={member.avatarUpdatedAt}
-                    size={40}
-                    className="border-border/70"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate font-medium text-foreground">{member.displayName}</p>
-                      <span className="text-xs text-muted-foreground/80">{completionPercent}%</span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground/80">
-                      <span>
-                        {member.stats.captured}/{member.stats.total} Maße
-                      </span>
-                      {member.stats.missing > 0 ? (
-                        <Badge
-                          variant="outline"
-                          className="border-destructive/50 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
-                        >
-                          {member.stats.missing} fehlt
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="border-success/40 bg-success/10 px-1.5 py-0 text-[10px] text-success"
-                        >
-                          Vollständig
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/50">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary via-sky-500 to-violet-500 transition-all"
-                        style={{ width: `${completionPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  const globalStats = useMemo(() => {
+    const totalMembers = memberItems.length;
+    const totalMeasurements = memberItems.reduce((sum, member) => sum + member.measurements.length, 0);
+    const completedMembers = memberItems.reduce(
+      (count, member) => (member.measurements.length === TOTAL_TYPES ? count + 1 : count),
+      0,
     );
-  };
+    const averageCompletion =
+      totalMembers === 0
+        ? 0
+        : memberItems.reduce((sum, member) => sum + member.measurements.length / Math.max(1, TOTAL_TYPES), 0) /
+          totalMembers;
+
+    return {
+      totalMembers,
+      totalMeasurements,
+      completedMembers,
+      missingMembers: Math.max(0, totalMembers - completedMembers),
+      averageCompletion,
+    };
+  }, [memberItems]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
-      <div className="space-y-4">
-        <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-background/95 via-background/70 to-muted/50 p-6 shadow-[0_0_0_1px_rgba(148,163,184,0.15),0_25px_45px_-15px_rgba(15,23,42,0.6)] backdrop-blur">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),transparent_60%)]" />
-          <div className="relative z-10 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/80">Kostüm-Matrix</p>
-              <h2 className="font-serif text-xl text-foreground">Anprobe Control Center</h2>
-            </div>
-            <Badge className="flex items-center gap-1 border-cyan-400/40 bg-cyan-500/10 text-xs text-cyan-200">
-              <Sparkles className="h-3 w-3" /> Live Sync
-            </Badge>
+    <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-background/95 via-background/70 to-muted/50 p-6 shadow-[0_0_0_1px_rgba(148,163,184,0.15),0_25px_45px_-15px_rgba(15,23,42,0.6)] backdrop-blur">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),transparent_60%)]" />
+        <div className="relative z-10 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/80">Kostüm-Matrix</p>
+            <h2 className="font-serif text-xl text-foreground">Anprobe Control Center</h2>
           </div>
-          <div className="relative z-10 mt-6 grid gap-4 sm:grid-cols-3">
-            <StatBlock label="Ensemble" value={NUMBER_FORMATTER.format(globalStats.totalMembers)} hint="Mitglieder" />
-            <StatBlock
-              label="Erfasste Maße"
-              value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)}
-              hint="Datensätze"
-            />
-            <StatBlock
-              label="Abdeckung"
-              value={PERCENT_FORMATTER.format(globalStats.averageCompletion)}
-              hint={
-                globalStats.missingMembers > 0
-                  ? `${globalStats.missingMembers} Profile offen`
-                  : "Vollständig"
-              }
-            />
-          </div>
+          <Badge className="flex items-center gap-1 border-cyan-400/40 bg-cyan-500/10 text-xs text-cyan-200">
+            <Sparkles className="h-3 w-3" /> Live Sync
+          </Badge>
         </div>
+        <div className="relative z-10 mt-6 grid gap-4 sm:grid-cols-3">
+          <StatBlock label="Ensemble" value={NUMBER_FORMATTER.format(globalStats.totalMembers)} hint="Mitglieder" />
+          <StatBlock
+            label="Erfasste Maße"
+            value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)}
+            hint="Datensätze"
+          />
+          <StatBlock
+            label="Abdeckung"
+            value={PERCENT_FORMATTER.format(globalStats.averageCompletion)}
+            hint={
+              globalStats.missingMembers > 0
+                ? `${globalStats.missingMembers} Profile offen`
+                : "Vollständig"
+            }
+          />
+        </div>
+      </div>
 
-        <div className="rounded-3xl border border-border/40 bg-background/85 p-4 shadow-[0_15px_35px_-20px_rgba(15,23,42,0.45)] backdrop-blur">
-          <div className="flex flex-col gap-3">
+      <div className="rounded-3xl border border-border/40 bg-background/85 p-5 shadow-[0_15px_35px_-20px_rgba(15,23,42,0.45)] backdrop-blur">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground/80">Mitglieder</p>
             <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Mitglieder oder Maße suchen"
+                value={memberSearch}
+                onChange={(event) => setMemberSearch(event.target.value)}
+                placeholder="Mitglieder oder Rollen suchen"
                 className="h-7 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
               />
             </div>
-
             <div className="flex flex-wrap items-center gap-2">
               <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-              <FilterButton label="Alle" active={filter === "all"} onClick={() => setFilter("all")} />
+              <FilterButton label="Alle" active={memberFilter === "all"} onClick={() => setMemberFilter("all")} />
               <FilterButton
                 label="Vollständig"
-                active={filter === "complete"}
-                onClick={() => setFilter("complete")}
+                active={memberFilter === "complete"}
+                onClick={() => setMemberFilter("complete")}
               />
               <FilterButton
                 label="Fehlend"
-                active={filter === "missing"}
-                onClick={() => setFilter("missing")}
+                active={memberFilter === "missing"}
+                onClick={() => setMemberFilter("missing")}
               />
             </div>
           </div>
 
-          {renderMemberList()}
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground/80">Maße</p>
+            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                value={measurementSearch}
+                onChange={(event) => setMeasurementSearch(event.target.value)}
+                placeholder="Maßart filtern"
+                className="h-7 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+              <FilterButton label="Alle" active={measurementFilter === "all"} onClick={() => setMeasurementFilter("all")} />
+              <FilterButton
+                label="Vollständig"
+                active={measurementFilter === "complete"}
+                onClick={() => setMeasurementFilter("complete")}
+              />
+              <FilterButton
+                label="Fehlend"
+                active={measurementFilter === "missing"}
+                onClick={() => setMeasurementFilter("missing")}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="rounded-[32px] border border-border/40 bg-gradient-to-br from-background/95 via-background/70 to-muted/50 p-6 shadow-[0_0_0_1px_rgba(148,163,184,0.12),0_30px_60px_-30px_rgba(15,23,42,0.7)] backdrop-blur">
-        {activeMember ? (
-          <div className="flex h-full flex-col gap-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                <UserAvatar
-                  userId={activeMember.id}
-                  firstName={activeMember.firstName}
-                  lastName={activeMember.lastName}
-                  name={activeMember.name}
-                  avatarSource={activeMember.avatarSource}
-                  avatarUpdatedAt={activeMember.avatarUpdatedAt}
-                  size={72}
-                  className="border-border/70"
-                />
-                <div>
-                  <h3 className="font-serif text-2xl text-foreground">{activeMember.displayName}</h3>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    {activeMember.roles.length ? (
-                      activeMember.roles.map((role) => (
-                        <span
-                          key={role}
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs",
-                            ROLE_BADGE_VARIANTS[role] ?? "border border-border/60 bg-muted/40 text-muted-foreground",
-                          )}
+        {sortedMembers.length ? (
+          measurementRows.length ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-[720px] border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-20 bg-background/95 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                      Maß
+                    </th>
+                    {sortedMembers.map((member) => (
+                      <th
+                        key={member.id}
+                        className="min-w-[220px] border-l border-border/40 bg-background/80 px-4 py-3 text-left align-bottom"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setMemberDialogId(member.id)}
+                          className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-2 py-1.5 text-left transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         >
-                          {ROLE_LABELS[role] ?? role}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-muted-foreground">Keine Rollen zugewiesen</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs text-muted-foreground">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  <span>{formatLastUpdated(activeMember.stats.lastUpdated)}</span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDialogState({ mode: "create", memberId: activeMember.id })}
-                >
-                  Neues Maß erfassen
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {measurementTypeEnum.options.map((type) => {
-                const entry = activeMember.measurementMap.get(type) ?? null;
-                const unitLabel = entry
-                  ? MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit
-                  : undefined;
-                return (
-                  <div
-                    key={type}
-                    className="group relative overflow-hidden rounded-3xl border border-border/50 bg-background/80 p-5 transition hover:border-primary/40 hover:bg-primary/5"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-violet-500/10 opacity-0 transition group-hover:opacity-100" />
-                    <div className="relative z-10 flex h-full flex-col gap-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground/80">
-                          {MEASUREMENT_TYPE_LABELS[type]}
-                        </span>
-                        {entry ? (
-                          <Badge variant="outline" className="border-border/50 bg-background/60 text-[10px] text-foreground/80">
-                            Aktualisiert
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-destructive/60 bg-destructive/10 text-[10px] text-destructive">
-                            Fehlt
-                          </Badge>
+                          <UserAvatar
+                            userId={member.id}
+                            firstName={member.firstName}
+                            lastName={member.lastName}
+                            name={member.name}
+                            avatarSource={member.avatarSource}
+                            avatarUpdatedAt={member.avatarUpdatedAt}
+                            size={40}
+                            className="border-border/70"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-foreground">{member.displayName}</p>
+                            <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground/80">
+                              <span>
+                                {member.stats.captured}/{member.stats.total} Maße
+                              </span>
+                              {member.stats.missing > 0 ? (
+                                <Badge
+                                  variant="outline"
+                                  className="border-destructive/50 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
+                                >
+                                  {member.stats.missing} offen
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="border-success/40 bg-success/10 px-1.5 py-0 text-[10px] text-success"
+                                >
+                                  Vollständig
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {measurementRows.map((row, index) => (
+                    <tr key={row.type} className="border-t border-border/40">
+                      <th
+                        scope="row"
+                        className={cn(
+                          "sticky left-0 z-10 bg-background/95 px-4 py-3 text-left text-sm font-medium text-foreground",
+                          index % 2 === 1 ? "bg-background" : "bg-background/95",
                         )}
-                      </div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-semibold tracking-tight text-foreground">
-                          {entry ? formatValue(entry.value) : "—"}
-                        </span>
-                        {entry ? (
-                          <span className="text-sm text-muted-foreground">{unitLabel}</span>
-                        ) : null}
-                      </div>
-                      <p className="min-h-[2.5rem] text-xs leading-snug text-muted-foreground/80">
-                        {entry?.note ? entry.note : "Noch keine Notiz hinterlegt."}
-                      </p>
-                      <div className="mt-auto flex items-center justify-between text-[11px] text-muted-foreground/70">
-                        <span>
-                          {entry?.updatedAt
-                            ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
-                            : "Keine Historie"}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() =>
-                            entry
-                              ? setDialogState({ mode: "edit", memberId: activeMember.id, entry })
-                              : setDialogState({ mode: "create", memberId: activeMember.id, initialType: type })
-                          }
-                        >
-                          {entry ? "Bearbeiten" : "Erfassen"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {activeMember.stats.missing > 0 ? (
-              <div className="flex flex-col gap-3 rounded-3xl border border-destructive/50 bg-destructive/5 p-5 text-sm text-destructive">
-                <div className="flex items-center gap-2 font-medium">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Noch offene Maße</span>
-                </div>
-                <p className="text-sm text-destructive/80">
-                  Es fehlen {activeMember.stats.missing} Angaben. Erfasse die Werte, um das Profil abzuschließen.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {activeMember.stats.missingTypes.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setDialogState({ mode: "create", memberId: activeMember.id, initialType: type })}
-                      className="rounded-full border border-destructive/40 bg-background/80 px-3 py-1 text-xs text-destructive transition hover:border-destructive/80 hover:bg-destructive/10"
-                    >
-                      {MEASUREMENT_TYPE_LABELS[type]}
-                    </button>
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span>{row.label}</span>
+                          {row.missingCount > 0 ? (
+                            <Badge
+                              variant="outline"
+                              className="border-destructive/50 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
+                            >
+                              {row.missingCount} offen
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="border-success/40 bg-success/10 px-1.5 py-0 text-[10px] text-success"
+                            >
+                              Vollständig
+                            </Badge>
+                          )}
+                        </div>
+                      </th>
+                      {row.entries.map(({ memberId, entry }) => (
+                        <td key={memberId} className="border-l border-border/40 px-2 py-2 align-top">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              entry
+                                ? setDialogState({ mode: "edit", memberId, entry })
+                                : setDialogState({ mode: "create", memberId, initialType: row.type })
+                            }
+                            className={cn(
+                              "flex h-full w-full flex-col gap-1 rounded-2xl border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                              entry
+                                ? "border-border/50 bg-background/70 hover:border-primary/40 hover:bg-primary/5"
+                                : "border-dashed border-destructive/60 bg-destructive/10 hover:border-destructive/70",
+                            )}
+                          >
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-lg font-semibold text-foreground">
+                                {entry ? formatValue(entry.value) : "Fehlt"}
+                              </span>
+                              {entry ? (
+                                <span className="text-xs text-muted-foreground">
+                                  {MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-destructive">Noch offen</span>
+                              )}
+                            </div>
+                            <p className="min-h-[2.5rem] text-xs leading-snug text-muted-foreground/80">
+                              {entry?.note ? entry.note : "Keine Notiz hinterlegt."}
+                            </p>
+                            <span className="text-[11px] text-muted-foreground/60">
+                              {entry?.updatedAt
+                                ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
+                                : "Keine Historie"}
+                            </span>
+                          </button>
+                        </td>
+                      ))}
+                    </tr>
                   ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-3xl border border-success/50 bg-success/10 p-5 text-sm text-success">
-                <Sparkles className="h-4 w-4" />
-                <span>Alle Maße sind vollständig erfasst – bereit für die nächste Anprobe.</span>
-              </div>
-            )}
-          </div>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-4 py-16 text-center text-sm text-muted-foreground">
+              <AlertTriangle className="h-6 w-6 text-muted-foreground" />
+              <p>Keine Maße entsprechen den aktuellen Filtern. Passe die Auswahl an, um weitere Einträge zu sehen.</p>
+            </div>
+          )
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center gap-4 py-16 text-center text-sm text-muted-foreground">
             <AlertTriangle className="h-6 w-6 text-muted-foreground" />
-            <p>Keine Mitglieder mit Körpermaßen gefunden. Lege neue Profile an oder passe die Filter an.</p>
+            <p>Keine Mitglieder mit Körpermaßen gefunden. Lege neue Profile an oder entferne Filter.</p>
           </div>
         )}
       </div>
+
+      <Dialog open={memberDialogId !== null} onOpenChange={(open) => (!open ? handleMemberDialogClose() : null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>
+              {memberModalMember ? `Übersicht für ${memberModalMember.displayName}` : "Profilübersicht"}
+            </DialogTitle>
+          </DialogHeader>
+          {memberModalMember ? (
+            <div className="space-y-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-1 items-center gap-4">
+                  <UserAvatar
+                    userId={memberModalMember.id}
+                    firstName={memberModalMember.firstName}
+                    lastName={memberModalMember.lastName}
+                    name={memberModalMember.name}
+                    avatarSource={memberModalMember.avatarSource}
+                    avatarUpdatedAt={memberModalMember.avatarUpdatedAt}
+                    size={72}
+                    className="border-border/70"
+                  />
+                  <div>
+                    <h2 className="font-serif text-2xl text-foreground">{memberModalMember.displayName}</h2>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      {memberModalMember.roles.length ? (
+                        memberModalMember.roles.map((role) => (
+                          <span
+                            key={role}
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs",
+                              ROLE_BADGE_VARIANTS[role] ?? "border border-border/60 bg-muted/40 text-muted-foreground",
+                            )}
+                          >
+                            {ROLE_LABELS[role] ?? role}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground/80">Keine Rollen zugewiesen</span>
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      <span>{formatLastUpdated(memberModalMember.stats.lastUpdated)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-start gap-3 sm:items-end">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className="border-border/60 bg-background/60 px-2 py-1 text-[11px] text-muted-foreground"
+                    >
+                      {memberModalMember.stats.captured}/{memberModalMember.stats.total} Maße
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="border-primary/40 bg-primary/10 px-2 py-1 text-[11px] text-primary"
+                    >
+                      {Math.round(memberModalMember.stats.completion * 100)}%
+                    </Badge>
+                  </div>
+                  <div className="w-full min-w-[160px]">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted/40">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-primary via-sky-500 to-violet-500"
+                        style={{ width: `${Math.round(memberModalMember.stats.completion * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDialogState({ mode: "create", memberId: memberModalMember.id })}
+                  >
+                    Neues Maß erfassen
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {measurementTypeEnum.options.map((type) => {
+                  const entry = memberModalMember.measurementMap.get(type) ?? null;
+                  const unitLabel = entry ? MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit : undefined;
+                  return (
+                    <div
+                      key={type}
+                      className="group relative overflow-hidden rounded-3xl border border-border/50 bg-background/80 p-5 transition hover:border-primary/40 hover:bg-primary/5"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-violet-500/10 opacity-0 transition group-hover:opacity-100" />
+                      <div className="relative z-10 flex h-full flex-col gap-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground/80">
+                            {MEASUREMENT_TYPE_LABELS[type]}
+                          </span>
+                          {entry ? (
+                            <Badge variant="outline" className="border-border/50 bg-background/60 text-[10px] text-foreground/80">
+                              Aktualisiert
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-destructive/60 bg-destructive/10 text-[10px] text-destructive">
+                              Fehlt
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-semibold tracking-tight text-foreground">
+                            {entry ? formatValue(entry.value) : "—"}
+                          </span>
+                          {entry ? <span className="text-sm text-muted-foreground">{unitLabel}</span> : null}
+                        </div>
+                        <p className="min-h-[2.5rem] text-xs leading-snug text-muted-foreground/80">
+                          {entry?.note ? entry.note : "Noch keine Notiz hinterlegt."}
+                        </p>
+                        <div className="mt-auto flex items-center justify-between text-[11px] text-muted-foreground/70">
+                          <span>
+                            {entry?.updatedAt
+                              ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
+                              : "Keine Historie"}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() =>
+                              entry
+                                ? setDialogState({ mode: "edit", memberId: memberModalMember.id, entry })
+                                : setDialogState({ mode: "create", memberId: memberModalMember.id, initialType: type })
+                            }
+                          >
+                            {entry ? "Bearbeiten" : "Erfassen"}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-4 py-10 text-center text-sm text-muted-foreground">
+              <AlertTriangle className="h-6 w-6 text-muted-foreground" />
+              <p>Profilinformationen konnten nicht geladen werden. Schließe das Fenster und versuche es erneut.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogState !== null} onOpenChange={(open) => (!open ? handleDialogClose() : null)}>
         <DialogContent className="max-w-md">
