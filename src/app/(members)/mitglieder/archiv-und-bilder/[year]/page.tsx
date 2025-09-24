@@ -12,9 +12,14 @@ import { GalleryMediaType } from "@prisma/client";
 import { getGalleryYearDescription, isValidGalleryYear } from "@/lib/gallery";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
-export default async function ArchiveYearPage({ params }: { params: { year: string } }) {
+export default async function ArchiveYearPage({
+  params,
+}: {
+  params: Promise<{ year: string }>;
+}) {
+  const resolvedParams = await params;
+  const yearParam = resolvedParams?.year ?? "";
   const session = await requireAuth();
-  const yearParam = params.year ?? "";
   const year = Number.parseInt(yearParam, 10);
 
   if (!isValidGalleryYear(year)) {

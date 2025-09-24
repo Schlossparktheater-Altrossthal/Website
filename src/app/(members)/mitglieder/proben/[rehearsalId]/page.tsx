@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import sanitizeHtml from "sanitize-html";
 
 import { PageHeader } from "@/components/members/page-header";
@@ -56,7 +57,11 @@ function displayName(user?: DisplayUser | null) {
   return getUserDisplayName(user, "Unbekannt");
 }
 
-export default async function RehearsalDetailPage({ params }: { params: { rehearsalId: string } }) {
+export default async function RehearsalDetailPage({
+  params,
+}: {
+  params: Promise<{ rehearsalId: string }>;
+}) {
   const session = await requireAuth();
   const [canViewOwn, canPlan] = await Promise.all([
     hasPermission(session.user, "mitglieder.meine-proben"),
@@ -67,8 +72,14 @@ export default async function RehearsalDetailPage({ params }: { params: { rehear
     return <div className="text-sm text-red-600">Kein Zugriff auf die Probenansicht.</div>;
   }
 
+  const resolvedParams = await params;
+  const rehearsalId = resolvedParams?.rehearsalId;
+  if (!rehearsalId) {
+    notFound();
+  }
+
   const rehearsal = await prisma.rehearsal.findUnique({
-    where: { id: params.rehearsalId },
+    where: { id: rehearsalId },
     include: {
       invitees: {
         include: {

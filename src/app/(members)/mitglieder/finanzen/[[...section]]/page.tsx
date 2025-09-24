@@ -19,11 +19,12 @@ const DEFAULT_STATUS_FILTER: FinanceEntryStatus[] = ["draft", "pending", "approv
 const VALID_SECTIONS = new Set(["dashboard", "buchungen", "budgets", "export"]);
 
 interface PageProps {
-  params: { section?: string[] };
+  params: Promise<{ section?: string[] }>;
 }
 
 export default async function FinancePage({ params }: PageProps) {
   const session = await requireAuth();
+  const resolvedParams = await params;
   const [canView, canManage, canApprove, canExport] = await Promise.all([
     hasPermission(session.user, "mitglieder.finanzen"),
     hasPermission(session.user, "mitglieder.finanzen.manage"),
@@ -43,7 +44,7 @@ export default async function FinancePage({ params }: PageProps) {
   }
 
   const allowedScopes = resolveAllowedVisibilityScopes(session.user, canApprove);
-  const requestedSection = params.section?.[0] ?? "dashboard";
+  const requestedSection = resolvedParams?.section?.[0] ?? "dashboard";
   const activeSection = VALID_SECTIONS.has(requestedSection)
     ? (requestedSection as "dashboard" | "buchungen" | "budgets" | "export")
     : "dashboard";
