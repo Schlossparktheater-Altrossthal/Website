@@ -17,6 +17,11 @@ enum Role {
   admin
 }
 
+enum SyncScope {
+  inventory
+  tickets
+}
+
 enum DepartmentMembershipRole {
   lead
   member
@@ -857,6 +862,40 @@ model InventoryItem {
   location  String?
   owner     String?
   condition String?
+}
+
+model SyncEvent {
+  id               String    @id @default(cuid())
+  scope            SyncScope
+  clientId         String
+  clientMutationId String
+  dedupeKey        String?
+  type             String
+  payload          Json
+  occurredAt       DateTime
+  serverSeq        Int       @unique @default(autoincrement())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  mutation         SyncMutation? @relation(fields: [clientMutationId], references: [clientMutationId], onDelete: Cascade)
+
+  @@index([scope, serverSeq])
+  @@index([scope, dedupeKey])
+  @@index([scope, occurredAt])
+}
+
+model SyncMutation {
+  clientMutationId String   @id
+  clientId         String
+  scope            SyncScope
+  eventCount       Int
+  firstServerSeq   Int?
+  lastServerSeq    Int?
+  acknowledgedSeq  Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  events           SyncEvent[]
+
+  @@index([scope, clientId])
 }
 
 model FinanceEntry {
