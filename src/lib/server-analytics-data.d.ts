@@ -5,6 +5,7 @@ export type PagePerformanceMetricOverride = {
   avgPageLoadMs: number;
   lcpMs?: number | null;
   scope?: "public" | "members" | null;
+  weight?: number;
 };
 
 export declare function loadDeviceBreakdownFromDatabase(): Promise<DeviceStat[] | null>;

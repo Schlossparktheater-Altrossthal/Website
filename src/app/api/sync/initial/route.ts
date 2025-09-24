@@ -7,7 +7,15 @@ const querySchema = z.object({
   scope: z.enum(["inventory", "tickets"]),
   cursor: z.string().optional(),
   limit: z
-    .coerce.number({ invalid_type_error: "limit must be a number" })
+    .coerce.number()
+    .superRefine((value, ctx) => {
+      if (Number.isNaN(value)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "limit must be a number",
+        });
+      }
+    })
     .int()
     .min(1)
     .max(500)
