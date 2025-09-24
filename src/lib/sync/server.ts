@@ -227,6 +227,40 @@ export async function selectBaseline(
     } satisfies InventoryBaselineResult;
   }
 
+  if (scope === "tickets") {
+    const tickets = await prisma.ticket.findMany({
+      orderBy: { id: "asc" },
+      take: limit + 1,
+      ...(options.cursor
+        ? {
+            skip: 1,
+            cursor: { id: options.cursor },
+          }
+        : {}),
+    });
+
+    const hasMore = tickets.length > limit;
+    const records = hasMore ? tickets.slice(0, limit) : tickets;
+
+    const mapped: TicketRecord[] = records.map((ticket) => ({
+      id: ticket.id,
+      code: ticket.code,
+      status: ticket.status as TicketRecord["status"],
+      holderName: ticket.holderName ?? undefined,
+      eventId: ticket.eventId,
+      updatedAt: ticket.updatedAt.toISOString(),
+    }));
+
+    return {
+      scope,
+      records: mapped,
+      serverSeq,
+      capturedAt,
+      hasMore,
+      nextCursor: hasMore ? records[records.length - 1]?.id : undefined,
+    } satisfies TicketBaselineResult;
+  }
+
   const hasMore = false;
   return {
     scope,

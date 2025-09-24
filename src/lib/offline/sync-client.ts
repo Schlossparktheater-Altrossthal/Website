@@ -454,7 +454,7 @@ export class SyncClient {
 
     const result: PendingEvent[] = [];
     // Dexie transaction scope ensures atomic dequeue of events
-    await (db as any).transaction("rw", db.eventQueue, async () => {
+    await db.transaction("rw", db.eventQueue, async () => {
       const ordered = await db.eventQueue.orderBy("createdAt").toArray();
 
       for (const event of ordered) {
@@ -539,7 +539,7 @@ export class SyncClient {
     scope: OfflineScope,
     serverSeq: number,
   ) {
-    await (db as any).transaction("rw", db.syncState, async () => {
+    await db.transaction("rw", db.syncState, async () => {
       const existing = await db.syncState.get(scope);
       const updatedAt = new Date().toISOString();
 
