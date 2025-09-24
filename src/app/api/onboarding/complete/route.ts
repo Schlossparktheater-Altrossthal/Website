@@ -7,6 +7,7 @@ import { isInviteUsable } from "@/lib/member-invites";
 import { sortRoles, ROLES, type Role } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
+import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -115,7 +116,7 @@ const payloadSchema = z.object({
   memberSinceYear: z.number().int().min(1900).max(CURRENT_YEAR).optional().nullable(),
   focus: z.enum(["acting", "tech", "both"]),
   preferences: z.array(preferenceSchema),
-  interests: z.array(z.string().min(1)).max(30),
+  interests: z.array(z.string().min(1)).max(MAX_INTERESTS_PER_USER),
   dietaryPreference: dietaryPreferenceSchema,
   photoConsent: z
     .object({

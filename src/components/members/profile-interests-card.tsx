@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-const MAX_INTERESTS = 30;
+import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 const MIN_INTEREST_LENGTH = 2;
 
 function normalizeInterest(value: string) {
@@ -92,8 +91,8 @@ export function ProfileInterestsCard() {
       setError("Dieses Interesse hast du bereits hinzugefügt.");
       return;
     }
-    if (interests.length >= MAX_INTERESTS) {
-      setError(`Maximal ${MAX_INTERESTS} Interessen möglich.`);
+    if (interests.length >= MAX_INTERESTS_PER_USER) {
+      setError(`Maximal ${MAX_INTERESTS_PER_USER} Interessen möglich.`);
       return;
     }
     setInterests((prev) => [...prev, normalized]);
@@ -211,7 +210,7 @@ export function ProfileInterestsCard() {
             </div>
           </>
         )}
-        <p className="text-xs text-muted-foreground">Maximal {MAX_INTERESTS} Interessen möglich.</p>
+        <p className="text-xs text-muted-foreground">Maximal {MAX_INTERESTS_PER_USER} Interessen möglich.</p>
         {error && <p className="text-xs text-destructive">{error}</p>}
 
         <div className="flex justify-end border-t border-border/60 pt-4">

@@ -34,14 +34,8 @@ import {
   resolveDietaryStrictnessLabel,
   resolveDietaryStyleLabel,
 } from "@/data/dietary-preferences";
+import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
 import { cn } from "@/lib/utils";
-
-const ALLERGY_LEVEL_STYLES: Record<AllergyLevel, string> = {
-  MILD: "border-emerald-400/40 bg-emerald-500/10 text-emerald-600",
-  MODERATE: "border-amber-400/40 bg-amber-500/10 text-amber-600",
-  SEVERE: "border-rose-400/40 bg-rose-500/10 text-rose-600",
-  LETHAL: "border-red-500/50 bg-red-500/10 text-red-600",
-};
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
@@ -384,7 +378,7 @@ export function ProfileDietaryPreferences({
                         variant="outline"
                         className={cn(
                           "text-[0.7rem]",
-                          ALLERGY_LEVEL_STYLES[entry.level],
+                          ALLERGY_LEVEL_STYLES[entry.level].badge,
                         )}
                       >
                         {levelLabel(entry.level)}
