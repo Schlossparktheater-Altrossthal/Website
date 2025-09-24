@@ -1146,3 +1146,76 @@ model Announcement {
   attachments Json?
   createdAt   DateTime @default(now())
 }
+
+enum AnalyticsRequestArea {
+  public
+  members
+  api
+  unknown
+}
+
+model AnalyticsHttpRequest {
+  id           String                @id @default(cuid())
+  timestamp    DateTime              @default(now())
+  method       String                @default("GET")
+  route        String
+  area         AnalyticsRequestArea
+  statusCode   Int
+  durationMs   Int
+  payloadBytes Int                   @default(0)
+  createdAt    DateTime              @default(now())
+
+  @@index([timestamp])
+  @@index([area, timestamp])
+  @@index([route])
+}
+
+model AnalyticsUptimeHeartbeat {
+  id         String   @id @default(cuid())
+  service    String   @default("app-server")
+  isHealthy  Boolean  @default(true)
+  latencyMs  Int?
+  observedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([service, observedAt])
+  @@index([observedAt])
+}
+
+model AnalyticsHttpSummary {
+  id                        String   @id @default(cuid())
+  windowStart               DateTime
+  windowEnd                 DateTime
+  totalRequests             Int      @default(0)
+  successfulRequests        Int      @default(0)
+  clientErrorRequests       Int      @default(0)
+  serverErrorRequests       Int      @default(0)
+  averageDurationMs         Float    @default(0)
+  p95DurationMs             Int?
+  averagePayloadBytes       Float    @default(0)
+  uptimePercentage          Float?
+  frontendRequests          Int      @default(0)
+  frontendAvgResponseMs     Float    @default(0)
+  frontendAvgPayloadBytes   Float    @default(0)
+  membersRequests           Int      @default(0)
+  membersAvgResponseMs      Float    @default(0)
+  apiRequests               Int      @default(0)
+  apiAvgResponseMs          Float    @default(0)
+  apiErrorRate              Float    @default(0)
+  generatedAt               DateTime @default(now())
+
+  @@map("analytics_http_summary")
+  @@index([windowEnd])
+}
+
+model AnalyticsHttpPeakHour {
+  id          String   @id @default(cuid())
+  bucketStart DateTime
+  bucketEnd   DateTime
+  requests    Int      @default(0)
+  share       Float    @default(0)
+  generatedAt DateTime @default(now())
+
+  @@map("analytics_http_peak_hours")
+  @@index([bucketStart])
+}

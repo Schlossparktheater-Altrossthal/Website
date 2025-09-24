@@ -2,6 +2,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
 
+import type { AnalyticsHttpPeakHour, AnalyticsHttpSummary } from "@prisma/client";
+
 import staticAnalyticsData from "@/data/server-analytics-static.json" with { type: "json" };
 import {
   applyPagePerformanceMetrics,
@@ -10,6 +12,7 @@ import {
   mergeDeviceBreakdown,
 } from "@/lib/server-analytics-data";
 import type { PagePerformanceMetricOverride } from "@/lib/server-analytics-data";
+import { prisma } from "@/lib/prisma";
 
 export type OptimizationImpact = "Hoch" | "Mittel" | "Niedrig";
 export type OptimizationArea = "Frontend" | "Mitgliederbereich" | "Infrastruktur";
@@ -189,6 +192,106 @@ function formatBytes(bytes: number) {
   return `${value.toFixed(decimals)} ${units[unitIndex]}`;
 }
 
+function formatTime(value: Date | string | number) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return "00:00";
+  }
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function formatTimeRange(start: Date | string | number, end: Date | string | number) {
+  return `${formatTime(start)} – ${formatTime(end)}`;
+}
+
+function applyHttpSummaryOverrides(base: ServerSummary, row: AnalyticsHttpSummary): ServerSummary {
+  const totalRequests = Math.max(0, row.totalRequests);
+  const totalErrors = Math.max(0, row.clientErrorRequests + row.serverErrorRequests);
+  const averageResponse = Number.isFinite(row.averageDurationMs) ? Math.max(0, row.averageDurationMs) : base.averageResponseTimeMs;
+  const uptime = Number.isFinite(row.uptimePercentage ?? NaN)
+    ? clamp(Number(row.uptimePercentage), 0, 100)
+    : base.uptimePercentage;
+
+  return {
+    ...base,
+    uptimePercentage: uptime,
+    requestsLast24h: totalRequests,
+    averageResponseTimeMs: Math.round(averageResponse),
+    errorRate: totalRequests > 0 ? clamp(totalErrors / totalRequests, 0, 1) : 0,
+  };
+}
+
+function applyRequestBreakdownOverrides(base: RequestBreakdown, row: AnalyticsHttpSummary): RequestBreakdown {
+  const frontendPayloadKb = row.frontendAvgPayloadBytes / 1024;
+  const hasFrontendData = row.frontendRequests > 0;
+  const hasMemberData = row.membersRequests > 0;
+  const hasApiData = row.apiRequests > 0;
+  return {
+    frontend: {
+      ...base.frontend,
+      requests: Math.max(0, row.frontendRequests),
+      avgResponseTimeMs:
+        hasFrontendData && Number.isFinite(row.frontendAvgResponseMs) && row.frontendAvgResponseMs >= 0
+          ? Math.round(row.frontendAvgResponseMs)
+          : base.frontend.avgResponseTimeMs,
+      avgPayloadKb:
+        hasFrontendData && Number.isFinite(frontendPayloadKb) && frontendPayloadKb >= 0
+          ? Math.round(frontendPayloadKb * 10) / 10
+          : base.frontend.avgPayloadKb,
+    },
+    members: {
+      ...base.members,
+      requests: Math.max(0, row.membersRequests),
+      avgResponseTimeMs:
+        hasMemberData && Number.isFinite(row.membersAvgResponseMs) && row.membersAvgResponseMs >= 0
+          ? Math.round(row.membersAvgResponseMs)
+          : base.members.avgResponseTimeMs,
+    },
+    api: {
+      ...base.api,
+      requests: Math.max(0, row.apiRequests),
+      avgResponseTimeMs:
+        hasApiData && Number.isFinite(row.apiAvgResponseMs) && row.apiAvgResponseMs >= 0
+          ? Math.round(row.apiAvgResponseMs)
+          : base.api.avgResponseTimeMs,
+      errorRate:
+        hasApiData && Number.isFinite(row.apiErrorRate) && row.apiErrorRate >= 0
+          ? clamp(Number(row.apiErrorRate), 0, 1)
+          : base.api.errorRate,
+    },
+  };
+}
+
+function convertHttpPeakHours(rows: AnalyticsHttpPeakHour[]): PeakHour[] {
+  return rows.map((row) => ({
+    range: formatTimeRange(row.bucketStart, row.bucketEnd),
+    requests: Math.max(0, row.requests),
+    share: clamp(Number(row.share ?? 0), 0, 1),
+  }));
+}
+
+async function loadHttpAggregationsFromDatabase() {
+  const [summary, peakHours] = await Promise.all([
+    prisma.analyticsHttpSummary.findFirst({
+      orderBy: { windowEnd: "desc" },
+    }),
+    prisma.analyticsHttpPeakHour.findMany({
+      orderBy: [
+        { requests: "desc" },
+        { bucketStart: "desc" },
+      ],
+      take: 8,
+    }),
+  ]);
+
+  return {
+    summary: summary ?? null,
+    peakHours,
+  };
+}
+
 function readCpuTimes(): CpuTimesSnapshot {
   return os.cpus().reduce<CpuTimesSnapshot>(
     (accumulator, cpu) => {
@@ -352,6 +455,13 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   let deviceBreakdown = STATIC_ANALYTICS.deviceBreakdown;
   let publicPages = STATIC_ANALYTICS.publicPages;
   let memberPages = STATIC_ANALYTICS.memberPages;
+  let summary: ServerSummary = { ...STATIC_ANALYTICS.summary };
+  let requestBreakdown: RequestBreakdown = {
+    frontend: { ...STATIC_ANALYTICS.requestBreakdown.frontend },
+    members: { ...STATIC_ANALYTICS.requestBreakdown.members },
+    api: { ...STATIC_ANALYTICS.requestBreakdown.api },
+  };
+  let peakHours: PeakHour[] = (STATIC_ANALYTICS.peakHours ?? []).map((entry) => ({ ...entry }));
 
   try {
     resourceUsage = await collectSystemResourceUsage();
@@ -360,7 +470,11 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   }
 
   if (process.env.DATABASE_URL) {
-    const [deviceOverrides, pageMetricsResult] = await Promise.all([
+    const [httpAggregates, deviceOverrides, pageMetricsResult] = await Promise.all([
+      loadHttpAggregationsFromDatabase().catch((error) => {
+        console.error("[server-analytics] Failed to load HTTP analytics summary", error);
+        return null;
+      }),
       loadDeviceBreakdownFromDatabase().catch((error) => {
         console.error("[server-analytics] Failed to load device analytics", error);
         return null;
@@ -370,6 +484,15 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         return [] as PagePerformanceMetricOverride[];
       }),
     ]);
+
+    if (httpAggregates?.summary) {
+      summary = applyHttpSummaryOverrides(summary, httpAggregates.summary);
+      requestBreakdown = applyRequestBreakdownOverrides(requestBreakdown, httpAggregates.summary);
+    }
+
+    if (httpAggregates?.peakHours && httpAggregates.peakHours.length > 0) {
+      peakHours = convertHttpPeakHours(httpAggregates.peakHours);
+    }
 
     deviceBreakdown = mergeDeviceBreakdown(deviceBreakdown, deviceOverrides ?? undefined);
 
@@ -391,6 +514,9 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   return {
     generatedAt: new Date().toISOString(),
     ...STATIC_ANALYTICS,
+    summary,
+    requestBreakdown,
+    peakHours,
     resourceUsage,
     deviceBreakdown,
     publicPages,
