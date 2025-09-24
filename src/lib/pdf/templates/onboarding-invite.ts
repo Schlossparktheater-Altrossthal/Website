@@ -109,8 +109,9 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       text: "#1f2937",
       textMuted: "#4b5563",
       textSoft: "#6b7280",
-      qrDark: "#7c2d12",
-      qrLight: "#fffbeb",
+      qrDark: "#0f172a",
+      qrLight: "#e0f2fe",
+      qrAccent: "#bae6fd",
     } as const;
 
     const title = data.headline ?? data.inviteLabel ?? "Dein Backstage-Start";
@@ -203,26 +204,64 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.font("Helvetica-Bold").fontSize(16).fillColor(palette.sunrise).text("Backstage-Check-in", { align: "center" });
 
     doc.moveDown(0.4);
-    const qrImage = await QRCode.toBuffer(data.link, {
-      margin: 1,
-      width: 512,
-      color: { dark: palette.qrDark, light: palette.qrLight },
+    const qrData = QRCode.create(data.link, {
+      errorCorrectionLevel: "H",
     });
-    const qrSize = Math.min(availableWidth, 280);
+    const qrModuleCount = qrData.modules.size;
+    const qrQuietZone = 2;
+    const qrTargetSize = Math.min(availableWidth, 220);
+    const qrModuleSize = qrTargetSize / (qrModuleCount + qrQuietZone * 2);
+    const qrSize = qrModuleSize * (qrModuleCount + qrQuietZone * 2);
     const qrX = marginLeft + (availableWidth - qrSize) / 2;
     const qrY = doc.y;
+    const qrContentX = qrX + qrQuietZone * qrModuleSize;
+    const qrContentY = qrY + qrQuietZone * qrModuleSize;
 
     doc.save();
-    doc.roundedRect(qrX - 24, qrY - 24, qrSize + 48, qrSize + 48, 28).fillColor("#fff1f2").fill();
+    doc.roundedRect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40, 26).fillColor("#fef7ec").fill();
     doc.restore();
 
     doc.save();
-    doc.lineWidth(4);
-    doc.strokeColor(palette.sunrise);
-    doc.roundedRect(qrX - 24, qrY - 24, qrSize + 48, qrSize + 48, 28).stroke();
+    doc.lineWidth(3);
+    doc.strokeColor(palette.twilight);
+    doc.roundedRect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40, 26).stroke();
     doc.restore();
 
-    doc.image(qrImage, qrX, qrY, { width: qrSize, height: qrSize });
+    doc.save();
+    doc.roundedRect(qrX, qrY, qrSize, qrSize, 22).fillColor(palette.qrLight).fill();
+    doc.restore();
+
+    const finderCenters: Array<{ row: number; col: number }> = [
+      { row: 3, col: 3 },
+      { row: 3, col: qrModuleCount - 4 },
+      { row: qrModuleCount - 4, col: 3 },
+    ];
+    const finderRadius = qrModuleSize * 4.2;
+
+    doc.save();
+    doc.fillColor(palette.qrAccent);
+    for (const center of finderCenters) {
+      const cx = qrContentX + (center.col + 0.5) * qrModuleSize;
+      const cy = qrContentY + (center.row + 0.5) * qrModuleSize;
+      doc.circle(cx, cy, finderRadius).fill();
+    }
+    doc.restore();
+
+    const dotRadius = qrModuleSize * 0.42;
+    doc.save();
+    doc.fillColor(palette.qrDark);
+    for (let row = 0; row < qrModuleCount; row += 1) {
+      for (let col = 0; col < qrModuleCount; col += 1) {
+        if (!qrData.modules.get(row, col)) {
+          continue;
+        }
+        const cx = qrContentX + (col + 0.5) * qrModuleSize;
+        const cy = qrContentY + (row + 0.5) * qrModuleSize;
+        doc.circle(cx, cy, dotRadius).fill();
+      }
+    }
+    doc.restore();
+
     doc.y = qrY + qrSize;
 
     doc.moveDown(0.9);
