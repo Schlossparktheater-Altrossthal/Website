@@ -101,17 +101,8 @@ export async function getActiveProductionId(userId?: string | null) {
   const fallbackId = await resolveFallbackActiveProductionId(userId);
 
   if (!fallbackId) {
-    if (cookieValue) {
-      store.delete(ACTIVE_PRODUCTION_COOKIE);
-    }
     return null;
   }
-
-  store.set(ACTIVE_PRODUCTION_COOKIE, fallbackId, {
-    maxAge: 60 * 60 * 24 * 180,
-    sameSite: "lax",
-    path: "/",
-  });
 
   return fallbackId;
 }
