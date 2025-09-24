@@ -49,11 +49,15 @@ export async function joinDepartmentAction(formData: FormData) {
 
   const department = await prisma.department.findUnique({
     where: { id: departmentIdValue },
-    select: { id: true },
+    select: { id: true, requiresJoinApproval: true },
   });
 
   if (!department) {
     throw new Error("Das ausgewählte Gewerk existiert nicht mehr.");
+  }
+
+  if (department.requiresJoinApproval) {
+    throw new Error("Dieses Gewerk benötigt eine Zustimmung durch die Leitung.");
   }
 
   await prisma.departmentMembership.upsert({

@@ -641,6 +641,7 @@ async function main() {
         description: dept.description ?? null,
         color: dept.color ?? null,
         isCore: true,
+        requiresJoinApproval: dept.requiresJoinApproval ?? false,
       },
       create: {
         slug: dept.slug,
@@ -648,6 +649,7 @@ async function main() {
         description: dept.description ?? null,
         color: dept.color ?? null,
         isCore: true,
+        requiresJoinApproval: dept.requiresJoinApproval ?? false,
       },
     });
   }

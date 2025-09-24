@@ -142,6 +142,17 @@ export default async function ProduktionsGewerkePage() {
                   className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
                 />
               </div>
+              <div className="space-y-1 sm:col-span-2">
+                <span className="text-sm font-medium">Beitritt</span>
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    name="requiresApproval"
+                    className="h-4 w-4 rounded border border-border"
+                  />
+                  Leitung muss neue Mitglieder bestätigen, bevor sie beitreten.
+                </label>
+              </div>
             </fieldset>
             <div className="space-y-1">
               <label className="text-sm font-medium">Beschreibung</label>
@@ -177,6 +188,11 @@ export default async function ProduktionsGewerkePage() {
                       ) : null}
                       {department.slug ? (
                         <p className="text-xs uppercase tracking-wide text-muted-foreground">Slug: {department.slug}</p>
+                      ) : null}
+                      {department.requiresJoinApproval ? (
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Beitritt benötigt Zustimmung der Leitung
+                        </p>
                       ) : null}
                     </div>
                   </div>
@@ -219,6 +235,20 @@ export default async function ProduktionsGewerkePage() {
                         defaultValue={department.color ?? "#94a3b8"}
                         className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
                       />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Beitritt
+                      </span>
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          name="requiresApproval"
+                          defaultChecked={department.requiresJoinApproval}
+                          className="h-4 w-4 rounded border border-border"
+                        />
+                        Leitung muss neue Mitglieder bestätigen, bevor sie beitreten.
+                      </label>
                     </div>
                     <div className="space-y-1 md:col-span-2">
                       <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

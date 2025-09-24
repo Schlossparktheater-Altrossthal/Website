@@ -18,19 +18,32 @@ export async function GET() {
 
   await Promise.all([ensureSystemRoles(), ensurePermissionDefinitions()]);
 
-  const [roles, permissions, grants] = await Promise.all([
+  const [roles, permissions, grants, departments, departmentGrants] = await Promise.all([
     prisma.appRole.findMany({
       where: { isSystem: false },
       orderBy: [{ sortIndex: "asc" }, { name: "asc" }],
     }),
     prisma.permission.findMany({ where: { key: { in: DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key) } } }),
     prisma.appRolePermission.findMany({ select: { roleId: true, permission: { select: { key: true } } } }),
+    prisma.department.findMany({
+      orderBy: [{ name: "asc" }],
+      select: { id: true, name: true, slug: true, requiresJoinApproval: true },
+    }),
+    prisma.departmentPermission.findMany({
+      select: { departmentId: true, permission: { select: { key: true } } },
+    }),
   ]);
 
   const grantsMap: Record<string, string[]> = {};
   for (const g of grants) {
     if (!grantsMap[g.roleId]) grantsMap[g.roleId] = [];
     grantsMap[g.roleId].push(g.permission.key);
+  }
+
+  const departmentGrantsMap: Record<string, string[]> = {};
+  for (const g of departmentGrants) {
+    if (!departmentGrantsMap[g.departmentId]) departmentGrantsMap[g.departmentId] = [];
+    departmentGrantsMap[g.departmentId].push(g.permission.key);
   }
 
   const permissionMap = new Map(permissions.map((perm) => [perm.key, perm]));
@@ -47,7 +60,13 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ roles, permissions: orderedPermissions, grants: grantsMap });
+  return NextResponse.json({
+    roles,
+    departments,
+    permissions: orderedPermissions,
+    grants: grantsMap,
+    departmentGrants: departmentGrantsMap,
+  });
 }
 
 export async function PUT(request: NextRequest) {
@@ -57,9 +76,28 @@ export async function PUT(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null) as
-    | { roleId: string; permissionKey: string; grant: boolean }
+    | {
+        targetType?: "role" | "department";
+        roleId?: string;
+        departmentId?: string;
+        targetId?: string;
+        permissionKey: string;
+        grant: boolean;
+      }
     | null;
-  if (!body || typeof body.roleId !== "string" || typeof body.permissionKey !== "string") {
+  if (!body || typeof body.permissionKey !== "string") {
+    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+  }
+
+  const targetType = body.targetType ?? (body.roleId ? "role" : body.departmentId ? "department" : undefined);
+  const targetId =
+    typeof body.targetId === "string"
+      ? body.targetId
+      : targetType === "role"
+        ? body.roleId
+        : body.departmentId;
+
+  if (!targetType || !targetId) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
@@ -69,26 +107,45 @@ export async function PUT(request: NextRequest) {
 
   await ensurePermissionDefinitions();
 
-  const role = await prisma.appRole.findUnique({ where: { id: body.roleId } });
-  if (!role) return NextResponse.json({ error: "Rolle nicht gefunden" }, { status: 404 });
-  // Do not edit owner/admin via matrix; they are wildcard
-  if (role.isSystem) {
-    return NextResponse.json({ error: "Owner/Admin sind nicht editierbar" }, { status: 400 });
-  }
-
   const perm = await prisma.permission.findUnique({ where: { key: body.permissionKey } });
   if (!perm) {
     return NextResponse.json({ error: "Recht nicht initialisiert" }, { status: 500 });
   }
 
-  if (body.grant) {
-    await prisma.appRolePermission.upsert({
-      where: { roleId_permissionId: { roleId: role.id, permissionId: perm.id } },
-      update: {},
-      create: { roleId: role.id, permissionId: perm.id },
-    });
+  if (targetType === "department") {
+    const department = await prisma.department.findUnique({ where: { id: targetId } });
+    if (!department) {
+      return NextResponse.json({ error: "Gewerk nicht gefunden" }, { status: 404 });
+    }
+
+    if (body.grant) {
+      await prisma.departmentPermission.upsert({
+        where: { departmentId_permissionId: { departmentId: department.id, permissionId: perm.id } },
+        update: {},
+        create: { departmentId: department.id, permissionId: perm.id },
+      });
+    } else {
+      await prisma.departmentPermission.deleteMany({
+        where: { departmentId: department.id, permissionId: perm.id },
+      });
+    }
   } else {
-    await prisma.appRolePermission.deleteMany({ where: { roleId: role.id, permissionId: perm.id } });
+    const role = await prisma.appRole.findUnique({ where: { id: targetId } });
+    if (!role) return NextResponse.json({ error: "Rolle nicht gefunden" }, { status: 404 });
+    // Do not edit owner/admin via matrix; they are wildcard
+    if (role.isSystem) {
+      return NextResponse.json({ error: "Owner/Admin sind nicht editierbar" }, { status: 400 });
+    }
+
+    if (body.grant) {
+      await prisma.appRolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId: perm.id } },
+        update: {},
+        create: { roleId: role.id, permissionId: perm.id },
+      });
+    } else {
+      await prisma.appRolePermission.deleteMany({ where: { roleId: role.id, permissionId: perm.id } });
+    }
   }
 
   return NextResponse.json({ ok: true });

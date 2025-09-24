@@ -22,6 +22,12 @@ type Role = {
   systemRole?: string | null;
   sortIndex: number;
 };
+type Department = {
+  id: string;
+  name: string;
+  slug: string | null;
+  requiresJoinApproval: boolean;
+};
 type Permission = {
   id: string;
   key: string;
@@ -33,8 +39,10 @@ type Permission = {
 
 export function PermissionMatrix() {
   const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [perms, setPerms] = useState<Permission[]>([]);
-  const [grants, setGrants] = useState<Record<string, Set<string>>>({});
+  const [roleGrants, setRoleGrants] = useState<Record<string, Set<string>>>({});
+  const [departmentGrants, setDepartmentGrants] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newRoleName, setNewRoleName] = useState("");
@@ -53,6 +61,7 @@ export function PermissionMatrix() {
   const [orderSaving, setOrderSaving] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeView, setActiveView] = useState<"roles" | "departments">("roles");
 
   async function load() {
     setLoading(true);
@@ -77,6 +86,20 @@ export function PermissionMatrix() {
         });
       setRoles(nonSystemRoles);
       setOrderError(null);
+      const fetchedDepartments: Department[] = Array.isArray(data.departments)
+        ? (data.departments as Array<Record<string, unknown>>)
+            .map((entry) => {
+              if (!entry || typeof entry !== "object") return null;
+              const id = typeof entry.id === "string" ? entry.id : null;
+              const name = typeof entry.name === "string" ? entry.name : null;
+              if (!id || !name) return null;
+              const slug = typeof entry.slug === "string" ? entry.slug : null;
+              const requiresJoinApproval = Boolean(entry.requiresJoinApproval);
+              return { id, name, slug, requiresJoinApproval } satisfies Department;
+            })
+            .filter((value): value is Department => Boolean(value))
+        : [];
+      setDepartments(fetchedDepartments);
       const fetchedPermissions: Permission[] = Array.isArray(data.permissions)
         ? (data.permissions as Array<Record<string, unknown>>)
             .map((entry) => {
@@ -101,10 +124,47 @@ export function PermissionMatrix() {
             .filter((value): value is Permission => Boolean(value))
         : [];
       setPerms(fetchedPermissions);
-      const m: Record<string, Set<string>> = {};
-      for (const r of data.roles as Role[]) m[r.id] = new Set<string>();
-      for (const roleId of Object.keys(data.grants || {})) m[roleId] = new Set<string>(data.grants[roleId]);
-      setGrants(m);
+      const roleGrantMap: Record<string, Set<string>> = {};
+      for (const role of fetchedRoles) {
+        roleGrantMap[role.id] = new Set<string>();
+      }
+      if (data.grants && typeof data.grants === "object") {
+        for (const [roleId, values] of Object.entries(data.grants as Record<string, unknown>)) {
+          if (!roleGrantMap[roleId]) {
+            roleGrantMap[roleId] = new Set<string>();
+          }
+          if (Array.isArray(values)) {
+            for (const value of values) {
+              if (typeof value === "string") {
+                roleGrantMap[roleId].add(value);
+              }
+            }
+          }
+        }
+      }
+      setRoleGrants(roleGrantMap);
+
+      const departmentGrantMap: Record<string, Set<string>> = {};
+      for (const department of fetchedDepartments) {
+        departmentGrantMap[department.id] = new Set<string>();
+      }
+      if (data.departmentGrants && typeof data.departmentGrants === "object") {
+        for (const [departmentId, values] of Object.entries(
+          data.departmentGrants as Record<string, unknown>,
+        )) {
+          if (!departmentGrantMap[departmentId]) {
+            departmentGrantMap[departmentId] = new Set<string>();
+          }
+          if (Array.isArray(values)) {
+            for (const value of values) {
+              if (typeof value === "string") {
+                departmentGrantMap[departmentId].add(value);
+              }
+            }
+          }
+        }
+      }
+      setDepartmentGrants(departmentGrantMap);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fehler");
     } finally {
@@ -255,18 +315,40 @@ export function PermissionMatrix() {
     setDropIndicator(null);
   };
 
-  const toggle = async (roleId: string, key: string, grant: boolean) => {
-    const old = new Set(grants[roleId] || new Set());
+  const toggleRole = async (roleId: string, key: string, grant: boolean) => {
+    const old = new Set(roleGrants[roleId] || new Set());
     const optimistic = new Set(old);
-    if (grant) optimistic.add(key); else optimistic.delete(key);
-    setGrants({ ...grants, [roleId]: optimistic });
+    if (grant) optimistic.add(key);
+    else optimistic.delete(key);
+    setRoleGrants({ ...roleGrants, [roleId]: optimistic });
     const res = await fetch("/api/permissions/definitions", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roleId, permissionKey: key, grant }),
+      body: JSON.stringify({ targetType: "role", targetId: roleId, permissionKey: key, grant }),
     });
     if (!res.ok) {
-      setGrants({ ...grants, [roleId]: old });
+      setRoleGrants({ ...roleGrants, [roleId]: old });
+    }
+  };
+
+  const toggleDepartment = async (departmentId: string, key: string, grant: boolean) => {
+    const old = new Set(departmentGrants[departmentId] || new Set());
+    const optimistic = new Set(old);
+    if (grant) optimistic.add(key);
+    else optimistic.delete(key);
+    setDepartmentGrants({ ...departmentGrants, [departmentId]: optimistic });
+    const res = await fetch("/api/permissions/definitions", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targetType: "department",
+        targetId: departmentId,
+        permissionKey: key,
+        grant,
+      }),
+    });
+    if (!res.ok) {
+      setDepartmentGrants({ ...departmentGrants, [departmentId]: old });
     }
   };
 
@@ -337,7 +419,7 @@ export function PermissionMatrix() {
     if (res.ok) {
       const rid = editRoleId;
       setRoles((prev) => prev.filter((r) => r.id !== rid));
-      setGrants((prev) => {
+      setRoleGrants((prev) => {
         const next = { ...prev } as Record<string, Set<string>>;
         delete next[rid];
         return next;
@@ -354,123 +436,92 @@ export function PermissionMatrix() {
   if (error) return <div className="text-red-600">{error}</div>;
 
   const hasSearch = searchTerm.trim().length > 0;
-  const totalColumns = roles.length + 1;
-  const tableRows: ReactNode[] = [];
-  let lastCategoryKey: string | null = null;
-  let categorySequence = 0;
-  let rowIndexWithinCategory = 0;
 
-  for (const perm of filteredPerms) {
-    if (perm.categoryKey !== lastCategoryKey) {
-      lastCategoryKey = perm.categoryKey;
-      rowIndexWithinCategory = 0;
-      const categoryKey = `category-${perm.categoryKey}-${categorySequence}`;
-      categorySequence += 1;
-      tableRows.push(
-        <tr key={categoryKey} className="bg-muted/50">
-          <th
-            scope="colgroup"
-            colSpan={totalColumns}
-            className="border-y border-border/70 px-3 py-3 text-left text-muted-foreground"
-          >
-            <div className="flex items-center gap-3">
-              <span className="hidden h-px flex-1 bg-border/60 sm:block" aria-hidden />
-              <span className="text-[0.65rem] font-semibold uppercase tracking-[0.3em]">
-                {perm.categoryLabel}
-              </span>
-              <span className="hidden h-px flex-1 bg-border/60 sm:block" aria-hidden />
-            </div>
-          </th>
+  const renderRoleMatrix = () => {
+    const totalColumns = roles.length + 1;
+    const rows: ReactNode[] = [];
+    let lastCategoryKey: string | null = null;
+    let categorySequence = 0;
+    let rowIndexWithinCategory = 0;
+
+    for (const perm of filteredPerms) {
+      if (perm.categoryKey !== lastCategoryKey) {
+        lastCategoryKey = perm.categoryKey;
+        rowIndexWithinCategory = 0;
+        const categoryKey = `category-${perm.categoryKey}-${categorySequence}`;
+        categorySequence += 1;
+        rows.push(
+          <tr key={categoryKey} className="bg-muted/50">
+            <th
+              scope="colgroup"
+              colSpan={totalColumns}
+              className="border-y border-border/70 px-3 py-3 text-left text-muted-foreground"
+            >
+              <div className="flex items-center gap-3">
+                <span className="hidden h-px flex-1 bg-border/60 sm:block" aria-hidden />
+                <span className="text-[0.65rem] font-semibold uppercase tracking-[0.3em]">
+                  {perm.categoryLabel}
+                </span>
+                <span className="hidden h-px flex-1 bg-border/60 sm:block" aria-hidden />
+              </div>
+            </th>
+          </tr>,
+        );
+      }
+
+      const isEvenRow = rowIndexWithinCategory % 2 === 0;
+      rowIndexWithinCategory += 1;
+
+      rows.push(
+        <tr key={perm.key} className={isEvenRow ? "bg-muted/30" : undefined}>
+          <td className="sticky left-0 z-0 bg-inherit p-3 align-top shadow-[inset_-1px_0_0_0_var(--border)]">
+            <div className="font-medium">{perm.label ?? perm.key}</div>
+            {perm.label && perm.label !== perm.key ? (
+              <div className="text-xs text-muted-foreground">{perm.key}</div>
+            ) : null}
+            {perm.description ? (
+              <div className="text-xs text-muted-foreground">{perm.description}</div>
+            ) : null}
+          </td>
+          {roles.map((r) => {
+            const granted = roleGrants[r.id]?.has(perm.key) ?? false;
+            return (
+              <td
+                key={r.id}
+                data-role-id={r.id}
+                className="p-3 align-middle"
+                onDragOver={(event) => handleDragOver(event, r.id)}
+                onDrop={(event) => handleDrop(event, r.id)}
+                onDragLeave={(event) => handleDragLeave(event, r.id)}
+              >
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={granted}
+                  onClick={() => toggleRole(r.id, perm.key, !granted)}
+                  className={`perm-toggle ${granted ? "on" : "off"}`}
+                >
+                  <span className="sr-only">{granted ? "Entziehen" : "Gewähren"}</span>
+                  <span className="knob" />
+                </button>
+              </td>
+            );
+          })}
         </tr>,
       );
     }
 
-    const isEvenRow = rowIndexWithinCategory % 2 === 0;
-    rowIndexWithinCategory += 1;
+    if (rows.length === 0) {
+      rows.push(
+        <tr key="empty">
+          <td colSpan={totalColumns} className="p-6 text-center text-sm text-muted-foreground">
+            {hasSearch ? "Keine Rechte passen zu deiner Suche." : "Keine Rechte vorhanden."}
+          </td>
+        </tr>,
+      );
+    }
 
-    tableRows.push(
-      <tr key={perm.key} className={isEvenRow ? "bg-muted/30" : undefined}>
-        <td className="sticky left-0 z-0 bg-inherit p-3 align-top shadow-[inset_-1px_0_0_0_var(--border)]">
-          <div className="font-medium">{perm.label ?? perm.key}</div>
-          {perm.label && perm.label !== perm.key ? (
-            <div className="text-xs text-muted-foreground">{perm.key}</div>
-          ) : null}
-          {perm.description ? (
-            <div className="text-xs text-muted-foreground">{perm.description}</div>
-          ) : null}
-        </td>
-        {roles.map((r) => {
-          const granted = grants[r.id]?.has(perm.key) ?? false;
-          return (
-            <td
-              key={r.id}
-              data-role-id={r.id}
-              className="p-3 align-middle"
-              onDragOver={(event) => handleDragOver(event, r.id)}
-              onDrop={(event) => handleDrop(event, r.id)}
-              onDragLeave={(event) => handleDragLeave(event, r.id)}
-            >
-              <button
-                type="button"
-                role="switch"
-                aria-checked={granted}
-                onClick={() => toggle(r.id, perm.key, !granted)}
-                className={`perm-toggle ${granted ? 'on' : 'off'}`}
-              >
-                <span className="sr-only">{granted ? 'Entziehen' : 'Gewähren'}</span>
-                <span className="knob" />
-              </button>
-            </td>
-          );
-        })}
-      </tr>,
-    );
-  }
-
-  if (tableRows.length === 0) {
-    tableRows.push(
-      <tr key="empty">
-        <td colSpan={totalColumns} className="p-6 text-center text-sm text-muted-foreground">
-          {hasSearch ? "Keine Rechte passen zu deiner Suche." : "Keine Rechte vorhanden."}
-        </td>
-      </tr>,
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-xl border bg-card/60 p-4 shadow-sm">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-semibold">Rollen & Rechte</h3>
-              <p className="text-sm text-muted-foreground">Weise vorhandene Website‑Rechte deinen eigenen Rollen zu.</p>
-            </div>
-            <div className="flex gap-2">
-              <input
-                className="rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="Neue Rolle (z. B. PR-Team)"
-                value={newRoleName}
-                onChange={(e) => setNewRoleName(e.target.value)}
-              />
-              <Button size="sm" onClick={addRole}>Rolle anlegen</Button>
-            </div>
-          </div>
-          <div className="flex w-full justify-end">
-            <div className="w-full sm:w-72">
-              <Input
-                type="search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Rechte durchsuchen…"
-                aria-label="Rechte durchsuchen"
-                spellCheck={false}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
+    return (
       <div className="overflow-auto rounded-xl border bg-card/40 shadow-sm">
         <table className="min-w-full text-sm" aria-busy={orderSaving}>
           <thead className="sticky top-0 z-10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -525,11 +576,209 @@ export function PermissionMatrix() {
               ))}
             </tr>
           </thead>
-          <tbody>{tableRows}</tbody>
+          <tbody>{rows}</tbody>
         </table>
       </div>
-      {orderError ? <p className="text-sm text-destructive">{orderError}</p> : null}
-      {orderSaving ? (
+    );
+  };
+
+  const renderDepartmentMatrix = () => {
+    if (!departments.length) {
+      return (
+        <div className="rounded-xl border bg-card/40 p-6 text-sm text-muted-foreground">
+          Lege zuerst Gewerke an, um Rechte zuzuweisen.
+        </div>
+      );
+    }
+
+    const totalColumns = departments.length + 1;
+    const rows: ReactNode[] = [];
+    let lastCategoryKey: string | null = null;
+    let categorySequence = 0;
+    let rowIndexWithinCategory = 0;
+
+    for (const perm of filteredPerms) {
+      if (perm.categoryKey !== lastCategoryKey) {
+        lastCategoryKey = perm.categoryKey;
+        rowIndexWithinCategory = 0;
+        const categoryKey = `department-category-${perm.categoryKey}-${categorySequence}`;
+        categorySequence += 1;
+        rows.push(
+          <tr key={categoryKey} className="bg-muted/50">
+            <th
+              scope="colgroup"
+              colSpan={totalColumns}
+              className="border-y border-border/70 px-3 py-3 text-left text-muted-foreground"
+            >
+              <div className="flex items-center gap-3">
+                <span className="hidden h-px flex-1 bg-border/60 sm:block" aria-hidden />
+                <span className="text-[0.65rem] font-semibold uppercase tracking-[0.3em]">
+                  {perm.categoryLabel}
+                </span>
+                <span className="hidden h-px flex-1 bg-border/60 sm:block" aria-hidden />
+              </div>
+            </th>
+          </tr>,
+        );
+      }
+
+      const isEvenRow = rowIndexWithinCategory % 2 === 0;
+      rowIndexWithinCategory += 1;
+
+      rows.push(
+        <tr key={`department-${perm.key}`} className={isEvenRow ? "bg-muted/30" : undefined}>
+          <td className="sticky left-0 z-0 bg-inherit p-3 align-top shadow-[inset_-1px_0_0_0_var(--border)]">
+            <div className="font-medium">{perm.label ?? perm.key}</div>
+            {perm.label && perm.label !== perm.key ? (
+              <div className="text-xs text-muted-foreground">{perm.key}</div>
+            ) : null}
+            {perm.description ? (
+              <div className="text-xs text-muted-foreground">{perm.description}</div>
+            ) : null}
+          </td>
+          {departments.map((department) => {
+            const granted = departmentGrants[department.id]?.has(perm.key) ?? false;
+            return (
+              <td key={department.id} className="p-3 align-middle">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={granted}
+                  onClick={() => toggleDepartment(department.id, perm.key, !granted)}
+                  className={`perm-toggle ${granted ? "on" : "off"}`}
+                >
+                  <span className="sr-only">{granted ? "Entziehen" : "Gewähren"}</span>
+                  <span className="knob" />
+                </button>
+              </td>
+            );
+          })}
+        </tr>,
+      );
+    }
+
+    if (rows.length === 0) {
+      rows.push(
+        <tr key="empty">
+          <td colSpan={totalColumns} className="p-6 text-center text-sm text-muted-foreground">
+            {hasSearch ? "Keine Rechte passen zu deiner Suche." : "Keine Rechte vorhanden."}
+          </td>
+        </tr>,
+      );
+    }
+
+    return (
+      <div className="overflow-auto rounded-xl border bg-card/40 shadow-sm">
+        <table className="min-w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <tr>
+              <th className="sticky left-0 z-10 bg-background/80 p-3 text-left font-medium">Recht</th>
+              {departments.map((department) => (
+                <th key={department.id} className="p-3 text-left align-top">
+                  <div className="space-y-1">
+                    <span className="text-sm font-medium leading-tight text-foreground">
+                      {department.name}
+                    </span>
+                    {department.slug ? (
+                      <span className="block text-xs uppercase tracking-wide text-muted-foreground">
+                        {department.slug}
+                      </span>
+                    ) : null}
+                    {department.requiresJoinApproval ? (
+                      <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                        Zustimmung nötig
+                      </span>
+                    ) : null}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const headerTitle =
+    activeView === "roles" ? "Rollen & Rechte" : "Gewerke & Rechte";
+  const headerDescription =
+    activeView === "roles"
+      ? "Weise vorhandene Website‑Rechte deinen eigenen Rollen zu."
+      : "Aktiviere Rechte für Teams, damit Mitglieder ihrer Gewerke Zugriff erhalten.";
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-card/60 p-4 shadow-sm">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold">{headerTitle}</h3>
+              <p className="text-sm text-muted-foreground">{headerDescription}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-background/80 p-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveView("roles")}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                    activeView === "roles"
+                      ? "bg-primary text-primary-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Rollen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveView("departments")}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                    activeView === "departments"
+                      ? "bg-primary text-primary-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Gewerke
+                </button>
+              </div>
+              {activeView === "roles" ? (
+                <div className="flex gap-2">
+                  <input
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    placeholder="Neue Rolle (z. B. PR-Team)"
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                  />
+                  <Button size="sm" onClick={addRole}>
+                    Rolle anlegen
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex w-full justify-end">
+            <div className="w-full sm:w-72">
+              <Input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Rechte durchsuchen…"
+                aria-label="Rechte durchsuchen"
+                spellCheck={false}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {activeView === "roles" ? renderRoleMatrix() : renderDepartmentMatrix()}
+
+      {activeView === "roles" && orderError ? (
+        <p className="text-sm text-destructive">{orderError}</p>
+      ) : null}
+      {activeView === "roles" && orderSaving ? (
         <p className="text-xs text-muted-foreground">Reihenfolge wird gespeichert…</p>
       ) : null}
       <Dialog

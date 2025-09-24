@@ -394,6 +394,7 @@ export async function createDepartmentAction(formData: FormData): Promise<void> 
     }
     const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 2000 });
     const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
+    const requiresApproval = parseCheckbox(formData.get("requiresApproval"));
     const baseSlug = slugify(slugInput ?? name);
     const slug = await ensureUniqueDepartmentSlug(baseSlug);
 
@@ -403,6 +404,7 @@ export async function createDepartmentAction(formData: FormData): Promise<void> 
         slug,
         description: description ?? null,
         color: color ?? null,
+        requiresJoinApproval: requiresApproval,
       },
     });
 
@@ -431,6 +433,7 @@ export async function updateDepartmentAction(formData: FormData): Promise<void> 
     }
     const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 2000 });
     const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
+    const requiresApproval = parseCheckbox(formData.get("requiresApproval"));
 
     let slug = department.slug;
     if (slugInput) {
@@ -445,6 +448,7 @@ export async function updateDepartmentAction(formData: FormData): Promise<void> 
         slug,
         description: description ?? null,
         color: color ?? null,
+        requiresJoinApproval: requiresApproval,
       },
     });
 
