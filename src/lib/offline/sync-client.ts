@@ -375,7 +375,7 @@ export class SyncClient {
 
       if (delta.upserts?.length || delta.deletes?.length) {
         const offlineDelta: OfflineDelta = {
-          scope,
+          scope: "inventory",
           serverSeq: data.serverSeq,
           upserts: delta.upserts,
           deletes: delta.deletes,
@@ -383,11 +383,11 @@ export class SyncClient {
 
         await applyDeltas(offlineDelta);
       } else {
-        await this.touchSyncState(db, scope, data.serverSeq);
+        await this.touchSyncState(db, "inventory", data.serverSeq);
       }
 
       return {
-        scope,
+        scope: "inventory",
         events: data.events.length,
         applied:
           (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0),
@@ -401,7 +401,7 @@ export class SyncClient {
 
     if (delta.upserts?.length || delta.deletes?.length) {
       const offlineDelta: OfflineDelta = {
-        scope,
+        scope: "tickets",
         serverSeq: data.serverSeq,
         upserts: delta.upserts,
         deletes: delta.deletes,
@@ -409,11 +409,11 @@ export class SyncClient {
 
       await applyDeltas(offlineDelta);
     } else {
-      await this.touchSyncState(db, scope, data.serverSeq);
+      await this.touchSyncState(db, "tickets", data.serverSeq);
     }
 
     return {
-      scope,
+      scope: "tickets",
       events: data.events.length,
       applied:
         (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0),
@@ -453,8 +453,8 @@ export class SyncClient {
     }
 
     const result: PendingEvent[] = [];
-
-    await db.transaction("rw", db.eventQueue, async () => {
+    // Dexie transaction scope ensures atomic dequeue of events
+    await (db as any).transaction("rw", db.eventQueue, async () => {
       const ordered = await db.eventQueue.orderBy("createdAt").toArray();
 
       for (const event of ordered) {
@@ -539,7 +539,7 @@ export class SyncClient {
     scope: OfflineScope,
     serverSeq: number,
   ) {
-    await db.transaction("rw", db.syncState, async () => {
+    await (db as any).transaction("rw", db.syncState, async () => {
       const existing = await db.syncState.get(scope);
       const updatedAt = new Date().toISOString();
 
@@ -566,7 +566,7 @@ export class SyncClient {
 
       const syncManager = (
         registration as ServiceWorkerRegistration & {
-          sync?: { register: (tag: string) => Promise<void> } | null;
+          sync?: { register?: (tag: string) => Promise<void> };
         }
       ).sync;
 

@@ -83,6 +83,15 @@ const IssuesIcon = createMembersNavIcon(
   </>,
 );
 
+const ScannerIcon = createMembersNavIcon(
+  <>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="M7 9h10" />
+    <path d="M5 13h14" />
+    <path d="M10 17h6" />
+  </>,
+);
+
 const RehearsalsIcon = createMembersNavIcon(
   <>
     <path d="M4 6a2 2 0 0 1 2-2h6" />
@@ -325,6 +334,12 @@ export const membersNavigation = [
         label: "Sperrliste",
         permissionKey: "mitglieder.sperrliste",
         icon: BlacklistIcon,
+      },
+      {
+        href: "/mitglieder/scan",
+        label: "Scanner",
+        permissionKey: "mitglieder.scan",
+        icon: ScannerIcon,
       },
       {
         href: "/mitglieder/issues",
