@@ -65,6 +65,9 @@ importers:
       dexie-observable:
         specifier: 4.0.1-beta.13
         version: 4.0.1-beta.13(dexie@4.0.4)
+      fontkit:
+        specifier: ^2.0.4
+        version: 2.0.4
       geist:
         specifier: ^1.5.1
         version: 1.5.1(next@15.5.3(react-dom@19.1.1(react@19.1.1))(react@19.1.1))
