@@ -127,12 +127,13 @@ export function MysteryCountdownCard({
 
   return (
     <Card className="relative">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <CardHeader className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <CardTitle>Nächstes Rätsel in</CardTitle>
         {canEdit ? (
           <Button
             size="sm"
             variant={editorOpen ? "secondary" : "outline"}
+            className="sm:self-start"
             onClick={() => toggleFeature("mystery.timer")}
             aria-pressed={editorOpen}
             aria-controls={EDITOR_SECTION_ID}
@@ -144,7 +145,11 @@ export function MysteryCountdownCard({
       <CardContent className="space-y-4">
         {showCountdown ? (
           <>
-            <Countdown targetDate={state.effectiveCountdownTarget} initialNow={initialNow} />
+            <Countdown
+              targetDate={state.effectiveCountdownTarget}
+              initialNow={initialNow}
+              variant="highlight"
+            />
             {countdownLabel ? (
               <Text variant="small" tone="muted">
                 Start am {countdownLabel}
