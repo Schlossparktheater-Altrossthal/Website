@@ -183,6 +183,7 @@ const Sidebar = React.forwardRef<
     ref,
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    const sheetContentRef = React.useRef<React.ElementRef<typeof SheetContent>>(null);
 
     const touchStartPoint = React.useRef<{ x: number; y: number } | null>(null);
     const touchCurrentPoint = React.useRef<{ x: number; y: number } | null>(null);
@@ -253,6 +254,7 @@ const Sidebar = React.forwardRef<
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
           <SheetContent
+            ref={sheetContentRef}
             data-sidebar="sidebar"
             data-mobile="true"
             className={cn(
@@ -262,6 +264,11 @@ const Sidebar = React.forwardRef<
             )}
             style={{ "--sidebar-width": SIDEBAR_WIDTH_MOBILE } as React.CSSProperties}
             side={side}
+            tabIndex={-1}
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              sheetContentRef.current?.focus({ preventScroll: true });
+            }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
