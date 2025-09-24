@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -923,7 +923,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   }
 
   return (
-    <>
+    <Fragment>
       <MembersTopbar>
         <MembersTopbarTitle>Mitglieder-Dashboard</MembersTopbarTitle>
         <MembersTopbarStatus>
@@ -970,36 +970,37 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           </div>
         ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)] xl:items-start">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)] lg:items-start xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)]">
           <div className="space-y-4">
             <Card className="h-full bg-gradient-to-br from-accent/20 to-transparent">
               <CardContent className="flex h-full flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between xl:gap-6">
                 <div>
                   <div className="text-sm text-muted-foreground">Willkommen zurück</div>
-                <h2 className="text-xl font-semibold">
-                  {session?.user?.name || session?.user?.email || "Mitglied"}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Hier findest du aktuelle Aktivitäten und schnelle Aktionen.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {availableQuickActions.map((link) => {
-                  const Icon = link.icon;
-                  return (
-                    <Button asChild key={link.href} variant="outline" size="sm">
-                      <Link href={link.href} title={link.label}>
-                        <Icon aria-hidden className="h-4 w-4" />
-                        <span className="sr-only sm:not-sr-only">{link.label}</span>
-                      </Link>
-                    </Button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                  <h2 className="text-xl font-semibold">
+                    {session?.user?.name || session?.user?.email || "Mitglied"}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Hier findest du aktuelle Aktivitäten und schnelle Aktionen.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {availableQuickActions.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <Button asChild key={link.href} variant="outline" size="sm">
+                        <Link href={link.href} title={link.label}>
+                          <Icon aria-hidden className="h-4 w-4" />
+                          <span className="sr-only sm:not-sr-only">{link.label}</span>
+                        </Link>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
-          {onboardingCard}
+            {onboardingCard}
+          </div>
         </div>
 
         <KeyMetricGrid>
@@ -1008,49 +1009,46 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               label={finalRehearsalMetric.label}
               value={finalRehearsalMetric.value}
               icon={<Sparkles className="h-4 w-4 text-primary" />}
-              hint={finalRehearsalMetric.hint}
-              tone={finalRehearsalMetric.tone}
+                hint={finalRehearsalMetric.hint}
+                tone={finalRehearsalMetric.tone}
+              />
+            ) : null}
+            <KeyMetricCard
+              label="Online Mitglieder"
+              value={stats.totalOnline}
+              icon={<Users className="h-4 w-4" />}
+              hint={onlineUpdatedHint}
+              tone="positive"
             />
-          ) : null}
-          <KeyMetricCard
-            label="Online Mitglieder"
-            value={stats.totalOnline}
-            icon={<Users className="h-4 w-4" />}
-            hint={onlineUpdatedHint}
-            tone="positive"
-          />
-          <KeyMetricCard
-            label="Mitglieder gesamt"
-            value={stats.totalMembers}
-            icon={<Activity className="h-4 w-4" />}
-            hint="inkl. Ensemble und Technik"
-          />
-          <KeyMetricCard
-            label="Proben diese Woche"
-            value={stats.rehearsalsThisWeek}
-            icon={<Calendar className="h-4 w-4" />}
-            hint="Termine der laufenden Kalenderwoche"
-          />
-          <KeyMetricCard
-            label="Ungelesene Benachrichtigungen"
-            value={stats.unreadNotifications}
+            <KeyMetricCard
+              label="Mitglieder gesamt"
+              value={stats.totalMembers}
+              icon={<Activity className="h-4 w-4" />}
+              hint="inkl. Ensemble und Technik"
+            />
+            <KeyMetricCard
+              label="Proben diese Woche"
+              value={stats.rehearsalsThisWeek}
+              icon={<Calendar className="h-4 w-4" />}
+              hint="Termine der laufenden Kalenderwoche"
+            />
+            <KeyMetricCard
+              label="Ungelesene Benachrichtigungen"
+              value={stats.unreadNotifications}
             icon={<Bell className="h-4 w-4" />}
             hint="Wer zuerst liest, ist informiert"
             tone={stats.unreadNotifications > 0 ? "warning" : undefined}
           />
         </KeyMetricGrid>
-      </div>
-
-      <div className="space-y-4 lg:space-y-6">
-        <div className="lg:flex lg:justify-end">
-          <Card className="h-full lg:w-full lg:max-w-md xl:max-w-lg">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] lg:items-stretch lg:gap-6">
+          <Card className="h-full">
             <CardHeader className="pb-3">
               <CardTitle>Aktive Mitglieder</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
               </p>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
+            <CardContent className="flex h-full flex-col gap-4">
               {onlineList.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
@@ -1072,39 +1070,38 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               )}
             </CardContent>
           </Card>
-        </div>
 
-        <Card className="h-full">
-          <CardHeader className="pb-3">
-            <CardTitle>Aktivitäten</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Neueste Proben, Zusagen und Benachrichtigungen.
-            </p>
-          </CardHeader>
-          <CardContent className="flex h-full flex-col">
-            {isLoading && recentActivities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Lade Aktivitäten …</p>
-            ) : recentActivities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Noch keine Aktivitäten erfasst.</p>
-            ) : (
-              <ul className="space-y-3">
-                {recentActivities.map((activity) => (
-                  <li key={`${activity.id}-${activity.timestamp.getTime()}`} className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{activity.message}</p>
-                      <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+          <Card className="h-full">
+            <CardHeader className="pb-3">
+              <CardTitle>Aktivitäten</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Neueste Proben, Zusagen und Benachrichtigungen.
+              </p>
+            </CardHeader>
+            <CardContent className="flex h-full flex-col">
+              {isLoading && recentActivities.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Lade Aktivitäten …</p>
+              ) : recentActivities.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Noch keine Aktivitäten erfasst.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {recentActivities.map((activity) => (
+                    <li key={`${activity.id}-${activity.timestamp.getTime()}`} className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                        {getActivityIcon(activity.type)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{activity.message}</p>
+                        <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </>
+    </Fragment>
   );
 }
