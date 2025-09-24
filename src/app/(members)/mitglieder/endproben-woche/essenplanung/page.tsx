@@ -26,6 +26,7 @@ import {
   loadMealPlanningContext,
 } from "./meal-plan-context";
 import { cn } from "@/lib/utils";
+import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 export const dynamic = "force-dynamic";
@@ -35,13 +36,6 @@ const ALLERGY_LEVEL_LABELS: Record<AllergyLevel, string> = {
   MODERATE: "Mittel",
   SEVERE: "Stark",
   LETHAL: "Kritisch",
-};
-
-const ALLERGY_LEVEL_STYLES: Record<AllergyLevel, string> = {
-  MILD: "border-emerald-300/50 bg-emerald-500/10 text-emerald-500",
-  MODERATE: "border-amber-300/60 bg-amber-500/10 text-amber-500",
-  SEVERE: "border-orange-400/60 bg-orange-500/15 text-orange-500",
-  LETHAL: "border-red-500/70 bg-red-500/15 text-red-500",
 };
 
 type Metric = {
@@ -415,7 +409,8 @@ export default async function EssensplanungPage() {
                           variant="outline"
                           className={cn(
                             "px-3 py-0.5 text-xs",
-                            ALLERGY_LEVEL_STYLES[entry.highestLevel] ?? "border-border/60 bg-muted/40 text-muted-foreground",
+                            ALLERGY_LEVEL_STYLES[entry.highestLevel]?.badge ??
+                              "border-border/60 bg-muted/40 text-muted-foreground",
                           )}
                         >
                           {ALLERGY_LEVEL_LABELS[entry.highestLevel]}

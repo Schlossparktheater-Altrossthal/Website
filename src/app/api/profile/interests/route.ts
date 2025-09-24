@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 
-const MAX_INTERESTS = 30;
 const MAX_INTEREST_LENGTH = 80;
 
 type NormalizedInterest = { value: string; lower: string };
@@ -68,8 +68,11 @@ export async function PUT(request: NextRequest) {
     }
     seen.add(entry.lower);
     normalized.push(entry);
-    if (normalized.length > MAX_INTERESTS) {
-      return NextResponse.json({ error: `Maximal ${MAX_INTERESTS} Interessen erlaubt` }, { status: 400 });
+    if (normalized.length > MAX_INTERESTS_PER_USER) {
+      return NextResponse.json(
+        { error: `Maximal ${MAX_INTERESTS_PER_USER} Interessen erlaubt` },
+        { status: 400 },
+      );
     }
   }
 

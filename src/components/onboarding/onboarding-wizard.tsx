@@ -22,6 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import {
+  DIETARY_STRICTNESS_OPTIONS,
+  DIETARY_STYLE_OPTIONS,
+  resolveDietaryStrictnessLabel,
+  resolveDietaryStyleLabel,
+  type DietaryStrictnessOption,
+  type DietaryStyleOption,
+} from "@/data/dietary-preferences";
+import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
 
 const allergyLevelLabels: Record<AllergyLevel, string> = {
   MILD: "Leicht (Unbehagen)",
@@ -106,57 +115,11 @@ const genderOptions = [
 
 type GenderOption = (typeof genderOptions)[number]["value"];
 
-const dietaryStyleOptions = [
-  { value: "none", label: "Keine besondere Ernährung" },
-  { value: "omnivore", label: "Allesesser:in" },
-  { value: "vegetarian", label: "Vegetarisch" },
-  { value: "vegan", label: "Vegan" },
-  { value: "pescetarian", label: "Pescetarisch" },
-  { value: "flexitarian", label: "Flexitarisch" },
-  { value: "halal", label: "Halal" },
-  { value: "kosher", label: "Koscher" },
-  { value: "custom", label: "Anderes (bitte angeben)" },
-] as const;
-
-type DietaryStyleOption = (typeof dietaryStyleOptions)[number]["value"];
-
-const dietaryStrictnessOptions = [
-  { value: "strict", label: "Strikt – keine Ausnahmen" },
-  { value: "flexible", label: "Flexibel – kleine Ausnahmen sind möglich" },
-  { value: "situational", label: "Situationsabhängig / nach Rücksprache" },
-] as const;
-
-type DietaryStrictnessOption = (typeof dietaryStrictnessOptions)[number]["value"];
-
 const CURRENT_YEAR = new Date().getFullYear();
 
 const BASE_BACKGROUND_SUGGESTIONS = ["Schule", "Berufsschule", "Universität", "Ausbildung", "Beruf"] as const;
 
-const allergyLevelStyles: Record<AllergyLevel, { badge: string; accent: string }> = {
-  MILD: {
-    badge: "border-emerald-400/50 bg-emerald-50 text-emerald-700",
-    accent: "from-emerald-400/70 to-emerald-500/70",
-  },
-  MODERATE: {
-    badge: "border-amber-400/50 bg-amber-50 text-amber-800",
-    accent: "from-amber-400/70 to-orange-400/70",
-  },
-  SEVERE: {
-    badge: "border-rose-400/50 bg-rose-50 text-rose-800",
-    accent: "from-rose-400/70 to-rose-500/70",
-  },
-  LETHAL: {
-    badge: "border-red-500/60 bg-red-50 text-red-800",
-    accent: "from-red-500/80 to-red-600/80",
-  },
-};
-
-const allergyLevelIntensity: Record<AllergyLevel, number> = {
-  MILD: 35,
-  MODERATE: 55,
-  SEVERE: 75,
-  LETHAL: 95,
-};
+const allergyLevelStyles = ALLERGY_LEVEL_STYLES;
 
 const weightLabels: { threshold: number; label: string }[] = [
   { threshold: 0, label: "Nur mal reinschauen" },
@@ -492,20 +455,22 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   }, [form.memberSinceYear]);
 
   const nutritionStyleLabel = useMemo(() => {
-    if (form.nutritionStyle === "custom") {
-      const custom = form.nutritionCustomStyle.trim();
-      return custom || "Individueller Stil";
+    const { label, custom } = resolveDietaryStyleLabel(
+      form.nutritionStyle,
+      form.nutritionCustomStyle,
+    );
+    if (form.nutritionStyle === "custom" && !custom) {
+      const fallback = DIETARY_STYLE_OPTIONS.find((option) => option.value === "custom");
+      return fallback?.label ?? label;
     }
-    const option = dietaryStyleOptions.find((entry) => entry.value === form.nutritionStyle);
-    return option?.label ?? "Keine besondere Ernährung";
+    return custom ?? label;
   }, [form.nutritionCustomStyle, form.nutritionStyle]);
 
   const nutritionStrictnessLabel = useMemo(() => {
-    if (form.nutritionStyle === "none") {
-      return "Nicht relevant";
-    }
-    const option = dietaryStrictnessOptions.find((entry) => entry.value === form.nutritionStrictness);
-    return option?.label ?? "Flexibel – kleine Ausnahmen sind möglich";
+    return resolveDietaryStrictnessLabel(
+      form.nutritionStyle,
+      form.nutritionStrictness,
+    );
   }, [form.nutritionStrictness, form.nutritionStyle]);
 
   const availableInterestSuggestions = useMemo(() => {
@@ -1792,7 +1757,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                       <SelectValue placeholder="Wähle deinen Stil" />
                     </SelectTrigger>
                     <SelectContent>
-                      {dietaryStyleOptions.map((option) => (
+                      {DIETARY_STYLE_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -1824,7 +1789,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                       <SelectValue placeholder="Wähle eine Option" />
                     </SelectTrigger>
                     <SelectContent>
-                      {dietaryStrictnessOptions.map((option) => (
+                      {DIETARY_STRICTNESS_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -1840,7 +1805,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
             <div className="grid gap-4">
               {form.dietary.map((entry) => {
                 const style = allergyLevelStyles[entry.level];
-                const progress = allergyLevelIntensity[entry.level];
+                const progress = style.intensity;
                 return (
                   <div key={entry.id} className="relative overflow-hidden rounded-2xl border border-border/60 bg-background/95 p-5 shadow-sm">
                     <div className={cn("absolute inset-x-5 top-0 h-px bg-gradient-to-r", style.accent)} aria-hidden />
