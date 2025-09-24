@@ -641,6 +641,10 @@ export async function hasPermission(user: UserLike, permissionKey: string): Prom
     roleFilters.push({ roleId: { in: customRoleIds } });
   }
 
+  if (!roleFilters.length) {
+    return false;
+  }
+
   const rolePermissions = await prisma.appRolePermission.count({
     where: {
       permissionId: perm.id,
