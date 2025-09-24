@@ -44,7 +44,7 @@ const selectClassName =
 const subtleSurfaceClassName =
   "rounded-2xl border border-border/60 bg-background/80 shadow-inner";
 
-type PageProps = { params: { departmentId: string } };
+type PageProps = { params: Promise<{ departmentId: string }> };
 
 type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
 
@@ -86,7 +86,13 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
     );
   }
 
-  const department = (await loadDepartmentWithRelations(params.departmentId)) as DepartmentWithRelations | null;
+  const resolvedParams = await params;
+  const departmentId = resolvedParams?.departmentId;
+  if (!departmentId) {
+    notFound();
+  }
+
+  const department = (await loadDepartmentWithRelations(departmentId)) as DepartmentWithRelations | null;
   if (!department) {
     notFound();
   }

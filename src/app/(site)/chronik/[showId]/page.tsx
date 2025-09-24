@@ -12,10 +12,12 @@ import { formatChronikPlayerName } from "../formatters";
 import type { ChronikCastEntry, ChronikMeta } from "../types";
 import { ChronikPerformanceDatesCard } from "../performance-dates-card";
 
+type ChronikDetailPageParams = {
+  showId: string;
+};
+
 type ChronikDetailPageProps = {
-  params: {
-    showId: string;
-  };
+  params: Promise<ChronikDetailPageParams>;
 };
 
 function buildPrimaryDetails(meta: ChronikMeta | null) {
@@ -50,7 +52,17 @@ function sanitizeCast(meta: ChronikMeta | null) {
 }
 
 export async function generateMetadata({ params }: ChronikDetailPageProps): Promise<Metadata> {
-  const item = await getChronikItem(params.showId);
+  const resolvedParams = await params;
+  const showId = resolvedParams?.showId;
+
+  if (!showId) {
+    return {
+      title: "Chronik-Eintrag nicht gefunden",
+      description: "Der angeforderte Eintrag ist in unserer Chronik nicht verfügbar.",
+    };
+  }
+
+  const item = await getChronikItem(showId);
 
   if (!item) {
     return {
@@ -68,7 +80,13 @@ export async function generateMetadata({ params }: ChronikDetailPageProps): Prom
 }
 
 export default async function ChronikDetailPage({ params }: ChronikDetailPageProps) {
-  const item = await getChronikItem(params.showId);
+  const resolvedParams = await params;
+  const showId = resolvedParams?.showId;
+  if (!showId) {
+    notFound();
+  }
+
+  const item = await getChronikItem(showId);
 
   if (!item) {
     notFound();

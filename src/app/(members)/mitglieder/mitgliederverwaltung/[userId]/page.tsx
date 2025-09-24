@@ -195,7 +195,7 @@ function formatRelativeTime(value: Date | null | undefined) {
   return formatRelativeFromNow(value);
 }
 
-type PageProps = { params: { userId: string | string[] } };
+type PageProps = { params: Promise<{ userId: string | string[] }> };
 
 type ActivityStatCardProps = {
   label: string;
@@ -279,8 +279,13 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Mitgliederprofile.</div>;
   }
 
-  const userIdParam = params.userId;
+  const resolvedParams = await params;
+  const userIdParam = resolvedParams?.userId;
   const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
+  if (!userId) {
+    notFound();
+  }
+
   const decodedId = decodeURIComponent(userId);
 
   const member = await prisma.user.findUnique({

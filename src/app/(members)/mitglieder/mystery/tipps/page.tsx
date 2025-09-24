@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/rbac";
 export default async function MysteryTipsAdminPage({
   searchParams,
 }: {
-  searchParams?: { clue?: string };
+  searchParams?: Promise<{ clue?: string }>;
 }) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.mystery.tips");
@@ -42,8 +42,12 @@ export default async function MysteryTipsAdminPage({
     published: clue.published,
   }));
 
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const availableClueIds = new Set(clues.map((clue) => clue.id));
-  let selectedClueId = searchParams?.clue && availableClueIds.has(searchParams.clue) ? searchParams.clue : null;
+  let selectedClueId =
+    resolvedSearchParams?.clue && availableClueIds.has(resolvedSearchParams.clue)
+      ? resolvedSearchParams.clue
+      : null;
   if (!selectedClueId && clues.length > 0) {
     selectedClueId = clues[0].id;
   }

@@ -17,7 +17,11 @@ function formatShowTitle(show: { title: string | null; year: number }) {
   return `Produktion ${show.year}`;
 }
 
-export default async function ProduktionDetailPage({ params }: { params: { showId: string } }) {
+export default async function ProduktionDetailPage({
+  params,
+}: {
+  params: Promise<{ showId: string }>;
+}) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
@@ -28,12 +32,18 @@ export default async function ProduktionDetailPage({ params }: { params: { showI
     );
   }
 
+  const resolvedParams = await params;
+  const showId = resolvedParams?.showId;
+  if (!showId) {
+    notFound();
+  }
+
   const [show, breakdownCount] = await Promise.all([
     prisma.show.findUnique({
-      where: { id: params.showId },
+      where: { id: showId },
       include: { _count: { select: { characters: true, scenes: true } } },
     }),
-    prisma.sceneBreakdownItem.count({ where: { scene: { showId: params.showId } } }),
+    prisma.sceneBreakdownItem.count({ where: { scene: { showId } } }),
   ]);
 
   if (!show) {

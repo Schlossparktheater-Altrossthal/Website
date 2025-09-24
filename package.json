@@ -6,7 +6,7 @@
     "predev": "node scripts/run-prisma-migrate.mjs",
     "dev": "next dev --turbopack",
     "prebuild": "pnpm prisma:generate",
-    "build": "next build --turbopack",
+    "build": "next build",
     "prestart": "node scripts/run-prisma-migrate.mjs",
     "postinstall": "node -e \"if(!process.env.SKIP_PRISMA_POSTINSTALL){require('child_process').execSync('pnpm prisma:generate',{stdio:'inherit'})}\"",
     "start": "next start",

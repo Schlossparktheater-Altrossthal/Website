@@ -6,8 +6,13 @@ import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingInvitePage({ params }: { params: { token: string } }) {
-  const rawToken = params.token;
+export default async function OnboardingInvitePage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const resolvedParams = await params;
+  const rawToken = resolvedParams?.token;
   if (!rawToken || typeof rawToken !== "string" || rawToken.length < 10) {
     notFound();
   }

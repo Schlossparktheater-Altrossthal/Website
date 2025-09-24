@@ -24,7 +24,7 @@ import { DepartmentCard, type DepartmentMeasurementsByUser } from "../department
 
 type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
 
-type PageProps = { params: { slug: string } };
+type PageProps = { params: Promise<{ slug: string }> };
 
 export default async function GewerkDetailPage({ params }: PageProps) {
   const session = await requireAuth();
@@ -48,7 +48,13 @@ export default async function GewerkDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const slug = decodeURIComponent(params.slug);
+  const resolvedParams = await params;
+  const rawSlug = resolvedParams?.slug;
+  if (!rawSlug) {
+    notFound();
+  }
+
+  const slug = decodeURIComponent(rawSlug);
 
   const membershipRaw = await prisma.departmentMembership.findFirst({
     where: { userId, department: { slug } },

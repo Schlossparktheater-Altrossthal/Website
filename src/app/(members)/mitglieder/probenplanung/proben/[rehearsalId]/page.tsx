@@ -16,15 +16,25 @@ type MemberOption = {
   extraRoles: string[];
 };
 
-export default async function RehearsalEditorPage({ params }: { params: { rehearsalId: string } }) {
+export default async function RehearsalEditorPage({
+  params,
+}: {
+  params: Promise<{ rehearsalId: string }>;
+}) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Probenplanung</div>;
   }
 
+  const resolvedParams = await params;
+  const rehearsalId = resolvedParams?.rehearsalId;
+  if (!rehearsalId) {
+    notFound();
+  }
+
   const rehearsal = await prisma.rehearsal.findUnique({
-    where: { id: params.rehearsalId },
+    where: { id: rehearsalId },
     include: {
       invitees: { select: { userId: true } },
     },

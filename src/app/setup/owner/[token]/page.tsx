@@ -14,11 +14,12 @@ export const metadata: Metadata = {
 };
 
 interface OwnerSetupPageProps {
-  params: { token?: string };
+  params: Promise<{ token?: string }>;
 }
 
 export default async function OwnerSetupPage({ params }: OwnerSetupPageProps) {
-  const token = typeof params?.token === "string" ? params.token.trim() : "";
+  const resolvedParams = await params;
+  const token = typeof resolvedParams?.token === "string" ? resolvedParams.token.trim() : "";
 
   if (!token) {
     return <InvalidToken message="Dieser Link ist ungültig." />;
