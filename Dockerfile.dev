@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.4
+
 # Development Dockerfile bundling the Next.js app and realtime server
 FROM node:24-alpine
 
@@ -25,7 +27,8 @@ WORKDIR /app
 
 # Install deps first (better caching)
 COPY package.json pnpm-lock.yaml ./
-RUN SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --no-frozen-lockfile
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store/v3 \
+    SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --no-frozen-lockfile
 
 # Copy the rest
 COPY . .
