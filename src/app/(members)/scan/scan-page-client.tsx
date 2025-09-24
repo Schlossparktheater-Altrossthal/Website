@@ -43,18 +43,18 @@ const STATUS_LABELS: Record<SyncScopeState["status"], string> = {
   error: "Fehler",
 };
 
-class HttpError extends Error {
+export class HttpError extends Error {
   constructor(public readonly status: number, message: string) {
     super(message);
     this.name = "HttpError";
   }
 }
 
-function isNonEmptyString(value: unknown): value is string {
+export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function getErrorMessage(error: unknown): string {
+export function getErrorMessage(error: unknown): string {
   if (error instanceof HttpError) {
     return error.message;
   }
@@ -64,7 +64,7 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-function shouldUseOfflineFallback(error: unknown): boolean {
+export function shouldUseOfflineFallback(error: unknown): boolean {
   if (error instanceof HttpError) {
     return error.status === 0 || error.status >= 500;
   }
@@ -84,7 +84,7 @@ function shouldUseOfflineFallback(error: unknown): boolean {
   return false;
 }
 
-async function readResponseBody(response: Response): Promise<unknown> {
+export async function readResponseBody(response: Response): Promise<unknown> {
   try {
     return await response.clone().json();
   } catch {
@@ -97,7 +97,7 @@ async function readResponseBody(response: Response): Promise<unknown> {
   }
 }
 
-function extractTicketInfo(data: unknown): {
+export function extractTicketInfo(data: unknown): {
   id?: string;
   holderName?: string;
   eventId?: string;
@@ -130,7 +130,7 @@ function extractTicketInfo(data: unknown): {
   return { id, holderName, eventId, status };
 }
 
-function extractMessage(data: unknown): string | null {
+export function extractMessage(data: unknown): string | null {
   if (!data) {
     return null;
   }
