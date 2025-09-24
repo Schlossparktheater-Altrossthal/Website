@@ -45,6 +45,8 @@ import {
   PiggyBank,
   CalendarRange,
   UtensilsCrossed,
+  MessageCircle,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -77,6 +79,7 @@ interface OnboardingOverview {
   background: string | null;
   backgroundClass: string | null;
   notes: string | null;
+  whatsappLink: string | null;
   stats: {
     acting: OnboardingDomainStats;
     crew: OnboardingDomainStats;
@@ -361,6 +364,10 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
   const updatedAt = parseIsoDate(photoRecord.updatedAt);
 
   const passwordSet = Boolean(value.passwordSet);
+  const whatsappLink =
+    typeof value.whatsappLink === "string" && value.whatsappLink.trim()
+      ? value.whatsappLink.trim()
+      : null;
 
   return {
     completed,
@@ -369,6 +376,7 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
     background,
     backgroundClass,
     notes,
+    whatsappLink,
     stats: {
       acting: actingStats,
       crew: crewStats,
@@ -438,6 +446,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   const [isLoading, setIsLoading] = useState(true);
   const [onboarding, setOnboarding] = useState<OnboardingOverview | null>(null);
   const [onboardingLoaded, setOnboardingLoaded] = useState(false);
+  const [whatsappDismissed, setWhatsappDismissed] = useState(false);
   const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(null);
   const [profileCompletion, setProfileCompletion] = useState<
     { complete: boolean; completed: number; total: number } | null
@@ -446,6 +455,10 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   useEffect(() => {
     setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
   }, [liveOnline]);
+
+  useEffect(() => {
+    setWhatsappDismissed(false);
+  }, [onboarding?.whatsappLink]);
 
   useEffect(() => {
     let cancelled = false;
@@ -845,6 +858,33 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             </div>
           </div>
 
+          {onboarding.whatsappLink && !whatsappDismissed ? (
+            <div className="space-y-2 rounded-xl border border-emerald-300/60 bg-emerald-50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp-Gruppe
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWhatsappDismissed(true)}
+                  className="rounded-full border border-transparent p-1 text-emerald-900/70 transition hover:border-emerald-300 hover:text-emerald-900"
+                  aria-label="Hinweis ausblenden"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <p className="text-xs text-emerald-900/80">
+                Tritt der Ensemble-Gruppe bei, um Ansprechpersonen und aktuelle Infos zu erhalten.
+              </p>
+              <Button asChild size="sm" variant="outline" className="border-emerald-400/60 text-emerald-900">
+                <a href={onboarding.whatsappLink} target="_blank" rel="noopener noreferrer">
+                  WhatsApp öffnen
+                </a>
+              </Button>
+            </div>
+          ) : null}
+
           <div className="space-y-2 rounded-xl border border-border/60 bg-background/85 p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase text-muted-foreground">Fotoerlaubnis</span>
@@ -866,7 +906,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         </CardContent>
       </Card>
     );
-  }, [onboarding, onboardingLoaded]);
+  }, [onboarding, onboardingLoaded, whatsappDismissed]);
 
   if (!session?.user) {
     return (

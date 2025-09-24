@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { ACTIVE_PRODUCTION_COOKIE } from "@/lib/active-production";
+import { setOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
 type ReadOptions = {
   minLength?: number;
@@ -199,6 +200,81 @@ export async function updateProductionTimelineAction(formData: FormData): Promis
     console.error("updateProductionTimelineAction", error);
     const message =
       error instanceof Error ? error.message : "Produktion konnte nicht aktualisiert werden.";
+    throw new Error(message);
+  }
+}
+
+function normalizeWhatsAppLink(raw: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error("Bitte gib einen gültigen WhatsApp-Link an.");
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error("WhatsApp-Links müssen mit https:// beginnen.");
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  const allowedHosts = [
+    "chat.whatsapp.com",
+    "whatsapp.com",
+    "www.whatsapp.com",
+    "wa.me",
+    "api.whatsapp.com",
+  ];
+  const isAllowedHost = allowedHosts.some((allowedHost) => host === allowedHost || host.endsWith(`.${allowedHost}`));
+  if (!isAllowedHost) {
+    throw new Error("Bitte nutze einen offiziellen WhatsApp-Beitrittslink.");
+  }
+
+  return parsed.toString();
+}
+
+export async function updateOnboardingSettingsAction(formData: FormData): Promise<void> {
+  const redirectPath = parseRedirectPath(formData);
+  try {
+    const session = await requireAuth();
+    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    if (!allowed) {
+      throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
+    }
+
+    const showId = readString(formData, "showId", { label: "Produktion" });
+    const shouldClear = formData.get("clear") === "1";
+    let whatsappLink: string | null = null;
+
+    if (!shouldClear) {
+      const rawLink = readOptionalString(formData, "whatsappLink", {
+        label: "WhatsApp-Link",
+        maxLength: 500,
+      });
+
+      if (rawLink) {
+        whatsappLink = normalizeWhatsAppLink(rawLink);
+      }
+    }
+
+    const show = await prisma.show.findUnique({ where: { id: showId }, select: { meta: true } });
+    if (!show) {
+      throw new Error("Produktion wurde nicht gefunden.");
+    }
+
+    const updatedMeta = setOnboardingWhatsAppLink(show.meta, whatsappLink);
+
+    await prisma.show.update({
+      where: { id: showId },
+      data: { meta: updatedMeta as Prisma.InputJsonValue },
+    });
+
+    revalidateShow(showId, redirectPath, false);
+  } catch (error) {
+    console.error("updateOnboardingSettingsAction", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Onboarding-Einstellungen konnten nicht gespeichert werden.";
     throw new Error(message);
   }
 }

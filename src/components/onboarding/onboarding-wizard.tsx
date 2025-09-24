@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { AllergyLevel, type Role } from "@prisma/client";
-import { Sparkles, ShieldCheck, Lock, Target } from "lucide-react";
+import { Sparkles, ShieldCheck, Lock, Target, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { SignaturePad } from "@/components/onboarding/signature-pad";
@@ -252,6 +252,7 @@ type InviteMeta = {
   usageCount: number;
   remainingUses: number | null;
   production: { id: string; title: string | null; year: number } | null;
+  whatsappLink: string | null;
 };
 
 type OnboardingWizardProps = {
@@ -1075,6 +1076,16 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       return null;
     }
   }, [invite.expiresAt]);
+
+  const whatsappHost = useMemo(() => {
+    if (!invite.whatsappLink) return null;
+    try {
+      const url = new URL(invite.whatsappLink);
+      return url.hostname.replace(/^www\./, "");
+    } catch {
+      return null;
+    }
+  }, [invite.whatsappLink]);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -2189,6 +2200,26 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 </div>
               </div>
             </section>
+
+            {invite.whatsappLink ? (
+              <section className="space-y-3 rounded-2xl border border-emerald-300/60 bg-emerald-50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp-Gruppe
+                  </div>
+                  <Button asChild size="sm" variant="outline" className="border-emerald-400/60 text-emerald-900">
+                    <a href={invite.whatsappLink} target="_blank" rel="noopener noreferrer">
+                      WhatsApp öffnen
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-xs text-emerald-900/80">
+                  Tritt unserer WhatsApp-Gruppe bei, um alle Updates und Ansprechpartner kennenzulernen.
+                  {whatsappHost ? ` (${whatsappHost})` : null}
+                </p>
+              </section>
+            ) : null}
 
             {success ? (
               <div className="rounded-lg border border-emerald-300 bg-emerald-50/80 p-4 text-sm text-emerald-900">

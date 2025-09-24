@@ -10,7 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
-import { setActiveProductionAction, updateProductionTimelineAction } from "../actions";
+import { X } from "lucide-react";
+
+import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
+
+import {
+  setActiveProductionAction,
+  updateOnboardingSettingsAction,
+  updateProductionTimelineAction,
+} from "../actions";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
   if (show.title && show.title.trim()) return show.title;
@@ -59,6 +67,8 @@ export default async function ProduktionDetailPage({
   const finalRehearsalWeekStartLabel = show.finalRehearsalWeekStart
     ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(show.finalRehearsalWeekStart)
     : null;
+  const whatsappLink = getOnboardingWhatsAppLink(show.meta);
+  const onboardingRedirect = `/mitglieder/produktionen/${show.id}`;
 
   return (
     <div className="space-y-10">
@@ -162,6 +172,55 @@ export default async function ProduktionDetailPage({
             <Button type="submit" className="sm:w-auto">
               Zeitplan aktualisieren
             </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-lg font-semibold">Onboarding-Einstellungen</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Hinterlege optional den WhatsApp-Beitrittslink für neue Mitglieder. Der Link erscheint in der
+            Onboarding-Zusammenfassung und auf dem Mitglieder-Dashboard.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form action={updateOnboardingSettingsAction} className="space-y-4">
+            <input type="hidden" name="showId" value={show.id} />
+            <input type="hidden" name="redirectPath" value={onboardingRedirect} />
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="whatsappLink">
+                WhatsApp-Beitrittslink
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  id="whatsappLink"
+                  name="whatsappLink"
+                  defaultValue={whatsappLink ?? ""}
+                  placeholder="https://chat.whatsapp.com/..."
+                  className="sm:max-w-lg"
+                />
+                <div className="flex items-center gap-2">
+                  <Button type="submit">Speichern</Button>
+                  {whatsappLink ? (
+                    <Button
+                      type="submit"
+                      name="clear"
+                      value="1"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Link entfernen"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Nur offizielle WhatsApp-Beitrittslinks werden akzeptiert. Lass das Feld leer, um den Link zu entfernen.
+              </p>
+            </div>
           </form>
         </CardContent>
       </Card>
