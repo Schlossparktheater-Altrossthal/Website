@@ -3,6 +3,8 @@ import os from 'node:os';
 import { setTimeout as wait } from 'node:timers/promises';
 import { createRequire } from 'node:module';
 
+import { Client } from 'pg';
+
 const require = createRequire(import.meta.url);
 const analyticsStaticData = require('../../src/data/server-analytics-static.json');
 
@@ -23,6 +25,17 @@ const fallbackAnalyticsModule = {
 
 function cloneStaticAnalyticsData() {
   return JSON.parse(JSON.stringify(analyticsStaticData));
+}
+
+const ANALYTICS_NOTIFICATION_CHANNEL = 'server_analytics_update';
+const POSTGRES_RECONNECT_DELAY_MS = 2_500;
+
+function formatPgIdentifier(identifier) {
+  const name = typeof identifier === 'string' ? identifier.trim() : '';
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    return null;
+  }
+  return `"${name.replace(/"/g, '""')}"`;
 }
 
 function clamp(value, min, max) {
@@ -226,6 +239,7 @@ export function createAnalyticsManager({
   now = () => Date.now(),
   toISO = (value) => new Date(value).toISOString(),
   diskPath = process.cwd(),
+  subscribeToExternalUpdates: providedSubscribe,
 } = {}) {
   const state = {
     latestAnalytics: null,
@@ -235,6 +249,7 @@ export function createAnalyticsManager({
     moduleErrorLogged: false,
     previousResourceUsage: new Map(),
     intervalId: null,
+    externalSubscription: null,
   };
 
   const logError =
@@ -250,6 +265,11 @@ export function createAnalyticsManager({
       ? collectResourceUsage
       : ({ previousResourceUsage }) =>
           collectSystemResourceUsage({ previousResourceUsage, logError, diskPath });
+
+  const externalUpdateSubscriber =
+    typeof providedSubscribe === 'function'
+      ? providedSubscribe
+      : createPostgresNotificationSubscriber({ getDatabaseUrl, logError, logWarn });
 
   function logMissingAnalyticsModule(message, error) {
     if (state.moduleMissingLogged) {
@@ -303,13 +323,30 @@ export function createAnalyticsManager({
     return state.modulePromise;
   }
 
-  function createFallbackSnapshot() {
+  function createFallbackSnapshot(reason) {
     const base = loadStaticData();
-    return { generatedAt: toISO(now()), ...base };
+    const generatedAt = toISO(now());
+    const fallbackReasons = reason ? [reason] : undefined;
+    return {
+      generatedAt,
+      ...base,
+      metadata: {
+        source: 'fallback',
+        attempts: 1,
+        lastUpdatedAt: generatedAt,
+        fallbackReasons,
+      },
+    };
   }
 
   async function collectAnalyticsSnapshot() {
     const base = loadStaticData();
+    const fallbackReasons = [];
+    const databaseUrl = getDatabaseUrl();
+    if (!databaseUrl) {
+      fallbackReasons.push('DATABASE_URL ist nicht gesetzt – verwende statische Kennzahlen');
+    }
+
     let resourceUsage = base.resourceUsage;
     try {
       resourceUsage = await resourceUsageCollector({
@@ -319,11 +356,13 @@ export function createAnalyticsManager({
       });
     } catch (error) {
       logError('[Realtime] Verwende statische Ressourcenwerte für Server-Analytics', error);
+      fallbackReasons.push('Systemressourcen konnten nicht gemessen werden');
     }
 
     let deviceBreakdown = base.deviceBreakdown ?? [];
     let publicPages = base.publicPages ?? [];
     let memberPages = base.memberPages ?? [];
+    let databaseUsed = false;
 
     const analyticsModule = await resolveAnalyticsModule();
     const mergeDeviceBreakdownFn =
@@ -343,43 +382,63 @@ export function createAnalyticsManager({
         ? analyticsModule.loadPagePerformanceMetrics
         : null;
 
-    if (getDatabaseUrl() && loadDeviceBreakdownFromDatabaseFn && loadPagePerformanceMetricsFn) {
+    if (databaseUrl && loadDeviceBreakdownFromDatabaseFn && loadPagePerformanceMetricsFn) {
       const [deviceOverrides, pageMetrics] = await Promise.all([
         loadDeviceBreakdownFromDatabaseFn().catch((error) => {
           logError('[Realtime] Failed to load device analytics', error);
+          fallbackReasons.push('Gerätekennzahlen aus der Datenbank nicht verfügbar');
           return null;
         }),
         loadPagePerformanceMetricsFn().catch((error) => {
           logError('[Realtime] Failed to load page performance metrics', error);
+          fallbackReasons.push('Seitenmetriken konnten nicht geladen werden');
           return [];
         }),
       ]);
 
-      deviceBreakdown = mergeDeviceBreakdownFn(deviceBreakdown, deviceOverrides ?? undefined);
+      if (Array.isArray(deviceOverrides)) {
+        deviceBreakdown = mergeDeviceBreakdownFn(deviceBreakdown, deviceOverrides ?? undefined);
+        databaseUsed = databaseUsed || deviceOverrides.length > 0;
+      } else {
+        deviceBreakdown = mergeDeviceBreakdownFn(deviceBreakdown);
+      }
 
       if (Array.isArray(pageMetrics) && pageMetrics.length > 0) {
         publicPages = applyPagePerformanceMetricsFn(publicPages, pageMetrics, 'public');
         memberPages = applyPagePerformanceMetricsFn(memberPages, pageMetrics, 'members');
+        databaseUsed = true;
       } else {
         publicPages = publicPages.map((entry) => ({ ...entry }));
         memberPages = memberPages.map((entry) => ({ ...entry }));
+        fallbackReasons.push('Keine Seitenmetriken in der Datenbank gespeichert');
       }
     } else {
+      if (databaseUrl) {
+        fallbackReasons.push('Optionales Analytics-Modul nicht verfügbar – verwende statische Kennzahlen');
+      }
       deviceBreakdown = mergeDeviceBreakdownFn(deviceBreakdown);
       publicPages = applyPagePerformanceMetricsFn(publicPages, [], 'public');
       memberPages = applyPagePerformanceMetricsFn(memberPages, [], 'members');
     }
 
+    const generatedAt = toISO(now());
+    const uniqueFallbackReasons = Array.from(new Set(fallbackReasons.filter(Boolean)));
+
     return {
-      generatedAt: toISO(now()),
+      generatedAt,
       ...base,
       resourceUsage,
       deviceBreakdown,
       publicPages,
       memberPages,
+      metadata: {
+        source: databaseUrl && databaseUsed ? 'live' : 'fallback',
+        attempts: 1,
+        lastUpdatedAt: generatedAt,
+        fallbackReasons: uniqueFallbackReasons.length > 0 ? uniqueFallbackReasons : undefined,
+      },
     };
   }
-
   function analyticsIsFresh() {
     if (!state.latestAnalytics) {
       return false;
@@ -410,7 +469,9 @@ export function createAnalyticsManager({
         if (state.latestAnalytics) {
           return state.latestAnalytics;
         }
-        const fallback = createFallbackSnapshot();
+        const fallback = createFallbackSnapshot(
+          error instanceof Error ? error.message : 'Failed to refresh analytics snapshot',
+        );
         state.latestAnalytics = fallback;
         return fallback;
       })
@@ -462,12 +523,25 @@ export function createAnalyticsManager({
     refreshAnalytics().catch((error) => {
       logError('[Realtime] Initial analytics snapshot failed', error);
     });
+    if (typeof externalUpdateSubscriber === 'function') {
+      state.externalSubscription = externalUpdateSubscriber(() => {
+        Promise.resolve(broadcastOnce(io)).catch((error) => {
+          logError('[Realtime] Failed to broadcast analytics update after notification', error);
+        });
+      });
+    }
   }
 
   function stop() {
     if (state.intervalId) {
       clearInterval(state.intervalId);
       state.intervalId = null;
+    }
+    if (state.externalSubscription && typeof state.externalSubscription.close === 'function') {
+      Promise.resolve(state.externalSubscription.close()).catch((error) => {
+        logWarn('[Realtime] Failed to close analytics notification subscription', error);
+      });
+      state.externalSubscription = null;
     }
   }
 
@@ -479,5 +553,179 @@ export function createAnalyticsManager({
     emit: emitAnalytics,
     isFresh: analyticsIsFresh,
     state,
+  };
+}
+
+function createPostgresNotificationSubscriber({ getDatabaseUrl, logError, logWarn }) {
+  return (handler) => {
+    const connectionString = typeof getDatabaseUrl === 'function' ? getDatabaseUrl() : null;
+    if (!connectionString) {
+      logWarn('[Realtime] Analytics notifications disabled because no DATABASE_URL is configured.');
+      return null;
+    }
+
+    const channelIdentifier = formatPgIdentifier(ANALYTICS_NOTIFICATION_CHANNEL);
+    if (!channelIdentifier) {
+      logWarn(
+        `[Realtime] Analytics notifications disabled because channel "${ANALYTICS_NOTIFICATION_CHANNEL}" is invalid.`,
+      );
+      return null;
+    }
+
+    let client = null;
+    let closed = false;
+    let reconnectTimer = null;
+    let connecting = false;
+    let activeHandlers = null;
+
+    const handleNotification = (message) => {
+      if (!message || message.channel !== ANALYTICS_NOTIFICATION_CHANNEL) {
+        return;
+      }
+      let payload;
+      if (message.payload) {
+        try {
+          payload = JSON.parse(message.payload);
+        } catch (error) {
+          logWarn('[Realtime] Failed to parse analytics notification payload', error);
+        }
+      }
+      try {
+        const result = handler(payload);
+        if (result && typeof result.catch === 'function') {
+          result.catch((error) => logError('[Realtime] Analytics notification handler failed', error));
+        }
+      } catch (error) {
+        logError('[Realtime] Analytics notification handler threw an error', error);
+      }
+    };
+
+    const detachListeners = (target, handlers) => {
+      if (!target) {
+        return;
+      }
+      if (typeof target.off === 'function') {
+        target.off('notification', handleNotification);
+        if (handlers?.error) target.off('error', handlers.error);
+        if (handlers?.end) target.off('end', handlers.end);
+      } else {
+        target.removeListener?.('notification', handleNotification);
+        if (handlers?.error) target.removeListener?.('error', handlers.error);
+        if (handlers?.end) target.removeListener?.('end', handlers.end);
+      }
+    };
+
+    const destroyClient = async (target, handlers, { skipUnlisten = false } = {}) => {
+      if (!target) {
+        return;
+      }
+      detachListeners(target, handlers);
+      if (!skipUnlisten) {
+        try {
+          await target.query(`UNLISTEN ${channelIdentifier}`);
+        } catch (error) {
+          logWarn('[Realtime] Failed to unlisten analytics channel', error);
+        }
+      }
+      try {
+        await target.end();
+      } catch (error) {
+        logWarn('[Realtime] Failed to close analytics notification client', error);
+      }
+    };
+
+    const clearReconnectTimer = () => {
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+    };
+
+    const scheduleReconnect = (delay = POSTGRES_RECONNECT_DELAY_MS) => {
+      if (closed || reconnectTimer || connecting || client) {
+        return;
+      }
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, delay);
+      if (typeof reconnectTimer.unref === 'function') {
+        reconnectTimer.unref();
+      }
+    };
+
+    const connect = async () => {
+      if (closed || connecting || client) {
+        return;
+      }
+      connecting = true;
+
+      const nextClient = new Client({ connectionString });
+      const handlers = {
+        error: (error) => {
+          logError('[Realtime] Analytics notification client error', error);
+          if (client === nextClient) {
+            client = null;
+            activeHandlers = null;
+          }
+          destroyClient(nextClient, handlers).catch((destroyError) => {
+            logWarn('[Realtime] Failed to dispose analytics notification client', destroyError);
+          });
+          scheduleReconnect();
+        },
+        end: () => {
+          if (client === nextClient) {
+            client = null;
+            activeHandlers = null;
+          }
+          detachListeners(nextClient, handlers);
+          if (!closed) {
+            logWarn('[Realtime] Analytics notification connection closed. Reconnecting…');
+            scheduleReconnect();
+          }
+        },
+      };
+
+      nextClient.on('notification', handleNotification);
+      nextClient.on('error', handlers.error);
+      nextClient.on('end', handlers.end);
+
+      try {
+        await nextClient.connect();
+        await nextClient.query(`LISTEN ${channelIdentifier}`);
+        client = nextClient;
+        activeHandlers = handlers;
+        clearReconnectTimer();
+      } catch (error) {
+        detachListeners(nextClient, handlers);
+        try {
+          await nextClient.end();
+        } catch (closeError) {
+          logWarn('[Realtime] Failed to close analytics notification client', closeError);
+        }
+        logError('[Realtime] Failed to connect to analytics notification channel', error);
+        scheduleReconnect();
+      } finally {
+        connecting = false;
+      }
+    };
+
+    connect();
+
+    return {
+      async close() {
+        closed = true;
+        clearReconnectTimer();
+        const target = client;
+        const handlers = activeHandlers;
+        client = null;
+        activeHandlers = null;
+        if (target) {
+          await destroyClient(target, handlers).catch((error) => {
+            logWarn('[Realtime] Failed to close analytics notification client', error);
+          });
+        }
+      },
+    };
   };
 }

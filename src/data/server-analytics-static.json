@@ -3,10 +3,13 @@
     "uptimePercentage": 99.982,
     "requestsLast24h": 19284,
     "averageResponseTimeMs": 184,
+    "p95ResponseTimeMs": 412,
     "errorRate": 0.0035,
     "peakConcurrentUsers": 312,
     "cacheHitRate": 0.78,
-    "realtimeEventsLast24h": 4860
+    "realtimeEventsLast24h": 4860,
+    "slaTargetPercentage": 99.95,
+    "slaViolationMinutes": 6.3
   },
   "resourceUsage": [
     {

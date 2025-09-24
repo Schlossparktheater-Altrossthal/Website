@@ -12,6 +12,24 @@ function resolvePositiveInteger(value: unknown, fallback: number) {
   return Math.round(parsed);
 }
 
+async function notifyRealtime(job: string, payload: Record<string, unknown> = {}) {
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  try {
+    const channelPayload = JSON.stringify({
+      job,
+      scope: "analytics",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+    await prisma.$executeRaw`SELECT pg_notify('server_analytics_update', ${channelPayload})`;
+  } catch (error) {
+    console.error(`[analytics] Failed to notify realtime server after ${job} aggregation`, error);
+  }
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.warn("[analytics] DATABASE_URL is not set. Skipping page metrics aggregation.");
@@ -86,6 +104,8 @@ async function main() {
       });
     }
   });
+
+  await notifyRealtime("page", { windowEnd: now.toISOString() });
 }
 
 void main()
