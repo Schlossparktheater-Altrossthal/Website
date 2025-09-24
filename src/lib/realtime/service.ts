@@ -2,6 +2,7 @@ import { Server as SocketIOServer, Socket } from "socket.io";
 import type { Server as HTTPServer } from "http";
 import { resolveHandshakeSecret, verifyHandshakeToken } from "./handshake";
 import { prisma } from "@/lib/prisma";
+import { trackPresenceEvent } from "@/lib/realtime/presence";
 import {
   ClientToServerEvents,
   InterServerEvents,
@@ -343,6 +344,8 @@ export class RealtimeService {
       return;
     }
 
+    const occurredAt = new Date();
+
     const presenceEvent: UserPresenceEvent = {
       type: "user_presence",
       action,
@@ -351,8 +354,15 @@ export class RealtimeService {
         id: socket.data.userId,
         name: socket.data.userName,
       },
-      timestamp: new Date().toISOString(),
+      timestamp: occurredAt.toISOString(),
     };
+
+    void trackPresenceEvent({
+      userId: socket.data.userId,
+      room,
+      action,
+      occurredAt,
+    });
 
     socket.to(room).emit("user_presence", presenceEvent);
   }

@@ -40,6 +40,7 @@ type WebVitalsContext = {
   path: string;
   scope: WebVitalsScope;
   weight: number;
+  analyticsSessionId?: string | null;
   device: DeviceHints;
   navigation: NavigationInsights;
   updatedAt: number;
@@ -81,14 +82,55 @@ function normalizeDuration(value: number | null | undefined): number | null {
   return Math.round(value);
 }
 
+function extractTrafficAttribution(context: WebVitalsContext) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const referrer = typeof document !== "undefined" && typeof document.referrer === "string"
+    ? document.referrer.trim() || null
+    : null;
+
+  let searchParams: URLSearchParams | null = null;
+  try {
+    const url = new URL(window.location.href);
+    searchParams = url.searchParams;
+  } catch {
+    searchParams = null;
+  }
+
+  const resolveParam = (key: string) => {
+    if (!searchParams) return null;
+    const value = searchParams.get(key);
+    return value && value.trim() ? value.trim() : null;
+  };
+
+  const utm = {
+    source: resolveParam("utm_source"),
+    medium: resolveParam("utm_medium"),
+    campaign: resolveParam("utm_campaign"),
+    term: resolveParam("utm_term"),
+    content: resolveParam("utm_content"),
+  };
+
+  return {
+    path: context.path,
+    referrer,
+    utm,
+  };
+}
+
 async function transmitMetrics(
   metricId: string,
   context: WebVitalsContext,
   loadTimeMs: number | null,
   lcpMs: number | null,
 ) {
+  const traffic = extractTrafficAttribution(context);
+
   const payload = {
     sessionId: metricId,
+    analyticsSessionId: context.analyticsSessionId ?? null,
     path: context.path,
     scope: context.scope,
     weight: Math.min(Math.max(Math.round(context.weight || 1), 1), 10_000),
@@ -102,6 +144,7 @@ async function transmitMetrics(
       connection: context.device.connection ?? null,
       viewport: context.device.viewport ?? null,
     },
+    traffic,
   };
 
   const body = JSON.stringify(payload);

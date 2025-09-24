@@ -2,6 +2,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { URL } from 'url';
 import { createAnalyticsManager } from './analytics.js';
+import { createRealtimeAnalyticsRecorder } from './analytics-events.js';
 import { verifyHandshake } from './handshake.js';
 import { createEventHandlers } from './events.js';
 
@@ -49,6 +50,7 @@ export function createRealtimeServer(options = {}) {
     attachRequestListener = true,
     analyticsIntervalMs: explicitAnalyticsIntervalMs,
     analyticsMaxAgeMs: explicitAnalyticsMaxAgeMs,
+    analyticsRecorder: providedAnalyticsRecorder,
   } = options;
 
   const logError =
@@ -134,6 +136,23 @@ export function createRealtimeServer(options = {}) {
     maxAgeMs: analyticsMaxAgeMs,
     toISO,
   });
+
+  const analyticsRecorder =
+    providedAnalyticsRecorder ?? createRealtimeAnalyticsRecorder({ logger });
+
+  const recordAnalyticsEvent = (eventType) => {
+    if (!analyticsRecorder || typeof analyticsRecorder.record !== 'function') {
+      return;
+    }
+    try {
+      const result = analyticsRecorder.record(eventType, new Date());
+      if (result && typeof result.catch === 'function') {
+        result.catch((error) => logError(`[Realtime] Failed to record analytics event ${eventType}`, error));
+      }
+    } catch (error) {
+      logError(`[Realtime] Failed to submit analytics event ${eventType}`, error);
+    }
+  };
 
   const {
     broadcastOnlineStats,
@@ -258,6 +277,7 @@ export function createRealtimeServer(options = {}) {
   });
 
   io.on('connection', (socket) => {
+    recordAnalyticsEvent('socket_connected');
     const userId = typeof socket.data.userId === 'string' ? socket.data.userId : null;
     if (!userId) {
       socket.emit('error', { message: 'Unauthorized: missing userId' });
@@ -269,6 +289,7 @@ export function createRealtimeServer(options = {}) {
     }
 
     registerUser(socket);
+    recordAnalyticsEvent('user_authenticated');
 
     analyticsManager
       .getSnapshot()
@@ -291,6 +312,7 @@ export function createRealtimeServer(options = {}) {
       }
       socket.join(room);
       socket.data.rooms.add(room);
+      recordAnalyticsEvent('join_room');
       emitUserPresence(room, socket, 'join');
 
       if (room.startsWith('rehearsal_')) {
@@ -304,6 +326,7 @@ export function createRealtimeServer(options = {}) {
       if (!socket.data.rooms.has(room)) return;
       socket.data.rooms.delete(room);
       socket.leave(room);
+      recordAnalyticsEvent('leave_room');
       emitUserPresence(room, socket, 'leave');
     });
 
@@ -332,6 +355,7 @@ export function createRealtimeServer(options = {}) {
     });
 
     socket.on('ping', () => {
+      recordAnalyticsEvent('ping');
       socket.emit('pong');
     });
 
@@ -342,6 +366,7 @@ export function createRealtimeServer(options = {}) {
     });
 
     socket.on('disconnect', () => {
+      recordAnalyticsEvent('socket_disconnected');
       unregisterUser(socket);
     });
   });
@@ -362,6 +387,9 @@ export function createRealtimeServer(options = {}) {
     if (closed) return;
     closed = true;
     analyticsManager.stop();
+    if (analyticsRecorder && typeof analyticsRecorder.flush === 'function') {
+      await analyticsRecorder.flush();
+    }
     await new Promise((resolve, reject) => {
       io.close((error) => {
         if (error) {

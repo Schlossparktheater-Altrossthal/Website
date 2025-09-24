@@ -3,9 +3,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "../route";
 
-const { upsertPageMock, upsertDeviceMock, transactionMock } = vi.hoisted(() => ({
+const {
+  upsertPageMock,
+  upsertDeviceMock,
+  upsertTrafficMock,
+  deletePageMock,
+  deleteDeviceMock,
+  deleteTrafficMock,
+  transactionMock,
+} = vi.hoisted(() => ({
   upsertPageMock: vi.fn(),
   upsertDeviceMock: vi.fn(),
+  upsertTrafficMock: vi.fn(),
+  deletePageMock: vi.fn(),
+  deleteDeviceMock: vi.fn(),
+  deleteTrafficMock: vi.fn(),
   transactionMock: vi.fn(),
 }));
 
@@ -14,6 +26,7 @@ vi.mock("@/lib/prisma", () => ({
     $transaction: transactionMock,
     analyticsPageView: { upsert: upsertPageMock },
     analyticsDeviceSnapshot: { upsert: upsertDeviceMock },
+    analyticsTrafficAttribution: { upsert: upsertTrafficMock },
   },
 }));
 
@@ -22,8 +35,12 @@ describe("web vitals analytics route", () => {
     vi.clearAllMocks();
     transactionMock.mockImplementation(async (callback) =>
       callback({
-        analyticsPageView: { upsert: upsertPageMock },
-        analyticsDeviceSnapshot: { upsert: upsertDeviceMock },
+        analyticsPageView: { upsert: upsertPageMock, deleteMany: deletePageMock },
+        analyticsDeviceSnapshot: { upsert: upsertDeviceMock, deleteMany: deleteDeviceMock },
+        analyticsTrafficAttribution: {
+          upsert: upsertTrafficMock,
+          deleteMany: deleteTrafficMock,
+        },
       }),
     );
   });
@@ -104,6 +121,18 @@ describe("web vitals analytics route", () => {
         }),
       }),
     );
+
+    expect(upsertTrafficMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { sessionId: "metric-123" },
+        create: expect.objectContaining({
+          path: "/galerie",
+          analyticsSessionId: null,
+          referrer: null,
+          referrerDomain: null,
+        }),
+      }),
+    );
   });
 
   it("infers members scope when not provided", async () => {
@@ -128,6 +157,15 @@ describe("web vitals analytics route", () => {
         }),
       }),
     );
+
+    expect(upsertTrafficMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { sessionId: "metric-456" },
+        create: expect.objectContaining({
+          path: "/mitglieder/dashboard",
+        }),
+      }),
+    );
   });
 
   it("rejects payload without metrics", async () => {
@@ -143,5 +181,6 @@ describe("web vitals analytics route", () => {
     expect(response.status).toBe(400);
     expect(upsertPageMock).not.toHaveBeenCalled();
     expect(upsertDeviceMock).not.toHaveBeenCalled();
+    expect(upsertTrafficMock).not.toHaveBeenCalled();
   });
 });

@@ -17,6 +17,7 @@ declare module "next-auth" {
       isDeactivated?: boolean;
       deactivatedAt?: string | null;
     };
+    analyticsSessionId?: string | null;
   }
   interface User {
     firstName?: string | null;

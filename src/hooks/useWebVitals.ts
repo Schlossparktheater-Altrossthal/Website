@@ -43,6 +43,7 @@ type WebVitalsContext = {
   path: string;
   scope: WebVitalsScope;
   weight: number;
+  analyticsSessionId?: string | null;
   device: DeviceHints;
   navigation: NavigationInsights;
   updatedAt: number;
@@ -57,6 +58,7 @@ declare global {
 export type UseWebVitalsOptions = {
   scope?: WebVitalsScope;
   weight?: number;
+  analyticsSessionId?: string | null;
 };
 
 function normalizePath(pathname: string | null): string {
@@ -320,6 +322,8 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
     return Math.min(Math.max(rounded, 1), 10_000);
   }, [options?.weight]);
 
+  const analyticsSessionId = options?.analyticsSessionId ?? null;
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -329,6 +333,7 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
       path: normalizedPath,
       scope,
       weight,
+      analyticsSessionId,
       device: collectDeviceHints(),
       navigation: collectNavigationInsights(),
       updatedAt: Date.now(),
@@ -349,5 +354,5 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("resize", handleVisibilityChange);
     };
-  }, [normalizedPath, scope, weight]);
+  }, [normalizedPath, scope, weight, analyticsSessionId]);
 }
