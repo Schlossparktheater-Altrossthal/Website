@@ -19,6 +19,7 @@ import type {
   RoomType,
   UserPresenceEvent,
 } from '@/lib/realtime/types';
+import { useOfflineSyncClient } from '@/lib/offline/hooks';
 
 // Allow essentially unlimited reconnects; avoid noisy hard-fail in production
 const MAX_RECONNECT_ATTEMPTS: number = Number.POSITIVE_INFINITY;
@@ -49,6 +50,8 @@ type AttendanceUpdateMessage = Parameters<ServerToClientEvents['attendance_updat
 type NotificationMessage = Parameters<ServerToClientEvents['notification_created']>[0];
 type RehearsalCreatedMessage = Parameters<ServerToClientEvents['rehearsal_created']>[0];
 type RehearsalUpdatedMessage = Parameters<ServerToClientEvents['rehearsal_updated']>[0];
+type InventoryRealtimeMessage = Parameters<ServerToClientEvents['inventory_event']>[0];
+type TicketRealtimeMessage = Parameters<ServerToClientEvents['ticket_scan_event']>[0];
 type HandshakeAuthPayload = {
   userId: string;
   userName?: string;
@@ -70,6 +73,7 @@ const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefine
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
+  const { client: syncClient } = useOfflineSyncClient();
   const [socket, setSocket] = useState<SocketInstance | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const reconnectAttempts = useRef(0);
@@ -313,6 +317,60 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       setSocket(null);
     };
   }, [session?.user?.id, session?.user?.name, connectionVersion, stopPingInterval]);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    const handleInventoryEvent = (event: InventoryRealtimeMessage) => {
+      const payload = event?.payload;
+      if (!payload) {
+        return;
+      }
+
+      const scope = payload.scope ?? 'inventory';
+
+      void syncClient
+        .applyRealtimePayload({
+          scope,
+          serverSeq: payload.serverSeq,
+          events: payload.events,
+          delta: payload.delta,
+        })
+        .catch((error) => {
+          console.warn('[Realtime] Failed to apply inventory realtime delta', error);
+        });
+    };
+
+    const handleTicketEvent = (event: TicketRealtimeMessage) => {
+      const payload = event?.payload;
+      if (!payload) {
+        return;
+      }
+
+      const scope = payload.scope ?? 'tickets';
+
+      void syncClient
+        .applyRealtimePayload({
+          scope,
+          serverSeq: payload.serverSeq,
+          events: payload.events,
+          delta: payload.delta,
+        })
+        .catch((error) => {
+          console.warn('[Realtime] Failed to apply ticket realtime delta', error);
+        });
+    };
+
+    socket.on('inventory_event', handleInventoryEvent);
+    socket.on('ticket_scan_event', handleTicketEvent);
+
+    return () => {
+      socket.off('inventory_event', handleInventoryEvent);
+      socket.off('ticket_scan_event', handleTicketEvent);
+    };
+  }, [socket, syncClient]);
 
   const joinRoom = useCallback((room: RoomType) => {
     const instance = socketRef.current;

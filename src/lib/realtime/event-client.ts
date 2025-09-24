@@ -9,6 +9,17 @@ function resolveEventUrl() {
   return `${base}${path}`;
 }
 
+/**
+ * Emits a realtime event to the standalone Socket.io bridge.
+ *
+ * Supported admin sync events include:
+ * - `inventory_event`: broadcast inventory deltas (expects `{ scope: 'inventory', serverSeq, events, delta }`).
+ * - `ticket_scan_event`: broadcast ticket scan deltas (expects `{ scope: 'tickets', serverSeq, events, delta }`).
+ *
+ * The payload for these events should mirror the response from the sync API so
+ * connected scanner clients can immediately apply the mutation to Dexie without
+ * waiting for the next poll.
+ */
 export async function emitRealtimeEvent(eventType: string, payload: unknown): Promise<void> {
   if (!eventType) {
     console.warn('[RealtimeTriggers] Missing event type');

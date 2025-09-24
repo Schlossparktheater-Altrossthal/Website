@@ -6,6 +6,8 @@ import { trackPresenceEvent } from "@/lib/realtime/presence";
 import {
   ClientToServerEvents,
   InterServerEvents,
+  InventoryRealtimeEvent,
+  InventoryRealtimePayload,
   NotificationCreatedEvent,
   OnlineStatsSnapshot,
   RealtimeEvent,
@@ -13,6 +15,8 @@ import {
   RoomType,
   ServerToClientEvents,
   SocketData,
+  TicketRealtimePayload,
+  TicketScanRealtimeEvent,
   UserPresenceEvent,
   UserJoinedEvent,
   UserLeftEvent,
@@ -498,6 +502,37 @@ export class RealtimeService {
     io.to(`user_${event.targetUserId}`).emit("notification_created", fullEvent);
 
     console.log(`[Realtime] sent notification to user ${event.targetUserId}`);
+  }
+
+  public broadcastInventoryEvent(payload: InventoryRealtimePayload): void {
+    const io = this.io;
+    if (!io) return;
+
+    const event: InventoryRealtimeEvent = {
+      type: "inventory_event",
+      payload,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.broadcast(event, "global");
+  }
+
+  public broadcastTicketScanEvent(payload: TicketRealtimePayload): void {
+    const io = this.io;
+    if (!io) return;
+
+    const event: TicketScanRealtimeEvent = {
+      type: "ticket_scan_event",
+      payload,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.broadcast(event, "global");
+
+    const showId = typeof payload.showId === "string" ? payload.showId.trim() : "";
+    if (showId) {
+      this.broadcast(event, `show_${showId}` as RoomType);
+    }
   }
 
   private getOnlineStatsSnapshot(): OnlineStatsSnapshot {

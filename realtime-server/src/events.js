@@ -183,6 +183,36 @@ export function createEventHandlers({ io, logger, toISO }) {
     return true;
   }
 
+  function broadcastInventoryEvent(data) {
+    if (!data || typeof data !== 'object') return false;
+
+    io.to('global').emit('inventory_event', {
+      type: 'inventory_event',
+      payload: data,
+      timestamp: formatTimestamp(Date.now()),
+    });
+
+    return true;
+  }
+
+  function broadcastTicketScanEvent(data) {
+    if (!data || typeof data !== 'object') return false;
+
+    const event = {
+      type: 'ticket_scan_event',
+      payload: data,
+      timestamp: formatTimestamp(Date.now()),
+    };
+
+    io.to('global').emit('ticket_scan_event', event);
+
+    if (typeof data.showId === 'string' && data.showId.trim()) {
+      io.to(`show_${data.showId}`).emit('ticket_scan_event', event);
+    }
+
+    return true;
+  }
+
   function handleServerEvent(eventType, data) {
     switch (eventType) {
       case 'attendance_updated':
@@ -193,6 +223,10 @@ export function createEventHandlers({ io, logger, toISO }) {
         return broadcastRehearsalUpdated(data);
       case 'notification_created':
         return sendNotification(data);
+      case 'inventory_event':
+        return broadcastInventoryEvent(data);
+      case 'ticket_scan_event':
+        return broadcastTicketScanEvent(data);
       default:
         return false;
     }
@@ -240,6 +274,8 @@ export function createEventHandlers({ io, logger, toISO }) {
     broadcastRehearsalCreated,
     broadcastRehearsalUpdated,
     sendNotification,
+    broadcastInventoryEvent,
+    broadcastTicketScanEvent,
     handleServerEvent,
     validateRoom,
   };
