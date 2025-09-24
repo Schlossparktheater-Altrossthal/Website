@@ -164,13 +164,43 @@ export async function consumeEvents(
 export async function applySnapshot(snapshot: OfflineSnapshot) {
   const db = ensureDb();
   const timestamp = snapshot.capturedAt ?? nowIso();
-  const table = snapshot.scope === "inventory" ? db.items : db.tickets;
+  if (snapshot.scope === "inventory") {
+    await db.transaction("rw", db.items, db.syncState, db.audits, async () => {
+      await db.items.clear();
 
-  await db.transaction("rw", table, db.syncState, db.audits, async () => {
-    await table.clear();
+      if (snapshot.records.length > 0) {
+        await db.items.bulkPut(snapshot.records);
+      }
+
+      await db.syncState.put({
+        scope: snapshot.scope,
+        lastServerSeq: snapshot.serverSeq,
+        updatedAt: timestamp,
+        lastSnapshotAt: timestamp,
+      });
+
+      await db.audits.put(
+        buildAudit(
+          snapshot.scope,
+          "snapshot",
+          `Applied snapshot for ${snapshot.scope}`,
+          {
+            serverSeq: snapshot.serverSeq,
+            recordCount: snapshot.records.length,
+            capturedAt: snapshot.capturedAt,
+          },
+          timestamp,
+        ),
+      );
+    });
+    return;
+  }
+
+  await db.transaction("rw", db.tickets, db.syncState, db.audits, async () => {
+    await db.tickets.clear();
 
     if (snapshot.records.length > 0) {
-      await table.bulkPut(snapshot.records);
+      await db.tickets.bulkPut(snapshot.records);
     }
 
     await db.syncState.put({
@@ -199,15 +229,49 @@ export async function applySnapshot(snapshot: OfflineSnapshot) {
 export async function applyDeltas(delta: OfflineDelta) {
   const db = ensureDb();
   const timestamp = nowIso();
-  const table = delta.scope === "inventory" ? db.items : db.tickets;
+  if (delta.scope === "inventory") {
+    await db.transaction("rw", db.items, db.syncState, db.audits, async () => {
+      if (delta.upserts?.length) {
+        await db.items.bulkPut(delta.upserts);
+      }
 
-  await db.transaction("rw", table, db.syncState, db.audits, async () => {
+      if (delta.deletes?.length) {
+        await db.items.bulkDelete(delta.deletes);
+      }
+
+      const previousState = await db.syncState.get(delta.scope);
+
+      await db.syncState.put({
+        scope: delta.scope,
+        lastServerSeq: delta.serverSeq,
+        updatedAt: timestamp,
+        lastSnapshotAt: previousState?.lastSnapshotAt,
+      });
+
+      await db.audits.put(
+        buildAudit(
+          delta.scope,
+          "delta",
+          `Applied delta for ${delta.scope}`,
+          {
+            serverSeq: delta.serverSeq,
+            upserts: delta.upserts?.length ?? 0,
+            deletes: delta.deletes?.length ?? 0,
+          },
+          timestamp,
+        ),
+      );
+    });
+    return;
+  }
+
+  await db.transaction("rw", db.tickets, db.syncState, db.audits, async () => {
     if (delta.upserts?.length) {
-      await table.bulkPut(delta.upserts);
+      await db.tickets.bulkPut(delta.upserts);
     }
 
     if (delta.deletes?.length) {
-      await table.bulkDelete(delta.deletes);
+      await db.tickets.bulkDelete(delta.deletes);
     }
 
     const previousState = await db.syncState.get(delta.scope);
@@ -259,9 +323,14 @@ export function OfflineSyncProvider({
     let cancelled = false;
 
     const openDatabase = async () => {
+      const dbInstance = offlineDb;
+      if (!dbInstance) {
+        return;
+      }
+
       try {
-        if (!offlineDb.isOpen()) {
-          await offlineDb.open();
+        if (!dbInstance.isOpen()) {
+          await dbInstance.open();
         }
 
         if (!cancelled) {

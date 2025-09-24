@@ -19,7 +19,7 @@ CREATE TABLE "public"."Issue" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "lastActivityAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "resolvedAt" TIMESTAMP(3),
-    "createdById" TEXT NOT NULL,
+    "createdById" TEXT,
     "updatedById" TEXT,
 
     CONSTRAINT "Issue_pkey" PRIMARY KEY ("id")
@@ -50,7 +50,7 @@ CREATE INDEX "Issue_createdById_idx" ON "public"."Issue"("createdById");
 CREATE INDEX "IssueComment_issueId_idx" ON "public"."IssueComment"("issueId");
 
 -- AddForeignKey
-ALTER TABLE "public"."Issue" ADD CONSTRAINT "Issue_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."Issue" ADD CONSTRAINT "Issue_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Issue" ADD CONSTRAINT "Issue_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
