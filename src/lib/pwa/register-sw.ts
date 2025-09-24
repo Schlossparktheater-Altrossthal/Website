@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Workbox } from "workbox-window";
 import { toast } from "sonner";
+import { usePathname } from "next/navigation";
 
 import { useOfflineSyncClient } from "@/lib/offline/hooks";
 import type { OfflineScope } from "@/lib/offline/types";
@@ -10,6 +11,7 @@ import type { OfflineScope } from "@/lib/offline/types";
 const SERVICE_WORKER_URL = "/service-worker.js";
 const OFFLINE_SYNC_TAG = "workbox-background-sync:offline-events";
 const OFFLINE_SCOPES: OfflineScope[] = ["inventory", "tickets"];
+const SCANNER_PATH_PREFIX = "/mitglieder/scan";
 
 type BeforeInstallPromptEvent = Event & {
   readonly platforms?: string[];
@@ -32,13 +34,77 @@ async function flushAllScopes(
 
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   const { flush } = useOfflineSyncClient();
+  const pathname = usePathname();
   const deferredPrompt = React.useRef<BeforeInstallPromptEvent | null>(null);
   const installToastId = React.useRef<string | number | null>(null);
   const updateToastId = React.useRef<string | number | null>(null);
+  const isScannerPath = pathname?.startsWith(SCANNER_PATH_PREFIX) ?? false;
+  const shouldOfferInstallRef = React.useRef(isScannerPath);
 
   const requestFlush = React.useCallback(() => {
     void flushAllScopes(flush, OFFLINE_SCOPES);
   }, [flush]);
+
+  const openInstallPromptToast = React.useCallback(() => {
+    const promptEvent = deferredPrompt.current;
+
+    if (!promptEvent) {
+      return;
+    }
+
+    if (installToastId.current) {
+      toast.dismiss(installToastId.current);
+      installToastId.current = null;
+    }
+
+    const toastId = toast("App installieren?", {
+      description: "Lege den Scanner auf deinem Gerät ab.",
+      duration: 10000,
+      action: {
+        label: "Installieren",
+        onClick: async () => {
+          try {
+            await promptEvent.prompt();
+            const choice = await promptEvent.userChoice;
+            if (choice.outcome !== "accepted") {
+              toast.info("Installation abgebrochen.");
+            }
+          } catch (installError) {
+            console.error("Installation prompt failed", installError);
+          } finally {
+            deferredPrompt.current = null;
+            if (installToastId.current) {
+              toast.dismiss(installToastId.current);
+              installToastId.current = null;
+            }
+          }
+        },
+      },
+      onDismiss: (toastInstance) => {
+        if (installToastId.current === toastInstance.id) {
+          installToastId.current = null;
+        }
+      },
+    });
+
+    installToastId.current = toastId;
+  }, []);
+
+  const shouldOfferInstall = isScannerPath;
+
+  React.useEffect(() => {
+    shouldOfferInstallRef.current = shouldOfferInstall;
+
+    if (!shouldOfferInstall && installToastId.current) {
+      toast.dismiss(installToastId.current);
+      installToastId.current = null;
+      return;
+    }
+
+    if (shouldOfferInstall && deferredPrompt.current && !installToastId.current) {
+      openInstallPromptToast();
+    }
+  }, [shouldOfferInstall, openInstallPromptToast]);
 
   React.useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
@@ -128,34 +194,9 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       const promptEvent = event as BeforeInstallPromptEvent;
       deferredPrompt.current = promptEvent;
 
-      if (installToastId.current) {
-        toast.dismiss(installToastId.current);
+      if (shouldOfferInstallRef.current) {
+        openInstallPromptToast();
       }
-
-      installToastId.current = toast("App installieren?", {
-        description: "Lege den Scanner auf deinem Gerät ab.",
-        duration: 10000,
-        action: {
-          label: "Installieren",
-          onClick: async () => {
-            try {
-              await promptEvent.prompt();
-              const choice = await promptEvent.userChoice;
-              if (choice.outcome !== "accepted") {
-                toast.info("Installation abgebrochen.");
-              }
-            } catch (installError) {
-              console.error("Installation prompt failed", installError);
-            } finally {
-              deferredPrompt.current = null;
-              if (installToastId.current) {
-                toast.dismiss(installToastId.current);
-                installToastId.current = null;
-              }
-            }
-          },
-        },
-      });
     };
 
     const handleAppInstalled = () => {
@@ -193,7 +234,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
         installToastId.current = null;
       }
     };
-  }, [requestFlush]);
+  }, [openInstallPromptToast, requestFlush]);
 
   return React.createElement(React.Fragment, null, children);
 }
