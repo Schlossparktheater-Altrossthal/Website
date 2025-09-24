@@ -9,12 +9,13 @@ import {
   enqueueEvent as persistEvent,
 } from "./storage";
 import type {
+  InventoryDelta,
   InventoryItemRecord,
-  OfflineDelta,
   OfflineScope,
   OfflineSnapshot,
   PendingEvent,
   PendingEventInput,
+  TicketDelta,
   TicketRecord,
 } from "./types";
 
@@ -25,6 +26,7 @@ const BASE_BACKOFF_MS = 400;
 const MAX_BACKOFF_MS = 10_000;
 const BACKGROUND_SYNC_TAG = "workbox-background-sync:offline-events";
 const CLIENT_ID_STORAGE_KEY = "offline.sync.clientId";
+const AUTO_SYNC_SCOPES: OfflineScope[] = ["inventory", "tickets"];
 
 export type SyncActivity =
   | "idle"
@@ -150,6 +152,35 @@ export interface ServerSyncEvent {
   dedupeKey?: string | null;
 }
 
+type RealtimeDeltaPayload<TRecord> = {
+  upserts?: TRecord[];
+  deletes?: string[];
+};
+
+export type InventoryRealtimeSyncPayload = {
+  scope: "inventory";
+  serverSeq?: number;
+  events?: ServerSyncEvent[];
+  delta?: RealtimeDeltaPayload<InventoryItemRecord>;
+  mutationId?: string | null;
+  clientId?: string | null;
+  source?: string | null;
+};
+
+export type TicketRealtimeSyncPayload = {
+  scope: "tickets";
+  serverSeq?: number;
+  events?: ServerSyncEvent[];
+  delta?: RealtimeDeltaPayload<TicketRecord>;
+  mutationId?: string | null;
+  clientId?: string | null;
+  source?: string | null;
+};
+
+export type RealtimeSyncPayload =
+  | InventoryRealtimeSyncPayload
+  | TicketRealtimeSyncPayload;
+
 export class SyncError extends Error {
   constructor(
     message: string,
@@ -171,9 +202,70 @@ export class SyncClient {
   private readonly fetcher: typeof fetch;
   private mutationCounter = 0;
   private fallbackClientId: string | null = null;
+  private backgroundSyncPromise: Promise<void> | null = null;
+  private serviceWorkerMessageHandler: ((event: MessageEvent) => void) | null = null;
 
   constructor(fetcher: typeof fetch = fetch) {
     this.fetcher = fetcher;
+    this.initializeBackgroundSyncBridge();
+  }
+
+  private initializeBackgroundSyncBridge() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (this.serviceWorkerMessageHandler) {
+      return;
+    }
+
+    const handler = (event: MessageEvent) => {
+      const { data } = event;
+
+      if (!data || typeof data !== "object") {
+        return;
+      }
+
+      if (data.type === "offline-events:flushed") {
+        void this.runBackgroundSyncPull();
+      } else if (data.type === "offline-events:error") {
+        console.warn("Background sync failed", data.message);
+      }
+    };
+
+    this.serviceWorkerMessageHandler = handler;
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", handler);
+    } else {
+      window.addEventListener("message", handler);
+    }
+  }
+
+  private async runBackgroundSyncPull(): Promise<void> {
+    if (this.backgroundSyncPromise) {
+      return this.backgroundSyncPromise;
+    }
+
+    this.backgroundSyncPromise = (async () => {
+      await Promise.all(
+        AUTO_SYNC_SCOPES.map(async (scope) => {
+          try {
+            await this.pull(scope);
+          } catch (error) {
+            console.warn(`Failed to refresh scope ${scope} after background sync`, error);
+          }
+        }),
+      );
+    })()
+      .catch((error) => {
+        console.warn("Background sync refresh failed", error);
+      })
+      .finally(() => {
+        this.backgroundSyncPromise = null;
+      });
+
+    return this.backgroundSyncPromise;
   }
 
   async bootstrap(scope: OfflineScope): Promise<BootstrapResult> {
@@ -358,69 +450,96 @@ export class SyncClient {
       },
     );
 
-    if (!data.events.length) {
-      await this.touchSyncState(db, scope, data.serverSeq);
-      return {
-        scope,
-        events: 0,
-        applied: 0,
-        serverSeq: data.serverSeq,
-        completedAt: new Date().toISOString(),
-        hasMore: data.hasMore,
-      } satisfies PullResult;
+    const applied = await this.applyRealtimePayload({
+      scope,
+      serverSeq: data.serverSeq,
+      events: data.events,
+    });
+
+    const resolvedServerSeq = applied?.serverSeq ?? Math.max(data.serverSeq, lastServerSeq);
+    const completedAt = new Date().toISOString();
+
+    return {
+      scope,
+      events: data.events.length,
+      applied: applied?.applied ?? 0,
+      serverSeq: resolvedServerSeq,
+      completedAt,
+      hasMore: data.hasMore,
+    } satisfies PullResult;
+  }
+
+  async applyRealtimePayload(
+    payload: RealtimeSyncPayload,
+  ): Promise<{ scope: OfflineScope; applied: number; serverSeq: number } | null> {
+    if (!payload) {
+      return null;
+    }
+
+    const scope = payload.scope;
+    const db = this.ensureDb();
+    const scopedEvents = (payload.events ?? []).filter((event) => event.scope === scope);
+    const providedSeq = typeof payload.serverSeq === "number" ? payload.serverSeq : 0;
+    const maxSeqFromEvents = scopedEvents.reduce(
+      (highest, event) => Math.max(highest, event.serverSeq ?? 0),
+      0,
+    );
+    const currentSeq = await this.getServerSeq(db, scope);
+    const deltaOverrides = payload.delta ?? {};
+    const hasOverrideDelta =
+      typeof deltaOverrides.upserts !== "undefined" ||
+      typeof deltaOverrides.deletes !== "undefined";
+    const containsNewEvents = scopedEvents.some((event) => event.serverSeq > currentSeq);
+
+    const candidateSeq = Math.max(providedSeq, maxSeqFromEvents);
+    const serverSeq = candidateSeq > 0 ? candidateSeq : currentSeq;
+
+    if (!containsNewEvents && !hasOverrideDelta && serverSeq <= currentSeq) {
+      await this.touchSyncState(db, scope, currentSeq);
+      return { scope, applied: 0, serverSeq: currentSeq };
     }
 
     if (scope === "inventory") {
-      const delta = this.buildDeltaFromEvents("inventory", data.events);
+      const computed = scopedEvents.length
+        ? this.buildInventoryDelta(scopedEvents)
+        : { upserts: undefined, deletes: undefined };
 
-      if (delta.upserts?.length || delta.deletes?.length) {
-        const offlineDelta: OfflineDelta = {
-          scope: "inventory",
-          serverSeq: data.serverSeq,
-          upserts: delta.upserts,
-          deletes: delta.deletes,
-        };
+      const upserts =
+        typeof payload.delta?.upserts !== "undefined" ? payload.delta.upserts : computed.upserts;
+      const deletes =
+        typeof payload.delta?.deletes !== "undefined" ? payload.delta.deletes : computed.deletes;
 
-        await applyDeltas(offlineDelta);
-      } else {
-        await this.touchSyncState(db, "inventory", data.serverSeq);
-      }
-
-      return {
+      const delta: InventoryDelta = {
         scope: "inventory",
-        events: data.events.length,
-        applied:
-          (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0),
-        serverSeq: data.serverSeq,
-        completedAt: new Date().toISOString(),
-        hasMore: data.hasMore,
-      } satisfies PullResult;
-    }
-
-    const delta = this.buildDeltaFromEvents("tickets", data.events);
-
-    if (delta.upserts?.length || delta.deletes?.length) {
-      const offlineDelta: OfflineDelta = {
-        scope: "tickets",
-        serverSeq: data.serverSeq,
-        upserts: delta.upserts,
-        deletes: delta.deletes,
+        serverSeq,
+        upserts,
+        deletes,
       };
 
-      await applyDeltas(offlineDelta);
-    } else {
-      await this.touchSyncState(db, "tickets", data.serverSeq);
+      await applyDeltas(delta);
+      const appliedCount = (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0);
+      return { scope: "inventory", applied: appliedCount, serverSeq };
     }
 
-    return {
+    const computed = scopedEvents.length
+      ? this.buildTicketDelta(scopedEvents)
+      : { upserts: undefined, deletes: undefined };
+
+    const upserts =
+      typeof payload.delta?.upserts !== "undefined" ? payload.delta.upserts : computed.upserts;
+    const deletes =
+      typeof payload.delta?.deletes !== "undefined" ? payload.delta.deletes : computed.deletes;
+
+    const delta: TicketDelta = {
       scope: "tickets",
-      events: data.events.length,
-      applied:
-        (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0),
-      serverSeq: data.serverSeq,
-      completedAt: new Date().toISOString(),
-      hasMore: data.hasMore,
-    } satisfies PullResult;
+      serverSeq,
+      upserts,
+      deletes,
+    };
+
+    await applyDeltas(delta);
+    const appliedCount = (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0);
+    return { scope: "tickets", applied: appliedCount, serverSeq };
   }
 
   determineScopeFromEvent(event: PendingEvent | PendingEventInput): OfflineScope {
