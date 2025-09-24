@@ -155,7 +155,7 @@ type EditInviteState = {
 type FreshInvite = {
   id: string;
   token: string;
-  inviteUrl: string;
+  inviteUrl: string | null;
   shareUrl: string | null;
   label: string | null;
   note: string | null;
@@ -235,6 +235,20 @@ export function MemberInviteManager() {
     },
     [resolvedOrigin],
   );
+  const freshInviteLinkDetails = useMemo<{
+    target: string | null;
+    display: string;
+  }>(() => {
+    if (!freshInvite) {
+      return { target: null, display: "" };
+    }
+    const candidate = freshInvite.shareUrl ?? freshInvite.inviteUrl ?? null;
+    const absolute = buildAbsoluteUrl(candidate);
+    return {
+      target: candidate,
+      display: absolute ?? candidate ?? "",
+    };
+  }, [freshInvite, buildAbsoluteUrl]);
 
   const extractFilenameFromDisposition = (disposition: string | null) => {
     if (!disposition) return null;
@@ -372,6 +386,8 @@ export function MemberInviteManager() {
         if (!prev) return prev;
         const match = normalizedInvites.find((entry) => entry.id === prev.id);
         if (!match) return prev;
+        const nextShareUrl = match.shareUrl ?? null;
+        const fallbackInviteUrl = prev.inviteUrl ?? (prev.token ? `/onboarding/${prev.token}` : null);
         return {
           ...prev,
           label: match.label ?? null,
@@ -381,7 +397,8 @@ export function MemberInviteManager() {
           roles: Array.isArray(match.roles) ? normalizeRoles(match.roles) : prev.roles,
           showId: match.showId,
           production: match.production,
-          shareUrl: match.shareUrl ?? null,
+          shareUrl: nextShareUrl,
+          inviteUrl: nextShareUrl ? fallbackInviteUrl : null,
         };
       });
     } catch (err) {
@@ -551,6 +568,8 @@ export function MemberInviteManager() {
         if (freshInvite?.id === updatedInvite.id) {
           setFreshInvite((prev) => {
             if (!prev) return prev;
+            const nextShareUrl = updatedInvite.isActive ? prev.shareUrl : null;
+            const fallbackInviteUrl = prev.inviteUrl ?? (prev.token ? `/onboarding/${prev.token}` : null);
             return {
               ...prev,
               label: updatedInvite.label ?? null,
@@ -566,6 +585,8 @@ export function MemberInviteManager() {
                 updatedInvite.show && typeof updatedInvite.show === "object"
                   ? (updatedInvite.show as ProductionSummary)
                   : prev.production,
+              shareUrl: nextShareUrl,
+              inviteUrl: nextShareUrl ? fallbackInviteUrl : null,
             };
           });
         }
@@ -610,15 +631,22 @@ export function MemberInviteManager() {
       if (!response.ok) {
         throw new Error(data?.error ?? "Einladung konnte nicht erstellt werden");
       }
-      if (data?.invite?.inviteUrl) {
+      if (data?.invite) {
         const inviteId = typeof data.invite.id === "string" && data.invite.id.trim().length
           ? data.invite.id
           : data.invite.token;
-        const sharePath = data.invite.shareUrl ?? data.invite.inviteUrl;
+        const linkCandidate = typeof data.invite.shareUrl === "string"
+          ? data.invite.shareUrl
+          : data.invite.inviteUrl ?? null;
         setFreshInvite({
           id: inviteId,
           token: data.invite.token,
-          inviteUrl: data.invite.inviteUrl,
+          inviteUrl:
+            typeof data.invite.inviteUrl === "string"
+              ? data.invite.inviteUrl
+              : data.invite.token
+                ? `/onboarding/${data.invite.token}`
+                : null,
           shareUrl: data.invite.shareUrl ?? null,
           label: data.invite.label ?? null,
           note: data.invite.note ?? null,
@@ -632,9 +660,9 @@ export function MemberInviteManager() {
               : productions.find((entry) => entry.id === form.showId) ?? null,
         });
         try {
-          const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
-          if (base) {
-            await navigator.clipboard.writeText(base + sharePath);
+          const absolute = buildAbsoluteUrl(linkCandidate);
+          if (absolute) {
+            await navigator.clipboard.writeText(absolute);
             toast.success("Neuer Link kopiert.");
           } else {
             toast.success("Neue Einladung erstellt. Link siehe unten.");
@@ -658,21 +686,21 @@ export function MemberInviteManager() {
   const copyFreshInvite = async () => {
     if (!freshInvite) return;
     try {
-      const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
-      if (!base) throw new Error("no-origin");
-      await navigator.clipboard.writeText(base + (freshInvite.shareUrl ?? freshInvite.inviteUrl));
+      const absolute = buildAbsoluteUrl(freshInvite.shareUrl ?? freshInvite.inviteUrl);
+      if (!absolute) throw new Error("no-url");
+      await navigator.clipboard.writeText(absolute);
       toast.success("Link kopiert");
     } catch {
       toast.error("Kopieren fehlgeschlagen");
     }
   };
 
-  const copyInviteLink = async (url: string) => {
+  const copyInviteLink = async (url: string | null | undefined) => {
     if (!url) return;
     try {
-      const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
-      if (!base) throw new Error("no-origin");
-      await navigator.clipboard.writeText(base + url);
+      const absolute = buildAbsoluteUrl(url);
+      if (!absolute) throw new Error("no-url");
+      await navigator.clipboard.writeText(absolute);
       toast.success("Link kopiert");
     } catch {
       toast.error("Kopieren fehlgeschlagen");
@@ -783,6 +811,7 @@ export function MemberInviteManager() {
                   variant="outline"
                   className="h-8 gap-2 border-primary/50 px-3 text-xs text-primary hover:bg-primary/10"
                   onClick={copyFreshInvite}
+                  disabled={!freshInviteLinkDetails.target}
                 >
                   <Copy className="h-4 w-4" />
                   Link kopieren
@@ -837,17 +866,19 @@ export function MemberInviteManager() {
                     </>
                   )}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 gap-2 px-3 text-xs text-primary hover:bg-primary/15"
-                  asChild
-                >
-                  <a href={freshInvite.shareUrl ?? freshInvite.inviteUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4" />
-                    Öffnen
-                  </a>
-                </Button>
+                {freshInviteLinkDetails.target ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 gap-2 px-3 text-xs text-primary hover:bg-primary/15"
+                    asChild
+                  >
+                    <a href={freshInviteLinkDetails.display || undefined} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                      Öffnen
+                    </a>
+                  </Button>
+                ) : null}
                 <Button
                   size="sm"
                   variant="ghost"
@@ -859,7 +890,7 @@ export function MemberInviteManager() {
               </div>
             </div>
             <code className="mt-3 block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
-              {(resolvedOrigin ? resolvedOrigin : "") + (freshInvite.shareUrl ?? freshInvite.inviteUrl)}
+              {freshInviteLinkDetails.display || "Kein Link verfügbar"}
             </code>
             <p className="mt-2 text-xs text-muted-foreground">
               Der Link ist zusätzlich in der Übersicht hervorgehoben.
@@ -879,6 +910,7 @@ export function MemberInviteManager() {
                 const isFresh = freshInvite?.id === invite.id;
                 const isExpanded = expandedInviteId === invite.id;
                 const sharePath = invite.shareUrl ?? null;
+                const shareLinkDisplay = sharePath ? buildAbsoluteUrl(sharePath) ?? sharePath : null;
                 const isProcessing = processingInviteId === invite.id;
                 const isDownloading = downloadingPdfFor === invite.id;
                 const metaItems: string[] = [];
@@ -1032,7 +1064,7 @@ export function MemberInviteManager() {
                               {sharePath ? (
                                 <>
                                   <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
-                                    {(resolvedOrigin ? resolvedOrigin : "") + sharePath}
+                                    {shareLinkDisplay}
                                   </code>
                                   <div className="flex flex-wrap gap-2 pt-1">
                                   <Button
