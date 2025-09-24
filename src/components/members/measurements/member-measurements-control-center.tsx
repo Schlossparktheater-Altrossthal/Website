@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Clock3, Filter, Search, Sparkles } from "lucide-react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { AlertTriangle, Clock3, Filter, Search } from "lucide-react";
 
 import { MeasurementForm } from "@/components/forms/measurement-form";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
 import { UserAvatar, type AvatarSource } from "@/components/user-avatar";
 import {
   MEASUREMENT_TYPE_LABELS,
@@ -76,7 +78,7 @@ type PreparedMember = MeasurementMember & {
 type MeasurementRow = {
   type: MeasurementType;
   label: string;
-  entries: { memberId: string; entry: MeasurementEntry | null }[];
+  entryMap: Map<string, MeasurementEntry | null>;
   missingCount: number;
   isComplete: boolean;
 };
@@ -196,11 +198,15 @@ export function MemberMeasurementsControlCenter({
         if (normalizedMeasurementSearch && !label.toLowerCase().includes(normalizedMeasurementSearch)) {
           return null;
         }
-        const entries = sortedMembers.map((member) => ({
-          memberId: member.id,
-          entry: member.measurementMap.get(type) ?? null,
-        }));
-        const missingCount = entries.reduce((count, item) => (!item.entry ? count + 1 : count), 0);
+        const entryMap = new Map<string, MeasurementEntry | null>();
+        let missingCount = 0;
+        for (const member of sortedMembers) {
+          const entry = member.measurementMap.get(type) ?? null;
+          entryMap.set(member.id, entry);
+          if (!entry) {
+            missingCount += 1;
+          }
+        }
         const isComplete = sortedMembers.length > 0 && missingCount === 0;
 
         if (measurementFilter === "complete" && !isComplete) {
@@ -210,10 +216,109 @@ export function MemberMeasurementsControlCenter({
           return null;
         }
 
-        return { type, label, entries, missingCount, isComplete };
+        return { type, label, entryMap, missingCount, isComplete };
       })
       .filter((row): row is MeasurementRow => row !== null);
   }, [measurementFilter, normalizedMeasurementSearch, sortedMembers]);
+
+  const columns = useMemo<ColumnDef<MeasurementRow>[]>(() => {
+    const base: ColumnDef<MeasurementRow>[] = [
+      {
+        accessorKey: "label",
+        header: "Maß",
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="flex items-center justify-between gap-2 pr-2 text-sm">
+              <span className="font-medium text-foreground">{item.label}</span>
+              {item.missingCount > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="border-destructive/50 bg-destructive/10 px-2 py-0.5 text-[10px] text-destructive"
+                >
+                  {item.missingCount} offen
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="border-success/40 bg-success/10 px-2 py-0.5 text-[10px] text-success"
+                >
+                  Vollständig
+                </Badge>
+              )}
+            </div>
+          );
+        },
+        meta: {
+          headerClassName: "sticky left-0 z-20 bg-muted/30",
+          cellClassName:
+            "sticky left-0 z-10 border-r border-border/60 bg-background px-4 py-3 text-sm font-medium text-foreground",
+        },
+      },
+    ];
+
+    sortedMembers.forEach((member) => {
+      base.push({
+        id: member.id,
+        header: () => (
+          <button
+            type="button"
+            onClick={() => setMemberDialogId(member.id)}
+            className="flex w-full flex-col items-start gap-1 rounded-md px-1 text-left text-xs text-muted-foreground transition hover:text-foreground"
+          >
+            <span className="w-full truncate text-sm font-semibold text-foreground">{member.displayName}</span>
+            <span className="w-full truncate text-[10px]">
+              {member.stats.captured}/{member.stats.total} Maße
+              {member.stats.missing > 0 ? ` · ${member.stats.missing} offen` : " · Vollständig"}
+            </span>
+          </button>
+        ),
+        cell: ({ row }) => {
+          const entry = row.original.entryMap.get(member.id) ?? null;
+          const unitLabel = entry ? MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit : undefined;
+          const secondaryText = entry?.note?.trim()
+            ? entry.note
+            : entry?.updatedAt
+            ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
+            : "Keine Notiz";
+
+          return (
+            <button
+              type="button"
+              onClick={() =>
+                entry
+                  ? setDialogState({ mode: "edit", memberId: member.id, entry })
+                  : setDialogState({ mode: "create", memberId: member.id, initialType: row.original.type })
+              }
+              className={cn(
+                "flex h-full w-full flex-col gap-1 rounded-md border border-transparent px-2 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                entry
+                  ? "hover:border-primary/40 hover:bg-primary/5"
+                  : "border-dashed border-destructive/60 bg-destructive/10 hover:border-destructive/70",
+              )}
+              title={entry?.note ?? undefined}
+            >
+              <div className="flex items-baseline gap-1">
+                <span className="font-semibold text-foreground">
+                  {entry ? formatValue(entry.value) : "—"}
+                </span>
+                <span className={cn("text-[10px]", entry ? "text-muted-foreground" : "text-destructive")}>
+                  {entry ? unitLabel ?? entry.unit : "Fehlt"}
+                </span>
+              </div>
+              <span className="truncate text-[10px] text-muted-foreground/80">{secondaryText}</span>
+            </button>
+          );
+        },
+        meta: {
+          headerClassName: "min-w-[180px] border-l border-border/60 align-bottom",
+          cellClassName: "min-w-[180px] border-l border-border/60 px-2 py-1.5",
+        },
+      });
+    });
+
+    return base;
+  }, [sortedMembers, setDialogState, setMemberDialogId]);
 
   const dialogMember = dialogState
     ? preparedMembers.find((member) => member.id === dialogState.memberId) ?? null
@@ -305,19 +410,18 @@ export function MemberMeasurementsControlCenter({
   }, [memberItems]);
 
   return (
-    <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-background/95 via-background/70 to-muted/50 p-6 shadow-[0_0_0_1px_rgba(148,163,184,0.15),0_25px_45px_-15px_rgba(15,23,42,0.6)] backdrop-blur">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),transparent_60%)]" />
-        <div className="relative z-10 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/80">Kostüm-Matrix</p>
-            <h2 className="font-serif text-xl text-foreground">Anprobe Control Center</h2>
+    <div className="space-y-5">
+      <div className="rounded-xl border border-border/60 bg-background p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground/70">Anprobe Control Center</p>
+            <h2 className="text-lg font-semibold text-foreground">Körpermaße im Überblick</h2>
           </div>
-          <Badge className="flex items-center gap-1 border-cyan-400/40 bg-cyan-500/10 text-xs text-cyan-200">
-            <Sparkles className="h-3 w-3" /> Live Sync
+          <Badge className="border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary" variant="outline">
+            Live Sync aktiv
           </Badge>
         </div>
-        <div className="relative z-10 mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <StatBlock label="Ensemble" value={NUMBER_FORMATTER.format(globalStats.totalMembers)} hint="Mitglieder" />
           <StatBlock
             label="Erfasste Maße"
@@ -336,20 +440,20 @@ export function MemberMeasurementsControlCenter({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-border/40 bg-background/85 p-5 shadow-[0_15px_35px_-20px_rgba(15,23,42,0.45)] backdrop-blur">
-        <div className="grid gap-5 lg:grid-cols-2">
+      <div className="rounded-xl border border-border/60 bg-background p-4 shadow-sm">
+        <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground/80">Mitglieder</p>
-            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/70">Mitglieder</p>
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-3 py-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 value={memberSearch}
                 onChange={(event) => setMemberSearch(event.target.value)}
                 placeholder="Mitglieder oder Rollen suchen"
-                className="h-7 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+                className="h-8 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               <Filter className="h-3.5 w-3.5 text-muted-foreground" />
               <FilterButton label="Alle" active={memberFilter === "all"} onClick={() => setMemberFilter("all")} />
               <FilterButton
@@ -366,17 +470,17 @@ export function MemberMeasurementsControlCenter({
           </div>
 
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground/80">Maße</p>
-            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/70">Maßarten</p>
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-3 py-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 value={measurementSearch}
                 onChange={(event) => setMeasurementSearch(event.target.value)}
                 placeholder="Maßart filtern"
-                className="h-7 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+                className="h-8 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               <Filter className="h-3.5 w-3.5 text-muted-foreground" />
               <FilterButton label="Alle" active={measurementFilter === "all"} onClick={() => setMeasurementFilter("all")} />
               <FilterButton
@@ -394,146 +498,19 @@ export function MemberMeasurementsControlCenter({
         </div>
       </div>
 
-      <div className="rounded-[32px] border border-border/40 bg-gradient-to-br from-background/95 via-background/70 to-muted/50 p-6 shadow-[0_0_0_1px_rgba(148,163,184,0.12),0_30px_60px_-30px_rgba(15,23,42,0.7)] backdrop-blur">
+      <div className="rounded-xl border border-border/60 bg-background p-2 shadow-sm">
         {sortedMembers.length ? (
           measurementRows.length ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-[720px] border-separate border-spacing-0 text-sm">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 z-20 bg-background/95 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                      Maß
-                    </th>
-                    {sortedMembers.map((member) => (
-                      <th
-                        key={member.id}
-                        className="min-w-[220px] border-l border-border/40 bg-background/80 px-4 py-3 text-left align-bottom"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setMemberDialogId(member.id)}
-                          className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-2 py-1.5 text-left transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                          <UserAvatar
-                            userId={member.id}
-                            firstName={member.firstName}
-                            lastName={member.lastName}
-                            name={member.name}
-                            avatarSource={member.avatarSource}
-                            avatarUpdatedAt={member.avatarUpdatedAt}
-                            size={40}
-                            className="border-border/70"
-                          />
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-foreground">{member.displayName}</p>
-                            <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground/80">
-                              <span>
-                                {member.stats.captured}/{member.stats.total} Maße
-                              </span>
-                              {member.stats.missing > 0 ? (
-                                <Badge
-                                  variant="outline"
-                                  className="border-destructive/50 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
-                                >
-                                  {member.stats.missing} offen
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  variant="outline"
-                                  className="border-success/40 bg-success/10 px-1.5 py-0 text-[10px] text-success"
-                                >
-                                  Vollständig
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {measurementRows.map((row, index) => (
-                    <tr key={row.type} className="border-t border-border/40">
-                      <th
-                        scope="row"
-                        className={cn(
-                          "sticky left-0 z-10 bg-background/95 px-4 py-3 text-left text-sm font-medium text-foreground",
-                          index % 2 === 1 ? "bg-background" : "bg-background/95",
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span>{row.label}</span>
-                          {row.missingCount > 0 ? (
-                            <Badge
-                              variant="outline"
-                              className="border-destructive/50 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
-                            >
-                              {row.missingCount} offen
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="border-success/40 bg-success/10 px-1.5 py-0 text-[10px] text-success"
-                            >
-                              Vollständig
-                            </Badge>
-                          )}
-                        </div>
-                      </th>
-                      {row.entries.map(({ memberId, entry }) => (
-                        <td key={memberId} className="border-l border-border/40 px-2 py-2 align-top">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              entry
-                                ? setDialogState({ mode: "edit", memberId, entry })
-                                : setDialogState({ mode: "create", memberId, initialType: row.type })
-                            }
-                            className={cn(
-                              "flex h-full w-full flex-col gap-1 rounded-2xl border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                              entry
-                                ? "border-border/50 bg-background/70 hover:border-primary/40 hover:bg-primary/5"
-                                : "border-dashed border-destructive/60 bg-destructive/10 hover:border-destructive/70",
-                            )}
-                          >
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-lg font-semibold text-foreground">
-                                {entry ? formatValue(entry.value) : "Fehlt"}
-                              </span>
-                              {entry ? (
-                                <span className="text-xs text-muted-foreground">
-                                  {MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-destructive">Noch offen</span>
-                              )}
-                            </div>
-                            <p className="min-h-[2.5rem] text-xs leading-snug text-muted-foreground/80">
-                              {entry?.note ? entry.note : "Keine Notiz hinterlegt."}
-                            </p>
-                            <span className="text-[11px] text-muted-foreground/60">
-                              {entry?.updatedAt
-                                ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
-                                : "Keine Historie"}
-                            </span>
-                          </button>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable columns={columns} data={measurementRows} tableClassName="min-w-[720px] text-xs" />
           ) : (
-            <div className="flex flex-col items-center justify-center gap-4 py-16 text-center text-sm text-muted-foreground">
-              <AlertTriangle className="h-6 w-6 text-muted-foreground" />
-              <p>Keine Maße entsprechen den aktuellen Filtern. Passe die Auswahl an, um weitere Einträge zu sehen.</p>
+            <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
+              <AlertTriangle className="h-5 w-5" />
+              <p>Keine Maße entsprechen den aktuellen Filtern. Passe die Auswahl an.</p>
             </div>
           )
         ) : (
-          <div className="flex flex-col items-center justify-center gap-4 py-16 text-center text-sm text-muted-foreground">
-            <AlertTriangle className="h-6 w-6 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
+            <AlertTriangle className="h-5 w-5" />
             <p>Keine Mitglieder mit Körpermaßen gefunden. Lege neue Profile an oder entferne Filter.</p>
           </div>
         )}
@@ -759,10 +736,10 @@ function StatBlock({
   hint: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/40 bg-background/75 p-4 text-sm text-muted-foreground">
-      <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground/80">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
-      <p className="text-xs text-muted-foreground/70">{hint}</p>
+    <div className="rounded-lg border border-border/60 bg-muted/15 p-3 text-sm text-muted-foreground">
+      <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground/80">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+      <p className="text-[11px] text-muted-foreground/70">{hint}</p>
     </div>
   );
 }
