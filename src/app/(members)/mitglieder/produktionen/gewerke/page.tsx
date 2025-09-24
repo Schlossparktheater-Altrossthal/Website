@@ -40,7 +40,9 @@ export default async function ProduktionsGewerkePage() {
     );
   }
 
-  const [departments, users, activeProduction] = await Promise.all([
+  const activeProduction = await getActiveProduction(session.user?.id);
+
+  const [departments, users] = await Promise.all([
     prisma.department.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -53,13 +55,25 @@ export default async function ProduktionsGewerkePage() {
       },
     }),
     prisma.user.findMany({
+      where: {
+        deactivatedAt: null,
+        ...(activeProduction
+          ? {
+              productionMemberships: {
+                some: {
+                  showId: activeProduction.id,
+                  OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+                },
+              },
+            }
+          : {}),
+      },
       orderBy: [
         { name: "asc" },
         { email: "asc" },
       ],
       select: { id: true, firstName: true, lastName: true, name: true, email: true },
     }),
-    getActiveProduction(),
   ]);
 
   const totalMemberships = departments.reduce((count, department) => count + department.memberships.length, 0);

@@ -251,6 +251,7 @@ type InviteMeta = {
   expiresAt: string | null;
   usageCount: number;
   remainingUses: number | null;
+  production: { id: string; title: string | null; year: number } | null;
 };
 
 type OnboardingWizardProps = {
@@ -312,6 +313,15 @@ function requiresBszClass(value: string) {
   const normalized = normalizeForMatch(value);
   if (!normalized.includes("bsz")) return false;
   return ["altrossthal", "altrothal", "canaletto"].some((keyword) => normalized.includes(keyword));
+}
+
+function formatProductionLabel(production: InviteMeta["production"]) {
+  if (!production) return "deine Produktion";
+  const trimmed = production.title?.trim() ?? "";
+  if (trimmed) {
+    return `${trimmed} (${production.year})`;
+  }
+  return `Produktion ${production.year}`;
 }
 
 export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps) {
@@ -1077,6 +1087,11 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
               {invite.createdBy ? ` von ${invite.createdBy}` : ""}.
               {inviteExpiresAt ? ` Gültig bis ${inviteExpiresAt}.` : ""}
             </p>
+            {invite.production ? (
+              <Badge variant="outline" className="mt-2 border-primary/60 text-primary">
+                Einladung für {formatProductionLabel(invite.production)}
+              </Badge>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:flex-nowrap">
             <Badge variant="outline">Link-ID gesichert</Badge>

@@ -311,6 +311,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Dieser Einladungslink ist nicht mehr gültig" }, { status: 400 });
   }
 
+  if (!invite.showId) {
+    return NextResponse.json(
+      { error: "Diese Einladung ist keiner Produktion zugeordnet." },
+      { status: 400 },
+    );
+  }
+
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
     return NextResponse.json({ error: "Für diese E-Mail existiert bereits ein Konto" }, { status: 409 });
@@ -389,11 +396,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      await tx.productionMembership.create({
+        data: {
+          userId: user.id,
+          showId: invite.showId,
+        },
+      });
+
       await tx.memberOnboardingProfile.create({
         data: {
           userId: user.id,
           inviteId: invite.id,
           redemptionId: redemption.id,
+          showId: invite.showId,
           focus,
           background,
           backgroundClass: backgroundClass ?? undefined,

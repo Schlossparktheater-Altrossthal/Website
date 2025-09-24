@@ -200,6 +200,23 @@ async function main() {
   const latestShow = await prisma.show.findFirst({ orderBy: { year: "desc" } });
   const referenceYear = latestShow?.year ?? new Date().getUTCFullYear();
 
+  if (latestShow) {
+    const seededUsers = await prisma.user.findMany({
+      where: { email: { in: emails } },
+      select: { id: true },
+    });
+
+    if (seededUsers.length) {
+      await prisma.productionMembership.createMany({
+        data: seededUsers.map((user) => ({
+          userId: user.id,
+          showId: latestShow.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+  }
+
   const financeBudgetSeeds = [
     {
       id: "seed-budget-costumes",

@@ -64,16 +64,23 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const invites = await prisma.memberInvite.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      createdBy: { select: { id: true, name: true, email: true } },
-      redemptions: {
-        select: { id: true, createdAt: true, completedAt: true },
-        orderBy: { createdAt: "desc" },
+  const [invites, productions] = await Promise.all([
+    prisma.memberInvite.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        createdBy: { select: { id: true, name: true, email: true } },
+        redemptions: {
+          select: { id: true, createdAt: true, completedAt: true },
+          orderBy: { createdAt: "desc" },
+        },
+        show: { select: { id: true, title: true, year: true } },
       },
-    },
-  });
+    }),
+    prisma.show.findMany({
+      orderBy: { year: "desc" },
+      select: { id: true, title: true, year: true },
+    }),
+  ]);
 
   const now = new Date();
   const formatted = invites.map((invite) => {
@@ -92,6 +99,7 @@ export async function GET() {
       roles: invite.roles,
       isDisabled: invite.isDisabled,
       createdBy: invite.createdBy,
+      show: invite.show,
       remainingUses: status.remainingUses,
       isActive: status.isActive,
       isExpired: status.isExpired,
@@ -103,7 +111,7 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ invites: formatted });
+  return NextResponse.json({ invites: formatted, productions });
 }
 
 export async function POST(request: NextRequest) {
@@ -119,6 +127,7 @@ export async function POST(request: NextRequest) {
         expiresAt?: unknown;
         maxUses?: unknown;
         roles?: unknown;
+        showId?: unknown;
       }
     | null;
 
@@ -131,6 +140,19 @@ export async function POST(request: NextRequest) {
   const expiresAt = parseDate(body.expiresAt);
   const maxUses = parseMaxUses(body.maxUses);
   const roles = filterRoles(body.roles);
+  const rawShowId = typeof body.showId === "string" ? body.showId.trim() : "";
+  if (!rawShowId) {
+    return NextResponse.json({ error: "Bitte wähle eine Produktion aus." }, { status: 400 });
+  }
+
+  const show = await prisma.show.findUnique({
+    where: { id: rawShowId },
+    select: { id: true, title: true, year: true },
+  });
+
+  if (!show) {
+    return NextResponse.json({ error: "Produktion wurde nicht gefunden" }, { status: 404 });
+  }
 
   const token = generateInviteToken();
   const tokenHash = hashInviteToken(token);
@@ -149,7 +171,9 @@ export async function POST(request: NextRequest) {
       maxUses,
       roles,
       createdById,
+      showId: show.id,
     },
+    include: { show: { select: { id: true, title: true, year: true } } },
   });
 
   const status = describeInvite(invite);
@@ -163,6 +187,7 @@ export async function POST(request: NextRequest) {
       token,
       inviteUrl: `/onboarding/${token}`,
       shareUrl: `/onboarding/${invite.tokenHash}`,
+      show: invite.show,
     },
   });
 }

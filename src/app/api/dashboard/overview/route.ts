@@ -49,7 +49,7 @@ export async function GET() {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     endOfMonth.setHours(23, 59, 59, 999);
 
-    const activeProductionId = await getActiveProductionId();
+    const activeProductionId = await getActiveProductionId(userId);
     const activeProductionPromise = activeProductionId
       ? prisma.show.findUnique({
           where: { id: activeProductionId },

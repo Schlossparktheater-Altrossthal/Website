@@ -62,7 +62,7 @@ export default async function ProduktionsBesetzungPage() {
     );
   }
 
-  const activeProduction = await getActiveProduction();
+  const activeProduction = await getActiveProduction(session.user?.id);
   const headerActions = (
     <Button asChild variant="outline" size="sm">
       <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
@@ -89,6 +89,15 @@ export default async function ProduktionsBesetzungPage() {
 
   const [users, show] = await Promise.all([
     prisma.user.findMany({
+      where: {
+        deactivatedAt: null,
+        productionMemberships: {
+          some: {
+            showId: activeProduction.id,
+            OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+          },
+        },
+      },
       orderBy: [
         { name: "asc" },
         { email: "asc" },

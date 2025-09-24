@@ -84,7 +84,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
 
   const session = await requireAuth();
   const permissions = await getUserPermissionKeys(session.user);
-  const activeProduction = await getActiveProduction();
+  const activeProduction = await getActiveProduction(session.user?.id);
 
   let resolvedSettings = resolveWebsiteSettings(null);
 
