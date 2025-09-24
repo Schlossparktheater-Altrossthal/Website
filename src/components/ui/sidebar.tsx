@@ -27,8 +27,12 @@ import {
 
 export const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem";
+const SIDEBAR_WIDTH_MIN_REM = 14;
+const SIDEBAR_WIDTH_MAX_REM = 20;
+const SIDEBAR_WIDTH_COMFORT_REM = 0.75;
+const SIDEBAR_WIDTH_MOBILE_REM = 18;
+const SIDEBAR_WIDTH = `${SIDEBAR_WIDTH_MIN_REM}rem`;
+const SIDEBAR_WIDTH_MOBILE = `${SIDEBAR_WIDTH_MOBILE_REM}rem`;
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_MOBILE_BREAKPOINT = "(max-width: 1023px)";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
@@ -52,6 +56,18 @@ function useSidebar() {
   }
 
   return context;
+}
+
+function getRootFontSize() {
+  if (typeof window === "undefined") {
+    return 16;
+  }
+
+  const root = window.document.documentElement;
+  const computedFontSize = window.getComputedStyle(root).fontSize;
+  const parsedFontSize = Number.parseFloat(computedFontSize);
+
+  return Number.isFinite(parsedFontSize) ? parsedFontSize : 16;
 }
 
 const SidebarProvider = React.forwardRef<
@@ -178,12 +194,167 @@ const Sidebar = React.forwardRef<
       collapsible = "offcanvas",
       className,
       children,
-      ...props
+      style: styleProp,
+      ...restProps
     },
     ref,
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
     const sheetContentRef = React.useRef<React.ElementRef<typeof SheetContent>>(null);
+    const containerRef = React.useRef<HTMLDivElement | null>(null);
+    const contentRef = React.useRef<HTMLDivElement | null>(null);
+    const [computedWidth, setComputedWidth] = React.useState<number | null>(null);
+    const lastMeasuredWidth = React.useRef<number | null>(null);
+
+    const assignDesktopContainerRef = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        containerRef.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        }
+      },
+      [ref],
+    );
+
+    const assignStaticContainerRef = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        containerRef.current = node;
+        contentRef.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        }
+      },
+      [ref],
+    );
+
+    const assignMobileContainerRef = React.useCallback(
+      (node: React.ElementRef<typeof SheetContent> | null) => {
+        sheetContentRef.current = node;
+        containerRef.current = node;
+      },
+      [],
+    );
+
+    React.useEffect(() => {
+      const container = containerRef.current;
+      const content = contentRef.current;
+      if (!container || !content) {
+        return;
+      }
+
+      if (isMobile) {
+        if (!openMobile) {
+          return;
+        }
+      } else if (collapsible !== "none" && state !== "expanded") {
+        return;
+      }
+
+      const measure = () => {
+        const baseFontSize = getRootFontSize();
+        const minWidth = SIDEBAR_WIDTH_MIN_REM * baseFontSize;
+        const maxWidth = SIDEBAR_WIDTH_MAX_REM * baseFontSize;
+        const comfortableExtra = SIDEBAR_WIDTH_COMFORT_REM * baseFontSize;
+
+        const previousWidth = container.style.getPropertyValue("--sidebar-width");
+        container.style.setProperty("--sidebar-width", `${minWidth}px`);
+
+        const requiredWidth = content.scrollWidth;
+        const hasOverflow = requiredWidth > minWidth + 1;
+
+        let nextWidth = hasOverflow ? requiredWidth + comfortableExtra : minWidth;
+        nextWidth = Math.max(minWidth, Math.min(maxWidth, nextWidth));
+
+        if (previousWidth) {
+          container.style.setProperty("--sidebar-width", previousWidth);
+        } else {
+          container.style.removeProperty("--sidebar-width");
+        }
+
+        const normalizedWidth = Math.round(nextWidth * 100) / 100;
+
+        if (
+          lastMeasuredWidth.current === null ||
+          Math.abs(lastMeasuredWidth.current - normalizedWidth) > 0.5
+        ) {
+          lastMeasuredWidth.current = normalizedWidth;
+          setComputedWidth(normalizedWidth);
+        }
+      };
+
+      let frame: number | null = null;
+      const scheduleMeasure = () => {
+        if (frame !== null) {
+          return;
+        }
+
+        frame = window.requestAnimationFrame(() => {
+          frame = null;
+          measure();
+        });
+      };
+
+      scheduleMeasure();
+
+      const resizeObservers: ResizeObserver[] = [];
+      if (typeof ResizeObserver !== "undefined") {
+        const contentObserver = new ResizeObserver(() => scheduleMeasure());
+        contentObserver.observe(content);
+        resizeObservers.push(contentObserver);
+
+        const containerObserver = new ResizeObserver(() => scheduleMeasure());
+        containerObserver.observe(container);
+        resizeObservers.push(containerObserver);
+      }
+
+      window.addEventListener("resize", scheduleMeasure);
+
+      return () => {
+        resizeObservers.forEach((observer) => observer.disconnect());
+        window.removeEventListener("resize", scheduleMeasure);
+        if (frame !== null) {
+          window.cancelAnimationFrame(frame);
+        }
+      };
+    }, [collapsible, isMobile, openMobile, state]);
+
+    const computedWidthValue = React.useMemo(
+      () => (computedWidth === null ? null : `${computedWidth}px`),
+      [computedWidth],
+    );
+
+    const widthVariableStyle = React.useMemo(
+      () =>
+        computedWidthValue
+          ? ({ "--sidebar-width": computedWidthValue } as React.CSSProperties)
+          : undefined,
+      [computedWidthValue],
+    );
+
+    const desktopStyle = React.useMemo(() => {
+      if (!computedWidthValue) {
+        return styleProp;
+      }
+
+      return {
+        ...styleProp,
+        "--sidebar-width": computedWidthValue,
+      } as React.CSSProperties;
+    }, [computedWidthValue, styleProp]);
+
+    const mobileContentStyle = React.useMemo(() => {
+      const widthStyle = computedWidthValue
+        ? ({ "--sidebar-width": computedWidthValue } as React.CSSProperties)
+        : ({ "--sidebar-width": SIDEBAR_WIDTH_MOBILE } as React.CSSProperties);
+
+      return styleProp
+        ? ({ ...styleProp, ...widthStyle } as React.CSSProperties)
+        : widthStyle;
+    }, [computedWidthValue, styleProp]);
 
     const touchStartPoint = React.useRef<{ x: number; y: number } | null>(null);
     const touchCurrentPoint = React.useRef<{ x: number; y: number } | null>(null);
@@ -242,8 +413,9 @@ const Sidebar = React.forwardRef<
             "flex h-full w-[var(--sidebar-width)] flex-col bg-sidebar text-sidebar-foreground",
             className,
           )}
-          ref={ref}
-          {...props}
+          ref={assignStaticContainerRef}
+          style={desktopStyle}
+          {...restProps}
         >
           {children}
         </div>
@@ -252,9 +424,9 @@ const Sidebar = React.forwardRef<
 
     if (isMobile) {
       return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...restProps}>
           <SheetContent
-            ref={sheetContentRef}
+            ref={assignMobileContainerRef}
             data-sidebar="sidebar"
             data-mobile="true"
             className={cn(
@@ -262,7 +434,7 @@ const Sidebar = React.forwardRef<
               "w-[min(100dvw,var(--sidebar-width))] max-w-[100dvw]",
               "portrait:max-w-none portrait:w-[100dvw]",
             )}
-            style={{ "--sidebar-width": SIDEBAR_WIDTH_MOBILE } as React.CSSProperties}
+            style={mobileContentStyle}
             side={side}
             tabIndex={-1}
             onOpenAutoFocus={(event) => {
@@ -278,7 +450,9 @@ const Sidebar = React.forwardRef<
               <SheetTitle>Sidebar</SheetTitle>
               <SheetDescription>Displays the mobile sidebar.</SheetDescription>
             </SheetHeader>
-            <div className="flex h-full w-full flex-col">{children}</div>
+            <div ref={contentRef} className="flex h-full w-full flex-col">
+              {children}
+            </div>
           </SheetContent>
         </Sheet>
       );
@@ -286,12 +460,13 @@ const Sidebar = React.forwardRef<
 
     return (
       <div
-        ref={ref}
+        ref={assignDesktopContainerRef}
         className="group peer hidden text-sidebar-foreground lg:block"
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
+        style={widthVariableStyle}
       >
         <div
           className={cn(
@@ -314,9 +489,11 @@ const Sidebar = React.forwardRef<
               : "group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className,
           )}
-          {...props}
+          style={desktopStyle}
+          {...restProps}
         >
           <div
+            ref={contentRef}
             data-sidebar="sidebar"
             className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
           >
