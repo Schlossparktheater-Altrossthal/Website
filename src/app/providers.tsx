@@ -7,7 +7,8 @@ import type { Session } from "next-auth";
 import { FrontendEditingProvider } from "@/components/frontend-editing/frontend-editing-provider";
 import { useWebVitals } from "@/hooks/useWebVitals";
 import { RealtimeProvider } from "@/hooks/useRealtime";
-import { OfflineSyncProvider } from "@/lib/offline/storage";
+import { OfflineSyncStatusProvider } from "@/lib/offline/hooks";
+import { OfflineSyncProvider as OfflineStorageProvider } from "@/lib/offline/storage";
 
 export function Providers({
   children,
@@ -21,20 +22,22 @@ export function Providers({
   return (
     <SessionProvider session={session}>
       <QueryClientProvider client={client}>
-        <OfflineSyncProvider>
-          <RealtimeProvider>
-            <FrontendEditingProvider>
-              {children}
-              <Toaster
-                richColors
-                position="top-right"
-                expand={true}
-                visibleToasts={5}
-                gap={8}
-              />
-            </FrontendEditingProvider>
-          </RealtimeProvider>
-        </OfflineSyncProvider>
+        <OfflineStorageProvider>
+          <OfflineSyncStatusProvider>
+            <RealtimeProvider>
+              <FrontendEditingProvider>
+                {children}
+                <Toaster
+                  richColors
+                  position="top-right"
+                  expand={true}
+                  visibleToasts={5}
+                  gap={8}
+                />
+              </FrontendEditingProvider>
+            </RealtimeProvider>
+          </OfflineSyncStatusProvider>
+        </OfflineStorageProvider>
       </QueryClientProvider>
     </SessionProvider>
   );
