@@ -176,13 +176,24 @@ export async function GET() {
 
     const activeProduction = activeProductionPromise ? await activeProductionPromise : null;
 
+    const notificationActivities = recentNotifications.flatMap((entry) => {
+      const notification = entry.notification;
+      if (!notification) {
+        console.warn("[Dashboard API] Skipping notification without payload", entry.notificationId);
+        return [] as const;
+      }
+      return [
+        {
+          id: entry.notificationId,
+          type: "notification" as const,
+          message: notification.title,
+          timestamp: notification.createdAt.toISOString(),
+        },
+      ];
+    });
+
     const activities = [
-      ...recentNotifications.map((entry) => ({
-        id: entry.notificationId,
-        type: "notification" as const,
-        message: entry.notification.title,
-        timestamp: entry.notification.createdAt.toISOString(),
-      })),
+      ...notificationActivities,
       ...recentRehearsals.map((rehearsal) => ({
         id: `rehearsal_${rehearsal.id}_${rehearsal.createdAt.getTime()}`,
         type: "rehearsal" as const,
