@@ -16,6 +16,7 @@ const BASE_PERMISSIONS = [
   "mitglieder.dashboard",
   "mitglieder.profil",
   "mitglieder.scan",
+  "mitglieder.inventaraufkleber",
   "mitglieder.galerie",
   "mitglieder.sperrliste",
   "mitglieder.issues",
