@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { calculateInviteStatus, describeInvite } from "@/lib/member-invites";
+import { sortRoles, ROLES, type Role } from "@/lib/roles";
 
 const DATE_LIMIT_YEARS = 5;
 
@@ -78,6 +79,7 @@ export async function PATCH(
         maxUses?: unknown;
         label?: unknown;
         note?: unknown;
+        roles?: unknown;
       }
     | null;
 
@@ -100,6 +102,9 @@ export async function PATCH(
 
   const note = normalizeString(body.note, 400);
   if (note !== undefined) data.note = note;
+
+  const roles = parseRoles(body.roles);
+  if (roles !== undefined) data.roles = roles;
 
   try {
     const invite = await prisma.memberInvite.update({
@@ -145,6 +150,19 @@ export async function PATCH(
     }
     return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
+}
+
+function parseRoles(value: unknown): Role[] | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) {
+    return ["member"];
+  }
+  if (!Array.isArray(value)) return undefined;
+  const allowed = value.filter((entry): entry is Role =>
+    typeof entry === "string" && (ROLES as readonly string[]).includes(entry),
+  );
+  const normalized = sortRoles(allowed.length ? allowed : ["member"]);
+  return normalized.length ? normalized : ["member"];
 }
 
 export async function DELETE(

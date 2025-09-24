@@ -100,22 +100,32 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
   async render(doc, data) {
     const QRCode = await loadQrCode();
     const title = data.headline ?? data.inviteLabel ?? "Onboarding starten";
+    const greetingHeadline = "Willkommen an Bord!";
+    const warmIntro = data.inviteLabel
+      ? `Schön, dass du beim Onboarding „${data.inviteLabel}“ dabei bist!`
+      : "Schön, dass du bei uns bist!";
+    const actionLine = data.inviteLabel
+      ? `Scanne den QR-Code oder nutze den Link, um ganz entspannt mit deinem Onboarding „${data.inviteLabel}“ zu starten.`
+      : "Scanne den QR-Code oder nutze den Link, um ganz entspannt mit deinem Onboarding zu starten.";
+
     doc.info.Title = title;
-    doc.info.Subject = "Onboarding-Link";
+    doc.info.Subject = "Einladung zum Onboarding";
 
-    doc.font("Helvetica-Bold").fontSize(28).fillColor("#111827").text(title, { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(32).fillColor("#0f172a").text(greetingHeadline, { align: "center" });
 
-    const introLine = data.inviteLabel
-      ? `Scanne den Code, um das Onboarding „${data.inviteLabel}“ zu starten.`
-      : "Scanne den QR-Code oder gib den Link ein, um mit dem Onboarding zu beginnen.";
+    doc.moveDown(0.3);
+    doc.font("Helvetica-Bold").fontSize(26).fillColor("#111827").text(title, { align: "center" });
 
-    doc.moveDown(0.6);
-    doc.font("Helvetica").fontSize(14).fillColor("#1f2937").text(introLine, { align: "center" });
+    doc.moveDown(0.55);
+    doc.font("Helvetica").fontSize(14).fillColor("#1f2937").text(warmIntro, { align: "center" });
+
+    doc.moveDown(0.25);
+    doc.font("Helvetica").fontSize(13).fillColor("#1f2937").text(actionLine, { align: "center" });
 
     if (data.note) {
       doc.moveDown(0.5);
       doc
-        .font("Helvetica")
+        .font("Helvetica-Oblique")
         .fontSize(12)
         .fillColor("#374151")
         .text(data.note, {
@@ -135,7 +145,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.y = qrY + qrSize;
 
     doc.moveDown(1);
-    doc.font("Helvetica-Bold").fontSize(14).fillColor("#111827").text("Direktlink", { align: "center" });
+    doc.font("Helvetica-Bold").fontSize(14).fillColor("#111827").text("Direkt zum Start", { align: "center" });
     doc.moveDown(0.25);
     doc
       .font("Helvetica")
@@ -148,7 +158,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       .font("Helvetica")
       .fontSize(11)
       .fillColor("#374151")
-      .text("Falls der QR-Code nicht funktioniert, gib den Link manuell im Browser ein.", { align: "center" });
+      .text("Wenn der QR-Code einmal zickt, gib den Link einfach im Browser ein.", { align: "center" });
 
     const detailEntries: Array<{ label: string; value: string }> = [];
     if (data.inviteLabel && data.inviteLabel !== title) {
@@ -166,15 +176,29 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
 
     if (detailEntries.length) {
       doc.moveDown(1);
-      doc.font("Helvetica-Bold").fontSize(12).fillColor("#111827").text("Details", { align: "left" });
-      doc.moveDown(0.25);
+      doc.font("Helvetica-Bold").fontSize(12).fillColor("#111827").text("Organisatorisches", { align: "left" });
+      doc.moveDown(0.2);
+      doc
+        .font("Helvetica")
+        .fontSize(11)
+        .fillColor("#4b5563")
+        .text("Damit du planen kannst, findest du hier die wichtigsten Rahmendaten:", {
+          align: "left",
+          width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+        });
+      doc.moveDown(0.35);
       doc.font("Helvetica").fontSize(11).fillColor("#374151");
       for (const entry of detailEntries) {
         doc.text(`${entry.label}: ${entry.value}`);
       }
     }
 
-    doc.moveDown(1.2);
+    doc.moveDown(0.9);
+    doc.font("Helvetica").fontSize(11).fillColor("#1f2937").text("Wir freuen uns auf dich – bis bald!", {
+      align: "center",
+    });
+
+    doc.moveDown(0.6);
     const generatedAt = formatDateTime(new Date());
     doc
       .font("Helvetica")

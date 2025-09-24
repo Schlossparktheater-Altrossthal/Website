@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Role } from "@prisma/client";
-import { ChevronDown, ChevronUp, Copy, Download, ExternalLink, Power, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, Download, ExternalLink, Pencil, Power, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { formatRelativeFromNow } from "@/lib/datetime";
 
 const ASSIGNABLE_ROLES = ROLES.filter((role) => role !== "admin" && role !== "owner");
+const ASSIGNABLE_ROLE_SET = new Set<Role>(ASSIGNABLE_ROLES);
 
 const statusLabelMap = {
   active: { label: "Aktiv", variant: "default" as const },
@@ -88,6 +89,14 @@ type CreateInviteState = {
   roles: Role[];
 };
 
+type EditInviteState = {
+  label: string;
+  note: string;
+  expiresAt: string;
+  maxUses: string;
+  roles: Role[];
+};
+
 type FreshInvite = {
   id: string;
   token: string;
@@ -99,6 +108,8 @@ type FreshInvite = {
   maxUses: number | null;
   roles: Role[];
 };
+
+type EditableInviteFields = Pick<InviteSummary, "id" | "label" | "note" | "expiresAt" | "maxUses" | "roles">;
 
 type InviteForPdf = {
   id: string;
@@ -122,7 +133,28 @@ export function MemberInviteManager() {
   const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
   const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
   const [expandedInviteId, setExpandedInviteId] = useState<string | null>(null);
+  const [editingInvite, setEditingInvite] = useState<EditableInviteFields | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [updatingInviteId, setUpdatingInviteId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EditInviteState>({
+    label: "",
+    note: "",
+    expiresAt: "",
+    maxUses: "",
+    roles: ["member"],
+  });
+  const [lockedRoles, setLockedRoles] = useState<Role[]>([]);
+  const normalizeRoles = useCallback(
+    (roles: Role[]): Role[] => {
+      const deduped = Array.from(new Set(roles));
+      const normalized = sortRoles(deduped.length ? deduped : (["member"] as Role[]));
+      return normalized.length ? normalized : (["member"] as Role[]);
+    },
+    [],
+  );
   const freshInviteId = freshInvite?.id ?? null;
+  const editingInviteId = editingInvite?.id ?? null;
+  const isUpdatingCurrentInvite = editingInviteId ? updatingInviteId === editingInviteId : false;
   useEffect(() => {
     if (freshInviteId) {
       setExpandedInviteId(freshInviteId);
@@ -248,19 +280,32 @@ export function MemberInviteManager() {
       const invitesPayload = Array.isArray(data?.invites)
         ? (data.invites as InviteSummaryPayload[])
         : [];
-      setInvites(
-        invitesPayload.map((invite) => ({
-          ...invite,
-          recentClicks: Array.isArray(invite.recentClicks) ? invite.recentClicks : [],
-        })),
-      );
+      const normalizedInvites = invitesPayload.map((invite) => ({
+        ...invite,
+        recentClicks: Array.isArray(invite.recentClicks) ? invite.recentClicks : [],
+      }));
+      setInvites(normalizedInvites);
+      setFreshInvite((prev) => {
+        if (!prev) return prev;
+        const match = normalizedInvites.find((entry) => entry.id === prev.id);
+        if (!match) return prev;
+        return {
+          ...prev,
+          label: match.label ?? null,
+          note: match.note ?? null,
+          expiresAt: match.expiresAt ?? null,
+          maxUses: typeof match.maxUses === "number" ? match.maxUses : null,
+          roles: Array.isArray(match.roles) ? normalizeRoles(match.roles) : prev.roles,
+          shareUrl: match.shareUrl ?? null,
+        };
+      });
     } catch (err) {
       console.error("[MemberInviteManager] load", err);
       setError("Einladungen konnten nicht geladen werden.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [normalizeRoles]);
 
   useEffect(() => {
     void loadInvites();
@@ -281,9 +326,144 @@ export function MemberInviteManager() {
     setForm((prev) => {
       const has = prev.roles.includes(role);
       const nextRoles = has ? prev.roles.filter((r) => r !== role) : [...prev.roles, role];
-      const normalized = sortRoles(nextRoles.length ? nextRoles : ["member"]);
+      const normalized = normalizeRoles(nextRoles);
       return { ...prev, roles: normalized };
     });
+  };
+
+  const resetEditForm = () => {
+    setEditForm({ label: "", note: "", expiresAt: "", maxUses: "", roles: ["member"] });
+    setLockedRoles([]);
+  };
+
+  const closeEditModal = () => {
+    if (updatingInviteId) return;
+    setEditModalOpen(false);
+    setEditingInvite(null);
+    resetEditForm();
+  };
+
+  const formatDateForInput = (iso: string | null) => {
+    if (!iso) return "";
+    const trimmed = iso.trim();
+    if (!trimmed) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+    if (trimmed.length >= 10) {
+      return trimmed.slice(0, 10);
+    }
+    try {
+      const parsed = new Date(trimmed);
+      if (Number.isNaN(parsed.valueOf())) return "";
+      return parsed.toISOString().slice(0, 10);
+    } catch {
+      return "";
+    }
+  };
+
+  const openEditModalWith = (invite: EditableInviteFields) => {
+    const editableRoles = invite.roles.filter((role) => ASSIGNABLE_ROLE_SET.has(role));
+    const locked = invite.roles.filter((role) => !ASSIGNABLE_ROLE_SET.has(role));
+    const dedupedLocked = Array.from(new Set(locked));
+    const sanitizedEditable = normalizeRoles(editableRoles.length ? editableRoles : (["member"] as Role[]));
+    setLockedRoles(dedupedLocked);
+    setEditingInvite({
+      ...invite,
+      label: invite.label ?? null,
+      note: invite.note ?? null,
+      maxUses: typeof invite.maxUses === "number" ? invite.maxUses : null,
+      expiresAt: invite.expiresAt ?? null,
+      roles: normalizeRoles([...sanitizedEditable, ...dedupedLocked]),
+    });
+    setEditForm({
+      label: invite.label ?? "",
+      note: invite.note ?? "",
+      expiresAt: formatDateForInput(invite.expiresAt ?? null),
+      maxUses: typeof invite.maxUses === "number" && Number.isFinite(invite.maxUses)
+        ? String(invite.maxUses)
+        : "",
+      roles: sanitizedEditable,
+    });
+    setExpandedInviteId(invite.id);
+    setEditModalOpen(true);
+    setError(null);
+  };
+
+  const toggleEditRole = (role: Role) => {
+    setEditForm((prev) => {
+      const has = prev.roles.includes(role);
+      const nextRoles = has ? prev.roles.filter((r) => r !== role) : [...prev.roles, role];
+      const normalized = normalizeRoles(nextRoles);
+      return { ...prev, roles: normalized };
+    });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingInvite) return;
+
+    setUpdatingInviteId(editingInvite.id);
+    setError(null);
+    try {
+      const trimmedLabel = editForm.label.trim();
+      const trimmedNote = editForm.note.trim();
+      const trimmedExpires = editForm.expiresAt.trim();
+      const trimmedMaxUses = editForm.maxUses.trim();
+      const parsedMaxUses = trimmedMaxUses ? Number(trimmedMaxUses) : null;
+      const payload = {
+        label: trimmedLabel || null,
+        note: trimmedNote || null,
+        expiresAt: trimmedExpires || null,
+        maxUses: trimmedMaxUses
+          ? Number.isFinite(parsedMaxUses)
+            ? parsedMaxUses
+            : null
+          : null,
+        roles: normalizeRoles([...editForm.roles, ...lockedRoles]),
+      };
+
+      const response = await fetch(`/api/member-invites/${editingInvite.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Einladung konnte nicht aktualisiert werden");
+      }
+
+      const updatedInvite = data?.invite as
+        | (InviteSummaryPayload & { roles?: Role[] })
+        | undefined;
+      if (updatedInvite && typeof updatedInvite.id === "string") {
+        setExpandedInviteId(updatedInvite.id);
+        if (freshInvite?.id === updatedInvite.id) {
+          setFreshInvite((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              label: updatedInvite.label ?? null,
+              note: updatedInvite.note ?? null,
+              expiresAt: updatedInvite.expiresAt ?? null,
+              maxUses: typeof updatedInvite.maxUses === "number" ? updatedInvite.maxUses : null,
+              roles: Array.isArray(updatedInvite.roles) ? normalizeRoles(updatedInvite.roles) : prev.roles,
+            };
+          });
+        }
+      }
+
+      toast.success("Einladung aktualisiert");
+      resetEditForm();
+      setEditingInvite(null);
+      setEditModalOpen(false);
+      await loadInvites();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Einladung konnte nicht aktualisiert werden";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setUpdatingInviteId(null);
+    }
   };
 
   const handleCreate = async () => {
@@ -479,6 +659,26 @@ export function MemberInviteManager() {
                   className="h-8 gap-2 border-primary/50 px-3 text-xs text-primary hover:bg-primary/10"
                   onClick={() => {
                     if (!freshInvite) return;
+                    openEditModalWith({
+                      id: freshInvite.id,
+                      label: freshInvite.label,
+                      note: freshInvite.note,
+                      expiresAt: freshInvite.expiresAt,
+                      maxUses: freshInvite.maxUses,
+                      roles: freshInvite.roles,
+                    });
+                  }}
+                  disabled={updatingInviteId === freshInvite.id}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Details bearbeiten
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-2 border-primary/50 px-3 text-xs text-primary hover:bg-primary/10"
+                  onClick={() => {
+                    if (!freshInvite) return;
                     void requestInvitePdf({
                       id: freshInvite.id,
                       label: freshInvite.label,
@@ -555,6 +755,14 @@ export function MemberInviteManager() {
                   metaItems.push(`${invite.usageCount} Nutzungen`);
                 }
                 const menuItems = [
+                  {
+                    label: "Details bearbeiten",
+                    icon: <Pencil className="h-4 w-4" />,
+                    onClick: () => {
+                      if (updatingInviteId) return;
+                      openEditModalWith(invite);
+                    },
+                  },
                   ...(sharePath
                     ? [
                         {
@@ -693,6 +901,16 @@ export function MemberInviteManager() {
                                     size="sm"
                                     variant="outline"
                                     className="h-8 gap-2 px-3 text-xs"
+                                    onClick={() => openEditModalWith(invite)}
+                                    disabled={updatingInviteId === invite.id}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    Details bearbeiten
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 gap-2 px-3 text-xs"
                                     onClick={() => {
                                       if (isDownloading) return;
                                       void requestInvitePdf({
@@ -816,6 +1034,106 @@ export function MemberInviteManager() {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
       </CardContent>
+
+      <Dialog
+        open={editModalOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            closeEditModal();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Details bearbeiten</DialogTitle>
+            <DialogDescription>
+              Passe Titel, Notizen oder Laufzeit deines Onboarding-Links an. Leere Felder setzen Werte zurück.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <label className="space-y-1 text-sm">
+              <span className="font-medium">Titel</span>
+              <Input
+                value={editForm.label}
+                onChange={(event) => setEditForm((prev) => ({ ...prev, label: event.target.value }))}
+                placeholder="z.B. Sommercrew 2025"
+                disabled={isUpdatingCurrentInvite}
+              />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span className="font-medium">Notiz</span>
+              <Textarea
+                value={editForm.note}
+                onChange={(event) => setEditForm((prev) => ({ ...prev, note: event.target.value }))}
+                placeholder="Internes Memo für die Verwaltung"
+                disabled={isUpdatingCurrentInvite}
+              />
+            </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Gültig bis</span>
+                <Input
+                  type="date"
+                  value={editForm.expiresAt}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
+                  disabled={isUpdatingCurrentInvite}
+                />
+                <span className="text-xs text-muted-foreground">Freilassen für unbegrenzte Laufzeit.</span>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Max. Nutzungen</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={editForm.maxUses}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, maxUses: event.target.value }))}
+                  placeholder="Unbegrenzt"
+                  disabled={isUpdatingCurrentInvite}
+                />
+                <span className="text-xs text-muted-foreground">Leer lassen, um keine Grenze zu setzen.</span>
+              </label>
+            </div>
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Rollen bei Erstellung</span>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {ASSIGNABLE_ROLES.map((role) => {
+                  const checked = editForm.roles.includes(role);
+                  return (
+                    <label
+                      key={`edit-${role}`}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition",
+                        checked ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/60",
+                        isUpdatingCurrentInvite && "pointer-events-none opacity-70",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleEditRole(role)}
+                        className="h-4 w-4"
+                        disabled={isUpdatingCurrentInvite}
+                      />
+                      <span>{ROLE_LABELS[role] ?? role}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Standard bleibt „Mitglied“. Weitere Rollen kannst du jederzeit ergänzen oder entfernen.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 pt-4 sm:space-x-2">
+            <Button type="button" variant="outline" onClick={closeEditModal} disabled={isUpdatingCurrentInvite}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleUpdate} disabled={isUpdatingCurrentInvite || !editingInviteId}>
+              {isUpdatingCurrentInvite ? "Speichere …" : "Änderungen speichern"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={modalOpen}
