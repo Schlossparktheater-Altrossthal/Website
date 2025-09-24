@@ -331,6 +331,7 @@ export function MemberInviteManager() {
 
   const loadInvites = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch("/api/member-invites", { cache: "no-store" });
       const data = await response.json().catch(() => null);
@@ -340,7 +341,8 @@ export function MemberInviteManager() {
           extractErrorMessage(data) ??
           response.statusText ??
           "Einladungen konnten nicht geladen werden";
-        throw new Error(message);
+        setError(message);
+        return;
       }
       const invitesPayload = Array.isArray(data?.invites)
         ? (data.invites as (InviteSummaryPayload & { show?: ProductionSummary | null })[])
