@@ -40,6 +40,7 @@ test('analytics manager refreshes snapshots with fallback data', async () => {
       throw error;
     },
     getDatabaseUrl: () => null,
+    subscribeToExternalUpdates: () => null,
   });
 
   const firstSnapshot = await manager.refresh();
@@ -122,6 +123,7 @@ test('analytics manager merges database overrides when module is available', asy
       ],
     }),
     getDatabaseUrl: () => 'postgres://example',
+    subscribeToExternalUpdates: () => null,
   });
 
   const snapshot = await manager.refresh();

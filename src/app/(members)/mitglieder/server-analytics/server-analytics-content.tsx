@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRealtime } from "@/hooks/useRealtime";
 import type {
   OptimizationArea,
@@ -15,6 +16,7 @@ import type {
 } from "@/lib/server-analytics";
 import type { ServerAnalyticsRealtimeEvent } from "@/lib/realtime/types";
 import { cn } from "@/lib/utils";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { updateServerLogStatusAction } from "./actions";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
@@ -69,6 +71,43 @@ function changeTextClass(value: number, positiveIsGood = true) {
   return isImprovement ? "text-emerald-600" : "text-orange-600";
 }
 
+function TrendIndicator({
+  change,
+  positiveIsGood = true,
+  format,
+  threshold = 0.0001,
+}: {
+  change: number;
+  positiveIsGood?: boolean;
+  format: (value: number) => string;
+  threshold?: number;
+}) {
+  if (!Number.isFinite(change) || Math.abs(change) < threshold) {
+    return (
+      <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+        <Minus className="h-3 w-3" />
+        <span>±0</span>
+      </span>
+    );
+  }
+
+  const isPositive = change > 0;
+  const isGood = positiveIsGood ? isPositive : !isPositive;
+  const Icon = isPositive ? TrendingUp : TrendingDown;
+
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1 text-xs font-medium",
+        isGood ? "text-emerald-600" : "text-orange-600",
+      )}
+    >
+      <Icon className="h-3 w-3" />
+      <span>{`${isPositive ? "+" : "−"}${format(Math.abs(change))}`}</span>
+    </span>
+  );
+}
+
 function areaBadgeVariant(area: OptimizationArea) {
   switch (area) {
     case "Frontend":
@@ -95,14 +134,44 @@ function impactBadgeVariant(impact: OptimizationImpact) {
   }
 }
 
-function MockDataBadge({ label = "Demo" }: { label?: string }) {
+function DataStatusBadge({ metadata }: { metadata?: ServerAnalytics["metadata"] }) {
+  if (!metadata || metadata.source === "live") {
+    return null;
+  }
+
+  const isCached = metadata.source === "cached";
+  const variant = isCached ? "warning" : "destructive";
+  const label = isCached ? "Cache" : "Fallback";
+  const reasons = metadata.fallbackReasons?.filter(Boolean) ?? [];
+  const reasonText =
+    reasons.length > 0
+      ? reasons.join(" • ")
+      : isCached
+        ? "Zeige letzte erfolgreiche Messung aus dem Cache."
+        : "Es stehen nur statische Kennzahlen zur Verfügung.";
+  const lastUpdatedLabel = formatLogTimestamp(metadata.lastUpdatedAt);
+  const staleLabel = metadata.staleSince ? formatLogTimestamp(metadata.staleSince) : null;
+  const ariaLabel = isCached ? "Server-Analytics aus Cache" : "Server-Analytics Fallback";
+
   return (
-    <Badge
-      variant="outline"
-      className="border-dashed text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
-    >
-      {label}
-    </Badge>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant={variant}
+          className="border-dashed text-[10px] font-semibold uppercase tracking-wide"
+          aria-label={ariaLabel}
+        >
+          {label}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs space-y-1 text-xs leading-relaxed">
+        <p>{reasonText}</p>
+        <p className="font-medium">Letzte Aktualisierung: {lastUpdatedLabel}</p>
+        {isCached && staleLabel ? (
+          <p className="text-muted-foreground">Stale seit {staleLabel}</p>
+        ) : null}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -268,6 +337,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
   const [analytics, setAnalytics] = useState<ServerAnalytics>(initialAnalytics);
   const [generatedAt, setGeneratedAt] = useState<Date>(() => parseGeneratedAt(initialAnalytics.generatedAt));
   const [hasLiveUpdate, setHasLiveUpdate] = useState(false);
+  const [previousAnalytics, setPreviousAnalytics] = useState<ServerAnalytics | null>(null);
   const [pendingLogId, setPendingLogId] = useState<string | null>(null);
   const [isStatusUpdating, startStatusUpdate] = useTransition();
   const displayAnalytics = useAnimatedAnalytics(analytics);
@@ -276,6 +346,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
     setAnalytics(initialAnalytics);
     setGeneratedAt(parseGeneratedAt(initialAnalytics.generatedAt));
     setHasLiveUpdate(false);
+    setPreviousAnalytics(null);
   }, [initialAnalytics]);
 
   useEffect(() => {
@@ -285,7 +356,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
       if (!event?.analytics) {
         return;
       }
-      setAnalytics(event.analytics);
+      setAnalytics((current) => {
+        setPreviousAnalytics(current);
+        return event.analytics;
+      });
       setGeneratedAt(parseGeneratedAt(event.analytics.generatedAt ?? event.timestamp));
       setHasLiveUpdate(true);
     };
@@ -334,6 +408,36 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         return "bg-muted-foreground/60";
     }
   }, [connectionStatus]);
+
+  const summaryTrends = useMemo(() => {
+    const previous = previousAnalytics?.summary;
+    if (!previous) {
+      return {
+        uptime: 0,
+        requests: 0,
+        averageResponse: 0,
+        p95: 0,
+        peakUsers: 0,
+        cacheHit: 0,
+        realtime: 0,
+        errorRate: 0,
+        slaViolations: 0,
+      };
+    }
+
+    const current = analytics.summary;
+    return {
+      uptime: current.uptimePercentage - previous.uptimePercentage,
+      requests: current.requestsLast24h - previous.requestsLast24h,
+      averageResponse: current.averageResponseTimeMs - previous.averageResponseTimeMs,
+      p95: current.p95ResponseTimeMs - previous.p95ResponseTimeMs,
+      peakUsers: current.peakConcurrentUsers - previous.peakConcurrentUsers,
+      cacheHit: current.cacheHitRate - previous.cacheHitRate,
+      realtime: current.realtimeEventsLast24h - previous.realtimeEventsLast24h,
+      errorRate: current.errorRate - previous.errorRate,
+      slaViolations: current.slaViolationMinutes - previous.slaViolationMinutes,
+    };
+  }, [analytics.summary, previousAnalytics]);
 
   const handleStatusUpdate = (logId: string, status: ServerLogEvent["status"]) => {
     setPendingLogId(logId);
@@ -413,7 +517,8 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
   const hasLogs = relevantLogs.length > 0;
 
   return (
-    <div className="space-y-6">
+    <TooltipProvider delayDuration={150}>
+      <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Server- & Nutzungsstatistiken</h1>
         <p className="text-sm text-muted-foreground">
@@ -425,7 +530,10 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             <span className={cn("h-2 w-2 rounded-full", connectionDotClass)} />
             {connectionText}
           </span>
-          <span>Letzte Aktualisierung: {lastUpdatedLabel}</span>
+          <span className="flex items-center gap-2">
+            Letzte Aktualisierung: {lastUpdatedLabel}
+            <DataStatusBadge metadata={displayAnalytics.metadata} />
+          </span>
         </div>
       </div>
 
@@ -442,92 +550,177 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </div>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Verfügbarkeit
-              <MockDataBadge />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{uptimeFormat.format(displayAnalytics.summary.uptimePercentage)} %</p>
-            <p className="text-xs text-muted-foreground">letzte 30 Tage</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Anfragen (24h)
-              <MockDataBadge />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.requestsLast24h)}</p>
-            <p className="text-xs text-muted-foreground">über alle Systeme hinweg</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Ø Antwortzeit
-              <MockDataBadge />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{formatMs(displayAnalytics.summary.averageResponseTimeMs)}</p>
-            <p className="text-xs text-muted-foreground">95. Perzentil liegt bei {formatMs(displayAnalytics.summary.averageResponseTimeMs * 1.6)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Peak gleichzeitiger Nutzer
-              <MockDataBadge />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.peakConcurrentUsers)}</p>
-            <p className="text-xs text-muted-foreground">innerhalb der letzten 24 Stunden</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Cache-Hit-Rate
-              <MockDataBadge />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{percentPreciseFormat.format(displayAnalytics.summary.cacheHitRate)}</p>
-            <p className="text-xs text-muted-foreground">Edge- und Anwendungscache kombiniert</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Realtime-Ereignisse (24h)
-              <MockDataBadge />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.realtimeEventsLast24h)}</p>
-            <p className="text-xs text-muted-foreground">Socket.io Updates und Live-Sync</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Fehlerquote
-              <MockDataBadge />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{percentPreciseFormat.format(displayAnalytics.summary.errorRate)}</p>
-            <p className="text-xs text-muted-foreground">5xx/4xx im Verhältnis zu allen Requests</p>
-          </CardContent>
-        </Card>
-      </div>
+          <section className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Kernkennzahlen
+              </h2>
+              <DataStatusBadge metadata={displayAnalytics.metadata} />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Verfügbarkeit</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold">
+                    {uptimeFormat.format(displayAnalytics.summary.uptimePercentage)} %
+                  </p>
+                  <TrendIndicator
+                    change={summaryTrends.uptime}
+                    format={(value) => `${uptimeFormat.format(value)} %`}
+                    threshold={0.005}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">letzte 30 Tage</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Anfragen (24h)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold">
+                    {numberFormat.format(displayAnalytics.summary.requestsLast24h)}
+                  </p>
+                  <TrendIndicator
+                    change={summaryTrends.requests}
+                    format={(value) => numberFormat.format(Math.round(value))}
+                    threshold={1}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">über alle Systeme hinweg</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Ø Antwortzeit</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold">
+                    {formatMs(displayAnalytics.summary.averageResponseTimeMs)}
+                  </p>
+                  <TrendIndicator
+                    change={summaryTrends.averageResponse}
+                    positiveIsGood={false}
+                    format={(value) => formatMs(value)}
+                    threshold={2}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>95. Perzentil: {formatMs(displayAnalytics.summary.p95ResponseTimeMs)}</span>
+                  <TrendIndicator
+                    change={summaryTrends.p95}
+                    positiveIsGood={false}
+                    format={(value) => formatMs(value)}
+                    threshold={2}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Peak gleichzeitiger Nutzer
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold">
+                    {numberFormat.format(displayAnalytics.summary.peakConcurrentUsers)}
+                  </p>
+                  <TrendIndicator
+                    change={summaryTrends.peakUsers}
+                    format={(value) => numberFormat.format(Math.round(value))}
+                    threshold={1}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">innerhalb der letzten 24 Stunden</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Cache-Hit-Rate</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold">
+                    {percentPreciseFormat.format(displayAnalytics.summary.cacheHitRate)}
+                  </p>
+                  <TrendIndicator
+                    change={summaryTrends.cacheHit}
+                    format={(value) => percentPreciseFormat.format(value)}
+                    threshold={0.001}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Edge- und Anwendungscache kombiniert</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Realtime-Ereignisse (24h)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold">
+                    {numberFormat.format(displayAnalytics.summary.realtimeEventsLast24h)}
+                  </p>
+                  <TrendIndicator
+                    change={summaryTrends.realtime}
+                    format={(value) => numberFormat.format(Math.round(value))}
+                    threshold={1}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Socket.io Updates und Live-Sync</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Fehlerquote</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold">
+                    {percentPreciseFormat.format(displayAnalytics.summary.errorRate)}
+                  </p>
+                  <TrendIndicator
+                    change={summaryTrends.errorRate}
+                    positiveIsGood={false}
+                    format={(value) => percentPreciseFormat.format(value)}
+                    threshold={0.0005}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">5xx/4xx im Verhältnis zu allen Requests</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">SLA-Verletzungen</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-semibold">
+                    {decimalFormat.format(displayAnalytics.summary.slaViolationMinutes)} min
+                  </p>
+                  <TrendIndicator
+                    change={summaryTrends.slaViolations}
+                    positiveIsGood={false}
+                    format={(value) => `${decimalFormat.format(value)} min`}
+                    threshold={0.05}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ziel {uptimeFormat.format(displayAnalytics.summary.slaTargetPercentage)} % Verfügbarkeit
+                </p>
+              </CardContent>
+            </Card>
+            </div>
+          </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border border-border/70">
@@ -567,7 +760,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Stoßzeiten & Lastverteilung
-              <MockDataBadge />
+              <DataStatusBadge metadata={displayAnalytics.metadata} />
             </CardTitle>
             <p className="text-sm text-muted-foreground">Zeitfenster mit erhöhter Auslastung innerhalb der letzten 7 Tage.</p>
           </CardHeader>
@@ -596,7 +789,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Seitenperformance – Öffentlicher Bereich
-            <MockDataBadge />
+            <DataStatusBadge metadata={displayAnalytics.metadata} />
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Ladezeiten, Verweildauer und Zielerfüllung auf den wichtigsten öffentlichen Seiten.
@@ -654,7 +847,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Seitenperformance – Mitgliederbereich
-            <MockDataBadge />
+            <DataStatusBadge metadata={displayAnalytics.metadata} />
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Nutzungsverhalten der eingeloggten Mitglieder inklusive Verweildauer und Erfolgsquote in den Arbeitsbereichen.
@@ -713,7 +906,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Traffic-Kanäle
-              <MockDataBadge />
+              <DataStatusBadge metadata={displayAnalytics.metadata} />
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Entwicklung der wichtigsten Besucherquellen inklusive Konversionsrate.
@@ -792,7 +985,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Session Insights
-              <MockDataBadge />
+              <DataStatusBadge metadata={displayAnalytics.metadata} />
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Vergleich von neuen, wiederkehrenden und eingeloggten Nutzergruppen.
@@ -830,7 +1023,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Optimierungspotenziale
-              <MockDataBadge />
+              <DataStatusBadge metadata={displayAnalytics.metadata} />
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Konkrete Hebel zur Verbesserung der Ladezeiten und Nutzerführung basierend auf den gemessenen Daten.
@@ -858,13 +1051,17 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         </TabsContent>
 
         <TabsContent value="logs" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
+          <section className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Systemmeldungen
+              </h2>
+              <DataStatusBadge metadata={displayAnalytics.metadata} />
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
             <Card className="border border-border/70">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  Warnungen
-                  <MockDataBadge />
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Warnungen</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-semibold">{numberFormat.format(warningCount)}</p>
@@ -873,10 +1070,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             </Card>
             <Card className="border border-border/70">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  Fehler
-                  <MockDataBadge />
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Fehler</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-semibold">{numberFormat.format(errorCount)}</p>
@@ -885,10 +1079,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
             </Card>
             <Card className="border border-border/70">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  Offene Vorfälle
-                  <MockDataBadge />
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Offene Vorfälle</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-semibold">{numberFormat.format(openIncidents)}</p>
@@ -908,18 +1099,16 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                 </div>
               </CardContent>
             </Card>
-          </div>
+            </div>
+          </section>
 
         <Card className="border border-border/70">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Warn- & Fehlermeldungen
-              <MockDataBadge />
-            </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Automatisch aggregierte Serverlogs der letzten 48 Stunden.
-              </p>
-            </CardHeader>
+            <CardTitle>Warn- & Fehlermeldungen</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Automatisch aggregierte Serverlogs der letzten 48 Stunden.
+            </p>
+          </CardHeader>
             <CardContent>
               {hasLogs ? (
                 <div className="space-y-4">
@@ -1008,6 +1197,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

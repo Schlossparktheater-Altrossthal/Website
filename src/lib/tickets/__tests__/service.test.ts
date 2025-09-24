@@ -7,7 +7,11 @@ import {
   serializeTicketForPayload,
   TicketCheckInError,
 } from "@/lib/tickets/service";
-import { TicketStatus } from "@prisma/client";
+
+const TICKET_STATUS = {
+  checked_in: "checked_in",
+  unused: "unused",
+} as const;
 
 describe("ticket service helpers", () => {
   it("normalizes missing occurredAt to a current timestamp", () => {
@@ -36,7 +40,7 @@ describe("ticket service helpers", () => {
     const ticket = {
       id: "ticket-1",
       code: "CODE-1",
-      status: TicketStatus.checked_in,
+      status: TICKET_STATUS.checked_in,
       eventId: "event-1",
       holderName: null,
       createdAt: new Date("2024-12-31T12:00:00.000Z"),
@@ -46,7 +50,7 @@ describe("ticket service helpers", () => {
     expect(serializeTicketForPayload(ticket)).toEqual({
       id: "ticket-1",
       code: "CODE-1",
-      status: TicketStatus.checked_in,
+      status: TICKET_STATUS.checked_in,
       eventId: "event-1",
       updatedAt: updatedAt.toISOString(),
     });
@@ -58,8 +62,8 @@ describe("ticket service helpers", () => {
       id: "scan-1",
       ticketId: "ticket-1",
       code: "CODE-1",
-      statusBefore: TicketStatus.unused,
-      statusAfter: TicketStatus.checked_in,
+      statusBefore: TICKET_STATUS.unused,
+      statusAfter: TICKET_STATUS.checked_in,
       source: null,
       occurredAt,
       dedupeKey: null,
@@ -76,8 +80,8 @@ describe("ticket service helpers", () => {
       id: "scan-1",
       ticketId: "ticket-1",
       code: "CODE-1",
-      statusBefore: TicketStatus.unused,
-      statusAfter: TicketStatus.checked_in,
+      statusBefore: TICKET_STATUS.unused,
+      statusAfter: TICKET_STATUS.checked_in,
       occurredAt: occurredAt.toISOString(),
       provisional: false,
     });
@@ -90,8 +94,8 @@ describe("ticket service helpers", () => {
       id: "scan-2",
       ticketId: "ticket-2",
       code: "CODE-2",
-      statusBefore: TicketStatus.unused,
-      statusAfter: TicketStatus.checked_in,
+      statusBefore: TICKET_STATUS.unused,
+      statusAfter: TICKET_STATUS.checked_in,
       source: "scanner",
       occurredAt,
       dedupeKey: "ticket:ticket-2",
@@ -108,8 +112,8 @@ describe("ticket service helpers", () => {
       id: "scan-2",
       ticketId: "ticket-2",
       code: "CODE-2",
-      statusBefore: TicketStatus.unused,
-      statusAfter: TicketStatus.checked_in,
+      statusBefore: TICKET_STATUS.unused,
+      statusAfter: TICKET_STATUS.checked_in,
       occurredAt: occurredAt.toISOString(),
       provisional: false,
       processedAt: processedAt.toISOString(),

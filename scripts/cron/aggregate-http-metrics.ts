@@ -4,6 +4,24 @@ import { aggregateHttpMetrics } from "@/lib/analytics/aggregate-http";
 const DEFAULT_WINDOW_MINUTES = 24 * 60;
 const DEFAULT_BUCKET_MINUTES = 60;
 
+async function notifyRealtime(job: string, payload: Record<string, unknown> = {}) {
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  try {
+    const channelPayload = JSON.stringify({
+      job,
+      scope: "analytics",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+    await prisma.$executeRaw`SELECT pg_notify('server_analytics_update', ${channelPayload})`;
+  } catch (error) {
+    console.error(`[analytics] Failed to notify realtime server after ${job} aggregation`, error);
+  }
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.warn("[analytics] DATABASE_URL is not set. Skipping HTTP aggregation batch.");
@@ -81,6 +99,8 @@ async function main() {
       });
     }
   });
+
+  await notifyRealtime("http", { windowEnd: summary.windowEnd?.toISOString?.() ?? now.toISOString() });
 }
 
 void main()
