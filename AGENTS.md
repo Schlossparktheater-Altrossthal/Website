@@ -17,6 +17,7 @@
 - Docker-Compose-Stacks (siehe `README.md`) stellen Postgres & Mailpit bereit. Bei lokalen Datenbankänderungen immer auch `.env.example` aktualisieren.
 
 ## Architektur- & Code-Richtlinien
+- Füge dem Repository keinerlei Binärdateien hinzu (z. B. PNG/JPG/GIF/WebP, Videos, Audio, Schriftarten, proprietäre Assets). Jegliche Ergänzungen oder Aktualisierungen solcher Dateien blockieren die PR-Erstellung im Codex-Web-Workflow und sind daher untersagt. Setze stattdessen auf textbasierte Alternativen (z. B. Inline-SVG) oder verweise auf bestehende Assets.
 - Standardmäßig React Server Components verwenden. `"use client"` nur bei zwingenden interaktiven Szenarien (Formulare, Drag & Drop, React Query etc.) setzen.
 - Server Actions liegen direkt neben den konsumierenden Komponenten (`actions.ts`). Bevorzugt Actions + React Server Components statt API-Mutationen, sofern Sessions oder Revalidierung (`revalidatePath`, `revalidateTag`) nicht entgegenstehen.
 - Datenbankzugriffe ausschließlich über den Proxy aus `@/lib/prisma`. Wiederverwendbare Queries in `@/lib/prisma-helpers` oder modularen Services kapseln.
