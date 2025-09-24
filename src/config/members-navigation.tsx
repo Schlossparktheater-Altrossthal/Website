@@ -92,6 +92,15 @@ const ScannerIcon = createMembersNavIcon(
   </>,
 );
 
+const InventoryStickersIcon = createMembersNavIcon(
+  <>
+    <path d="M4 5a2 2 0 0 1 2-2h6l8 8-8 8H6a2 2 0 0 1-2-2z" />
+    <path d="M9 7h.01" />
+    <path d="M9 11h4" />
+    <path d="M9 15h4" />
+  </>,
+);
+
 const RehearsalsIcon = createMembersNavIcon(
   <>
     <path d="M4 6a2 2 0 0 1 2-2h6" />
@@ -340,6 +349,12 @@ export const membersNavigation = [
         label: "Scanner",
         permissionKey: "mitglieder.scan",
         icon: ScannerIcon,
+      },
+      {
+        href: "/mitglieder/inventar-aufkleber",
+        label: "Inventaraufkleber",
+        permissionKey: "mitglieder.inventaraufkleber",
+        icon: InventoryStickersIcon,
       },
       {
         href: "/mitglieder/issues",
