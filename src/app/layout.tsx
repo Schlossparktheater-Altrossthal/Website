@@ -17,11 +17,13 @@ import { authOptions } from "@/lib/auth";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
+  applicationName: "Sommertheater Scan",
   title: {
     default: DEFAULT_SITE_TITLE,
     template: "%s | Sommertheater",
   },
   description: "Mystische Bühne unter freiem Himmel",
+  manifest: "/manifest.json",
   alternates: {
     canonical: "/",
   },
