@@ -26,7 +26,10 @@ export default async function OnboardingInvitePage({
   const tokenHash = isHashedToken ? token.toLowerCase() : hashInviteToken(token);
   const invite = await prisma.memberInvite.findUnique({
     where: { tokenHash },
-    include: { createdBy: { select: { name: true, email: true } } },
+    include: {
+      createdBy: { select: { name: true, email: true } },
+      show: { select: { id: true, title: true, year: true } },
+    },
   });
 
   if (!invite) {
@@ -75,6 +78,7 @@ export default async function OnboardingInvitePage({
           expiresAt: invite.expiresAt ? invite.expiresAt.toISOString() : null,
           usageCount: invite.usageCount,
           remainingUses: status.remainingUses,
+          production: invite.show,
         }}
       />
     </main>

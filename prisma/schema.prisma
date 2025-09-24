@@ -275,6 +275,7 @@ model User {
   onboardingProfile      MemberOnboardingProfile?
   interests              UserInterest[]
   rolePreferences        MemberRolePreference[]
+  productionMemberships  ProductionMembership[]
   interestsAuthored      Interest[]             @relation("InterestCreatedBy")
   issuesCreated          Issue[]                @relation("IssueCreatedBy")
   issuesUpdated          Issue[]                @relation("IssueUpdatedBy")
@@ -349,6 +350,9 @@ model Show {
   characters Character[]
   scenes     Scene[]
   finalRehearsalDuties FinalRehearsalDuty[]
+  memberships ProductionMembership[]
+  onboardingProfiles MemberOnboardingProfile[]
+  invites    MemberInvite[]
 }
 
 model FinalRehearsalDuty {
@@ -1102,10 +1106,12 @@ model MemberInvite {
   roles       Role[]
   isDisabled  Boolean  @default(false)
   createdById String
+  showId      String
 
   createdBy   User     @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Cascade)
   redemptions MemberInviteRedemption[]
   onboardings MemberOnboardingProfile[]
+  show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
 }
 
 model MemberInviteRedemption {
@@ -1166,6 +1172,7 @@ model MemberOnboardingProfile {
   userId       String           @unique
   inviteId     String?
   redemptionId String?         @unique
+  showId       String?
   focus        OnboardingFocus
   background   String?
   backgroundClass String?
@@ -1180,8 +1187,24 @@ model MemberOnboardingProfile {
   user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   invite     MemberInvite?            @relation(fields: [inviteId], references: [id], onDelete: SetNull)
   redemption MemberInviteRedemption?  @relation("OnboardingProfileRedemption", fields: [redemptionId], references: [id], onDelete: SetNull)
+  show       Show?                    @relation(fields: [showId], references: [id], onDelete: SetNull)
 
   @@index([inviteId])
+}
+
+model ProductionMembership {
+  id        String   @id @default(cuid())
+  showId    String
+  userId    String
+  joinedAt  DateTime @default(now())
+  leftAt    DateTime?
+
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([showId, userId])
+  @@index([userId, leftAt])
+  @@index([showId, leftAt])
 }
 
 model Announcement {

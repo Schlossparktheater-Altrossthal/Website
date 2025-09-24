@@ -46,6 +46,7 @@ export function describeInvite(invite: MemberInvite, now: Date = new Date()) {
     maxUses: invite.maxUses,
     usageCount: invite.usageCount,
     roles: invite.roles,
+    showId: invite.showId,
     ...status,
   };
 }

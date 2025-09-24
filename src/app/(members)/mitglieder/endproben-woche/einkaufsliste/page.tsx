@@ -30,7 +30,9 @@ export default async function EinkaufslistePage() {
     );
   }
 
-  const { plannerDays, defaultParticipantCount, totalParticipants } = await loadMealPlanningContext();
+  const { plannerDays, defaultParticipantCount, totalParticipants } = await loadMealPlanningContext(
+    session.user?.id,
+  );
   const assignments: PlannerAssignments = {};
   for (const day of plannerDays) {
     const dayAssignments: Record<string, string | null | undefined> = {};

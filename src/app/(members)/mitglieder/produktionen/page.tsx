@@ -41,7 +41,7 @@ export default async function ProduktionenPage() {
       orderBy: { year: "desc" },
       select: { id: true, year: true, title: true, synopsis: true },
     }),
-    getActiveProduction(),
+    getActiveProduction(session.user?.id),
   ]);
 
   const activeShowId = activeProduction?.id ?? null;

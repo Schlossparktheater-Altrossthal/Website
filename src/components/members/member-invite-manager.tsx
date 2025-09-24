@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,21 @@ function buildRecentClickDetails(timestamps: string[]): RecentClickDescriptor[] 
     .filter((entry): entry is RecentClickDescriptor => Boolean(entry));
 }
 
+function formatProductionLabel(production: ProductionSummary | null | undefined) {
+  if (!production) return "Unbekannte Produktion";
+  const trimmedTitle = production.title?.trim() ?? "";
+  if (trimmedTitle) {
+    return `${trimmedTitle} (${production.year})`;
+  }
+  return `Produktion ${production.year}`;
+}
+
+type ProductionSummary = {
+  id: string;
+  title: string | null;
+  year: number;
+};
+
 type InviteSummary = {
   id: string;
   label: string | null;
@@ -77,9 +93,15 @@ type InviteSummary = {
   shareUrl: string | null;
   isActive: boolean;
   recentClicks: string[];
+  showId: string;
+  production: ProductionSummary | null;
 };
 
-type InviteSummaryPayload = Omit<InviteSummary, "recentClicks"> & { recentClicks?: string[] };
+type InviteSummaryPayload = Omit<InviteSummary, "recentClicks" | "production"> & {
+  recentClicks?: string[];
+  show?: ProductionSummary | null;
+  production?: ProductionSummary | null;
+};
 
 type CreateInviteState = {
   label: string;
@@ -87,6 +109,7 @@ type CreateInviteState = {
   expiresAt: string;
   maxUses: string;
   roles: Role[];
+  showId: string;
 };
 
 type EditInviteState = {
@@ -95,6 +118,7 @@ type EditInviteState = {
   expiresAt: string;
   maxUses: string;
   roles: Role[];
+  showId: string;
 };
 
 type FreshInvite = {
@@ -107,9 +131,11 @@ type FreshInvite = {
   expiresAt: string | null;
   maxUses: number | null;
   roles: Role[];
+  showId: string;
+  production: ProductionSummary | null;
 };
 
-type EditableInviteFields = Pick<InviteSummary, "id" | "label" | "note" | "expiresAt" | "maxUses" | "roles">;
+type EditableInviteFields = Pick<InviteSummary, "id" | "label" | "note" | "expiresAt" | "maxUses" | "roles" | "showId" | "production">;
 
 type InviteForPdf = {
   id: string;
@@ -124,6 +150,7 @@ type InviteForPdf = {
 
 export function MemberInviteManager() {
   const [invites, setInvites] = useState<InviteSummary[]>([]);
+  const [productions, setProductions] = useState<ProductionSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -142,6 +169,7 @@ export function MemberInviteManager() {
     expiresAt: "",
     maxUses: "",
     roles: ["member"],
+    showId: "",
   });
   const [lockedRoles, setLockedRoles] = useState<Role[]>([]);
   const normalizeRoles = useCallback(
@@ -267,6 +295,7 @@ export function MemberInviteManager() {
     expiresAt: "",
     maxUses: "",
     roles: ["member"],
+    showId: "",
   });
 
   const loadInvites = useCallback(async () => {
@@ -278,13 +307,29 @@ export function MemberInviteManager() {
         throw new Error(data?.error ?? "Einladungen konnten nicht geladen werden");
       }
       const invitesPayload = Array.isArray(data?.invites)
-        ? (data.invites as InviteSummaryPayload[])
+        ? (data.invites as (InviteSummaryPayload & { show?: ProductionSummary | null })[])
         : [];
-      const normalizedInvites = invitesPayload.map((invite) => ({
-        ...invite,
-        recentClicks: Array.isArray(invite.recentClicks) ? invite.recentClicks : [],
-      }));
+      const productionsPayload = Array.isArray(data?.productions)
+        ? (data.productions as ProductionSummary[])
+        : [];
+      setProductions(productionsPayload);
+
+      const normalizedInvites: InviteSummary[] = invitesPayload.map((invite) => {
+        const production = invite.production ?? invite.show ?? null;
+        const showId = invite.showId ?? production?.id ?? "";
+        return {
+          ...invite,
+          production,
+          showId,
+          recentClicks: Array.isArray(invite.recentClicks) ? invite.recentClicks : [],
+        };
+      });
       setInvites(normalizedInvites);
+      setForm((prev) => {
+        if (prev.showId) return prev;
+        const defaultShowId = productionsPayload[0]?.id ?? "";
+        return { ...prev, showId: defaultShowId };
+      });
       setFreshInvite((prev) => {
         if (!prev) return prev;
         const match = normalizedInvites.find((entry) => entry.id === prev.id);
@@ -296,6 +341,8 @@ export function MemberInviteManager() {
           expiresAt: match.expiresAt ?? null,
           maxUses: typeof match.maxUses === "number" ? match.maxUses : null,
           roles: Array.isArray(match.roles) ? normalizeRoles(match.roles) : prev.roles,
+          showId: match.showId,
+          production: match.production,
           shareUrl: match.shareUrl ?? null,
         };
       });
@@ -318,7 +365,14 @@ export function MemberInviteManager() {
   }, []);
 
   const resetForm = () => {
-    setForm({ label: "", note: "", expiresAt: "", maxUses: "", roles: ["member"] });
+    setForm({
+      label: "",
+      note: "",
+      expiresAt: "",
+      maxUses: "",
+      roles: ["member"],
+      showId: productions[0]?.id ?? "",
+    });
     setError(null);
   };
 
@@ -332,7 +386,14 @@ export function MemberInviteManager() {
   };
 
   const resetEditForm = () => {
-    setEditForm({ label: "", note: "", expiresAt: "", maxUses: "", roles: ["member"] });
+    setEditForm({
+      label: "",
+      note: "",
+      expiresAt: "",
+      maxUses: "",
+      roles: ["member"],
+      showId: productions[0]?.id ?? "",
+    });
     setLockedRoles([]);
   };
 
@@ -384,6 +445,7 @@ export function MemberInviteManager() {
         ? String(invite.maxUses)
         : "",
       roles: sanitizedEditable,
+      showId: invite.showId ?? "",
     });
     setExpandedInviteId(invite.id);
     setEditModalOpen(true);
@@ -410,6 +472,10 @@ export function MemberInviteManager() {
       const trimmedExpires = editForm.expiresAt.trim();
       const trimmedMaxUses = editForm.maxUses.trim();
       const parsedMaxUses = trimmedMaxUses ? Number(trimmedMaxUses) : null;
+      if (!editForm.showId) {
+        throw new Error("Bitte wähle eine Produktion aus.");
+      }
+
       const payload = {
         label: trimmedLabel || null,
         note: trimmedNote || null,
@@ -420,6 +486,7 @@ export function MemberInviteManager() {
             : null
           : null,
         roles: normalizeRoles([...editForm.roles, ...lockedRoles]),
+        showId: editForm.showId,
       };
 
       const response = await fetch(`/api/member-invites/${editingInvite.id}`, {
@@ -447,6 +514,14 @@ export function MemberInviteManager() {
               expiresAt: updatedInvite.expiresAt ?? null,
               maxUses: typeof updatedInvite.maxUses === "number" ? updatedInvite.maxUses : null,
               roles: Array.isArray(updatedInvite.roles) ? normalizeRoles(updatedInvite.roles) : prev.roles,
+              showId:
+                typeof updatedInvite.showId === "string" && updatedInvite.showId.trim()
+                  ? updatedInvite.showId
+                  : prev.showId,
+              production:
+                updatedInvite.show && typeof updatedInvite.show === "object"
+                  ? (updatedInvite.show as ProductionSummary)
+                  : prev.production,
             };
           });
         }
@@ -470,12 +545,17 @@ export function MemberInviteManager() {
     setCreating(true);
     setError(null);
     try {
+      if (!form.showId) {
+        throw new Error("Bitte wähle eine Produktion aus.");
+      }
+
       const payload = {
         label: form.label || null,
         note: form.note || null,
         expiresAt: form.expiresAt || null,
         maxUses: form.maxUses ? Number(form.maxUses) : null,
         roles: form.roles,
+        showId: form.showId,
       };
       const response = await fetch("/api/member-invites", {
         method: "POST",
@@ -501,6 +581,11 @@ export function MemberInviteManager() {
           expiresAt: data.invite.expiresAt ?? null,
           maxUses: typeof data.invite.maxUses === "number" ? data.invite.maxUses : null,
           roles: Array.isArray(data.invite.roles) ? data.invite.roles : [],
+          showId: typeof data.invite.showId === "string" ? data.invite.showId : form.showId,
+          production:
+            data.invite.show && typeof data.invite.show === "object"
+              ? (data.invite.show as ProductionSummary)
+              : productions.find((entry) => entry.id === form.showId) ?? null,
         });
         try {
           const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
@@ -642,6 +727,11 @@ export function MemberInviteManager() {
                 <p className="text-xs text-muted-foreground sm:text-sm">
                   Kopiere den Link für den Versand oder öffne ihn direkt in einem neuen Tab.
                 </p>
+                {freshInvite.production ? (
+                  <Badge variant="outline" className="mt-1 border-primary/50 text-primary">
+                    {formatProductionLabel(freshInvite.production)}
+                  </Badge>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -666,6 +756,8 @@ export function MemberInviteManager() {
                       expiresAt: freshInvite.expiresAt,
                       maxUses: freshInvite.maxUses,
                       roles: freshInvite.roles,
+                      showId: freshInvite.showId,
+                      production: freshInvite.production,
                     });
                   }}
                   disabled={updatingInviteId === freshInvite.id}
@@ -745,7 +837,11 @@ export function MemberInviteManager() {
                 const sharePath = invite.shareUrl ?? null;
                 const isProcessing = processingInviteId === invite.id;
                 const isDownloading = downloadingPdfFor === invite.id;
-                const metaItems = [`Erstellt am ${formatDate(invite.createdAt)}`];
+                const metaItems: string[] = [];
+                if (invite.production) {
+                  metaItems.push(formatProductionLabel(invite.production));
+                }
+                metaItems.push(`Erstellt am ${formatDate(invite.createdAt)}`);
                 if (invite.expiresAt) {
                   metaItems.push(`Gültig bis ${formatDate(invite.expiresAt)}`);
                 }
@@ -880,14 +976,21 @@ export function MemberInviteManager() {
                           </div>
                         )}
                         <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium uppercase text-muted-foreground">Onboarding-Link</p>
-                            {sharePath ? (
-                              <>
-                                <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
-                                  {(resolvedOrigin ? resolvedOrigin : "") + sharePath}
-                                </code>
-                                <div className="flex flex-wrap gap-2 pt-1">
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium uppercase text-muted-foreground">Produktion</p>
+                              <p className="text-sm text-foreground">
+                                {invite.production ? formatProductionLabel(invite.production) : "–"}
+                              </p>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium uppercase text-muted-foreground">Onboarding-Link</p>
+                              {sharePath ? (
+                                <>
+                                  <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
+                                    {(resolvedOrigin ? resolvedOrigin : "") + sharePath}
+                                  </code>
+                                  <div className="flex flex-wrap gap-2 pt-1">
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -946,12 +1049,13 @@ export function MemberInviteManager() {
                                     </a>
                                   </Button>
                                 </div>
-                              </>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">
-                                Für diese Einladung ist kein öffentlicher Link freigegeben.
-                              </p>
-                            )}
+                                </>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  Für diese Einladung ist kein öffentlicher Link freigegeben.
+                                </p>
+                              )}
+                            </div>
                           </div>
                           <div className="space-y-3">
                             <div className="space-y-1">
@@ -1061,6 +1165,30 @@ export function MemberInviteManager() {
               />
             </label>
             <label className="space-y-1 text-sm">
+              <span className="font-medium">Produktion</span>
+              <Select
+                value={editForm.showId}
+                onValueChange={(value) => setEditForm((prev) => ({ ...prev, showId: value }))}
+                disabled={isUpdatingCurrentInvite || productions.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Produktion wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productions.map((production) => (
+                    <SelectItem key={`edit-production-${production.id}`} value={production.id}>
+                      {formatProductionLabel(production)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {productions.length === 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  Keine Produktionen vorhanden – lege zuerst eine Produktion an.
+                </span>
+              ) : null}
+            </label>
+            <label className="space-y-1 text-sm">
               <span className="font-medium">Notiz</span>
               <Textarea
                 value={editForm.note}
@@ -1162,6 +1290,30 @@ export function MemberInviteManager() {
                 onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
                 placeholder="z.B. Sommercrew 2025"
               />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span className="font-medium">Produktion</span>
+              <Select
+                value={form.showId}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, showId: value }))}
+                disabled={productions.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Produktion wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productions.map((production) => (
+                    <SelectItem key={`create-production-${production.id}`} value={production.id}>
+                      {formatProductionLabel(production)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {productions.length === 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  Keine Produktionen vorhanden – lege zuerst eine Produktion an.
+                </span>
+              ) : null}
             </label>
             <label className="space-y-1 text-sm">
               <span className="font-medium">Notiz (optional)</span>

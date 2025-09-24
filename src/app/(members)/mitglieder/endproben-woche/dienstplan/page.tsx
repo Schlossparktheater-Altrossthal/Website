@@ -233,7 +233,7 @@ export default async function FinalRehearsalDutyPlanPage() {
     );
   }
   const canManage = await hasPermission(session.user, FINAL_WEEK_MANAGE_PERMISSION_KEY);
-  const activeProductionId = await getActiveProductionId();
+  const activeProductionId = await getActiveProductionId(session.user?.id);
 
   const baseSelection = await Promise.all([
     activeProductionId
@@ -270,7 +270,19 @@ export default async function FinalRehearsalDutyPlanPage() {
       : Promise.resolve([]),
     canManage
       ? prisma.user.findMany({
-          where: { deactivatedAt: null },
+          where: {
+            deactivatedAt: null,
+            ...(show
+              ? {
+                  productionMemberships: {
+                    some: {
+                      showId: show.id,
+                      OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+                    },
+                  },
+                }
+              : {}),
+          },
           orderBy: [
             { firstName: "asc" },
             { lastName: "asc" },

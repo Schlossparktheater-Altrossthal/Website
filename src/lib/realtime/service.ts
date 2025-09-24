@@ -324,19 +324,16 @@ export class RealtimeService {
 
   private async isUserAuthorizedForShow(userId: string, showId: string): Promise<boolean> {
     try {
-      const show = await prisma.show.findFirst({
+      const membership = await prisma.productionMembership.findFirst({
         where: {
-          id: showId,
-          OR: [
-            { characters: { some: { castings: { some: { userId } } } } },
-            { rehearsals: { some: { attendance: { some: { userId } } } } },
-            { rehearsals: { some: { invitees: { some: { userId } } } } },
-          ],
+          userId,
+          showId,
+          OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
         },
         select: { id: true },
       });
 
-      return Boolean(show);
+      return Boolean(membership);
     } catch (error) {
       console.error(`[Realtime] Failed to verify show access for user ${userId} and show ${showId}`, error);
       return false;

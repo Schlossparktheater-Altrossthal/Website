@@ -50,7 +50,7 @@ export default async function ProduktionDetailPage({
     notFound();
   }
 
-  const activeProductionId = await getActiveProductionId();
+  const activeProductionId = await getActiveProductionId(session.user?.id);
   const isActive = activeProductionId === show.id;
   const title = formatShowTitle(show);
   const finalRehearsalWeekStartValue = show.finalRehearsalWeekStart

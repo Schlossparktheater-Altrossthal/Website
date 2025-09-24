@@ -556,8 +556,17 @@ export type MealPlanningContext = {
   priorityProfiles: ParticipantDietProfile[];
 };
 
-export async function loadMealPlanningContext(): Promise<MealPlanningContext> {
-  const activeProductionId = await getActiveProductionId();
+export async function loadMealPlanningContext(userId?: string | null): Promise<MealPlanningContext> {
+  const activeProductionId = await getActiveProductionId(userId);
+  const membershipFilter = activeProductionId
+    ? {
+        some: {
+          showId: activeProductionId,
+          OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+        },
+      }
+    : undefined;
+
   const [activeShow, profiles, rawRestrictions] = await Promise.all([
     activeProductionId
       ? prisma.show.findUnique({
@@ -566,7 +575,12 @@ export async function loadMealPlanningContext(): Promise<MealPlanningContext> {
         })
       : Promise.resolve(null),
     prisma.memberOnboardingProfile.findMany({
-      where: { user: { deactivatedAt: null } },
+      where: {
+        user: {
+          deactivatedAt: null,
+          productionMemberships: membershipFilter,
+        },
+      },
       select: {
         userId: true,
         dietaryPreference: true,
@@ -575,7 +589,13 @@ export async function loadMealPlanningContext(): Promise<MealPlanningContext> {
       },
     }),
     prisma.dietaryRestriction.findMany({
-      where: { isActive: true, user: { deactivatedAt: null } },
+      where: {
+        isActive: true,
+        user: {
+          deactivatedAt: null,
+          productionMemberships: membershipFilter,
+        },
+      },
       select: { userId: true, allergen: true, level: true },
     }),
   ]);

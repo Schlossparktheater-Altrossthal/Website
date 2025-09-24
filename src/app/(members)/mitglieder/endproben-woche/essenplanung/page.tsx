@@ -75,7 +75,7 @@ export default async function EssensplanungPage() {
     plannerDays,
     defaultParticipantCount,
     priorityProfiles,
-  } = await loadMealPlanningContext();
+  } = await loadMealPlanningContext(session.user?.id);
 
   const finalWeekStart = show?.finalRehearsalWeekStart ?? null;
   const numberFormatter = new Intl.NumberFormat("de-DE");

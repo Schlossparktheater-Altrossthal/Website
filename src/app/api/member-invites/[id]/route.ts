@@ -80,6 +80,7 @@ export async function PATCH(
         label?: unknown;
         note?: unknown;
         roles?: unknown;
+        showId?: unknown;
       }
     | null;
 
@@ -106,6 +107,24 @@ export async function PATCH(
   const roles = parseRoles(body.roles);
   if (roles !== undefined) data.roles = roles;
 
+  if (body.showId !== undefined) {
+    const rawShowId = typeof body.showId === "string" ? body.showId.trim() : "";
+    if (!rawShowId) {
+      return NextResponse.json({ error: "Bitte wähle eine Produktion aus." }, { status: 400 });
+    }
+
+    const show = await prisma.show.findUnique({
+      where: { id: rawShowId },
+      select: { id: true },
+    });
+
+    if (!show) {
+      return NextResponse.json({ error: "Produktion wurde nicht gefunden" }, { status: 404 });
+    }
+
+    data.showId = show.id;
+  }
+
   try {
     const invite = await prisma.memberInvite.update({
       where: { id },
@@ -113,6 +132,7 @@ export async function PATCH(
       include: {
         redemptions: { select: { id: true, completedAt: true } },
         createdBy: { select: { id: true, name: true, email: true } },
+        show: { select: { id: true, title: true, year: true } },
       },
     });
 
@@ -142,6 +162,7 @@ export async function PATCH(
         pendingSessions: pending,
         completedSessions: completed,
         createdBy: invite.createdBy,
+        show: invite.show,
       },
     });
   } catch (error) {
