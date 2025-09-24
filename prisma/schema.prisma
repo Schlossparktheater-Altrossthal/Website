@@ -22,6 +22,12 @@ enum SyncScope {
   tickets
 }
 
+enum TicketStatus {
+  unused
+  checked_in
+  invalid
+}
+
 enum DepartmentMembershipRole {
   lead
   member
@@ -1422,6 +1428,42 @@ model AnalyticsTrafficSource {
 
   @@map("analytics_traffic_sources")
   @@index([channel])
+}
+
+model Ticket {
+  id         String        @id @default(cuid())
+  code       String        @unique
+  eventId    String
+  holderName String?
+  status     TicketStatus  @default(unused)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  scanEvents TicketScanEvent[]
+
+  @@index([eventId])
+}
+
+model TicketScanEvent {
+  id               String        @id @default(cuid())
+  ticketId         String
+  code             String
+  statusBefore     TicketStatus
+  statusAfter      TicketStatus
+  source           String?
+  occurredAt       DateTime
+  dedupeKey        String?       @unique
+  serverSeq        Int?
+  processedAt      DateTime?
+  provisional      Boolean       @default(false)
+  clientId         String?
+  clientMutationId String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, occurredAt])
 }
 
 model AnalyticsRealtimeSummary {
