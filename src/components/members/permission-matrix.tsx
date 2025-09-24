@@ -68,8 +68,37 @@ export function PermissionMatrix() {
     setError(null);
     try {
       const res = await fetch("/api/permissions/definitions");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Laden fehlgeschlagen");
+      const rawBody = await res.text();
+      let parsedBody: unknown = null;
+
+      if (rawBody) {
+        try {
+          parsedBody = JSON.parse(rawBody);
+        } catch {
+          if (res.ok) {
+            throw new Error("Server lieferte eine ungültige Antwort.");
+          }
+        }
+      }
+
+      if (!res.ok) {
+        let errorMessage = rawBody || `Laden fehlgeschlagen (Status ${res.status})`;
+        if (
+          parsedBody &&
+          typeof parsedBody === "object" &&
+          "error" in parsedBody &&
+          typeof (parsedBody as { error?: unknown }).error === "string"
+        ) {
+          errorMessage = (parsedBody as { error: string }).error;
+        }
+        throw new Error(errorMessage);
+      }
+
+      if (!parsedBody || typeof parsedBody !== "object") {
+        throw new Error("Server lieferte eine ungültige Antwort.");
+      }
+
+      const data = parsedBody as Record<string, unknown>;
       const fetchedRoles = Array.isArray(data.roles)
         ? (data.roles as Role[]).map((role, index) => ({
             ...role,
