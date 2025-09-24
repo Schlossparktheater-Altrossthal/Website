@@ -83,5 +83,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{ matrix.build_args }}
-          cache-from: type=gha,scope=${{ matrix.environment }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.environment }}
