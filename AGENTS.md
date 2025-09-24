@@ -47,6 +47,7 @@
 - README, `docs/**` und `.env.example` bei relevanten Änderungen aktualisieren. Architektur- oder Designentscheidungen bitte im passenden Dokument notieren.
 - Tickets oder PR-Beschreibungen sollten Kontext, Entscheidungspunkte und QA-Schritte enthalten. Verweise auf Monitoring/Analytics ergänzen, falls betroffen.
 - Beachte die "Dev only Screenshot"-Sektion in den systemweiten Vorgaben: Bei wahrnehmbaren UI-Änderungen und vorhandener Dev-Server-Anleitung einen Screenshot für den Abschlussbericht aufnehmen.
+- Nutze dafür konsequent das automatisierte Screenshot-System (`/api/dev/screenshot-session`) und dokumentiere die Zielroute – manuell aufgenommene Login-Screens helfen dem Review-Team nicht weiter.
 - Diese `AGENTS.md` bei Bedarf fortschreiben, wenn bessere Kollaborationsmuster oder neue Tooling-Standards entstehen. Änderungen nachvollziehbar begründen.
 
 ## Ausnahmen & Sonderfälle
