@@ -105,7 +105,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ColorModeScript mode={resolvedSettings.colorMode} />
         <ThemeStyleRegistry tokens={themeTokens} />
       </head>
-      <body className="antialiased bg-background text-foreground">
+      <body
+        className={cn(
+          "antialiased bg-background text-foreground",
+          "overflow-x-hidden",
+        )}
+      >
         <Providers session={session}>
           <a
             href="#main"
