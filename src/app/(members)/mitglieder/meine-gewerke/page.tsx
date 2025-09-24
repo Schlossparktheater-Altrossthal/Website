@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import { CalendarDays, CheckCircle2, Clock, ListTodo, Ruler, Sparkles, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -108,6 +109,7 @@ export default async function MeineGewerkePage() {
       description: true,
       color: true,
       slug: true,
+      requiresJoinApproval: true,
     },
     orderBy: { name: "asc" },
   });
@@ -323,13 +325,29 @@ export default async function MeineGewerkePage() {
         </div>
       </div>
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {joinableDepartments.map((department) => (
-          <form
-            key={department.id}
-            action={joinDepartmentAction}
-            className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm transition hover:border-primary/40"
-          >
-            <input type="hidden" name="departmentId" value={department.id} />
+        {joinableDepartments.map((department) => {
+          const requiresApproval = department.requiresJoinApproval;
+          const cardClassName =
+            "group relative overflow-hidden rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm transition hover:border-primary/40";
+          const badgeRow = (
+            <div className="flex flex-wrap items-center gap-2">
+              {department.slug ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-border/50 bg-background/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {department.slug}
+                </span>
+              ) : null}
+              {requiresApproval ? (
+                <Badge
+                  variant="outline"
+                  className="border-primary/40 bg-primary/10 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary"
+                >
+                  Zustimmung nötig
+                </Badge>
+              ) : null}
+            </div>
+          );
+
+          const cardInner = (
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -343,18 +361,39 @@ export default async function MeineGewerkePage() {
                 {department.description ? (
                   <p className="text-xs text-muted-foreground">{department.description}</p>
                 ) : null}
-                {department.slug ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border/50 bg-background/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {department.slug}
-                  </span>
-                ) : null}
+                {badgeRow}
               </div>
-              <Button type="submit" size="sm" className="rounded-full px-3">
-                Beitreten
-              </Button>
+              {requiresApproval ? (
+                <div className="flex flex-col items-end gap-1 text-right text-xs text-muted-foreground">
+                  <span>Beitritt nur nach Freigabe der Leitung.</span>
+                </div>
+              ) : (
+                <Button type="submit" size="sm" className="rounded-full px-3">
+                  Beitreten
+                </Button>
+              )}
             </div>
-          </form>
-        ))}
+          );
+
+          if (requiresApproval) {
+            return (
+              <div key={department.id} className={cardClassName} aria-disabled="true">
+                {cardInner}
+              </div>
+            );
+          }
+
+          return (
+            <form
+              key={department.id}
+              action={joinDepartmentAction}
+              className={cardClassName}
+            >
+              <input type="hidden" name="departmentId" value={department.id} />
+              {cardInner}
+            </form>
+          );
+        })}
       </div>
     </section>
   ) : null;

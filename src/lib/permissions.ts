@@ -39,6 +39,7 @@ type UserLike = { id?: string; role?: Role; roles?: Role[] } | null | undefined;
 type ResolvedRoleContext = {
   systemRoles: Role[];
   customRoleIds: string[];
+  departmentIds: string[];
 };
 
 // Shared keys for profile data gatekeeping
@@ -551,7 +552,7 @@ async function ensureFinalWeekRoleDefaultAssignments() {
 
 async function resolveRoleContext(user: UserLike): Promise<ResolvedRoleContext> {
   if (!user?.id) {
-    return { systemRoles: [], customRoleIds: [] };
+    return { systemRoles: [], customRoleIds: [], departmentIds: [] };
   }
 
   const dbUser = await prisma.user.findUnique({
@@ -560,11 +561,12 @@ async function resolveRoleContext(user: UserLike): Promise<ResolvedRoleContext> 
       role: true,
       roles: { select: { role: true } },
       appRoles: { select: { roleId: true } },
+      departmentMemberships: { select: { departmentId: true } },
     },
   });
 
   if (!dbUser) {
-    return { systemRoles: [], customRoleIds: [] };
+    return { systemRoles: [], customRoleIds: [], departmentIds: [] };
   }
 
   const systemRoles = sortRoles([
@@ -574,7 +576,11 @@ async function resolveRoleContext(user: UserLike): Promise<ResolvedRoleContext> 
 
   const customRoleIds = Array.from(new Set(dbUser.appRoles.map((entry) => entry.roleId)));
 
-  return { systemRoles, customRoleIds };
+  const departmentIds = Array.from(
+    new Set(dbUser.departmentMemberships.map((membership) => membership.departmentId)),
+  );
+
+  return { systemRoles, customRoleIds, departmentIds };
 }
 
 function getBaselinePermissions(user: UserLike) {
@@ -594,7 +600,7 @@ export async function hasPermission(user: UserLike, permissionKey: string): Prom
   if (!user?.id) return false;
   if (!isKnownPermissionKey(permissionKey)) return false;
 
-  const { systemRoles, customRoleIds } = await resolveRoleContext(user);
+  const { systemRoles, customRoleIds, departmentIds } = await resolveRoleContext(user);
   const owned = new Set(systemRoles);
 
   if (owned.has("owner") || owned.has("admin")) return true;
@@ -606,10 +612,19 @@ export async function hasPermission(user: UserLike, permissionKey: string): Prom
   await ensureSystemRoles();
   await ensurePermissionDefinitions();
 
-  if (!systemRoles.length && !customRoleIds.length) return false;
+  if (!systemRoles.length && !customRoleIds.length && !departmentIds.length) return false;
 
   const perm = await prisma.permission.findUnique({ where: { key: permissionKey } });
   if (!perm) return false;
+
+  if (departmentIds.length) {
+    const departmentGrant = await prisma.departmentPermission.count({
+      where: { permissionId: perm.id, departmentId: { in: departmentIds } },
+    });
+    if (departmentGrant > 0) {
+      return true;
+    }
+  }
 
   const roleFilters: Prisma.AppRolePermissionWhereInput[] = [];
   if (systemRoles.length) {
@@ -639,7 +654,7 @@ export async function hasPermission(user: UserLike, permissionKey: string): Prom
 export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   if (!user?.id) return [];
 
-  const { systemRoles, customRoleIds } = await resolveRoleContext(user);
+  const { systemRoles, customRoleIds, departmentIds } = await resolveRoleContext(user);
   const owned = new Set(systemRoles);
 
   if (owned.has("owner") || owned.has("admin")) {
@@ -666,19 +681,31 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
     roleFilters.push({ roleId: { in: customRoleIds } });
   }
 
-  if (!roleFilters.length) {
-    return DEFAULT_PERMISSION_KEYS.filter((key) => granted.has(key));
+  if (roleFilters.length) {
+    const rolePermissions = await prisma.appRolePermission.findMany({
+      where: { OR: roleFilters },
+      select: { permission: { select: { key: true } } },
+    });
+
+    for (const entry of rolePermissions) {
+      const key = entry.permission?.key;
+      if (key && isKnownPermissionKey(key)) {
+        granted.add(key);
+      }
+    }
   }
 
-  const rolePermissions = await prisma.appRolePermission.findMany({
-    where: { OR: roleFilters },
-    select: { permission: { select: { key: true } } },
-  });
+  if (departmentIds.length) {
+    const departmentPermissions = await prisma.departmentPermission.findMany({
+      where: { departmentId: { in: departmentIds } },
+      select: { permission: { select: { key: true } } },
+    });
 
-  for (const entry of rolePermissions) {
-    const key = entry.permission?.key;
-    if (key && isKnownPermissionKey(key)) {
-      granted.add(key);
+    for (const entry of departmentPermissions) {
+      const key = entry.permission?.key;
+      if (key && isKnownPermissionKey(key)) {
+        granted.add(key);
+      }
     }
   }
 
