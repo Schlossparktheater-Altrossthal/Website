@@ -109,9 +109,17 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       text: "#1f2937",
       textMuted: "#4b5563",
       textSoft: "#6b7280",
-      qrDark: "#0f172a",
-      qrLight: "#e0f2fe",
-      qrAccent: "#bae6fd",
+      qrFrame: "#020617",
+      qrGlowOuter: "#1d4ed8",
+      qrGlowInner: "#38bdf8",
+      qrGradientStart: "#0f172a",
+      qrGradientEnd: "#1e293b",
+      qrModulePrimary: "#22d3ee",
+      qrModuleSecondary: "#38bdf8",
+      qrFinderOuter: "#7c3aed",
+      qrFinderInner: "#0ea5e9",
+      qrFinderCore: "#f8fafc",
+      qrFrameStroke: "#4f46e5",
     } as const;
 
     const title = data.headline ?? data.inviteLabel ?? "Dein Backstage-Start";
@@ -217,18 +225,55 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     const qrContentX = qrX + qrQuietZone * qrModuleSize;
     const qrContentY = qrY + qrQuietZone * qrModuleSize;
 
+    const qrFramePadding = 24;
+    const qrFrameRadius = 30;
+    const qrCenterX = qrX + qrSize / 2;
+    const qrCenterY = qrY + qrSize / 2;
+
     doc.save();
-    doc.roundedRect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40, 26).fillColor("#fef7ec").fill();
+    doc.opacity(0.16);
+    doc.fillColor(palette.qrGlowOuter);
+    doc.circle(qrCenterX, qrCenterY, qrSize / 2 + 42).fill();
     doc.restore();
 
     doc.save();
-    doc.lineWidth(3);
-    doc.strokeColor(palette.twilight);
-    doc.roundedRect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40, 26).stroke();
+    doc.opacity(0.28);
+    doc.fillColor(palette.qrGlowInner);
+    doc.circle(qrCenterX, qrCenterY, qrSize / 2 + 26).fill();
     doc.restore();
 
     doc.save();
-    doc.roundedRect(qrX, qrY, qrSize, qrSize, 22).fillColor(palette.qrLight).fill();
+    doc.roundedRect(qrX - qrFramePadding, qrY - qrFramePadding, qrSize + qrFramePadding * 2, qrSize + qrFramePadding * 2, qrFrameRadius)
+      .fillColor(palette.qrFrame)
+      .fill();
+    doc.restore();
+
+    const frameGradient = doc.linearGradient(
+      qrX - qrFramePadding,
+      qrY - qrFramePadding,
+      qrX + qrSize + qrFramePadding,
+      qrY + qrSize + qrFramePadding,
+    );
+    frameGradient.stop(0, palette.qrFrameStroke);
+    frameGradient.stop(1, palette.qrGlowInner);
+
+    doc.save();
+    doc.lineWidth(3.4);
+    doc.roundedRect(
+      qrX - qrFramePadding,
+      qrY - qrFramePadding,
+      qrSize + qrFramePadding * 2,
+      qrSize + qrFramePadding * 2,
+      qrFrameRadius,
+    ).stroke(frameGradient);
+    doc.restore();
+
+    const qrBackgroundGradient = doc.linearGradient(qrX, qrY, qrX + qrSize, qrY + qrSize);
+    qrBackgroundGradient.stop(0, palette.qrGradientStart);
+    qrBackgroundGradient.stop(1, palette.qrGradientEnd);
+
+    doc.save();
+    doc.roundedRect(qrX, qrY, qrSize, qrSize, 24).fill(qrBackgroundGradient);
     doc.restore();
 
     const finderCenters: Array<{ row: number; col: number }> = [
@@ -236,31 +281,67 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       { row: 3, col: qrModuleCount - 4 },
       { row: qrModuleCount - 4, col: 3 },
     ];
-    const finderRadius = qrModuleSize * 4.2;
+    const finderModuleSpan = 7;
+    const finderHalfSpan = (finderModuleSpan - 1) / 2;
+    const finderOuterSize = qrModuleSize * (finderModuleSpan + 2.4);
+    const finderInnerSize = qrModuleSize * (finderModuleSpan - 0.8);
+    const finderCoreRadius = qrModuleSize * 1.9;
 
-    doc.save();
-    doc.fillColor(palette.qrAccent);
     for (const center of finderCenters) {
       const cx = qrContentX + (center.col + 0.5) * qrModuleSize;
       const cy = qrContentY + (center.row + 0.5) * qrModuleSize;
-      doc.circle(cx, cy, finderRadius).fill();
-    }
-    doc.restore();
 
-    const dotRadius = qrModuleSize * 0.42;
-    doc.save();
-    doc.fillColor(palette.qrDark);
+      doc.save();
+      doc.translate(cx, cy);
+      doc.rotate(45);
+      doc.fillColor(palette.qrFinderOuter);
+      doc.rect(-finderOuterSize / 2, -finderOuterSize / 2, finderOuterSize, finderOuterSize).fill();
+      doc.restore();
+
+      doc.save();
+      doc.translate(cx, cy);
+      doc.rotate(45);
+      doc.fillColor(palette.qrFinderInner);
+      doc.rect(-finderInnerSize / 2, -finderInnerSize / 2, finderInnerSize, finderInnerSize).fill();
+      doc.restore();
+
+      doc.save();
+      doc.fillColor(palette.qrFinderCore);
+      doc.circle(cx, cy, finderCoreRadius).fill();
+      doc.restore();
+    }
+
+    const moduleSize = qrModuleSize * 0.78;
+    const moduleRadius = moduleSize / 5.5;
     for (let row = 0; row < qrModuleCount; row += 1) {
       for (let col = 0; col < qrModuleCount; col += 1) {
         if (!qrData.modules.get(row, col)) {
           continue;
         }
+
+        const isFinderModule = finderCenters.some((center) => {
+          return (
+            Math.abs(row - center.row) <= finderHalfSpan &&
+            Math.abs(col - center.col) <= finderHalfSpan
+          );
+        });
+        if (isFinderModule) {
+          continue;
+        }
+
         const cx = qrContentX + (col + 0.5) * qrModuleSize;
         const cy = qrContentY + (row + 0.5) * qrModuleSize;
-        doc.circle(cx, cy, dotRadius).fill();
+        const rotation = (row + col) % 2 === 0 ? 9 : -9;
+        const color = (row + col) % 3 === 0 ? palette.qrModuleSecondary : palette.qrModulePrimary;
+
+        doc.save();
+        doc.translate(cx, cy);
+        doc.rotate(rotation);
+        doc.fillColor(color);
+        doc.roundedRect(-moduleSize / 2, -moduleSize / 2, moduleSize, moduleSize, moduleRadius).fill();
+        doc.restore();
       }
     }
-    doc.restore();
 
     doc.y = qrY + qrSize;
 
