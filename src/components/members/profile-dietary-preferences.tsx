@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AllergyLevel } from "@prisma/client";
 import { Loader2, Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
@@ -61,11 +61,16 @@ type DialogState =
 interface ProfileDietaryPreferencesProps {
   initialPreference: DietaryPreferenceState;
   initialAllergies: AllergyEntry[];
+  onDietaryChange?: (data: {
+    preference: DietaryPreferenceState;
+    allergies: AllergyEntry[];
+  }) => void;
 }
 
 export function ProfileDietaryPreferences({
   initialPreference,
   initialAllergies,
+  onDietaryChange,
 }: ProfileDietaryPreferencesProps) {
   const { setItemComplete } = useProfileCompletion();
   const [preference, setPreference] = useState<DietaryPreferenceState>(
@@ -87,6 +92,13 @@ export function ProfileDietaryPreferences({
   );
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [deletingAllergen, setDeletingAllergen] = useState<string | null>(null);
+
+  const emitDietaryChange = useCallback(
+    (nextPreference: DietaryPreferenceState, nextAllergies: AllergyEntry[]) => {
+      onDietaryChange?.({ preference: nextPreference, allergies: nextAllergies });
+    },
+    [onDietaryChange],
+  );
 
   const styleRequiresCustom = draftStyle === "custom";
   const strictnessDisabled = draftStyle === "none";
@@ -151,6 +163,7 @@ export function ProfileDietaryPreferences({
       setDraftCustomStyle(nextPreference.customLabel ?? "");
       setItemComplete("dietary", true);
       toast.success("Ernährungsinformationen aktualisiert.");
+      emitDietaryChange(nextPreference, allergies);
     } catch (error) {
       const message =
         error instanceof Error
@@ -199,14 +212,16 @@ export function ProfileDietaryPreferences({
       note: saved?.note ?? data.note,
       updatedAt: saved?.updatedAt ?? new Date().toISOString(),
     };
-    setAllergies((prev) =>
-      sortAllergies([
+    setAllergies((prev) => {
+      const next = sortAllergies([
         ...prev.filter(
           (item) => item.allergen.toLowerCase() !== entry.allergen.toLowerCase(),
         ),
         entry,
-      ]),
-    );
+      ]);
+      emitDietaryChange(preference, next);
+      return next;
+    });
     setDialogState(null);
   };
 
@@ -225,11 +240,13 @@ export function ProfileDietaryPreferences({
             : "Allergie konnte nicht entfernt werden.";
         throw new Error(message);
       }
-      setAllergies((prev) =>
-        prev.filter(
+      setAllergies((prev) => {
+        const next = prev.filter(
           (entry) => entry.allergen.toLowerCase() !== allergen.toLowerCase(),
-        ),
-      );
+        );
+        emitDietaryChange(preference, next);
+        return next;
+      });
       toast.success("Allergie entfernt.");
     } catch (error) {
       const message =

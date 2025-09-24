@@ -22,6 +22,15 @@ interface ProfileFormProps {
   initialAvatarSource?: AvatarSource | null;
   initialAvatarUpdatedAt?: string | null;
   initialDateOfBirth?: string | null;
+  onProfileChange?: (data: {
+    firstName: string | null;
+    lastName: string | null;
+    name: string | null;
+    email: string | null;
+    avatarSource: AvatarSource | null;
+    avatarUpdatedAt: string | null;
+    dateOfBirth: string | null;
+  }) => void;
 }
 
 const AVATAR_CHOICES = ["GRAVATAR", "UPLOAD", "INITIALS"] as const;
@@ -59,6 +68,7 @@ export function ProfileForm({
   initialAvatarSource,
   initialAvatarUpdatedAt,
   initialDateOfBirth,
+  onProfileChange,
 }: ProfileFormProps) {
   const { update } = useSession();
   const derivedNames = initialName ? splitFullName(initialName) : { firstName: null, lastName: null };
@@ -270,6 +280,16 @@ export function ProfileForm({
       setRemoveAvatar(false);
       setSuccess("Profil wurde erfolgreich aktualisiert");
       toast.success("Profil wurde aktualisiert");
+
+      onProfileChange?.({
+        firstName: updatedFirstName ?? null,
+        lastName: updatedLastName ?? null,
+        name: updatedName ?? null,
+        email: updatedEmail ?? null,
+        avatarSource: (updatedAvatarSource ?? null) as AvatarSource | null,
+        avatarUpdatedAt: updatedAvatarTimestamp,
+        dateOfBirth: updatedDateOfBirthIso ?? null,
+      });
 
       completion.setItemComplete(
         "basics",
