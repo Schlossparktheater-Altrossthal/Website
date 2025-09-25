@@ -7,6 +7,11 @@ import { requireAuth } from "@/lib/rbac";
 
 import { RehearsalEditor } from "../../rehearsal-editor";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import {
+  DEFAULT_TIME_ZONE,
+  formatIsoDateInTimeZone,
+  parseDateTimeInTimeZone,
+} from "@/lib/date-time";
 
 type MemberOption = {
   id: string;
@@ -58,8 +63,11 @@ export default async function RehearsalEditorPage({
     },
   });
 
-  const dateKey = rehearsal.start.toISOString().slice(0, 10);
-  const dayStart = new Date(`${dateKey}T00:00:00`);
+  const dateKey = formatIsoDateInTimeZone(
+    rehearsal.start.toISOString(),
+    DEFAULT_TIME_ZONE,
+  );
+  const dayStart = parseDateTimeInTimeZone(dateKey, "00:00", DEFAULT_TIME_ZONE);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
   const blocked = await prisma.blockedDay.findMany({
@@ -104,6 +112,7 @@ export default async function RehearsalEditorPage({
           status: rehearsal.status,
           title: rehearsal.title,
           start: rehearsal.start.toISOString(),
+          end: rehearsal.end ? rehearsal.end.toISOString() : null,
           location: rehearsal.location,
           description: rehearsal.description,
           inviteeIds: rehearsal.invitees.map((entry) => entry.userId),
