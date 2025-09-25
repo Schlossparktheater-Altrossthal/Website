@@ -39,7 +39,7 @@ export async function joinDepartmentAction(formData: FormData) {
   const session = await requireAuth();
   const userId = session.user?.id;
   if (!userId) {
-    throw new Error("Benutzer:in konnte nicht ermittelt werden.");
+    throw new Error("Benutzer konnte nicht ermittelt werden.");
   }
 
   const departmentIdValue = formData.get("departmentId");

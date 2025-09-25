@@ -486,7 +486,7 @@ export function ProfilePageClient({
           <PageHeader
             variant="section"
             title="Mein Profil"
-            description="Halte deine Angaben aktuell, damit Teams und Kolleg:innen optimal planen können."
+            description="Halte deine Angaben aktuell, damit Teams und Kollegen optimal planen können."
           />
           <div className="mt-6">
             <ProfilePhotoConsentNotice

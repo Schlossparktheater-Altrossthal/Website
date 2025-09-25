@@ -117,7 +117,7 @@ const careCircle: Supporter[] = [
     icon: Users,
     title: "Pflege-AG & Schülerschaft",
     description:
-      "In festen Diensten sorgten engagierte Schüler:innen für Futter, frisches Wasser und liebevolle Aufmerksamkeit.",
+      "In festen Diensten sorgten engagierte Schüler für Futter, frisches Wasser und liebevolle Aufmerksamkeit.",
   },
   {
     icon: ShieldCheck,
@@ -306,7 +306,7 @@ export default function SchulkatzePage() {
             In Erinnerung an Dieter
           </Heading>
           <Text variant="bodyLg" tone="muted" align="center">
-            Dieter hat Generationen von Schüler:innen begleitet und unserer Schule ein unverwechselbares Gefühl von Heimat gegeben.
+            Dieter hat Generationen von Schülern begleitet und unserer Schule ein unverwechselbares Gefühl von Heimat gegeben.
             Seine Geschichte erinnert uns daran, wie wertvoll Fürsorge und Gemeinschaft sind.
           </Text>
           <Text tone="muted" align="center">

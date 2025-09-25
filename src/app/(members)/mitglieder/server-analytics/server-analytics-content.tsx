@@ -984,7 +984,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
                           <div className="flex flex-wrap justify-end gap-3 text-xs text-muted-foreground">
                             <span>Vorkommen: {numberFormat.format(log.occurrences)}</span>
                             {typeof log.affectedUsers === "number" ? (
-                              <span>Betroffene Nutzer:innen: {numberFormat.format(log.affectedUsers)}</span>
+                              <span>Betroffene Nutzer: {numberFormat.format(log.affectedUsers)}</span>
                             ) : null}
                           </div>
                         </div>
