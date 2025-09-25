@@ -8,15 +8,13 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
 
 import {
-  clearActiveProductionAction,
-  createProductionAction,
-  setActiveProductionAction,
-} from "./actions";
+  ClearActiveProductionForm,
+  CreateProductionForm,
+  SetActiveProductionForm,
+} from "./production-forms-client";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
   if (show.title && show.title.trim()) {
@@ -98,12 +96,10 @@ export default async function ProduktionenPage() {
       <Button asChild variant="outline">
         <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams verwalten</Link>
       </Button>
-      <form action={clearActiveProductionAction} className="ml-auto flex-shrink-0">
-        <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-        <Button type="submit" variant="ghost" size="sm">
-          Aktive Auswahl zurücksetzen
-        </Button>
-      </form>
+      <ClearActiveProductionForm
+        redirectPath="/mitglieder/produktionen"
+        className="ml-auto flex-shrink-0"
+      />
     </>
   ) : null;
 
@@ -183,71 +179,11 @@ export default async function ProduktionenPage() {
             </p>
           </CardHeader>
           <CardContent>
-            <form action={createProductionAction} className="grid gap-6">
-              <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-              <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 sm:grid-cols-2">
-                <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Basisdaten
-                </legend>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Jahr</label>
-                  <Input type="number" name="year" min={1900} max={2200} defaultValue={suggestedYear} required />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Titel</label>
-                  <Input name="title" placeholder="Titel der Produktion" maxLength={160} />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-sm font-medium">Kurzbeschreibung</label>
-                  <Textarea
-                    name="synopsis"
-                    rows={3}
-                    maxLength={600}
-                    placeholder="Optionaler Teaser, Autor oder kurzes Motto."
-                  />
-                </div>
-              </fieldset>
-
-              <details className="rounded-lg border border-border/60 bg-background/60 p-4 transition [&_summary::-webkit-details-marker]:hidden">
-                <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
-                  <span>Timeline &amp; Kommunikation (optional)</span>
-                  <span className="text-xs text-muted-foreground">Bereich öffnen</span>
-                </summary>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Startdatum</label>
-                    <Input type="date" name="startDate" />
-                  </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Enddatum</label>
-                  <Input type="date" name="endDate" />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-sm font-medium">Beginn der Endprobenwoche</label>
-                  <Input type="date" name="finalRehearsalWeekStart" />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-sm font-medium">Premierenankündigung</label>
-                  <Input type="date" name="revealDate" />
-                </div>
-              </div>
-              </details>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    name="setActive"
-                    defaultChecked={shouldSetActiveByDefault}
-                    className="mt-1 h-4 w-4 rounded border border-border bg-background text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  />
-                  <span className="leading-snug">Nach dem Anlegen als aktive Produktion setzen</span>
-                </label>
-                <Button type="submit" className="sm:w-auto">
-                  Produktion erstellen
-                </Button>
-              </div>
-            </form>
+            <CreateProductionForm
+              redirectPath="/mitglieder/produktionen"
+              suggestedYear={suggestedYear}
+              shouldSetActiveByDefault={shouldSetActiveByDefault}
+            />
           </CardContent>
         </Card>
 
@@ -283,13 +219,12 @@ export default async function ProduktionenPage() {
                       )}
                     </CardHeader>
                     <CardContent className="mt-auto flex flex-wrap items-center gap-2">
-                      <form action={setActiveProductionAction} className="flex-shrink-0">
-                        <input type="hidden" name="showId" value={show.id} />
-                        <input type="hidden" name="redirectPath" value="/mitglieder/produktionen" />
-                        <Button type="submit" size="sm" disabled={isActive}>
-                          {isActive ? "Aktiv ausgewählt" : "Als aktiv setzen"}
-                        </Button>
-                      </form>
+                      <SetActiveProductionForm
+                        showId={show.id}
+                        showTitle={title}
+                        redirectPath="/mitglieder/produktionen"
+                        isActive={isActive}
+                      />
                       <Button asChild size="sm" variant="outline" className="flex-shrink-0">
                         <Link href={`/mitglieder/produktionen/${show.id}`}>Details anzeigen</Link>
                       </Button>

@@ -16,6 +16,19 @@ import { hasPermission } from "@/lib/permissions";
 import { ACTIVE_PRODUCTION_COOKIE } from "@/lib/active-production";
 import { setOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
+export type ProductionActionResult =
+  | { ok: true; message?: string }
+  | { ok: false; error: string };
+
+function actionSuccess(message?: string): ProductionActionResult {
+  return message ? { ok: true, message } : { ok: true };
+}
+
+function actionFailure(error: unknown, fallbackMessage: string): ProductionActionResult {
+  const message = error instanceof Error ? error.message : fallbackMessage;
+  return { ok: false, error: message };
+}
+
 type ReadOptions = {
   minLength?: number;
   maxLength?: number;
@@ -44,7 +57,7 @@ function readOptionalString(formData: FormData, key: string, options?: ReadOptio
   return trimmed;
 }
 
-export async function setActiveProductionAction(formData: FormData): Promise<void> {
+export async function setActiveProductionAction(formData: FormData): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
     const allowed = await hasPermission(session.user, "mitglieder.produktionen");
@@ -71,14 +84,13 @@ export async function setActiveProductionAction(formData: FormData): Promise<voi
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
+    return actionSuccess("Aktive Produktion wurde gesetzt.");
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Aktive Produktion konnte nicht gesetzt werden.";
-    throw new Error(message);
+    return actionFailure(error, "Aktive Produktion konnte nicht gesetzt werden.");
   }
 }
 
-export async function clearActiveProductionAction(formData: FormData): Promise<void> {
+export async function clearActiveProductionAction(formData: FormData): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
     const allowed = await hasPermission(session.user, "mitglieder.produktionen");
@@ -95,16 +107,13 @@ export async function clearActiveProductionAction(formData: FormData): Promise<v
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
+    return actionSuccess("Aktive Produktion wurde zurückgesetzt.");
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Aktive Produktion konnte nicht entfernt werden.";
-    throw new Error(message);
+    return actionFailure(error, "Aktive Produktion konnte nicht entfernt werden.");
   }
 }
 
-export async function createProductionAction(formData: FormData): Promise<void> {
+export async function createProductionAction(formData: FormData): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
     const allowed = await hasPermission(session.user, "mitglieder.produktionen");
@@ -184,11 +193,10 @@ export async function createProductionAction(formData: FormData): Promise<void> 
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
+    return actionSuccess("Produktion wurde erstellt.");
   } catch (error) {
     console.error("createProductionAction", error);
-    const message =
-      error instanceof Error ? error.message : "Produktion konnte nicht angelegt werden.";
-    throw new Error(message);
+    return actionFailure(error, "Produktion konnte nicht angelegt werden.");
   }
 }
 

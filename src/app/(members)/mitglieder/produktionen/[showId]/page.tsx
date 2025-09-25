@@ -14,11 +14,8 @@ import { X } from "lucide-react";
 
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
-import {
-  setActiveProductionAction,
-  updateOnboardingSettingsAction,
-  updateProductionTimelineAction,
-} from "../actions";
+import { updateOnboardingSettingsAction, updateProductionTimelineAction } from "../actions";
+import { SetActiveProductionForm } from "../production-forms-client";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
   if (show.title && show.title.trim()) return show.title;
@@ -127,13 +124,13 @@ export default async function ProduktionDetailPage({
               <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams</Link>
             </Button>
             {!isActive ? (
-              <form action={setActiveProductionAction} className="ml-auto flex-shrink-0">
-                <input type="hidden" name="showId" value={show.id} />
-                <input type="hidden" name="redirectPath" value={`/mitglieder/produktionen/${show.id}`} />
-                <Button type="submit" size="sm">
-                  Produktion aktiv setzen
-                </Button>
-              </form>
+              <SetActiveProductionForm
+                showId={show.id}
+                showTitle={title}
+                redirectPath={`/mitglieder/produktionen/${show.id}`}
+                isActive={isActive}
+                className="ml-auto flex-shrink-0"
+              />
             ) : null}
           </div>
         </CardContent>
