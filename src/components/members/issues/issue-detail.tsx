@@ -171,6 +171,11 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
     await handleUpdate({ visibility: nextVisibility });
   };
 
+  const handleMarkAsSolved = useCallback(async () => {
+    if (!issue) return;
+    await handleUpdate({ status: "closed" });
+  }, [handleUpdate, issue]);
+
   const handleCommentSubmit = async () => {
     if (!issue) return;
     const trimmed = commentDraft.trim();
@@ -361,6 +366,17 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          ) : null}
+
+          {canUpdate && issue.status === "resolved" ? (
+            <div className="space-y-2 md:col-span-2">
+              <Button type="button" onClick={handleMarkAsSolved} disabled={updating}>
+                Solve
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Alles geklärt? Bestätige die Lösung, um das Anliegen abzuschließen.
+              </p>
             </div>
           ) : null}
         </div>
