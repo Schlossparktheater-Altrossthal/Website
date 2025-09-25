@@ -14,12 +14,14 @@ export function resolveHomepageCountdown(record: HomepageCountdownRecord) {
   const defaultCountdown = getDefaultCountdownDate();
   const storedCountdown = record?.countdownTarget ?? null;
   const effectiveCountdownTarget = storedCountdown ?? defaultCountdown;
+  const disabled = record?.disabled ?? false;
 
   return {
     countdownTarget: storedCountdown,
     effectiveCountdownTarget,
     updatedAt: record?.updatedAt ?? null,
     hasCustomCountdown: storedCountdown !== null,
+    disabled,
   } as const;
 }
 
@@ -27,15 +29,17 @@ export async function readHomepageCountdown() {
   return prisma.homepageCountdown.findUnique({ where: { id: HOMEPAGE_COUNTDOWN_ID } });
 }
 
-export async function saveHomepageCountdown(data: { countdownTarget: Date | null }) {
+export async function saveHomepageCountdown(data: { countdownTarget: Date | null; disabled: boolean }) {
   return prisma.homepageCountdown.upsert({
     where: { id: HOMEPAGE_COUNTDOWN_ID },
     update: {
       countdownTarget: data.countdownTarget,
+      disabled: data.disabled,
     },
     create: {
       id: HOMEPAGE_COUNTDOWN_ID,
       countdownTarget: data.countdownTarget,
+      disabled: data.disabled,
     },
   });
 }

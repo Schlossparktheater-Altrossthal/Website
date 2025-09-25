@@ -562,6 +562,7 @@ model Clue {
 model HomepageCountdown {
   id              String   @id @default("public")
   countdownTarget DateTime?
+  disabled        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

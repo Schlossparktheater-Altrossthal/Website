@@ -24,6 +24,7 @@ type HomepageCountdownProps = {
   defaultCountdownTarget: string;
   updatedAt: string | null;
   hasCustomCountdown: boolean;
+  disabled: boolean;
   initialNow: number;
 };
 
@@ -32,6 +33,7 @@ type CountdownSettingsState = {
   effectiveCountdownTarget: string;
   updatedAt: string | null;
   hasCustomCountdown: boolean;
+  disabled: boolean;
 };
 
 type SavedSettingsResponse = {
@@ -40,6 +42,7 @@ type SavedSettingsResponse = {
     effectiveCountdownTarget: string;
     updatedAt: string | null;
     hasCustomCountdown: boolean;
+    disabled: boolean;
   };
   error?: string;
 };
@@ -85,6 +88,7 @@ export function HomepageCountdown({
   defaultCountdownTarget,
   updatedAt,
   hasCustomCountdown,
+  disabled,
   initialNow,
 }: HomepageCountdownProps) {
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
@@ -96,8 +100,10 @@ export function HomepageCountdown({
     effectiveCountdownTarget,
     updatedAt,
     hasCustomCountdown,
+    disabled,
   }));
   const [countdownInputValue, setCountdownInputValue] = useState(() => isoToLocalInputValue(initialCountdownTarget));
+  const [formDisabled, setFormDisabled] = useState(() => disabled);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -108,9 +114,11 @@ export function HomepageCountdown({
       effectiveCountdownTarget,
       updatedAt,
       hasCustomCountdown,
+      disabled,
     });
     setCountdownInputValue(isoToLocalInputValue(initialCountdownTarget));
-  }, [initialCountdownTarget, effectiveCountdownTarget, updatedAt, hasCustomCountdown]);
+    setFormDisabled(disabled);
+  }, [initialCountdownTarget, effectiveCountdownTarget, updatedAt, hasCustomCountdown, disabled]);
 
   useEffect(() => {
     if (!editorOpen) {
@@ -134,11 +142,14 @@ export function HomepageCountdown({
     [settings.updatedAt],
   );
 
+  const countdownActive = !settings.disabled;
+
   const countdownReached = useMemo(() => {
+    if (settings.disabled) return false;
     const target = new Date(settings.effectiveCountdownTarget);
     if (Number.isNaN(target.getTime())) return false;
     return target.getTime() <= Date.now();
-  }, [settings.effectiveCountdownTarget]);
+  }, [settings.effectiveCountdownTarget, settings.disabled]);
 
   function handleToggleEditor() {
     if (!canEdit) return;
@@ -165,7 +176,7 @@ export function HomepageCountdown({
       const response = await fetch("/api/homepage/countdown", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ countdownTarget: isoCountdown }),
+        body: JSON.stringify({ countdownTarget: isoCountdown, disabled: formDisabled }),
       });
       const data = (await response.json().catch(() => ({}))) as SavedSettingsResponse;
 
@@ -174,14 +185,23 @@ export function HomepageCountdown({
       }
 
       const nextCountdownInput = isoToLocalInputValue(data.settings.countdownTarget ?? null);
+      const wasDisabled = settings.disabled;
       setSettings({
         countdownTarget: data.settings.countdownTarget ?? null,
         effectiveCountdownTarget: data.settings.effectiveCountdownTarget,
         updatedAt: data.settings.updatedAt ?? null,
         hasCustomCountdown: data.settings.hasCustomCountdown,
+        disabled: data.settings.disabled,
       });
       setCountdownInputValue(nextCountdownInput);
-      setSuccess("Der Premieren-Countdown wurde gespeichert.");
+      setFormDisabled(data.settings.disabled);
+      setSuccess(
+        data.settings.disabled
+          ? "Der Premieren-Countdown wurde deaktiviert."
+          : wasDisabled
+              ? "Der Premieren-Countdown wurde aktiviert."
+              : "Der Premieren-Countdown wurde gespeichert.",
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler beim Speichern.");
     } finally {
@@ -193,21 +213,29 @@ export function HomepageCountdown({
     <div className="flex w-full flex-col items-center gap-5 text-center">
       <div className="flex flex-col items-center gap-5">
         <Heading level="h3" align="center">
-          {countdownReached ? "Premierenwochenende" : "Premiere in"}
+          {countdownActive ? (countdownReached ? "Premierenwochenende" : "Premiere in") : "Premieren-Countdown"}
         </Heading>
-        {countdownReached ? (
-          <Text variant="lead" tone="success" className="font-semibold">
-            Das Ensemble steht auf der Bühne – wir sehen uns im Schlosspark!
-          </Text>
+        {countdownActive ? (
+          countdownReached ? (
+            <Text variant="lead" tone="success" className="font-semibold">
+              Das Ensemble steht auf der Bühne – wir sehen uns im Schlosspark!
+            </Text>
+          ) : (
+            <Countdown targetDate={settings.effectiveCountdownTarget} initialNow={initialNow} />
+          )
         ) : (
-          <Countdown targetDate={settings.effectiveCountdownTarget} initialNow={initialNow} />
+          <Text variant="lead" tone="muted" className="font-semibold">
+            Der Countdown ist aktuell deaktiviert.
+          </Text>
         )}
         <Text variant="small" tone="muted">
-          {countdownLabel
-            ? countdownReached
-              ? `Gestartet am ${countdownLabel}.`
-              : `Erste Aufführung am ${countdownLabel}.`
-            : "Das genaue Datum geben wir in Kürze bekannt."}
+          {countdownActive
+            ? countdownLabel
+              ? countdownReached
+                ? `Gestartet am ${countdownLabel}.`
+                : `Erste Aufführung am ${countdownLabel}.`
+              : "Das genaue Datum geben wir in Kürze bekannt."
+            : "Sobald ein Datum kommuniziert werden soll, kannst du den Countdown wieder aktivieren."}
         </Text>
         {canEdit ? (
           <Button
@@ -261,6 +289,26 @@ export function HomepageCountdown({
                       ? `Kein eigenes Datum hinterlegt – Standard: ${defaultCountdownLabel}`
                       : "Kein eigenes Datum hinterlegt."}
               </Text>
+            </div>
+
+            <div className="space-y-2 rounded-2xl border border-border/60 bg-background/60 p-4 text-left">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="homepage-countdown-visible" className="text-sm font-semibold">
+                    Countdown auf der Startseite anzeigen
+                  </Label>
+                  <Text variant="small" tone="muted">
+                    Wenn deaktiviert, wird auf der Startseite kein Timer angezeigt – das gespeicherte Datum bleibt erhalten.
+                  </Text>
+                </div>
+                <input
+                  id="homepage-countdown-visible"
+                  type="checkbox"
+                  className="mt-1 h-5 w-5 rounded border-border/60 text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  checked={!formDisabled}
+                  onChange={(event) => setFormDisabled(!event.target.checked)}
+                />
+              </div>
             </div>
 
             {updatedAtLabel ? (
