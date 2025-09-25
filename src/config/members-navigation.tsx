@@ -12,6 +12,7 @@ export type MembersNavGroupId =
   | "final-week"
   | "production"
   | "finance"
+  | "inventory"
   | "admin";
 
 export const MEMBERS_NAV_ASSIGNMENTS_GROUP_ID: MembersNavGroupId = "assignments";
@@ -98,6 +99,23 @@ const InventoryStickersIcon = createMembersNavIcon(
     <path d="M9 7h.01" />
     <path d="M9 11h4" />
     <path d="M9 15h4" />
+  </>,
+);
+
+const TechInventoryIcon = createMembersNavIcon(
+  <>
+    <path d="M3 8.5 12 4l9 4.5" />
+    <path d="M5 11h14v8H5z" />
+    <path d="M9 15h6" />
+    <path d="M12 12v6" />
+  </>,
+);
+
+const CostumeInventoryIcon = createMembersNavIcon(
+  <>
+    <path d="M12 4a2 2 0 0 1 2 2c0 1.105-.895 2-2 2s-2-.895-2-2" />
+    <path d="M8 8 6 20h12L16 8" />
+    <path d="M10 16h4" />
   </>,
 );
 
@@ -361,6 +379,24 @@ export const membersNavigation = [
         label: "Feedback & Support",
         permissionKey: "mitglieder.issues",
         icon: IssuesIcon,
+      },
+    ],
+  },
+  {
+    id: "inventory",
+    label: "Lagerverwaltung",
+    items: [
+      {
+        href: "/mitglieder/lagerverwaltung/technik",
+        label: "Technik-Lager",
+        permissionKey: "mitglieder.lager.technik",
+        icon: TechInventoryIcon,
+      },
+      {
+        href: "/mitglieder/lagerverwaltung/kostueme",
+        label: "Kostüm-Lager",
+        permissionKey: "mitglieder.lager.kostueme",
+        icon: CostumeInventoryIcon,
       },
     ],
   },

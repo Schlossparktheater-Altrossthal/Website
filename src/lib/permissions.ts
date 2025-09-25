@@ -61,6 +61,20 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "base",
   },
   {
+    key: "mitglieder.lager.technik",
+    label: "Technik-Lager verwalten",
+    description:
+      "Gerätebestand, Ausgaben und Rückgaben im Techniklager koordinieren und nachverfolgen.",
+    category: "planning",
+  },
+  {
+    key: "mitglieder.lager.kostueme",
+    label: "Kostüm-Lager verwalten",
+    description:
+      "Bestand des Kostümfundus pflegen, Größen kontrollieren und Pflegehinweise dokumentieren.",
+    category: "planning",
+  },
+  {
     key: "mitglieder.galerie",
     label: "Archiv und Bilder öffnen",
     description:
