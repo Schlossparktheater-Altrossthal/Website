@@ -165,7 +165,6 @@ const engagement = [
 type Trade = {
   icon: LucideIcon;
   title: string;
-  focus: string;
   description: string;
 };
 
@@ -173,77 +172,66 @@ const trades: Trade[] = [
   {
     icon: Drama,
     title: "Schauspiel",
-    focus: "Ob Rolle ohne Text oder im Ensemble, kleine Rolle, mittelgroße Rolle oder große Rolle",
     description:
       "Wir entwickeln Szenen gemeinsam und finden für jede Person die passende Herausforderung – vom leisen Spiel bis zur großen Hauptrolle.",
   },
   {
     icon: Spotlight,
     title: "Technik",
-    focus: "Licht, Ton",
     description:
       "Scheinwerfer, Funkmikros und Klangflächen sorgen für Atmosphäre. Unser Technikteam mischt, programmiert und begleitet jede Vorstellung live.",
   },
   {
     icon: Paintbrush,
     title: "Bühnenbau & -malerei",
-    focus: "Bühne gestalten, Pflanzen (Floristen)",
     description:
       "Holz, Stoffe und frische Floristik verschmelzen zu verwunschenen Parklandschaften. Hier entstehen Wege, Kulissen und Farbräume.",
   },
   {
     icon: Package,
     title: "Requisite",
-    focus: "Gegenstände zum Spielen",
     description:
       "Vom alten Koffer bis zum magischen Artefakt – die Requisite recherchiert, baut und pflegt alles, was Figuren in den Händen halten.",
   },
   {
     icon: Shirt,
     title: "Kostüm",
-    focus: "Kostüme entwickeln und nähen",
     description:
       "Outfits werden entworfen, zugeschnitten und veredelt. So erzählen Stoffe, Farben und Accessoires eigene Geschichten.",
   },
   {
     icon: WandSparkles,
     title: "Maske",
-    focus: "Schauspieler schminken",
     description:
       "Mit Pinseln, Airbrush und viel Fingerspitzengefühl entstehen Charaktere – vom sommerlichen Glow bis hin zu fantastischen Wesen.",
   },
   {
     icon: Megaphone,
     title: "Werbung",
-    focus: "Social Media (Instagram)",
     description:
       "Stories, Reels und Plakatideen machen Probenprozesse sichtbar und laden unser Publikum frühzeitig in den Schlosspark ein.",
   },
   {
     icon: AudioLines,
     title: "Soufflage",
-    focus: "Bei Hängern einspringen",
     description:
       "Mit Textbuch und Ruhe bewahren die Souffleur:innen den Überblick – und geben im richtigen Moment leise Stichworte.",
   },
   {
     icon: Music3,
     title: "Musik",
-    focus: "Musik komponieren, Instrumente, Tanz",
     description:
       "Eigenkompositionen, Chorarrangements und choreografierte Bewegungen verweben Klang und Rhythmus mit der Handlung.",
   },
   {
     icon: UtensilsCrossed,
     title: "Verpflegung",
-    focus: "Um Essen kümmern",
     description:
       "Snacks für lange Probentage und liebevoll gedeckte Buffets vor den Shows halten Ensemble und Gäste bei Kräften.",
   },
   {
     icon: ClipboardList,
     title: "Regieassistenz & Organisation",
-    focus: "Termine, Ablauf, Kommunikation",
     description:
       "Spielpläne, Probenprotokolle und Kontaktlisten laufen hier zusammen – damit jede Premiere punktgenau gelingt.",
   },
@@ -360,7 +348,7 @@ export default async function AboutPage() {
             role="list"
             aria-label="Gewerke des Ensembles"
           >
-            {trades.map(({ icon: Icon, title, focus, description }) => (
+            {trades.map(({ icon: Icon, title, description }) => (
               <Card
                 key={title}
                 role="listitem"
@@ -375,9 +363,6 @@ export default async function AboutPage() {
                   </Heading>
                 </div>
                 <div className="space-y-3">
-                  <Text variant="small" className="font-medium text-primary">
-                    {focus}
-                  </Text>
                   <Text variant="small" tone="muted">
                     {description}
                   </Text>
