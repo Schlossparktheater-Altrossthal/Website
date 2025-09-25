@@ -33,27 +33,37 @@ env:
 
 jobs:
   build-and-push-website:
-    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       matrix:
         include:
-          - environment: dev
+          - branch: dev
+            environment: dev
             dockerfile: Dockerfile.dev
             build_args: |
               NODE_ENV=development
               GIT_COMMIT_SHA=${{ github.sha }}
             metadata_tags: |
               type=raw,value=dev
-          - environment: prod
+          - branch: dev
+            environment: prod
             dockerfile: Dockerfile.prod
             build_args: |
               NODE_ENV=production
               GIT_COMMIT_SHA=${{ github.sha }}
             metadata_tags: |
               type=raw,value=prod
+          - branch: main
+            environment: latest
+            dockerfile: Dockerfile.prod
+            build_args: |
+              NODE_ENV=production
+              GIT_COMMIT_SHA=${{ github.sha }}
+            metadata_tags: |
+              type=raw,value=latest
+    if: github.ref == format('refs/heads/{0}', matrix.branch)
     name: Build and Push Theater Website Image (${{ matrix.environment }})
     steps:
       - name: Checkout repository
@@ -85,43 +95,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{ matrix.build_args }}
-
-  build-and-push-website-latest:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    name: Build and Push Theater Website Image (latest)
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PAT }}
-
-      - name: Extract Docker metadata (latest)
-        id: meta-latest
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.WEBSITE_IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest
-
-      - name: Build and push latest Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.prod
-          push: true
-          tags: ${{ steps.meta-latest.outputs.tags }}
-          labels: ${{ steps.meta-latest.outputs.labels }}
-          build-args: |
-            NODE_ENV=production
-            GIT_COMMIT_SHA=${{ github.sha }}
