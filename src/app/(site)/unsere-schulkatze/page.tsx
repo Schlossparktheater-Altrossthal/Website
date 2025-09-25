@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
-import { Cat, Fish, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
+import { Cat, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
@@ -94,15 +94,15 @@ const highlights: Highlight[] = [
 const memories: Memory[] = [
   {
     icon: Sun,
-    title: "Frühe Streifzüge",
+    title: "Uralter Bekannter",
     detail:
-      "Dennis Dieter startet seinen Tag in der Bibliothek, schnuppert an Büchern und beobachtet den Sonnenaufgang durch die großen Fenster.",
+      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn Jahren über das Schulgelände.",
   },
   {
     icon: PawPrint,
     title: "Lieblingsorte",
     detail:
-      "Fensterbänke, Proberaumteppiche und der Innenhof sind seine Rückzugsorte – von dort aus behält er alles neugierig im Blick.",
+      "Die Bänke und Tische im Grünen Klassenzimmer, die Probebühne und sonnige Plätzchen wurden zu seinen Ruhepolen – überall dort wirkte er wie ein grauer Wächter des Geländes.",
   },
   {
     icon: MoonStar,
@@ -115,29 +115,23 @@ const memories: Memory[] = [
 const careCircle: Supporter[] = [
   {
     icon: Users,
-    title: "Pflege-AG & Schülerschaft",
+    title: "Schüler:innen & Kollegium",
     description:
-      "In festen Diensten sorgen engagierte Schüler für Futter, frisches Wasser und spielerische Abwechslung.",
+      "Ohne feste Dienste brachten Schüler:innen und Lehrkräfte Futter, frisches Wasser und liebevolle Aufmerksamkeit direkt aus dem Alltag mit.",
   },
   {
     icon: ShieldCheck,
-    title: "Hausmeisterteam & Tierärztin",
+    title: "Hausmeisterteam & Tierarzt",
     description:
-      "Sie behalten Dennis Dieters Gesundheit im Blick, koordinieren Checks und sorgen für sichere Rückzugsorte auf dem Campus.",
-  },
-  {
-    icon: Fish,
-    title: "Patenschaften & Spenden",
-    description:
-      "Klassen und Kollegium legen zusammen, damit Futter, Spielzeug und Tierarztbesuche verlässlich finanziert sind.",
+      "Sie behielten Dennis Dieters Gesundheit im Blick, koordinierten Checks und sorgten für sichere Rückzugsorte auf dem Campus.",
   },
 ];
 
 const lessons: string[] = [
-  "Tiere, die unsere Schule begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dennis Dieter zeigt uns das jeden Tag.",
-  "Gemeinsame Rituale schaffen Vertrauen, besonders wenn ein Vierbeiner neu in eine gewachsene Gemeinschaft kommt.",
-  "In lebhaften Schulmomenten helfen ruhige Ecken, damit Dennis Dieter sich zurückziehen und Kraft sammeln kann.",
-  "Wer künftig eine Schulkatze willkommen heißt, sollte an Dennis Dieters Bedürfnisse denken: Ruhe, Respekt und Zeit.",
+  "Dennis Dieter zeigte uns, wie sehr er Streicheleinheiten schätzte – und wie achtsam wir mit seinen Signalen umgehen mussten.",
+  "Gleichzeitig liebte er seine Freiheit: offene Türen, weite Wege und das Recht, jederzeit eigene Runden zu drehen.",
+  "Ruhige Ecken und respektvolle Distanz gaben ihm Kraft, nach neugierigen Streifzügen wieder aufzutanken.",
+  "Wer künftig eine Schulkatze willkommen heißt, sollte Nähe und Freiraum im Gleichgewicht halten.",
 ];
 
 export default function SchulkatzePage() {
@@ -176,8 +170,8 @@ export default function SchulkatzePage() {
               Kostümfundus, mal sitzt er aufmerksam im Zuschauerraum und beobachtet jede Szene.
             </Text>
             <Text tone="muted">
-              Gemeinsam mit der Pflege-AG achten wir darauf, dass Dennis Dieter seinen eigenen Rhythmus behalten kann. Er zeigt uns, wie
-              Fürsorge und Rücksicht eine Gemeinschaft stärken.
+              Schüler:innen und Lehrkräfte achten gemeinsam darauf, dass Dennis Dieter seinen eigenen Rhythmus behalten kann. Er zeigt uns,
+              wie Fürsorge und Rücksicht eine Gemeinschaft stärken – auch ohne feste Dienste oder eine eigene AG.
             </Text>
           </div>
           <figure className="relative mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg">
@@ -282,7 +276,7 @@ export default function SchulkatzePage() {
           </div>
           <div className="space-y-3">
             <Text variant="small" tone="muted">
-              Dennis Dieter zeigt uns, wie wichtig Achtsamkeit und klare Strukturen im Schulalltag sind. Diese Gedanken begleiten uns:
+              Dennis Dieter hat uns gelehrt, Nähe und Freiraum in Balance zu halten. Diese Gedanken begleiten uns:
             </Text>
             <ul className="space-y-2">
               {lessons.map((lesson) => (
@@ -310,7 +304,7 @@ export default function SchulkatzePage() {
             kann. Jede Begegnung mit ihm erzählt eine neue Geschichte.
           </Text>
           <Text tone="muted" align="center">
-            Wer Tipps zur Eingewöhnung hat oder die Arbeit der Pflege-AG unterstützen möchte, erreicht uns unter{' '}
+            Wer Tipps zur Eingewöhnung hat oder schöne Erinnerungen teilen möchte, erreicht uns unter{' '}
             <TextLink href="mailto:schulkatze@sommertheater-altrossthal.de">schulkatze@sommertheater-altrossthal.de</TextLink>.
           </Text>
         </div>
