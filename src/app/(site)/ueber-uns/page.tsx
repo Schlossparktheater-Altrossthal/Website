@@ -298,10 +298,7 @@ export default async function AboutPage() {
         />
       </div>
 
-      <section
-        className="mx-auto w-full px-[var(--layout-gutter)] pb-12 pt-16 sm:pt-24"
-        style={{ maxWidth: "min(100vw, calc(var(--layout-max-width) + 2 * var(--layout-gutter)))" }}
-      >
+      <section className="layout-container pb-12 pt-16 sm:pt-24">
         <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
           <div className="mx-auto max-w-3xl">
             <Text variant="eyebrow" uppercase tone="primary">
@@ -344,10 +341,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      <section
-        className="mx-auto w-full px-[var(--layout-gutter)] pb-16 sm:pb-24"
-        style={{ maxWidth: "min(100vw, calc(var(--layout-max-width) + 2 * var(--layout-gutter)))" }}
-      >
+      <section className="layout-container pb-16 sm:pb-24">
         <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
           <div className="mx-auto max-w-3xl">
             <Heading level="h2">Gewerke, die eine Produktion tragen</Heading>
@@ -359,40 +353,46 @@ export default async function AboutPage() {
               Scroll durch die Werkstätten und entdecke, wie vielfältig Theaterarbeit am BSZ Altroßthal ist.
             </Text>
           </div>
-          <div className="relative mt-8">
+          <div className="group relative mt-8 pb-6">
             <div
               className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background via-background/80 to-transparent"
               aria-hidden
             />
-            <div
-              className="flex gap-6 overflow-x-auto pb-6 pr-6 [scrollbar-color:theme(colors.primary/40)_transparent] [scrollbar-width:thin]"
-              role="list"
-              aria-label="Gewerke des Ensembles"
-            >
-              {trades.map(({ icon: Icon, title, focus, description }) => (
-                <Card
-                  key={title}
-                  role="listitem"
-                  className="flex w-[min(22rem,80vw)] shrink-0 snap-start flex-col justify-between gap-4 rounded-2xl border-border/40 bg-card/70 p-6 shadow-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
-                      <Icon className="h-6 w-6" aria-hidden />
-                    </div>
-                    <Heading level="h3" className="text-xl" weight="bold">
-                      {title}
-                    </Heading>
-                  </div>
-                  <div className="space-y-3">
-                    <Text variant="small" className="font-medium text-primary">
-                      {focus}
-                    </Text>
-                    <Text variant="small" tone="muted">
-                      {description}
-                    </Text>
-                  </div>
-                </Card>
-              ))}
+            <div className="overflow-hidden pr-6">
+              <div
+                className="flex w-max gap-6 animate-trades-carousel focus-visible:[animation-play-state:paused] group-hover:[animation-play-state:paused]"
+                role="list"
+                aria-label="Gewerke des Ensembles"
+                tabIndex={0}
+              >
+                {Array.from({ length: 2 }).map((_, loopIndex) =>
+                  trades.map(({ icon: Icon, title, focus, description }) => (
+                    <Card
+                      key={`${title}-${loopIndex}`}
+                      role="listitem"
+                      aria-hidden={loopIndex > 0 ? true : undefined}
+                      className="flex w-[min(22rem,80vw)] shrink-0 snap-start flex-col justify-between gap-4 rounded-2xl border-border/40 bg-card/70 p-6 shadow-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+                          <Icon className="h-6 w-6" aria-hidden />
+                        </div>
+                        <Heading level="h3" className="text-xl" weight="bold">
+                          {title}
+                        </Heading>
+                      </div>
+                      <div className="space-y-3">
+                        <Text variant="small" className="font-medium text-primary">
+                          {focus}
+                        </Text>
+                        <Text variant="small" tone="muted">
+                          {description}
+                        </Text>
+                      </div>
+                    </Card>
+                  )),
+                )}
+              </div>
             </div>
             <div
               className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background via-background/80 to-transparent"
@@ -400,15 +400,13 @@ export default async function AboutPage() {
             />
           </div>
           <Text variant="small" tone="muted" className="mt-4">
-            Tipp: Mit dem horizontalen Scrollbalken oder per Wischgeste kannst du alle Gewerke entdecken.
+            Tipp: Die Gewerke bewegen sich automatisch durch das Karussell. Bewege die Maus darüber oder fokussiere die Liste, um
+            die Bewegung zu pausieren.
           </Text>
         </div>
       </section>
 
-      <section
-        className="mx-auto w-full px-[var(--layout-gutter)] pb-16 sm:pb-24"
-        style={{ maxWidth: "min(100vw, calc(var(--layout-max-width) + 2 * var(--layout-gutter)))" }}
-      >
+      <section className="layout-container pb-16 sm:pb-24">
         <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div className="space-y-6">
@@ -460,10 +458,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      <section
-        className="mx-auto w-full px-[var(--layout-gutter)] pb-16 sm:pb-24"
-        style={{ maxWidth: "min(100vw, calc(var(--layout-max-width) + 2 * var(--layout-gutter)))" }}
-      >
+      <section className="layout-container pb-16 sm:pb-24">
         <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
           <div className="mx-auto max-w-2xl">
             <Heading level="h2">Werte, die wir leben</Heading>
@@ -490,10 +485,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      <section
-        className="mx-auto w-full px-[var(--layout-gutter)] pb-16 sm:pb-24"
-        style={{ maxWidth: "min(100vw, calc(var(--layout-max-width) + 2 * var(--layout-gutter)))" }}
-      >
+      <section className="layout-container pb-16 sm:pb-24">
         <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
           <div className="grid gap-10 lg:grid-cols-2">
             <div>
@@ -524,10 +516,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      <section
-        className="mx-auto w-full px-[var(--layout-gutter)] pb-20 sm:pb-28"
-        style={{ maxWidth: "min(100vw, calc(var(--layout-max-width) + 2 * var(--layout-gutter)))" }}
-      >
+      <section className="layout-container pb-20 sm:pb-28">
         <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
           <div className="rounded-3xl border border-border/40 bg-card/60 p-8 sm:p-12">
             <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">

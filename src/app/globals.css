@@ -229,6 +229,26 @@
     font-weight: 600;
     text-transform: uppercase;
   }
+
+  .animate-trades-carousel {
+    animation: trades-carousel 60s linear infinite;
+  }
+}
+
+@keyframes trades-carousel {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-trades-carousel {
+    animation-play-state: paused;
+  }
 }
 
 @layer components {
