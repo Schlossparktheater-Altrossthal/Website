@@ -18,6 +18,7 @@ import {
 import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
 import { combineNameParts } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
 export default async function ProbenplanungPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
@@ -71,10 +72,11 @@ export default async function ProbenplanungPage() {
 
   const calendarBlockedDays: CalendarBlockedDay[] = blockedDays.map((entry) => {
     const iso = entry.date.toISOString();
+    const dateKey = formatIsoDateInTimeZone(iso, DEFAULT_TIME_ZONE);
     return {
       id: entry.id,
       date: iso,
-      dateKey: iso.slice(0, 10),
+      dateKey,
       reason: entry.reason,
       kind: "BLOCKED",
       user: {
@@ -90,12 +92,13 @@ export default async function ProbenplanungPage() {
   const calendarRehearsals: CalendarRehearsal[] = publishedRehearsals.map((r) => {
     const startIso = r.start.toISOString();
     const endIso = r.end ? r.end.toISOString() : null;
+    const dateKey = formatIsoDateInTimeZone(startIso, DEFAULT_TIME_ZONE);
     return {
       id: r.id,
       title: r.title,
       start: startIso,
       end: endIso,
-      dateKey: startIso.slice(0, 10),
+      dateKey,
       location: r.location,
     };
   });
@@ -103,6 +106,7 @@ export default async function ProbenplanungPage() {
   const draftDateFormatter = new Intl.DateTimeFormat("de-DE", {
     dateStyle: "full",
     timeStyle: "short",
+    timeZone: DEFAULT_TIME_ZONE,
   });
   const now = new Date();
   const total = publishedRehearsals.length;
