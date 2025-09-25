@@ -11,6 +11,7 @@ if (!secret) {
 const targetBranch = process.env.TARGET_BRANCH ?? 'main';
 const webhookPath = process.env.WEBHOOK_PATH ?? '/webhook';
 const listenPort = Number.parseInt(process.env.LISTEN_PORT ?? process.env.PORT ?? '3000', 10);
+const healthPath = `${webhookPath.endsWith('/') ? webhookPath.slice(0, -1) : webhookPath}/health`;
 
 let deploymentQueue = Promise.resolve();
 let lastStatus = {
@@ -101,7 +102,7 @@ const server = createServer((req, res) => {
   const { method } = req;
   const url = new URL(req.url ?? '/', 'http://localhost');
 
-  if (method === 'GET' && url.pathname === '/healthz') {
+  if (method === 'GET' && (url.pathname === '/healthz' || url.pathname === healthPath)) {
     respondJson(res, 200, { status: 'ok', lastStatus });
     return;
   }
@@ -166,5 +167,7 @@ const server = createServer((req, res) => {
 });
 
 server.listen(listenPort, () => {
-  console.log(`[webhook] Listening on 0.0.0.0:${listenPort}, path ${webhookPath}`);
+  console.log(
+    `[webhook] Listening on 0.0.0.0:${listenPort}, path ${webhookPath}, health ${healthPath}`,
+  );
 });
