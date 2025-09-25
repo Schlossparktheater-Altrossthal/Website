@@ -3,6 +3,97 @@ import process from 'node:process';
 import { spawn } from 'node:child_process';
 import httpProxy from 'http-proxy';
 
+function normalizeAbsolutePath(value, fallback) {
+  const raw = (value ?? fallback ?? '').trim();
+  if (!raw) {
+    return fallback ?? '/';
+  }
+
+  if (raw === '/') {
+    return '/';
+  }
+
+  const prefixed = raw.startsWith('/') ? raw : `/${raw}`;
+  const collapsed = prefixed.replace(/\/+/g, '/');
+  const trimmed = collapsed.replace(/\/+$/, '');
+  return trimmed || '/';
+}
+
+function resolveDeployWebhookTarget(defaultPort) {
+  const directTarget =
+    process.env.DEPLOY_WEBHOOK_TARGET_URL?.trim() ||
+    process.env.AUTO_DEPLOY_INTERNAL_URL?.trim() ||
+    process.env.AUTO_DEPLOY_PROXY_TARGET?.trim();
+
+  if (directTarget) {
+    return directTarget;
+  }
+
+  const host =
+    process.env.DEPLOY_WEBHOOK_HOST?.trim() ||
+    process.env.AUTO_DEPLOY_INTERNAL_HOST?.trim() ||
+    process.env.AUTO_DEPLOY_CONTAINER_NAME?.trim();
+
+  if (!host) {
+    return null;
+  }
+
+  const protocol =
+    process.env.DEPLOY_WEBHOOK_PROTOCOL?.trim() ||
+    process.env.AUTO_DEPLOY_INTERNAL_PROTOCOL?.trim() ||
+    'http';
+  const port = parsePort(
+    process.env.DEPLOY_WEBHOOK_PORT ??
+      process.env.AUTO_DEPLOY_INTERNAL_PORT ??
+      process.env.AUTO_DEPLOY_LISTEN_PORT,
+    defaultPort,
+  );
+
+  return `${protocol}://${host}:${port}`;
+}
+
+function createDeployProxyConfig(defaultPort) {
+  const target = resolveDeployWebhookTarget(defaultPort);
+  if (!target) {
+    return null;
+  }
+
+  let normalizedTarget;
+  try {
+    const url = new URL(target);
+    normalizedTarget = `${url.origin}${url.pathname.replace(/\/$/, '')}`;
+  } catch (error) {
+    console.warn('[Proxy] Ignoring invalid deploy webhook target URL', target, error);
+    return null;
+  }
+
+  const webhookPath = normalizeAbsolutePath(
+    process.env.DEPLOY_WEBHOOK_PATH ||
+      process.env.AUTO_DEPLOY_PROXY_PATH ||
+      process.env.AUTO_DEPLOY_WEBHOOK_PATH,
+    '/webhook',
+  );
+
+  const pathSet = new Set(['/healthz']);
+  pathSet.add(webhookPath);
+  if (webhookPath !== '/' && !webhookPath.endsWith('/')) {
+    pathSet.add(`${webhookPath}/`);
+  }
+
+  const healthPath = webhookPath === '/' ? '/health' : `${webhookPath}/health`;
+  pathSet.add(healthPath);
+  if (!healthPath.endsWith('/')) {
+    pathSet.add(`${healthPath}/`);
+  }
+
+  return {
+    target: normalizedTarget,
+    webhookPath,
+    healthPath,
+    allowedPaths: pathSet,
+  };
+}
+
 function parsePort(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ''), 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -51,6 +142,14 @@ async function main() {
   let serverClosed = false;
   let childExited = false;
 
+  const defaultDeployPort = parsePort(process.env.AUTO_DEPLOY_LISTEN_PORT, 3000);
+  const deployProxyConfig = createDeployProxyConfig(defaultDeployPort);
+  if (deployProxyConfig) {
+    console.log(
+      `[Proxy] Forwarding ${deployProxyConfig.webhookPath} (health: ${deployProxyConfig.healthPath}, /healthz) to ${deployProxyConfig.target}`,
+    );
+  }
+
   const proxy = httpProxy.createProxyServer({
     target: targetUrl,
     ws: true,
@@ -82,7 +181,19 @@ async function main() {
   });
 
   const server = http.createServer((req, res) => {
-    proxy.web(req, res, { target: targetUrl });
+    let target = targetUrl;
+    if (deployProxyConfig) {
+      try {
+        const { pathname } = new URL(req.url ?? '/', 'http://localhost');
+        if (deployProxyConfig.allowedPaths.has(pathname)) {
+          target = deployProxyConfig.target;
+        }
+      } catch (error) {
+        console.warn('[Proxy] Failed to inspect request URL for deploy webhook routing', error);
+      }
+    }
+
+    proxy.web(req, res, { target });
   });
 
   server.on('upgrade', (req, socket, head) => {
