@@ -134,22 +134,10 @@ const milestones = [
       "Florist:innen gestalten erstmals lebendige Bühnenbilder aus regionalen Pflanzen und geben dem Park seine ikonischen Duftinseln.",
   },
   {
-    year: "2017",
-    title: "Werkstatt-Ateliers",
+    year: "2025",
+    title: "Eigene Webseite für Produktionen",
     description:
-      "Neue Workshops ermöglichen Schüler:innen, sich in Lichttechnik, Metallbau und Kostümhandwerk auszuprobieren und Verantwortung zu übernehmen.",
-  },
-  {
-    year: "2023",
-    title: "Digital verbunden",
-    description:
-      "Livestreams für Menschen, die nicht vor Ort sein können, und ein hybrides Probenformat für unser Ensemble.",
-  },
-  {
-    year: "2023",
-    title: "Headsets für präzisen Klang",
-    description:
-      "Erstes Theaterstück, bei dem Headsets eingesetzt werden, um Stimmen auf der Freiluftbühne noch klarer zu transportieren.",
+      "Alle Produktionen und Meilensteine erhalten ein digitales Zuhause – die neue Webseite bündelt seitdem Archiv, Tickets und Rückblicke.",
   },
 ];
 
