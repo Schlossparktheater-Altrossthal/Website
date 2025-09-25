@@ -196,6 +196,11 @@ arrives for the configured branch.
      `AUTO_DEPLOY_GIT_SSH_KNOWN_HOSTS`) – optional SSH credentials for private
      repositories.
 5. Start the service: `docker compose -f docker-compose.autodeploy.yml up -d`.
+   On first boot the container performs an initial deployment automatically
+   (equivalent to manually calling `deploy-service/deploy.sh`). Set
+   `AUTO_DEPLOY_RUN_ON_START=false` when you prefer to trigger the first build
+   yourself (for example to adjust environment variables or secrets on the
+   target host beforehand).
 6. Register a new GitHub webhook that points to the regular website hostname,
    for example `https://${DEV_HOST:-devtheater.beegreenx.de}${AUTO_DEPLOY_WEBHOOK_PATH:-/webhook}`.
    Traefik (or any other edge proxy) only needs to know about the website

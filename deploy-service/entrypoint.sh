@@ -111,5 +111,19 @@ fi
 
 git config --global --add safe.directory "$REPO_DIR"
 
+RUN_DEPLOY_ON_START="${RUN_DEPLOY_ON_START:-${AUTO_DEPLOY_RUN_ON_START:-true}}"
+
+if [ "$RUN_DEPLOY_ON_START" = "true" ]; then
+  echo "[entrypoint] Running initial deployment before starting the webhook listener"
+  if /app/deploy.sh; then
+    echo "[entrypoint] Initial deployment finished"
+  else
+    echo "[entrypoint] Initial deployment failed" >&2
+    exit 1
+  fi
+else
+  echo "[entrypoint] Skipping initial deployment (RUN_DEPLOY_ON_START=$RUN_DEPLOY_ON_START)"
+fi
+
 echo "[entrypoint] Starting webhook listener on port ${LISTEN_PORT:-3000}"
 exec node /app/server.mjs
