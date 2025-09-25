@@ -14,11 +14,12 @@ interface OwnerSetupFormProps {
 interface ApiResponse {
   ok?: boolean;
   error?: string;
-  user?: { email?: string | null; name?: string | null };
+  user?: { email?: string | null; name?: string | null; firstName?: string | null; lastName?: string | null };
 }
 
 export function OwnerSetupForm({ token }: OwnerSetupFormProps) {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,12 +33,18 @@ export function OwnerSetupForm({ token }: OwnerSetupFormProps) {
     if (loading) return;
 
     const trimmedEmail = email.trim().toLowerCase();
-    const trimmedName = name.trim();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
     const trimmedPassword = password.trim();
     const trimmedConfirm = confirmPassword.trim();
 
     if (!trimmedEmail) {
       setError("Bitte eine E-Mail-Adresse angeben.");
+      return;
+    }
+
+    if (!trimmedFirstName) {
+      setError("Bitte einen Vornamen angeben.");
       return;
     }
 
@@ -65,7 +72,8 @@ export function OwnerSetupForm({ token }: OwnerSetupFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
-          name: trimmedName || undefined,
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName || undefined,
           email: trimmedEmail,
           password: trimmedPassword,
         }),
@@ -104,17 +112,32 @@ export function OwnerSetupForm({ token }: OwnerSetupFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid gap-2">
-        <label className="text-sm font-medium" htmlFor="owner-name">
-          Name (optional)
-        </label>
-        <Input
-          id="owner-name"
-          autoComplete="name"
-          placeholder="Max Mustermann"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <label className="text-sm font-medium" htmlFor="owner-first-name">
+            Vorname
+          </label>
+          <Input
+            id="owner-first-name"
+            autoComplete="given-name"
+            placeholder="Max"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            required
+          />
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium" htmlFor="owner-last-name">
+            Nachname (optional)
+          </label>
+          <Input
+            id="owner-last-name"
+            autoComplete="family-name"
+            placeholder="Mustermann"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+          />
+        </div>
       </div>
 
       <div className="grid gap-2">
