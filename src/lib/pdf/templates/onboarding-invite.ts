@@ -243,19 +243,16 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.restore();
 
     doc.save();
-    doc.roundedRect(qrX - qrFramePadding, qrY - qrFramePadding, qrSize + qrFramePadding * 2, qrSize + qrFramePadding * 2, qrFrameRadius)
+    doc.roundedRect(
+      qrX - qrFramePadding,
+      qrY - qrFramePadding,
+      qrSize + qrFramePadding * 2,
+      qrSize + qrFramePadding * 2,
+      qrFrameRadius,
+    )
       .fillColor(palette.qrFrame)
       .fill();
     doc.restore();
-
-    const frameGradient = doc.linearGradient(
-      qrX - qrFramePadding,
-      qrY - qrFramePadding,
-      qrX + qrSize + qrFramePadding,
-      qrY + qrSize + qrFramePadding,
-    );
-    frameGradient.stop(0, palette.qrFrameStroke);
-    frameGradient.stop(1, palette.qrGlowInner);
 
     doc.save();
     doc.lineWidth(3.4);
@@ -265,85 +262,31 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       qrSize + qrFramePadding * 2,
       qrSize + qrFramePadding * 2,
       qrFrameRadius,
-    ).stroke(frameGradient);
+    )
+      .stroke(palette.qrFrameStroke);
     doc.restore();
-
-    const qrBackgroundGradient = doc.linearGradient(qrX, qrY, qrX + qrSize, qrY + qrSize);
-    qrBackgroundGradient.stop(0, palette.qrGradientStart);
-    qrBackgroundGradient.stop(1, palette.qrGradientEnd);
 
     doc.save();
-    doc.roundedRect(qrX, qrY, qrSize, qrSize, 24).fill(qrBackgroundGradient);
+    doc.roundedRect(qrX, qrY, qrSize, qrSize, 16).fill("#ffffff");
     doc.restore();
 
-    const finderCenters: Array<{ row: number; col: number }> = [
-      { row: 3, col: 3 },
-      { row: 3, col: qrModuleCount - 4 },
-      { row: qrModuleCount - 4, col: 3 },
-    ];
-    const finderModuleSpan = 7;
-    const finderHalfSpan = (finderModuleSpan - 1) / 2;
-    const finderOuterSize = qrModuleSize * (finderModuleSpan + 2.4);
-    const finderInnerSize = qrModuleSize * (finderModuleSpan - 0.8);
-    const finderCoreRadius = qrModuleSize * 1.9;
-
-    for (const center of finderCenters) {
-      const cx = qrContentX + (center.col + 0.5) * qrModuleSize;
-      const cy = qrContentY + (center.row + 0.5) * qrModuleSize;
-
-      doc.save();
-      doc.translate(cx, cy);
-      doc.rotate(45);
-      doc.fillColor(palette.qrFinderOuter);
-      doc.rect(-finderOuterSize / 2, -finderOuterSize / 2, finderOuterSize, finderOuterSize).fill();
-      doc.restore();
-
-      doc.save();
-      doc.translate(cx, cy);
-      doc.rotate(45);
-      doc.fillColor(palette.qrFinderInner);
-      doc.rect(-finderInnerSize / 2, -finderInnerSize / 2, finderInnerSize, finderInnerSize).fill();
-      doc.restore();
-
-      doc.save();
-      doc.fillColor(palette.qrFinderCore);
-      doc.circle(cx, cy, finderCoreRadius).fill();
-      doc.restore();
-    }
-
-    const moduleSize = qrModuleSize * 0.78;
-    const moduleRadius = moduleSize / 5.5;
+    doc.save();
+    doc.fillColor(palette.qrModulePrimary);
     for (let row = 0; row < qrModuleCount; row += 1) {
       for (let col = 0; col < qrModuleCount; col += 1) {
         if (!qrData.modules.get(row, col)) {
           continue;
         }
 
-        const isFinderModule = finderCenters.some((center) => {
-          return (
-            Math.abs(row - center.row) <= finderHalfSpan &&
-            Math.abs(col - center.col) <= finderHalfSpan
-          );
-        });
-        if (isFinderModule) {
-          continue;
-        }
+        const moduleX = qrContentX + col * qrModuleSize;
+        const moduleY = qrContentY + row * qrModuleSize;
 
-        const cx = qrContentX + (col + 0.5) * qrModuleSize;
-        const cy = qrContentY + (row + 0.5) * qrModuleSize;
-        const rotation = (row + col) % 2 === 0 ? 9 : -9;
-        const color = (row + col) % 3 === 0 ? palette.qrModuleSecondary : palette.qrModulePrimary;
-
-        doc.save();
-        doc.translate(cx, cy);
-        doc.rotate(rotation);
-        doc.fillColor(color);
-        doc.roundedRect(-moduleSize / 2, -moduleSize / 2, moduleSize, moduleSize, moduleRadius).fill();
-        doc.restore();
+        doc.rect(moduleX, moduleY, qrModuleSize, qrModuleSize).fill();
       }
     }
+    doc.restore();
 
-    doc.y = qrY + qrSize;
+    doc.y = qrY + qrSize + 24;
 
     doc.moveDown(0.9);
     doc.font("Helvetica-Bold").fontSize(14).fillColor(palette.text).text("Direkter Zugang", { align: "center" });
