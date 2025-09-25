@@ -14,8 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Text } from "@/components/ui/typography";
 
-const STORAGE_KEY = "dieter-dennis-encounters";
-const MODERATION_STORAGE_KEY = "dieter-dennis-hidden-encounters";
+const STORAGE_KEY = "dennis-dieter-encounters";
+const MODERATION_STORAGE_KEY = "dennis-dieter-hidden-encounters";
 
 const MODERATOR_ROLES = new Set<Role>(["board", "admin", "owner"]);
 
@@ -34,32 +34,32 @@ type StoredEncounter = Omit<Encounter, "source">;
 const curatedEncounters: Encounter[] = [
   {
     id: "curated-1",
-    since: "Sommer 2019",
-    nickname: "Direktor Dennis",
+    since: "Sommer 2024",
+    nickname: "Dennis Dieter vom Werkhof",
     story:
-      "Bei der Generalprobe durfte Dieter auf der leeren Zuschauertribüne thronen. Sein zufriedenes Schnurren war das entspannteste Zeichen für eine gelungene Premiere.",
+      "Bei der Generalprobe huschte Dennis Dieter zwischen den Kulissen hindurch, kletterte auf die letzte Reihe und beobachtete uns mit großen Augen. Sein zufriedenes Schnurren nahm allen die Nervosität.",
     author: "Lara aus der Kostümwerkstatt",
-    createdAt: "Juni 2023",
+    createdAt: "Juni 2024",
     source: "curated",
   },
   {
     id: "curated-2",
-    since: "Frühjahr 2016",
-    nickname: "Professor Dieter",
+    since: "Frühjahr 2024",
+    nickname: "Bibliotheks-Dennis",
     story:
-      "In der Prüfungswoche spazierte er durch die Aula, legte sich mitten zwischen die Skripte und erinnerte uns daran, Pausen einzuplanen. Seitdem gehört ein Streicheln von Dieter zu jeder Lernrunde.",
+      "Im Selbstlernzentrum legte er sich mitten zwischen Karteikästen und erinnerte uns daran, Pausen zu machen. Seitdem gehört ein kurzer Streichler für Dennis Dieter zu jeder Lernrunde.",
     author: "Herr Schubert, Mathekollegium",
-    createdAt: "März 2022",
+    createdAt: "März 2024",
     source: "curated",
   },
   {
     id: "curated-3",
-    since: "Herbst 2021",
+    since: "Herbst 2024",
     nickname: "Captain Dennis",
     story:
-      "Beim Kulissenbau für das Hafenstück bewachte er mit ernster Miene die Werkzeugkisten. Niemand vergaß dank ihm den Helm – Dieter passte einfach auf uns auf.",
+      "Beim Kulissenbau bewachte er mit wachem Blick die Werkzeugkisten. Niemand vergaß dank ihm den Helm – Dennis Dieter passte einfach auf uns auf.",
     author: "Werkstatt-AG",
-    createdAt: "Oktober 2023",
+    createdAt: "Oktober 2024",
     source: "curated",
   },
 ];
@@ -72,7 +72,7 @@ function generateId() {
   return `encounter-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function DieterEncountersSection() {
+export function DennisDieterEncountersSection() {
   const { data: session } = useSession();
   const [userEncounters, setUserEncounters] = useState<Encounter[]>([]);
   const [hiddenEncounterIds, setHiddenEncounterIds] = useState<string[]>([]);
@@ -279,7 +279,7 @@ export function DieterEncountersSection() {
     setUserEncounters((previous) => [newEncounter, ...previous]);
     form.reset();
 
-    const sinceInput = form.querySelector<HTMLInputElement>("#dieter-since");
+    const sinceInput = form.querySelector<HTMLInputElement>("#dennis-dieter-since");
     sinceInput?.focus();
   }, []);
 
@@ -300,11 +300,11 @@ export function DieterEncountersSection() {
         <div className="mx-auto max-w-6xl space-y-10">
           <div className="space-y-4 text-center">
             <Heading level="h2" align="center">
-              Begegnungen mit Dieter Dennis von Altroßthal
+              Begegnungen mit Dennis Dieter von Altroßthal
             </Heading>
             <Text variant="body" tone="muted" align="center">
-              Seit wann kennen Sie schon Dieter Dennis von Altroßthal? Wie hieß sie bei Ihnen? Teilen Sie uns Ihre Begegnung mit
-              Dieter mit. Wir freuen uns mehr über sie zu erfahren.
+              Seit wann kennen Sie schon Dennis Dieter von Altroßthal? Welchen Spitznamen hat er bei Ihnen? Teilen Sie uns Ihre Begegnung
+              mit Dennis Dieter mit. Wir freuen uns, mehr darüber zu erfahren.
             </Text>
           </div>
 
@@ -347,7 +347,7 @@ export function DieterEncountersSection() {
                   className="rounded-full px-4"
                   onClick={toggleFormVisibility}
                   aria-expanded={isFormOpen}
-                  aria-controls="dieter-encounter-form"
+                  aria-controls="dennis-dieter-encounter-form"
                 >
                   <Sparkles className="h-4 w-4" aria-hidden />
                   {isFormOpen ? "Formular schließen" : "Begegnung eintragen"}
@@ -356,21 +356,21 @@ export function DieterEncountersSection() {
 
               {isFormOpen ? (
                 <form
-                  id="dieter-encounter-form"
-                  className="mt-5 space-y-5 rounded-2xl border border-border/40 bg-background/70 p-4 shadow-inner sm:p-5"
+                  id="dennis-dieter-encounter-form"
+                  className="mt-6 space-y-4"
                   onSubmit={handleSubmit}
                 >
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="dieter-since">Seit wann kennen Sie Dieter?</Label>
-                      <Input id="dieter-since" name="since" placeholder="z. B. Frühjahr 2020" required autoComplete="off" />
+                      <Label htmlFor="dennis-dieter-since">Seit wann kennen Sie Dennis Dieter?</Label>
+                      <Input id="dennis-dieter-since" name="since" placeholder="z. B. Frühjahr 2024" required autoComplete="off" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="dieter-nickname">Wie hieß sie bei Ihnen?</Label>
+                      <Label htmlFor="dennis-dieter-nickname">Wie hieß er bei Ihnen?</Label>
                       <Input
-                        id="dieter-nickname"
+                        id="dennis-dieter-nickname"
                         name="nickname"
-                        placeholder="Unser Spitzname für Dieter"
+                        placeholder="Unser Spitzname für Dennis Dieter"
                         required
                         autoComplete="off"
                       />
@@ -378,9 +378,9 @@ export function DieterEncountersSection() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="dieter-author">Wer teilt diese Begegnung? (optional)</Label>
+                    <Label htmlFor="dennis-dieter-author">Wer teilt diese Begegnung? (optional)</Label>
                     <Input
-                      id="dieter-author"
+                      id="dennis-dieter-author"
                       name="author"
                       placeholder="Ihr Name, Ihre Klasse oder Gruppe"
                       autoComplete="off"
@@ -388,11 +388,11 @@ export function DieterEncountersSection() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="dieter-story">Ihre Begegnung mit Dieter</Label>
+                    <Label htmlFor="dennis-dieter-story">Ihre Begegnung mit Dennis Dieter</Label>
                     <Textarea
-                      id="dieter-story"
+                      id="dennis-dieter-story"
                       name="story"
-                      placeholder="Was haben Sie mit Dieter erlebt?"
+                      placeholder="Was haben Sie mit Dennis Dieter erlebt?"
                       rows={5}
                       required
                     />
@@ -521,7 +521,7 @@ export function DieterEncountersSection() {
                           Noch keine Begegnungen
                         </Text>
                         <Text variant="small" tone="muted">
-                          Seien Sie die erste Person, die Dieter Dennis hier vorstellt.
+                          Seien Sie die erste Person, die Dennis Dieter hier vorstellt.
                         </Text>
                       </Card>
                     </li>
