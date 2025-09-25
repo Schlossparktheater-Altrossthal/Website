@@ -14,6 +14,10 @@ import { ProfileChecklistCard } from "@/components/members/profile-checklist-car
 import { ProfilePhotoConsentNotice } from "@/components/members/profile-photo-consent-notice";
 import { ProfileDietaryPreferences } from "@/components/members/profile-dietary-preferences";
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
+import {
+  ProfileOnboardingEditor,
+  type ProfileOnboardingState,
+} from "@/components/members/profile-onboarding-editor";
 import type { ProfileChecklistItem, ProfileChecklistTarget } from "@/lib/profile-completion";
 import type { AvatarSource } from "@/components/user-avatar";
 import type { PhotoConsentStatus, PhotoConsentSummary } from "@/types/photo-consent";
@@ -36,6 +40,7 @@ import { getUserDisplayName } from "@/lib/names";
 import {
   Calendar,
   CheckCircle2,
+  ClipboardList,
   Crown,
   FileBadge,
   Gavel,
@@ -126,10 +131,15 @@ const ROLE_ICON_ACCENTS: Record<Role, string> = {
 const ROLE_STATUS_BADGE_CLASSES =
   "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
 
-type ProfileTabId = ProfileChecklistTarget | "interessen";
+type ProfileTabId = ProfileChecklistTarget | "interessen" | "onboarding";
 
 const summaryDateFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
+});
+
+const summaryDateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeStyle: "short",
 });
 
 const EMPTY_VALUE_LABEL = "Nicht hinterlegt";
@@ -161,11 +171,30 @@ const PHOTO_STATUS_LABELS: Record<PhotoConsentStatus, string> = {
   rejected: "Abgelehnt",
 };
 
+const ONBOARDING_FOCUS_LABELS: Record<"acting" | "tech" | "both", string> = {
+  acting: "Schauspiel",
+  tech: "Gewerke",
+  both: "Schauspiel & Gewerke",
+};
+
+const ONBOARDING_FOCUS_DESCRIPTIONS: Record<"acting" | "tech" | "both", string> = {
+  acting: "Du möchtest auf der Bühne wirken und Rollen gestalten.",
+  tech: "Du möchtest hinter den Kulissen organisieren, bauen oder für Licht & Ton sorgen.",
+  both: "Du bleibst flexibel zwischen Bühne und Gewerken und entscheidest situativ.",
+};
+
 function formatDate(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return null;
   return summaryDateFormatter.format(date);
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return null;
+  return summaryDateTimeFormatter.format(date);
 }
 
 function formatMeasurementValue(value: number) {
@@ -288,6 +317,7 @@ interface ProfilePageClientProps {
   measurements?: MeasurementEntry[];
   dietaryPreference: DietaryPreferenceState;
   allergies: AllergyEntry[];
+  onboarding: ProfileOnboardingState;
   photoConsent: PhotoConsentSummary | null;
 }
 
@@ -382,6 +412,7 @@ export function ProfilePageClient({
   measurements,
   dietaryPreference,
   allergies,
+  onboarding,
   photoConsent,
 }: ProfilePageClientProps) {
   const [activeTab, setActiveTab] = useState<ProfileTabId>("stammdaten");
@@ -396,6 +427,8 @@ export function ProfilePageClient({
   const [measurementState, setMeasurementState] = useState<MeasurementEntry[]>(() =>
     canManageMeasurements ? sortMeasurements(measurements ?? []) : [],
   );
+  const [onboardingState, setOnboardingState] =
+    useState<ProfileOnboardingState>(onboarding);
 
   const measurementEntries = canManageMeasurements ? measurementState : [];
 
@@ -421,6 +454,18 @@ export function ProfilePageClient({
     preferenceState.style,
     preferenceState.customLabel,
   );
+
+  const onboardingUpdatedAtDate = formatDate(onboardingState.updatedAt);
+  const onboardingUpdatedAtDetail = formatDateTime(onboardingState.updatedAt);
+  const onboardingFocusLabel = onboardingState.focus
+    ? ONBOARDING_FOCUS_LABELS[onboardingState.focus]
+    : null;
+  const onboardingFocusDescription = onboardingState.focus
+    ? ONBOARDING_FOCUS_DESCRIPTIONS[onboardingState.focus]
+    : null;
+  const onboardingMemberSince = onboardingState.memberSinceYear
+    ? `Seit ${onboardingState.memberSinceYear}`
+    : null;
 
   const latestMeasurementUpdate = measurementEntries.reduce<string | null>(
     (latest, entry) => {
@@ -529,6 +574,19 @@ export function ProfilePageClient({
         : "Noch keine Freigabe abgeschlossen.",
     },
     {
+      key: "onboarding",
+      label: "Onboarding",
+      icon: ClipboardList,
+      value: onboardingFocusLabel ? (
+        <span className="text-sm font-medium text-foreground">{onboardingFocusLabel}</span>
+      ) : (
+        <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>
+      ),
+      hint: onboardingUpdatedAtDate
+        ? `Zuletzt bearbeitet am ${onboardingUpdatedAtDate}`
+        : "Noch keine Angaben aus dem Onboarding.",
+    },
+    {
       key: "roles",
       label: "Aktive Rollen",
       icon: UsersRound,
@@ -611,6 +669,12 @@ export function ProfilePageClient({
       label: "Stammdaten",
       description: "Kontakt, Name & Geburtsdatum",
       icon: IdCard,
+    },
+    {
+      id: "onboarding",
+      label: "Onboarding",
+      description: "Schwerpunkt & Hintergrund",
+      icon: ClipboardList,
     },
     {
       id: "ernaehrung",
@@ -852,6 +916,88 @@ export function ProfilePageClient({
                                 }
                               : prev,
                           );
+                        }}
+                      />
+                    </EditorPanel>
+                  ) : null}
+                </TabsContent>
+
+                <TabsContent value="onboarding" className="space-y-6">
+                  <SummaryField
+                    label="Schwerpunkt"
+                    description={
+                      onboardingUpdatedAtDetail
+                        ? `Zuletzt bearbeitet am ${onboardingUpdatedAtDetail}`
+                        : "Noch keine Angaben aus dem Onboarding."
+                    }
+                    onClick={() => openEditor("onboarding")}
+                  >
+                    <div className="space-y-1">
+                      {onboardingFocusLabel ? (
+                        <span>{onboardingFocusLabel}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>
+                      )}
+                      {onboardingFocusDescription ? (
+                        <p className="text-xs text-muted-foreground">{onboardingFocusDescription}</p>
+                      ) : null}
+                    </div>
+                  </SummaryField>
+
+                  <SummaryField
+                    label="Hintergrund"
+                    onClick={() => openEditor("onboarding")}
+                  >
+                    {onboardingState.background ? (
+                      <span>{onboardingState.background}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>
+                    )}
+                  </SummaryField>
+
+                  <SummaryField
+                    label="Klasse/Jahrgang"
+                    onClick={() => openEditor("onboarding")}
+                  >
+                    {onboardingState.backgroundClass ? (
+                      <span>{onboardingState.backgroundClass}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>
+                    )}
+                  </SummaryField>
+
+                  <SummaryField
+                    label="Mitglied seit"
+                    onClick={() => openEditor("onboarding")}
+                  >
+                    {onboardingMemberSince ? (
+                      <span>{onboardingMemberSince}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>
+                    )}
+                  </SummaryField>
+
+                  <SummaryField
+                    label="Notizen"
+                    onClick={() => openEditor("onboarding")}
+                  >
+                    {onboardingState.notes ? (
+                      <p className="whitespace-pre-wrap text-sm">{onboardingState.notes}</p>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>
+                    )}
+                  </SummaryField>
+
+                  {activeEditor === "onboarding" ? (
+                    <EditorPanel
+                      title="Onboarding-Angaben bearbeiten"
+                      description="Passe Schwerpunkt, Hintergrund und Hinweise aus deinem Onboarding an."
+                      onClose={closeEditor}
+                    >
+                      <ProfileOnboardingEditor
+                        initialState={onboardingState}
+                        onChange={(next) => {
+                          setOnboardingState(next);
                         }}
                       />
                     </EditorPanel>
