@@ -128,7 +128,7 @@ export function UserNav({ className }: { className?: string }) {
               className="block px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
               onClick={() => setOpen(false)}
             >
-              Mitgliederbereich
+              Dashboard
             </Link>
             <Link
               role="menuitem"
@@ -138,6 +138,23 @@ export function UserNav({ className }: { className?: string }) {
             >
               Profil
             </Link>
+            <Link
+              role="menuitem"
+              href="/mitglieder/sperrliste"
+              className="block px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
+              onClick={() => setOpen(false)}
+            >
+              Sperrliste
+            </Link>
+            <Link
+              role="menuitem"
+              href="/mitglieder/meine-proben"
+              className="block px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
+              onClick={() => setOpen(false)}
+            >
+              Meine Proben
+            </Link>
+            <div className="mx-3 my-1 h-px bg-border/60" />
             <button
               role="menuitem"
               className="block w-full px-3 py-2 text-left text-sm hover:bg-accent/30 focus:bg-accent/30"
