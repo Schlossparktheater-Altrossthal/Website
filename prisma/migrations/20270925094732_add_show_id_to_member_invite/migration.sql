@@ -51,7 +51,6 @@ BEGIN
 END;
 $$;
 
--- Fallback to the most recent show for invites that are not linked to onboarding data
 DO $$
 DECLARE
   fallback_show_id TEXT;
@@ -65,6 +64,44 @@ BEGIN
   IF fallback_show_id IS NOT NULL THEN
     UPDATE "public"."MemberInvite"
     SET "showId" = fallback_show_id
+    WHERE "showId" IS NULL;
+  END IF;
+END;
+$$;
+
+-- Ensure legacy invites without a matching show always receive
+-- a deterministic placeholder show.
+DO $$
+DECLARE
+  placeholder_show_id CONSTANT TEXT := 'legacy-member-invite-show';
+  placeholder_year    INTEGER;
+  earliest_invite     TIMESTAMP;
+BEGIN
+  IF EXISTS (SELECT 1 FROM "public"."MemberInvite" WHERE "showId" IS NULL) THEN
+    IF NOT EXISTS (SELECT 1 FROM "public"."Show" WHERE "id" = placeholder_show_id) THEN
+      SELECT MIN("createdAt") INTO earliest_invite FROM "public"."MemberInvite";
+      placeholder_year := COALESCE(
+        CAST(EXTRACT(YEAR FROM earliest_invite) AS INTEGER),
+        CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS INTEGER)
+      );
+
+      INSERT INTO "public"."Show" ("id", "year", "title", "synopsis", "dates", "posterUrl", "revealedAt", "finalRehearsalWeekStart", "meta")
+      VALUES (
+        placeholder_show_id,
+        placeholder_year,
+        'Legacy-Mitgliedschaften',
+        'Automatisch erstellte Produktion für bestehende Einladungen ohne Show-Verknüpfung.',
+        '[]'::jsonb,
+        NULL,
+        NULL,
+        NULL,
+        jsonb_build_object('generatedByMigration', '20270925094732_add_show_id_to_member_invite')
+      )
+      ON CONFLICT ("id") DO NOTHING;
+    END IF;
+
+    UPDATE "public"."MemberInvite"
+    SET "showId" = placeholder_show_id
     WHERE "showId" IS NULL;
   END IF;
 END;
