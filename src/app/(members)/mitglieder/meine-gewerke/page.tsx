@@ -89,6 +89,20 @@ export default async function MeineGewerkePage() {
             },
             orderBy: { createdAt: "asc" },
           },
+          events: {
+            include: {
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: { start: "asc" },
+          },
         },
       },
     },

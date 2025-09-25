@@ -87,6 +87,20 @@ export default async function DepartmentTodosPage() {
               { createdAt: "asc" },
             ],
           },
+          events: {
+            include: {
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: { start: "asc" },
+          },
         },
       },
     },
