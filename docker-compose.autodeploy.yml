@@ -1,0 +1,25 @@
+services:
+  auto-deploy:
+    build:
+      context: .
+      dockerfile: deploy-service/Dockerfile
+    image: ${AUTO_DEPLOY_IMAGE:-limitlessgreen/theater_autodeploy:latest}
+    restart: unless-stopped
+    environment:
+      GIT_REMOTE_URL: ${AUTO_DEPLOY_GIT_REMOTE_URL:?set AUTO_DEPLOY_GIT_REMOTE_URL}
+      GITHUB_WEBHOOK_SECRET: ${AUTO_DEPLOY_WEBHOOK_SECRET:?set AUTO_DEPLOY_WEBHOOK_SECRET}
+      TARGET_BRANCH: ${AUTO_DEPLOY_TARGET_BRANCH:-main}
+      DEPLOY_ENV: ${AUTO_DEPLOY_ENV:-prod}
+      COMPOSE_FILE_PATH: ${AUTO_DEPLOY_COMPOSE_FILE:-/opt/worktree/docker-compose.hosting.yml}
+      DEPLOY_SERVICE_NAME: ${AUTO_DEPLOY_SERVICE_NAME:-}
+      COMPOSE_PROJECT_NAME: ${AUTO_DEPLOY_PROJECT_NAME:-theater}
+      LISTEN_PORT: ${AUTO_DEPLOY_LISTEN_PORT:-3000}
+      WEBHOOK_PATH: ${AUTO_DEPLOY_WEBHOOK_PATH:-/webhook}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - auto-deploy-repo:/opt/worktree
+    ports:
+      - "${AUTO_DEPLOY_WEBHOOK_PORT:-9000}:${AUTO_DEPLOY_LISTEN_PORT:-3000}"
+
+volumes:
+  auto-deploy-repo:

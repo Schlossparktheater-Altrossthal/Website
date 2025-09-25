@@ -159,6 +159,48 @@ creates the schemas `theater_dev` and `theater_prod` on first startup, so no
 external SQL file is required. The compose stack expects an external Docker
 network called `proxy` so Traefik can route traffic to the containers.
 
+### Auto-deploying with the webhook service container
+
+`docker-compose.autodeploy.yml` builds a small service container that listens for
+GitHub push webhooks and rebuilds/restarts the application container on demand.
+Only this service image needs to be published to your registry – the actual
+Next.js image will be rebuilt locally through `docker compose` whenever a push
+arrives for the configured branch.
+
+1. Build and publish the service image once: `docker build -f deploy-service/Dockerfile -t <registry>/theater-autodeploy .`.
+2. Provision a host with Docker and mount `/var/run/docker.sock` into the
+   service. The container uses the Docker API to rebuild the app image and
+   therefore must run with this socket mount.
+3. Create a persistent volume (automatically handled by the compose file) to
+   store the checked-out repository under `/opt/worktree`.
+4. Configure the environment variables in `.env` (see the template at the end
+   of `.env.example`). The most relevant toggles are:
+   - `AUTO_DEPLOY_GIT_REMOTE_URL` – SSH or HTTPS URL of this repository.
+   - `AUTO_DEPLOY_TARGET_BRANCH` – the branch to deploy (default `main`).
+   - `AUTO_DEPLOY_ENV` – selects `app-dev` or `app-prod` inside
+     `docker-compose.hosting.yml`.
+   - `AUTO_DEPLOY_SERVICE_NAME` – override when you want to deploy a custom
+     service name instead of the dev/prod default.
+   - `AUTO_DEPLOY_WEBHOOK_SECRET` – shared secret for the GitHub webhook
+     signature.
+5. Start the service: `docker compose -f docker-compose.autodeploy.yml up -d`.
+6. Register a new GitHub webhook that points to
+   `https://<host>:${AUTO_DEPLOY_WEBHOOK_PORT}${AUTO_DEPLOY_WEBHOOK_PATH}` and
+   reuse the same secret. The container exposes a health probe at `/healthz` for
+   monitoring.
+
+When GitHub sends a push event for the selected branch the service performs the
+following steps sequentially:
+
+1. Fetch the latest commit and hard-reset the worktree.
+2. Run `docker compose -f docker-compose.hosting.yml build <service>`.
+3. Run `docker compose -f docker-compose.hosting.yml up -d <service>` to replace
+   the running container.
+
+Because deployments are queued, multiple pushes arriving in quick succession are
+processed sequentially without overlapping builds. Check the container logs for
+the `[deploy]` prefix to inspect the output of the build command.
+
 ### Run the combined server without Docker
 
 ```bash
