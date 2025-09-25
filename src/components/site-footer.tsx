@@ -115,6 +115,14 @@ export function SiteFooter({ buildInfo, isDevBuild, siteTitle }: SiteFooterProps
             <a className="transition-colors hover:text-primary" href="mailto:hallo@sommertheater.de">
               Kontakt
             </a>
+            <a
+              className="transition-colors hover:text-primary"
+              href="https://www.instagram.com/schlossparktheater"
+              rel="noreferrer noopener"
+              target="_blank"
+            >
+              Instagram
+            </a>
           </div>
           <p className="text-xs text-muted-foreground/80 sm:text-sm">
             {isDevBuild ? (
