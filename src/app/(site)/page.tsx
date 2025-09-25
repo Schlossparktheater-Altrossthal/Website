@@ -69,14 +69,15 @@ export default async function Home() {
             <Text variant="eyebrow" uppercase tone="primary">
               Sommertheater Altrossthal
             </Text>
-            <HomepageCountdown
-              initialCountdownTarget={initialCountdownTargetIso}
-              effectiveCountdownTarget={effectiveCountdownTargetIso}
-              defaultCountdownTarget={DEFAULT_HOMEPAGE_COUNTDOWN_ISO}
-              updatedAt={updatedAtIso}
-              hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
-              initialNow={countdownInitialNow}
-            />
+          <HomepageCountdown
+            initialCountdownTarget={initialCountdownTargetIso}
+            effectiveCountdownTarget={effectiveCountdownTargetIso}
+            defaultCountdownTarget={DEFAULT_HOMEPAGE_COUNTDOWN_ISO}
+            updatedAt={updatedAtIso}
+            hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
+            disabled={resolvedCountdown.disabled}
+            initialNow={countdownInitialNow}
+          />
             <Text variant="bodyLg" align="center" tone="muted">
               Ein einziges Wochenende. Ein Sommer. Ein Stück.
             </Text>

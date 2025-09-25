@@ -14,6 +14,7 @@ const updateSchema = z.object({
   countdownTarget: z
     .union([z.string().datetime({ offset: true }), z.null()])
     .transform((value) => (value ? new Date(value) : null)),
+  disabled: z.boolean().optional().default(false),
 });
 
 function serializeSettings(record: Awaited<ReturnType<typeof readHomepageCountdown>>) {
@@ -23,6 +24,7 @@ function serializeSettings(record: Awaited<ReturnType<typeof readHomepageCountdo
     effectiveCountdownTarget: resolved.effectiveCountdownTarget.toISOString(),
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
     hasCustomCountdown: resolved.hasCustomCountdown,
+    disabled: resolved.disabled,
     defaultCountdownTarget: DEFAULT_HOMEPAGE_COUNTDOWN_ISO,
   } as const;
 }
@@ -71,7 +73,10 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const saved = await saveHomepageCountdown({ countdownTarget: parsed.data.countdownTarget });
+    const saved = await saveHomepageCountdown({
+      countdownTarget: parsed.data.countdownTarget,
+      disabled: parsed.data.disabled,
+    });
     return NextResponse.json({ settings: serializeSettings(saved) });
   } catch (error) {
     console.error("Failed to save homepage countdown", error);

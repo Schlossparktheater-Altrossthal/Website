@@ -84,10 +84,12 @@ async function main() {
     where: { id: "public" },
     update: {
       countdownTarget: new Date("2026-06-18T17:00:00.000Z"),
+      disabled: false,
     },
     create: {
       id: "public",
       countdownTarget: new Date("2026-06-18T17:00:00.000Z"),
+      disabled: false,
     },
   });
 
