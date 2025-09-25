@@ -8,3 +8,7 @@ pnpm-store
 dev.db*
 .DS_Store
 
+
+# local-only compose files
+docker-compose.internal.yml
+
