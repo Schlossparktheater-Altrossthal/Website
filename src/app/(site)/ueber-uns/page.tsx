@@ -116,6 +116,12 @@ const values = [
 
 const milestones = [
   {
+    year: "2008",
+    title: "Theatergruppe im Kulturpalast",
+    description:
+      "Schüler:innen des BSZ schließen sich erstmals als Theatergruppe zusammen und zeigen \"Fluch(t)weg\" im Studiotheater des Kulturpalastes.",
+  },
+  {
     year: "2009",
     title: "Die erste Inszenierung",
     description:
@@ -138,6 +144,12 @@ const milestones = [
     title: "Digital verbunden",
     description:
       "Livestreams für Menschen, die nicht vor Ort sein können, und ein hybrides Probenformat für unser Ensemble.",
+  },
+  {
+    year: "2023",
+    title: "Headsets für präzisen Klang",
+    description:
+      "Erstes Theaterstück, bei dem Headsets eingesetzt werden, um Stimmen auf der Freiluftbühne noch klarer zu transportieren.",
   },
 ];
 
