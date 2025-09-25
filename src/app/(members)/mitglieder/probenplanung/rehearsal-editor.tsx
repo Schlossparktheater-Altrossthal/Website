@@ -12,6 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ROLE_LABELS, ROLES } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import {
+  formatIsoDateInTimeZone,
+  formatIsoTimeInTimeZone,
+  parseDateTimeInTimeZone,
+} from "@/lib/date-time";
 
 import {
   discardRehearsalDraftAction,
@@ -40,6 +45,7 @@ type RehearsalEditorProps = {
     status: string;
     title: string;
     start: string;
+    end: string | null;
     location: string;
     description: string | null;
     inviteeIds: string[];
@@ -53,14 +59,6 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 function displayName(member: MemberOption) {
   return member.name?.trim() || member.email?.trim() || "Unbekannt";
-}
-
-function toDateString(iso: string) {
-  return iso.slice(0, 10);
-}
-
-function toTimeString(iso: string) {
-  return iso.slice(11, 16);
 }
 
 function detectRegistrationDeadlineOption(
@@ -101,24 +99,20 @@ function detectRegistrationDeadlineOption(
   return closestOption;
 }
 
-function parseLocalDateTime(date: string, time: string) {
-  if (!date || !time) {
-    return null;
-  }
-  const result = new Date(`${date}T${time}`);
-  if (Number.isNaN(result.getTime())) {
-    return null;
-  }
-  return result;
-}
-
 export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: RehearsalEditorProps) {
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
 
   const [title, setTitle] = useState(rehearsal.title);
-  const [date, setDate] = useState(toDateString(rehearsal.start));
-  const [time, setTime] = useState(toTimeString(rehearsal.start));
+  const [date, setDate] = useState(() =>
+    formatIsoDateInTimeZone(rehearsal.start)
+  );
+  const [time, setTime] = useState(() =>
+    formatIsoTimeInTimeZone(rehearsal.start)
+  );
+  const [endTime, setEndTime] = useState(() =>
+    rehearsal.end ? formatIsoTimeInTimeZone(rehearsal.end) : ""
+  );
   const [location, setLocation] = useState(rehearsal.location);
   const [description, setDescription] = useState(rehearsal.description ?? "");
   const [selectedInvitees, setSelectedInvitees] = useState<string[]>(() => Array.from(new Set(rehearsal.inviteeIds)));
@@ -132,7 +126,14 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
   const [isPublishing, startPublish] = useTransition();
   const [isDiscarding, startDiscard] = useTransition();
 
-  const startDateTime = useMemo(() => parseLocalDateTime(date, time), [date, time]);
+  const startDateTime = useMemo(() => {
+    try {
+      return parseDateTimeInTimeZone(date, time);
+    } catch (error) {
+      console.error("Failed to parse rehearsal start", error);
+      return null;
+    }
+  }, [date, time]);
   const deadlinePreviewDate = useMemo(() => {
     if (!startDateTime) {
       return null;
@@ -217,11 +218,13 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
     setSaveStatus("saving");
     const handle = setTimeout(() => {
       const updateAction = isDraft ? updateRehearsalDraftAction : updateRehearsalAction;
+      const trimmedEndTime = endTime.trim();
       const actionParams = {
         id: rehearsal.id,
         title,
         date,
         time,
+        ...(trimmedEndTime ? { endTime: trimmedEndTime } : {}),
         location,
         description,
         invitees: selectedInvitees,
@@ -255,6 +258,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
     description,
     date,
     time,
+    endTime,
     title,
     location,
     selectedInvitees,
@@ -265,11 +269,13 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
 
   const handlePublish = () => {
     startPublish(() => {
+      const trimmedEndTime = endTime.trim();
       publishRehearsalAction({
         id: rehearsal.id,
         title,
         date,
         time,
+        ...(trimmedEndTime ? { endTime: trimmedEndTime } : {}),
         location,
         description,
         invitees: selectedInvitees,
@@ -360,7 +366,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="rehearsal-date">
                   Datum
@@ -383,6 +389,17 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
                   value={time}
                   onChange={(event) => setTime(event.target.value)}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="rehearsal-end">
+                  Ende
+                </label>
+                <Input
+                  id="rehearsal-end"
+                  type="time"
+                  value={endTime}
+                  onChange={(event) => setEndTime(event.target.value)}
                 />
               </div>
             </div>
