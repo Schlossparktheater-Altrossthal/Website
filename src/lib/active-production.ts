@@ -2,6 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 
 export const ACTIVE_PRODUCTION_COOKIE = "active-production";
 
@@ -75,7 +76,14 @@ async function resolveFallbackActiveProductionId(userId: string | null | undefin
   return preferred?.showId ?? null;
 }
 
-export async function getActiveProductionId(userId?: string | null) {
+type ActiveProductionOptions = {
+  canManageProductions?: boolean;
+};
+
+export async function getActiveProductionId(
+  userId?: string | null,
+  options?: ActiveProductionOptions,
+) {
   const store = await cookies();
   const cookieValue = store.get(ACTIVE_PRODUCTION_COOKIE)?.value ?? null;
 
@@ -83,7 +91,15 @@ export async function getActiveProductionId(userId?: string | null) {
     return cookieValue;
   }
 
+  const canManageProductions =
+    options?.canManageProductions ??
+    (await hasPermission({ id: userId }, "mitglieder.produktionen"));
+
   if (cookieValue) {
+    if (canManageProductions) {
+      return cookieValue;
+    }
+
     const membership = await prisma.productionMembership.findFirst({
       where: {
         userId,
@@ -108,12 +124,18 @@ export async function getActiveProductionId(userId?: string | null) {
 }
 
 export const getActiveProduction = cache(async (userId?: string | null) => {
-  const activeProductionId = await getActiveProductionId(userId);
+  const canManageProductions = userId
+    ? await hasPermission({ id: userId }, "mitglieder.produktionen")
+    : false;
+
+  const activeProductionId = await getActiveProductionId(userId, {
+    canManageProductions,
+  });
   if (!activeProductionId) {
     return null;
   }
 
-  const where = userId
+  const where = userId && !canManageProductions
     ? {
         id: activeProductionId,
         memberships: {
