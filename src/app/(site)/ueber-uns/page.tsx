@@ -311,12 +311,9 @@ export default async function AboutPage() {
             Schlosspark Altrossthal.
           </Text>
           <Text tone="muted" className="mt-4">
-            Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Lernende, Alumni und Freund:innen des
-            BSZ Altroßthal, um eine Bühne zu schaffen, die weit über klassischen Unterricht hinausgeht.
-          </Text>
-          <Text tone="muted" className="mt-4">
-            Das Ensemble besteht aus Schüler:innen des Beruflichen Gymnasiums und der Fachoberschule, Auszubildenden aus Landwirtschaft, Floristik, Konditorei
-            und vielen weiteren Gewerken sowie Freund:innen des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung Dresden.
+            Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Schüler des Beruflichen Gymnasiums und
+            der Fachoberschule, Auszubildende aus Landwirtschaft, Floristik, Konditorei und weiteren Bereichen sowie Freunde des BSZ für Agrarwirtschaft und
+            Ernährung, um eine Bühne zu schaffen, die weit über klassischen Unterricht hinausgeht.
           </Text>
           <Text tone="muted" className="mt-4">
             Die Regie übernehmen meist professionelle Schauspieler:innen oder Regisseur:innen, die ihre Erfahrung teilen und gemeinsam mit uns neue Sommerstücke
