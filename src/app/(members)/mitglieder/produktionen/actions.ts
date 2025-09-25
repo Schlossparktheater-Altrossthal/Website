@@ -159,6 +159,24 @@ export async function createProductionAction(formData: FormData): Promise<void> 
         sameSite: "lax",
         path: "/",
       });
+
+      if (session.user?.id) {
+        await prisma.productionMembership.upsert({
+          where: {
+            showId_userId: {
+              showId: show.id,
+              userId: session.user.id,
+            },
+          },
+          update: {
+            leftAt: null,
+          },
+          create: {
+            showId: show.id,
+            userId: session.user.id,
+          },
+        });
+      }
     }
 
     revalidatePath("/mitglieder", "layout");
