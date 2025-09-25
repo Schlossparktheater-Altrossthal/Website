@@ -15,6 +15,7 @@
   - `pnpm start:combined` bzw. `pnpm start:proxy` spiegeln das Docker-Setup ohne Container.
   - Design-Token-Workflows: `pnpm swatches:gen` und `pnpm design-system:tokens`.
 - Docker-Compose-Stacks (siehe `README.md`) stellen Postgres & Mailpit bereit. Bei lokalen Datenbankänderungen immer auch `.env.example` aktualisieren.
+- Für manuelle Tests steht eine gehostete Postgres-Instanz zur Verfügung: `PGPASSWORD=HcLZvPJqj6UPJe7imjToQKGMk6mS4kpS psql -h dpg-d3ajsrd6ubrc739spr30-a.oregon-postgres.render.com -U test_kxuk_user test_kxuk`.
 
 ## Architektur- & Code-Richtlinien
 - Füge dem Repository keinerlei Binärdateien hinzu (z. B. PNG/JPG/GIF/WebP, Videos, Audio, Schriftarten, proprietäre Assets). Jegliche Ergänzungen oder Aktualisierungen solcher Dateien blockieren die PR-Erstellung im Codex-Web-Workflow und sind daher untersagt. Setze stattdessen auf textbasierte Alternativen (z. B. Inline-SVG) oder verweise auf bestehende Assets.
