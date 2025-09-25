@@ -338,7 +338,7 @@ export function DieterEncountersSection() {
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <Text variant="small" tone="muted">
-                  Ein Klick öffnet das Formular – so bleibt die Übersicht konzentriert und leicht.
+                  Ein Klick öffnet das Formular.
                 </Text>
                 <Button
                   type="button"
