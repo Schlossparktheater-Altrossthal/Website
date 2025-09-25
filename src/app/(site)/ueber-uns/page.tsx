@@ -1,13 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
 import {
+  AudioLines,
   CalendarHeart,
+  ClipboardList,
   Drama,
   HeartHandshake,
   MapPin,
+  Megaphone,
+  Music3,
+  Package,
+  Paintbrush,
+  Shirt,
   Sparkles,
+  Spotlight,
   Trees,
   Users,
+  UtensilsCrossed,
+  WandSparkles,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,6 +162,93 @@ const engagement = [
   },
 ];
 
+type Trade = {
+  icon: LucideIcon;
+  title: string;
+  focus: string;
+  description: string;
+};
+
+const trades: Trade[] = [
+  {
+    icon: Drama,
+    title: "Schauspiel",
+    focus: "Ob Rolle ohne Text oder im Ensemble, kleine Rolle, mittelgroße Rolle oder große Rolle",
+    description:
+      "Wir entwickeln Szenen gemeinsam und finden für jede Person die passende Herausforderung – vom leisen Spiel bis zur großen Hauptrolle.",
+  },
+  {
+    icon: Spotlight,
+    title: "Technik",
+    focus: "Licht, Ton",
+    description:
+      "Scheinwerfer, Funkmikros und Klangflächen sorgen für Atmosphäre. Unser Technikteam mischt, programmiert und begleitet jede Vorstellung live.",
+  },
+  {
+    icon: Paintbrush,
+    title: "Bühnenbau & -malerei",
+    focus: "Bühne gestalten, Pflanzen (Floristen)",
+    description:
+      "Holz, Stoffe und frische Floristik verschmelzen zu verwunschenen Parklandschaften. Hier entstehen Wege, Kulissen und Farbräume.",
+  },
+  {
+    icon: Package,
+    title: "Requisite",
+    focus: "Gegenstände zum Spielen",
+    description:
+      "Vom alten Koffer bis zum magischen Artefakt – die Requisite recherchiert, baut und pflegt alles, was Figuren in den Händen halten.",
+  },
+  {
+    icon: Shirt,
+    title: "Kostüm",
+    focus: "Kostüme entwickeln und nähen",
+    description:
+      "Outfits werden entworfen, zugeschnitten und veredelt. So erzählen Stoffe, Farben und Accessoires eigene Geschichten.",
+  },
+  {
+    icon: WandSparkles,
+    title: "Maske",
+    focus: "Schauspieler schminken",
+    description:
+      "Mit Pinseln, Airbrush und viel Fingerspitzengefühl entstehen Charaktere – vom sommerlichen Glow bis hin zu fantastischen Wesen.",
+  },
+  {
+    icon: Megaphone,
+    title: "Werbung",
+    focus: "Social Media (Instagram)",
+    description:
+      "Stories, Reels und Plakatideen machen Probenprozesse sichtbar und laden unser Publikum frühzeitig in den Schlosspark ein.",
+  },
+  {
+    icon: AudioLines,
+    title: "Soufflage",
+    focus: "Bei Hängern einspringen",
+    description:
+      "Mit Textbuch und Ruhe bewahren die Souffleur:innen den Überblick – und geben im richtigen Moment leise Stichworte.",
+  },
+  {
+    icon: Music3,
+    title: "Musik",
+    focus: "Musik komponieren, Instrumente, Tanz",
+    description:
+      "Eigenkompositionen, Chorarrangements und choreografierte Bewegungen verweben Klang und Rhythmus mit der Handlung.",
+  },
+  {
+    icon: UtensilsCrossed,
+    title: "Verpflegung",
+    focus: "Um Essen kümmern",
+    description:
+      "Snacks für lange Probentage und liebevoll gedeckte Buffets vor den Shows halten Ensemble und Gäste bei Kräften.",
+  },
+  {
+    icon: ClipboardList,
+    title: "Regieassistenz & Organisation",
+    focus: "Termine, Ablauf, Kommunikation",
+    description:
+      "Spielpläne, Probenprotokolle und Kontaktlisten laufen hier zusammen – damit jede Premiere punktgenau gelingt.",
+  },
+];
+
 export default async function AboutPage() {
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const ensembleStats = await getCurrentProductionEnsembleStats();
@@ -216,6 +314,14 @@ export default async function AboutPage() {
             Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Lernende, Alumni und Freund:innen des
             BSZ Altroßthal, um eine Bühne zu schaffen, die weit über klassischen Unterricht hinausgeht.
           </Text>
+          <Text tone="muted" className="mt-4">
+            Das Ensemble besteht aus Schüler:innen des Beruflichen Gymnasiums und der Fachoberschule, Auszubildenden aus Landwirtschaft, Floristik, Konditorei
+            und vielen weiteren Gewerken sowie Freund:innen des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung Dresden.
+          </Text>
+          <Text tone="muted" className="mt-4">
+            Die Regie übernehmen meist professionelle Schauspieler:innen oder Regisseur:innen, die ihre Erfahrung teilen und gemeinsam mit uns neue Sommerstücke
+            entwickeln.
+          </Text>
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
@@ -231,6 +337,62 @@ export default async function AboutPage() {
             </Card>
           ))}
         </div>
+      </section>
+
+      <section className="layout-container pb-16 sm:pb-24">
+        <div className="max-w-3xl">
+          <Heading level="h2">Gewerke, die eine Produktion tragen</Heading>
+          <Text variant="bodyLg" tone="muted" className="mt-4">
+            Jeder Sommer entsteht aus vielen Händen und Talenten. Unser Ensemble arbeitet bereichsübergreifend – von der ersten Textprobe bis zur letzten
+            Vorstellungsnacht.
+          </Text>
+          <Text tone="muted" className="mt-2">
+            Scroll durch die Werkstätten und entdecke, wie vielfältig Theaterarbeit am BSZ Altroßthal ist.
+          </Text>
+        </div>
+        <div className="relative mt-8">
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background via-background/80 to-transparent"
+            aria-hidden
+          />
+          <div
+            className="flex gap-6 overflow-x-auto pb-6 pr-6 [scrollbar-color:theme(colors.primary/40)_transparent] [scrollbar-width:thin]"
+            role="list"
+            aria-label="Gewerke des Ensembles"
+          >
+            {trades.map(({ icon: Icon, title, focus, description }) => (
+              <Card
+                key={title}
+                role="listitem"
+                className="flex w-[min(22rem,80vw)] shrink-0 snap-start flex-col justify-between gap-4 rounded-2xl border-border/40 bg-card/70 p-6 shadow-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+                    <Icon className="h-6 w-6" aria-hidden />
+                  </div>
+                  <Heading level="h3" className="text-xl" weight="bold">
+                    {title}
+                  </Heading>
+                </div>
+                <div className="space-y-3">
+                  <Text variant="small" className="font-medium text-primary">
+                    {focus}
+                  </Text>
+                  <Text variant="small" tone="muted">
+                    {description}
+                  </Text>
+                </div>
+              </Card>
+            ))}
+          </div>
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background via-background/80 to-transparent"
+            aria-hidden
+          />
+        </div>
+        <Text variant="small" tone="muted" className="mt-4">
+          Tipp: Mit dem horizontalen Scrollbalken oder per Wischgeste kannst du alle Gewerke entdecken.
+        </Text>
       </section>
 
       <section className="layout-container pb-16 sm:pb-24">
