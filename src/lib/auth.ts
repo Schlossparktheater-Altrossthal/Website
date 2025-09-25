@@ -245,7 +245,13 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   useSecureCookies,
   // Use JWT sessions for reliability in dev (works with Credentials + Email).
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    // Keep logins valid for roughly one month and refresh them regularly when the
+    // user returns to the site (sliding expiration).
+    maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+    updateAge: 24 * 60 * 60, // refresh token after one day of inactivity
+  },
   providers: [
     EmailProvider({
       server: process.env.EMAIL_SERVER,
