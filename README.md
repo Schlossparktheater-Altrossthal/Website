@@ -173,7 +173,11 @@ arrives for the configured branch.
    therefore must run with this socket mount.
 3. Create a persistent volume (automatically handled by the compose file) to
    store the checked-out repository under `/opt/worktree`.
-4. Configure the environment variables in `.env` (see the template at the end
+4. Provision the bundled PostgreSQL 16 instance or point it at your managed
+   database. Credentials default to `postgres`/`postgres` and can be overridden
+   through `POSTGRES_USER` and `POSTGRES_PASSWORD`. Persist the data directory
+   by keeping the `AUTO_DEPLOY_PGDATA_VOLUME` volume.
+5. Configure the environment variables in `.env` (see the template at the end
    of `.env.example`). The most relevant toggles are:
    - `AUTO_DEPLOY_GIT_REMOTE_URL` – SSH or HTTPS URL of this repository.
    - `AUTO_DEPLOY_TARGET_BRANCH` – the branch to deploy (default `main`).
@@ -195,13 +199,13 @@ arrives for the configured branch.
    - `AUTO_DEPLOY_GIT_SSH_PRIVATE_KEY` (plus
      `AUTO_DEPLOY_GIT_SSH_KNOWN_HOSTS`) – optional SSH credentials for private
      repositories.
-5. Start the service: `docker compose -f docker-compose.autodeploy.yml up -d`.
+6. Start the service: `docker compose -f docker-compose.autodeploy.yml up -d`.
    On first boot the container performs an initial deployment automatically
    (equivalent to manually calling `deploy-service/deploy.sh`). Set
    `AUTO_DEPLOY_RUN_ON_START=false` when you prefer to trigger the first build
    yourself (for example to adjust environment variables or secrets on the
    target host beforehand).
-6. Register a new GitHub webhook that points to the regular website hostname,
+7. Register a new GitHub webhook that points to the regular website hostname,
    for example `https://${DEV_HOST:-devtheater.beegreenx.de}${AUTO_DEPLOY_WEBHOOK_PATH:-/webhook}`.
    Traefik (or any other edge proxy) only needs to know about the website
    container – the internal reverse proxy forwards `/webhook` and `/healthz`

@@ -1,4 +1,20 @@
 services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - auto-deploy-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - auto-deploy-internal
+
   auto-deploy:
     image: ${AUTO_DEPLOY_IMAGE:-limitlessgreen/theater_autodeploy:latest}
     pull_policy: ${AUTO_DEPLOY_PULL_POLICY:-always}
@@ -18,11 +34,18 @@ services:
       - auto-deploy-repo:/opt/worktree
     networks:
       - auto-deploy-proxy
+      - auto-deploy-internal
 
 volumes:
   auto-deploy-repo:
     name: ${AUTO_DEPLOY_WORKTREE_VOLUME:-auto-deploy-repo}
+  auto-deploy-pgdata:
+    name: ${AUTO_DEPLOY_PGDATA_VOLUME:-auto-deploy-pgdata}
+
 networks:
   auto-deploy-proxy:
     external: true
     name: ${AUTO_DEPLOY_NETWORK:-proxy}
+  auto-deploy-internal:
+    internal: true
+    name: ${AUTO_DEPLOY_INTERNAL_NETWORK:-auto-deploy-internal}
