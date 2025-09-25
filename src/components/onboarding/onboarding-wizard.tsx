@@ -23,10 +23,11 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  DIETARY_STRICTNESS_OPTIONS,
   DIETARY_STYLE_OPTIONS,
-  resolveDietaryStrictnessLabel,
+  DIETARY_STRICTNESS_OPTIONS,
+  DEFAULT_STRICTNESS_FOR_NONE,
   resolveDietaryStyleLabel,
+  resolveDietaryStrictnessLabel,
   type DietaryStrictnessOption,
   type DietaryStyleOption,
 } from "@/data/dietary-preferences";
@@ -323,7 +324,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     actingPreferences: initialActingPreferences,
     crewPreferences: initialCrewPreferences,
     interests: [] as string[],
-    nutritionStyle: "none" as DietaryStyleOption,
+    nutritionStyle: "omnivore" as DietaryStyleOption,
     nutritionCustomStyle: "",
     nutritionStrictness: "flexible" as DietaryStrictnessOption,
     photoConsent: { consent: true },
@@ -466,12 +467,32 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     return custom ?? label;
   }, [form.nutritionCustomStyle, form.nutritionStyle]);
 
-  const nutritionStrictnessLabel = useMemo(() => {
-    return resolveDietaryStrictnessLabel(
-      form.nutritionStyle,
-      form.nutritionStrictness,
-    );
-  }, [form.nutritionStrictness, form.nutritionStyle]);
+  const nutritionStrictnessLabel = useMemo(
+    () =>
+      resolveDietaryStrictnessLabel(
+        form.nutritionStyle,
+        form.nutritionStrictness,
+      ),
+    [form.nutritionStrictness, form.nutritionStyle],
+  );
+
+  const isAllesesser =
+    form.nutritionStyle === "omnivore" || form.nutritionStyle === "none";
+
+  useEffect(() => {
+    if (form.nutritionStyle !== "none") return;
+    setForm((prev) => ({ ...prev, nutritionStyle: "omnivore" }));
+  }, [form.nutritionStyle, setForm]);
+
+  useEffect(() => {
+    if (!isAllesesser) return;
+    if (form.nutritionStrictness === DEFAULT_STRICTNESS_FOR_NONE) return;
+    setForm((prev) => ({
+      ...prev,
+      nutritionStrictness: DEFAULT_STRICTNESS_FOR_NONE,
+    }));
+  }, [form.nutritionStrictness, form.nutritionStyle, isAllesesser, setForm]);
+
 
   const availableInterestSuggestions = useMemo(() => {
     const selected = new Set(form.interests.map((item) => item.toLowerCase()));
@@ -1741,7 +1762,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
           <CardContent className="space-y-6">
             <div className="space-y-4 rounded-2xl border border-border/60 bg-background/85 p-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1 text-sm">
+                <div className="space-y-2 text-sm">
                   <span className="font-medium">Ernährungsstil</span>
                   <Select
                     value={form.nutritionStyle}
@@ -1757,7 +1778,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                       <SelectValue placeholder="Wähle deinen Stil" />
                     </SelectTrigger>
                     <SelectContent>
-                      {DIETARY_STYLE_OPTIONS.map((option) => (
+                      {DIETARY_STYLE_OPTIONS.filter((option) => option.value !== "none").map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -1774,31 +1795,42 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Zum Beispiel vegan, vegetarisch, halal oder ein eigener Mix.
+                    Allesesser:in ist vorausgewählt. Wähle eine andere Option, wenn du besondere Ernährungsweisen hast.
                   </p>
                 </div>
-                <div className="space-y-1 text-sm">
+                <div className="space-y-2 text-sm">
                   <span className="font-medium">Wie konsequent hältst du dich daran?</span>
-                  <Select
-                    value={form.nutritionStrictness}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({ ...prev, nutritionStrictness: value as DietaryStrictnessOption }))
-                    }
-                  >
-                    <SelectTrigger className="bg-background/80">
-                      <SelectValue placeholder="Wähle eine Option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DIETARY_STRICTNESS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    So können wir besser einschätzen, ob Ausnahmen für dich in Ordnung sind.
-                  </p>
+                  {isAllesesser ? (
+                    <div className="space-y-1 rounded-lg border border-border/50 bg-background px-3 py-2">
+                      <p className="text-sm font-medium text-foreground">Nicht relevant</p>
+                      <p className="text-xs text-muted-foreground">
+                        Für Allesesser:innen planen wir flexibel. Melde dich einfach beim Team, falls es besondere Wünsche gibt.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <Select
+                        value={form.nutritionStrictness}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({ ...prev, nutritionStrictness: value as DietaryStrictnessOption }))
+                        }
+                      >
+                        <SelectTrigger className="bg-background/80">
+                          <SelectValue placeholder="Wähle eine Option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DIETARY_STRICTNESS_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        So wissen wir, ob Ausnahmen möglich sind oder strikt vermieden werden sollen.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -2104,11 +2136,18 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     <dt className="text-muted-foreground">Ernährungsstil</dt>
                     <dd className="font-medium text-foreground">{nutritionStyleLabel}</dd>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-muted-foreground">Umgang</dt>
-                    <dd className="font-medium text-foreground">{nutritionStrictnessLabel}</dd>
-                  </div>
+                  {!isAllesesser && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">Strengegrad</dt>
+                      <dd className="font-medium text-foreground">{nutritionStrictnessLabel}</dd>
+                    </div>
+                  )}
                 </dl>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {isAllesesser
+                    ? "Strengegrade entfallen – individuelle Hinweise erfasst du einfach über Allergien und Unverträglichkeiten."
+                    : "Passe den Strengegrad bei Bedarf an oder melde dich direkt beim Team, falls sich deine Ernährung ändert."}
+                </p>
                 {form.dietary.length ? (
                   <div className="mt-3 space-y-3 text-sm">
                     {form.dietary.map((entry) => {

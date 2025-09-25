@@ -30,7 +30,7 @@ const genderOptionLabels = {
 type GenderOption = keyof typeof genderOptionLabels;
 
 const dietaryStyleLabels = {
-  none: "Keine besondere Ernährung",
+  none: "Allesesser:in",
   omnivore: "Allesesser:in",
   vegetarian: "Vegetarisch",
   vegan: "Vegan",
@@ -251,8 +251,11 @@ export async function POST(request: NextRequest) {
 
   const dietaryStrictnessOption = dietaryPreference.strictness as DietaryStrictnessOption;
   const dietaryStrictnessLabel = dietaryStrictnessLabels[dietaryStrictnessOption];
-  const dietaryStrictnessDisplay =
-    dietaryStyleOption === "none" ? "Nicht relevant" : dietaryStrictnessLabel;
+  const isBaselineDietaryStyle =
+    dietaryStyleOption === "none" || dietaryStyleOption === "omnivore";
+  const dietaryStrictnessDisplay = isBaselineDietaryStyle
+    ? "Nicht relevant"
+    : dietaryStrictnessLabel;
 
   let dateOfBirth: Date | null = null;
   if (payload.dateOfBirth) {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const DIETARY_STYLE_OPTIONS = [
-  { value: "none", label: "Keine besondere Ernährung" },
+  { value: "none", label: "Allesesser:in" },
   { value: "omnivore", label: "Allesesser:in" },
   { value: "vegetarian", label: "Vegetarisch" },
   { value: "vegan", label: "Vegan" },
@@ -69,7 +69,7 @@ export function resolveDietaryStrictnessLabel(
   style: DietaryStyleOption,
   strictness: DietaryStrictnessOption,
 ): string {
-  if (style === "none") {
+  if (style === "none" || style === "omnivore") {
     return NONE_STRICTNESS_LABEL;
   }
   const option = DIETARY_STRICTNESS_OPTIONS.find(

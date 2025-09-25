@@ -48,10 +48,7 @@ import {
   MEASUREMENT_UNIT_LABELS,
   sortMeasurements,
 } from "@/data/measurements";
-import {
-  resolveDietaryStrictnessLabel,
-  resolveDietaryStyleLabel,
-} from "@/data/dietary-preferences";
+import { resolveDietaryStyleLabel } from "@/data/dietary-preferences";
 
 interface MeasurementEntry {
   id: string;
@@ -400,10 +397,6 @@ export function ProfilePageClient({
     preferenceState.style,
     preferenceState.customLabel,
   );
-  const dietaryStrictness = resolveDietaryStrictnessLabel(
-    preferenceState.style,
-    preferenceState.strictness,
-  );
 
   const latestMeasurementUpdate = measurementEntries.reduce<string | null>(
     (latest, entry) => {
@@ -649,7 +642,7 @@ export function ProfilePageClient({
                   </TabsContent>
 
                   <TabsContent value="ernaehrung" className="space-y-6 pt-4">
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4">
                       <SummaryField
                         label="Ernährungsstil"
                         onClick={() => openEditor("ernaehrung")}
@@ -662,12 +655,6 @@ export function ProfilePageClient({
                             </span>
                           ) : null}
                         </div>
-                      </SummaryField>
-                      <SummaryField
-                        label="Strenge"
-                        onClick={() => openEditor("ernaehrung")}
-                      >
-                        {renderText(dietaryStrictness)}
                       </SummaryField>
                     </div>
 

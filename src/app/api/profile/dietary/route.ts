@@ -42,8 +42,10 @@ export async function PUT(request: NextRequest) {
   }
 
   const style = parsed.style;
-  const strictness: DietaryStrictnessOption =
-    style === "none" ? DEFAULT_STRICTNESS_FOR_NONE : parsed.strictness;
+  const strictnessBaseline = style === "none" || style === "omnivore";
+  const strictness: DietaryStrictnessOption = strictnessBaseline
+    ? DEFAULT_STRICTNESS_FOR_NONE
+    : parsed.strictness;
   const customLabel = parsed.customLabel ?? null;
 
   const { label: styleLabel, custom } = resolveDietaryStyleLabel(
