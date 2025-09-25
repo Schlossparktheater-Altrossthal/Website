@@ -181,6 +181,11 @@ arrives for the configured branch.
      `docker-compose.hosting.yml`.
    - `AUTO_DEPLOY_SERVICE_NAME` – override when you want to deploy a custom
      service name instead of the dev/prod default.
+   - `AUTO_DEPLOY_HOST` – public hostname that Traefik should route to this
+     webhook service.
+   - `AUTO_DEPLOY_TRAEFIK_ENTRYPOINTS` / `AUTO_DEPLOY_TRAEFIK_CERT_RESOLVER` –
+     optional overrides for the Traefik entrypoint list (default `websecure`)
+     and certificate resolver (default `myresolver`).
    - `AUTO_DEPLOY_WEBHOOK_SECRET` – shared secret for the GitHub webhook
      signature.
    - `AUTO_DEPLOY_GIT_HTTP_TOKEN` or the combination of
@@ -191,9 +196,10 @@ arrives for the configured branch.
      repositories.
 5. Start the service: `docker compose -f docker-compose.autodeploy.yml up -d`.
 6. Register a new GitHub webhook that points to
-   `https://<host>:${AUTO_DEPLOY_WEBHOOK_PORT}${AUTO_DEPLOY_WEBHOOK_PATH}` and
-   reuse the same secret. The container exposes a health probe at `/healthz` for
-   monitoring.
+   `https://${AUTO_DEPLOY_HOST}${AUTO_DEPLOY_WEBHOOK_PATH}` (or use the raw port
+   mapping `https://<host>:${AUTO_DEPLOY_WEBHOOK_PORT}${AUTO_DEPLOY_WEBHOOK_PATH}`)
+   and reuse the same secret. The container exposes a health probe at `/healthz`
+   for monitoring.
 
 When GitHub sends a push event for the selected branch the service performs the
 following steps sequentially:
