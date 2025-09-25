@@ -181,13 +181,14 @@ arrives for the configured branch.
      `docker-compose.hosting.yml`.
    - `AUTO_DEPLOY_SERVICE_NAME` – override when you want to deploy a custom
      service name instead of the dev/prod default.
-   - `AUTO_DEPLOY_HOST` – public hostname that Traefik should route to this
-     webhook service.
-   - `AUTO_DEPLOY_TRAEFIK_ENTRYPOINTS` / `AUTO_DEPLOY_TRAEFIK_CERT_RESOLVER` –
-     optional overrides for the Traefik entrypoint list (default `websecure`)
-     and certificate resolver (default `myresolver`).
    - `AUTO_DEPLOY_WEBHOOK_SECRET` – shared secret for the GitHub webhook
      signature.
+   - `AUTO_DEPLOY_CONTAINER_NAME` – optional container name override. The
+     default (`theater-autodeploy`) becomes the DNS name that the website
+     container uses when proxying webhook traffic internally.
+   - `AUTO_DEPLOY_INTERNAL_URL` – full HTTP(S) URL that the website container
+     should forward webhook requests to. When left unset the compose file uses
+     `http://${AUTO_DEPLOY_CONTAINER_NAME:-theater-autodeploy}:${AUTO_DEPLOY_LISTEN_PORT:-3000}`.
    - `AUTO_DEPLOY_GIT_HTTP_TOKEN` or the combination of
      `AUTO_DEPLOY_GIT_HTTP_USERNAME`/`AUTO_DEPLOY_GIT_HTTP_PASSWORD` – optional
      HTTPS credentials for private repositories.
@@ -195,11 +196,13 @@ arrives for the configured branch.
      `AUTO_DEPLOY_GIT_SSH_KNOWN_HOSTS`) – optional SSH credentials for private
      repositories.
 5. Start the service: `docker compose -f docker-compose.autodeploy.yml up -d`.
-6. Register a new GitHub webhook that points to
-   `https://${AUTO_DEPLOY_HOST}${AUTO_DEPLOY_WEBHOOK_PATH}` (or use the raw port
-   mapping `https://<host>:${AUTO_DEPLOY_WEBHOOK_PORT}${AUTO_DEPLOY_WEBHOOK_PATH}`)
-   and reuse the same secret. The container exposes a health probe at `/healthz`
-   for monitoring.
+6. Register a new GitHub webhook that points to the regular website hostname,
+   for example `https://${DEV_HOST:-devtheater.beegreenx.de}${AUTO_DEPLOY_WEBHOOK_PATH:-/webhook}`.
+   Traefik (or any other edge proxy) only needs to know about the website
+   container – the internal reverse proxy forwards `/webhook` and `/healthz`
+   requests to the auto-deploy service once `AUTO_DEPLOY_INTERNAL_URL` is set.
+   The auto-deploy container continues to expose a health probe at `/healthz`
+   for monitoring (reachable through the website host).
 
 When GitHub sends a push event for the selected branch the service performs the
 following steps sequentially:
