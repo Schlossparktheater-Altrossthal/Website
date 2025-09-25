@@ -19,6 +19,13 @@ if (workbox) {
   };
 
   const replayQueue = async (queue) => {
+    const pendingEntries = typeof queue.getAll === "function" ? await queue.getAll() : null;
+    const hasPending = Array.isArray(pendingEntries) ? pendingEntries.length > 0 : true;
+
+    if (!hasPending) {
+      return;
+    }
+
     try {
       await queue.replayRequests();
       await broadcastMessage({ type: "offline-events:flushed" });
