@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const DIETARY_STYLE_OPTIONS = [
-  { value: "none", label: "Allesesser:in" },
-  { value: "omnivore", label: "Allesesser:in" },
+  { value: "none", label: "Allesesser" },
+  { value: "omnivore", label: "Allesesser" },
   { value: "vegetarian", label: "Vegetarisch" },
   { value: "vegan", label: "Vegan" },
   { value: "pescetarian", label: "Pescetarisch" },

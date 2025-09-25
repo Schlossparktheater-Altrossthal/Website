@@ -137,7 +137,7 @@ export default async function DepartmentTodosPage() {
 
   const heroDescription = memberships.length
     ? "Alle Aufgaben, Zuständigkeiten und Leitungen deiner Gewerke gebündelt an einem Ort."
-    : "Sobald du einem Gewerk beitrittst, erscheinen hier deine Todos und Ansprechpartner:innen.";
+    : "Sobald du einem Gewerk beitrittst, erscheinen hier deine Todos und Ansprechpartner.";
 
   const headerActions = (
     <>
@@ -220,7 +220,7 @@ export default async function DepartmentTodosPage() {
           <div className="space-y-4 text-sm text-muted-foreground sm:text-base">
             <h2 className="text-lg font-semibold text-foreground sm:text-xl">Noch keine Gewerke-Aufgaben</h2>
             <p>
-              Tritt einem Gewerk bei, um hier Aufgaben, Zuständigkeiten und Ansprechpartner:innen zu sehen.
+              Tritt einem Gewerk bei, um hier Aufgaben, Zuständigkeiten und Ansprechpartner zu sehen.
             </p>
             <div>
               <Button asChild>
@@ -421,7 +421,7 @@ export default async function DepartmentTodosPage() {
               <div className="grid gap-6 lg:grid-cols-2">
                 <section className="rounded-2xl border border-border/60 bg-background/70 p-4 shadow-inner">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">Leitung &amp; Ansprechpartner:innen</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Leitung &amp; Ansprechpartner</h3>
                     <Badge variant="muted" size="sm">
                       {leadership.length} {leadership.length === 1 ? "Person" : "Personen"}
                     </Badge>

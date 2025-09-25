@@ -247,7 +247,7 @@ export default async function MeineGewerkePage() {
 
   const heroDescription = memberships.length
     ? "Behalte deine Zuständigkeiten im Blick, choreografiere Aufgaben und sichere kollisionsfreie Zeitfenster für dein Team."
-    : "Sobald du einem Gewerk zugeordnet bist, findest du hier Aufgaben, Ansprechpartner:innen und Terminvorschläge.";
+    : "Sobald du einem Gewerk zugeordnet bist, findest du hier Aufgaben, Ansprechpartner und Terminvorschläge.";
 
   const hero = (
     <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/70 p-6 shadow-[0_28px_90px_-50px_rgba(99,102,241,0.8)] sm:p-10">
@@ -320,7 +320,7 @@ export default async function MeineGewerkePage() {
         <div className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground sm:text-xl">Weitere Gewerke beitreten</h2>
           <p className="text-sm text-muted-foreground">
-            Verstärke zusätzliche Teams, um deren Aufgabenlisten, Ansprechpartner:innen und Terminvorschläge freizuschalten.
+            Verstärke zusätzliche Teams, um deren Aufgabenlisten, Ansprechpartner und Terminvorschläge freizuschalten.
           </p>
         </div>
       </div>

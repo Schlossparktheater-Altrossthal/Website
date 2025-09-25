@@ -72,7 +72,7 @@ export default async function OnboardingAnalyticsPage() {
       <Card className="border border-border/70">
         <CardHeader>
           <CardTitle>Mystery Scoreboard</CardTitle>
-          <p className="text-sm text-muted-foreground">Top-Spieler:innen mit Punkten für richtige Rätsel-Ideen.</p>
+          <p className="text-sm text-muted-foreground">Top-Spieler mit Punkten für richtige Rätsel-Ideen.</p>
         </CardHeader>
         <CardContent>
           {scoreboard.length === 0 ? (
@@ -232,7 +232,7 @@ export default async function OnboardingAnalyticsPage() {
                 const gender =
                   profile.gender && profile.gender.toLowerCase() !== "keine angabe" ? profile.gender : null;
                 const showDietaryPreference =
-                  profile.dietaryPreference && profile.dietaryPreference !== "Allesesser:in";
+                  profile.dietaryPreference && profile.dietaryPreference !== "Allesesser";
                 const dietaryStrictness =
                   profile.dietaryPreferenceStrictness && profile.dietaryPreferenceStrictness !== "Nicht relevant"
                     ? profile.dietaryPreferenceStrictness

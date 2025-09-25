@@ -220,7 +220,7 @@ export function ProfileDietaryPreferences({
               Ernährungsstil
             </h3>
             <p className="text-xs text-muted-foreground">
-              Wir planen dich standardmäßig als Allesesser:in ein. Besondere Wünsche oder Einschränkungen teilst du am besten direkt über die Allergieverwaltung oder im persönlichen Gespräch mit dem Team.
+              Wir planen dich standardmäßig als Allesesser ein. Besondere Wünsche oder Einschränkungen teilst du am besten direkt über die Allergieverwaltung oder im persönlichen Gespräch mit dem Team.
             </p>
           </div>
           <div className="space-y-2 rounded-lg border border-border/60 bg-background p-3">

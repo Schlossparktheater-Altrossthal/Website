@@ -58,7 +58,7 @@ const baseHighlights: Highlight[] = [
   {
     label: "Ensemble",
     value: "45+",
-    detail: "Darstellende, Musiker:innen und helfende Hände",
+    detail: "Darsteller, Musiker und helfende Hände",
   },
   {
     label: "Publikum",
@@ -89,7 +89,7 @@ const signature = [
     icon: Trees,
     title: "Schulgelände voller Gewerke",
     description:
-      "Schüler:innen des BSZ Altroßthal bringen Floristik, Holz- und Metallbau ein – so wachsen Bühne, Kostüm und Szenografie Hand in Hand.",
+      "Schüler des BSZ Altroßthal bringen Floristik, Holz- und Metallbau ein – so wachsen Bühne, Kostüm und Szenografie Hand in Hand.",
   },
 ];
 
@@ -119,19 +119,19 @@ const milestones = [
     year: "2009",
     title: "Die erste Inszenierung",
     description:
-      "Toni Burghard Friedrich initiiert das Sommertheater mit \"Die lustigen Weiber von Windsor\" und schafft einen neuen Ort für Schüler:innen des BSZ.",
+      "Toni Burghard Friedrich initiiert das Sommertheater mit \"Die lustigen Weiber von Windsor\" und schafft einen neuen Ort für Schüler des BSZ.",
   },
   {
     year: "2012",
     title: "Floristik trifft Bühne",
     description:
-      "Florist:innen gestalten erstmals lebendige Bühnenbilder aus regionalen Pflanzen und geben dem Park seine ikonischen Duftinseln.",
+      "Floristen gestalten erstmals lebendige Bühnenbilder aus regionalen Pflanzen und geben dem Park seine ikonischen Duftinseln.",
   },
   {
     year: "2017",
     title: "Werkstatt-Ateliers",
     description:
-      "Neue Workshops ermöglichen Schüler:innen, sich in Lichttechnik, Metallbau und Kostümhandwerk auszuprobieren und Verantwortung zu übernehmen.",
+      "Neue Workshops ermöglichen Schülern, sich in Lichttechnik, Metallbau und Kostümhandwerk auszuprobieren und Verantwortung zu übernehmen.",
   },
   {
     year: "2023",
@@ -154,7 +154,7 @@ const engagement = [
   {
     title: "Fördern",
     description:
-      "Als Partner:in oder Sponsor:in stärkst du kulturelle Angebote in der Region und ermöglichst faire Gagen für unser Kreativteam.",
+      "Als Partner oder Sponsor stärkst du kulturelle Angebote in der Region und ermöglichst faire Gagen für unser Kreativteam.",
     action: {
       label: "Kontakt aufnehmen",
       href: "mailto:foerderkreis@sommertheater-altrossthal.de",
@@ -224,7 +224,7 @@ const trades: Trade[] = [
     title: "Soufflage",
     focus: "Bei Hängern einspringen",
     description:
-      "Mit Textbuch und Ruhe bewahren die Souffleur:innen den Überblick – und geben im richtigen Moment leise Stichworte.",
+      "Mit Textbuch und Ruhe bewahren die Souffleure den Überblick – und geben im richtigen Moment leise Stichworte.",
   },
   {
     icon: Music3,
@@ -260,7 +260,7 @@ export default async function AboutPage() {
     return {
       ...item,
       value: NUMBER_FORMATTER.format(ensembleStats.memberCount),
-      detail: "Mitglieder in der aktuellen Produktion – Darstellende, Musiker:innen und helfende Hände",
+      detail: "Mitglieder in der aktuellen Produktion – Darsteller, Musiker und helfende Hände",
     };
   });
   const jsonLd = {
@@ -311,15 +311,15 @@ export default async function AboutPage() {
             Schlosspark Altrossthal.
           </Text>
           <Text tone="muted" className="mt-4">
-            Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Lernende, Alumni und Freund:innen des
+            Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Lernende, Alumni und Freunde des
             BSZ Altroßthal, um eine Bühne zu schaffen, die weit über klassischen Unterricht hinausgeht.
           </Text>
           <Text tone="muted" className="mt-4">
-            Das Ensemble besteht aus Schüler:innen des Beruflichen Gymnasiums und der Fachoberschule, Auszubildenden aus Landwirtschaft, Floristik, Konditorei
-            und vielen weiteren Gewerken sowie Freund:innen des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung Dresden.
+            Das Ensemble besteht aus Schülern des Beruflichen Gymnasiums und der Fachoberschule, Auszubildenden aus Landwirtschaft, Floristik, Konditorei
+            und vielen weiteren Gewerken sowie Freunden des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung Dresden.
           </Text>
           <Text tone="muted" className="mt-4">
-            Die Regie übernehmen meist professionelle Schauspieler:innen oder Regisseur:innen, die ihre Erfahrung teilen und gemeinsam mit uns neue Sommerstücke
+            Die Regie übernehmen meist professionelle Schauspieler oder Regisseure, die ihre Erfahrung teilen und gemeinsam mit uns neue Sommerstücke
             entwickeln.
           </Text>
         </div>
@@ -437,7 +437,7 @@ export default async function AboutPage() {
                 das Publikum mitnimmt in eine andere Welt.
               </Heading>
               <Text variant="small" tone="muted">
-                Jedes Szenenbild wird speziell für den Schlosspark entwickelt. Lichtinstallationen und räumlicher Klang lassen die Besucher:innen mitten in der
+                Jedes Szenenbild wird speziell für den Schlosspark entwickelt. Lichtinstallationen und räumlicher Klang lassen die Besucher mitten in der
                 Geschichte stehen.
               </Text>
             </div>
