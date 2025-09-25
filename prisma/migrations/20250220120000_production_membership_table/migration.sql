@@ -1,4 +1,18 @@
 -- CreateTable
+CREATE TABLE "public"."Show" (
+    "id" TEXT NOT NULL,
+    "year" INTEGER NOT NULL,
+    "title" TEXT,
+    "synopsis" TEXT,
+    "dates" JSONB NOT NULL,
+    "posterUrl" TEXT,
+    "revealedAt" TIMESTAMP(3),
+    "meta" JSONB,
+
+    CONSTRAINT "Show_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "public"."ProductionMembership" (
     "id" TEXT NOT NULL,
     "showId" TEXT NOT NULL,
