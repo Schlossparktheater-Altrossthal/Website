@@ -232,7 +232,7 @@ export default async function OnboardingAnalyticsPage() {
                 const gender =
                   profile.gender && profile.gender.toLowerCase() !== "keine angabe" ? profile.gender : null;
                 const showDietaryPreference =
-                  profile.dietaryPreference && profile.dietaryPreference !== "Keine besondere Ernährung";
+                  profile.dietaryPreference && profile.dietaryPreference !== "Allesesser:in";
                 const dietaryStrictness =
                   profile.dietaryPreferenceStrictness && profile.dietaryPreferenceStrictness !== "Nicht relevant"
                     ? profile.dietaryPreferenceStrictness

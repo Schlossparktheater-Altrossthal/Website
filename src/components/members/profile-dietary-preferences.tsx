@@ -1,20 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AllergyLevel } from "@prisma/client";
 import { Loader2, Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -26,13 +18,10 @@ import { AllergyForm } from "@/components/forms/allergy-form";
 import { useProfileCompletion } from "@/components/members/profile-completion-context";
 import {
   DEFAULT_STRICTNESS_FOR_NONE,
-  DIETARY_STRICTNESS_OPTIONS,
-  DIETARY_STYLE_OPTIONS,
-  NONE_STRICTNESS_LABEL,
+  resolveDietaryStyleLabel,
+  resolveDietaryStrictnessLabel,
   type DietaryStrictnessOption,
   type DietaryStyleOption,
-  resolveDietaryStrictnessLabel,
-  resolveDietaryStyleLabel,
 } from "@/data/dietary-preferences";
 import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
 import { cn } from "@/lib/utils";
@@ -44,6 +33,21 @@ type DietaryPreferenceState = {
   customLabel: string | null;
   strictness: DietaryStrictnessOption;
 };
+
+function normalizePreferenceState(
+  state: DietaryPreferenceState,
+): DietaryPreferenceState {
+  const style = state.style === "none" ? "omnivore" : state.style;
+  const customRaw = typeof state.customLabel === "string" ? state.customLabel.trim() : "";
+  const customLabel = style === "custom" ? customRaw || null : null;
+  const strictness = style === "omnivore" ? DEFAULT_STRICTNESS_FOR_NONE : state.strictness;
+
+  return {
+    style,
+    customLabel,
+    strictness,
+  } satisfies DietaryPreferenceState;
+}
 
 type AllergyEntry = {
   allergen: string;
@@ -73,19 +77,14 @@ export function ProfileDietaryPreferences({
   onDietaryChange,
 }: ProfileDietaryPreferencesProps) {
   const { setItemComplete } = useProfileCompletion();
-  const [preference, setPreference] = useState<DietaryPreferenceState>(
-    initialPreference,
+  const preference = useMemo(
+    () => normalizePreferenceState(initialPreference),
+    [initialPreference],
   );
-  const [draftStyle, setDraftStyle] = useState<DietaryStyleOption>(
-    initialPreference.style,
-  );
-  const [draftStrictness, setDraftStrictness] =
-    useState<DietaryStrictnessOption>(initialPreference.strictness);
-  const [draftCustomStyle, setDraftCustomStyle] = useState(
-    initialPreference.customLabel ?? "",
-  );
-  const [savingPreference, setSavingPreference] = useState(false);
-  const [preferenceError, setPreferenceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItemComplete("dietary", true);
+  }, [setItemComplete]);
 
   const [allergies, setAllergies] = useState<AllergyEntry[]>(() =>
     sortAllergies(initialAllergies),
@@ -100,81 +99,24 @@ export function ProfileDietaryPreferences({
     [onDietaryChange],
   );
 
-  const styleRequiresCustom = draftStyle === "custom";
-  const strictnessDisabled = draftStyle === "none";
-
-  const hasPreferenceChanges = useMemo(() => {
-    const custom = draftCustomStyle.trim();
-    return (
-      draftStyle !== preference.style ||
-      draftStrictness !== preference.strictness ||
-      (styleRequiresCustom
-        ? custom !== (preference.customLabel ?? "")
-        : preference.customLabel !== null)
-    );
-  }, [draftStyle, draftStrictness, draftCustomStyle, preference, styleRequiresCustom]);
-
   const preferenceLabel = useMemo(() => {
     const { label } = resolveDietaryStyleLabel(
-      draftStyle,
-      draftCustomStyle,
+      preference.style,
+      preference.customLabel,
     );
     return label;
-  }, [draftStyle, draftCustomStyle]);
+  }, [preference.customLabel, preference.style]);
 
-  const strictnessLabel = useMemo(() => {
-    return resolveDietaryStrictnessLabel(draftStyle, draftStrictness);
-  }, [draftStyle, draftStrictness]);
+  const showCustomLabel =
+    preference.style === "custom" && preference.customLabel;
 
-  const handleSavePreference = async () => {
-    setPreferenceError(null);
-    if (styleRequiresCustom && !draftCustomStyle.trim()) {
-      setPreferenceError("Bitte beschreibe deinen Ernährungsstil.");
-      return;
-    }
-    setSavingPreference(true);
-    try {
-      const response = await fetch("/api/profile/dietary", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          style: draftStyle,
-          strictness: draftStrictness,
-          customLabel: styleRequiresCustom ? draftCustomStyle.trim() : null,
-        }),
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        const message =
-          typeof data?.error === "string"
-            ? data.error
-            : "Ernährungsstil konnte nicht gespeichert werden.";
-        throw new Error(message);
-      }
-      const payload = (data as { preference?: unknown })?.preference;
-      const nextPreference = normalizePreferencePayload(payload, {
-        style: draftStyle,
-        strictness: draftStrictness,
-        customLabel: styleRequiresCustom ? draftCustomStyle.trim() : null,
-      });
-      setPreference(nextPreference);
-      setDraftStyle(nextPreference.style);
-      setDraftStrictness(nextPreference.strictness);
-      setDraftCustomStyle(nextPreference.customLabel ?? "");
-      setItemComplete("dietary", true);
-      toast.success("Ernährungsinformationen aktualisiert.");
-      emitDietaryChange(nextPreference, allergies);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Ernährungsstil konnte nicht gespeichert werden.";
-      setPreferenceError(message);
-      toast.error(message);
-    } finally {
-      setSavingPreference(false);
-    }
-  };
+  const strictnessLabel = useMemo(
+    () => resolveDietaryStrictnessLabel(preference.style, preference.strictness),
+    [preference.strictness, preference.style],
+  );
+
+  const isAllesesser =
+    preference.style === "omnivore" || preference.style === "none";
 
   const openCreateDialog = () => setDialogState({ mode: "create" });
   const openEditDialog = (entry: AllergyEntry) =>
@@ -265,7 +207,7 @@ export function ProfileDietaryPreferences({
         <div className="text-xs font-semibold uppercase tracking-wider text-primary">
           Ernährung &amp; Verträglichkeiten
         </div>
-        <CardTitle className="text-xl">Passe deinen Ernährungsstil an</CardTitle>
+        <CardTitle className="text-xl">Ernährungsprofil &amp; Hinweise</CardTitle>
         <p className="text-sm text-muted-foreground">
           Teile uns mit, wie wir bei Verpflegung, Proben und Events auf dich achten
           können und verwalte Allergien oder Unverträglichkeiten zentral.
@@ -273,96 +215,27 @@ export function ProfileDietaryPreferences({
       </CardHeader>
       <CardContent className="space-y-6 px-6 pb-6 sm:px-7">
         <section className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-4 shadow-sm">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground/90">
-                Ernährungsstil
-              </label>
-              <Select value={draftStyle} onValueChange={(value) => {
-                const next = value as DietaryStyleOption;
-                setDraftStyle(next);
-                if (next === "none") {
-                  setDraftStrictness(DEFAULT_STRICTNESS_FOR_NONE);
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Wähle deinen Ernährungsstil" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DIETARY_STYLE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground/90">
-                Strenge / Flexibilität
-              </label>
-              <Select
-                value={draftStrictness}
-                disabled={strictnessDisabled}
-                onValueChange={(value) =>
-                  setDraftStrictness(value as DietaryStrictnessOption)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Wie strikt ist deine Ernährung?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DIETARY_STRICTNESS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {strictnessDisabled ? (
-                <p className="text-xs text-muted-foreground">
-                  {NONE_STRICTNESS_LABEL}
-                </p>
-              ) : null}
-            </div>
-            {styleRequiresCustom ? (
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-foreground/90" htmlFor="profile-dietary-custom">
-                  Eigene Beschreibung
-                </label>
-                <Input
-                  id="profile-dietary-custom"
-                  value={draftCustomStyle}
-                  onChange={(event) => setDraftCustomStyle(event.target.value)}
-                  placeholder="z.B. Paleo, Clean Eating, Intervallfasten"
-                />
-              </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-foreground">
+              Ernährungsstil
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Wir planen dich standardmäßig als Allesesser:in ein. Besondere Wünsche oder Einschränkungen teilst du am besten direkt über die Allergieverwaltung oder im persönlichen Gespräch mit dem Team.
+            </p>
+          </div>
+          <div className="space-y-2 rounded-lg border border-border/60 bg-background p-3">
+            <p className="text-sm font-semibold text-foreground">{preferenceLabel}</p>
+            {showCustomLabel ? (
+              <p className="text-xs text-muted-foreground">
+                Eigene Beschreibung: {preference.customLabel}
+              </p>
             ) : null}
+            <p className="text-xs text-muted-foreground">
+              {isAllesesser
+                ? "Strengegrade sind für diesen Standard nicht erforderlich."
+                : `Strengegrad: ${strictnessLabel}`}
+            </p>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border/50 bg-muted/20 p-3 text-xs text-muted-foreground">
-            <div>
-              <p className="font-medium text-foreground/80">Vorschau</p>
-              <p>{preferenceLabel}</p>
-              <p>{strictnessLabel}</p>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSavePreference}
-              disabled={!hasPreferenceChanges || savingPreference}
-            >
-              {savingPreference ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Speichern …
-                </>
-              ) : (
-                "Einstellungen speichern"
-              )}
-            </Button>
-          </div>
-          {preferenceError ? (
-            <p className="text-xs text-destructive">{preferenceError}</p>
-          ) : null}
         </section>
 
         <section className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-4 shadow-sm">
@@ -489,38 +362,6 @@ export function ProfileDietaryPreferences({
   );
 }
 
-function normalizePreferencePayload(
-  payload: unknown,
-  fallback: DietaryPreferenceState,
-): DietaryPreferenceState {
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "style" in payload &&
-    typeof (payload as { style?: unknown }).style === "string"
-  ) {
-    const styleRaw = (payload as { style: string }).style;
-    const style = isDietaryStyleOption(styleRaw) ? styleRaw : fallback.style;
-
-    const customRaw = (payload as { customLabel?: unknown }).customLabel;
-    const customLabel =
-      typeof customRaw === "string" ? customRaw.trim() || null : null;
-
-    const strictnessRaw = (payload as { strictness?: unknown }).strictness;
-    const strictness =
-      typeof strictnessRaw === "string" && isDietaryStrictnessOption(strictnessRaw)
-        ? (strictnessRaw as DietaryStrictnessOption)
-        : fallback.strictness;
-
-    return {
-      style,
-      customLabel,
-      strictness,
-    };
-  }
-  return fallback;
-}
-
 function sortAllergies(entries: AllergyEntry[]) {
   return [...entries].sort((a, b) =>
     a.allergen.localeCompare(b.allergen, "de-DE", {
@@ -550,12 +391,4 @@ function formatDate(value: string) {
     return value;
   }
   return dateFormatter.format(date);
-}
-
-function isDietaryStyleOption(value: string): value is DietaryStyleOption {
-  return DIETARY_STYLE_OPTIONS.some((option) => option.value === value);
-}
-
-function isDietaryStrictnessOption(value: string): value is DietaryStrictnessOption {
-  return DIETARY_STRICTNESS_OPTIONS.some((option) => option.value === value);
 }

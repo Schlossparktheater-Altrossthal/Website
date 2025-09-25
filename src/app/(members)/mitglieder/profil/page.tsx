@@ -132,7 +132,9 @@ export default async function ProfilePage() {
     user.onboardingProfile?.dietaryPreferenceStrictness ?? null,
   );
   const normalizedStrictness: DietaryStrictnessOption =
-    styleInfo.style === "none" ? DEFAULT_STRICTNESS_FOR_NONE : strictnessValue;
+    styleInfo.style === "none" || styleInfo.style === "omnivore"
+      ? DEFAULT_STRICTNESS_FOR_NONE
+      : strictnessValue;
 
   const photoSummary = buildPhotoConsentSummary({
     dateOfBirth: user.dateOfBirth,
