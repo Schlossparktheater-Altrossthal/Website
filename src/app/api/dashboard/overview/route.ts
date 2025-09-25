@@ -10,6 +10,15 @@ import { getActiveProductionId } from "@/lib/active-production";
 import { buildProfileChecklist } from "@/lib/profile-completion";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
+type MembershipSummary = {
+  showId: string;
+  title: string | null;
+  year: number;
+  joinedAt: string;
+  leftAt: string | null;
+  isActive: boolean;
+};
+
 const onboardingProfileSelect = Prisma.validator<Prisma.MemberOnboardingProfileSelect>()({
   focus: true,
   background: true,
@@ -74,6 +83,7 @@ export async function GET() {
       dietaryRestrictions,
       photoConsent,
       userRecord,
+      membershipRecords,
       measurementCount,
     ] = await Promise.all([
       prisma.user.count(),
@@ -167,6 +177,19 @@ export async function GET() {
           email: true,
           dateOfBirth: true,
           passwordHash: true,
+        },
+      }),
+      prisma.productionMembership.findMany({
+        where: { userId },
+        orderBy: { joinedAt: "desc" },
+        include: {
+          show: {
+            select: {
+              id: true,
+              title: true,
+              year: true,
+            },
+          },
         },
       }),
       canManageMeasurements
@@ -263,6 +286,28 @@ export async function GET() {
       photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
     });
 
+    const nowTimestamp = Date.now();
+    const membershipSummaries: MembershipSummary[] = membershipRecords
+      .map((membership) => {
+        const show = membership.show;
+        if (!show) {
+          return null;
+        }
+
+        const leftAtIso = membership.leftAt ? membership.leftAt.toISOString() : null;
+        const isActive = !membership.leftAt || membership.leftAt.getTime() > nowTimestamp;
+
+        return {
+          showId: show.id,
+          title: show.title,
+          year: show.year,
+          joinedAt: membership.joinedAt.toISOString(),
+          leftAt: leftAtIso,
+          isActive,
+        } satisfies MembershipSummary;
+      })
+      .filter((entry): entry is MembershipSummary => entry !== null);
+
     const finalRehearsalWeek = activeProduction?.finalRehearsalWeekStart
       ? {
           showId: activeProduction.id,
@@ -288,6 +333,14 @@ export async function GET() {
         completed: profileChecklist.completed,
         total: profileChecklist.total,
       },
+      activeProduction: activeProduction
+        ? {
+            id: activeProduction.id,
+            title: activeProduction.title,
+            year: activeProduction.year,
+          }
+        : null,
+      productionMemberships: membershipSummaries,
     });
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {

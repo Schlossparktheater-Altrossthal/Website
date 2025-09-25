@@ -158,6 +158,21 @@ interface MembersDashboardProps {
   permissions?: readonly string[];
 }
 
+type ActiveProductionOverview = {
+  id: string;
+  title: string | null;
+  year: number;
+};
+
+type ProductionMembershipSummary = {
+  showId: string;
+  title: string | null;
+  year: number;
+  joinedAt: Date | null;
+  leftAt: Date | null;
+  isActive: boolean;
+};
+
 const QUICK_ACTION_LINKS = [
   {
     href: "/mitglieder/profil",
@@ -227,6 +242,8 @@ type OverviewResponse = {
   onboarding?: unknown;
   finalRehearsalWeek?: unknown;
   profileCompletion?: unknown;
+  activeProduction?: unknown;
+  productionMemberships?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -430,6 +447,90 @@ function parseProfileCompletion(value: unknown):
   return { complete, completed, total };
 }
 
+function parseActiveProduction(value: unknown): ActiveProductionOverview | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const rawId = value.id;
+  const rawTitle = value.title;
+  const rawYear = value.year;
+
+  if (typeof rawId !== "string" || !rawId) {
+    return null;
+  }
+
+  if (typeof rawYear !== "number" || !Number.isFinite(rawYear)) {
+    return null;
+  }
+
+  const title = typeof rawTitle === "string" && rawTitle.trim() ? rawTitle : null;
+
+  return { id: rawId, title, year: rawYear } satisfies ActiveProductionOverview;
+}
+
+function parseProductionMemberships(value: unknown): ProductionMembershipSummary[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => {
+      if (!isRecord(entry)) {
+        return null;
+      }
+
+      const rawShowId = entry.showId;
+      const rawTitle = entry.title;
+      const rawYear = entry.year;
+      const rawJoinedAt = entry.joinedAt;
+      const rawLeftAt = entry.leftAt;
+      const rawIsActive = entry.isActive;
+
+      if (typeof rawShowId !== "string" || !rawShowId) {
+        return null;
+      }
+
+      if (typeof rawYear !== "number" || !Number.isFinite(rawYear)) {
+        return null;
+      }
+
+      const title = typeof rawTitle === "string" && rawTitle.trim() ? rawTitle : null;
+      const joinedAt = parseIsoDate(rawJoinedAt);
+      const leftAt = parseIsoDate(rawLeftAt);
+      const isActive = Boolean(rawIsActive);
+
+      return {
+        showId: rawShowId,
+        title,
+        year: rawYear,
+        joinedAt,
+        leftAt,
+        isActive,
+      } satisfies ProductionMembershipSummary;
+    })
+    .filter((entry): entry is ProductionMembershipSummary => entry !== null);
+}
+
+function formatProductionName(entry: { title: string | null; year: number }) {
+  if (entry.title && entry.title.trim()) {
+    return `${entry.title} (${entry.year})`;
+  }
+  return `Produktion ${entry.year}`;
+}
+
+function formatDateLocalized(date: Date | null) {
+  if (!date) {
+    return null;
+  }
+
+  try {
+    return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(date);
+  } catch {
+    return null;
+  }
+}
+
 export function MembersDashboard({ permissions: permissionsProp }: MembersDashboardProps = {}) {
   const { data: session } = useSession();
   const { connectionStatus } = useRealtime();
@@ -440,6 +541,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   } = useOnlineStats();
   const contextPermissions = useMembersPermissions();
   const effectivePermissions = permissionsProp ?? contextPermissions;
+  const canAccessProductions =
+    effectivePermissions?.includes("mitglieder.produktionen") ?? false;
 
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -451,6 +554,10 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   const [profileCompletion, setProfileCompletion] = useState<
     { complete: boolean; completed: number; total: number } | null
   >(null);
+  const [activeProduction, setActiveProduction] = useState<ActiveProductionOverview | null>(null);
+  const [productionMemberships, setProductionMemberships] = useState<ProductionMembershipSummary[]>([]);
+  const [activeProductionLoaded, setActiveProductionLoaded] = useState(false);
+  const [activeProductionError, setActiveProductionError] = useState(false);
 
   useEffect(() => {
     setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
@@ -465,6 +572,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
     async function load() {
       setIsLoading(true);
+      setActiveProductionError(false);
       try {
         const response = await fetch("/api/dashboard/overview", { cache: "no-store" });
         if (!response.ok) {
@@ -497,15 +605,19 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         setOnboarding(parseOnboardingOverview(payload?.onboarding));
         setFinalRehearsalWeek(parseFinalRehearsalWeek(payload?.finalRehearsalWeek));
         setProfileCompletion(parseProfileCompletion(payload?.profileCompletion));
+        setActiveProduction(parseActiveProduction(payload?.activeProduction));
+        setProductionMemberships(parseProductionMemberships(payload?.productionMemberships));
         const activities = parseRecentActivities(payload?.recentActivities);
 
         setRecentActivities(activities.slice(0, 10));
       } catch (error) {
         console.error("[Dashboard] Error loading overview", error);
+        setActiveProductionError(true);
       } finally {
         if (!cancelled) {
           setIsLoading(false);
           setOnboardingLoaded(true);
+          setActiveProductionLoaded(true);
         }
       }
     }
@@ -623,6 +735,28 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     };
   }, [connectionStatus]);
 
+  const activeMembership = useMemo(() => {
+    if (!activeProduction) {
+      return null;
+    }
+
+    return (
+      productionMemberships.find((entry) => entry.showId === activeProduction.id) ?? null
+    );
+  }, [activeProduction, productionMemberships]);
+
+  const otherMemberships = useMemo(() => {
+    if (productionMemberships.length === 0) {
+      return [] as ProductionMembershipSummary[];
+    }
+
+    if (!activeProduction) {
+      return productionMemberships;
+    }
+
+    return productionMemberships.filter((entry) => entry.showId !== activeProduction.id);
+  }, [activeProduction, productionMemberships]);
+
   const finalRehearsalMetric = useMemo(() => {
     if (!finalRehearsalWeek) return null;
 
@@ -673,6 +807,174 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   const onlineUpdatedHint = onlineLoading
     ? "Aktualisiert …"
     : `Aktualisiert ${formatTimeAgo(new Date())}`;
+
+  const activeProductionCard = useMemo(() => {
+    if (!activeProductionLoaded) {
+      return (
+        <Card className="border border-dashed border-border/60 bg-background/80">
+          <CardContent className="space-y-3 p-6">
+            <div className="h-4 w-32 rounded bg-muted/50" />
+            <div className="h-5 w-48 rounded bg-muted/40" />
+            <div className="h-3 w-full rounded bg-muted/30" />
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (activeProductionError) {
+      return (
+        <Card className="border border-destructive/40 bg-destructive/10 text-destructive">
+          <CardContent className="space-y-2 p-6">
+            <p className="text-sm font-semibold">Aktive Produktion konnte nicht geladen werden.</p>
+            <p className="text-xs text-destructive/80">
+              Bitte lade die Seite neu oder versuche es später erneut.
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const membershipSectionTitle = activeProduction ? "Weitere Produktionen" : "Bisherige Produktionen";
+
+    const membershipBadges = otherMemberships.length
+      ? (
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {membershipSectionTitle}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {otherMemberships.slice(0, 4).map((membership) => {
+                const label = formatProductionName(membership);
+                const leftLabel = formatDateLocalized(membership.leftAt);
+                const statusText = membership.isActive
+                  ? "aktiv"
+                  : leftLabel
+                    ? `bis ${leftLabel}`
+                    : "archiviert";
+
+                return (
+                  <Badge
+                    key={`membership-${membership.showId}`}
+                    variant="outline"
+                    className={cn(
+                      "border-border/60 bg-background text-foreground",
+                      membership.isActive && "border-primary/40 bg-primary/10 text-primary",
+                    )}
+                  >
+                    <span className="font-medium">{label}</span>
+                    <span className="ml-1 text-[11px] text-muted-foreground">• {statusText}</span>
+                  </Badge>
+                );
+              })}
+            </div>
+            {otherMemberships.length > 4 ? (
+              <p className="text-[11px] text-muted-foreground">
+                + {otherMemberships.length - 4} weitere im Archiv
+              </p>
+            ) : null}
+          </div>
+        )
+      : null;
+
+    const sharedNote = (
+      <p className="text-xs text-muted-foreground">
+        Profilangaben wie Maße, Allergien und Einverständnisse gelten produktonsübergreifend und müssen nicht
+        erneut erfasst werden.
+      </p>
+    );
+
+    if (!activeProduction) {
+      return (
+        <Card className="border border-dashed border-primary/40 bg-primary/5">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-lg font-semibold text-primary">Keine aktive Produktion ausgewählt</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Wähle eine aktive Produktion, um Rollen, Szenen und Gewerke der aktuellen Saison zu sehen.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Sobald du nur einer laufenden Produktion angehörst oder frühere Produktionen ausgelaufen sind, setzen wir
+              deine Mitgliedschaft automatisch auf die aktuelle Produktion.
+            </p>
+            {membershipBadges}
+            {sharedNote}
+            {canAccessProductions ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button asChild size="sm">
+                  <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const productionLabel = formatProductionName(activeProduction);
+    const membership = activeMembership;
+    const joinedLabel = formatDateLocalized(membership?.joinedAt ?? null);
+    const leftLabel = formatDateLocalized(membership?.leftAt ?? null);
+    const statusBadgeLabel = membership?.isActive === false ? "Archiviert" : "Aktiv";
+    const statusBadgeClass =
+      membership?.isActive === false
+        ? "border-border/60 text-muted-foreground"
+        : "border-primary/40 bg-primary/10 text-primary";
+
+    let membershipSubtitle: string | null = null;
+    if (membership?.isActive) {
+      membershipSubtitle = joinedLabel ? `Seit ${joinedLabel} Teil der Produktion.` : "Mitgliedschaft aktiv.";
+    } else if (membership) {
+      membershipSubtitle = joinedLabel && leftLabel
+        ? `Von ${joinedLabel} bis ${leftLabel} aktiv.`
+        : leftLabel
+          ? `Mitgliedschaft beendet am ${leftLabel}.`
+          : "Mitgliedschaft archiviert.";
+    }
+
+    return (
+      <Card className="border border-border/70 bg-background/70">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-lg font-semibold">Aktive Produktion</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Du arbeitest aktuell in {productionLabel}.
+            </p>
+          </div>
+          <Badge variant="outline" className={statusBadgeClass}>
+            {statusBadgeLabel}
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">{productionLabel}</p>
+            <p className="text-xs text-muted-foreground">
+              {membershipSubtitle ?? "Mitgliedschaft automatisch verwaltet."}
+            </p>
+          </div>
+          {membershipBadges}
+          {sharedNote}
+          {canAccessProductions ? (
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button asChild size="sm">
+                <Link href={`/mitglieder/produktionen/${activeProduction.id}`}>Arbeitsbereich öffnen</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/mitglieder/produktionen">Produktion wechseln</Link>
+              </Button>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+    );
+  }, [
+    activeProduction,
+    activeProductionError,
+    activeProductionLoaded,
+    activeMembership,
+    canAccessProductions,
+    otherMemberships,
+  ]);
 
   const onboardingCard = useMemo(() => {
     if (!onboardingLoaded) {
@@ -972,6 +1274,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)] lg:items-start xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)]">
           <div className="space-y-4">
+            {activeProductionCard}
             <Card className="h-full bg-gradient-to-br from-accent/20 to-transparent">
               <CardContent className="flex h-full flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between xl:gap-6">
                 <div>
