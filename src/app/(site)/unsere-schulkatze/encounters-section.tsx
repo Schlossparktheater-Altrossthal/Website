@@ -535,7 +535,7 @@ export function DieterEncountersSection() {
                     <div>
                       <Text weight="semibold">Ausgeblendete Begegnungen</Text>
                       <Text variant="small" tone="muted">
-                        Nur für Moderator:innen sichtbar. Blenden Sie Beiträge bei Bedarf wieder ein.
+                        Nur für Moderatoren sichtbar. Blenden Sie Beiträge bei Bedarf wieder ein.
                       </Text>
                     </div>
                     <Button

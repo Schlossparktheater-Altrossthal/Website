@@ -3,7 +3,42 @@ import type { AllergyLevel, OnboardingFocus, RolePreferenceDomain } from "@prism
 import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus } from "@/lib/member-invites";
 
+export type OnboardingInviteSummary = {
+  id: string;
+  label: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+  isExpired: boolean;
+  isDisabled: boolean;
+  isExhausted: boolean;
+  remainingUses: number | null;
+  usageCount: number;
+  maxUses: number | null;
+  showId: string;
+};
+
+export type OnboardingShowSummary = {
+  id: string;
+  title: string | null;
+  year: number;
+  onboardingCount: number;
+  completedCount: number;
+  openCount: number;
+  focus: Record<OnboardingFocus, number>;
+  pendingPhotoConsents: number;
+  guardianDocumentsMissing: number;
+  invites: {
+    total: number;
+    active: number;
+    expired: number;
+    disabled: number;
+    exhausted: number;
+    totalUsage: number;
+  };
+};
+
 export type OnboardingTalentProfile = {
+  id: string;
   userId: string;
   name: string | null;
   email: string | null;
@@ -23,6 +58,9 @@ export type OnboardingTalentProfile = {
   dietaryRestrictions: { allergen: string; level: AllergyLevel }[];
   age: number | null;
   hasPendingPhotoConsent: boolean;
+  requiresGuardianDocument: boolean;
+  show: { id: string; title: string | null; year: number } | null;
+  invite: OnboardingInviteSummary | null;
 };
 
 export type OnboardingAnalytics = {
@@ -41,6 +79,7 @@ export type OnboardingAnalytics = {
     usageCount: number;
     remainingUses: number | null;
     isActive: boolean;
+    show: { id: string; title: string | null; year: number } | null;
   }[];
   completions: {
     total: number;
@@ -51,8 +90,46 @@ export type OnboardingAnalytics = {
   dietary: { level: AllergyLevel; count: number }[];
   minorsPendingDocuments: number;
   pendingPhotoConsents: number;
+  shows: OnboardingShowSummary[];
   talentProfiles: OnboardingTalentProfile[];
 };
+
+type ShowSummaryAccumulator = {
+  show: { id: string; title: string | null; year: number };
+  invites: {
+    total: number;
+    active: number;
+    expired: number;
+    disabled: number;
+    exhausted: number;
+    totalUsage: number;
+  };
+  onboardingCount: number;
+  completedCount: number;
+  focus: Record<OnboardingFocus, number>;
+  pendingPhotoConsents: number;
+  guardianDocumentsMissing: number;
+};
+
+function ensureShowSummary(
+  map: Map<string, ShowSummaryAccumulator>,
+  show: { id: string; title: string | null; year: number },
+) {
+  let summary = map.get(show.id);
+  if (!summary) {
+    summary = {
+      show: { id: show.id, title: show.title, year: show.year },
+      invites: { total: 0, active: 0, expired: 0, disabled: 0, exhausted: 0, totalUsage: 0 },
+      onboardingCount: 0,
+      completedCount: 0,
+      focus: { acting: 0, tech: 0, both: 0 },
+      pendingPhotoConsents: 0,
+      guardianDocumentsMissing: 0,
+    } satisfies ShowSummaryAccumulator;
+    map.set(show.id, summary);
+  }
+  return summary;
+}
 
 export async function collectOnboardingAnalytics(now: Date = new Date()): Promise<OnboardingAnalytics> {
   const [
@@ -65,7 +142,10 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
     pendingPhotoConsents,
   ] = await Promise.all([
     prisma.memberInvite.findMany({
-      include: { redemptions: { select: { id: true, completedAt: true } } },
+      include: {
+        redemptions: { select: { id: true, completedAt: true } },
+        show: { select: { id: true, title: true, year: true } },
+      },
     }),
     prisma.memberOnboardingProfile.findMany({
       orderBy: { createdAt: "desc" },
@@ -76,11 +156,23 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
             name: true,
             email: true,
             dateOfBirth: true,
-            photoConsent: { select: { status: true } },
+            photoConsent: { select: { status: true, documentUploadedAt: true } },
           },
         },
-        invite: { select: { label: true } },
+        invite: {
+          select: {
+            id: true,
+            label: true,
+            expiresAt: true,
+            maxUses: true,
+            usageCount: true,
+            isDisabled: true,
+            showId: true,
+            show: { select: { id: true, title: true, year: true } },
+          },
+        },
         redemption: { select: { completedAt: true } },
+        show: { select: { id: true, title: true, year: true } },
       },
     }),
     prisma.memberRolePreference.findMany({ select: { userId: true, code: true, domain: true, weight: true } }),
@@ -97,6 +189,8 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
     prisma.photoConsent.count({ where: { status: "pending" } }),
   ]);
 
+  const showSummaries = new Map<string, ShowSummaryAccumulator>();
+
   const inviteStats = invites.reduce(
     (acc, invite) => {
       const status = calculateInviteStatus(invite, now);
@@ -106,6 +200,17 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
       if (status.isExpired) acc.expired += 1;
       if (status.isExhausted) acc.exhausted += 1;
       if (invite.isDisabled) acc.disabled += 1;
+
+      if (invite.show) {
+        const summary = ensureShowSummary(showSummaries, invite.show);
+        summary.invites.total += 1;
+        summary.invites.totalUsage += invite.usageCount;
+        if (status.isActive) summary.invites.active += 1;
+        if (status.isExpired) summary.invites.expired += 1;
+        if (status.isExhausted) summary.invites.exhausted += 1;
+        if (invite.isDisabled) summary.invites.disabled += 1;
+      }
+
       return acc;
     },
     { total: 0, active: 0, expired: 0, disabled: 0, exhausted: 0, totalUsage: 0 },
@@ -121,6 +226,7 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
         usageCount: invite.usageCount,
         remainingUses: status.remainingUses,
         isActive: status.isActive,
+        show: invite.show ? { id: invite.show.id, title: invite.show.title, year: invite.show.year } : null,
       };
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -132,6 +238,12 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
   };
   for (const profile of profileRecords) {
     focusCounts[profile.focus] = (focusCounts[profile.focus] ?? 0) + 1;
+    const show = profile.show ?? profile.invite?.show ?? null;
+    if (show) {
+      const summary = ensureShowSummary(showSummaries, show);
+      summary.onboardingCount += 1;
+      summary.focus[profile.focus] = (summary.focus[profile.focus] ?? 0) + 1;
+    }
   }
 
   const interestMap = new Map<string, number>();
@@ -218,8 +330,46 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
       const preferences = preferencesByUser.get(userId) ?? [];
       const interestsForUser = interestsByUser.get(userId) ?? [];
       const dietaryEntries = dietaryByUser.get(userId) ?? [];
+      const age = calculateAge(user?.dateOfBirth ?? null);
+      const hasPendingPhotoConsent = user?.photoConsent?.status === "pending";
+      const requiresGuardianDocument =
+        typeof age === "number" && age < 18 && (!user?.photoConsent || !user.photoConsent.documentUploadedAt);
+      const show = profile.show ?? profile.invite?.show ?? null;
+
+      if (show) {
+        const summary = ensureShowSummary(showSummaries, show);
+        if (completedAt) {
+          summary.completedCount += 1;
+        }
+        if (hasPendingPhotoConsent) {
+          summary.pendingPhotoConsents += 1;
+        }
+        if (requiresGuardianDocument) {
+          summary.guardianDocumentsMissing += 1;
+        }
+      }
+
+      const inviteSummary: OnboardingInviteSummary | null = profile.invite
+        ? (() => {
+            const status = calculateInviteStatus(profile.invite, now);
+            return {
+              id: profile.invite.id,
+              label: profile.invite.label?.trim() || null,
+              expiresAt: profile.invite.expiresAt ? profile.invite.expiresAt.toISOString() : null,
+              isActive: status.isActive,
+              isExpired: status.isExpired,
+              isDisabled: status.isDisabled,
+              isExhausted: status.isExhausted,
+              remainingUses: status.remainingUses,
+              usageCount: profile.invite.usageCount,
+              maxUses: profile.invite.maxUses ?? null,
+              showId: profile.invite.showId,
+            } satisfies OnboardingInviteSummary;
+          })()
+        : null;
 
       return {
+        id: profile.id,
         userId,
         name: user?.name?.trim() || null,
         email: user?.email?.trim() || null,
@@ -237,8 +387,11 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
         preferences,
         interests: interestsForUser,
         dietaryRestrictions: dietaryEntries,
-        age: calculateAge(user?.dateOfBirth ?? null),
-        hasPendingPhotoConsent: user?.photoConsent?.status === "pending",
+        age,
+        hasPendingPhotoConsent,
+        requiresGuardianDocument,
+        show: show ? { id: show.id, title: show.title, year: show.year } : null,
+        invite: inviteSummary,
       } satisfies OnboardingTalentProfile;
     })
     .sort((a, b) => {
@@ -246,6 +399,21 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
       const bTime = b.completedAt ? new Date(b.completedAt).getTime() : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
+
+  const shows = Array.from(showSummaries.values())
+    .map((summary) => ({
+      id: summary.show.id,
+      title: summary.show.title,
+      year: summary.show.year,
+      onboardingCount: summary.onboardingCount,
+      completedCount: summary.completedCount,
+      openCount: Math.max(summary.onboardingCount - summary.completedCount, 0),
+      focus: { ...summary.focus },
+      pendingPhotoConsents: summary.pendingPhotoConsents,
+      guardianDocumentsMissing: summary.guardianDocumentsMissing,
+      invites: { ...summary.invites },
+    }))
+    .sort((a, b) => b.year - a.year || (a.title ?? "").localeCompare(b.title ?? "", "de-DE"));
 
   return {
     invites: inviteStats,
@@ -256,6 +424,7 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
     dietary,
     minorsPendingDocuments,
     pendingPhotoConsents,
+    shows,
     talentProfiles,
   };
 }

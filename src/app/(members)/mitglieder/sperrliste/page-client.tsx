@@ -7,7 +7,7 @@ import type { HolidayRange } from "@/types/holidays";
 
 import type { BlockedDay } from "./block-calendar";
 import type { OverviewMember } from "./block-overview";
-import { SperrlisteSettingsManager } from "./settings-manager";
+import { SperrlisteSettingsDialog } from "./settings-dialog";
 import { SperrlisteTabs } from "./sperrliste-tabs";
 
 interface SperrlistePageClientProps {
@@ -34,19 +34,21 @@ export function SperrlistePageClient({
   return (
     <div className="space-y-6">
       {canManageSettings ? (
-        <SperrlisteSettingsManager
-          settings={settings}
-          defaultHolidaySourceUrl={defaultHolidayUrl}
-          onSettingsChange={(payload) => {
-            setSettings(payload.settings);
-            if (payload.holidays) {
-              setHolidays(payload.holidays);
-            }
-            if (payload.defaults?.holidaySourceUrl) {
-              setDefaultHolidayUrl(payload.defaults.holidaySourceUrl);
-            }
-          }}
-        />
+        <div className="flex justify-end">
+          <SperrlisteSettingsDialog
+            settings={settings}
+            defaultHolidaySourceUrl={defaultHolidayUrl}
+            onSettingsChange={(payload) => {
+              setSettings(payload.settings);
+              if (payload.holidays) {
+                setHolidays(payload.holidays);
+              }
+              if (payload.defaults?.holidaySourceUrl) {
+                setDefaultHolidayUrl(payload.defaults.holidaySourceUrl);
+              }
+            }}
+          />
+        </div>
       ) : null}
 
       <SperrlisteTabs

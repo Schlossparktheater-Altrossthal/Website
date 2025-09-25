@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
-import { Cat, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
+import { Cat, Fish, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
@@ -81,7 +81,7 @@ const highlights: Highlight[] = [
     icon: MoonStar,
     title: "Uralter Bekannter",
     description:
-      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn Jahren über das Schulgelände.",
+      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn, zwanzig Jahren über das Schulgelände.",
   },
   {
     icon: Heart,
@@ -102,7 +102,7 @@ const memories: Memory[] = [
     icon: PawPrint,
     title: "Lieblingsorte",
     detail:
-      "Die Bänke und Tische im Grünen Klassenzimmer, die Probebühne und sonnige Plätzchen wurden zu seinen Ruhepolen – überall dort wirkte er wie ein grauer Wächter des Geländes.",
+      "Fensterbänke, Probebühnen und Parkbänke wurden zu seinen Ruhepolen – überall dort wirkte er wie ein grauer Wächter des Geländes.",
   },
   {
     icon: MoonStar,
@@ -117,19 +117,25 @@ const careCircle: Supporter[] = [
     icon: Users,
     title: "Pflege-AG & Schülerschaft",
     description:
-      "Schüler:innen und Lehrkräfte brachten ihm selbstständig Futter, frisches Wasser und liebevolle Aufmerksamkeit mit.",
+      "In festen Diensten sorgten engagierte Schüler für Futter, frisches Wasser und liebevolle Aufmerksamkeit.",
   },
   {
     icon: ShieldCheck,
-    title: "Hausmeisterteam & Tierarzt",
+    title: "Hausmeisterteam & Tierärztin",
     description:
       "Sie behielten Gesundheit und Sicherheit im Blick, koordinierten Checks und boten Dieter auch in seinen älteren Jahren Halt.",
+  },
+  {
+    icon: Fish,
+    title: "Patenschaften & Spenden",
+    description:
+      "Klassen und Kollegium legten zusammen, damit Futter, Medikamente und letzte Wege gemeinschaftlich getragen wurden.",
   },
 ];
 
 const lessons: string[] = [
-  "Dieter genoss Streicheleinheiten und Nähe, doch er zeigte uns auch, wie wichtig behutsame Gesten und Respekt sind.",
-  "Er liebte seine Freiheit auf dem Campus und suchte sich selbst aus, wann er Gesellschaft oder Ruhe wollte.",
+  "Tiere, die unsere Schule begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
+  "Gemeinsame Rituale schaffen Vertrauen, besonders wenn ein Vierbeiner über so viele Jahre Teil der Gemeinschaft ist.",
   "In Abschiedsmomenten hilft es, Erinnerungen zu teilen und Orte des Gedenkens zu schaffen.",
   "Wer künftig eine Schulkatze willkommen heißt, sollte an Dieters Bedürfnisse denken: Ruhe, Respekt und Zeit.",
 ];
@@ -300,7 +306,7 @@ export default function SchulkatzePage() {
             In Erinnerung an Dieter
           </Heading>
           <Text variant="bodyLg" tone="muted" align="center">
-            Dieter hat Generationen von Schüler:innen begleitet und unserer Schule ein unverwechselbares Gefühl von Heimat gegeben.
+            Dieter hat Generationen von Schülern begleitet und unserer Schule ein unverwechselbares Gefühl von Heimat gegeben.
             Seine Geschichte erinnert uns daran, wie wertvoll Fürsorge und Gemeinschaft sind.
           </Text>
           <Text tone="muted" align="center">

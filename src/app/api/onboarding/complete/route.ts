@@ -30,8 +30,8 @@ const genderOptionLabels = {
 type GenderOption = keyof typeof genderOptionLabels;
 
 const dietaryStyleLabels = {
-  none: "Allesesser:in",
-  omnivore: "Allesesser:in",
+  none: "Allesesser",
+  omnivore: "Allesesser",
   vegetarian: "Vegetarisch",
   vegan: "Vegan",
   pescetarian: "Pescetarisch",
