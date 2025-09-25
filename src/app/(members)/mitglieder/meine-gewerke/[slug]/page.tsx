@@ -21,6 +21,7 @@ import {
   type DepartmentMembershipWithDepartment,
 } from "../utils";
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "../department-card";
+import { DepartmentEventPlanner, type DepartmentEventLite } from "../department-event-planner";
 
 type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
 
@@ -85,6 +86,20 @@ export default async function GewerkDetailPage({ params }: PageProps) {
             },
             orderBy: { createdAt: "asc" },
           },
+          events: {
+            include: {
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: { start: "asc" },
+          },
         },
       },
     },
@@ -99,6 +114,26 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   if (canManageDepartments) {
     redirect(`/mitglieder/produktionen/gewerke/${membership.department.id}`);
   }
+
+  const departmentEvents = membership.department.events
+    .map((event) => ({
+      id: event.id,
+      title: event.title,
+      start: event.start.toISOString(),
+      end: event.end ? event.end.toISOString() : null,
+      location: event.location ?? null,
+      description: event.description ?? null,
+      createdBy: event.createdBy
+        ? {
+            id: event.createdBy.id,
+            name: event.createdBy.name ?? null,
+            email: event.createdBy.email ?? null,
+            firstName: event.createdBy.firstName ?? null,
+            lastName: event.createdBy.lastName ?? null,
+          }
+        : null,
+    }))
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()) as DepartmentEventLite[];
 
   const today = startOfToday();
   const planningStart = addDays(today, PLANNING_FREEZE_DAYS);
@@ -158,6 +193,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
   const now = new Date();
+  const upcomingEventsCount = departmentEvents.filter((event) => new Date(event.start) >= now).length;
 
   const isEnsembleDepartment = membership.department.slug?.toLowerCase() === "ensemble";
   const tasksForStats = isEnsembleDepartment ? [] : membership.department.tasks;
@@ -168,6 +204,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
     { label: "Teammitglieder", value: membership.department.memberships.length, hint: "Aktive Personen", icon: Users },
     { label: "Aktive Aufgaben", value: activeTasksCount, hint: "Offen & in Arbeit im Gewerk", icon: ListTodo },
     { label: "Abgeschlossen", value: completedTasksCount, hint: "Erledigte Gewerke-Aufgaben", icon: CheckCircle2 },
+    { label: "Nächste Termine", value: upcomingEventsCount, hint: "Planung im Gewerk", icon: CalendarDays },
   ];
 
   const headerActions = (
@@ -256,7 +293,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div>
         </div>
-        <dl className="grid gap-4 md:grid-cols-3">
+        <dl className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {summaryStats.map((stat) => {
             const Icon = stat.icon;
             return (
@@ -295,6 +332,12 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-10">
       {hero}
+      <DepartmentEventPlanner
+        events={departmentEvents}
+        departmentId={membership.department.id}
+        departmentSlug={membership.department.slug}
+        canManage={membership.role === "lead"}
+      />
       <DepartmentCard
         membership={membership}
         userId={userId}
