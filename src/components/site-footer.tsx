@@ -55,7 +55,6 @@ export function SiteFooter({ buildInfo, isDevBuild, siteTitle }: SiteFooterProps
                   <a className="hover:underline" href="mailto:hallo@sommertheater.de">
                     hallo@sommertheater.de
                   </a>
-                  <br /> +49&nbsp;176&nbsp;1234567
                 </p>
               </div>
             </div>
