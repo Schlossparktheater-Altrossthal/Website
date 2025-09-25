@@ -17,6 +17,41 @@ FROM invite_profile AS ip
 WHERE mi."id" = ip."inviteId" AND mi."showId" IS NULL;
 
 -- Fallback to the most recent show for invites that are not linked to onboarding data
+-- If no show exists yet, create a placeholder record so we always have
+-- something to reference. The migration only inserts this when the table
+-- is currently empty, which is the case for fresh production databases
+-- that only relied on invites so far.
+DO $$
+DECLARE
+  placeholder_show_id CONSTANT TEXT := 'legacy-member-invite-show';
+  placeholder_year    INTEGER;
+  earliest_invite     TIMESTAMP;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM "public"."Show") AND EXISTS (SELECT 1 FROM "public"."MemberInvite") THEN
+    SELECT MIN("createdAt") INTO earliest_invite FROM "public"."MemberInvite";
+    placeholder_year := COALESCE(
+      CAST(EXTRACT(YEAR FROM earliest_invite) AS INTEGER),
+      CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS INTEGER)
+    );
+
+    INSERT INTO "public"."Show" ("id", "year", "title", "synopsis", "dates", "posterUrl", "revealedAt", "finalRehearsalWeekStart", "meta")
+    VALUES (
+      placeholder_show_id,
+      placeholder_year,
+      'Legacy-Mitgliedschaften',
+      'Automatisch erstellte Produktion für bestehende Einladungen ohne Show-Verknüpfung.',
+      '[]'::jsonb,
+      NULL,
+      NULL,
+      NULL,
+      jsonb_build_object('generatedByMigration', '20270925094732_add_show_id_to_member_invite')
+    )
+    ON CONFLICT ("id") DO NOTHING;
+  END IF;
+END;
+$$;
+
+-- Fallback to the most recent show for invites that are not linked to onboarding data
 DO $$
 DECLARE
   fallback_show_id TEXT;
