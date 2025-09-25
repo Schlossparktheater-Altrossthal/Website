@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -19,14 +19,7 @@ import {
   MembersTopbarTitle,
 } from "@/components/members/members-app-shell";
 import { useMembersPermissions } from "@/components/members/permissions-context";
-import {
-  KeyMetricCard,
-  KeyMetricGrid,
-  PageHeader,
-  PageHeaderDescription,
-  PageHeaderStatus,
-  PageHeaderTitle,
-} from "@/design-system/patterns";
+import { PageHeader, PageHeaderDescription, PageHeaderStatus, PageHeaderTitle } from "@/design-system/patterns";
 import {
   Users,
   Activity,
@@ -46,6 +39,7 @@ import {
   CalendarRange,
   UtensilsCrossed,
   MessageCircle,
+  ArrowUpRight,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -152,6 +146,33 @@ type QuickActionLink = {
   label: string;
   icon: LucideIcon;
   permissionKey?: string;
+};
+
+type MetricTone = "neutral" | "accent" | "positive" | "warning" | "destructive";
+
+type MetricItem = {
+  key: string;
+  label: string;
+  value: string;
+  hint?: string | null;
+  icon: ReactNode;
+  tone: MetricTone;
+};
+
+const METRIC_CARD_CLASSES: Record<MetricTone, string> = {
+  neutral: "border-border/60 bg-background/80",
+  accent: "border-primary/35 bg-primary/5",
+  positive: "border-success/40 bg-success/10",
+  warning: "border-warning/40 bg-warning/10",
+  destructive: "border-destructive/40 bg-destructive/10",
+};
+
+const METRIC_ICON_CLASSES: Record<MetricTone, string> = {
+  neutral: "border-border/40 bg-muted/40 text-foreground",
+  accent: "border-primary/40 bg-primary/10 text-primary",
+  positive: "border-success/40 bg-success/15 text-success",
+  warning: "border-warning/40 bg-warning/15 text-warning",
+  destructive: "border-destructive/40 bg-destructive/15 text-destructive",
 };
 
 interface MembersDashboardProps {
@@ -703,6 +724,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     );
   }, [effectivePermissions]);
 
+  const quickActions = useMemo(() => availableQuickActions.slice(0, 6), [availableQuickActions]);
+
   const connectionMeta = useMemo(() => {
     if (connectionStatus === "connected") {
       return {
@@ -734,6 +757,14 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       label: "Offline",
     };
   }, [connectionStatus]);
+
+  const connectionToneClasses: Record<"online" | "offline" | "warning" | "error", string> = {
+    online: "border-success/40 bg-success/10 text-success",
+    warning: "border-warning/40 bg-warning/10 text-warning",
+    error: "border-destructive/40 bg-destructive/10 text-destructive",
+    offline: "border-border/60 bg-muted/60 text-muted-foreground",
+  };
+  const connectionBadgeClass = connectionToneClasses[connectionMeta.state];
 
   const activeMembership = useMemo(() => {
     if (!activeProduction) {
@@ -804,14 +835,133 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     };
   }, [finalRehearsalWeek]);
 
+  const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE"), []);
+
   const onlineUpdatedHint = onlineLoading
     ? "Aktualisiert …"
     : `Aktualisiert ${formatTimeAgo(new Date())}`;
 
+  const metrics = useMemo(() => {
+    const items: MetricItem[] = [
+      {
+        key: "online",
+        label: "Online Mitglieder",
+        value: numberFormatter.format(stats.totalOnline),
+        hint: onlineUpdatedHint,
+        icon: <Users className="h-4 w-4" />,
+        tone: "positive",
+      },
+      {
+        key: "members",
+        label: "Mitglieder gesamt",
+        value: numberFormatter.format(stats.totalMembers),
+        hint: "inkl. Ensemble und Technik",
+        icon: <Activity className="h-4 w-4" />,
+        tone: "neutral",
+      },
+      {
+        key: "rehearsals",
+        label: "Proben diese Woche",
+        value: numberFormatter.format(stats.rehearsalsThisWeek),
+        hint: "Termine der laufenden Kalenderwoche",
+        icon: <Calendar className="h-4 w-4" />,
+        tone: "accent",
+      },
+      {
+        key: "notifications",
+        label: "Ungelesene Benachrichtigungen",
+        value: numberFormatter.format(stats.unreadNotifications),
+        hint: "Wer zuerst liest, ist informiert",
+        icon: <Bell className="h-4 w-4" />,
+        tone: stats.unreadNotifications > 0 ? "warning" : "neutral",
+      },
+    ];
+
+    if (finalRehearsalMetric) {
+      const rehearsalTone: MetricTone =
+        finalRehearsalMetric.tone === "destructive"
+          ? "destructive"
+          : finalRehearsalMetric.tone === "warning"
+            ? "warning"
+            : finalRehearsalMetric.tone === "positive"
+              ? "positive"
+              : "accent";
+
+      items.unshift({
+        key: "final-rehearsal",
+        label: finalRehearsalMetric.label,
+        value:
+          typeof finalRehearsalMetric.value === "number"
+            ? numberFormatter.format(finalRehearsalMetric.value)
+            : finalRehearsalMetric.value,
+        hint: finalRehearsalMetric.hint,
+        icon: <Sparkles className="h-4 w-4" />,
+        tone: rehearsalTone,
+      });
+    }
+
+    return items;
+  }, [
+    finalRehearsalMetric,
+    numberFormatter,
+    onlineUpdatedHint,
+    stats.rehearsalsThisWeek,
+    stats.totalMembers,
+    stats.totalOnline,
+    stats.unreadNotifications,
+  ]);
+
+  const profileReminder = useMemo(() => {
+    if (!profileCompletion) {
+      return null;
+    }
+
+    const remaining = Math.max(profileCompletion.total - profileCompletion.completed, 0);
+
+    if (!profileCompletion.complete) {
+      return (
+        <div className="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+          <div className="flex items-start gap-2">
+            <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-warning/50 bg-warning/15">
+              <CalendarRange className="h-4 w-4" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-semibold">Profilangaben unvollständig</p>
+              <p className="text-xs text-warning/90">
+                {`Noch ${remaining} von ${profileCompletion.total} Aufgaben offen.`}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-warning/40 text-warning hover:bg-warning/10"
+            asChild
+          >
+            <Link href="/mitglieder/profil">Profil aktualisieren</Link>
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-start gap-3 rounded-2xl border border-success/40 bg-success/10 p-4 text-sm text-success">
+        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-success/50 bg-success/15">
+          <CheckCircle2 className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="font-semibold">Profil vollständig</p>
+          <p className="text-xs text-success/90">Alle Angaben sind auf dem aktuellen Stand.</p>
+        </div>
+      </div>
+    );
+  }, [profileCompletion]);
+
   const activeProductionCard = useMemo(() => {
     if (!activeProductionLoaded) {
       return (
-        <Card className="border border-dashed border-border/60 bg-background/80">
+        <Card className="rounded-3xl border border-dashed border-border/60 bg-background/80 shadow-sm">
           <CardContent className="space-y-3 p-6">
             <div className="h-4 w-32 rounded bg-muted/50" />
             <div className="h-5 w-48 rounded bg-muted/40" />
@@ -823,7 +973,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
     if (activeProductionError) {
       return (
-        <Card className="border border-destructive/40 bg-destructive/10 text-destructive">
+        <Card className="rounded-3xl border border-destructive/40 bg-destructive/10 text-destructive shadow-sm">
           <CardContent className="space-y-2 p-6">
             <p className="text-sm font-semibold">Aktive Produktion konnte nicht geladen werden.</p>
             <p className="text-xs text-destructive/80">
@@ -885,7 +1035,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
     if (!activeProduction) {
       return (
-        <Card className="border border-dashed border-primary/40 bg-primary/5">
+        <Card className="rounded-3xl border border-dashed border-primary/40 bg-primary/5 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
           <CardHeader className="space-y-1">
             <CardTitle className="text-lg font-semibold text-primary">Keine aktive Produktion ausgewählt</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -933,7 +1083,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     }
 
     return (
-      <Card className="border border-border/70 bg-background/70">
+      <Card className="rounded-3xl border border-border/70 bg-background/85 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <CardTitle className="text-lg font-semibold">Aktive Produktion</CardTitle>
@@ -979,7 +1129,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   const onboardingCard = useMemo(() => {
     if (!onboardingLoaded) {
       return (
-        <Card className="border border-dashed border-border/60 bg-background/80">
+        <Card className="rounded-3xl border border-dashed border-border/60 bg-background/80 shadow-sm">
           <CardContent className="p-6 text-sm text-muted-foreground">
             Onboarding-Status wird geladen …
           </CardContent>
@@ -989,7 +1139,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
     if (!onboarding) {
       return (
-        <Card className="border border-dashed border-border/60 bg-background/80">
+        <Card className="rounded-3xl border border-dashed border-border/60 bg-background/80 shadow-sm">
           <CardContent className="space-y-2 p-6 text-sm text-muted-foreground">
             <p>Noch keine Onboarding-Daten vorhanden.</p>
             <p>Nutze den Einladungslink oder melde dich beim Team.</p>
@@ -1037,7 +1187,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       : null;
 
     return (
-      <Card className="border border-primary/30 bg-gradient-to-br from-primary/5 via-background to-background">
+      <Card className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-lg">Dein Onboarding</CardTitle>
@@ -1237,173 +1387,206 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
       <MembersContentHeader>
         <PageHeader>
-          <div className="space-y-1.5">
-            <PageHeaderTitle>Mitglieder-Dashboard</PageHeaderTitle>
-            <PageHeaderDescription>
-              Aktuelle Kennzahlen, Aktivitäten und Schnellzugriffe auf einen Blick.
-            </PageHeaderDescription>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-1.5">
+              <PageHeaderTitle>Mitglieder-Dashboard</PageHeaderTitle>
+              <PageHeaderDescription>
+                Aktuelle Kennzahlen, Aktivitäten und Schnellzugriffe auf einen Blick.
+              </PageHeaderDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <PageHeaderStatus state={connectionMeta.state} icon={connectionMeta.icon}>
+                {connectionMeta.label}
+              </PageHeaderStatus>
+              {profileCompletion?.complete ? (
+                <Badge variant="outline" className="border-success/40 bg-success/10 text-success">
+                  Profil aktualisiert
+                </Badge>
+              ) : null}
+            </div>
           </div>
         </PageHeader>
       </MembersContentHeader>
 
-      <div className="space-y-6 lg:space-y-8">
-        {profileCompletion && !profileCompletion.complete ? (
-          <div className="rounded-2xl border border-warning/45 bg-warning/10 p-4 text-sm text-warning shadow-[0_18px_48px_rgba(253,176,34,0.12)]">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold">Profilangaben unvollständig</p>
-                <p className="text-xs text-warning/90">
-                  {`Du hast ${Math.max(
-                    profileCompletion.total - profileCompletion.completed,
-                    0,
-                  )} von ${profileCompletion.total} Aufgaben offen.`}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-warning/40 text-warning hover:bg-warning/10"
-                asChild
-              >
-                <Link href="/mitglieder/profil">Profil aktualisieren</Link>
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)] lg:items-start xl:grid-cols-[minmax(0,0.6fr)_minmax(0,0.4fr)]">
-          <div className="space-y-4">
-            {activeProductionCard}
-            <Card className="h-full bg-gradient-to-br from-accent/20 to-transparent">
-              <CardContent className="flex h-full flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between xl:gap-6">
+      <div className="space-y-10 pb-12">
+        <section className="relative overflow-hidden rounded-3xl border border-border/70 bg-background/80 shadow-[0_32px_80px_rgba(15,23,42,0.16)]">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" />
+          <div className="absolute inset-y-0 right-[-20%] -z-10 hidden w-1/2 rounded-full bg-primary/10 blur-3xl lg:block" />
+          <div className="relative grid gap-8 p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:items-start">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/40 bg-primary/15 text-primary">
+                  <Sparkles className="h-5 w-5" />
+                </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Willkommen zurück</div>
-                  <h2 className="text-xl font-semibold">
+                  <p className="text-sm text-muted-foreground">Willkommen zurück</p>
+                  <h2 className="text-2xl font-semibold tracking-tight">
                     {session?.user?.name || session?.user?.email || "Mitglied"}
                   </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Hier findest du aktuelle Aktivitäten und schnelle Aktionen.
-                  </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {availableQuickActions.map((link) => {
+              </div>
+              <p className="max-w-xl text-sm text-muted-foreground">
+                Halte Produktionen, Proben und Teamkommunikation im Blick. Nutze die Schnellaktionen für den direkten Einstieg.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium shadow-sm backdrop-blur",
+                    connectionBadgeClass,
+                  )}
+                >
+                  {connectionMeta.icon}
+                  <span>{connectionMeta.label}</span>
+                </div>
+                {onlineUsers.length ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground">
+                    <Users className="h-3.5 w-3.5" />
+                    <span>{numberFormatter.format(onlineUsers.length)} online</span>
+                  </div>
+                ) : null}
+              </div>
+              {profileReminder}
+            </div>
+            <div className="space-y-4 rounded-2xl border border-border/50 bg-background/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <span>Schnellaktionen</span>
+                <span>{quickActions.length}</span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {quickActions.length ? (
+                  quickActions.map((link) => {
                     const Icon = link.icon;
                     return (
-                      <Button asChild key={link.href} variant="outline" size="sm">
-                        <Link href={link.href} title={link.label}>
-                          <Icon aria-hidden className="h-4 w-4" />
-                          <span className="sr-only sm:not-sr-only">{link.label}</span>
-                        </Link>
-                      </Button>
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="group flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/80 px-3 py-3 text-sm font-medium transition hover:border-primary/40 hover:bg-primary/10"
+                      >
+                        <span className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary transition group-hover:border-primary/50 group-hover:bg-primary/15 group-hover:text-primary">
+                            <Icon aria-hidden className="h-4 w-4" />
+                          </span>
+                          <span className="text-left text-sm font-medium leading-tight">{link.label}</span>
+                        </span>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:text-primary" />
+                      </Link>
                     );
-                  })}
+                  })
+                ) : (
+                  <p className="col-span-2 text-sm text-muted-foreground">Keine Schnellaktionen verfügbar.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((metric) => (
+            <Card
+              key={metric.key}
+              className={cn(
+                "relative overflow-hidden rounded-2xl border shadow-[0_18px_40px_rgba(15,23,42,0.08)]",
+                METRIC_CARD_CLASSES[metric.tone],
+              )}
+            >
+              <CardHeader className="space-y-4 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/90">
+                      {metric.label}
+                    </p>
+                    <p className="text-2xl font-semibold tracking-tight">{metric.value}</p>
+                  </div>
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-xl border text-sm",
+                      METRIC_ICON_CLASSES[metric.tone],
+                    )}
+                  >
+                    {metric.icon}
+                  </div>
                 </div>
+                {metric.hint ? <p className="text-xs text-muted-foreground">{metric.hint}</p> : null}
+              </CardHeader>
+            </Card>
+          ))}
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <div className="space-y-6">
+            {activeProductionCard}
+            {onboardingCard}
+          </div>
+          <div className="space-y-6">
+            <Card className="h-full rounded-3xl border border-border/70 bg-background/85 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+              <CardHeader className="space-y-1 pb-4">
+                <CardTitle>Aktive Mitglieder</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
+                </p>
+              </CardHeader>
+              <CardContent className="flex h-full flex-col gap-4">
+                {onlineList.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                    {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {onlineList.map((user) => (
+                      <li
+                        key={`${user.id}-${user.joinedAt.getTime()}`}
+                        className="flex items-center justify-between rounded-2xl border border-border/50 bg-background/80 px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-2.5 w-2.5 rounded-full bg-success" />
+                          <span className="text-sm font-medium">{user.name}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{formatTimeAgo(user.joinedAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </CardContent>
             </Card>
 
-            {onboardingCard}
-          </div>
-        </div>
-
-        <KeyMetricGrid>
-          {finalRehearsalMetric ? (
-            <KeyMetricCard
-              label={finalRehearsalMetric.label}
-              value={finalRehearsalMetric.value}
-              icon={<Sparkles className="h-4 w-4 text-primary" />}
-                hint={finalRehearsalMetric.hint}
-                tone={finalRehearsalMetric.tone}
-              />
-            ) : null}
-            <KeyMetricCard
-              label="Online Mitglieder"
-              value={stats.totalOnline}
-              icon={<Users className="h-4 w-4" />}
-              hint={onlineUpdatedHint}
-              tone="positive"
-            />
-            <KeyMetricCard
-              label="Mitglieder gesamt"
-              value={stats.totalMembers}
-              icon={<Activity className="h-4 w-4" />}
-              hint="inkl. Ensemble und Technik"
-            />
-            <KeyMetricCard
-              label="Proben diese Woche"
-              value={stats.rehearsalsThisWeek}
-              icon={<Calendar className="h-4 w-4" />}
-              hint="Termine der laufenden Kalenderwoche"
-            />
-            <KeyMetricCard
-              label="Ungelesene Benachrichtigungen"
-              value={stats.unreadNotifications}
-            icon={<Bell className="h-4 w-4" />}
-            hint="Wer zuerst liest, ist informiert"
-            tone={stats.unreadNotifications > 0 ? "warning" : undefined}
-          />
-        </KeyMetricGrid>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] lg:items-stretch lg:gap-6">
-          <Card className="h-full">
-            <CardHeader className="pb-3">
-              <CardTitle>Aktive Mitglieder</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
-              </p>
-            </CardHeader>
-            <CardContent className="flex h-full flex-col gap-4">
-              {onlineList.length === 0 ? (
+            <Card className="h-full rounded-3xl border border-border/70 bg-background/85 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+              <CardHeader className="space-y-1 pb-4">
+                <CardTitle>Aktivitäten</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
+                  Neueste Proben, Zusagen und Benachrichtigungen.
                 </p>
-              ) : (
-                <ul className="space-y-3">
-                  {onlineList.map((user) => (
-                    <li key={`${user.id}-${user.joinedAt.getTime()}`} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2.5 w-2.5 rounded-full bg-success" />
-                        <span className="text-sm font-medium">{user.name}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTimeAgo(user.joinedAt)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="h-full">
-            <CardHeader className="pb-3">
-              <CardTitle>Aktivitäten</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Neueste Proben, Zusagen und Benachrichtigungen.
-              </p>
-            </CardHeader>
-            <CardContent className="flex h-full flex-col">
-              {isLoading && recentActivities.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Lade Aktivitäten …</p>
-              ) : recentActivities.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Noch keine Aktivitäten erfasst.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {recentActivities.map((activity) => (
-                    <li key={`${activity.id}-${activity.timestamp.getTime()}`} className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                        {getActivityIcon(activity.type)}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{activity.message}</p>
-                        <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </CardHeader>
+              <CardContent className="flex h-full flex-col gap-4">
+                {isLoading && recentActivities.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                    Lade Aktivitäten …
+                  </div>
+                ) : recentActivities.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                    Noch keine Aktivitäten erfasst.
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {recentActivities.map((activity) => (
+                      <li
+                        key={`${activity.id}-${activity.timestamp.getTime()}`}
+                        className="flex items-center gap-3 rounded-2xl border border-border/50 bg-background/80 px-4 py-3"
+                      >
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+                          {getActivityIcon(activity.type)}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{activity.message}</p>
+                          <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
       </div>
     </Fragment>
   );
