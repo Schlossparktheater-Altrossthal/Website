@@ -24,6 +24,7 @@ import type {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -33,14 +34,22 @@ import {
 } from "@/lib/roles";
 import { getUserDisplayName } from "@/lib/names";
 import {
+  Calendar,
   CheckCircle2,
   Crown,
+  FileBadge,
   Gavel,
+  IdCard,
+  Mail,
   PiggyBank,
+  Ruler,
+  Sparkles,
   ShieldCheck,
+  UserRoundCheck,
   UsersRound,
   VenetianMask,
   Wrench,
+  UtensilsCrossed,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -198,18 +207,29 @@ interface SummaryFieldProps {
 
 function SummaryField({ label, onClick, description, children }: SummaryFieldProps) {
   const content = (
-    <>
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          {label}
+        </span>
+        {onClick ? (
+          <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-primary/70 transition-colors group-hover:text-primary sm:inline">
+            Bearbeiten
+          </span>
+        ) : null}
+      </div>
       <div className="text-sm text-foreground">{children}</div>
       {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       {onClick ? (
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/60 transition group-hover:text-primary">
+        <span className="text-[10px] font-medium uppercase tracking-widest text-primary/70 transition-colors group-hover:text-primary sm:hidden">
           Zum Bearbeiten tippen
         </span>
       ) : null}
-    </>
+    </div>
+  );
+
+  const baseClasses = cn(
+    "group relative w-full overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-5 text-left shadow-sm backdrop-blur transition-colors",
   );
 
   if (onClick) {
@@ -218,8 +238,8 @@ function SummaryField({ label, onClick, description, children }: SummaryFieldPro
         type="button"
         onClick={onClick}
         className={cn(
-          "group flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-background/80 p-4 text-left shadow-sm transition",
-          "hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          baseClasses,
+          "hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         )}
       >
         {content}
@@ -227,11 +247,7 @@ function SummaryField({ label, onClick, description, children }: SummaryFieldPro
     );
   }
 
-  return (
-    <div className="flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-background/80 p-4 text-left shadow-sm">
-      {content}
-    </div>
-  );
+  return <div className={baseClasses}>{content}</div>;
 }
 
 interface EditorPanelProps {
@@ -243,17 +259,24 @@ interface EditorPanelProps {
 
 function EditorPanel({ title, description, onClose, children }: EditorPanelProps) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/95 p-6 shadow-lg shadow-primary/10">
+    <div className="rounded-3xl border border-border/60 bg-background/95 p-6 shadow-xl shadow-primary/10">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <h4 className="text-lg font-semibold text-foreground">{title}</h4>
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </div>
-        <Button type="button" size="sm" variant="ghost" onClick={onClose}>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="self-start text-muted-foreground hover:text-primary"
+          onClick={onClose}
+        >
           Schließen
         </Button>
       </div>
-      <div className="mt-6 space-y-6">{children}</div>
+      <Separator className="my-6" />
+      <div className="space-y-6">{children}</div>
     </div>
   );
 }
@@ -271,12 +294,12 @@ interface ProfilePageClientProps {
 function ProfileRolesCard({ roles }: { roles: Role[] }) {
   if (!roles.length) {
     return (
-      <Card className="rounded-2xl border border-border/60 bg-background/85 p-6 shadow-lg shadow-primary/10">
+      <Card className="rounded-3xl border border-border/60 bg-card/80 p-6 shadow-lg shadow-primary/10">
         <CardHeader className="px-0 pt-0">
-          <CardTitle>Rollen &amp; Berechtigungen</CardTitle>
+          <CardTitle className="text-xl">Rollen &amp; Berechtigungen</CardTitle>
         </CardHeader>
         <CardContent className="px-0 pt-0">
-          <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border/50 bg-muted/20 p-4 text-sm text-muted-foreground">
             Dir sind aktuell keine Rollen zugewiesen. Wende dich an die Produktionsleitung, wenn dir Inhalte fehlen.
           </div>
         </CardContent>
@@ -285,14 +308,14 @@ function ProfileRolesCard({ roles }: { roles: Role[] }) {
   }
 
   return (
-    <Card className="rounded-2xl border border-border/60 bg-background/85 p-0 shadow-lg shadow-primary/10">
-      <CardHeader className="space-y-2 px-6 pb-4 pt-6 sm:px-7">
-        <CardTitle>Rollen &amp; Berechtigungen</CardTitle>
+    <Card className="rounded-3xl border border-border/60 bg-card/80 p-0 shadow-lg shadow-primary/10">
+      <CardHeader className="space-y-3 px-6 pb-4 pt-6 sm:px-8">
+        <CardTitle className="text-xl">Rollen &amp; Berechtigungen</CardTitle>
         <p className="text-sm text-muted-foreground">
           Deine Rollen steuern Sichtbarkeit und Handlungsrechte im Mitgliederportal. Wende dich bei fehlenden Rechten an die Administration.
         </p>
       </CardHeader>
-      <CardContent className="space-y-5 px-6 pb-6 sm:px-7">
+      <CardContent className="space-y-6 px-6 pb-6 sm:px-8">
         <div className="flex flex-wrap gap-2">
           {roles.map((role) => (
             <Badge
@@ -314,11 +337,11 @@ function ProfileRolesCard({ roles }: { roles: Role[] }) {
             return (
               <li
                 key={role}
-                className="flex gap-3 rounded-xl border border-border/60 bg-background/70 p-3 shadow-sm backdrop-blur"
+                className="flex gap-3 rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm backdrop-blur"
               >
                 <div
                   className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full border text-sm",
+                    "flex h-11 w-11 items-center justify-center rounded-full border text-sm",
                     ROLE_ICON_ACCENTS[role],
                   )}
                   aria-hidden
@@ -392,6 +415,7 @@ export function ProfilePageClient({
     ? AVATAR_SOURCE_LABELS[avatarSource]
     : "Automatisch";
   const avatarUpdatedAt = formatDate(profileUser.avatarUpdatedAt);
+  const age = calculateAge(profileUser.dateOfBirth);
 
   const dietaryStyle = resolveDietaryStyleLabel(
     preferenceState.style,
@@ -471,33 +495,215 @@ export function ProfilePageClient({
     photoSummary?.updatedAt ?? photoSummary?.submittedAt ?? null,
   );
 
+  const shouldShowPhotoNotice =
+    !!photoSummary &&
+    (photoSummary.status === "none" ||
+      photoSummary.status === "rejected" ||
+      photoSummary.requiresDateOfBirth ||
+      (photoSummary.requiresDocument && !photoSummary.hasDocument));
+
+  const rolesLabelList = profileUser.roles.map(
+    (role) => ROLE_LABELS[role] ?? role,
+  );
+
+  type HighlightItem = {
+    key: string;
+    label: string;
+    icon: LucideIcon;
+    value: ReactNode;
+    hint?: ReactNode;
+  };
+
+  const highlightItems: HighlightItem[] = [
+    {
+      key: "photo",
+      label: "Foto-Status",
+      icon: FileBadge,
+      value: (
+        <Badge variant="outline" className={cn("text-xs", photoStatusBadge)}>
+          {photoStatusLabel}
+        </Badge>
+      ),
+      hint: photoUpdatedAt
+        ? `Stand ${photoUpdatedAt}`
+        : "Noch keine Freigabe abgeschlossen.",
+    },
+    {
+      key: "roles",
+      label: "Aktive Rollen",
+      icon: UsersRound,
+      value: (
+        <span className="text-base font-semibold text-foreground">
+          {profileUser.roles.length}
+        </span>
+      ),
+      hint:
+        rolesLabelList.length > 0
+          ? rolesLabelList.slice(0, 2).join(", ")
+          : "Keine Rollen hinterlegt.",
+    },
+    {
+      key: "contact",
+      label: "Kontakt",
+      icon: Mail,
+      value: profileUser.email ? (
+        <span className="text-sm font-medium text-foreground">
+          {profileUser.email}
+        </span>
+      ) : (
+        <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>
+      ),
+      hint: displayName ? `Anzeigename: ${displayName}` : undefined,
+    },
+    {
+      key: "birthdate",
+      label: "Geburtstag",
+      icon: Calendar,
+      value: birthdate ? (
+        <span className="text-sm font-medium text-foreground">{birthdate}</span>
+      ) : (
+        <span className="text-xs text-muted-foreground">{EMPTY_VALUE_LABEL}</span>
+      ),
+      hint: age ? `${age} Jahre` : undefined,
+    },
+    {
+      key: "avatar",
+      label: "Profilbild",
+      icon: UserRoundCheck,
+      value: (
+        <span className="text-sm font-medium text-foreground">
+          {avatarSourceLabel}
+        </span>
+      ),
+      hint: avatarUpdatedAt
+        ? `Aktualisiert am ${avatarUpdatedAt}`
+        : "Automatische Darstellung",
+    },
+  ];
+
+  if (canManageMeasurements) {
+    const measurementLastUpdated = latestMeasurementUpdate
+      ? formatDate(latestMeasurementUpdate)
+      : null;
+    highlightItems.push({
+      key: "measurements",
+      label: "Maße",
+      icon: Ruler,
+      value: (
+        <span className="text-sm font-medium text-foreground">
+          {measurementEntries.length
+            ? `${measurementEntries.length} Werte`
+            : "Keine Angaben"}
+        </span>
+      ),
+      hint:
+        measurementEntries.length && measurementLastUpdated
+          ? `Stand ${measurementLastUpdated}`
+          : measurementEntries.length
+            ? undefined
+            : "Bitte ergänzen, damit das Kostüm-Team planen kann.",
+    });
+  }
+
+  const tabItems: { id: ProfileTabId; label: string; description: string; icon: LucideIcon }[] = [
+    {
+      id: "stammdaten",
+      label: "Stammdaten",
+      description: "Kontakt, Name & Geburtsdatum",
+      icon: IdCard,
+    },
+    {
+      id: "ernaehrung",
+      label: "Ernährung",
+      description: "Präferenzen und Allergien",
+      icon: UtensilsCrossed,
+    },
+    {
+      id: "masse",
+      label: "Maße",
+      description: "Körpermaße für Kostüm & Ausstattung",
+      icon: Ruler,
+    },
+    {
+      id: "interessen",
+      label: "Interessen",
+      description: "Engagement & Wunschbereiche",
+      icon: Sparkles,
+    },
+    {
+      id: "freigaben",
+      label: "Freigaben",
+      description: "Fotoeinverständnis & Dokumente",
+      icon: FileBadge,
+    },
+  ];
+
+  const visibleTabItems = tabItems.filter(
+    (item) => item.id !== "masse" || canManageMeasurements,
+  );
+
   return (
     <ProfileCompletionProvider initialItems={checklist}>
       <div className="relative space-y-10 sm:space-y-12">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-gradient-to-b from-primary/10 via-transparent to-transparent blur-3xl"
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-gradient-to-b from-primary/15 via-transparent to-transparent blur-3xl"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-40 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-secondary/15 blur-3xl dark:bg-secondary/20"
+          className="pointer-events-none absolute -bottom-32 left-1/2 -z-10 h-80 w-80 -translate-x-1/2 rounded-full bg-secondary/15 blur-3xl dark:bg-secondary/25"
         />
-        <section className="rounded-3xl border border-border/60 bg-background/90 px-6 py-8 shadow-lg shadow-primary/10 sm:px-8">
-          <PageHeader
-            variant="section"
-            title="Mein Profil"
-            description="Halte deine Angaben aktuell, damit Teams und Kollegen optimal planen können."
+        <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/80 shadow-xl shadow-primary/10">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-secondary/10"
           />
-          <div className="mt-6">
-            <ProfilePhotoConsentNotice
-              summary={photoSummary}
-              onManage={handleManagePhoto}
+          <div className="relative space-y-8 p-6 sm:p-8">
+            <PageHeader
+              variant="section"
+              title="Mein Profil"
+              description="Halte deine Angaben aktuell, damit Teams und Kolleg*innen optimal planen können."
+              className="max-w-2xl text-balance"
             />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {highlightItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.key}
+                    className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm backdrop-blur transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="rounded-full border border-border/60 bg-muted/30 p-2 text-muted-foreground">
+                        <Icon className="h-4 w-4" aria-hidden />
+                      </span>
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          {item.label}
+                        </p>
+                        <div className="text-sm text-foreground">{item.value}</div>
+                        {item.hint ? (
+                          <p className="text-xs text-muted-foreground">{item.hint}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+          {shouldShowPhotoNotice ? (
+            <div className="relative border-t border-border/60 bg-background/70 px-6 py-6 sm:px-8">
+              <ProfilePhotoConsentNotice
+                summary={photoSummary}
+                onManage={handleManagePhoto}
+              />
+            </div>
+          ) : null}
         </section>
 
         <div className="grid gap-6 lg:gap-8 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)] xl:items-start xl:gap-10 2xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)] 2xl:gap-12">
-          <div className="space-y-6 xl:space-y-8">
+          <aside className="space-y-6 xl:space-y-8">
             <ProfileSummaryCard
               userId={profileUser.id}
               firstName={profileUser.firstName}
@@ -512,399 +718,401 @@ export function ProfilePageClient({
             <ProfileRolesCard roles={profileUser.roles} />
 
             <ProfileChecklistCard onNavigateToSection={handleNavigateToSection} />
-          </div>
+          </aside>
 
-          <div className="space-y-10 xl:space-y-12">
-            <div className="space-y-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <section
+            id="profile-tabs"
+            className="space-y-6 rounded-3xl border border-border/60 bg-card/80 p-6 shadow-lg shadow-primary/10 sm:p-8"
+          >
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Profilbereiche
               </p>
-              <div
-                id="profile-tabs"
-                className="rounded-3xl border border-border/60 bg-background/90 p-6 shadow-lg shadow-primary/10 sm:p-8"
-              >
-                <Tabs
-                  value={activeTab}
-                  onValueChange={handleTabChange}
-                  className="space-y-6"
-                >
-                  <TabsList className="flex flex-wrap gap-2">
-                    <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-                    <TabsTrigger value="ernaehrung">Ernährung</TabsTrigger>
-                    {canManageMeasurements ? (
-                      <TabsTrigger value="masse">Maße</TabsTrigger>
-                    ) : null}
-                    <TabsTrigger value="interessen">Interessen</TabsTrigger>
-                    <TabsTrigger value="freigaben">Freigaben</TabsTrigger>
-                  </TabsList>
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold text-foreground">Alles an einem Ort</h2>
+                <p className="text-sm text-muted-foreground">
+                  Bearbeite die Bereiche deines Profils und halte deine Angaben auf dem aktuellen Stand.
+                </p>
+              </div>
+            </div>
 
-                  <TabsContent value="stammdaten" className="space-y-6 pt-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <SummaryField
-                        label="Vorname"
-                        onClick={() => openEditor("stammdaten")}
-                      >
-                        {renderText(profileUser.firstName)}
-                      </SummaryField>
-                      <SummaryField
-                        label="Nachname"
-                        onClick={() => openEditor("stammdaten")}
-                      >
-                        {renderText(profileUser.lastName)}
-                      </SummaryField>
-                      <SummaryField
-                        label="Anzeigename"
-                        onClick={() => openEditor("stammdaten")}
-                      >
-                        {renderText(displayName || null)}
-                      </SummaryField>
-                      <SummaryField
-                        label="E-Mail-Adresse"
-                        description="Wir verwenden diese Adresse für Login und Benachrichtigungen."
-                        onClick={() => openEditor("stammdaten")}
-                      >
-                        {renderText(profileUser.email)}
-                      </SummaryField>
-                      <SummaryField
-                        label="Geburtsdatum"
-                        description="Hilft bei der Verwaltung notwendiger Einverständnisse."
-                        onClick={() => openEditor("stammdaten")}
-                      >
-                        {birthdate ? (
-                          <span>{birthdate}</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {EMPTY_VALUE_LABEL}
-                          </span>
-                        )}
-                      </SummaryField>
-                      <SummaryField
-                        label="Profilbild"
-                        description="Quelle und Aktualisierung deines Avatars."
-                        onClick={() => openEditor("stammdaten")}
-                      >
-                        <div className="space-y-1">
-                          <span>{avatarSourceLabel}</span>
-                          {avatarUpdatedAt ? (
-                            <span className="text-xs text-muted-foreground">
-                              Aktualisiert am {avatarUpdatedAt}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Noch kein Upload gespeichert.
-                            </span>
-                          )}
-                        </div>
-                      </SummaryField>
-                    </div>
-
-                    {activeEditor === "stammdaten" ? (
-                      <EditorPanel
-                        title="Stammdaten bearbeiten"
-                        description="Passe Name, Kontaktadresse und Login-Daten an."
-                        onClose={closeEditor}
-                      >
-                        <ProfileForm
-                          userId={profileUser.id}
-                          initialFirstName={profileUser.firstName}
-                          initialLastName={profileUser.lastName}
-                          initialName={profileUser.name}
-                          initialEmail={profileUser.email}
-                          initialAvatarSource={toAvatarSource(
-                            profileUser.avatarSource,
-                          )}
-                          initialAvatarUpdatedAt={profileUser.avatarUpdatedAt}
-                          initialDateOfBirth={profileUser.dateOfBirth}
-                          onProfileChange={(next) => {
-                            setProfileUser((prev) => ({
-                              ...prev,
-                              firstName: next.firstName,
-                              lastName: next.lastName,
-                              name: next.name,
-                              email: next.email,
-                              avatarSource: next.avatarSource ?? null,
-                              avatarUpdatedAt: next.avatarUpdatedAt,
-                              dateOfBirth: next.dateOfBirth,
-                            }));
-                            setPhotoSummary((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    dateOfBirth: next.dateOfBirth,
-                                    age: calculateAge(next.dateOfBirth),
-                                  }
-                                : prev,
-                            );
-                          }}
-                        />
-                      </EditorPanel>
-                    ) : null}
-                  </TabsContent>
-
-                  <TabsContent value="ernaehrung" className="space-y-6 pt-4">
-                    <div className="grid gap-4">
-                      <SummaryField
-                        label="Ernährungsstil"
-                        onClick={() => openEditor("ernaehrung")}
-                      >
-                        <div className="space-y-1">
-                          <span>{dietaryStyle.label}</span>
-                          {preferenceState.customLabel ? (
-                            <span className="text-xs text-muted-foreground">
-                              Eigene Beschreibung: {preferenceState.customLabel}
-                            </span>
-                          ) : null}
-                        </div>
-                      </SummaryField>
-                    </div>
-
-                    <SummaryField
-                      label="Allergien & Unverträglichkeiten"
-                      onClick={() => openEditor("ernaehrung")}
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
+              <TabsList className="!grid grid-cols-1 gap-2 rounded-2xl border border-border/60 bg-muted/30 p-2 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleTabItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <TabsTrigger
+                      key={item.id}
+                      value={item.id}
+                      className="!flex h-full flex-col items-start gap-2 rounded-2xl px-3 py-3 text-left shadow-sm transition hover:bg-primary/5 hover:text-foreground sm:px-4 sm:py-4"
                     >
-                      {allergyState.length ? (
-                        <div className="flex flex-wrap gap-2">
-                          {allergyState.slice(0, 6).map((entry) => (
-                            <Badge
-                              key={entry.allergen}
-                              variant="outline"
-                              className={cn(
-                                "text-xs",
-                                ALLERGY_LEVEL_STYLES[entry.level],
-                              )}
-                            >
-                              {entry.allergen}
-                            </Badge>
-                          ))}
-                          {allergyState.length > 6 ? (
-                            <span className="text-xs text-muted-foreground">
-                              +{allergyState.length - 6} weitere
-                            </span>
-                          ) : null}
-                        </div>
+                      <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Icon className="h-4 w-4" aria-hidden />
+                        {item.label}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{item.description}</span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+
+              <div className="space-y-8">
+                <TabsContent value="stammdaten" className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <SummaryField
+                      label="Vorname"
+                      onClick={() => openEditor("stammdaten")}
+                    >
+                      {renderText(profileUser.firstName)}
+                    </SummaryField>
+                    <SummaryField
+                      label="Nachname"
+                      onClick={() => openEditor("stammdaten")}
+                    >
+                      {renderText(profileUser.lastName)}
+                    </SummaryField>
+                    <SummaryField
+                      label="Anzeigename"
+                      onClick={() => openEditor("stammdaten")}
+                    >
+                      {renderText(displayName || null)}
+                    </SummaryField>
+                    <SummaryField
+                      label="E-Mail-Adresse"
+                      description="Wir verwenden diese Adresse für Login und Benachrichtigungen."
+                      onClick={() => openEditor("stammdaten")}
+                    >
+                      {renderText(profileUser.email)}
+                    </SummaryField>
+                    <SummaryField
+                      label="Geburtsdatum"
+                      description="Hilft bei der Verwaltung notwendiger Einverständnisse."
+                      onClick={() => openEditor("stammdaten")}
+                    >
+                      {birthdate ? (
+                        <span>{birthdate}</span>
                       ) : (
                         <span className="text-xs text-muted-foreground">
                           {EMPTY_VALUE_LABEL}
                         </span>
                       )}
                     </SummaryField>
-
-                    {activeEditor === "ernaehrung" ? (
-                      <EditorPanel
-                        title="Ernährung & Allergien bearbeiten"
-                        description="Pflege Ernährungsstil und medizinische Hinweise."
-                        onClose={closeEditor}
-                      >
-                        <ProfileDietaryPreferences
-                          initialPreference={preferenceState}
-                          initialAllergies={allergyState}
-                          onDietaryChange={({ preference, allergies: nextAllergies }) => {
-                            setPreferenceState(preference);
-                            setAllergyState(nextAllergies);
-                          }}
-                        />
-                      </EditorPanel>
-                    ) : null}
-                  </TabsContent>
-
-                  {canManageMeasurements ? (
-                    <TabsContent value="masse" className="space-y-6 pt-4">
-                      <SummaryField
-                        label="Erfasste Maße"
-                        description="Gib dem Kostüm-Team aktuelle Werte an die Hand."
-                        onClick={() => openEditor("masse")}
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className="border-primary/40 bg-primary/10 text-primary"
-                          >
-                            {measurementEntries.length} Werte
-                          </Badge>
-                          {measurementEntries.length && latestMeasurementUpdate ? (
-                            <span className="text-xs text-muted-foreground">
-                              Aktualisiert am {formatDate(latestMeasurementUpdate)}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Noch keine Werte hinterlegt.
-                            </span>
-                          )}
-                        </div>
-                      </SummaryField>
-
-                      {measurementEntries.length ? (
-                        <div className="grid gap-4 md:grid-cols-2">
-                          {measurementEntries.slice(0, 4).map((entry) => (
-                            <SummaryField
-                              key={entry.type}
-                              label={MEASUREMENT_TYPE_LABELS[entry.type]}
-                              onClick={() => openEditor("masse")}
-                            >
-                              <div className="flex flex-wrap items-baseline gap-2">
-                                <span className="text-base font-semibold text-foreground">
-                                  {formatMeasurementValue(entry.value)}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit}
-                                </span>
-                              </div>
-                              {entry.note ? (
-                                <p className="text-xs text-muted-foreground">
-                                  {entry.note}
-                                </p>
-                              ) : null}
-                              <p className="text-[11px] text-muted-foreground">
-                                Aktualisiert am {formatDate(entry.updatedAt) ?? "-"}
-                              </p>
-                            </SummaryField>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          Erfasse deine Maße, damit das Kostüm-Team planen kann.
-                        </p>
-                      )}
-
-                      {measurementEntries.length > 4 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Weitere Maße findest du im Bearbeitungsmodus.
-                        </p>
-                      ) : null}
-
-                      {activeEditor === "masse" ? (
-                        <EditorPanel
-                          title="Maße & Kostümplanung"
-                          description="Erfasse oder aktualisiere deine Körpermaße."
-                          onClose={closeEditor}
-                        >
-                          <MemberMeasurementsManager
-                            initialMeasurements={measurementEntries}
-                            onMeasurementsChange={(entries) =>
-                              setMeasurementState(sortMeasurements(entries))
-                            }
-                          />
-                        </EditorPanel>
-                      ) : null}
-                    </TabsContent>
-                  ) : null}
-
-                  <TabsContent value="interessen" className="space-y-6 pt-4">
                     <SummaryField
-                      label="Status"
-                      description="Tippe, um deine Interessen zu pflegen."
-                      onClick={() => openEditor("interessen")}
+                      label="Profilbild"
+                      description="Quelle und Aktualisierung deines Avatars."
+                      onClick={() => openEditor("stammdaten")}
                     >
-                      <span className="text-sm text-muted-foreground">
-                        Interessen werden beim Öffnen geladen.
-                      </span>
-                    </SummaryField>
-
-                    {activeEditor === "interessen" ? (
-                      <EditorPanel
-                        title="Interessen & Engagement"
-                        description="Pflege Schlagworte, um passende Aufgaben zu finden."
-                        onClose={closeEditor}
-                      >
-                        <ProfileInterestsCard />
-                      </EditorPanel>
-                    ) : null}
-                  </TabsContent>
-
-                  <TabsContent value="freigaben" className="space-y-6 pt-4">
-                    <SummaryField
-                      label="Status"
-                      onClick={() => openEditor("freigaben")}
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className={cn("text-xs", photoStatusBadge)}
-                        >
-                          {photoStatusLabel}
-                        </Badge>
-                        {photoUpdatedAt ? (
+                      <div className="space-y-1">
+                        <span>{avatarSourceLabel}</span>
+                        {avatarUpdatedAt ? (
                           <span className="text-xs text-muted-foreground">
-                            Aktualisiert am {photoUpdatedAt}
+                            Aktualisiert am {avatarUpdatedAt}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Noch kein Upload gespeichert.
+                          </span>
+                        )}
+                      </div>
+                    </SummaryField>
+                  </div>
+
+                  {activeEditor === "stammdaten" ? (
+                    <EditorPanel
+                      title="Stammdaten bearbeiten"
+                      description="Passe Name, Kontaktadresse und Login-Daten an."
+                      onClose={closeEditor}
+                    >
+                      <ProfileForm
+                        userId={profileUser.id}
+                        initialFirstName={profileUser.firstName}
+                        initialLastName={profileUser.lastName}
+                        initialName={profileUser.name}
+                        initialEmail={profileUser.email}
+                        initialAvatarSource={toAvatarSource(profileUser.avatarSource)}
+                        initialAvatarUpdatedAt={profileUser.avatarUpdatedAt}
+                        initialDateOfBirth={profileUser.dateOfBirth}
+                        onProfileChange={(next) => {
+                          setProfileUser((prev) => ({
+                            ...prev,
+                            firstName: next.firstName,
+                            lastName: next.lastName,
+                            name: next.name,
+                            email: next.email,
+                            avatarSource: next.avatarSource ?? null,
+                            avatarUpdatedAt: next.avatarUpdatedAt,
+                            dateOfBirth: next.dateOfBirth,
+                          }));
+                          setPhotoSummary((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  dateOfBirth: next.dateOfBirth,
+                                  age: calculateAge(next.dateOfBirth),
+                                }
+                              : prev,
+                          );
+                        }}
+                      />
+                    </EditorPanel>
+                  ) : null}
+                </TabsContent>
+
+                <TabsContent value="ernaehrung" className="space-y-6">
+                  <div className="grid gap-4">
+                    <SummaryField
+                      label="Ernährungsstil"
+                      onClick={() => openEditor("ernaehrung")}
+                    >
+                      <div className="space-y-1">
+                        <span>{dietaryStyle.label}</span>
+                        {preferenceState.customLabel ? (
+                          <span className="text-xs text-muted-foreground">
+                            Eigene Beschreibung: {preferenceState.customLabel}
                           </span>
                         ) : null}
                       </div>
                     </SummaryField>
+                  </div>
 
-                    <SummaryField
-                      label="Geburtsdatum & Alter"
-                      onClick={() => openEditor("freigaben")}
-                    >
-                      {photoSummary?.dateOfBirth ? (
-                        <div className="space-y-1">
-                          <span>{formatDate(photoSummary.dateOfBirth)}</span>
-                          {photoSummary.age !== null ? (
-                            <span className="text-xs text-muted-foreground">
-                              {photoSummary.age} Jahre
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {photoSummary?.requiresDateOfBirth
-                            ? "Bitte ergänze dein Geburtsdatum."
-                            : EMPTY_VALUE_LABEL}
-                        </span>
-                      )}
-                    </SummaryField>
-
-                    <SummaryField
-                      label="Dokumente"
-                      onClick={() => openEditor("freigaben")}
-                    >
-                      {photoSummary ? (
-                        <div className="space-y-1">
-                          <span>
-                            {photoSummary.requiresDocument
-                              ? photoSummary.hasDocument
-                                ? "Dokument liegt vor."
-                                : "Dokument erforderlich – bitte hochladen."
-                              : "Kein Dokument notwendig."}
+                  <SummaryField
+                    label="Allergien & Unverträglichkeiten"
+                    onClick={() => openEditor("ernaehrung")}
+                  >
+                    {allergyState.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {allergyState.slice(0, 6).map((entry) => (
+                          <Badge
+                            key={entry.allergen}
+                            variant="outline"
+                            className={cn("text-xs", ALLERGY_LEVEL_STYLES[entry.level])}
+                          >
+                            {entry.allergen}
+                          </Badge>
+                        ))}
+                        {allergyState.length > 6 ? (
+                          <span className="text-xs text-muted-foreground">
+                            +{allergyState.length - 6} weitere
                           </span>
-                          {photoSummary.documentUploadedAt ? (
-                            <span className="text-xs text-muted-foreground">
-                              Hochgeladen am {" "}
-                              {formatDate(photoSummary.documentUploadedAt)}
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {EMPTY_VALUE_LABEL}
-                        </span>
-                      )}
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {EMPTY_VALUE_LABEL}
+                      </span>
+                    )}
+                  </SummaryField>
+
+                  {activeEditor === "ernaehrung" ? (
+                    <EditorPanel
+                      title="Ernährung & Allergien bearbeiten"
+                      description="Pflege Ernährungsstil und medizinische Hinweise."
+                      onClose={closeEditor}
+                    >
+                      <ProfileDietaryPreferences
+                        initialPreference={preferenceState}
+                        initialAllergies={allergyState}
+                        onDietaryChange={({ preference, allergies: nextAllergies }) => {
+                          setPreferenceState(preference);
+                          setAllergyState(nextAllergies);
+                        }}
+                      />
+                    </EditorPanel>
+                  ) : null}
+                </TabsContent>
+
+                {canManageMeasurements ? (
+                  <TabsContent value="masse" className="space-y-6">
+                    <SummaryField
+                      label="Erfasste Maße"
+                      description="Gib dem Kostüm-Team aktuelle Werte an die Hand."
+                      onClick={() => openEditor("masse")}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="border-primary/40 bg-primary/10 text-primary"
+                        >
+                          {measurementEntries.length} Werte
+                        </Badge>
+                        {measurementEntries.length && latestMeasurementUpdate ? (
+                          <span className="text-xs text-muted-foreground">
+                            Aktualisiert am {formatDate(latestMeasurementUpdate)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Noch keine Werte hinterlegt.
+                          </span>
+                        )}
+                      </div>
                     </SummaryField>
 
-                    {photoSummary?.rejectionReason ? (
-                      <SummaryField
-                        label="Hinweis"
-                        onClick={() => openEditor("freigaben")}
-                      >
-                        <span className="text-sm text-destructive">
-                          {photoSummary.rejectionReason}
-                        </span>
-                      </SummaryField>
+                    {measurementEntries.length ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {measurementEntries.slice(0, 4).map((entry) => (
+                          <SummaryField
+                            key={entry.type}
+                            label={MEASUREMENT_TYPE_LABELS[entry.type]}
+                            onClick={() => openEditor("masse")}
+                          >
+                            <div className="flex flex-wrap items-baseline gap-2">
+                              <span className="text-base font-semibold text-foreground">
+                                {formatMeasurementValue(entry.value)}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit}
+                              </span>
+                            </div>
+                            {entry.note ? (
+                              <p className="text-xs text-muted-foreground">{entry.note}</p>
+                            ) : null}
+                            <p className="text-[11px] text-muted-foreground">
+                              Aktualisiert am {formatDate(entry.updatedAt) ?? "-"}
+                            </p>
+                          </SummaryField>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Erfasse deine Maße, damit das Kostüm-Team planen kann.
+                      </p>
+                    )}
+
+                    {measurementEntries.length > 4 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Weitere Maße findest du im Bearbeitungsmodus.
+                      </p>
                     ) : null}
 
-                    {activeEditor === "freigaben" ? (
+                    {activeEditor === "masse" ? (
                       <EditorPanel
-                        title="Freigaben & Fotoeinverständnis"
-                        description="Verwalte Einverständnisse und lade Dokumente hoch."
+                        title="Maße & Kostümplanung"
+                        description="Erfasse oder aktualisiere deine Körpermaße."
                         onClose={closeEditor}
                       >
-                        <PhotoConsentCard onSummaryChange={handlePhotoSummaryChange} />
+                        <MemberMeasurementsManager
+                          initialMeasurements={measurementEntries}
+                          onMeasurementsChange={(entries) =>
+                            setMeasurementState(sortMeasurements(entries))
+                          }
+                        />
                       </EditorPanel>
                     ) : null}
                   </TabsContent>
-                </Tabs>
+                ) : null}
+
+                <TabsContent value="interessen" className="space-y-6">
+                  <SummaryField
+                    label="Status"
+                    description="Tippe, um deine Interessen zu pflegen."
+                    onClick={() => openEditor("interessen")}
+                  >
+                    <span className="text-sm text-muted-foreground">
+                      Interessen werden beim Öffnen geladen.
+                    </span>
+                  </SummaryField>
+
+                  {activeEditor === "interessen" ? (
+                    <EditorPanel
+                      title="Interessen & Engagement"
+                      description="Pflege Schlagworte, um passende Aufgaben zu finden."
+                      onClose={closeEditor}
+                    >
+                      <ProfileInterestsCard />
+                    </EditorPanel>
+                  ) : null}
+                </TabsContent>
+
+                <TabsContent value="freigaben" className="space-y-6">
+                  <SummaryField
+                    label="Status"
+                    onClick={() => openEditor("freigaben")}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className={cn("text-xs", photoStatusBadge)}>
+                        {photoStatusLabel}
+                      </Badge>
+                      {photoUpdatedAt ? (
+                        <span className="text-xs text-muted-foreground">
+                          Aktualisiert am {photoUpdatedAt}
+                        </span>
+                      ) : null}
+                    </div>
+                  </SummaryField>
+
+                  <SummaryField
+                    label="Geburtsdatum & Alter"
+                    onClick={() => openEditor("freigaben")}
+                  >
+                    {photoSummary?.dateOfBirth ? (
+                      <div className="space-y-1">
+                        <span>{formatDate(photoSummary.dateOfBirth)}</span>
+                        {photoSummary.age !== null ? (
+                          <span className="text-xs text-muted-foreground">
+                            {photoSummary.age} Jahre
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {photoSummary?.requiresDateOfBirth
+                          ? "Bitte ergänze dein Geburtsdatum."
+                          : EMPTY_VALUE_LABEL}
+                      </span>
+                    )}
+                  </SummaryField>
+
+                  <SummaryField
+                    label="Dokumente"
+                    onClick={() => openEditor("freigaben")}
+                  >
+                    {photoSummary ? (
+                      <div className="space-y-1">
+                        <span>
+                          {photoSummary.requiresDocument
+                            ? photoSummary.hasDocument
+                              ? "Dokument liegt vor."
+                              : "Dokument erforderlich – bitte hochladen."
+                            : "Kein Dokument notwendig."}
+                        </span>
+                        {photoSummary.documentUploadedAt ? (
+                          <span className="text-xs text-muted-foreground">
+                            Hochgeladen am {" "}
+                            {formatDate(photoSummary.documentUploadedAt)}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {EMPTY_VALUE_LABEL}
+                      </span>
+                    )}
+                  </SummaryField>
+
+                  {photoSummary?.rejectionReason ? (
+                    <SummaryField
+                      label="Hinweis"
+                      onClick={() => openEditor("freigaben")}
+                    >
+                      <span className="text-sm text-destructive">
+                        {photoSummary.rejectionReason}
+                      </span>
+                    </SummaryField>
+                  ) : null}
+
+                  {activeEditor === "freigaben" ? (
+                    <EditorPanel
+                      title="Freigaben & Fotoeinverständnis"
+                      description="Verwalte Einverständnisse und lade Dokumente hoch."
+                      onClose={closeEditor}
+                    >
+                      <PhotoConsentCard onSummaryChange={handlePhotoSummaryChange} />
+                    </EditorPanel>
+                  ) : null}
+                </TabsContent>
               </div>
-            </div>
-          </div>
+            </Tabs>
+          </section>
         </div>
       </div>
     </ProfileCompletionProvider>
