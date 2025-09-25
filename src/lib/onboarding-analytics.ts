@@ -17,6 +17,20 @@ export type OnboardingInviteSummary = {
   showId: string;
 };
 
+export type OnboardingInterestStat = { name: string; count: number };
+
+export type OnboardingRolePreferenceStat = {
+  code: string;
+  domain: RolePreferenceDomain;
+  averageWeight: number;
+  responses: number;
+};
+
+export type OnboardingShowAggregations = {
+  interests: OnboardingInterestStat[];
+  rolePreferences: OnboardingRolePreferenceStat[];
+};
+
 export type OnboardingShowSummary = {
   id: string;
   title: string | null;
@@ -35,7 +49,7 @@ export type OnboardingShowSummary = {
     exhausted: number;
     totalUsage: number;
   };
-};
+} & OnboardingShowAggregations;
 
 export type OnboardingTalentProfile = {
   id: string;
@@ -85,13 +99,14 @@ export type OnboardingAnalytics = {
     total: number;
     byFocus: Record<OnboardingFocus, number>;
   };
-  interests: { name: string; count: number }[];
-  rolePreferences: { code: string; domain: RolePreferenceDomain; averageWeight: number; responses: number }[];
+  interests: OnboardingInterestStat[];
+  rolePreferences: OnboardingRolePreferenceStat[];
   dietary: { level: AllergyLevel; count: number }[];
   minorsPendingDocuments: number;
   pendingPhotoConsents: number;
   shows: OnboardingShowSummary[];
   talentProfiles: OnboardingTalentProfile[];
+  showAggregations: Record<string, OnboardingShowAggregations>;
 };
 
 type ShowSummaryAccumulator = {
@@ -109,6 +124,11 @@ type ShowSummaryAccumulator = {
   focus: Record<OnboardingFocus, number>;
   pendingPhotoConsents: number;
   guardianDocumentsMissing: number;
+  interestCounts: Map<string, number>;
+  rolePreferenceTotals: Map<
+    string,
+    { domain: RolePreferenceDomain; code: string; total: number; responses: number }
+  >;
 };
 
 function ensureShowSummary(
@@ -125,6 +145,8 @@ function ensureShowSummary(
       focus: { acting: 0, tech: 0, both: 0 },
       pendingPhotoConsents: 0,
       guardianDocumentsMissing: 0,
+      interestCounts: new Map(),
+      rolePreferenceTotals: new Map(),
     } satisfies ShowSummaryAccumulator;
     map.set(show.id, summary);
   }
@@ -347,6 +369,23 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
         if (requiresGuardianDocument) {
           summary.guardianDocumentsMissing += 1;
         }
+        for (const interest of interestsForUser) {
+          summary.interestCounts.set(interest, (summary.interestCounts.get(interest) ?? 0) + 1);
+        }
+        for (const pref of preferences) {
+          const key = preferenceKey(pref.domain, pref.code);
+          if (!summary.rolePreferenceTotals.has(key)) {
+            summary.rolePreferenceTotals.set(key, {
+              domain: pref.domain,
+              code: pref.code,
+              total: 0,
+              responses: 0,
+            });
+          }
+          const bucket = summary.rolePreferenceTotals.get(key)!;
+          bucket.total += pref.weight;
+          bucket.responses += 1;
+        }
       }
 
       const inviteSummary: OnboardingInviteSummary | null = profile.invite
@@ -400,19 +439,47 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
       return bTime - aTime;
     });
 
+  const showAggregations = new Map<string, OnboardingShowAggregations>();
+
   const shows = Array.from(showSummaries.values())
-    .map((summary) => ({
-      id: summary.show.id,
-      title: summary.show.title,
-      year: summary.show.year,
-      onboardingCount: summary.onboardingCount,
-      completedCount: summary.completedCount,
-      openCount: Math.max(summary.onboardingCount - summary.completedCount, 0),
-      focus: { ...summary.focus },
-      pendingPhotoConsents: summary.pendingPhotoConsents,
-      guardianDocumentsMissing: summary.guardianDocumentsMissing,
-      invites: { ...summary.invites },
-    }))
+    .map((summary) => {
+      const interests = Array.from(summary.interestCounts.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "de-DE"));
+
+      const rolePreferences = Array.from(summary.rolePreferenceTotals.values())
+        .map((bucket) => ({
+          code: bucket.code,
+          domain: bucket.domain,
+          responses: bucket.responses,
+          averageWeight: bucket.responses
+            ? Math.round((bucket.total / bucket.responses) * 10) / 10
+            : 0,
+        }))
+        .sort((a, b) => b.averageWeight - a.averageWeight || a.code.localeCompare(b.code));
+
+      const aggregates: OnboardingShowAggregations = {
+        interests,
+        rolePreferences,
+      };
+
+      showAggregations.set(summary.show.id, aggregates);
+
+      return {
+        id: summary.show.id,
+        title: summary.show.title,
+        year: summary.show.year,
+        onboardingCount: summary.onboardingCount,
+        completedCount: summary.completedCount,
+        openCount: Math.max(summary.onboardingCount - summary.completedCount, 0),
+        focus: { ...summary.focus },
+        pendingPhotoConsents: summary.pendingPhotoConsents,
+        guardianDocumentsMissing: summary.guardianDocumentsMissing,
+        invites: { ...summary.invites },
+        interests,
+        rolePreferences,
+      } satisfies OnboardingShowSummary;
+    })
     .sort((a, b) => b.year - a.year || (a.title ?? "").localeCompare(b.title ?? "", "de-DE"));
 
   return {
@@ -426,6 +493,7 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
     pendingPhotoConsents,
     shows,
     talentProfiles,
+    showAggregations: Object.fromEntries(showAggregations.entries()),
   };
 }
 

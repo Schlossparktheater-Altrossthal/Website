@@ -5,6 +5,7 @@ import {
   collectOnboardingAnalytics,
   type OnboardingTalentProfile,
   type OnboardingShowSummary,
+  type OnboardingShowAggregations,
 } from "@/lib/onboarding-analytics";
 import { getMysteryScoreboard } from "@/lib/mystery-tips";
 import { hasPermission } from "@/lib/permissions";
@@ -17,6 +18,10 @@ const percentFormat = new Intl.NumberFormat("de-DE", {
   style: "percent",
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
+});
+const weightFormat = new Intl.NumberFormat("de-DE", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1,
 });
 const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 const dateTimeFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -171,6 +176,8 @@ export default async function OnboardingAnalyticsPage() {
                         <th className="px-3 py-2 text-left">Foto-EV offen</th>
                         <th className="px-3 py-2 text-left">Elternformulare</th>
                         <th className="px-3 py-2 text-left">Fokus</th>
+                        <th className="px-3 py-2 text-left">Top-Interessen</th>
+                        <th className="px-3 py-2 text-left">Top-Präferenzen</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/70">
@@ -194,6 +201,56 @@ export default async function OnboardingAnalyticsPage() {
                               <span>G: {numberFormat.format(show.focus.tech)}</span>
                               <span>H: {numberFormat.format(show.focus.both)}</span>
                             </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            {show.interests.length ? (
+                              <div className="flex flex-wrap gap-2">
+                                {show.interests.slice(0, 3).map((interest) => (
+                                  <Badge
+                                    key={`${show.id}-interest-${interest.name}`}
+                                    variant="muted"
+                                    className="justify-start"
+                                  >
+                                    <span>{interest.name}</span>
+                                    <span className="text-[10px] uppercase text-muted-foreground">
+                                      {numberFormat.format(interest.count)}
+                                    </span>
+                                  </Badge>
+                                ))}
+                                {show.interests.length > 3 ? (
+                                  <Badge variant="ghost" className="text-xs text-muted-foreground">
+                                    +{numberFormat.format(show.interests.length - 3)} weitere
+                                  </Badge>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Keine Angaben</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            {show.rolePreferences.length ? (
+                              <div className="flex flex-wrap gap-2">
+                                {show.rolePreferences.slice(0, 3).map((pref) => (
+                                  <Badge
+                                    key={`${show.id}-pref-${pref.code}`}
+                                    variant="outline"
+                                    className="justify-start"
+                                  >
+                                    <span className="font-medium">{humanizePreference(pref.code)}</span>
+                                    <span className="text-[10px] uppercase text-muted-foreground">
+                                      {pref.domain === "acting" ? "S" : "G"} · {weightFormat.format(pref.averageWeight)}
+                                    </span>
+                                  </Badge>
+                                ))}
+                                {show.rolePreferences.length > 3 ? (
+                                  <Badge variant="ghost" className="text-xs text-muted-foreground">
+                                    +{numberFormat.format(show.rolePreferences.length - 3)} weitere
+                                  </Badge>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Keine Angaben</span>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -390,7 +447,12 @@ export default async function OnboardingAnalyticsPage() {
 
                   <div className="space-y-4">
                     {profiles.map((profile) => (
-                      <TalentProfileCard key={profile.id} profile={profile} />
+                      <TalentProfileCard
+                        key={profile.id}
+                        profile={profile}
+                        showSummary={summary ?? undefined}
+                        showAggregations={profile.show ? analytics.showAggregations[profile.show.id] : undefined}
+                      />
                     ))}
                   </div>
                 </section>
@@ -403,7 +465,15 @@ export default async function OnboardingAnalyticsPage() {
   );
 }
 
-function TalentProfileCard({ profile }: { profile: OnboardingTalentProfile }) {
+function TalentProfileCard({
+  profile,
+  showSummary,
+  showAggregations,
+}: {
+  profile: OnboardingTalentProfile;
+  showSummary?: OnboardingShowSummary;
+  showAggregations?: OnboardingShowAggregations;
+}) {
   const name = profile.name ?? profile.email ?? "Unbekannte Person";
   const showLabel = formatShowTitle(profile.show);
   const completionLabel = profile.completedAt
@@ -423,6 +493,14 @@ function TalentProfileCard({ profile }: { profile: OnboardingTalentProfile }) {
       : null;
 
   const inviteExpiresAt = profile.invite?.expiresAt ? dateFormat.format(new Date(profile.invite.expiresAt)) : null;
+  const showTopInterests = showAggregations?.interests?.slice(0, 3) ?? showSummary?.interests?.slice(0, 3) ?? [];
+  const showTopPreferences =
+    showAggregations?.rolePreferences?.slice(0, 3) ?? showSummary?.rolePreferences?.slice(0, 3) ?? [];
+  const missingInterests = showTopInterests.filter((entry) => !profile.interests.includes(entry.name));
+  const missingPreferences = showTopPreferences.filter(
+    (entry) => !profile.preferences.some((pref) => pref.code === entry.code),
+  );
+  const hasShowDemand = showTopInterests.length > 0 || showTopPreferences.length > 0;
 
   return (
     <div className="rounded-lg border border-border/60 bg-background/60 p-4">
@@ -485,6 +563,80 @@ function TalentProfileCard({ profile }: { profile: OnboardingTalentProfile }) {
       {profile.notes && (
         <p className="mt-2 text-sm text-muted-foreground">Notizen: {profile.notes}</p>
       )}
+
+      {hasShowDemand ? (
+        <div className="mt-4 space-y-3 rounded-lg border border-dashed border-warning/40 bg-warning/5 p-3 text-xs md:text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-semibold uppercase text-muted-foreground">Abgleich mit Produktionsbedarf</p>
+            {missingInterests.length + missingPreferences.length > 0 ? (
+              <Badge variant="warning" className="uppercase tracking-wide">
+                {missingInterests.length + missingPreferences.length} offene Bedarfe
+              </Badge>
+            ) : (
+              <Badge variant="success" className="uppercase tracking-wide">
+                Bedarf abgedeckt
+              </Badge>
+            )}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <p className="font-medium text-muted-foreground">Top-Interessen der Produktion</p>
+              {showTopInterests.length ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {showTopInterests.map((entry) => {
+                    const matches = profile.interests.includes(entry.name);
+                    return (
+                      <Badge
+                        key={`${profile.id}-show-interest-${entry.name}`}
+                        variant={matches ? "success" : "outline"}
+                        className="justify-start"
+                      >
+                        <span>{entry.name}</span>
+                        <span className="text-[10px] uppercase text-muted-foreground">
+                          {numberFormat.format(entry.count)}
+                        </span>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-2 text-muted-foreground">Keine Interessen priorisiert.</p>
+              )}
+            </div>
+            <div>
+              <p className="font-medium text-muted-foreground">Top-Präferenzen der Produktion</p>
+              {showTopPreferences.length ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {showTopPreferences.map((entry) => {
+                    const matches = profile.preferences.some((pref) => pref.code === entry.code);
+                    return (
+                      <Badge
+                        key={`${profile.id}-show-pref-${entry.code}`}
+                        variant={matches ? "success" : "outline"}
+                        className="justify-start"
+                      >
+                        <span className="font-medium">{humanizePreference(entry.code)}</span>
+                        <span className="text-[10px] uppercase text-muted-foreground">
+                          {entry.domain === "acting" ? "S" : "G"} · {weightFormat.format(entry.averageWeight)}
+                        </span>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-2 text-muted-foreground">Keine Präferenzen priorisiert.</p>
+              )}
+            </div>
+          </div>
+          {missingInterests.length + missingPreferences.length > 0 ? (
+            <p className="text-xs text-warning">
+              Empfehlung: Mit der Produktion abstimmen, ob zusätzliche Interessen oder Rollenoptionen benötigt werden.
+            </p>
+          ) : (
+            <p className="text-xs text-success">Profil deckt die wichtigsten Produktionsbedarfe ab.</p>
+          )}
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div>
