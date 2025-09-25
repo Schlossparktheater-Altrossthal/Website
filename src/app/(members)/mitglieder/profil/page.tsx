@@ -56,8 +56,14 @@ export default async function ProfilePage() {
         dateOfBirth: true,
         onboardingProfile: {
           select: {
+            focus: true,
+            background: true,
+            backgroundClass: true,
+            notes: true,
+            memberSinceYear: true,
             dietaryPreference: true,
             dietaryPreferenceStrictness: true,
+            updatedAt: true,
           },
         },
         photoConsent: {
@@ -189,6 +195,14 @@ export default async function ProfilePage() {
         strictness: normalizedStrictness,
       }}
       allergies={allergies}
+      onboarding={{
+        focus: user.onboardingProfile?.focus ?? null,
+        background: user.onboardingProfile?.background?.trim() ?? null,
+        backgroundClass: user.onboardingProfile?.backgroundClass?.trim() ?? null,
+        notes: user.onboardingProfile?.notes?.trim() ?? null,
+        memberSinceYear: user.onboardingProfile?.memberSinceYear ?? null,
+        updatedAt: user.onboardingProfile?.updatedAt?.toISOString() ?? null,
+      }}
       photoConsent={photoSummary}
     />
   );
