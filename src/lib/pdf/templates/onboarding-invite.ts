@@ -109,17 +109,17 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       text: "#1f2937",
       textMuted: "#4b5563",
       textSoft: "#6b7280",
-      qrFrame: "#020617",
-      qrGlowOuter: "#1d4ed8",
-      qrGlowInner: "#38bdf8",
-      qrGradientStart: "#0f172a",
-      qrGradientEnd: "#1e293b",
-      qrModulePrimary: "#22d3ee",
-      qrModuleSecondary: "#38bdf8",
-      qrFinderOuter: "#7c3aed",
-      qrFinderInner: "#0ea5e9",
-      qrFinderCore: "#f8fafc",
-      qrFrameStroke: "#4f46e5",
+      qrFrame: "#0f172a",
+      qrGlowOuter: "#0b1120",
+      qrGlowInner: "#1e293b",
+      qrGradientStart: "#1f2937",
+      qrGradientEnd: "#0f172a",
+      qrModulePrimary: "#0f172a",
+      qrModuleSecondary: "#1e293b",
+      qrFinderOuter: "#312e81",
+      qrFinderInner: "#1d4ed8",
+      qrFinderCore: "#e2e8f0",
+      qrFrameStroke: "#4338ca",
     } as const;
 
     const title = data.headline ?? data.inviteLabel ?? "Dein Backstage-Start";
@@ -211,19 +211,36 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.moveDown(0.8);
     doc.font("Helvetica-Bold").fontSize(16).fillColor(palette.sunrise).text("Backstage-Check-in", { align: "center" });
 
-    doc.moveDown(0.4);
+    doc.moveDown(0.8);
     const qrData = QRCode.create(data.link, {
       errorCorrectionLevel: "H",
     });
     const qrModuleCount = qrData.modules.size;
     const qrQuietZone = 2;
-    const qrTargetSize = Math.min(availableWidth, 220);
+    const qrTargetSize = Math.min(availableWidth, 192);
     const qrModuleSize = qrTargetSize / (qrModuleCount + qrQuietZone * 2);
     const qrSize = qrModuleSize * (qrModuleCount + qrQuietZone * 2);
     const qrX = marginLeft + (availableWidth - qrSize) / 2;
     const qrY = doc.y;
     const qrContentX = qrX + qrQuietZone * qrModuleSize;
     const qrContentY = qrY + qrQuietZone * qrModuleSize;
+
+    const moduleRadius = Math.min(qrModuleSize * 0.45, 3.5);
+    const finderSize = 7;
+    const finderOffsets = [
+      { row: 0, col: 0 },
+      { row: 0, col: qrModuleCount - finderSize },
+      { row: qrModuleCount - finderSize, col: 0 },
+    ] as const;
+
+    const isFinderModule = (row: number, col: number) =>
+      finderOffsets.some(
+        (offset) =>
+          row >= offset.row &&
+          row < offset.row + finderSize &&
+          col >= offset.col &&
+          col < offset.col + finderSize,
+      );
 
     const qrFramePadding = 24;
     const qrFrameRadius = 30;
@@ -270,23 +287,66 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.roundedRect(qrX, qrY, qrSize, qrSize, 16).fill("#ffffff");
     doc.restore();
 
+    const moduleGradient = doc
+      .linearGradient(qrContentX, qrContentY, qrContentX + qrSize - qrQuietZone * qrModuleSize * 2, qrContentY + qrSize)
+      .stop(0, palette.qrGradientStart)
+      .stop(1, palette.qrGradientEnd);
+
     doc.save();
-    doc.fillColor(palette.qrModulePrimary);
     for (let row = 0; row < qrModuleCount; row += 1) {
       for (let col = 0; col < qrModuleCount; col += 1) {
-        if (!qrData.modules.get(row, col)) {
+        if (!qrData.modules.get(row, col) || isFinderModule(row, col)) {
           continue;
         }
 
         const moduleX = qrContentX + col * qrModuleSize;
         const moduleY = qrContentY + row * qrModuleSize;
 
-        doc.rect(moduleX, moduleY, qrModuleSize, qrModuleSize).fill();
+        doc.roundedRect(moduleX, moduleY, qrModuleSize, qrModuleSize, moduleRadius).fill(moduleGradient);
       }
     }
     doc.restore();
 
-    doc.y = qrY + qrSize + 24;
+    for (const offset of finderOffsets) {
+      const finderX = qrContentX + offset.col * qrModuleSize;
+      const finderY = qrContentY + offset.row * qrModuleSize;
+      const finderDimension = finderSize * qrModuleSize;
+      const finderInnerDimension = (finderSize - 2) * qrModuleSize;
+      const finderCoreDimension = (finderSize - 4) * qrModuleSize;
+
+      const finderGradient = doc
+        .linearGradient(finderX, finderY, finderX + finderDimension, finderY + finderDimension)
+        .stop(0, palette.qrFinderOuter)
+        .stop(1, palette.qrFinderInner);
+
+      doc
+        .roundedRect(finderX, finderY, finderDimension, finderDimension, moduleRadius * 2)
+        .fill(finderGradient);
+
+      doc
+        .roundedRect(
+          finderX + qrModuleSize,
+          finderY + qrModuleSize,
+          finderInnerDimension,
+          finderInnerDimension,
+          moduleRadius * 1.6,
+        )
+        .fillColor(palette.qrModuleSecondary)
+        .fill();
+
+      doc
+        .roundedRect(
+          finderX + qrModuleSize * 2,
+          finderY + qrModuleSize * 2,
+          finderCoreDimension,
+          finderCoreDimension,
+          moduleRadius,
+        )
+        .fillColor(palette.qrFinderCore)
+        .fill();
+    }
+
+    doc.y = qrY + qrSize + 28;
 
     doc.moveDown(0.9);
     doc.font("Helvetica-Bold").fontSize(14).fillColor(palette.text).text("Direkter Zugang", { align: "center" });
