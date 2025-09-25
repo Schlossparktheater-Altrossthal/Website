@@ -3,7 +3,6 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - dev
       - main
     paths:
       - '.github/workflows/docker-publish.yml'
@@ -41,7 +40,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - branch: dev
+          - branch: main
             environment: dev
             dockerfile: Dockerfile.dev
             build_args: |
@@ -49,7 +48,7 @@ jobs:
               GIT_COMMIT_SHA=${{ github.sha }}
             metadata_tags: |
               type=raw,value=dev
-          - branch: dev
+          - branch: main
             environment: prod
             dockerfile: Dockerfile.prod
             build_args: |
