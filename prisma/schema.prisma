@@ -268,6 +268,7 @@ model User {
   departmentMemberships  DepartmentMembership[]
   departmentTasksAssigned DepartmentTask[] @relation("DepartmentTaskAssignee")
   departmentTasksCreated  DepartmentTask[] @relation("DepartmentTaskCreator")
+  departmentEventsCreated DepartmentEvent[]
   characterCastings      CharacterCasting[]
   breakdownAssignments   SceneBreakdownItem[] @relation("BreakdownAssignee")
   inviteLinksCreated     MemberInvite[]       @relation("MemberInvitesCreated")
@@ -390,6 +391,7 @@ model Department {
   breakdownItems SceneBreakdownItem[]
   tasks        DepartmentTask[]
   permissions  DepartmentPermission[]
+  events       DepartmentEvent[]
 }
 
 model DepartmentMembership {
@@ -435,6 +437,23 @@ model DepartmentPermission {
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([departmentId, permissionId])
+}
+
+model DepartmentEvent {
+  id            String     @id @default(cuid())
+  departmentId  String
+  title         String
+  start         DateTime
+  end           DateTime?
+  location      String?
+  description   String?
+  createdById   String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy     User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([departmentId, start])
 }
 
 model Character {

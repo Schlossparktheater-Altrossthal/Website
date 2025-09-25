@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashOwnerSetupToken } from "@/lib/owner-setup";
 import { hashPassword } from "@/lib/password";
+import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
@@ -16,11 +17,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
-  const { token: tokenValue, email: emailValue, password: passwordValue, name: nameValue } = rawBody as {
+  const {
+    token: tokenValue,
+    email: emailValue,
+    password: passwordValue,
+    name: nameValue,
+    firstName: firstNameValue,
+    lastName: lastNameValue,
+  } = rawBody as {
     token?: unknown;
     email?: unknown;
     password?: unknown;
     name?: unknown;
+    firstName?: unknown;
+    lastName?: unknown;
   };
 
   if (typeof tokenValue !== "string" || !tokenValue.trim()) {
@@ -48,7 +58,43 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const name = typeof nameValue === "string" && nameValue.trim() ? nameValue.trim() : undefined;
+  let firstName: string | null = null;
+  if (firstNameValue !== undefined) {
+    if (typeof firstNameValue !== "string") {
+      return NextResponse.json({ error: "Vorname ist ungültig" }, { status: 400 });
+    }
+    firstName = trimToNull(firstNameValue);
+  }
+
+  let lastName: string | null = null;
+  if (lastNameValue !== undefined) {
+    if (typeof lastNameValue !== "string") {
+      return NextResponse.json({ error: "Nachname ist ungültig" }, { status: 400 });
+    }
+    lastName = trimToNull(lastNameValue);
+  }
+
+  let fallbackName: string | null = null;
+  if (nameValue !== undefined) {
+    if (typeof nameValue !== "string") {
+      return NextResponse.json({ error: "Name ist ungültig" }, { status: 400 });
+    }
+    fallbackName = trimToNull(nameValue);
+  }
+
+  if (!firstName && fallbackName) {
+    const split = splitFullName(fallbackName);
+    firstName = split.firstName;
+    if (!lastName) {
+      lastName = split.lastName;
+    }
+  }
+
+  if (!firstName) {
+    return NextResponse.json({ error: "Vorname ist erforderlich" }, { status: 400 });
+  }
+
+  const displayName = combineNameParts(firstName, lastName) ?? fallbackName ?? null;
 
   const tokenHash = hashOwnerSetupToken(tokenValue.trim());
 
@@ -83,14 +129,16 @@ export async function POST(request: NextRequest) {
       const created = await tx.user.create({
         data: {
           email,
-          name: name ?? null,
+          firstName,
+          lastName,
+          name: displayName,
           role: "owner",
           passwordHash,
           roles: {
             create: [{ role: "owner" }],
           },
         },
-        select: { id: true, email: true, name: true },
+        select: { id: true, email: true, name: true, firstName: true, lastName: true },
       });
 
       await tx.ownerSetupToken.deleteMany({ where: { id: { not: setupToken.id } } });

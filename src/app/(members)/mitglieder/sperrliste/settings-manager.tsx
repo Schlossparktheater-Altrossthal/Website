@@ -22,16 +22,16 @@ const CHECKED_AT_FORMATTER = new Intl.DateTimeFormat("de-DE", {
 
 const FREEZE_DAY_PRESETS = [0, 3, 5, 7, 10, 14, 21, 28, 30] as const;
 
+export type SperrlisteSettingsChangePayload = {
+  settings: ClientSperrlisteSettings;
+  holidays?: HolidayRange[];
+  defaults?: { holidaySourceUrl: string };
+};
+
 interface SperrlisteSettingsManagerProps {
   settings: ClientSperrlisteSettings;
   defaultHolidaySourceUrl: string;
-  onSettingsChange?: (
-    payload: {
-      settings: ClientSperrlisteSettings;
-      holidays?: HolidayRange[];
-      defaults?: { holidaySourceUrl: string };
-    },
-  ) => void;
+  onSettingsChange?: (payload: SperrlisteSettingsChangePayload) => void;
 }
 
 type ErrorState = {

@@ -162,6 +162,22 @@ export type DepartmentMembershipWithDepartment = Prisma.DepartmentMembershipGetP
             };
           };
         };
+        events: {
+          include: {
+            createdBy: {
+              select: {
+                id: true;
+                name: true;
+                email: true;
+                firstName: true;
+                lastName: true;
+              };
+            };
+          };
+          orderBy: {
+            start: "asc";
+          };
+        };
       };
     };
   };

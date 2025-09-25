@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -18,6 +18,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
@@ -33,6 +34,7 @@ import {
   type AssignmentFocus,
 } from "@/lib/members-navigation";
 import { cn } from "@/lib/utils";
+import { ChevronsUpDown } from "lucide-react";
 
 export type { AssignmentFocus } from "@/lib/members-navigation";
 
@@ -40,6 +42,186 @@ function isActive(pathname: string, href: string) {
   if (pathname === href) return true;
   if (href === "/mitglieder") return false;
   return pathname.startsWith(`${href}/`);
+}
+
+interface ProductionAction {
+  href: string;
+  label: string;
+  description?: string;
+}
+
+function MembersNavProductionSwitcher({
+  activeProduction,
+  activeProductionTitle,
+  isCollapsed,
+  currentPath,
+}: {
+  activeProduction?: ActiveProductionNavInfo;
+  activeProductionTitle: string | null;
+  isCollapsed: boolean;
+  currentPath: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLLIElement | null>(null);
+  const labelId = useId();
+  const menuId = `${labelId}-production-menu`;
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [currentPath]);
+
+  useEffect(() => {
+    if (isCollapsed) {
+      setIsOpen(false);
+    }
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | PointerEvent) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const productionBadge = activeProduction
+    ? String(activeProduction.year).slice(-2).padStart(2, "0")
+    : "–";
+
+  const primaryLabel = activeProductionTitle ?? "Produktion wählen";
+  const secondaryLabel = activeProduction
+    ? `Jahrgang ${activeProduction.year}`
+    : "In der Übersicht auswählen";
+
+  const actions = useMemo<ProductionAction[]>(() => {
+    const items: ProductionAction[] = [
+      {
+        href: "/mitglieder/produktionen",
+        label: activeProduction ? "Produktion wechseln" : "Produktion auswählen",
+        description: "Öffne die Produktionsübersicht und lege die aktive Saison fest.",
+      },
+    ];
+
+    if (activeProduction) {
+      items.push({
+        href: `/mitglieder/produktionen/${activeProduction.id}`,
+        label: "Aktive Produktion öffnen",
+        description: "Direkter Zugriff auf Rollen, Szenen und Aufgaben dieser Produktion.",
+      });
+    }
+
+    items.push({
+      href: "/mitglieder/produktionen#produktion-anlegen",
+      label: "Neue Produktion anlegen",
+      description: "Starte eine neue Saison und strukturiere Teams, Szenen und Zuständigkeiten.",
+    });
+
+    return items;
+  }, [activeProduction]);
+
+  return (
+    <SidebarGroup className={cn(!isCollapsed && "pt-[var(--space-2xs)]")}> 
+      <SidebarGroupContent>
+        <SidebarMenu>
+          <SidebarMenuItem ref={containerRef}>
+            <SidebarMenuButton
+              id={labelId}
+              size="lg"
+              aria-expanded={isOpen}
+              aria-controls={menuId}
+              onClick={() => setIsOpen((value) => !value)}
+              className={cn(
+                "h-auto items-center gap-[var(--space-2xs)] px-[var(--space-xs)] py-[var(--space-2xs)]",
+                isCollapsed && "justify-center px-0",
+              )}
+              tooltip={isCollapsed ? primaryLabel : undefined}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-sidebar-border/60 bg-sidebar/70 text-[13px] font-semibold uppercase text-sidebar-foreground/80">
+                {productionBadge}
+              </div>
+              {!isCollapsed && (
+                <div className="flex min-w-0 flex-1 flex-col text-left">
+                  <span className="truncate text-sm font-semibold leading-5 text-sidebar-foreground">
+                    {primaryLabel}
+                  </span>
+                  <span className="truncate text-xs text-sidebar-foreground/70">
+                    {secondaryLabel}
+                  </span>
+                </div>
+              )}
+              <ChevronsUpDown
+                className={cn(
+                  "ml-auto h-4 w-4 shrink-0 text-sidebar-foreground/60 transition-transform",
+                  isOpen && !isCollapsed && "rotate-180",
+                )}
+              />
+            </SidebarMenuButton>
+            {isOpen ? (
+              <div
+                id={menuId}
+                role="menu"
+                aria-labelledby={labelId}
+                className="absolute left-0 right-0 top-full z-50 mt-[var(--space-3xs)] rounded-lg border border-sidebar-border/60 bg-popover text-popover-foreground shadow-lg"
+              >
+                <div className="px-[var(--space-sm)] py-[var(--space-xs)]">
+                  <Text
+                    asChild
+                    variant="eyebrow"
+                    className="text-muted-foreground/80"
+                  >
+                    <span>Aktive Produktion</span>
+                  </Text>
+                  <p className="mt-1 text-sm font-semibold leading-5">
+                    {primaryLabel}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {activeProduction
+                      ? `Jahrgang ${activeProduction.year}`
+                      : "Wähle in der Übersicht eine aktive Produktion aus."}
+                  </p>
+                </div>
+                <Separator className="bg-sidebar-border/60" />
+                <ul className="flex flex-col gap-1 p-2">
+                  {actions.map((action) => (
+                    <li key={action.href}>
+                      <Link
+                        href={action.href}
+                        onClick={() => setIsOpen(false)}
+                        className="block rounded-md px-3 py-2 text-sm font-medium text-foreground transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      >
+                        <span className="block truncate">{action.label}</span>
+                        {action.description ? (
+                          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                            {action.description}
+                          </span>
+                        ) : null}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
 }
 
 export function MembersNav({
@@ -152,54 +334,12 @@ export function MembersNav({
           isCollapsed && "px-[var(--space-2xs)] py-[var(--space-sm)]",
         )}
       >
-        {!isCollapsed && (
-          <div className="px-[var(--space-xs)]">
-            <div className="rounded-lg border border-sidebar-border/60 bg-sidebar/70 p-[var(--space-sm)] shadow-sm">
-              <div className="flex items-start justify-between gap-[var(--space-xs)]">
-                <div>
-                  <Text variant="eyebrow" className="block text-sidebar-foreground/60">
-                    Aktive Produktion
-                  </Text>
-                  {activeProduction && activeProductionTitle ? (
-                    <>
-                      <Text
-                        asChild
-                        variant="small"
-                        weight="semibold"
-                        tone="primary"
-                        className="mt-[var(--space-3xs)] inline-flex max-w-full items-center gap-[var(--space-3xs)] rounded-full border border-primary/30 bg-primary/10 px-[var(--space-xs)] py-0.5 shadow-sm"
-                      >
-                        <span className="truncate">{activeProductionTitle}</span>
-                      </Text>
-                      <Text
-                        variant="caption"
-                        tone="muted"
-                        className="mt-0.5 block"
-                      >
-                        Jahrgang {activeProduction.year}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text
-                      variant="caption"
-                      className="mt-[var(--space-3xs)] block text-sidebar-foreground/70"
-                    >
-                      Noch keine Produktion ausgewählt. Wähle in der Übersicht eine aktive Produktion aus.
-                    </Text>
-                  )}
-                </div>
-                <Text
-                  asChild
-                  variant="caption"
-                  weight="medium"
-                  className="text-sidebar-foreground/80 transition hover:text-sidebar-foreground"
-                >
-                  <Link href="/mitglieder/produktionen">Übersicht öffnen</Link>
-                </Text>
-              </div>
-            </div>
-          </div>
-        )}
+        <MembersNavProductionSwitcher
+          activeProduction={activeProduction}
+          activeProductionTitle={activeProductionTitle}
+          isCollapsed={isCollapsed}
+          currentPath={pathname}
+        />
 
         {groups.length === 0 ? (
           <div className="mx-[var(--space-xs)] rounded-lg border border-dashed border-sidebar-border/60 bg-sidebar/40 p-[var(--space-xs)] text-sidebar-foreground/70">

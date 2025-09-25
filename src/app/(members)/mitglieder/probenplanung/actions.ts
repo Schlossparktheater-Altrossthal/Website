@@ -14,6 +14,12 @@ import {
   sendNotification,
 } from "@/lib/realtime/triggers";
 import {
+  DEFAULT_TIME_ZONE,
+  formatIsoDateInTimeZone,
+  formatIsoTimeInTimeZone,
+  parseDateTimeInTimeZone,
+} from "@/lib/date-time";
+import {
   computeRegistrationDeadline,
   registrationDeadlineOptionSchema,
   type RegistrationDeadlineOption,
@@ -21,11 +27,13 @@ import {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIME = /^\d{2}:\d{2}$/;
+const REHEARSAL_TIME_ZONE = DEFAULT_TIME_ZONE;
 
 const baseSchema = z.object({
   title: z.string().trim().min(3, "Titel ist zu kurz").max(120, "Titel ist zu lang"),
   date: z.string().regex(ISO_DATE, "Ungültiges Datum"),
   time: z.string().regex(ISO_TIME, "Ungültige Uhrzeit"),
+  endTime: z.string().regex(ISO_TIME, "Ungültige Uhrzeit").optional(),
   location: z.string().trim().min(2, "Ort ist zu kurz").max(120, "Ort ist zu lang").optional(),
   description: z.string().max(10_000).optional(),
   invitees: z.array(z.string().min(1)).optional(),
@@ -50,11 +58,30 @@ function sanitizeDescription(html?: string | null) {
 }
 
 function parseStart(date: string, time: string) {
-  const start = new Date(`${date}T${time}`);
-  if (Number.isNaN(start.getTime())) {
+  try {
+    return parseDateTimeInTimeZone(date, time, REHEARSAL_TIME_ZONE);
+  } catch (error) {
+    console.error("Failed to parse rehearsal start", error);
     throw new Error("Ungültige Kombination aus Datum und Uhrzeit.");
   }
-  return start;
+}
+
+function parseEnd(
+  date: string,
+  endTime: string,
+  start: Date,
+) {
+  let end: Date;
+  try {
+    end = parseDateTimeInTimeZone(date, endTime, REHEARSAL_TIME_ZONE);
+  } catch (error) {
+    console.error("Failed to parse rehearsal end", error);
+    throw new Error("Ungültige Endzeit.");
+  }
+  if (end.getTime() <= start.getTime()) {
+    throw new Error("Endzeit muss nach der Startzeit liegen.");
+  }
+  return end;
 }
 
 function computeEnd(start: Date, previousStart?: Date | null, previousEnd?: Date | null) {
@@ -149,6 +176,7 @@ export async function createRehearsalDraftAction(input?: {
   title?: string;
   date?: string;
   time?: string;
+  endTime?: string;
   location?: string;
 }) {
   const auth = await ensurePlanner();
@@ -163,14 +191,23 @@ export async function createRehearsalDraftAction(input?: {
 
   if (input?.date) {
     try {
-      const desired = parseStart(input.date, input.time ?? "19:00");
-      start = desired;
+      start = parseStart(input.date, input.time ?? "19:00");
     } catch (error) {
       console.warn("Invalid draft start provided", error);
     }
   }
 
-  const end = computeEnd(start);
+  let end = computeEnd(start);
+  if (input?.endTime) {
+    const dateForEnd = input.date
+      ? input.date
+      : formatIsoDateInTimeZone(start.toISOString(), REHEARSAL_TIME_ZONE);
+    try {
+      end = parseEnd(dateForEnd, input.endTime, start);
+    } catch (error) {
+      console.warn("Invalid draft end provided", error);
+    }
+  }
   const normalizedTitle = input?.title?.trim() || "Neue Probe";
   const normalizedLocation = input?.location?.trim() || "Noch offen";
 
@@ -212,7 +249,17 @@ export async function updateRehearsalDraftAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, location, description, invitees, registrationDeadlineOption } = parsed.data;
+  const {
+    id,
+    title,
+    date,
+    time,
+    endTime,
+    location,
+    description,
+    invitees,
+    registrationDeadlineOption,
+  } = parsed.data;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -241,12 +288,28 @@ export async function updateRehearsalDraftAction(input: {
 
       let nextStart = existing.start;
 
+      const currentDate = formatIsoDateInTimeZone(
+        existing.start.toISOString(),
+        REHEARSAL_TIME_ZONE,
+      );
+      const currentTime = formatIsoTimeInTimeZone(
+        existing.start.toISOString(),
+        REHEARSAL_TIME_ZONE,
+      );
+
       if (date || time) {
-        const currentDate = existing.start.toISOString().slice(0, 10);
-        const currentTime = existing.start.toISOString().slice(11, 16);
-        nextStart = parseStart(date ?? currentDate, time ?? currentTime);
-        const nextEnd = computeEnd(nextStart, existing.start, existing.end);
+        const targetDate = date ?? currentDate;
+        const targetTime = time ?? currentTime;
+        nextStart = parseStart(targetDate, targetTime);
         updateData.start = nextStart;
+      }
+
+      if (endTime !== undefined) {
+        const targetDateForEnd = date ?? currentDate;
+        const parsedEnd = parseEnd(targetDateForEnd, endTime, nextStart);
+        updateData.end = parsedEnd;
+      } else if (date || time) {
+        const nextEnd = computeEnd(nextStart, existing.start, existing.end);
         updateData.end = nextEnd;
       }
 
@@ -274,6 +337,15 @@ export async function updateRehearsalDraftAction(input: {
     if (error instanceof Error && error.message === "not-draft") {
       return { error: "Der Entwurf wurde bereits veröffentlicht." } as const;
     }
+    if (error instanceof Error && error.message === "Endzeit muss nach der Startzeit liegen.") {
+      return { error: error.message } as const;
+    }
+    if (error instanceof Error && error.message === "Ungültige Endzeit.") {
+      return { error: error.message } as const;
+    }
+    if (error instanceof Error && error.message === "Ungültige Kombination aus Datum und Uhrzeit.") {
+      return { error: error.message } as const;
+    }
     console.error("Error updating rehearsal draft", error);
     return { error: "Der Entwurf konnte nicht gespeichert werden." } as const;
   }
@@ -283,6 +355,7 @@ export async function publishRehearsalAction(input: {
   title: string;
   date: string;
   time: string;
+  endTime?: string;
   location?: string;
   description?: string;
   invitees?: string[];
@@ -298,7 +371,17 @@ export async function publishRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, location, description, invitees, registrationDeadlineOption } = parsed.data;
+  const {
+    id,
+    title,
+    date,
+    time,
+    endTime,
+    location,
+    description,
+    invitees,
+    registrationDeadlineOption,
+  } = parsed.data;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -314,7 +397,9 @@ export async function publishRehearsalAction(input: {
       }
 
       const start = parseStart(date, time);
-      const end = computeEnd(start, existing.start, existing.end);
+      const end = endTime
+        ? parseEnd(date, endTime, start)
+        : computeEnd(start, existing.start, existing.end);
       const normalizedLocation = location?.trim() ? location.trim() : "Noch offen";
       const safeDescription = sanitizeDescription(description);
 
@@ -324,7 +409,11 @@ export async function publishRehearsalAction(input: {
 
       const syncedInvitees = await syncInvitees(tx, id, inviteeIds);
       const roles = await collectInviteeRoles(tx, syncedInvitees);
-      const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
+      const formatter = new Intl.DateTimeFormat("de-DE", {
+        dateStyle: "full",
+        timeStyle: "short",
+        timeZone: REHEARSAL_TIME_ZONE,
+      });
       const notificationBody = `Am ${formatter.format(start)}`;
 
       const rehearsal = await tx.rehearsal.update({
@@ -342,6 +431,10 @@ export async function publishRehearsalAction(input: {
         },
         select: { id: true, title: true, start: true, end: true, location: true },
       });
+
+      if (!rehearsal.end) {
+        throw new Error("missing-end");
+      }
 
       if (syncedInvitees.length) {
         await tx.notification.create({
@@ -398,6 +491,15 @@ export async function publishRehearsalAction(input: {
     if (error instanceof Error && error.message === "not-draft") {
       return { error: "Die Probe wurde bereits veröffentlicht." } as const;
     }
+    if (error instanceof Error && error.message === "missing-end") {
+      return { error: "Die Probe konnte keine Endzeit speichern." } as const;
+    }
+    if (error instanceof Error && error.message === "Endzeit muss nach der Startzeit liegen.") {
+      return { error: error.message } as const;
+    }
+    if (error instanceof Error && error.message === "Ungültige Endzeit.") {
+      return { error: error.message } as const;
+    }
     console.error("Error publishing rehearsal", error);
     return { error: "Die Probe konnte nicht veröffentlicht werden." } as const;
   }
@@ -429,6 +531,7 @@ export async function createRehearsalAction(input: {
   title: string;
   date: string;
   time: string;
+  endTime?: string;
   location?: string;
   description?: string;
   invitees?: string[];
@@ -444,9 +547,18 @@ export async function createRehearsalAction(input: {
     return { error: "Bitte Titel, Datum und Uhrzeit prüfen." } as const;
   }
 
-  const { title, date, time, location, description, invitees, registrationDeadlineOption } = parsed.data;
+  const {
+    title,
+    date,
+    time,
+    endTime,
+    location,
+    description,
+    invitees,
+    registrationDeadlineOption,
+  } = parsed.data;
   const start = parseStart(date, time);
-  const end = computeEnd(start);
+  const end = endTime ? parseEnd(date, endTime, start) : computeEnd(start);
   const normalizedLocation = location?.trim() ? location.trim() : "Noch offen";
   const safeDescription = sanitizeDescription(description);
 
@@ -461,7 +573,11 @@ export async function createRehearsalAction(input: {
   try {
     const result = await prisma.$transaction(async (tx) => {
       const roles = await collectInviteeRoles(tx, inviteeIds);
-      const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
+      const formatter = new Intl.DateTimeFormat("de-DE", {
+        dateStyle: "full",
+        timeStyle: "short",
+        timeZone: REHEARSAL_TIME_ZONE,
+      });
       const body = `Am ${formatter.format(start)}`;
 
       const rehearsal = await tx.rehearsal.create({
@@ -527,6 +643,12 @@ export async function createRehearsalAction(input: {
 
     return { success: true as const, id: rehearsal.id };
   } catch (error) {
+    if (error instanceof Error && error.message === "Endzeit muss nach der Startzeit liegen.") {
+      return { error: error.message } as const;
+    }
+    if (error instanceof Error && error.message === "Ungültige Endzeit.") {
+      return { error: error.message } as const;
+    }
     console.error("Error creating rehearsal", error);
     return { error: "Die Probe konnte nicht gespeichert werden." } as const;
   }
@@ -537,6 +659,7 @@ export async function updateRehearsalAction(input: {
   title: string;
   date: string;
   time: string;
+  endTime?: string;
   location?: string;
   description?: string;
   invitees?: string[];
@@ -552,7 +675,17 @@ export async function updateRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, location, description, invitees, registrationDeadlineOption } = parsed.data;
+  const {
+    id,
+    title,
+    date,
+    time,
+    endTime,
+    location,
+    description,
+    invitees,
+    registrationDeadlineOption,
+  } = parsed.data;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -573,7 +706,9 @@ export async function updateRehearsalAction(input: {
       }
 
       const start = parseStart(date, time);
-      const end = computeEnd(start, existing.start, existing.end);
+      const end = endTime
+        ? parseEnd(date, endTime, start)
+        : computeEnd(start, existing.start, existing.end);
       const normalizedLocation = location?.trim()
         ? location.trim()
         : existing.location ?? "Noch offen";
@@ -628,7 +763,11 @@ export async function updateRehearsalAction(input: {
     });
 
     const { rehearsal, targetInvitees, previous, descriptionChanged } = result;
-    const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
+    const formatter = new Intl.DateTimeFormat("de-DE", {
+      dateStyle: "full",
+      timeStyle: "short",
+      timeZone: REHEARSAL_TIME_ZONE,
+    });
     const updatedTitle = `Probe aktualisiert: ${rehearsal.title}`;
 
     const updates: string[] = [];
@@ -647,6 +786,20 @@ export async function updateRehearsalAction(input: {
     const newLocation = rehearsal.location?.trim() || "Noch offen";
     if (previousLocation !== newLocation) {
       updates.push(`Ort: ${previousLocation} → ${newLocation}`);
+    }
+
+    const previousEnd = previous.end;
+    const newEnd = rehearsal.end;
+    const previousEndMs = previousEnd?.getTime();
+    const newEndMs = newEnd?.getTime();
+    if ((previousEndMs ?? null) !== (newEndMs ?? null)) {
+      if (previousEnd && newEnd) {
+        updates.push(`Ende: ${formatter.format(previousEnd)} → ${formatter.format(newEnd)}`);
+      } else if (!previousEnd && newEnd) {
+        updates.push(`Neue Endzeit: ${formatter.format(newEnd)}`);
+      } else if (previousEnd && !newEnd) {
+        updates.push("Endzeit entfernt.");
+      }
     }
 
     if (descriptionChanged) {
@@ -691,7 +844,7 @@ export async function updateRehearsalAction(input: {
         changes: {
           title: rehearsal.title,
           start: rehearsal.start.toISOString(),
-          end: rehearsal.end.toISOString(),
+          end: rehearsal.end ? rehearsal.end.toISOString() : undefined,
           location: rehearsal.location ?? undefined,
         },
         targetUserIds: targetInvitees,
@@ -718,6 +871,12 @@ export async function updateRehearsalAction(input: {
   } catch (error) {
     if (error instanceof Error && error.message === "not-found") {
       return { error: "Die Probe konnte nicht aktualisiert werden." } as const;
+    }
+    if (error instanceof Error && error.message === "Endzeit muss nach der Startzeit liegen.") {
+      return { error: error.message } as const;
+    }
+    if (error instanceof Error && error.message === "Ungültige Endzeit.") {
+      return { error: error.message } as const;
     }
     console.error("Error updating rehearsal", error);
     return { error: "Die Probe konnte nicht aktualisiert werden." } as const;

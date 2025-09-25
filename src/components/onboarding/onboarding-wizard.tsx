@@ -1795,7 +1795,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Allesesser:in ist vorausgewählt. Wähle eine andere Option, wenn du besondere Ernährungsweisen hast.
+                    Allesesser ist vorausgewählt. Wähle eine andere Option, wenn du besondere Ernährungsweisen hast.
                   </p>
                 </div>
                 <div className="space-y-2 text-sm">
@@ -1804,7 +1804,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     <div className="space-y-1 rounded-lg border border-border/50 bg-background px-3 py-2">
                       <p className="text-sm font-medium text-foreground">Nicht relevant</p>
                       <p className="text-xs text-muted-foreground">
-                        Für Allesesser:innen planen wir flexibel. Melde dich einfach beim Team, falls es besondere Wünsche gibt.
+                        Für Allesesser planen wir flexibel. Melde dich einfach beim Team, falls es besondere Wünsche gibt.
                       </p>
                     </div>
                   ) : (

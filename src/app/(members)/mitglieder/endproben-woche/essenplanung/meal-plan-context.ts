@@ -26,8 +26,8 @@ export const STYLE_BADGE_VARIANTS: Record<DietaryStyleOption, string> = {
 };
 
 export const STYLE_LABELS: Record<DietaryStyleOption, string> = {
-  none: "Allesesser:in",
-  omnivore: "Allesesser:in",
+  none: "Allesesser",
+  omnivore: "Allesesser",
   vegetarian: "Vegetarisch",
   vegan: "Vegan",
   pescetarian: "Pescetarisch",

@@ -301,8 +301,18 @@ export default async function AboutPage() {
       </div>
 
       <section className="layout-container pb-12 pt-16 sm:pt-24">
+<<<<<<< HEAD
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
+=======
+<<<<<<< HEAD
+        <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
+          <div className="mx-auto max-w-3xl">
+=======
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-3xl">
+>>>>>>> 9131132 (Adjust Über uns layout and add carousel animation)
+>>>>>>> main
             <Text variant="eyebrow" uppercase tone="primary">
               Sommertheater Altrossthal
             </Text>
@@ -344,14 +354,75 @@ export default async function AboutPage() {
       </section>
 
       <section className="layout-container pb-16 sm:pb-24">
+<<<<<<< HEAD
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
+=======
+<<<<<<< HEAD
+        <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
+          <div className="mx-auto max-w-3xl">
+=======
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-3xl">
+>>>>>>> 9131132 (Adjust Über uns layout and add carousel animation)
+>>>>>>> main
             <Heading level="h2">Gewerke, die eine Produktion tragen</Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
               Jeder Sommer entsteht aus vielen Händen und Talenten. Unser Ensemble arbeitet bereichsübergreifend – von der ersten Textprobe bis zur letzten
               Vorstellungsnacht.
+<<<<<<< HEAD
             </Text>
             <Text tone="muted" className="mt-2">
+=======
+<<<<<<< HEAD
+            </Text>
+            <Text tone="muted" className="mt-2">
+              Scroll durch die Werkstätten und entdecke, wie vielfältig Theaterarbeit am BSZ Altroßthal ist.
+            </Text>
+          </div>
+          <div className="group relative mt-8 pb-6">
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background via-background/80 to-transparent"
+              aria-hidden
+            />
+            <div className="overflow-hidden pr-6">
+              <div
+                className="flex w-max gap-6 animate-trades-carousel focus-visible:[animation-play-state:paused] group-hover:[animation-play-state:paused]"
+                role="list"
+                aria-label="Gewerke des Ensembles"
+                tabIndex={0}
+              >
+                {Array.from({ length: 2 }).map((_, loopIndex) =>
+                  trades.map(({ icon: Icon, title, focus, description }) => (
+                    <Card
+                      key={`${title}-${loopIndex}`}
+                      role="listitem"
+                      aria-hidden={loopIndex > 0 ? true : undefined}
+                      className="flex w-[min(22rem,80vw)] shrink-0 snap-start flex-col justify-between gap-4 rounded-2xl border-border/40 bg-card/70 p-6 shadow-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+                          <Icon className="h-6 w-6" aria-hidden />
+                        </div>
+                        <Heading level="h3" className="text-xl" weight="bold">
+                          {title}
+                        </Heading>
+                      </div>
+                      <div className="space-y-3">
+                        <Text variant="small" className="font-medium text-primary">
+                          {focus}
+                        </Text>
+                        <Text variant="small" tone="muted">
+                          {description}
+                        </Text>
+                      </div>
+                    </Card>
+                  )),
+                )}
+=======
+            </Text>
+            <Text tone="muted" className="mt-2">
+>>>>>>> main
               Lass das Karussell auf dich wirken oder halte es an, indem du mit der Maus über die Karten fährst.
             </Text>
           </div>
@@ -453,6 +524,7 @@ export default async function AboutPage() {
                   Jedes Szenenbild wird speziell für den Schlosspark entwickelt. Lichtinstallationen und räumlicher Klang lassen die Besucher:innen mitten in der
                   Geschichte stehen.
                 </Text>
+<<<<<<< HEAD
               </div>
             </div>
           </div>
@@ -483,10 +555,28 @@ export default async function AboutPage() {
               </Card>
             ))}
           </div>
+=======
+>>>>>>> 9131132 (Adjust Über uns layout and add carousel animation)
+              </div>
+            </div>
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background via-background/80 to-transparent"
+              aria-hidden
+            />
+          </div>
+<<<<<<< HEAD
+          <Text variant="small" tone="muted" className="mt-4">
+            Tipp: Die Gewerke bewegen sich automatisch durch das Karussell. Bewege die Maus darüber oder fokussiere die Liste, um
+            die Bewegung zu pausieren.
+          </Text>
+=======
+>>>>>>> 9131132 (Adjust Über uns layout and add carousel animation)
+>>>>>>> main
         </div>
       </section>
 
       <section className="layout-container pb-16 sm:pb-24">
+<<<<<<< HEAD
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-2">
             <div>
@@ -512,13 +602,176 @@ export default async function AboutPage() {
                     </li>
                   ))}
                 </ul>
+=======
+<<<<<<< HEAD
+        <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
+          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div className="space-y-6">
+              <Heading level="h2">Unsere Handschrift</Heading>
+              <Text variant="bodyLg" tone="muted">
+                Die Sommerproduktionen entstehen über Monate hinweg – von der ersten Idee bis zur letzten Generalprobe. Dabei verbinden wir poetische Stoffe mit
+                immersiven Erlebnissen, die nur unter freiem Himmel möglich sind. Werkstätten für Floristik, Holz- und Metallgestaltung sowie Maskenbild des
+                Berufsschulzentrums fließen direkt in Bühnenwelten ein.
+              </Text>
+              <div className="space-y-5">
+                {signature.map(({ icon: Icon, title, description }) => (
+                  <div
+                    key={title}
+                    className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
+                  >
+                    <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                      <Icon className="h-6 w-6" aria-hidden />
+                    </div>
+                    <div>
+                      <Heading level="h4" className="text-lg" weight="bold">
+                        {title}
+                      </Heading>
+                      <Text variant="small" tone="muted" className="mt-1">
+                        {description}
+                      </Text>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-primary/10 via-background to-background p-8 shadow-lg">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,223,150,0.18),_transparent_60%)]" aria-hidden />
+              <div className="relative space-y-4">
+                <Text variant="eyebrow" uppercase tone="primary">
+                  Atmosphäre
+                </Text>
+                <Heading level="h3" className="text-2xl">
+                  Wenn die Sonne hinter den Baumwipfeln verschwindet, beginnt unser Bühnenraum zu leben: leuchtende Pfade, flüsternde Bäume und ein Ensemble, das
+                  das Publikum mitnimmt in eine andere Welt.
+                </Heading>
+                <Text variant="small" tone="muted">
+                  Jedes Szenenbild wird speziell für den Schlosspark entwickelt. Lichtinstallationen und räumlicher Klang lassen die Besucher:innen mitten in der
+                  Geschichte stehen.
+                </Text>
+              </div>
+            </div>
+=======
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-2xl">
+            <Heading level="h2">Werte, die wir leben</Heading>
+            <Text variant="bodyLg" tone="muted" className="mt-4">
+              Ensemblearbeit bedeutet Vertrauen. Unsere Werte spiegeln sich in jeder Probe, jedem Ehrenamt und jedem Gast wider, der den Weg nach Altrossthal findet.
+            </Text>
+          </div>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {values.map(({ icon: Icon, title, description }) => (
+              <Card key={title} className="relative overflow-hidden bg-card/70">
+                <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
+                <CardHeader>
+                  <Icon className="h-8 w-8 text-primary" aria-hidden />
+                </CardHeader>
+                <CardContent>
+                  <CardTitle className="text-xl">{title}</CardTitle>
+                  <Text variant="small" tone="muted" className="mt-2">
+                    {description}
+                  </Text>
+                </CardContent>
+              </Card>
+            ))}
+>>>>>>> 9131132 (Adjust Über uns layout and add carousel animation)
+>>>>>>> main
+          </div>
+        </div>
+      </div>
+      </section>
+
+      <section className="layout-container pb-16 sm:pb-24">
+<<<<<<< HEAD
+        <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
+          <div className="mx-auto max-w-2xl">
+            <Heading level="h2">Werte, die wir leben</Heading>
+            <Text variant="bodyLg" tone="muted" className="mt-4">
+              Ensemblearbeit bedeutet Vertrauen. Unsere Werte spiegeln sich in jeder Probe, jedem Ehrenamt und jedem Gast wider, der den Weg nach Altrossthal findet.
+            </Text>
+          </div>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {values.map(({ icon: Icon, title, description }) => (
+              <Card key={title} className="relative overflow-hidden bg-card/70">
+                <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
+                <CardHeader>
+                  <Icon className="h-8 w-8 text-primary" aria-hidden />
+                </CardHeader>
+                <CardContent>
+                  <CardTitle className="text-xl">{title}</CardTitle>
+                  <Text variant="small" tone="muted" className="mt-2">
+                    {description}
+                  </Text>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="layout-container pb-16 sm:pb-24">
+        <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
+=======
+        <div className="mx-auto max-w-6xl">
+>>>>>>> 9131132 (Adjust Über uns layout and add carousel animation)
+          <div className="grid gap-10 lg:grid-cols-2">
+            <div>
+              <Heading level="h2">Meilensteine</Heading>
+              <Text variant="bodyLg" tone="muted" className="mt-4">
+                Wir wachsen organisch und mit viel Leidenschaft. Ein paar Stationen auf unserem Weg:
+              </Text>
+            </div>
+            <div className="relative">
+              <div className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" aria-hidden />
+<<<<<<< HEAD
+              <ul className="space-y-8">
+                {milestones.map((milestone) => (
+                  <li key={milestone.year} className="relative pl-12">
+                    <div className="absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-primary/20 text-primary">
+                      <span className="text-xs font-semibold">{milestone.year}</span>
+                    </div>
+                    <Heading level="h4" className="text-lg" weight="bold">
+                      {milestone.title}
+                    </Heading>
+                    <Text variant="small" tone="muted" className="mt-2">
+                      {milestone.description}
+                    </Text>
+                  </li>
+                ))}
+              </ul>
+            </div>
+=======
+                <ul className="space-y-8">
+                  {milestones.map((milestone) => (
+                    <li key={milestone.year} className="relative pl-12">
+                      <div className="absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-primary/20 text-primary">
+                        <span className="text-xs font-semibold">{milestone.year}</span>
+                      </div>
+                      <Heading level="h4" className="text-lg" weight="bold">
+                        {milestone.title}
+                      </Heading>
+                      <Text variant="small" tone="muted" className="mt-2">
+                        {milestone.description}
+                      </Text>
+                    </li>
+                  ))}
+                </ul>
+>>>>>>> 9131132 (Adjust Über uns layout and add carousel animation)
           </div>
         </div>
       </div>
       </section>
 
       <section className="layout-container pb-20 sm:pb-28">
+<<<<<<< HEAD
         <div className="mx-auto max-w-6xl">
+=======
+<<<<<<< HEAD
+        <div className="mx-auto w-full max-w-[var(--layout-max-width)]">
+=======
+        <div className="mx-auto max-w-6xl">
+>>>>>>> 9131132 (Adjust Über uns layout and add carousel animation)
+>>>>>>> main
           <div className="rounded-3xl border border-border/40 bg-card/60 p-8 sm:p-12">
             <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
               <div className="space-y-5">
