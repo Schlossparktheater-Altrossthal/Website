@@ -1,10 +1,8 @@
 services:
   auto-deploy:
-    build:
-      context: .
-      dockerfile: deploy-service/Dockerfile
     image: ${AUTO_DEPLOY_IMAGE:-limitlessgreen/theater_autodeploy:latest}
-    restart: unless-stopped
+    pull_policy: ${AUTO_DEPLOY_PULL_POLICY:-always}
+    restart: ${AUTO_DEPLOY_RESTART_POLICY:-unless-stopped}
     environment:
       GIT_REMOTE_URL: ${AUTO_DEPLOY_GIT_REMOTE_URL:?set AUTO_DEPLOY_GIT_REMOTE_URL}
       GITHUB_WEBHOOK_SECRET: ${AUTO_DEPLOY_WEBHOOK_SECRET:?set AUTO_DEPLOY_WEBHOOK_SECRET}
@@ -15,29 +13,31 @@ services:
       LISTEN_PORT: ${AUTO_DEPLOY_LISTEN_PORT:-3000}
       WEBHOOK_PATH: ${AUTO_DEPLOY_WEBHOOK_PATH:-/webhook}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${AUTO_DEPLOY_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - auto-deploy-repo:/opt/worktree
     ports:
       - "${AUTO_DEPLOY_WEBHOOK_PORT:-9000}:${AUTO_DEPLOY_LISTEN_PORT:-3000}"
     networks:
-      - proxy
+      - auto-deploy-proxy
     labels:
-      traefik.enable: "true"
-      traefik.http.routers.auto-deploy-http.entrypoints: web
+      traefik.enable: "${AUTO_DEPLOY_TRAEFIK_ENABLED:-true}"
+      traefik.http.routers.auto-deploy-http.entrypoints: ${AUTO_DEPLOY_TRAEFIK_HTTP_ENTRYPOINTS:-web}
       traefik.http.routers.auto-deploy-http.rule: Host(`${AUTO_DEPLOY_HOST:?set AUTO_DEPLOY_HOST}`)
-      traefik.http.routers.auto-deploy-http.middlewares: auto-deploy-https-redirect
-      traefik.http.routers.auto-deploy-http.service: auto-deploy
-      traefik.http.middlewares.auto-deploy-https-redirect.redirectscheme.scheme: https
+      traefik.http.routers.auto-deploy-http.middlewares: ${AUTO_DEPLOY_TRAEFIK_HTTP_MIDDLEWARES:-auto-deploy-https-redirect}
+      traefik.http.routers.auto-deploy-http.service: ${AUTO_DEPLOY_TRAEFIK_HTTP_SERVICE:-auto-deploy}
+      traefik.http.middlewares.auto-deploy-https-redirect.redirectscheme.scheme: ${AUTO_DEPLOY_TRAEFIK_REDIRECT_SCHEME:-https}
       traefik.http.routers.auto-deploy.entrypoints: ${AUTO_DEPLOY_TRAEFIK_ENTRYPOINTS:-websecure}
       traefik.http.routers.auto-deploy.rule: Host(`${AUTO_DEPLOY_HOST:?set AUTO_DEPLOY_HOST}`)
-      traefik.http.routers.auto-deploy.tls: "true"
+      traefik.http.routers.auto-deploy.tls: "${AUTO_DEPLOY_TRAEFIK_TLS_ENABLED:-true}"
       traefik.http.routers.auto-deploy.tls.certresolver: ${AUTO_DEPLOY_TRAEFIK_CERT_RESOLVER:-myresolver}
-      traefik.http.routers.auto-deploy.service: auto-deploy
+      traefik.http.routers.auto-deploy.service: ${AUTO_DEPLOY_TRAEFIK_SERVICE:-auto-deploy}
       traefik.http.services.auto-deploy.loadbalancer.server.port: ${AUTO_DEPLOY_LISTEN_PORT:-3000}
-      traefik.docker.network: proxy
+      traefik.docker.network: ${AUTO_DEPLOY_TRAEFIK_NETWORK:-proxy}
 
 volumes:
   auto-deploy-repo:
+    name: ${AUTO_DEPLOY_WORKTREE_VOLUME:-auto-deploy-repo}
 networks:
-  proxy:
+  auto-deploy-proxy:
     external: true
+    name: ${AUTO_DEPLOY_NETWORK:-proxy}
