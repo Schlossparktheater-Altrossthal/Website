@@ -183,6 +183,12 @@ arrives for the configured branch.
      service name instead of the dev/prod default.
    - `AUTO_DEPLOY_WEBHOOK_SECRET` – shared secret for the GitHub webhook
      signature.
+   - `AUTO_DEPLOY_GIT_HTTP_TOKEN` or the combination of
+     `AUTO_DEPLOY_GIT_HTTP_USERNAME`/`AUTO_DEPLOY_GIT_HTTP_PASSWORD` – optional
+     HTTPS credentials for private repositories.
+   - `AUTO_DEPLOY_GIT_SSH_PRIVATE_KEY` (plus
+     `AUTO_DEPLOY_GIT_SSH_KNOWN_HOSTS`) – optional SSH credentials for private
+     repositories.
 5. Start the service: `docker compose -f docker-compose.autodeploy.yml up -d`.
 6. Register a new GitHub webhook that points to
    `https://<host>:${AUTO_DEPLOY_WEBHOOK_PORT}${AUTO_DEPLOY_WEBHOOK_PATH}` and
