@@ -293,6 +293,7 @@ export async function POST(request: NextRequest) {
   }
 
   const invite = redemption.invite;
+  const whatsappLinkVisitedAt = redemption.whatsappLinkVisitedAt ?? null;
   if (!isInviteUsable(invite)) {
     return NextResponse.json({ error: "Dieser Einladungslink ist nicht mehr gültig" }, { status: 400 });
   }
@@ -404,6 +405,7 @@ export async function POST(request: NextRequest) {
           memberSinceYear: memberSinceYear ?? undefined,
           dietaryPreference: dietaryStyleDisplay,
           dietaryPreferenceStrictness: dietaryStrictnessDisplay,
+          whatsappLinkVisitedAt: whatsappLinkVisitedAt ?? undefined,
         },
       });
 

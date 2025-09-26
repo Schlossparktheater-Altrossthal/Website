@@ -74,6 +74,7 @@ interface OnboardingOverview {
   backgroundClass: string | null;
   notes: string | null;
   whatsappLink: string | null;
+  whatsappLinkVisitedAt: Date | null;
   stats: {
     acting: OnboardingDomainStats;
     crew: OnboardingDomainStats;
@@ -406,6 +407,7 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
     typeof value.whatsappLink === "string" && value.whatsappLink.trim()
       ? value.whatsappLink.trim()
       : null;
+  const whatsappLinkVisitedAt = parseIsoDate(value.whatsappLinkVisitedAt);
 
   return {
     completed,
@@ -415,6 +417,7 @@ function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
     backgroundClass,
     notes,
     whatsappLink,
+    whatsappLinkVisitedAt,
     stats: {
       acting: actingStats,
       crew: crewStats,
@@ -571,6 +574,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   const [onboarding, setOnboarding] = useState<OnboardingOverview | null>(null);
   const [onboardingLoaded, setOnboardingLoaded] = useState(false);
   const [whatsappDismissed, setWhatsappDismissed] = useState(false);
+  const [whatsappVisitPending, setWhatsappVisitPending] = useState(false);
   const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(null);
   const [profileCompletion, setProfileCompletion] = useState<
     { complete: boolean; completed: number; total: number } | null
@@ -587,6 +591,53 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   useEffect(() => {
     setWhatsappDismissed(false);
   }, [onboarding?.whatsappLink]);
+
+  const showWhatsAppCallout = Boolean(
+    onboarding?.whatsappLink && !onboarding.whatsappLinkVisitedAt && !whatsappDismissed,
+  );
+
+  const handleDashboardWhatsappVisit = useCallback(() => {
+    if (!onboarding?.whatsappLink || onboarding.whatsappLinkVisitedAt || whatsappVisitPending) {
+      return;
+    }
+
+    setWhatsappVisitPending(true);
+
+    const send = async () => {
+      try {
+        const response = await fetch("/api/onboarding/whatsapp-visit", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+          keepalive: true,
+        });
+
+        if (!response.ok) {
+          throw new Error(`RequestFailed:${response.status}`);
+        }
+
+        const data = (await response.json().catch(() => null)) as { visitedAt?: string } | null;
+        const visitedIso = typeof data?.visitedAt === "string" ? data.visitedAt.trim() : "";
+        const parsedVisited = visitedIso ? new Date(visitedIso) : new Date();
+        const visitedDate = Number.isNaN(parsedVisited.valueOf()) ? new Date() : parsedVisited;
+
+        setOnboarding((prev) =>
+          prev
+            ? {
+                ...prev,
+                whatsappLinkVisitedAt: visitedDate,
+              }
+            : prev,
+        );
+      } catch (error) {
+        console.error("[dashboard.whatsapp] visit failed", error);
+      } finally {
+        setWhatsappVisitPending(false);
+      }
+    };
+
+    void send();
+  }, [onboarding, whatsappVisitPending]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1310,7 +1361,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             </div>
           </div>
 
-          {onboarding.whatsappLink && !whatsappDismissed ? (
+          {showWhatsAppCallout ? (
             <div className="space-y-2 rounded-xl border border-emerald-300/60 bg-emerald-50 p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
@@ -1329,9 +1380,19 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               <p className="text-xs text-emerald-900/80">
                 Tritt der Ensemble-Gruppe bei, um Ansprechpersonen und aktuelle Infos zu erhalten.
               </p>
-              <Button asChild size="sm" variant="outline" className="border-emerald-400/60 text-emerald-900">
-                <a href={onboarding.whatsappLink} target="_blank" rel="noopener noreferrer">
-                  WhatsApp öffnen
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="border-emerald-400/60 text-emerald-900"
+              >
+                <a
+                  href={onboarding.whatsappLink ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleDashboardWhatsappVisit}
+                >
+                  {whatsappVisitPending ? "Wird geöffnet …" : "WhatsApp öffnen"}
                 </a>
               </Button>
             </div>
@@ -1358,7 +1419,13 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         </CardContent>
       </Card>
     );
-  }, [onboarding, onboardingLoaded, whatsappDismissed]);
+  }, [
+    handleDashboardWhatsappVisit,
+    onboarding,
+    onboardingLoaded,
+    showWhatsAppCallout,
+    whatsappVisitPending,
+  ]);
 
   if (!session?.user) {
     return (
