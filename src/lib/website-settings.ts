@@ -8,6 +8,7 @@ export const DEFAULT_THEME_ID = "default-website-theme" as const;
 export const DEFAULT_WEBSITE_SETTINGS_ID = "public" as const;
 export const DEFAULT_SITE_TITLE = "Sommertheater im Schlosspark" as const;
 export const DEFAULT_COLOR_MODE = "dark" as const;
+export const DEFAULT_MAINTENANCE_MODE = false as const;
 
 export const THEME_COLOR_MODES = ["light", "dark", "system"] as const;
 export type ThemeColorMode = (typeof THEME_COLOR_MODES)[number];
@@ -1018,6 +1019,24 @@ function sanitiseColorMode(value: unknown): ThemeColorMode {
     : DEFAULT_COLOR_MODE;
 }
 
+function sanitiseMaintenanceMode(value: unknown): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalised = value.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(normalised)) {
+      return true;
+    }
+    if (["0", "false", "no", "off"].includes(normalised)) {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+}
+
 export type WebsiteSettingsRecord = (WebsiteSettings & { theme: WebsiteTheme | null }) | null;
 
 export type ResolvedWebsiteTheme = {
@@ -1033,6 +1052,7 @@ export type ResolvedWebsiteSettings = {
   id: string;
   siteTitle: string;
   colorMode: ThemeColorMode;
+  maintenanceMode: boolean;
   updatedAt: Date | null;
   theme: ResolvedWebsiteTheme;
 };
@@ -1067,6 +1087,7 @@ export function resolveWebsiteSettings(record: WebsiteSettingsRecord): ResolvedW
     id: record?.id ?? DEFAULT_WEBSITE_SETTINGS_ID,
     siteTitle: record ? sanitiseSiteTitle(record.siteTitle) : DEFAULT_SITE_TITLE,
     colorMode: record ? sanitiseColorMode(record.colorMode) : DEFAULT_COLOR_MODE,
+    maintenanceMode: record ? sanitiseMaintenanceMode(record.maintenanceMode) : DEFAULT_MAINTENANCE_MODE,
     updatedAt: record?.updatedAt ?? null,
     theme,
   };
@@ -1093,6 +1114,7 @@ export type ClientWebsiteSettings = {
   id: string;
   siteTitle: string;
   colorMode: ThemeColorMode;
+  maintenanceMode: boolean;
   updatedAt: string | null;
   theme: ClientWebsiteTheme;
 };
@@ -1125,6 +1147,7 @@ export function toClientWebsiteSettings(resolved: ResolvedWebsiteSettings): Clie
     id: resolved.id,
     siteTitle: resolved.siteTitle,
     colorMode: resolved.colorMode,
+    maintenanceMode: resolved.maintenanceMode,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
     theme: toClientWebsiteTheme(resolved.theme),
   };
@@ -1187,6 +1210,7 @@ export async function ensureWebsiteSettingsRecord() {
       id: DEFAULT_WEBSITE_SETTINGS_ID,
       siteTitle: DEFAULT_SITE_TITLE,
       colorMode: DEFAULT_COLOR_MODE,
+      maintenanceMode: DEFAULT_MAINTENANCE_MODE,
       theme: { connect: { id: theme.id } },
     },
     include: { theme: true },
@@ -1196,6 +1220,7 @@ export async function ensureWebsiteSettingsRecord() {
 export type WebsiteSettingsInput = {
   siteTitle?: string | null;
   colorMode?: ThemeColorMode | null;
+  maintenanceMode?: boolean | null;
   themeId?: string | null;
 };
 
@@ -1205,6 +1230,7 @@ export async function saveWebsiteSettings(input: WebsiteSettingsInput) {
     id: DEFAULT_WEBSITE_SETTINGS_ID,
     siteTitle: DEFAULT_SITE_TITLE,
     colorMode: DEFAULT_COLOR_MODE,
+    maintenanceMode: DEFAULT_MAINTENANCE_MODE,
   };
 
   if (input.siteTitle !== undefined) {
@@ -1217,6 +1243,12 @@ export async function saveWebsiteSettings(input: WebsiteSettingsInput) {
     const mode = sanitiseColorMode(input.colorMode);
     update.colorMode = mode;
     create.colorMode = mode;
+  }
+
+  if (input.maintenanceMode !== undefined) {
+    const maintenanceMode = sanitiseMaintenanceMode(input.maintenanceMode);
+    update.maintenanceMode = maintenanceMode;
+    create.maintenanceMode = maintenanceMode;
   }
 
   if (input.themeId !== undefined) {
