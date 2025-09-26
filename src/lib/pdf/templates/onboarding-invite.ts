@@ -116,11 +116,11 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     const QRCode = await loadQrCode();
     const theatreName = "Sommertheater Altrossthal";
     const palette = {
-      background: "#fff7ed",
-      sunrise: "#f97316",
-      twilight: "#0ea5e9",
-      rose: "#f43f5e",
-      highlight: "#fde68a",
+      background: "#ffffff",
+      sunrise: "#ea580c",
+      twilight: "#38bdf8",
+      rose: "#fb7185",
+      highlight: "#fef3c7",
       text: "#1f2937",
       textMuted: "#4b5563",
       textSoft: "#6b7280",
@@ -135,6 +135,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       qrFinderInner: "#ffffff",
       qrFinderCore: "#000000",
       qrFrameStroke: "#4338ca",
+      noteBackground: "#fff1f2",
     } as const;
 
     const title = data.headline ?? data.inviteLabel ?? "Dein Backstage-Start";
@@ -209,7 +210,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       const noteHeight = doc.heightOfString(data.note, { width: noteTextWidth });
 
       doc.save();
-      doc.roundedRect(noteX, noteY - 14, noteBoxWidth, noteHeight + 28, 18).fillColor("#ffe4e6").fill();
+      doc.roundedRect(noteX, noteY - 14, noteBoxWidth, noteHeight + 28, 18).fillColor(palette.noteBackground).fill();
       doc.restore();
 
       doc.save();
