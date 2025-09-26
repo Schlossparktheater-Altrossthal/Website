@@ -26,6 +26,21 @@ const weightFormat = new Intl.NumberFormat("de-DE", {
 const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 const dateTimeFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 
+type PlanningCandidate = {
+  profileId: string;
+  name: string;
+  weight: number;
+  showLabel: string;
+  focus: OnboardingTalentProfile["focus"];
+  status: "completed" | "open";
+};
+
+type PlanningBucket = {
+  code: string;
+  label: string;
+  candidates: PlanningCandidate[];
+};
+
 export default async function OnboardingAnalyticsPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.onboarding.analytics");
@@ -66,6 +81,167 @@ export default async function OnboardingAnalyticsPage() {
     const aTitle = formatShowTitle(a.show);
     const bTitle = formatShowTitle(b.show);
     return aTitle.localeCompare(bTitle, "de-DE");
+  });
+
+  const actingPreferenceCodes = ["acting_lead", "acting_medium", "acting_scout", "acting_statist"];
+  const crewPreferenceCodes = [
+    "crew_direction",
+    "crew_stage",
+    "crew_tech",
+    "crew_costume",
+    "crew_makeup",
+    "crew_props",
+    "crew_music",
+  ];
+
+  const toPlanningCandidate = (
+    profile: OnboardingTalentProfile,
+    preference: OnboardingTalentProfile["preferences"][number],
+  ): PlanningCandidate => ({
+    profileId: profile.id,
+    name: profile.name ?? profile.email ?? "Unbekannte Person",
+    weight: preference.weight,
+    showLabel: formatShowTitle(profile.show),
+    focus: profile.focus,
+    status: profile.completedAt ? "completed" : "open",
+  });
+
+  const sortCandidates = (list: PlanningCandidate[]) =>
+    list.sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name, "de-DE"));
+
+  const actingCandidateMap = new Map<string, PlanningCandidate[]>();
+  const crewCandidateMap = new Map<string, PlanningCandidate[]>();
+  const additionalActingCodes = new Set<string>();
+  const additionalCrewCodes = new Set<string>();
+
+  for (const code of actingPreferenceCodes) {
+    actingCandidateMap.set(code, []);
+  }
+  for (const code of crewPreferenceCodes) {
+    crewCandidateMap.set(code, []);
+  }
+
+  for (const profile of analytics.talentProfiles) {
+    for (const pref of profile.preferences) {
+      if (pref.domain === "acting") {
+        if (!actingCandidateMap.has(pref.code)) {
+          actingCandidateMap.set(pref.code, []);
+          additionalActingCodes.add(pref.code);
+        }
+        actingCandidateMap.get(pref.code)!.push(toPlanningCandidate(profile, pref));
+      }
+      if (pref.domain === "crew") {
+        if (!crewCandidateMap.has(pref.code)) {
+          crewCandidateMap.set(pref.code, []);
+          additionalCrewCodes.add(pref.code);
+        }
+        crewCandidateMap.get(pref.code)!.push(toPlanningCandidate(profile, pref));
+      }
+    }
+  }
+
+  for (const bucket of actingCandidateMap.values()) {
+    sortCandidates(bucket);
+  }
+  for (const bucket of crewCandidateMap.values()) {
+    sortCandidates(bucket);
+  }
+
+  const actingBucketOrder = [
+    ...actingPreferenceCodes,
+    ...Array.from(additionalActingCodes).sort((a, b) =>
+      humanizePreference(a).localeCompare(humanizePreference(b), "de-DE"),
+    ),
+  ];
+  const crewBucketOrder = [
+    ...crewPreferenceCodes,
+    ...Array.from(additionalCrewCodes).sort((a, b) =>
+      humanizePreference(a).localeCompare(humanizePreference(b), "de-DE"),
+    ),
+  ];
+
+  const actingPlanningBuckets: PlanningBucket[] = actingBucketOrder.map((code) => ({
+    code,
+    label: humanizePreference(code),
+    candidates: actingCandidateMap.get(code) ?? [],
+  }));
+
+  const crewPlanningBuckets: PlanningBucket[] = crewBucketOrder.map((code) => ({
+    code,
+    label: humanizePreference(code),
+    candidates: crewCandidateMap.get(code) ?? [],
+  }));
+
+  const showPlanning = groupedProfiles.map(({ show, profiles }) => {
+    const actingMap = new Map<string, PlanningCandidate[]>();
+    const crewMap = new Map<string, PlanningCandidate[]>();
+    const extraActing = new Set<string>();
+    const extraCrew = new Set<string>();
+
+    for (const code of actingPreferenceCodes) {
+      actingMap.set(code, []);
+    }
+    for (const code of crewPreferenceCodes) {
+      crewMap.set(code, []);
+    }
+
+    for (const profile of profiles) {
+      for (const pref of profile.preferences) {
+        if (pref.domain === "acting") {
+          if (!actingMap.has(pref.code)) {
+            actingMap.set(pref.code, []);
+            extraActing.add(pref.code);
+          }
+          actingMap.get(pref.code)!.push(toPlanningCandidate(profile, pref));
+        }
+        if (pref.domain === "crew") {
+          if (!crewMap.has(pref.code)) {
+            crewMap.set(pref.code, []);
+            extraCrew.add(pref.code);
+          }
+          crewMap.get(pref.code)!.push(toPlanningCandidate(profile, pref));
+        }
+      }
+    }
+
+    for (const bucket of actingMap.values()) {
+      sortCandidates(bucket);
+    }
+    for (const bucket of crewMap.values()) {
+      sortCandidates(bucket);
+    }
+
+    const actingOrder = [
+      ...actingPreferenceCodes,
+      ...Array.from(extraActing).sort((a, b) =>
+        humanizePreference(a).localeCompare(humanizePreference(b), "de-DE"),
+      ),
+    ];
+    const crewOrder = [
+      ...crewPreferenceCodes,
+      ...Array.from(extraCrew).sort((a, b) =>
+        humanizePreference(a).localeCompare(humanizePreference(b), "de-DE"),
+      ),
+    ];
+
+    const completedCount = profiles.filter((profile) => profile.completedAt).length;
+
+    return {
+      key: show?.id ?? "__unassigned",
+      showLabel: formatShowTitle(show),
+      profileCount: profiles.length,
+      completedCount,
+      actingBuckets: actingOrder.map((code) => ({
+        code,
+        label: humanizePreference(code),
+        candidates: actingMap.get(code) ?? [],
+      })),
+      crewBuckets: crewOrder.map((code) => ({
+        code,
+        label: humanizePreference(code),
+        candidates: crewMap.get(code) ?? [],
+      })),
+    };
   });
 
   return (
@@ -256,6 +432,93 @@ export default async function OnboardingAnalyticsPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border border-border/70">
+            <CardHeader>
+              <CardTitle>Planung nach Präferenzen</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Listen pro Rollengröße und Gewerk, sortiert nach Wunschgewichtung der Talente.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-lg border border-border/60 bg-background/60 p-4">
+                  <PlanningBucketSection
+                    heading="Schauspiel · Wunschlisten"
+                    buckets={actingPlanningBuckets}
+                    emptyLabel="Noch keine Rollenwünsche hinterlegt."
+                  />
+                </div>
+                <div className="rounded-lg border border-border/60 bg-background/60 p-4">
+                  <PlanningBucketSection
+                    heading="Gewerke · Wunschlisten"
+                    buckets={crewPlanningBuckets}
+                    emptyLabel="Noch keine Gewerke-Präferenzen hinterlegt."
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-border/70">
+            <CardHeader>
+              <CardTitle>Besetzungsplanung pro Produktion</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Kombiniert Wunschlisten mit Produktionen, um finale Platzierungen zu planen.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {showPlanning.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Noch keine Onboardings erfasst.</p>
+              ) : (
+                <div className="space-y-4">
+                  {showPlanning.map((entry) => {
+                    const actingTotal = entry.actingBuckets.reduce((sum, bucket) => sum + bucket.candidates.length, 0);
+                    const crewTotal = entry.crewBuckets.reduce((sum, bucket) => sum + bucket.candidates.length, 0);
+
+                    return (
+                      <div key={entry.key} className="rounded-lg border border-border/60 bg-background/60 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold leading-tight">{entry.showLabel}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {numberFormat.format(entry.profileCount)} Profile · {numberFormat.format(entry.completedCount)} abgeschlossen
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                              Schauspiel {numberFormat.format(actingTotal)}
+                            </Badge>
+                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                              Gewerke {numberFormat.format(crewTotal)}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          <div className="rounded-md border border-border/50 bg-background p-3">
+                            <PlanningBucketSection
+                              heading="Schauspiel"
+                              buckets={entry.actingBuckets}
+                              emptyLabel="Keine Rollenpräferenzen für diese Produktion."
+                              variant="compact"
+                            />
+                          </div>
+                          <div className="rounded-md border border-border/50 bg-background p-3">
+                            <PlanningBucketSection
+                              heading="Gewerke"
+                              buckets={entry.crewBuckets}
+                              emptyLabel="Keine Gewerke-Präferenzen für diese Produktion."
+                              variant="compact"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -772,6 +1035,76 @@ function humanizePreference(code: string) {
     default:
       return code;
   }
+}
+
+function PlanningBucketSection({
+  heading,
+  buckets,
+  emptyLabel,
+  variant = "global",
+}: {
+  heading: string;
+  buckets: PlanningBucket[];
+  emptyLabel: string;
+  variant?: "global" | "compact";
+}) {
+  const totalCandidates = buckets.reduce((sum, bucket) => sum + bucket.candidates.length, 0);
+  const visibleBuckets = buckets.filter((bucket) => bucket.candidates.length > 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+        <span>{heading}</span>
+        <span>{numberFormat.format(totalCandidates)}</span>
+      </div>
+      {totalCandidates === 0 ? (
+        <p className="text-xs text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <div className="space-y-3">
+          {visibleBuckets.map((bucket) => (
+            <div key={bucket.code} className="space-y-2">
+              <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                <span>{bucket.label}</span>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                  {numberFormat.format(bucket.candidates.length)}
+                </Badge>
+              </div>
+              <ul className="space-y-1.5">
+                {bucket.candidates.slice(0, 4).map((candidate) => {
+                  const metadataParts: string[] = [];
+                  if (variant !== "compact") {
+                    metadataParts.push(candidate.showLabel);
+                  }
+                  metadataParts.push(candidate.status === "completed" ? "abgeschlossen" : "offen");
+                  metadataParts.push(focusLabel(candidate.focus));
+
+                  return (
+                    <li
+                      key={`${bucket.code}-${candidate.profileId}`}
+                      className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-background/70 px-2 py-1.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium leading-tight">{candidate.name}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{metadataParts.join(" · ")}</p>
+                      </div>
+                      <Badge variant="secondary" className="shrink-0 text-[11px]">
+                        {weightFormat.format(candidate.weight)}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+              {bucket.candidates.length > 4 ? (
+                <p className="text-[11px] text-muted-foreground">
+                  +{numberFormat.format(bucket.candidates.length - 4)} weitere
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function dietaryLabel(level: string) {
