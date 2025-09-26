@@ -327,7 +327,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     nutritionStyle: "omnivore" as DietaryStyleOption,
     nutritionCustomStyle: "",
     nutritionStrictness: "flexible" as DietaryStrictnessOption,
-    photoConsent: { consent: true },
+    photoConsent: { consent: true, skipDocument: false },
     dietary: [] as DietaryEntry[],
   });
 
@@ -669,11 +669,16 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
 
   const photoConsentMessage = useMemo(() => {
     if (!form.photoConsent.consent) {
-      return "Bitte bestätige dein Einverständnis, damit wir dich auf Fotos zeigen dürfen.";
+      return "Du hast aktuell nicht zugestimmt. Das ist in Ordnung – du kannst es später im Mitgliederbereich nachholen.";
+    }
+    if (form.photoConsent.skipDocument) {
+      return isMinor
+        ? "Du reichst die Zustimmung deiner Erziehungsberechtigten später nach."
+        : "Du reichst dein unterschriebenes Formular später nach.";
     }
     if (!documentFile) {
       return isMinor
-        ? "Die unterschriebene Zustimmung deiner Erziehungsberechtigten fehlt noch."
+        ? "Die unterschriebene Zustimmung deiner Erziehungsberechtigten fehlt noch oder wird später nachgereicht."
         : "Bitte lade dein Einverständnis hoch oder unterschreibe digital.";
     }
     if (isMinor) {
@@ -683,7 +688,13 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       return "Du hast die Fotoeinverständnis digital unterschrieben.";
     }
     return "Deine unterschriebene Fotoeinverständnis wird mitgeschickt.";
-  }, [documentFile, documentMode, form.photoConsent.consent, isMinor]);
+  }, [
+    documentFile,
+    documentMode,
+    form.photoConsent.consent,
+    form.photoConsent.skipDocument,
+    isMinor,
+  ]);
 
   const handleAddDietary = () => {
     const trimmed = dietaryDraft.allergen.trim();
@@ -743,8 +754,12 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       }
       setDocumentError(null);
       setDocumentFile(file);
+      setForm((prev) => ({
+        ...prev,
+        photoConsent: { ...prev.photoConsent, skipDocument: false },
+      }));
     },
-    [setDocumentError, setDocumentFile],
+    [setDocumentError, setDocumentFile, setForm],
   );
 
   const handleDocumentInput = (file: File | null) => {
@@ -768,6 +783,22 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
     setSignatureDataUrl(null);
     setDocumentFromFile(null);
   };
+
+  const handleGuardianDocumentSkipChange = useCallback(
+    (skip: boolean) => {
+      setForm((prev) => ({
+        ...prev,
+        photoConsent: { ...prev.photoConsent, skipDocument: skip },
+      }));
+      if (skip) {
+        setDocumentMode("upload");
+        setSignatureDataUrl(null);
+        setDocumentFromFile(null);
+        setDocumentError(null);
+      }
+    },
+    [setDocumentError, setDocumentFromFile, setDocumentMode, setForm, setSignatureDataUrl],
+  );
 
   useEffect(() => {
     if (!isMinor) {
@@ -888,15 +919,11 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       return;
     }
     if (step === 4) {
-      if (!form.photoConsent.consent) {
-        setError("Wir benötigen deine Zustimmung zur Fotoerlaubnis, damit du beim Theater mitmachen kannst.");
-        return;
-      }
-      if (!documentFile) {
+      if (form.photoConsent.consent && !form.photoConsent.skipDocument && !documentFile) {
         setError(
           isMinor
-            ? "Bitte lade die unterschriebene Erklärung deiner Erziehungsberechtigten hoch."
-            : "Bitte lade dein unterschriebenes Einverständnis hoch oder unterschreibe digital.",
+            ? "Bitte lade die unterschriebene Erklärung deiner Erziehungsberechtigten hoch oder wähle aus, dass du sie später nachreichst."
+            : "Bitte lade dein unterschriebenes Einverständnis hoch, unterschreibe digital oder markiere, dass du es später nachreichst.",
         );
         return;
       }
@@ -987,6 +1014,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         },
         photoConsent: {
           consent: form.photoConsent.consent,
+          skipDocument: form.photoConsent.skipDocument,
         },
         dietary: form.dietary.map((entry) => ({
           allergen: entry.allergen,
@@ -1659,8 +1687,9 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 <p className="font-medium">Du bist unter 18 Jahre alt</p>
                 <p>
                   Wir benötigen die unterschriebene Foto-Einverständniserklärung deiner Erziehungsberechtigten. Lade das Dokument
-                  als PDF oder Bilddatei hoch – ohne dieses Formular können wir dich leider nicht aufnehmen.
+                  als PDF oder Bilddatei hoch oder markiere unten, dass du es später nachreichst.
                 </p>
+                <p>Deine eigene Zustimmung gibst du direkt über das Kästchen oben.</p>
               </div>
             ) : (
               <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
@@ -1671,18 +1700,34 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
 
             <div className="space-y-3 text-sm">
               {isMinor ? (
-                <div className="space-y-2">
-                  <label className="block font-medium">Einverständnis der Erziehungsberechtigten (PDF, JPG, PNG)</label>
-                  <Input
-                    type="file"
-                    accept="application/pdf,image/jpeg,image/png"
-                    onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {documentFile
-                      ? `Ausgewählt: ${documentFile.name}`
-                      : "Lade die unterschriebene Zustimmung deiner Erziehungsberechtigten hoch."}
-                  </p>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="block font-medium">Einverständnis der Erziehungsberechtigten (PDF, JPG, PNG)</label>
+                    <Input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {documentFile
+                        ? `Ausgewählt: ${documentFile.name}`
+                        : "Lade die unterschriebene Zustimmung deiner Erziehungsberechtigten hoch oder nutze die Option darunter, um sie später nachzureichen."}
+                    </p>
+                  </div>
+                  <label className="flex items-start gap-3 rounded-lg border border-border/70 p-3">
+                    <input
+                      type="checkbox"
+                      checked={form.photoConsent.skipDocument}
+                      onChange={(event) => handleGuardianDocumentSkipChange(event.target.checked)}
+                      className="mt-1 h-4 w-4"
+                    />
+                    <div className="space-y-1 text-sm">
+                      <p className="font-medium">Ich reiche die Zustimmung meiner Erziehungsberechtigten später nach.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Du kannst das Formular jederzeit im Mitgliederbereich hochladen.
+                      </p>
+                    </div>
+                  </label>
                 </div>
               ) : (
                 <>
