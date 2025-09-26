@@ -56,7 +56,13 @@ export default async function OnboardingAnalyticsPage({
   }
 
   const analytics = await collectOnboardingAnalytics();
-  const scoreboard = await getMysteryScoreboard();
+  let scoreboard: Awaited<ReturnType<typeof getMysteryScoreboard>>;
+  try {
+    scoreboard = await getMysteryScoreboard();
+  } catch (error) {
+    console.error("[onboarding-analytics.scoreboard]", error);
+    scoreboard = [];
+  }
 
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const rawShowParam = resolvedSearchParams?.show;
