@@ -304,7 +304,6 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.restore();
 
     doc.save();
-    const moduleRadius = (qrModuleSize / 2) * 0.82;
     doc.fillColor(palette.qrModulePrimary);
     for (let row = 0; row < qrModuleCount; row += 1) {
       for (let col = 0; col < qrModuleCount; col += 1) {
@@ -314,10 +313,8 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
 
         const moduleX = qrContentX + col * qrModuleSize;
         const moduleY = qrContentY + row * qrModuleSize;
-        const centerX = moduleX + qrModuleSize / 2;
-        const centerY = moduleY + qrModuleSize / 2;
 
-        doc.circle(centerX, centerY, moduleRadius).fill();
+        doc.rect(moduleX, moduleY, qrModuleSize, qrModuleSize).fill();
       }
     }
     doc.restore();
@@ -326,15 +323,39 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       const finderX = qrContentX + offset.col * qrModuleSize;
       const finderY = qrContentY + offset.row * qrModuleSize;
       const finderDimension = finderSize * qrModuleSize;
-      const finderCenterX = finderX + finderDimension / 2;
-      const finderCenterY = finderY + finderDimension / 2;
-      const outerRadius = finderDimension / 2;
-      const innerRadius = Math.max(outerRadius - qrModuleSize * 1.4, qrModuleSize);
-      const coreRadius = Math.max(innerRadius - qrModuleSize * 1.2, qrModuleSize * 0.6);
+      const innerDimension = Math.max(finderDimension - qrModuleSize * 2, qrModuleSize);
+      const coreDimension = Math.max(innerDimension - qrModuleSize * 2, qrModuleSize);
 
-      doc.save().circle(finderCenterX, finderCenterY, outerRadius).fillColor(palette.qrFinderOuter).fill().restore();
-      doc.save().circle(finderCenterX, finderCenterY, innerRadius).fillColor(palette.qrFinderInner).fill().restore();
-      doc.save().circle(finderCenterX, finderCenterY, coreRadius).fillColor(palette.qrFinderCore).fill().restore();
+      doc
+        .save()
+        .rect(finderX, finderY, finderDimension, finderDimension)
+        .fillColor(palette.qrFinderOuter)
+        .fill()
+        .restore();
+
+      doc
+        .save()
+        .rect(
+          finderX + (finderDimension - innerDimension) / 2,
+          finderY + (finderDimension - innerDimension) / 2,
+          innerDimension,
+          innerDimension,
+        )
+        .fillColor(palette.qrFinderInner)
+        .fill()
+        .restore();
+
+      doc
+        .save()
+        .rect(
+          finderX + (finderDimension - coreDimension) / 2,
+          finderY + (finderDimension - coreDimension) / 2,
+          coreDimension,
+          coreDimension,
+        )
+        .fillColor(palette.qrFinderCore)
+        .fill()
+        .restore();
     }
 
     doc.y = qrY + qrSize + 28;
