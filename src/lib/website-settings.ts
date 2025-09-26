@@ -922,6 +922,8 @@ const PRESET_THEME_DEFINITIONS: WebsiteThemePresetDefinition[] = [
   },
 ];
 
+const PRESET_THEME_IDS = new Set(PRESET_THEME_DEFINITIONS.map((preset) => preset.id));
+
 function sanitiseCssValue(value: unknown, fallback: string): string {
   if (typeof value !== "string") {
     return fallback;
@@ -1039,12 +1041,20 @@ function sanitiseMaintenanceMode(value: unknown): boolean {
 
 export type WebsiteSettingsRecord = (WebsiteSettings & { theme: WebsiteTheme | null }) | null;
 
+export class LockedWebsiteThemeError extends Error {
+  constructor(message = "Standard-Designs können nicht bearbeitet werden. Bitte dupliziere das Theme.") {
+    super(message);
+    this.name = "LockedWebsiteThemeError";
+  }
+}
+
 export type ResolvedWebsiteTheme = {
   id: string;
   name: string;
   description: string | null;
   tokens: ThemeTokens;
   isDefault: boolean;
+  isPreset: boolean;
   updatedAt: Date | null;
 };
 
@@ -1063,6 +1073,7 @@ const FALLBACK_THEME: ResolvedWebsiteTheme = {
   description: "Standardfarben aus dem Designsystem.",
   tokens: cloneDefaultTokens(),
   isDefault: true,
+  isPreset: true,
   updatedAt: null,
 };
 
@@ -1077,6 +1088,7 @@ export function resolveWebsiteTheme(record: WebsiteTheme | null | undefined): Re
     description: record.description ?? null,
     tokens: sanitiseThemeTokens(record.tokens ?? designTokens),
     isDefault: record.isDefault ?? false,
+    isPreset: PRESET_THEME_IDS.has(record.id) || Boolean(record.isDefault),
     updatedAt: record.updatedAt ?? null,
   };
 }
@@ -1099,6 +1111,7 @@ export type ClientWebsiteTheme = {
   description: string | null;
   tokens: ThemeTokens;
   isDefault: boolean;
+  isPreset: boolean;
   updatedAt: string | null;
 };
 
@@ -1107,6 +1120,7 @@ export type ClientWebsiteThemeSummary = {
   name: string;
   description: string | null;
   isDefault: boolean;
+  isPreset: boolean;
   updatedAt: string | null;
 };
 
@@ -1126,6 +1140,7 @@ export function toClientWebsiteTheme(resolved: ResolvedWebsiteTheme): ClientWebs
     description: resolved.description,
     tokens: cloneThemeTokens(resolved.tokens),
     isDefault: resolved.isDefault,
+    isPreset: resolved.isPreset,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
   };
 }
@@ -1138,6 +1153,7 @@ export function toClientWebsiteThemeSummary(
     name: resolved.name,
     description: resolved.description,
     isDefault: resolved.isDefault,
+    isPreset: resolved.isPreset,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
   };
 }
@@ -1276,6 +1292,10 @@ export type WebsiteThemeInput = {
 
 export async function saveWebsiteTheme(id: string, input: WebsiteThemeInput) {
   const existing = await prisma.websiteTheme.findUnique({ where: { id } });
+
+  if (existing && (existing.isDefault || PRESET_THEME_IDS.has(existing.id))) {
+    throw new LockedWebsiteThemeError();
+  }
 
   const baseName = existing?.name ?? "Unbenanntes Theme";
   const resolvedName = sanitiseCssValue(input.name ?? baseName, baseName);
