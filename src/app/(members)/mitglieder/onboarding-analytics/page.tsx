@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   collectOnboardingAnalytics,
+  type OnboardingInterestStat,
+  type OnboardingRolePreferenceStat,
   type OnboardingTalentProfile,
   type OnboardingShowSummary,
   type OnboardingShowAggregations,
@@ -12,6 +14,7 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
 import { RenewOnboardingInviteButton } from "./renew-onboarding-invite-button";
+import { OnboardingShowFilter } from "./onboarding-show-filter";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const percentFormat = new Intl.NumberFormat("de-DE", {
@@ -41,7 +44,11 @@ type PlanningBucket = {
   candidates: PlanningCandidate[];
 };
 
-export default async function OnboardingAnalyticsPage() {
+export default async function OnboardingAnalyticsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.onboarding.analytics");
   if (!allowed) {
@@ -51,24 +58,71 @@ export default async function OnboardingAnalyticsPage() {
   const analytics = await collectOnboardingAnalytics();
   const scoreboard = await getMysteryScoreboard();
 
-  const totalProfiles = analytics.talentProfiles.length;
-  const completedProfiles = analytics.talentProfiles.filter((profile) => Boolean(profile.completedAt)).length;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const rawShowParam = resolvedSearchParams?.show;
+  const selectedShowIdCandidate = Array.isArray(rawShowParam) ? rawShowParam[0] : rawShowParam;
+  const selectedShowId = typeof selectedShowIdCandidate === "string" ? selectedShowIdCandidate : null;
+  const selectedShow = selectedShowId
+    ? analytics.shows.find((show) => show.id === selectedShowId) ?? null
+    : null;
+
+  const showFilterOptions = [
+    { value: "", label: "Alle Onboardings" },
+    ...analytics.shows.map((show) => ({ value: show.id, label: formatShowTitle(show) })),
+  ];
+
+  const visibleProfiles = selectedShow
+    ? analytics.talentProfiles.filter((profile) => profile.show?.id === selectedShow.id)
+    : analytics.talentProfiles;
+
+  const totalProfiles = visibleProfiles.length;
+  const completedProfiles = visibleProfiles.filter((profile) => Boolean(profile.completedAt)).length;
   const openProfiles = Math.max(totalProfiles - completedProfiles, 0);
-  const totalFocus = analytics.completions.total || 1;
+
+  const focusCounts = visibleProfiles.reduce(
+    (acc, profile) => {
+      acc[profile.focus] = (acc[profile.focus] ?? 0) + 1;
+      return acc;
+    },
+    { acting: 0, tech: 0, both: 0 } as Record<OnboardingTalentProfile["focus"], number>,
+  );
+  const totalFocus = Math.max(focusCounts.acting + focusCounts.tech + focusCounts.both, 1);
+
+  const invitesOverview = selectedShow ? selectedShow.invites : analytics.invites;
   const inactiveInvites =
-    analytics.invites.expired + analytics.invites.disabled + analytics.invites.exhausted;
+    invitesOverview.expired + invitesOverview.disabled + invitesOverview.exhausted;
+
+  const pendingPhotoConsentsCount = selectedShow
+    ? selectedShow.pendingPhotoConsents
+    : analytics.pendingPhotoConsents;
+  const minorsPendingDocumentsCount = selectedShow
+    ? selectedShow.guardianDocumentsMissing
+    : analytics.minorsPendingDocuments;
+
+  const interestStats: OnboardingInterestStat[] = selectedShow
+    ? selectedShow.interests
+    : analytics.interests;
+  const rolePreferenceStats: OnboardingRolePreferenceStat[] = selectedShow
+    ? selectedShow.rolePreferences
+    : analytics.rolePreferences;
+  const dietaryStats = selectedShow ? summarizeDietary(visibleProfiles) : analytics.dietary;
+
+  const visibleShowSummaries = selectedShow ? [selectedShow] : analytics.shows;
+  const showFilterValue = selectedShow?.id ?? "";
+
+  const summaryByShowId = new Map(analytics.shows.map((show) => [show.id, show] as const));
 
   const profilesByShow = new Map<
     string,
     { show: OnboardingTalentProfile["show"]; profiles: OnboardingTalentProfile[]; summary: OnboardingShowSummary | null }
   >();
-  for (const profile of analytics.talentProfiles) {
+  for (const profile of visibleProfiles) {
     const showId = profile.show?.id ?? "__unassigned";
     if (!profilesByShow.has(showId)) {
       profilesByShow.set(showId, {
         show: profile.show,
         profiles: [],
-        summary: profile.show ? analytics.shows.find((entry) => entry.id === profile.show?.id) ?? null : null,
+        summary: profile.show ? summaryByShowId.get(profile.show.id) ?? null : null,
       });
     }
     profilesByShow.get(showId)!.profiles.push(profile);
@@ -121,7 +175,7 @@ export default async function OnboardingAnalyticsPage() {
     crewCandidateMap.set(code, []);
   }
 
-  for (const profile of analytics.talentProfiles) {
+  for (const profile of visibleProfiles) {
     for (const pref of profile.preferences) {
       if (pref.domain === "acting") {
         if (!actingCandidateMap.has(pref.code)) {
@@ -246,11 +300,14 @@ export default async function OnboardingAnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Onboarding Analytics</h1>
-        <p className="text-sm text-muted-foreground">
-          Überblick über Einladungen, Produktionen und individuelle Antworten aus dem Onboarding-Wizard.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Onboarding Analytics</h1>
+          <p className="text-sm text-muted-foreground">
+            Überblick über Einladungen, Produktionen und individuelle Antworten aus dem Onboarding-Wizard.
+          </p>
+        </div>
+        <OnboardingShowFilter options={showFilterOptions} value={showFilterValue} />
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
@@ -266,7 +323,7 @@ export default async function OnboardingAnalyticsPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Onboardings gesamt</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(analytics.completions.total)}</p>
+                <p className="text-3xl font-semibold">{numberFormat.format(totalProfiles)}</p>
                 <p className="text-xs text-muted-foreground">
                   {numberFormat.format(completedProfiles)} abgeschlossen · {numberFormat.format(openProfiles)} offen
                 </p>
@@ -278,8 +335,8 @@ export default async function OnboardingAnalyticsPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Aktive Einladungen</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(analytics.invites.active)}</p>
-                <p className="text-xs text-muted-foreground">von {numberFormat.format(analytics.invites.total)} insgesamt</p>
+                <p className="text-3xl font-semibold">{numberFormat.format(invitesOverview.active)}</p>
+                <p className="text-xs text-muted-foreground">von {numberFormat.format(invitesOverview.total)} insgesamt</p>
               </CardContent>
             </Card>
 
@@ -290,9 +347,8 @@ export default async function OnboardingAnalyticsPage() {
               <CardContent>
                 <p className="text-3xl font-semibold">{numberFormat.format(inactiveInvites)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {numberFormat.format(analytics.invites.expired)} abgelaufen · {numberFormat.format(analytics.invites.disabled)}
-                  {" "}
-                  deaktiviert · {numberFormat.format(analytics.invites.exhausted)} ausgeschöpft
+                  {numberFormat.format(invitesOverview.expired)} abgelaufen · {numberFormat.format(invitesOverview.disabled)}{" "}
+                  deaktiviert · {numberFormat.format(invitesOverview.exhausted)} ausgeschöpft
                 </p>
               </CardContent>
             </Card>
@@ -302,7 +358,7 @@ export default async function OnboardingAnalyticsPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Verbrauchte Slots</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(analytics.invites.totalUsage)}</p>
+                <p className="text-3xl font-semibold">{numberFormat.format(invitesOverview.totalUsage)}</p>
                 <p className="text-xs text-muted-foreground">registrierte Abschlüsse über den Wizard</p>
               </CardContent>
             </Card>
@@ -312,7 +368,7 @@ export default async function OnboardingAnalyticsPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Fotoeinverständnisse offen</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(analytics.pendingPhotoConsents)}</p>
+                <p className="text-3xl font-semibold">{numberFormat.format(pendingPhotoConsentsCount)}</p>
                 <p className="text-xs text-muted-foreground">Status &bdquo;Pending&ldquo; benötigt Freigabe</p>
               </CardContent>
             </Card>
@@ -322,7 +378,7 @@ export default async function OnboardingAnalyticsPage() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">Elternformulare ausstehend</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(analytics.minorsPendingDocuments)}</p>
+                <p className="text-3xl font-semibold">{numberFormat.format(minorsPendingDocumentsCount)}</p>
                 <p className="text-xs text-muted-foreground">Minderjährige ohne hochgeladenes Elternformular</p>
               </CardContent>
             </Card>
@@ -336,7 +392,7 @@ export default async function OnboardingAnalyticsPage() {
               </p>
             </CardHeader>
             <CardContent>
-              {analytics.shows.length === 0 ? (
+              {visibleShowSummaries.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Noch keine Onboardings erfasst.</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -357,7 +413,7 @@ export default async function OnboardingAnalyticsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/70">
-                      {analytics.shows.map((show) => (
+                      {visibleShowSummaries.map((show) => (
                         <tr key={show.id} className="bg-background/60">
                           <td className="px-3 py-2 font-medium">{formatShowTitle(show)}</td>
                           <td className="px-3 py-2">{numberFormat.format(show.onboardingCount)}</td>
@@ -451,6 +507,7 @@ export default async function OnboardingAnalyticsPage() {
                     heading="Schauspiel · Wunschlisten"
                     buckets={actingPlanningBuckets}
                     emptyLabel="Noch keine Rollenwünsche hinterlegt."
+                    variant={selectedShow ? "compact" : "global"}
                   />
                 </div>
                 <div className="rounded-lg border border-border/60 bg-background/60 p-4">
@@ -458,6 +515,7 @@ export default async function OnboardingAnalyticsPage() {
                     heading="Gewerke · Wunschlisten"
                     buckets={crewPlanningBuckets}
                     emptyLabel="Noch keine Gewerke-Präferenzen hinterlegt."
+                    variant={selectedShow ? "compact" : "global"}
                   />
                 </div>
               </div>
@@ -532,13 +590,13 @@ export default async function OnboardingAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3 text-sm">
-                  {Object.entries(analytics.completions.byFocus).map(([focus, count]) => (
+                  {Object.entries(focusCounts).map(([focus, count]) => (
                     <div key={focus} className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
                       <span className="font-medium capitalize">
                         {focus === "acting" ? "Schauspiel" : focus === "tech" ? "Gewerke" : "Hybrid"}
                       </span>
                       <span>
-                        {numberFormat.format(count)} · {percentFormat.format((count as number) / totalFocus)}
+                        {numberFormat.format(count)} · {percentFormat.format(count / totalFocus)}
                       </span>
                     </div>
                   ))}
@@ -552,9 +610,9 @@ export default async function OnboardingAnalyticsPage() {
                 <p className="text-sm text-muted-foreground">Tags und Themen, die im Wizard angegeben wurden.</p>
               </CardHeader>
               <CardContent>
-                {analytics.interests.length ? (
+                {interestStats.length ? (
                   <ul className="space-y-2 text-sm">
-                    {analytics.interests.slice(0, 10).map((interest) => (
+                    {interestStats.slice(0, 10).map((interest) => (
                       <li key={interest.name} className="flex items-center justify-between">
                         <span>{interest.name}</span>
                         <Badge variant="outline">{interest.count}</Badge>
@@ -574,7 +632,7 @@ export default async function OnboardingAnalyticsPage() {
               <p className="text-sm text-muted-foreground">Durchschnittliche Gewichtung (0–100) der gewählten Optionen.</p>
             </CardHeader>
             <CardContent>
-              {analytics.rolePreferences.length ? (
+              {rolePreferenceStats.length ? (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[520px] text-sm">
                     <thead className="text-left text-xs uppercase text-muted-foreground">
@@ -586,7 +644,7 @@ export default async function OnboardingAnalyticsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analytics.rolePreferences.slice(0, 12).map((entry) => (
+                      {rolePreferenceStats.slice(0, 12).map((entry) => (
                         <tr key={`${entry.domain}-${entry.code}`} className="border-b border-border/50">
                           <td className="px-3 py-2 text-muted-foreground">
                             {entry.domain === "acting" ? "Schauspiel" : "Gewerke"}
@@ -611,9 +669,9 @@ export default async function OnboardingAnalyticsPage() {
               <p className="text-sm text-muted-foreground">Aktive Angaben aus dem Wizard für Catering und Veranstaltungen.</p>
             </CardHeader>
             <CardContent>
-              {analytics.dietary.length ? (
+              {dietaryStats.length ? (
                 <div className="flex flex-wrap gap-3">
-                  {analytics.dietary.map((entry) => (
+                  {dietaryStats.map((entry) => (
                     <div key={entry.level} className="rounded-lg border border-border/60 px-3 py-2 text-sm">
                       <p className="font-medium">{dietaryLabel(entry.level)}</p>
                       <p className="text-xs text-muted-foreground">{numberFormat.format(entry.count)} Angaben</p>
@@ -715,6 +773,7 @@ export default async function OnboardingAnalyticsPage() {
                         profile={profile}
                         showSummary={summary ?? undefined}
                         showAggregations={profile.show ? analytics.showAggregations[profile.show.id] : undefined}
+                        showLabelVisible={!selectedShow}
                       />
                     ))}
                   </div>
@@ -732,10 +791,12 @@ function TalentProfileCard({
   profile,
   showSummary,
   showAggregations,
+  showLabelVisible = true,
 }: {
   profile: OnboardingTalentProfile;
   showSummary?: OnboardingShowSummary;
   showAggregations?: OnboardingShowAggregations;
+  showLabelVisible?: boolean;
 }) {
   const name = profile.name ?? profile.email ?? "Unbekannte Person";
   const showLabel = formatShowTitle(profile.show);
@@ -780,7 +841,7 @@ function TalentProfileCard({
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {profile.email && <span>{profile.email}</span>}
             <span>{completionLabel}</span>
-            <span>Produktion: {showLabel}</span>
+            {showLabelVisible && <span>Produktion: {showLabel}</span>}
             {profile.memberSinceYear && <span>Mitglied seit {profile.memberSinceYear}</span>}
           </div>
         </div>
@@ -1105,6 +1166,19 @@ function PlanningBucketSection({
       )}
     </div>
   );
+}
+
+function summarizeDietary(profiles: OnboardingTalentProfile[]) {
+  const counts = new Map<OnboardingTalentProfile["dietaryRestrictions"][number]["level"], number>();
+  for (const profile of profiles) {
+    for (const entry of profile.dietaryRestrictions) {
+      counts.set(entry.level, (counts.get(entry.level) ?? 0) + 1);
+    }
+  }
+
+  return Array.from(counts.entries())
+    .map(([level, count]) => ({ level, count }))
+    .sort((a, b) => b.count - a.count || a.level.localeCompare(b.level));
 }
 
 function dietaryLabel(level: string) {
