@@ -116,9 +116,9 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       qrGradientEnd: "#0f172a",
       qrModulePrimary: "#0f172a",
       qrModuleSecondary: "#1e293b",
-      qrFinderOuter: "#312e81",
-      qrFinderInner: "#1d4ed8",
-      qrFinderCore: "#e2e8f0",
+      qrFinderOuter: "#000000",
+      qrFinderInner: "#ffffff",
+      qrFinderCore: "#000000",
       qrFrameStroke: "#4338ca",
     } as const;
 
@@ -311,19 +311,15 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       const finderX = qrContentX + offset.col * qrModuleSize;
       const finderY = qrContentY + offset.row * qrModuleSize;
       const finderDimension = finderSize * qrModuleSize;
-      const finderGradient = doc
-        .linearGradient(finderX, finderY, finderX + finderDimension, finderY + finderDimension)
-        .stop(0, palette.qrFinderOuter)
-        .stop(1, palette.qrFinderInner);
+      const finderCenterX = finderX + finderDimension / 2;
+      const finderCenterY = finderY + finderDimension / 2;
+      const outerRadius = finderDimension / 2;
+      const innerRadius = Math.max(outerRadius - qrModuleSize * 1.4, qrModuleSize);
+      const coreRadius = Math.max(innerRadius - qrModuleSize * 1.2, qrModuleSize * 0.6);
 
-      doc
-        .save()
-        .rect(finderX, finderY, finderDimension, finderDimension)
-        .fill(finderGradient)
-        .lineWidth(Math.max(qrModuleSize * 0.6, 2))
-        .strokeColor(palette.qrFinderCore)
-        .stroke()
-        .restore();
+      doc.save().circle(finderCenterX, finderCenterY, outerRadius).fillColor(palette.qrFinderOuter).fill().restore();
+      doc.save().circle(finderCenterX, finderCenterY, innerRadius).fillColor(palette.qrFinderInner).fill().restore();
+      doc.save().circle(finderCenterX, finderCenterY, coreRadius).fillColor(palette.qrFinderCore).fill().restore();
     }
 
     doc.y = qrY + qrSize + 28;
