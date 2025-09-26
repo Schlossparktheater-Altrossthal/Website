@@ -27,8 +27,14 @@ type TicketStatusValue = "unused" | "checked_in" | "invalid" | "pending";
 
 interface InventoryItemRow {
   id: string;
+  sku: string;
   name: string;
   qty: number;
+  category: string;
+  details: string | null;
+  lastUsedAt: Date | null;
+  lastInventoryAt: Date | null;
+  updatedAt: Date;
 }
 
 interface TicketRow {
@@ -115,7 +121,12 @@ function toDate(value: Date | string | number | null | undefined): Date {
 }
 
 function cloneInventoryItem(item: InventoryItemRow): InventoryItemRow {
-  return { ...item };
+  return {
+    ...item,
+    lastUsedAt: item.lastUsedAt ? new Date(item.lastUsedAt.getTime()) : null,
+    lastInventoryAt: item.lastInventoryAt ? new Date(item.lastInventoryAt.getTime()) : null,
+    updatedAt: new Date(item.updatedAt.getTime()),
+  };
 }
 
 function cloneTicket(ticket: TicketRow): TicketRow {
@@ -416,8 +427,33 @@ const prismaStub = {
       const records = Array.isArray(data) ? data : [data];
       const normalized = records.map((item, index) => ({
         id: item.id ?? `inventory-${fakeDb.inventoryItems.length + index + 1}`,
+        sku: item.sku ??
+          (item.id ?? `inventory-${fakeDb.inventoryItems.length + index + 1}`),
         name: item.name ?? "",
         qty: item.qty ?? 0,
+        category: (item.category as string | undefined) ?? "accessories",
+        details:
+          typeof item.details === "string"
+            ? item.details
+            : item.details == null
+              ? null
+              : String(item.details),
+        lastUsedAt:
+          item.lastUsedAt instanceof Date
+            ? new Date(item.lastUsedAt.getTime())
+            : item.lastUsedAt
+                ? toDate(item.lastUsedAt as Date | string | number)
+                : null,
+        lastInventoryAt:
+          item.lastInventoryAt instanceof Date
+            ? new Date(item.lastInventoryAt.getTime())
+            : item.lastInventoryAt
+                ? toDate(item.lastInventoryAt as Date | string | number)
+                : null,
+        updatedAt:
+          item.updatedAt instanceof Date
+            ? new Date(item.updatedAt.getTime())
+            : new Date(),
       }));
 
       fakeDb.inventoryItems.push(...normalized);

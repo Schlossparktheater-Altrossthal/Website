@@ -14,6 +14,7 @@ export default async function InventoryStickersPage() {
 
   let inventoryItems: {
     id: string;
+    sku: string;
     name: string;
     location: string | null;
     owner: string | null;
@@ -21,12 +22,13 @@ export default async function InventoryStickersPage() {
 
   if (hasDatabase) {
     const records = await prisma.inventoryItem.findMany({
-      select: { id: true, name: true, location: true, owner: true },
-      orderBy: [{ name: "asc" }, { id: "asc" }],
+      select: { id: true, sku: true, name: true, location: true, owner: true },
+      orderBy: [{ name: "asc" }, { sku: "asc" }, { id: "asc" }],
     });
 
     inventoryItems = records.map((item) => ({
       id: item.id,
+      sku: item.sku,
       name: item.name,
       location: item.location ?? null,
       owner: item.owner ?? null,

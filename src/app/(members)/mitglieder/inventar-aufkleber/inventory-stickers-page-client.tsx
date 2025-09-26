@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 
 type InventoryItemOption = {
   id: string;
+  sku: string;
   name: string;
   location: string | null;
   owner: string | null;
@@ -300,10 +301,11 @@ export default function InventoryStickersPageClient({
 
     return inventoryItems
       .filter((item) => {
+        const skuMatch = item.sku.toLowerCase().includes(normalized);
         const idMatch = item.id.toLowerCase().includes(normalized);
         const nameMatch = item.name.toLowerCase().includes(normalized);
         const locationMatch = item.location?.toLowerCase().includes(normalized) ?? false;
-        return idMatch || nameMatch || locationMatch;
+        return skuMatch || idMatch || nameMatch || locationMatch;
       })
       .slice(0, 12);
   }, [inventoryItems, inventoryQuery]);
@@ -315,7 +317,7 @@ export default function InventoryStickersPageClient({
         .join(" • ");
 
       setStickers((previous) => {
-        const existingIndex = previous.findIndex((entry) => entry.code === item.id);
+        const existingIndex = previous.findIndex((entry) => entry.code === item.sku);
         if (existingIndex >= 0) {
           const next = [...previous];
           const current = next[existingIndex];
@@ -331,7 +333,7 @@ export default function InventoryStickersPageClient({
         return [
           ...previous,
           createStickerEntry({
-            code: item.id,
+            code: item.sku,
             primaryText: item.name,
             secondaryText: details.length > 0 ? details : undefined,
             copies: 1,
@@ -535,7 +537,7 @@ export default function InventoryStickersPageClient({
 
                         return (
                           <div
-                            key={item.id}
+                            key={item.sku}
                             className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/80 p-3 shadow-sm"
                           >
                             <div className="min-w-0 space-y-1">
@@ -547,7 +549,7 @@ export default function InventoryStickersPageClient({
                                 tone="muted"
                                 className="flex items-center gap-2 text-xs"
                               >
-                                <span className="font-mono">{item.id}</span>
+                                <span className="font-mono">{item.sku}</span>
                                 {subtitleParts.length > 0 ? (
                                   <span className="truncate">{subtitleParts.join(" • ")}</span>
                                 ) : null}

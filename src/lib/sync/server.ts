@@ -239,7 +239,7 @@ export async function selectBaseline(
 
   if (scope === "inventory") {
     const items = await prisma.inventoryItem.findMany({
-      orderBy: { id: "asc" },
+      orderBy: [{ category: "asc" }, { sku: "asc" }, { id: "asc" }],
       take: limit + 1,
       ...(options.cursor
         ? {
@@ -254,10 +254,17 @@ export async function selectBaseline(
 
     const mapped: InventoryItemRecord[] = records.map((item) => ({
       id: item.id,
-      sku: item.id,
+      sku: item.sku,
       name: item.name,
       quantity: item.qty,
-      updatedAt: capturedAt,
+      updatedAt: item.updatedAt.toISOString(),
+      category: item.category,
+      details: item.details ?? null,
+      lastUsedAt: item.lastUsedAt?.toISOString() ?? null,
+      lastInventoryAt: item.lastInventoryAt?.toISOString() ?? null,
+      location: item.location ?? null,
+      owner: item.owner ?? null,
+      condition: item.condition ?? null,
     }));
 
     return {

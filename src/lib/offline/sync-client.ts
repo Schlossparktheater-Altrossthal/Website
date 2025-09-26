@@ -19,6 +19,27 @@ import type {
   TicketRecord,
 } from "./types";
 
+const INVENTORY_CATEGORY_VALUES: InventoryItemRecord["category"][] = [
+  "light",
+  "sound",
+  "network",
+  "video",
+  "instruments",
+  "cables",
+  "cases",
+  "accessories",
+];
+
+function isInventoryCategoryValue(
+  value: string | null,
+): value is InventoryItemRecord["category"] {
+  if (!value) {
+    return false;
+  }
+
+  return (INVENTORY_CATEGORY_VALUES as readonly string[]).includes(value);
+}
+
 const DEFAULT_RETRY_ATTEMPTS = 3;
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_FLUSH_LIMIT = 50;
@@ -978,12 +999,38 @@ export class SyncClient {
     const updatedAt =
       this.pickString(record, ["updatedAt", "occurredAt"]) ?? occurredAt;
 
+    const categoryValue = this.pickString(record, ["category", "type"]);
+    const category = isInventoryCategoryValue(categoryValue)
+      ? categoryValue
+      : ("accessories" as InventoryItemRecord["category"]);
+    const details = this.pickString(record, ["details", "description"]);
+    const lastUsedAt = this.pickString(record, ["lastUsedAt", "usedAt"]);
+    const lastInventoryAt = this.pickString(record, [
+      "lastInventoryAt",
+      "inventoryCheckedAt",
+      "countedAt",
+    ]);
+    const location = this.pickString(record, ["location", "place", "room"]);
+    const owner = this.pickString(record, ["owner", "responsible", "contact"]);
+    const condition = this.pickString(record, [
+      "condition",
+      "state",
+      "status",
+    ]);
+
     return {
       id,
       sku,
       name,
       quantity,
       updatedAt,
+      category,
+      details: details ?? null,
+      lastUsedAt: lastUsedAt ?? null,
+      lastInventoryAt: lastInventoryAt ?? null,
+      location: location ?? null,
+      owner: owner ?? null,
+      condition: condition ?? null,
     } satisfies InventoryItemRecord;
   }
 

@@ -22,6 +22,17 @@ enum SyncScope {
   tickets
 }
 
+enum InventoryItemCategory {
+  light
+  sound
+  network
+  video
+  instruments
+  cables
+  cases
+  accessories
+}
+
 enum TicketStatus {
   unused
   checked_in
@@ -901,11 +912,18 @@ model Task {
 
 model InventoryItem {
   id        String  @id @default(cuid())
+  sku       String  @unique @default(cuid())
   name      String
   qty       Int
   location  String?
   owner     String?
   condition String?
+  category         InventoryItemCategory @default(accessories)
+  details          String?
+  lastUsedAt       DateTime?
+  lastInventoryAt  DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 }
 
 model SyncEvent {
