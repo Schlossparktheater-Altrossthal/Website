@@ -202,6 +202,19 @@ const DutyRosterIcon = createMembersNavIcon(
   </>,
 );
 
+const MealPlanIcon = createMembersNavIcon(
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 2v4" />
+    <path d="M15 2v4" />
+    <path d="M3 10h18" />
+    <path d="M7 14h6" />
+    <path d="M7 18h6" />
+    <path d="m17 14 2 2 2-2" />
+    <path d="M17 18h4" />
+  </>,
+);
+
 const CateringIcon = createMembersNavIcon(
   <>
     <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8" />
@@ -460,6 +473,12 @@ export const membersNavigation = [
         label: "Essensplanung",
         permissionKey: "mitglieder.essenplanung",
         icon: CateringIcon,
+      },
+      {
+        href: "/mitglieder/endproben-woche/menueplan",
+        label: "Menüplan",
+        permissionKey: "mitglieder.essenplanung",
+        icon: MealPlanIcon,
       },
       {
         href: "/mitglieder/endproben-woche/einkaufsliste",
