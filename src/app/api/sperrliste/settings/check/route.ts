@@ -9,7 +9,7 @@ import {
   type HolidaySourceMode,
   type ResolvedSperrlisteSettings,
 } from "@/lib/sperrliste-settings";
-import { fetchHolidayRangesForSettings } from "@/lib/holidays";
+import { fetchHolidayRangesForSettings, isHolidaySourceUrlAllowed } from "@/lib/holidays";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
@@ -86,6 +86,14 @@ export async function POST(request: NextRequest) {
   if (mode === "custom" && !url) {
     return NextResponse.json(
       { error: "Bitte gib eine gültige URL für die Ferienquelle an." },
+      { status: 400 },
+    );
+  }
+
+  if (mode === "custom" && url && !isHolidaySourceUrlAllowed(url)) {
+    console.warn("[sperrliste] blocked custom holiday source", { url });
+    return NextResponse.json(
+      { error: "Diese Ferienquelle ist nicht erlaubt." },
       { status: 400 },
     );
   }
