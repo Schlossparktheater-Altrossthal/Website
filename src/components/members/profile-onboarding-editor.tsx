@@ -10,6 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import {
+  BACKGROUND_TAGS,
+  findMatchingBackgroundTag,
+  normalizeBackgroundLabel,
+} from "@/data/onboarding-backgrounds";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -31,7 +36,7 @@ const focusOptions: { value: OnboardingFocus; label: string; description: string
   },
 ];
 
-const backgroundSuggestions = [
+const BASE_BACKGROUND_SUGGESTIONS = [
   "Schule",
   "Berufsschule",
   "Universität",
@@ -74,6 +79,29 @@ export function ProfileOnboardingEditor({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const activeBackgroundTag = useMemo(
+    () => findMatchingBackgroundTag(background),
+    [background],
+  );
+  const requiresBackgroundClass = activeBackgroundTag?.requiresClass ?? false;
+  const backgroundClassSuggestions = useMemo(
+    () => activeBackgroundTag?.getClassSuggestions?.() ?? [],
+    [activeBackgroundTag],
+  );
+  const backgroundTagValueKeys = useMemo(
+    () => new Set(BACKGROUND_TAGS.map((tag) => normalizeBackgroundLabel(tag.value))),
+    [],
+  );
+  const filteredBackgroundSuggestions = useMemo(
+    () =>
+      BASE_BACKGROUND_SUGGESTIONS.filter((suggestion) => {
+        const key = normalizeBackgroundLabel(suggestion);
+        if (!key) return false;
+        return !backgroundTagValueKeys.has(key);
+      }),
+    [backgroundTagValueKeys],
+  );
+
   const formattedUpdatedAt = useMemo(() => {
     if (!updatedAt) return null;
     const parsed = new Date(updatedAt);
@@ -99,6 +127,10 @@ export function ProfileOnboardingEditor({
     }
 
     const trimmedClass = backgroundClass.trim();
+    if (requiresBackgroundClass && !trimmedClass) {
+      setError(activeBackgroundTag?.classRequiredError ?? "Bitte gib deine Klasse an.");
+      return;
+    }
     if (trimmedClass.length > 120) {
       setError("Klassenangaben dürfen maximal 120 Zeichen enthalten.");
       return;
@@ -244,30 +276,75 @@ export function ProfileOnboardingEditor({
           <span className="text-xs text-muted-foreground">
             Kurze Info zu Schule, Ausbildung oder Beruf hilft uns beim Einordnen.
           </span>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {backgroundSuggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                className="rounded-full border border-border px-3 py-1 text-[0.7rem] text-muted-foreground transition hover:border-primary hover:text-primary"
-                onClick={() => setBackground(suggestion)}
-              >
-                {suggestion}
-              </button>
-            ))}
+          <div className="space-y-2 pt-2">
+            {BACKGROUND_TAGS.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {BACKGROUND_TAGS.map((tag) => {
+                  const isActive = activeBackgroundTag?.id === tag.id;
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      className={cn(
+                        "rounded-full border px-3 py-1 text-[0.7rem] transition",
+                        isActive
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+                      )}
+                      onClick={() => setBackground(tag.value)}
+                    >
+                      {tag.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {filteredBackgroundSuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {filteredBackgroundSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    className="rounded-full border border-border px-3 py-1 text-[0.7rem] text-muted-foreground transition hover:border-primary hover:text-primary"
+                    onClick={() => setBackground(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </label>
 
         <label className="space-y-1 text-sm">
-          <span className="font-medium">Klasse oder Jahrgang (optional)</span>
+          <span className="font-medium">
+            {requiresBackgroundClass ? "Klasse oder Jahrgang (erforderlich)" : "Klasse oder Jahrgang (optional)"}
+          </span>
           <Input
             value={backgroundClass}
             onChange={(event) => setBackgroundClass(event.target.value)}
-            placeholder="z.B. BFS 23A"
+            placeholder={activeBackgroundTag?.classPlaceholder ?? "z.B. BFS 23A"}
           />
           <span className="text-xs text-muted-foreground">
-            Hilft uns bei der Planung innerhalb der Produktionen – falls nicht relevant, lass das Feld frei.
+            {requiresBackgroundClass
+              ? activeBackgroundTag?.classHelper ??
+                "Bitte gib deine Klasse an, damit wir dich richtig zuordnen können."
+              : "Hilft uns bei der Planung innerhalb der Produktionen – falls nicht relevant, lass das Feld frei."}
           </span>
+          {backgroundClassSuggestions.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {backgroundClassSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  className="rounded-full border border-border px-3 py-1 text-[0.7rem] text-muted-foreground transition hover:border-primary hover:text-primary"
+                  onClick={() => setBackgroundClass(suggestion)}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
         </label>
       </section>
 

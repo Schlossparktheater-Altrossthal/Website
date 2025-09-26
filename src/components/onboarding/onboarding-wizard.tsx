@@ -32,6 +32,11 @@ import {
   type DietaryStyleOption,
 } from "@/data/dietary-preferences";
 import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
+import {
+  BACKGROUND_TAGS,
+  findMatchingBackgroundTag,
+  normalizeBackgroundLabel,
+} from "@/data/onboarding-backgrounds";
 
 const allergyLevelLabels: Record<AllergyLevel, string> = {
   MILD: "Leicht (Unbehagen)",
@@ -119,33 +124,6 @@ type GenderOption = (typeof genderOptions)[number]["value"];
 const CURRENT_YEAR = new Date().getFullYear();
 
 const BASE_BACKGROUND_SUGGESTIONS = ["Schule", "Berufsschule", "Universität", "Ausbildung", "Beruf"] as const;
-
-function createBszClassSuggestions(): string[] {
-  const now = new Date();
-  const relevantYears = [-1, 0, 1]
-    .map((offset) => now.getFullYear() + offset)
-    .filter((year) => year >= 2000 && year <= 2100)
-    .map((year) => String(year % 100).padStart(2, "0"));
-
-  const suggestions: string[] = [];
-  const pushUnique = (value: string) => {
-    if (!suggestions.includes(value)) {
-      suggestions.push(value);
-    }
-  };
-
-  for (const year of relevantYears) {
-    for (const suffix of ["A", "B", "C"]) {
-      pushUnique(`BFS ${year}${suffix}`);
-    }
-    pushUnique(`FO ${year}`);
-    pushUnique(`BG ${year}`);
-  }
-
-  ["BG 11", "BG 12", "BG 13", "FO 11", "FO 12", "BVJ", "BVJ+", "Berufsvorbereitung"].forEach(pushUnique);
-
-  return suggestions;
-}
 
 const allergyLevelStyles = ALLERGY_LEVEL_STYLES;
 
@@ -374,21 +352,6 @@ function createPreferenceCode() {
   return `custom-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function normalizeForMatch(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ß/g, "ss")
-    .toLowerCase();
-}
-
-function isBszBackground(value: string) {
-  if (!value) return false;
-  const normalized = normalizeForMatch(value);
-  if (!normalized.includes("bsz")) return false;
-  return ["altrossthal", "altrothal", "canaletto"].some((keyword) => normalized.includes(keyword));
-}
-
 function formatProductionLabel(production: InviteMeta["production"]) {
   if (!production) return "deine Produktion";
   const trimmed = production.title?.trim() ?? "";
@@ -414,7 +377,6 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(
     () => [...BASE_BACKGROUND_SUGGESTIONS],
   );
-  const [bszClassSuggestions] = useState<string[]>(() => createBszClassSuggestions());
   const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
@@ -522,20 +484,41 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
   const isMinor = age !== null && age < 18;
-  const hasBszBackground = useMemo(() => isBszBackground(form.background), [form.background]);
+  const activeBackgroundTag = useMemo(
+    () => findMatchingBackgroundTag(form.background),
+    [form.background],
+  );
+  const requiresBackgroundClass = activeBackgroundTag?.requiresClass ?? false;
+  const backgroundClassSuggestions = useMemo(
+    () => activeBackgroundTag?.getClassSuggestions?.() ?? [],
+    [activeBackgroundTag],
+  );
+  const backgroundTagValueKeys = useMemo(
+    () => new Set(BACKGROUND_TAGS.map((tag) => normalizeBackgroundLabel(tag.value))),
+    [],
+  );
+  const filteredBackgroundSuggestions = useMemo(
+    () =>
+      backgroundSuggestions.filter((suggestion) => {
+        const key = normalizeBackgroundLabel(suggestion);
+        if (!key) return false;
+        return !backgroundTagValueKeys.has(key);
+      }),
+    [backgroundSuggestions, backgroundTagValueKeys],
+  );
   const backgroundClassLabel = useMemo(() => {
     const trimmed = form.backgroundClass.trim();
     return trimmed ? trimmed : null;
   }, [form.backgroundClass]);
 
   useEffect(() => {
-    if (hasBszBackground) return;
+    if (requiresBackgroundClass) return;
     if (!form.backgroundClass) return;
     setForm((prev) => {
       if (!prev.backgroundClass) return prev;
       return { ...prev, backgroundClass: "" };
     });
-  }, [form.backgroundClass, hasBszBackground]);
+  }, [form.backgroundClass, requiresBackgroundClass]);
 
   const genderLabel = useMemo(() => {
     if (form.genderOption === "custom") {
@@ -982,6 +965,10 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
         setError("Wo kommst du her? Schule, Uni, Ausbildung – ein Stichwort genügt.");
         return;
       }
+      if (requiresBackgroundClass && !form.backgroundClass.trim()) {
+        setError(activeBackgroundTag?.classRequiredError ?? "Bitte gib deine Klasse an.");
+        return;
+      }
       if (form.genderOption === "custom" && !form.genderCustom.trim()) {
         setError("Bitte beschreibe dein Geschlecht oder wähle eine Option aus der Liste.");
         return;
@@ -1417,47 +1404,82 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 <span className="text-xs text-muted-foreground">
                   Erzähl uns kurz, ob du zur Schule gehst, eine Ausbildung machst oder bereits arbeitest.
                 </span>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {backgroundSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                      onClick={() => setForm((prev) => ({ ...prev, background: suggestion }))}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
+                <div className="space-y-2 pt-2">
+                  {BACKGROUND_TAGS.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {BACKGROUND_TAGS.map((tag) => {
+                        const isActive = activeBackgroundTag?.id === tag.id;
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            className={cn(
+                              "rounded-full border px-3 py-1 text-xs transition",
+                              isActive
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+                            )}
+                            onClick={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                background: tag.value,
+                              }))
+                            }
+                          >
+                            {tag.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {filteredBackgroundSuggestions.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {filteredBackgroundSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
+                          onClick={() => setForm((prev) => ({ ...prev, background: suggestion }))}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </label>
-              {hasBszBackground && (
+              {requiresBackgroundClass && (
                 <label className="space-y-1 text-sm md:col-start-2">
-                  <span className="font-medium">Welche Klasse besuchst du am BSZ Altroßthal/Canaletto?</span>
+                  <span className="font-medium">
+                    {activeBackgroundTag?.classLabel ?? "Welche Klasse besuchst du?"}
+                  </span>
                   <Input
                     value={form.backgroundClass}
                     onChange={(event) => setForm((prev) => ({ ...prev, backgroundClass: event.target.value }))}
-                    placeholder="z.B. BFS 23A"
+                    placeholder={activeBackgroundTag?.classPlaceholder ?? "z.B. BFS 23A"}
                   />
                   <span className="text-xs text-muted-foreground">
-                    Optional: Damit können wir dich deinem Jahrgang zuordnen.
+                    {activeBackgroundTag?.classHelper ?? "Hilft uns bei der Zuordnung."}
                   </span>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {bszClassSuggestions.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                        onClick={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            backgroundClass: suggestion,
-                          }))
-                        }
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
+                  {backgroundClassSuggestions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {backgroundClassSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              backgroundClass: suggestion,
+                            }))
+                          }
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </label>
               )}
             </div>
