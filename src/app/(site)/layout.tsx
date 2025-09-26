@@ -100,7 +100,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <div className="app-shell">
       <MysticBackground />
-      <SiteHeader siteTitle={siteTitle} />
+      {!showMaintenanceNotice ? <SiteHeader siteTitle={siteTitle} /> : null}
       <main id="main" className="site-main">
         {showMaintenanceNotice ? (
           <div className="flex min-h-[60svh] items-center justify-center px-6 py-16">
@@ -110,7 +110,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           children
         )}
       </main>
-      <SiteFooter buildInfo={buildInfo} isDevBuild={isDevBuild} siteTitle={siteTitle} />
+      {!showMaintenanceNotice ? (
+        <SiteFooter buildInfo={buildInfo} isDevBuild={isDevBuild} siteTitle={siteTitle} />
+      ) : null}
     </div>
   );
 }
