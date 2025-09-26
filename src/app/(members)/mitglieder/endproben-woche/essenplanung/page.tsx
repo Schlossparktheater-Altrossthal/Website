@@ -272,7 +272,7 @@ export default async function EssensplanungPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex items-start gap-2 text-sm text-muted-foreground">
                   <Sparkles className="mt-0.5 h-4 w-4 text-primary" />
-                  <span>Eigene Rezepte werden nach dem Speichern direkt im Dropdown &bdquo;Eigene Rezepte&ldquo; verfügbar.</span>
+                  <span>Eigene Rezepte landen nach dem Speichern automatisch im Menüplan und lassen sich in jedem Slot auswählen.</span>
                 </div>
                 <div className="flex items-start gap-2 text-sm text-muted-foreground">
                   <ShieldAlert className="mt-0.5 h-4 w-4 text-warning" />
