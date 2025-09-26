@@ -124,6 +124,70 @@ const PHOTO_STATUS_CLASSES: Record<PhotoConsentStatus, string> = {
   rejected: "border-destructive/45 bg-destructive/10 text-destructive",
 };
 
+const ROLE_PREFERENCE_DEFINITIONS: Record<string, { title: string; description: string }> = {
+  acting_statist: {
+    title: "Statistenrolle",
+    description: "Auf der Bühne ohne Text – Präsenz in Bildern und Szenen.",
+  },
+  acting_scout: {
+    title: "Schnupperrolle",
+    description: "Kleine Auftritte zum Reinschnuppern mit überschaubarer Textmenge.",
+  },
+  acting_medium: {
+    title: "Mittlere Rolle",
+    description: "Spürbar auf der Bühne, mit Verantwortung im Ensemble und regelmäßigem Proben.",
+  },
+  acting_lead: {
+    title: "Große Rolle",
+    description: "Haupt- oder zentrale Nebenrolle mit intensiver Vorbereitung und Bühnenpräsenz.",
+  },
+  crew_stage: {
+    title: "Bühnenbild & Ausstattung",
+    description: "Räume entwerfen, Kulissen bauen und für beeindruckende Bilder sorgen.",
+  },
+  crew_tech: {
+    title: "Licht & Ton",
+    description: "Shows inszenieren mit Licht, Klang, Effekten und technischer Präzision.",
+  },
+  crew_costume: {
+    title: "Kostüm",
+    description: "Looks entwickeln, nähen, Fundus pflegen und Outfits anpassen.",
+  },
+  crew_makeup: {
+    title: "Maske & Make-up",
+    description: "Maskenbild, Styling, Perücken und schnelle Verwandlungen hinter der Bühne.",
+  },
+  crew_direction: {
+    title: "Regieassistenz & Orga",
+    description: "Abläufe koordinieren, Proben strukturieren, Teams im Hintergrund führen.",
+  },
+  crew_music: {
+    title: "Musik & Klang",
+    description: "Arrangements entwickeln, Proben begleiten und Produktionen musikalisch tragen.",
+  },
+  crew_props: {
+    title: "Requisite",
+    description: "Requisiten gestalten, organisieren und für reibungslose Szenen sorgen.",
+  },
+  crew_marketing: {
+    title: "Werbung & Social Media",
+    description: "Kampagnen planen, Content erstellen und Produktionen sichtbar machen.",
+  },
+};
+
+const ROLE_PREFERENCE_WEIGHT_LABELS: { threshold: number; label: string }[] = [
+  { threshold: 0, label: "Nur mal reinschauen" },
+  { threshold: 25, label: "Locker interessiert" },
+  { threshold: 50, label: "Motiviert" },
+  { threshold: 75, label: "Sehr engagiert" },
+  { threshold: 90, label: "Herzensprojekt" },
+];
+
+const ROLE_PREFERENCE_WEIGHT_FORMAT = new Intl.NumberFormat("de-DE", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 function formatDate(value: Date | null | undefined) {
   if (!value) return "—";
   return dateFormatter.format(value);
@@ -165,6 +229,86 @@ function resolvePhotoConsent(consent: PhotoConsentSelection | null): PhotoConsen
     className,
     updatedAt,
   };
+}
+
+type RolePreferenceEntry = {
+  code: string;
+  domain: "acting" | "crew";
+  weight: number;
+};
+
+function resolveRolePreferenceTitle(code: string) {
+  if (code.startsWith("custom-")) {
+    return "Eigenes Gewerk";
+  }
+  return ROLE_PREFERENCE_DEFINITIONS[code]?.title ?? code;
+}
+
+function resolveRolePreferenceDescription(code: string) {
+  if (code.startsWith("custom-")) {
+    return "Vom Mitglied individuell ergänzt.";
+  }
+  return ROLE_PREFERENCE_DEFINITIONS[code]?.description ?? null;
+}
+
+function resolveRolePreferenceWeightLabel(weight: number) {
+  const match = [...ROLE_PREFERENCE_WEIGHT_LABELS].reverse().find((entry) => weight >= entry.threshold);
+  return match?.label ?? "Interesse";
+}
+
+function rolePreferenceSectionLabel(domain: "acting" | "crew") {
+  return domain === "acting" ? "Schauspiel" : "Gewerke";
+}
+
+function RolePreferenceList({ domain, preferences }: { domain: "acting" | "crew"; preferences: RolePreferenceEntry[] }) {
+  if (!preferences.length) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {rolePreferenceSectionLabel(domain)}
+      </div>
+      <ul className="space-y-2">
+        {preferences.map((preference) => {
+          const safeWeight = Math.max(0, Math.min(100, preference.weight));
+          const barWidth = Math.max(safeWeight, 6);
+          const title = resolveRolePreferenceTitle(preference.code);
+          const description = resolveRolePreferenceDescription(preference.code);
+          const weightLabel = resolveRolePreferenceWeightLabel(safeWeight);
+          return (
+            <li
+              key={`${domain}-${preference.code}`}
+              className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-semibold text-foreground">{title}</p>
+                  {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+                  {preference.code.startsWith("custom-") ? (
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+                      Individueller Eintrag ({preference.code})
+                    </p>
+                  ) : null}
+                </div>
+                <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wide">
+                  {ROLE_PREFERENCE_WEIGHT_FORMAT.format(safeWeight)} / 100
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>{weightLabel}</span>
+                <span>{ROLE_PREFERENCE_WEIGHT_FORMAT.format(safeWeight)}</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+                <div className="h-full rounded-full bg-primary/70" style={{ width: `${barWidth}%` }} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
 
 function getAttendanceStatusLabel(status: AttendanceStatus | null | undefined) {
@@ -266,6 +410,13 @@ const memberSelect = {
       consentGiven: true,
       updatedAt: true,
       approvedAt: true,
+    },
+  },
+  rolePreferences: {
+    select: {
+      code: true,
+      domain: true,
+      weight: true,
     },
   },
 } satisfies Prisma.UserSelect;
@@ -616,6 +767,22 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const onboardingBackground = member.onboardingProfile?.background?.trim() ?? null;
   const onboardingNotes = member.onboardingProfile?.notes?.trim() ?? null;
 
+  const rolePreferences: RolePreferenceEntry[] = (member.rolePreferences ?? []).map((preference) => ({
+    code: preference.code,
+    domain: preference.domain as RolePreferenceEntry["domain"],
+    weight: preference.weight ?? 0,
+  }));
+  const sortedRolePreferences = [...rolePreferences].sort((a, b) => {
+    const weightDiff = Math.max(0, Math.min(100, b.weight)) - Math.max(0, Math.min(100, a.weight));
+    if (weightDiff !== 0) {
+      return weightDiff;
+    }
+    return a.code.localeCompare(b.code);
+  });
+  const actingRolePreferences = sortedRolePreferences.filter((preference) => preference.domain === "acting");
+  const crewRolePreferences = sortedRolePreferences.filter((preference) => preference.domain === "crew");
+  const hasRolePreferences = actingRolePreferences.length > 0 || crewRolePreferences.length > 0;
+
   const email = member.email?.trim() ?? null;
   const dateOfBirthLabel = formatDate(member.dateOfBirth);
   const createdAtLabel = formatDateTime(member.createdAt);
@@ -777,6 +944,27 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                     {onboardingNotes ? (
                       <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{onboardingNotes}</p>
                     ) : null}
+                  </div>
+
+                  <div className="rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <ListChecks className="h-4 w-4" aria-hidden />
+                      Rollen &amp; Gewerke aus dem Onboarding
+                    </div>
+                    {hasRolePreferences ? (
+                      <div className="mt-3 space-y-4">
+                        {actingRolePreferences.length ? (
+                          <RolePreferenceList domain="acting" preferences={actingRolePreferences} />
+                        ) : null}
+                        {crewRolePreferences.length ? (
+                          <RolePreferenceList domain="crew" preferences={crewRolePreferences} />
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Im Onboarding wurden keine Rollen oder Gewerke markiert.
+                      </p>
+                    )}
                   </div>
 
                   <div className="rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm">
