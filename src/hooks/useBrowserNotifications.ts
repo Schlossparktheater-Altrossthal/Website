@@ -180,12 +180,18 @@ export function useBrowserNotifications(
       }
 
       const baseData = isRecord(data) ? data : {};
+      const combinedData: Record<string, unknown> = { ...baseData };
+
+      const resolvedUrl = url ?? baseData.url;
+      if (typeof resolvedUrl === "string" && resolvedUrl.trim()) {
+        combinedData.url = resolvedUrl;
+      } else if ("url" in combinedData) {
+        delete combinedData.url;
+      }
+
       const options: NotificationOptions = {
         ...rest,
-        data: {
-          ...baseData,
-          url: url ?? baseData.url,
-        },
+        ...(Object.keys(combinedData).length > 0 ? { data: combinedData } : {}),
       };
 
       const registrationInstance = registrationRef.current;
