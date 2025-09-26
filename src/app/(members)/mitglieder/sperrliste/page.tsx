@@ -56,6 +56,7 @@ export default async function SperrlistePage() {
             date: true,
             reason: true,
             kind: true,
+            createdAt: true,
           },
         },
       },
@@ -73,6 +74,7 @@ export default async function SperrlistePage() {
     date: format(entry.date, "yyyy-MM-dd"),
     reason: entry.reason,
     kind: entry.kind,
+    createdAt: entry.createdAt.toISOString(),
   }));
 
   const overviewMembers: OverviewMember[] = overviewUsers.map((user) => ({
@@ -90,6 +92,7 @@ export default async function SperrlistePage() {
       date: format(entry.date, "yyyy-MM-dd"),
       reason: entry.reason,
       kind: entry.kind,
+      createdAt: entry.createdAt.toISOString(),
     })),
   }));
 

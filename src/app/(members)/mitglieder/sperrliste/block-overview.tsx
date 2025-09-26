@@ -73,6 +73,13 @@ type HolidaySegment = {
   showDivider: boolean;
 };
 
+function formatCreatedAtLabel(createdAt?: string | null) {
+  if (!createdAt) return null;
+  const parsed = parseISO(createdAt);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return format(parsed, "d. MMMM yyyy 'um' HH:mm 'Uhr'", { locale: de });
+}
+
 function prepareMembers(members: OverviewMember[]): PreparedMember[] {
   return members.map((member) => {
     const blockedMap = new Map<string, BlockedDay>();
@@ -185,6 +192,11 @@ export function BlockOverview({
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedBlockedDay, setSelectedBlockedDay] = useState<SelectedBlockedDay | null>(null);
+
+  const selectedBlockedCreatedAtLabel = useMemo(
+    () => formatCreatedAtLabel(selectedBlockedDay?.entry.createdAt),
+    [selectedBlockedDay],
+  );
 
   const daysInView = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
@@ -442,7 +454,7 @@ export function BlockOverview({
             <LegendItem
               label="Gesperrt"
               description="Eingetragene Abwesenheiten – Details per Klick"
-              className="border-destructive/60 bg-destructive/20 text-destructive"
+              className="border-destructive/60 bg-transparent"
             />
             <LegendItem
               label="Eingeschränkt"
@@ -590,6 +602,7 @@ export function BlockOverview({
                       const entry = member.blockedMap.get(key);
                       const trimmedReason = entry?.reason?.trim() || undefined;
                       const hasReason = Boolean(trimmedReason);
+                      const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
                       const weekday = day.getDay();
                       const showDivider =
                         sortedPreferredWeekdays.length > 0 &&
@@ -618,6 +631,9 @@ export function BlockOverview({
                                 : "gesperrt"
                           : "frei",
                       ];
+                      if (createdAtLabel) {
+                        label.push(`Eingetragen am ${createdAtLabel}`);
+                      }
                       if (isHoliday) {
                         label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`);
                       } else if (!entry) {
@@ -651,14 +667,14 @@ export function BlockOverview({
                           )}
                         >
                           {isBlocked && entry ? (
-                            <button
-                              type="button"
-                              onClick={openDetails}
-                              className={cn(
-                                "flex h-full min-h-[56px] w-full flex-col items-center justify-center rounded-lg border border-destructive/60 bg-destructive/15 px-2 py-2 text-xs leading-5 text-destructive shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-destructive/70 dark:bg-destructive/25 dark:text-destructive-foreground",
-                                isToday(day) && "ring-1 ring-primary/60",
-                                !isSameMonth(day, currentMonth) && "opacity-70",
-                              )}
+                          <button
+                            type="button"
+                            onClick={openDetails}
+                            className={cn(
+                              "flex h-full min-h-[56px] w-full flex-col items-center justify-center rounded-lg border border-transparent bg-transparent px-2 py-2 text-xs leading-5 text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80",
+                              isToday(day) && "ring-1 ring-primary/60",
+                              !isSameMonth(day, currentMonth) && "opacity-70",
+                            )}
                               aria-label={[...label, "Details öffnen"].join(". ")}
                               title={label.join(". ")}
                             >
@@ -669,7 +685,7 @@ export function BlockOverview({
                                   <span className="line-clamp-2">{trimmedReason}</span>
                                 </span>
                               ) : (
-                                <span className="mt-1 text-[11px] leading-4 text-destructive/80 dark:text-destructive-foreground/80">
+                                <span className="mt-1 text-[11px] leading-4 text-destructive/70">
                                   Keine Details
                                 </span>
                               )}
@@ -778,6 +794,7 @@ export function BlockOverview({
                     const isPreferred = entry?.kind === "PREFERRED";
                     const trimmedReason = entry?.reason?.trim() || undefined;
                     const hasReason = Boolean(trimmedReason);
+                    const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
                     const label = [
                       format(day, "EEEE, d. MMMM yyyy", { locale: de }),
                       entry
@@ -790,6 +807,9 @@ export function BlockOverview({
                     ];
                     if (isHoliday) {
                       label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`);
+                    }
+                    if (createdAtLabel) {
+                      label.push(`Eingetragen am ${createdAtLabel}`);
                     }
 
                     const openDetails = () => {
@@ -810,7 +830,7 @@ export function BlockOverview({
                             type="button"
                             onClick={openDetails}
                             className={cn(
-                              "flex h-full w-full flex-col items-center rounded-2xl border border-destructive/60 bg-destructive/15 px-2 py-2 text-center text-xs leading-5 text-destructive shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-destructive/70 dark:bg-destructive/25 dark:text-destructive-foreground",
+                              "flex h-full w-full flex-col items-center rounded-2xl border border-transparent bg-transparent px-2 py-2 text-center text-xs leading-5 text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80",
                               isToday(day) && "ring-2 ring-primary/70",
                             )}
                             aria-label={[...label, "Details öffnen"].join(". ")}
@@ -826,7 +846,7 @@ export function BlockOverview({
                                 <span className="line-clamp-2">{trimmedReason}</span>
                               </span>
                             ) : (
-                              <span className="mt-2 text-[11px] leading-4 text-destructive/80 dark:text-destructive-foreground/80">
+                              <span className="mt-2 text-[11px] leading-4 text-destructive/70">
                                 Keine Details
                               </span>
                             )}
@@ -908,11 +928,16 @@ export function BlockOverview({
             <div className="space-y-4" id="blocked-day-details">
               <div className="space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Grund
+                  Grund &amp; Zeitpunkt
                 </span>
-                <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm leading-6 text-muted-foreground/90">
-                  {selectedBlockedDay.entry.reason?.trim() || "Kein Grund hinterlegt."}
-                </p>
+                <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-3 text-sm leading-6 text-muted-foreground/90">
+                  <p>{selectedBlockedDay.entry.reason?.trim() || "Kein Grund hinterlegt."}</p>
+                  <p className="mt-2 text-xs text-muted-foreground/80">
+                    {selectedBlockedCreatedAtLabel
+                      ? `Eingetragen am ${selectedBlockedCreatedAtLabel}.`
+                      : "Zeitpunkt konnte nicht ermittelt werden."}
+                  </p>
+                </div>
               </div>
               {selectedBlockedDay.holidayEntries.length ? (
                 <div className="space-y-2">

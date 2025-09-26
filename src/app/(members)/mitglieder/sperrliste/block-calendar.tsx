@@ -41,6 +41,7 @@ export type BlockedDay = {
   date: string;
   reason: string | null;
   kind: BlockedDayKind;
+  createdAt: string;
 };
 
 const KIND_OPTIONS: { kind: BlockedDayKind; title: string; description: string }[] = [

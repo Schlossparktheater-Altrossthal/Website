@@ -15,6 +15,7 @@ export type BlockDayResponse = {
   date: string;
   reason: string | null;
   kind: BlockedDayKind;
+  createdAt: string;
 };
 
 export function normaliseReason(input?: string | null) {
@@ -36,11 +37,13 @@ export function toResponse(entry: {
   date: Date;
   reason: string | null;
   kind: BlockedDayKind;
+  createdAt: Date;
 }): BlockDayResponse {
   return {
     id: entry.id,
     date: format(entry.date, "yyyy-MM-dd"),
     reason: entry.reason,
     kind: entry.kind,
+    createdAt: entry.createdAt.toISOString(),
   };
 }
