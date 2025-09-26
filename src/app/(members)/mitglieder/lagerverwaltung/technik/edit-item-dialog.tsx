@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,37 +19,54 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
-  createTechnikInventoryItem,
+  updateTechnikInventoryItem,
   type TechnikInventoryActionState,
 } from "./actions";
-import {
-  TECH_CATEGORY_LABEL,
-  TECH_CATEGORY_PREFIX,
-  type TechnikInventoryCategory,
-} from "./config";
+import { TECH_CATEGORY_LABEL, type TechnikInventoryCategory } from "./config";
 
 const INITIAL_STATE: TechnikInventoryActionState = { status: "idle" };
 
-interface AddTechnikItemDialogProps {
-  category: TechnikInventoryCategory;
+function formatDateInput(value: Date | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
+interface EditTechnikItemDialogProps {
+  item: {
+    id: string;
+    sku: string;
+    category: TechnikInventoryCategory;
+    name: string;
+    manufacturer: string | null;
+    itemType: string | null;
+    quantity: number;
+    acquisitionCost: number | null;
+    totalValue: number | null;
+    purchaseDate: Date | null;
+    lastUsedAt: Date | null;
+    lastInventoryAt: Date | null;
+    details: string | null;
+  };
+}
+
+export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(
-    createTechnikInventoryItem,
+    updateTechnikInventoryItem,
     INITIAL_STATE,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
-
-  const categoryLabel = TECH_CATEGORY_LABEL[category];
-  const prefix = TECH_CATEGORY_PREFIX[category];
+  const categoryLabel = TECH_CATEGORY_LABEL[item.category];
 
   useEffect(() => {
     if (state.status === "success") {
       toast.success(state.message);
-      formRef.current?.reset();
       setOpen(false);
       setErrorMessage(null);
     }
@@ -68,43 +86,46 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">Artikel hinzufügen</Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Inventarposten ${item.sku} bearbeiten`}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Artikel in {categoryLabel} anlegen</DialogTitle>
+          <DialogTitle>Inventarposten bearbeiten</DialogTitle>
           <DialogDescription>
-            Die Artikelnummer wird automatisch als{" "}
-            <span className="font-mono">
-              {prefix}
-              001
-            </span>{" "}
-            vergeben und fortlaufend erhöht.
+            Aktualisiere Details für {categoryLabel}. Änderungen werden direkt
+            gespeichert.
           </DialogDescription>
         </DialogHeader>
-        <form ref={formRef} action={formAction} className="space-y-4">
-          <input type="hidden" name="category" value={category} />
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="id" value={item.id} />
+          <input type="hidden" name="category" value={item.category} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-manufacturer-${category}`}>
+              <Label htmlFor={`technik-manufacturer-edit-${item.id}`}>
                 Hersteller
               </Label>
               <Input
-                id={`technik-manufacturer-${category}`}
+                id={`technik-manufacturer-edit-${item.id}`}
                 name="manufacturer"
-                placeholder="z. B. Cameo"
+                defaultValue={item.manufacturer ?? ""}
                 required
                 maxLength={120}
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-name-${category}`}>
+              <Label htmlFor={`technik-name-edit-${item.id}`}>
                 Modellbezeichnung
               </Label>
               <Input
-                id={`technik-name-${category}`}
+                id={`technik-name-edit-${item.id}`}
                 name="name"
-                placeholder="z. B. Zenit W600"
+                defaultValue={item.name}
                 required
                 maxLength={160}
               />
@@ -112,97 +133,102 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-type-${category}`}>Typ</Label>
+              <Label htmlFor={`technik-type-edit-${item.id}`}>Typ</Label>
               <Input
-                id={`technik-type-${category}`}
+                id={`technik-type-edit-${item.id}`}
                 name="itemType"
-                placeholder="z. B. LED-Fluter"
+                defaultValue={item.itemType ?? ""}
                 required
                 maxLength={120}
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-quantity-${category}`}>Menge</Label>
+              <Label htmlFor={`technik-quantity-edit-${item.id}`}>
+                Menge
+              </Label>
               <Input
-                id={`technik-quantity-${category}`}
+                id={`technik-quantity-edit-${item.id}`}
                 name="quantity"
                 type="number"
                 min={0}
                 step={1}
-                defaultValue={1}
+                defaultValue={item.quantity}
                 required
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-acquisition-${category}`}>
+              <Label htmlFor={`technik-acquisition-edit-${item.id}`}>
                 Kosten bei Anschaffung (EUR)
               </Label>
               <Input
-                id={`technik-acquisition-${category}`}
+                id={`technik-acquisition-edit-${item.id}`}
                 name="acquisitionCost"
                 type="number"
                 min={0}
                 step="0.01"
-                placeholder="z. B. 2499"
+                defaultValue={item.acquisitionCost ?? ""}
                 required
               />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-total-${category}`}>
+              <Label htmlFor={`technik-total-edit-${item.id}`}>
                 Gesamtwert (EUR)
               </Label>
               <Input
-                id={`technik-total-${category}`}
+                id={`technik-total-edit-${item.id}`}
                 name="totalValue"
                 type="number"
                 min={0}
                 step="0.01"
-                placeholder="z. B. 9996"
+                defaultValue={item.totalValue ?? ""}
                 required
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-purchase-${category}`}>
+              <Label htmlFor={`technik-purchase-edit-${item.id}`}>
                 Kaufdatum
               </Label>
               <Input
-                id={`technik-purchase-${category}`}
+                id={`technik-purchase-edit-${item.id}`}
                 name="purchaseDate"
                 type="date"
+                defaultValue={formatDateInput(item.purchaseDate)}
                 required
               />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-lastUsedAt-${category}`}>
+              <Label htmlFor={`technik-lastUsed-edit-${item.id}`}>
                 Zuletzt benutzt
               </Label>
               <Input
-                id={`technik-lastUsedAt-${category}`}
+                id={`technik-lastUsed-edit-${item.id}`}
                 name="lastUsedAt"
                 type="date"
+                defaultValue={formatDateInput(item.lastUsedAt)}
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor={`technik-lastInventoryAt-${category}`}>
+              <Label htmlFor={`technik-lastInventory-edit-${item.id}`}>
                 Letzte Inventur
               </Label>
               <Input
-                id={`technik-lastInventoryAt-${category}`}
+                id={`technik-lastInventory-edit-${item.id}`}
                 name="lastInventoryAt"
                 type="date"
+                defaultValue={formatDateInput(item.lastInventoryAt)}
               />
             </div>
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor={`technik-details-${category}`}>Anmerkungen</Label>
+            <Label htmlFor={`technik-notes-edit-${item.id}`}>Anmerkungen</Label>
             <Textarea
-              id={`technik-details-${category}`}
+              id={`technik-notes-edit-${item.id}`}
               name="details"
-              placeholder="Besonderheiten, Zubehör, Wartungshinweise …"
+              defaultValue={item.details ?? ""}
               maxLength={500}
               rows={3}
             />
@@ -214,12 +240,8 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
             <p className="text-sm text-red-600">{errorMessage}</p>
           ) : null}
           <DialogFooter>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="w-full sm:w-auto"
-            >
-              {isPending ? "Speichere …" : "Artikel speichern"}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Speichere …" : "Änderungen speichern"}
             </Button>
           </DialogFooter>
         </form>

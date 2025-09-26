@@ -25,13 +25,31 @@ const createItemSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(2, "Bitte einen Artikelnamen mit mindestens zwei Zeichen angeben.")
-    .max(160, "Der Artikelnamen darf höchstens 160 Zeichen enthalten."),
+    .min(2, "Bitte eine Modellbezeichnung mit mindestens zwei Zeichen angeben.")
+    .max(160, "Die Modellbezeichnung darf höchstens 160 Zeichen enthalten."),
+  manufacturer: z
+    .string()
+    .trim()
+    .min(2, "Bitte einen Hersteller mit mindestens zwei Zeichen angeben.")
+    .max(120, "Der Hersteller darf höchstens 120 Zeichen enthalten."),
+  itemType: z
+    .string()
+    .trim()
+    .min(2, "Bitte einen Typ mit mindestens zwei Zeichen angeben.")
+    .max(120, "Der Typ darf höchstens 120 Zeichen enthalten."),
   quantity: z
     .coerce
     .number()
     .int("Die Menge muss eine ganze Zahl sein.")
     .min(0, "Die Menge darf nicht negativ sein."),
+  acquisitionCost: z
+    .coerce
+    .number()
+    .min(0, "Die Anschaffungskosten dürfen nicht negativ sein."),
+  totalValue: z
+    .coerce
+    .number()
+    .min(0, "Der Gesamtwert darf nicht negativ sein."),
   details: z
     .string()
     .trim()
@@ -47,6 +65,15 @@ const createItemSchema = z.object({
       (value) => value === undefined || !Number.isNaN(value.getTime()),
       "Ungültiges Datum für zuletzt benutzt.",
     ),
+  purchaseDate: z
+    .string()
+    .trim()
+    .min(1, "Bitte ein Kaufdatum auswählen.")
+    .transform((value) => new Date(`${value}T00:00:00`))
+    .refine(
+      (value) => !Number.isNaN(value.getTime()),
+      "Ungültiges Datum für den Kauf.",
+    ),
   lastInventoryAt: z
     .string()
     .optional()
@@ -56,6 +83,10 @@ const createItemSchema = z.object({
       (value) => value === undefined || !Number.isNaN(value.getTime()),
       "Ungültiges Datum für die letzte Inventur.",
     ),
+});
+
+const updateItemSchema = createItemSchema.extend({
+  id: z.string().cuid("Ungültige Inventar-ID."),
 });
 
 async function generateSku(
@@ -102,9 +133,14 @@ export async function createTechnikInventoryItem(
     const parsed = createItemSchema.safeParse({
       category: formData.get("category"),
       name: formData.get("name"),
+      manufacturer: formData.get("manufacturer"),
+      itemType: formData.get("itemType"),
       quantity: formData.get("quantity"),
+      acquisitionCost: formData.get("acquisitionCost"),
+      totalValue: formData.get("totalValue"),
       details: formData.get("details") ?? undefined,
       lastUsedAt: formData.get("lastUsedAt") ?? undefined,
+      purchaseDate: formData.get("purchaseDate"),
       lastInventoryAt: formData.get("lastInventoryAt") ?? undefined,
     });
 
@@ -121,7 +157,12 @@ export async function createTechnikInventoryItem(
       const item = await tx.inventoryItem.create({
         data: {
           name: values.name,
+          manufacturer: values.manufacturer,
+          itemType: values.itemType,
           qty: values.quantity,
+          acquisitionCost: values.acquisitionCost,
+          totalValue: values.totalValue,
+          purchaseDate: values.purchaseDate,
           details: values.details ?? null,
           sku,
           category: values.category as InventoryItemCategory,
@@ -146,6 +187,73 @@ export async function createTechnikInventoryItem(
       error instanceof Error
         ? error.message
         : "Der Artikel konnte nicht angelegt werden.";
+    return { status: "error", error: message };
+  }
+}
+
+export async function updateTechnikInventoryItem(
+  _prevState: TechnikInventoryActionState,
+  formData: FormData,
+): Promise<TechnikInventoryActionState> {
+  try {
+    const session = await requireAuth();
+    const allowed = await hasPermission(session.user, "mitglieder.lager.technik");
+
+    if (!allowed) {
+      throw new Error("Du hast keinen Zugriff auf das Technik-Lager.");
+    }
+
+    const parsed = updateItemSchema.safeParse({
+      id: formData.get("id"),
+      category: formData.get("category"),
+      name: formData.get("name"),
+      manufacturer: formData.get("manufacturer"),
+      itemType: formData.get("itemType"),
+      quantity: formData.get("quantity"),
+      acquisitionCost: formData.get("acquisitionCost"),
+      totalValue: formData.get("totalValue"),
+      details: formData.get("details") ?? undefined,
+      lastUsedAt: formData.get("lastUsedAt") ?? undefined,
+      purchaseDate: formData.get("purchaseDate"),
+      lastInventoryAt: formData.get("lastInventoryAt") ?? undefined,
+    });
+
+    if (!parsed.success) {
+      const firstError = parsed.error.issues.at(0)?.message ?? "Ungültige Eingabe.";
+      return { status: "error", error: firstError };
+    }
+
+    const values = parsed.data;
+
+    await prisma.inventoryItem.update({
+      where: { id: values.id },
+      data: {
+        name: values.name,
+        manufacturer: values.manufacturer,
+        itemType: values.itemType,
+        qty: values.quantity,
+        acquisitionCost: values.acquisitionCost,
+        totalValue: values.totalValue,
+        purchaseDate: values.purchaseDate,
+        details: values.details ?? null,
+        category: values.category as InventoryItemCategory,
+        lastUsedAt: values.lastUsedAt ?? null,
+        lastInventoryAt: values.lastInventoryAt ?? null,
+      },
+    });
+
+    revalidatePath("/mitglieder/lagerverwaltung/technik");
+
+    const label = TECH_CATEGORY_LABEL[values.category];
+    return {
+      status: "success",
+      message: `Artikel wurde aktualisiert (${label}).`,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Der Artikel konnte nicht aktualisiert werden.";
     return { status: "error", error: message };
   }
 }
