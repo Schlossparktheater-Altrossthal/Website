@@ -4,10 +4,17 @@ import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 
-const handler = NextAuth(authOptions);
-
-type NextAuthHandler = typeof handler;
+type NextAuthHandler = ReturnType<typeof NextAuth>;
 type NextAuthContext = Parameters<NextAuthHandler>[1];
+
+let cachedHandler: NextAuthHandler | null = null;
+
+function getHandler(): NextAuthHandler {
+  if (!cachedHandler) {
+    cachedHandler = NextAuth(authOptions);
+  }
+  return cachedHandler;
+}
 
 function isAuthTemporarilyDisabled() {
   const explicitFlag = (process.env.AUTH_DEV_NO_DB ?? process.env.NEXT_PUBLIC_AUTH_DEV_NO_DB ?? "").trim().toLowerCase();
@@ -45,6 +52,7 @@ async function safeHandle(request: NextRequest, context: NextAuthContext) {
   }
 
   try {
+    const handler = getHandler();
     return await handler(request, context);
   } catch (error) {
     console.error("[auth] NextAuth handler failed", error);
