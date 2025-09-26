@@ -281,6 +281,9 @@ function ProfilePageContent({
   const [whatsappPending, setWhatsappPending] = useState(false);
   const { items: checklistItems, completed, total, isComplete } =
     useProfileCompletion();
+  const [age, setAge] = useState<number | null>(() =>
+    calculateAge(profileUser.dateOfBirth),
+  );
   const completionProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
   const nextChecklistItem = checklistItems.find((item) => !item.complete) ?? null;
   const headerStatusState = isComplete ? "online" : total > 0 ? "warning" : "idle";
@@ -302,6 +305,13 @@ function ProfilePageContent({
     setWhatsappVisitedAtState(Number.isNaN(parsed.valueOf()) ? null : parsed);
   }, [whatsappLinkVisitedAt]);
 
+  useEffect(() => {
+    setAge((previousAge) => {
+      const nextAge = calculateAge(profileUser.dateOfBirth);
+      return nextAge === previousAge ? previousAge : nextAge;
+    });
+  }, [profileUser.dateOfBirth]);
+
   const displayName = getUserDisplayName(
     {
       firstName: profileUser.firstName,
@@ -318,7 +328,6 @@ function ProfilePageContent({
     ? AVATAR_SOURCE_LABELS[avatarSource]
     : "Automatisch";
   const avatarUpdatedAt = formatDate(profileUser.avatarUpdatedAt);
-  const age = calculateAge(profileUser.dateOfBirth);
 
   const dietaryStyle = resolveDietaryStyleLabel(
     preferenceState.style,
