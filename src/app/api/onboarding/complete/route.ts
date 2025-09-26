@@ -156,21 +156,6 @@ function normalizeString(value: string | null | undefined) {
   return trimmed ? trimmed : null;
 }
 
-function normalizeForMatch(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ß/g, "ss")
-    .toLowerCase();
-}
-
-function requiresBszClass(value: string) {
-  if (!value) return false;
-  const normalized = normalizeForMatch(value);
-  if (!normalized.includes("bsz")) return false;
-  return ["altrossthal", "altrothal", "canaletto"].some((keyword) => normalized.includes(keyword));
-}
-
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
@@ -199,10 +184,6 @@ export async function POST(request: NextRequest) {
   const fullName = combineNameParts(firstName, lastName) ?? null;
   const background = payload.background.trim();
   const backgroundClass = normalizeString(payload.backgroundClass);
-  const requiresBackgroundClass = requiresBszClass(background);
-  if (requiresBackgroundClass && !backgroundClass) {
-    return NextResponse.json({ error: "Bitte gib deine Klasse am BSZ an." }, { status: 400 });
-  }
   const notes = normalizeString(payload.notes);
   const focus = payload.focus;
   const password = payload.password;
