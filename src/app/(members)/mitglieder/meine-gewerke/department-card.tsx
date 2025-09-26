@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { CalendarDays, Clock } from "lucide-react";
+import { format, parse } from "date-fns";
+import { de } from "date-fns/locale/de";
+import { BellRing, CalendarDays, Clock } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +17,7 @@ import {
 } from "@/data/measurements";
 
 import {
+  DATE_KEY_FORMAT,
   ROLE_BADGE_VARIANTS,
   ROLE_LABELS,
   TASK_STATUS_BADGES,
@@ -28,6 +31,7 @@ import {
   hexToRgba,
   isCastDepartmentUser,
 } from "./utils";
+import { CreateDepartmentEventButton } from "./department-event-create-button";
 
 export type DepartmentMeasurementEntry = {
   id: string;
@@ -101,6 +105,38 @@ export function DepartmentCard({
     blockedByUser,
   );
   const blockedDatesCount = countBlockedDays(memberIdsForDepartment, blockedByUser);
+  const canManageEvents = membership.role === "lead" && Boolean(department.slug);
+
+  const blockedMembersDetailed = sortedMembers
+    .map((member) => {
+      const entries = blockedByUser.get(member.userId);
+      if (!entries?.size) {
+        return null;
+      }
+
+      const dates = Array.from(entries)
+        .map((key) => ({
+          key,
+          date: parse(key, DATE_KEY_FORMAT, new Date()),
+        }))
+        .filter(({ date }) => date >= planningStart && date <= planningEnd)
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+      if (!dates.length) {
+        return null;
+      }
+
+      const formattedDates = dates.slice(0, 3).map(({ date }) => format(date, "dd.MM.", { locale: de }));
+      const remaining = dates.length - formattedDates.length;
+
+      return {
+        id: member.id,
+        name: formatUserName(member.user),
+        formattedDates,
+        remaining,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
   const measurementsForDepartment = isCostumeDepartment && measurementsByUser ? measurementsByUser : undefined;
   const membersWithMeasurements = measurementsForDepartment
@@ -212,9 +248,22 @@ export function DepartmentCard({
           <section className="space-y-4 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">Terminvorschläge</h3>
-              <Badge variant="muted" size="sm">
-                {blockedDatesCount} blockierte Tage
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="muted" size="sm">
+                  {blockedDatesCount} blockierte Tage
+                </Badge>
+                {canManageEvents ? (
+                  <CreateDepartmentEventButton
+                    departmentId={department.id}
+                    departmentSlug={department.slug!}
+                    triggerProps={{
+                      size: "xs",
+                      className:
+                        "px-3 text-xs shadow-[0_12px_30px_-32px_rgba(99,102,241,0.7)] hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
+                    }}
+                  />
+                ) : null}
+              </div>
             </div>
             {meetingSuggestions.length ? (
               <ul className="grid gap-3 sm:grid-cols-2">
@@ -232,9 +281,28 @@ export function DepartmentCard({
                         <p className="text-xs text-muted-foreground">Frei für alle Mitglieder</p>
                       </div>
                     </div>
-                    <Badge variant="outline" size="sm" className="rounded-full border-primary/40 text-primary">
-                      {suggestion.shortLabel}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant="outline" size="sm" className="rounded-full border-primary/40 text-primary">
+                        {suggestion.shortLabel}
+                      </Badge>
+                      {canManageEvents ? (
+                        <CreateDepartmentEventButton
+                          departmentId={department.id}
+                          departmentSlug={department.slug!}
+                          defaultValues={{
+                            date: suggestion.key,
+                            title: `${department.name} · Treffen`,
+                          }}
+                          dialogDescription={`Übernimm ${suggestion.label} als Startpunkt und passe Zeiten oder Details nach Bedarf an.`}
+                          triggerProps={{
+                            label: "Übernehmen",
+                            size: "xs",
+                            className:
+                              "px-3 text-xs shadow-[0_10px_26px_-34px_rgba(99,102,241,0.65)] hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
+                          }}
+                        />
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -243,6 +311,30 @@ export function DepartmentCard({
                 Aktuell gibt es keinen Termin ohne Sperrlisten-Konflikte. Prüfe deine Sperrtage und die deines Teams.
               </p>
             )}
+            {blockedMembersDetailed.length ? (
+              <div className="space-y-2 rounded-xl border border-dashed border-amber-400/40 bg-amber-500/5 p-3 text-xs">
+                <div className="flex items-center gap-2 text-foreground">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                    <BellRing aria-hidden className="h-4 w-4" />
+                  </span>
+                  <p className="text-sm font-semibold">Abmeldungen im Planungsfenster</p>
+                </div>
+                <ul className="space-y-1">
+                  {blockedMembersDetailed.map((entry) => (
+                    <li key={entry.id} className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-foreground">{entry.name}</span>
+                      <span className="text-muted-foreground">
+                        {entry.formattedDates.join(", ")}
+                        {entry.remaining > 0 ? ` (+${entry.remaining} weitere)` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-muted-foreground/80">
+                  Grundlage: Aktualisierte Sperrlisten seit dem Freeze bis {planningWindowLabel}.
+                </p>
+              </div>
+            ) : null}
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>
                 Fenster: {freezeUntilLabel} – {planningWindowLabel}

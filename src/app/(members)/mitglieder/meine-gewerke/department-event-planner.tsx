@@ -1,32 +1,18 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { CalendarPlus, Clock, MapPin, Trash2 } from "lucide-react";
+import { Clock, MapPin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { getUserDisplayName } from "@/lib/names";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
-import {
-  createDepartmentEventAction,
-  deleteDepartmentEventAction,
-} from "./department-events-actions";
+import { deleteDepartmentEventAction } from "./department-events-actions";
+import { CreateDepartmentEventButton } from "./department-event-create-button";
 
 type EventUser = {
   id: string;
@@ -137,12 +123,9 @@ export function DepartmentEventPlanner({
           </div>
         </div>
         {canManage ? (
-          <CreateDepartmentEventDialog
+          <CreateDepartmentEventButton
             departmentId={departmentId}
             departmentSlug={departmentSlug}
-            onSuccess={() => {
-              router.refresh();
-            }}
           />
         ) : null}
       </div>
@@ -212,147 +195,6 @@ export function DepartmentEventPlanner({
         </div>
       )}
     </section>
-  );
-}
-
-type CreateDialogProps = {
-  departmentId: string;
-  departmentSlug: string;
-  onSuccess: () => void;
-};
-
-function CreateDepartmentEventDialog({ departmentId, departmentSlug, onSuccess }: CreateDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const defaultDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const payload = {
-      departmentId,
-      departmentSlug,
-      title: String(formData.get("title") ?? ""),
-      date: String(formData.get("date") ?? ""),
-      startTime: String(formData.get("startTime") ?? ""),
-      endTime: (formData.get("endTime") as string | null) ?? undefined,
-      location: (formData.get("location") as string | null) ?? undefined,
-      description: (formData.get("description") as string | null) ?? undefined,
-    };
-
-    startTransition(() => {
-      createDepartmentEventAction(payload)
-        .then((result) => {
-          if (result?.success) {
-            toast.success("Termin gespeichert.");
-            form.reset();
-            setOpen(false);
-            onSuccess();
-          } else {
-            toast.error(result?.error ?? "Termin konnte nicht angelegt werden.");
-          }
-        })
-        .catch(() => {
-          toast.error("Termin konnte nicht angelegt werden.");
-        });
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          size="sm"
-          className="gap-2 rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary text-primary-foreground shadow-[0_16px_40px_-32px_rgba(99,102,241,0.85)] hover:from-primary/90 hover:via-primary/80 hover:to-primary/90"
-        >
-          <CalendarPlus aria-hidden className="h-4 w-4" />
-          <span>Termin planen</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Neuen Termin planen</DialogTitle>
-          <DialogDescription>
-            Lege Titel, Zeitpunkt und optional Ort oder Notizen fest. Der Termin erscheint sofort im Kalender deines Gewerks.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="department-event-title">Titel</Label>
-            <Input
-              id="department-event-title"
-              name="title"
-              placeholder="z. B. Licht-Setup abstimmen"
-              required
-              minLength={3}
-              maxLength={120}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="department-event-date">Datum</Label>
-              <Input
-                id="department-event-date"
-                name="date"
-                type="date"
-                required
-                defaultValue={defaultDate}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="department-event-start">Start</Label>
-              <Input
-                id="department-event-start"
-                name="startTime"
-                type="time"
-                required
-                defaultValue="18:00"
-              />
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="department-event-end">Ende (optional)</Label>
-              <Input id="department-event-end" name="endTime" type="time" defaultValue="20:00" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="department-event-location">Ort (optional)</Label>
-              <Input
-                id="department-event-location"
-                name="location"
-                placeholder="z. B. Werkstatt oder Lager"
-                maxLength={120}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="department-event-description">Notizen (optional)</Label>
-            <Textarea
-              id="department-event-description"
-              name="description"
-              placeholder="Checkliste, Verantwortlichkeiten oder besondere Hinweise"
-              rows={4}
-              maxLength={2000}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setOpen(false)}
-              disabled={isPending}
-            >
-              Abbrechen
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Speichern…" : "Termin anlegen"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
 
