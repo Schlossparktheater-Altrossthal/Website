@@ -481,7 +481,7 @@ export function BlockOverview({
 
       <div className="hidden sm:block">
         <div className="relative max-h-[70vh] overflow-auto rounded-2xl border border-border/60 bg-card shadow-sm">
-          <table className="w-full min-w-[960px] border-collapse text-xs">
+          <table className="w-full min-w-[960px] table-fixed border-collapse text-xs">
             <thead className="sticky top-0 z-30 bg-card/95">
               <tr>
                 <th
@@ -675,7 +675,7 @@ export function BlockOverview({
                               type="button"
                               onClick={openDetails}
                               className={cn(
-                                "group relative flex h-12 w-full items-center justify-center rounded-lg border border-transparent bg-transparent px-3 text-xs font-medium uppercase tracking-[0.2em] text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80",
+                                "group relative flex h-12 w-full min-w-0 items-center justify-center rounded-lg border border-transparent bg-transparent px-3 text-xs font-medium uppercase tracking-[0.2em] text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80",
                                 isToday(day) && "ring-1 ring-primary/60",
                                 !isSameMonth(day, currentMonth) && "opacity-70",
                               )}
@@ -700,7 +700,7 @@ export function BlockOverview({
                           ) : (
                             <div
                               className={cn(
-                                "relative flex h-12 w-full items-center justify-center overflow-hidden rounded-lg border border-transparent bg-muted/20 px-3 text-[11px] font-medium transition-colors",
+                                "relative flex h-12 w-full min-w-0 items-center justify-center overflow-hidden rounded-lg border border-transparent bg-muted/20 px-3 text-[11px] font-medium transition-colors",
                                 isLimited &&
                                   "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100",
                                 isPreferred &&
