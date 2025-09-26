@@ -131,6 +131,14 @@ export function BlockCalendar({
   const dragIntentRef = useRef<SelectionIntent | null>(null);
   const draggingRef = useRef(false);
   const pointerHandledRef = useRef(false);
+  const gestureSelectionRef = useRef<{ startKey: string | null; triggered: boolean }>({
+    startKey: null,
+    triggered: false,
+  });
+
+  const resetGestureSelection = useCallback(() => {
+    gestureSelectionRef.current = { startKey: null, triggered: false };
+  }, []);
 
   const blockedByDate = useMemo(() => {
     const map = new Map<string, BlockedDay>();
@@ -332,12 +340,36 @@ export function BlockCalendar({
     };
   }, [selectionMode]);
 
+  useEffect(() => {
+    const handlePointerEnd = () => {
+      draggingRef.current = false;
+      dragIntentRef.current = null;
+      resetGestureSelection();
+    };
+
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+
+    return () => {
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+    };
+  }, [resetGestureSelection]);
+
+  const resetSelectionState = useCallback(
+    (initialKeys: string[] = []) => {
+      const uniqueKeys = Array.from(new Set(initialKeys));
+      setSelectedDayKeys(() => new Set(uniqueKeys));
+      setBulkReason("");
+      setBulkError(null);
+      setBulkKind(lastUsedKind);
+    },
+    [lastUsedKind],
+  );
+
   const clearSelection = useCallback(() => {
-    setSelectedDayKeys(new Set<string>());
-    setBulkReason("");
-    setBulkError(null);
-    setBulkKind(lastUsedKind);
-  }, [lastUsedKind]);
+    resetSelectionState();
+  }, [resetSelectionState]);
 
   const updateSelection = useCallback(
     (key: string, shouldSelect: boolean) => {
@@ -368,16 +400,23 @@ export function BlockCalendar({
     setSelectedKind(lastUsedKind);
   }, [lastUsedKind]);
 
+  const startGestureSelection = useCallback(
+    (initialKeys: string[]) => {
+      closeModal();
+      setSelectionMode(true);
+      resetSelectionState(initialKeys);
+    },
+    [closeModal, resetSelectionState],
+  );
+
   const handleToggleSelectionMode = () => {
     const nextMode = !selectionMode;
     setSelectionMode(nextMode);
     if (nextMode) {
       closeModal();
-      clearSelection();
-      setBulkKind(lastUsedKind);
-    } else {
-      clearSelection();
     }
+    resetSelectionState();
+    resetGestureSelection();
   };
 
   const openDay = useCallback(
@@ -407,34 +446,72 @@ export function BlockCalendar({
 
   const handleDayPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, key: string) => {
-      if (!selectionMode || event.button !== 0) {
+      if (event.button !== 0) {
+        resetGestureSelection();
         return;
       }
-      event.preventDefault();
-      pointerHandledRef.current = true;
-      const shouldSelect = !selectedDayKeys.has(key);
-      dragIntentRef.current = shouldSelect ? "select" : "deselect";
-      draggingRef.current = true;
-      updateSelection(key, shouldSelect);
+      if (selectionMode) {
+        event.preventDefault();
+        pointerHandledRef.current = true;
+        const shouldSelect = !selectedDayKeys.has(key);
+        dragIntentRef.current = shouldSelect ? "select" : "deselect";
+        draggingRef.current = true;
+        updateSelection(key, shouldSelect);
+        return;
+      }
+
+      pointerHandledRef.current = false;
+      gestureSelectionRef.current = { startKey: key, triggered: false };
+      dragIntentRef.current = null;
+      draggingRef.current = false;
     },
-    [selectionMode, selectedDayKeys, updateSelection]
+    [resetGestureSelection, selectionMode, selectedDayKeys, updateSelection]
   );
 
   const handleDayPointerEnter = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, key: string) => {
-      if (!selectionMode || !draggingRef.current) {
+      if (selectionMode) {
+        if (!draggingRef.current) {
+          return;
+        }
+        if (event.buttons === 0) {
+          draggingRef.current = false;
+          dragIntentRef.current = null;
+          return;
+        }
+        event.preventDefault();
+        const intent = dragIntentRef.current ?? "select";
+        updateSelection(key, intent === "select");
+        return;
+      }
+
+      const gesture = gestureSelectionRef.current;
+      if (!gesture.startKey) {
         return;
       }
       if (event.buttons === 0) {
         draggingRef.current = false;
         dragIntentRef.current = null;
+        resetGestureSelection();
         return;
       }
+      if (key === gesture.startKey) {
+        return;
+      }
+
       event.preventDefault();
-      const intent = dragIntentRef.current ?? "select";
-      updateSelection(key, intent === "select");
+      if (!gesture.triggered) {
+        gesture.triggered = true;
+        pointerHandledRef.current = true;
+        dragIntentRef.current = "select";
+        draggingRef.current = true;
+        startGestureSelection([gesture.startKey, key]);
+        return;
+      }
+
+      updateSelection(key, true);
     },
-    [selectionMode, updateSelection]
+    [resetGestureSelection, selectionMode, startGestureSelection, updateSelection]
   );
 
   const handleDayClick = useCallback(
