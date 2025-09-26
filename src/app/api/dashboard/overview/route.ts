@@ -28,6 +28,7 @@ const onboardingProfileSelect = Prisma.validator<Prisma.MemberOnboardingProfileS
   updatedAt: true,
   dietaryPreference: true,
   dietaryPreferenceStrictness: true,
+  whatsappLinkVisitedAt: true,
   show: { select: { meta: true } },
 });
 
@@ -259,6 +260,9 @@ export async function GET() {
       backgroundClass: onboardingProfile?.backgroundClass ?? null,
       notes: onboardingProfile?.notes ?? null,
       whatsappLink,
+      whatsappLinkVisitedAt: onboardingProfile?.whatsappLinkVisitedAt
+        ? onboardingProfile.whatsappLinkVisitedAt.toISOString()
+        : null,
       stats: {
         acting: { count: actingPreferences.length, averageWeight: averageWeight(actingPreferences) },
         crew: { count: crewPreferences.length, averageWeight: averageWeight(crewPreferences) },

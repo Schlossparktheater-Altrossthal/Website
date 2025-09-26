@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { AllergyLevel, MeasurementType, MeasurementUnit, Role } from "@prisma/client";
 
@@ -27,6 +27,7 @@ import type {
 } from "@/data/dietary-preferences";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,7 @@ import {
   VenetianMask,
   Wrench,
   UtensilsCrossed,
+  MessageCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -261,6 +263,8 @@ interface ProfilePageClientProps {
   allergies: AllergyEntry[];
   onboarding: ProfileOnboardingState;
   photoConsent: PhotoConsentSummary | null;
+  whatsappLink: string | null;
+  whatsappLinkVisitedAt: string | null;
 }
 
 function ProfileRolesCard({ roles }: { roles: Role[] }) {
@@ -356,6 +360,8 @@ export function ProfilePageClient({
   allergies,
   onboarding,
   photoConsent,
+  whatsappLink,
+  whatsappLinkVisitedAt,
 }: ProfilePageClientProps) {
   const [activeTab, setActiveTab] = useState<ProfileTabId>("stammdaten");
   const [activeEditor, setActiveEditor] = useState<ProfileTabId | null>(null);
@@ -371,8 +377,25 @@ export function ProfilePageClient({
   );
   const [onboardingState, setOnboardingState] =
     useState<ProfileOnboardingState>(onboarding);
+  const [whatsappVisitedAtState, setWhatsappVisitedAtState] = useState<Date | null>(() => {
+    if (!whatsappLinkVisitedAt) {
+      return null;
+    }
+    const parsed = new Date(whatsappLinkVisitedAt);
+    return Number.isNaN(parsed.valueOf()) ? null : parsed;
+  });
+  const [whatsappPending, setWhatsappPending] = useState(false);
 
   const measurementEntries = canManageMeasurements ? measurementState : [];
+
+  useEffect(() => {
+    if (!whatsappLinkVisitedAt) {
+      setWhatsappVisitedAtState(null);
+      return;
+    }
+    const parsed = new Date(whatsappLinkVisitedAt);
+    setWhatsappVisitedAtState(Number.isNaN(parsed.valueOf()) ? null : parsed);
+  }, [whatsappLinkVisitedAt]);
 
   const displayName = getUserDisplayName(
     {
@@ -493,6 +516,44 @@ export function ProfilePageClient({
   const rolesLabelList = profileUser.roles.map(
     (role) => ROLE_LABELS[role] ?? role,
   );
+
+  const normalizedWhatsappLink = whatsappLink?.trim() ? whatsappLink.trim() : null;
+  const showWhatsappNotice = Boolean(normalizedWhatsappLink && !whatsappVisitedAtState);
+
+  const handleWhatsappVisit = useCallback(() => {
+    if (!normalizedWhatsappLink || whatsappVisitedAtState || whatsappPending) {
+      return;
+    }
+
+    setWhatsappPending(true);
+
+    const send = async () => {
+      try {
+        const response = await fetch("/api/onboarding/whatsapp-visit", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+          keepalive: true,
+        });
+
+        if (!response.ok) {
+          throw new Error(`RequestFailed:${response.status}`);
+        }
+
+        const data = (await response.json().catch(() => null)) as { visitedAt?: string } | null;
+        const visitedIso = typeof data?.visitedAt === "string" ? data.visitedAt.trim() : "";
+        const parsedVisited = visitedIso ? new Date(visitedIso) : new Date();
+        const visitedDate = Number.isNaN(parsedVisited.valueOf()) ? new Date() : parsedVisited;
+        setWhatsappVisitedAtState(visitedDate);
+      } catch (error) {
+        console.error("[profile.whatsapp] visit failed", error);
+      } finally {
+        setWhatsappPending(false);
+      }
+    };
+
+    void send();
+  }, [normalizedWhatsappLink, whatsappVisitedAtState, whatsappPending]);
 
   type HighlightItem = {
     key: string;
@@ -778,6 +839,35 @@ export function ProfilePageClient({
               description="Halte deine Angaben aktuell, damit Teams und Kolleg*innen optimal planen können."
               className="max-w-2xl text-balance"
             />
+            {showWhatsappNotice ? (
+              <div className="space-y-2 rounded-2xl border border-emerald-300/60 bg-emerald-50/80 p-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp-Gruppe fürs Ensemble
+                  </div>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="border-emerald-400/60 text-emerald-900"
+                  >
+                    <a
+                      href={normalizedWhatsappLink ?? "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={handleWhatsappVisit}
+                    >
+                      {whatsappPending ? "Wird geöffnet …" : "WhatsApp öffnen"}
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-xs text-emerald-900/80">
+                  Du hast die Onboarding-Gruppe noch nicht besucht. Tritt bei, um aktuelle Informationen und Kontakte zu
+                  erhalten.
+                </p>
+              </div>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {highlightItems.map((item) => {
                 const Icon = item.icon;

@@ -19,6 +19,7 @@ import {
   parseDietaryStyleFromLabel,
   type DietaryStrictnessOption,
 } from "@/data/dietary-preferences";
+import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
 export default async function ProfilePage() {
   const session = await requireAuth();
@@ -64,6 +65,8 @@ export default async function ProfilePage() {
             dietaryPreference: true,
             dietaryPreferenceStrictness: true,
             updatedAt: true,
+            whatsappLinkVisitedAt: true,
+            show: { select: { meta: true } },
           },
         },
         photoConsent: {
@@ -203,6 +206,10 @@ export default async function ProfilePage() {
         memberSinceYear: user.onboardingProfile?.memberSinceYear ?? null,
         updatedAt: user.onboardingProfile?.updatedAt?.toISOString() ?? null,
       }}
+      whatsappLink={getOnboardingWhatsAppLink(user.onboardingProfile?.show?.meta ?? null)}
+      whatsappLinkVisitedAt={
+        user.onboardingProfile?.whatsappLinkVisitedAt?.toISOString() ?? null
+      }
       photoConsent={photoSummary}
     />
   );

@@ -1157,6 +1157,7 @@ model MemberInviteRedemption {
   createdAt    DateTime  @default(now())
   completedAt  DateTime?
   payload      Json?
+  whatsappLinkVisitedAt DateTime?
 
   invite   MemberInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
   user     User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -1215,6 +1216,7 @@ model MemberOnboardingProfile {
   memberSinceYear Int?
   dietaryPreference String?
   dietaryPreferenceStrictness String?
+  whatsappLinkVisitedAt DateTime?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 

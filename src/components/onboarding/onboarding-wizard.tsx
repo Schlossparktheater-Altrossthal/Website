@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { AllergyLevel, type Role } from "@prisma/client";
-import { Sparkles, ShieldCheck, Lock, Target, MessageCircle } from "lucide-react";
+import { Sparkles, ShieldCheck, Lock, Target, MessageCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 
 import { SignaturePad } from "@/components/onboarding/signature-pad";
@@ -334,6 +334,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   const [bszClassSuggestions] = useState<string[]>(() => createBszClassSuggestions());
   const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
+  const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -1097,6 +1098,44 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       setLoading(false);
     }
   };
+
+  const handleWhatsappVisit = useCallback(() => {
+    if (whatsappVisitTracked) {
+      return;
+    }
+
+    setWhatsappVisitTracked(true);
+    const body = JSON.stringify({ sessionToken });
+
+    const send = async () => {
+      try {
+        if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+          const blob = new Blob([body], { type: "application/json" });
+          const ok = navigator.sendBeacon("/api/onboarding/whatsapp-visit", blob);
+          if (!ok) {
+            throw new Error("BeaconFailed");
+          }
+          return;
+        }
+
+        const response = await fetch("/api/onboarding/whatsapp-visit", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body,
+          keepalive: true,
+        });
+
+        if (!response.ok) {
+          throw new Error(`RequestFailed:${response.status}`);
+        }
+      } catch (error) {
+        console.error("[onboarding.whatsapp] visit failed", error);
+        setWhatsappVisitTracked(false);
+      }
+    };
+
+    void send();
+  }, [sessionToken, whatsappVisitTracked]);
 
   const inviteCreatedAt = useMemo(() => {
     try {
@@ -2074,6 +2113,42 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
+            {invite.whatsappLink ? (
+              <section className="space-y-3 rounded-3xl border border-emerald-400/70 bg-emerald-50/90 p-5 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-base font-semibold text-emerald-900">
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp-Gruppe zum Einstieg
+                  </div>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="border-emerald-400/70 text-emerald-900"
+                  >
+                    <a
+                      href={invite.whatsappLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={handleWhatsappVisit}
+                    >
+                      {whatsappVisitTracked ? "Bereits geöffnet" : "WhatsApp öffnen"}
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-sm text-emerald-900/80">
+                  Tritt unserer WhatsApp-Gruppe bei, um alle Updates und Ansprechpartner kennenzulernen.
+                  {whatsappHost ? ` (${whatsappHost})` : null}
+                </p>
+                {whatsappVisitTracked ? (
+                  <p className="flex items-center gap-2 text-xs font-medium text-emerald-900/80">
+                    <Check className="h-4 w-4" />
+                    Danke! Wir haben notiert, dass du die Gruppe geöffnet hast.
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-2xl border border-border/70 bg-background/90 p-4">
                 <h3 className="text-sm font-semibold uppercase text-muted-foreground">Profil</h3>
@@ -2290,26 +2365,6 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                 </div>
               </div>
             </section>
-
-            {invite.whatsappLink ? (
-              <section className="space-y-3 rounded-2xl border border-emerald-300/60 bg-emerald-50 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp-Gruppe
-                  </div>
-                  <Button asChild size="sm" variant="outline" className="border-emerald-400/60 text-emerald-900">
-                    <a href={invite.whatsappLink} target="_blank" rel="noopener noreferrer">
-                      WhatsApp öffnen
-                    </a>
-                  </Button>
-                </div>
-                <p className="text-xs text-emerald-900/80">
-                  Tritt unserer WhatsApp-Gruppe bei, um alle Updates und Ansprechpartner kennenzulernen.
-                  {whatsappHost ? ` (${whatsappHost})` : null}
-                </p>
-              </section>
-            ) : null}
 
             {success ? (
               <div className="rounded-lg border border-emerald-300 bg-emerald-50/80 p-4 text-sm text-emerald-900">
