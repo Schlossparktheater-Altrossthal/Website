@@ -1040,6 +1040,10 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       return;
     }
     if (step === 4) {
+      if (isMinor && !form.photoConsent.consent) {
+        setError("Bitte bestätige dein eigenes Fotoeinverständnis über das Kästchen oben.");
+        return;
+      }
       if (form.photoConsent.consent && !form.photoConsent.skipDocument && !documentFile) {
         setError(
           isMinor
@@ -1921,7 +1925,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                   Wir benötigen die unterschriebene Foto-Einverständniserklärung deiner Erziehungsberechtigten. Lade das Dokument
                   als PDF oder Bilddatei hoch oder markiere unten, dass du es später nachreichst.
                 </p>
-                <p>Deine eigene Zustimmung gibst du direkt über das Kästchen oben.</p>
+                <p>Deine eigene Zustimmung gibst du direkt über das Kästchen oben – sie ist verpflichtend.</p>
               </div>
             ) : (
               <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
