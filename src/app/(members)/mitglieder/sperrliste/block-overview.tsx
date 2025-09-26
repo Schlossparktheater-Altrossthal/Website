@@ -671,34 +671,36 @@ export function BlockOverview({
                           )}
                         >
                           {isBlocked && entry ? (
-                          <button
-                            type="button"
-                            onClick={openDetails}
-                            className={cn(
-                              "flex h-full min-h-[56px] w-full flex-col items-center justify-center rounded-lg border border-transparent bg-transparent px-2 py-2 text-xs leading-5 text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80",
-                              isToday(day) && "ring-1 ring-primary/60",
-                              !isSameMonth(day, currentMonth) && "opacity-70",
-                            )}
+                            <button
+                              type="button"
+                              onClick={openDetails}
+                              className={cn(
+                                "group relative flex h-12 w-full items-center justify-center rounded-lg border border-transparent bg-transparent px-3 text-xs font-medium uppercase tracking-[0.2em] text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80",
+                                isToday(day) && "ring-1 ring-primary/60",
+                                !isSameMonth(day, currentMonth) && "opacity-70",
+                              )}
                               aria-label={[...label, "Details öffnen"].join(". ")}
                               title={label.join(". ")}
                             >
-                              <span className="text-[11px] font-semibold uppercase tracking-wide">Gesperrt</span>
-                              {hasReason ? (
-                                <span className="mt-1 flex items-start gap-2 text-left text-[11px] leading-4">
-                                  <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
-                                  <span className="line-clamp-2">{trimmedReason}</span>
-                                </span>
-                              ) : (
-                                <span className="mt-1 text-[11px] leading-4 text-destructive/70">
-                                  Keine Details
-                                </span>
-                              )}
+                              <span className="flex w-full items-center justify-center gap-2 text-[10px]">
+                                <span className="flex-1 truncate text-left tracking-[0.28em]">Gesperrt</span>
+                                {hasReason ? (
+                                  <span className="flex-1 truncate text-right normal-case tracking-normal text-[11px]">
+                                    {trimmedReason}
+                                  </span>
+                                ) : (
+                                  <span className="flex-1 truncate text-right normal-case tracking-normal text-[11px] text-destructive/70">
+                                    Keine Details
+                                  </span>
+                                )}
+                              </span>
+                              <span className="pointer-events-none absolute inset-x-2 bottom-2 h-1 rounded-full bg-destructive/20 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
                               <span className="sr-only">Sperrtermin öffnen</span>
                             </button>
                           ) : (
                             <div
                               className={cn(
-                                "flex h-full min-h-[56px] flex-col items-center justify-center rounded-lg border border-transparent px-2 py-2 text-xs leading-5 transition-colors",
+                                "relative flex h-12 w-full items-center justify-center overflow-hidden rounded-lg border border-transparent bg-muted/20 px-3 text-[11px] font-medium transition-colors",
                                 isLimited &&
                                   "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100",
                                 isPreferred &&
@@ -706,7 +708,7 @@ export function BlockOverview({
                                 !entry && isHoliday &&
                                   "border-sky-400/40 bg-sky-500/10 text-sky-900 dark:text-sky-100",
                                 !entry && !isHoliday &&
-                                  "border-border/50 bg-muted/20 text-muted-foreground/80",
+                                  "border-border/40 bg-background/60 text-muted-foreground/80 backdrop-blur",
                                 !entry && !isHoliday && isPreferredDay &&
                                   "border-primary/40 bg-primary/10 text-primary/90 dark:border-primary/50 dark:bg-primary/20 dark:text-primary-foreground",
                                 !entry && !isHoliday && isExceptionDay &&
@@ -718,18 +720,14 @@ export function BlockOverview({
                               title={label.join(". ")}
                             >
                               {entry ? (
-                                <>
-                                  <span className="text-[11px] font-semibold uppercase tracking-wide">
+                                <div className="flex w-full items-center justify-between gap-2 text-[10px] uppercase tracking-[0.18em]">
+                                  <span className="truncate">
                                     {isPreferred ? "Bevorzugt" : "Eingeschränkt"}
                                   </span>
-                                  {trimmedReason ? (
-                                    <span className="mt-1 line-clamp-2 text-[11px] leading-4">{trimmedReason}</span>
-                                  ) : (
-                                    <span className="mt-1 text-[11px] leading-4 text-muted-foreground/80">
-                                      {isPreferred ? "Ohne Angabe" : "Keine Details"}
-                                    </span>
-                                  )}
-                                </>
+                                  <span className="truncate text-right normal-case tracking-normal text-[11px]">
+                                    {trimmedReason || (isPreferred ? "Ohne Angabe" : "Keine Details")}
+                                  </span>
+                                </div>
                               ) : isHoliday ? (
                                 <span className="sr-only">{holidayEntries[0]?.title ?? "Ferien"}</span>
                               ) : isPreferredDay ? (
@@ -737,7 +735,7 @@ export function BlockOverview({
                               ) : isExceptionDay ? (
                                 <span className="sr-only">Ausnahmeprobentag</span>
                               ) : (
-                                <span className="text-xs font-medium leading-5 text-muted-foreground/80">Frei</span>
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.26em] text-muted-foreground/70">Frei</span>
                               )}
                             </div>
                           )}
