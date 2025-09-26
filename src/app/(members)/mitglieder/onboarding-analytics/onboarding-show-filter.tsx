@@ -11,6 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+export const ONBOARDING_SHOW_FILTER_ALL_VALUE = "__all__";
+
 type OnboardingShowFilterOption = {
   value: string;
   label: string;
@@ -29,7 +31,7 @@ export function OnboardingShowFilter({ options, value }: OnboardingShowFilterPro
 
   const handleChange = (nextValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
-    if (!nextValue) {
+    if (nextValue === ONBOARDING_SHOW_FILTER_ALL_VALUE) {
       params.delete("show");
     } else {
       params.set("show", nextValue);
@@ -55,7 +57,7 @@ export function OnboardingShowFilter({ options, value }: OnboardingShowFilterPro
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
-            <SelectItem key={option.value || "__all"} value={option.value}>
+            <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>
           ))}
