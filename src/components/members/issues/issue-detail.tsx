@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ISSUE_CATEGORY_BADGE_CLASSES,
   ISSUE_CATEGORY_LABELS,
@@ -48,16 +49,26 @@ type IssueDetailProps = {
   issueId: string;
   canManage: boolean;
   currentUserId: string;
-  onIssueUpdated: (issue: IssueSummary) => void;
+  onIssueUpdated?: (issue: IssueSummary) => void;
+  initialIssue?: IssueDetailType | null;
 };
 
-export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated }: IssueDetailProps) {
-  const [issue, setIssue] = useState<IssueDetailType | null>(null);
-  const [loading, setLoading] = useState(true);
+export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated, initialIssue }: IssueDetailProps) {
+  const [issue, setIssue] = useState<IssueDetailType | null>(initialIssue ?? null);
+  const [loading, setLoading] = useState(!initialIssue);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
   const [postingComment, setPostingComment] = useState(false);
+
+  const emitIssueUpdated = useCallback(
+    (next: IssueSummary) => {
+      if (typeof onIssueUpdated === "function") {
+        onIssueUpdated(next);
+      }
+    },
+    [onIssueUpdated],
+  );
 
   const canUpdate = useMemo(() => {
     if (canManage) return true;
@@ -66,9 +77,12 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
   }, [canManage, issue, currentUserId]);
 
   const loadIssue = useCallback(
-    async (emitUpdate = false) => {
+    async (emitUpdate = false, options: { showLoading?: boolean } = {}) => {
       if (!issueId) return;
-      setLoading(true);
+      const { showLoading = true } = options;
+      if (showLoading) {
+        setLoading(true);
+      }
       setError(null);
       try {
         const response = await fetch(`/api/issues/${issueId}`);
@@ -83,7 +97,7 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
         if (emitUpdate) {
           const { comments, ...summary } = data.issue as IssueDetailType;
           void comments;
-          onIssueUpdated(summary);
+          emitIssueUpdated(summary);
         }
       } catch (err) {
         console.error("[IssueDetail] load", err);
@@ -92,13 +106,20 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
         setLoading(false);
       }
     },
-    [issueId, onIssueUpdated],
+    [issueId, emitIssueUpdated],
   );
 
   useEffect(() => {
-    void loadIssue(false);
+    if (initialIssue && initialIssue.id === issueId) {
+      setIssue(initialIssue);
+      setLoading(false);
+      setError(null);
+      void loadIssue(false, { showLoading: false });
+    } else {
+      void loadIssue(false);
+    }
     setCommentDraft("");
-  }, [issueId, loadIssue]);
+  }, [issueId, initialIssue, loadIssue]);
 
   const handleUpdate = useCallback(
     async (
@@ -131,7 +152,7 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
         setIssue(data.issue as IssueDetailType);
         const { comments, ...summary } = data.issue as IssueDetailType;
         void comments;
-        onIssueUpdated(summary);
+        emitIssueUpdated(summary);
         toast.success("Änderungen gespeichert");
       } catch (err) {
         console.error("[IssueDetail] update", err);
@@ -140,7 +161,7 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
         setUpdating(false);
       }
     },
-    [issue, onIssueUpdated],
+    [issue, emitIssueUpdated],
   );
 
   const handleStatusChange = async (nextStatus: string) => {
@@ -201,7 +222,7 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
       setIssue(data.issue as IssueDetailType);
       const { comments, ...summary } = data.issue as IssueDetailType;
       void comments;
-      onIssueUpdated(summary);
+      emitIssueUpdated(summary);
       toast.success("Kommentar hinzugefügt");
     } catch (err) {
       console.error("[IssueDetail] comment", err);
@@ -211,7 +232,7 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
     }
   };
 
-  if (loading) {
+  if (loading && !issue) {
     return (
       <div className="space-y-4">
         <div className="h-6 w-2/3 animate-pulse rounded bg-muted/40" />
@@ -239,188 +260,224 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated 
     return <p className="text-sm text-muted-foreground">Anliegen konnte nicht geladen werden.</p>;
   }
 
+  const createdByName = issue.createdBy?.name || issue.createdBy?.email || "Unbekannt";
+  const updatedByName = issue.updatedBy?.name || issue.updatedBy?.email || null;
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge className={cn("border", ISSUE_STATUS_BADGE_CLASSES[issue.status])}>
-            {ISSUE_STATUS_LABELS[issue.status]}
-          </Badge>
-          <Badge className={cn("border", ISSUE_PRIORITY_BADGE_CLASSES[issue.priority])}>
-            Priorität: {ISSUE_PRIORITY_LABELS[issue.priority]}
-          </Badge>
-          <Badge className={cn("border", ISSUE_CATEGORY_BADGE_CLASSES[issue.category])}>
-            {ISSUE_CATEGORY_LABELS[issue.category]}
-          </Badge>
-          <Badge className={cn("border", ISSUE_VISIBILITY_BADGE_CLASSES[issue.visibility])}>
-            {ISSUE_VISIBILITY_LABELS[issue.visibility]}
-          </Badge>
-        </div>
-        <h2 className="text-xl font-semibold">{issue.title}</h2>
-        {issue.descriptionHtml ? (
-          <div
-            className="prose prose-sm max-w-none text-foreground prose-headings:text-foreground prose-a:text-primary"
-            dangerouslySetInnerHTML={{ __html: issue.descriptionHtml }}
-          />
-        ) : (
-          <p className="whitespace-pre-line text-sm text-foreground/80">{issue.description}</p>
-        )}
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="space-y-6">
+        <Card>
+          <CardHeader className="border-b border-border/40 pb-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/80">{createdByName}</span>
+              <span>meldete dieses Anliegen am {formatDateTime(issue.createdAt)}.</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {issue.descriptionHtml ? (
+              <div
+                className="prose prose-sm max-w-none text-foreground prose-headings:text-foreground prose-a:text-primary"
+                dangerouslySetInnerHTML={{ __html: issue.descriptionHtml }}
+              />
+            ) : (
+              <p className="whitespace-pre-line text-sm text-foreground/80">{issue.description}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <CardTitle className="text-base">Verlauf &amp; Kommentare</CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => loadIssue(true, { showLoading: false })}
+            >
+              Aktualisieren
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-4">
+              {issue.comments.length > 0 ? (
+                issue.comments.map((comment) => (
+                  <div key={comment.id} className="overflow-hidden rounded-lg border border-border/50">
+                    <div className="flex items-center justify-between bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+                      <span>{comment.author?.name || comment.author?.email || "Unbekannt"}</span>
+                      <span>{formatDateTime(comment.createdAt)}</span>
+                    </div>
+                    <div className="space-y-2 px-4 py-3 text-sm text-foreground/80">
+                      <p className="whitespace-pre-line">{comment.body}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">Noch keine Kommentare vorhanden.</p>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-dashed border-border/50 bg-muted/10 p-4">
+              <h4 className="text-sm font-semibold text-foreground">Kommentar hinzufügen</h4>
+              <Textarea
+                value={commentDraft}
+                onChange={(event) => setCommentDraft(event.target.value)}
+                rows={4}
+                placeholder="Teile Updates, Rückfragen oder weitere Details zu diesem Anliegen."
+                className="mt-2"
+              />
+              <div className="mt-3 flex items-center justify-end gap-3">
+                <input type="hidden" value={issueId} readOnly aria-hidden />
+                <Button
+                  type="button"
+                  onClick={handleCommentSubmit}
+                  disabled={postingComment || commentDraft.trim().length === 0}
+                >
+                  {postingComment ? "Wird gespeichert..." : "Kommentar speichern"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-
-      <div className="grid gap-4 rounded-lg border border-border/40 bg-muted/10 p-4 text-sm text-muted-foreground md:grid-cols-2">
-        <div>
-          <div className="font-medium text-foreground/80">Erstellt von</div>
-          <div>
-            {issue.createdBy?.name || issue.createdBy?.email || "Unbekannt"}
-            <span className="ml-2 text-xs text-muted-foreground">am {formatDateTime(issue.createdAt)}</span>
-          </div>
-        </div>
-        <div>
-          <div className="font-medium text-foreground/80">Letzte Aktivität</div>
-          <div>
-            {formatDateTime(issue.lastActivityAt)}
-            {issue.updatedBy?.name ? (
-              <span className="ml-2 text-xs text-muted-foreground">durch {issue.updatedBy.name}</span>
-            ) : null}
-          </div>
-        </div>
-        <div>
-          <div className="font-medium text-foreground/80">Status geändert</div>
-          <div>{formatDateTime(issue.updatedAt)}</div>
-        </div>
-        <div>
-          <div className="font-medium text-foreground/80">Kommentare</div>
-          <div>{issue.commentCount}</div>
-        </div>
-      </div>
-
-      {(canUpdate || canManage) && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground/80">Status</label>
-            <Select value={issue.status} onValueChange={handleStatusChange} disabled={!canUpdate || updating}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {ISSUE_STATUS_VALUES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {ISSUE_STATUS_LABELS[status]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground/80">Priorität</label>
-            <Select value={issue.priority} onValueChange={handlePriorityChange} disabled={!canManage || updating}>
-              <SelectTrigger>
-                <SelectValue placeholder="Priorität wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {ISSUE_PRIORITY_VALUES.map((priority) => (
-                  <SelectItem key={priority} value={priority}>
-                    {ISSUE_PRIORITY_LABELS[priority]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {canManage ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground/80">Kategorie</label>
-              <Select value={issue.category} onValueChange={handleCategoryChange} disabled={updating}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Kategorie wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ISSUE_CATEGORY_VALUES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {ISSUE_CATEGORY_LABELS[category]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-
-          {canUpdate ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground/80">Sichtbarkeit</label>
-              <Select value={issue.visibility} onValueChange={handleVisibilityChange} disabled={updating}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sichtbarkeit wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ISSUE_VISIBILITY_VALUES.map((visibility) => (
-                    <SelectItem key={visibility} value={visibility}>
-                      <div className="flex flex-col text-left">
-                        <span>{ISSUE_VISIBILITY_LABELS[visibility]}</span>
-                        <span className="text-[11px] text-muted-foreground">
-                          {ISSUE_VISIBILITY_DESCRIPTIONS[visibility]}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-
-          {canUpdate && issue.status === "resolved" ? (
-            <div className="space-y-2 md:col-span-2">
-              <Button type="button" onClick={handleMarkAsSolved} disabled={updating}>
-                Solve
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Alles geklärt? Bestätige die Lösung, um das Anliegen abzuschließen.
-              </p>
-            </div>
-          ) : null}
-        </div>
-      )}
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-foreground">Kommentare</h3>
-          <Button type="button" variant="outline" size="sm" onClick={() => loadIssue(true)} disabled={loading}>
-            Aktualisieren
-          </Button>
-        </div>
-        <div className="space-y-4">
-          {issue.comments.length > 0 ? (
-            issue.comments.map((comment) => (
-              <div key={comment.id} className="rounded-lg border border-border/40 bg-background/80 p-3 text-sm">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{comment.author?.name || comment.author?.email || "Unbekannt"}</span>
-                  <span>{formatDateTime(comment.createdAt)}</span>
-                </div>
-                <p className="mt-2 whitespace-pre-line text-foreground/80">{comment.body}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">Noch keine Kommentare vorhanden.</p>
-          )}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Anliegen verwalten</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground/80">Status</label>
+              <Select value={issue.status} onValueChange={handleStatusChange} disabled={!canUpdate || updating}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ISSUE_STATUS_VALUES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {ISSUE_STATUS_LABELS[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="rounded-lg border border-dashed border-border/50 bg-muted/10 p-4">
-          <h4 className="text-sm font-semibold text-foreground">Kommentar hinzufügen</h4>
-          <Textarea
-            value={commentDraft}
-            onChange={(event) => setCommentDraft(event.target.value)}
-            rows={4}
-            placeholder="Teile Updates, Rückfragen oder weitere Details zu diesem Anliegen."
-            className="mt-2"
-          />
-          <div className="mt-3 flex items-center justify-end gap-3">
-            <input type="hidden" value={issueId} readOnly aria-hidden />
-            <Button type="button" onClick={handleCommentSubmit} disabled={postingComment || commentDraft.trim().length === 0}>
-              {postingComment ? "Wird gespeichert..." : "Kommentar speichern"}
-            </Button>
-          </div>
-        </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground/80">Priorität</label>
+              <Select value={issue.priority} onValueChange={handlePriorityChange} disabled={!canManage || updating}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Priorität wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ISSUE_PRIORITY_VALUES.map((priority) => (
+                    <SelectItem key={priority} value={priority}>
+                      {ISSUE_PRIORITY_LABELS[priority]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {canManage ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground/80">Kategorie</label>
+                <Select value={issue.category} onValueChange={handleCategoryChange} disabled={updating}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kategorie wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ISSUE_CATEGORY_VALUES.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {ISSUE_CATEGORY_LABELS[category]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
+            {canUpdate ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground/80">Sichtbarkeit</label>
+                <Select value={issue.visibility} onValueChange={handleVisibilityChange} disabled={updating}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sichtbarkeit wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ISSUE_VISIBILITY_VALUES.map((visibility) => (
+                      <SelectItem key={visibility} value={visibility}>
+                        <div className="flex flex-col text-left">
+                          <span>{ISSUE_VISIBILITY_LABELS[visibility]}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {ISSUE_VISIBILITY_DESCRIPTIONS[visibility]}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
+            {canUpdate && issue.status === "resolved" ? (
+              <div className="space-y-2">
+                <Button type="button" onClick={handleMarkAsSolved} disabled={updating}>
+                  Anliegen abschließen
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Alles geklärt? Bestätige die Lösung, um das Anliegen endgültig zu schließen.
+                </p>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Metadaten</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div>
+              <div className="font-medium text-foreground/80">Status</div>
+              <Badge className={cn("mt-1 border", ISSUE_STATUS_BADGE_CLASSES[issue.status])}>
+                {ISSUE_STATUS_LABELS[issue.status]}
+              </Badge>
+            </div>
+            <div>
+              <div className="font-medium text-foreground/80">Priorität</div>
+              <Badge className={cn("mt-1 border", ISSUE_PRIORITY_BADGE_CLASSES[issue.priority])}>
+                {ISSUE_PRIORITY_LABELS[issue.priority]}
+              </Badge>
+            </div>
+            <div>
+              <div className="font-medium text-foreground/80">Kategorie</div>
+              <Badge className={cn("mt-1 border", ISSUE_CATEGORY_BADGE_CLASSES[issue.category])}>
+                {ISSUE_CATEGORY_LABELS[issue.category]}
+              </Badge>
+            </div>
+            <div>
+              <div className="font-medium text-foreground/80">Sichtbarkeit</div>
+              <Badge className={cn("mt-1 border", ISSUE_VISIBILITY_BADGE_CLASSES[issue.visibility])}>
+                {ISSUE_VISIBILITY_LABELS[issue.visibility]}
+              </Badge>
+            </div>
+            <div>
+              <div className="font-medium text-foreground/80">Letzte Aktivität</div>
+              <div>
+                {formatDateTime(issue.lastActivityAt)}
+                {updatedByName ? <span className="ml-2 text-xs">durch {updatedByName}</span> : null}
+              </div>
+            </div>
+            <div>
+              <div className="font-medium text-foreground/80">Zuletzt aktualisiert</div>
+              <div>{formatDateTime(issue.updatedAt)}</div>
+            </div>
+            <div>
+              <div className="font-medium text-foreground/80">Kommentare</div>
+              <div>{issue.commentCount}</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

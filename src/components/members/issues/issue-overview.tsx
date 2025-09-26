@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
 import type { IssueCategory, IssueStatus } from "@/lib/issues";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,27 +32,33 @@ import {
 } from "@/lib/issues";
 import { cn } from "@/lib/utils";
 import { IssueCreateForm } from "./issue-create-form";
-import { IssueDetail } from "./issue-detail";
 import type { IssueStatusCounts, IssueSummary } from "./types";
+import { formatRelativeFromNow } from "@/lib/datetime";
+import { CircleDot, MessageSquare, CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 type IssueOverviewProps = {
   initialIssues: IssueSummary[];
   initialCounts: IssueStatusCounts;
-  canManage: boolean;
-  currentUserId: string;
 };
 
 type StatusFilterValue = "all" | IssueStatus;
 type CategoryFilterValue = "all" | IssueCategory;
 
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return "-";
-  return new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+const STATUS_ICON_MAP: Record<
+  IssueStatus,
+  { icon: LucideIcon; className: string; label: string }
+> = {
+  open: { icon: CircleDot, className: "text-emerald-500", label: ISSUE_STATUS_LABELS.open },
+  in_progress: { icon: Loader2, className: "text-sky-500", label: ISSUE_STATUS_LABELS.in_progress },
+  resolved: { icon: CheckCircle2, className: "text-emerald-500", label: ISSUE_STATUS_LABELS.resolved },
+  closed: { icon: XCircle, className: "text-rose-500", label: ISSUE_STATUS_LABELS.closed },
+};
+
+function IssueStatusIcon({ status }: { status: IssueStatus }) {
+  const config = STATUS_ICON_MAP[status];
+  const Icon = config.icon;
+  const className = cn("h-5 w-5", status === "in_progress" ? "animate-spin" : null, config.className);
+  return <Icon aria-hidden className={className} />;
 }
 
 function normalizeCounts(counts?: Partial<IssueStatusCounts> | null): IssueStatusCounts {
@@ -62,7 +70,7 @@ function normalizeCounts(counts?: Partial<IssueStatusCounts> | null): IssueStatu
   };
 }
 
-export function IssueOverview({ initialIssues, initialCounts, canManage, currentUserId }: IssueOverviewProps) {
+export function IssueOverview({ initialIssues, initialCounts }: IssueOverviewProps) {
   const [issues, setIssues] = useState<IssueSummary[]>(initialIssues);
   const [counts, setCounts] = useState<IssueStatusCounts>(normalizeCounts(initialCounts));
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("open");
@@ -71,8 +79,6 @@ export function IssueOverview({ initialIssues, initialCounts, canManage, current
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
 
   const totalCount = counts.open + counts.in_progress + counts.resolved + counts.closed;
 
@@ -146,37 +152,6 @@ export function IssueOverview({ initialIssues, initialCounts, canManage, current
     }
     setCounts((prev) => ({ ...prev, [issue.status]: (prev[issue.status] ?? 0) + 1 }));
     void loadIssues();
-  };
-
-  const handleIssueUpdated = (issue: IssueSummary) => {
-    setIssues((prev) => {
-      const term = searchTerm.trim().toLowerCase();
-      const matchesStatus = statusFilter === "all" || statusFilter === issue.status;
-      const matchesCategory = categoryFilter === "all" || categoryFilter === issue.category;
-      const matchesSearch =
-        term.length === 0 ||
-        issue.title.toLowerCase().includes(term) ||
-        issue.description.toLowerCase().includes(term);
-
-      const next = prev.filter((entry) => entry.id !== issue.id);
-      if (matchesStatus && matchesCategory && matchesSearch) {
-        next.unshift(issue);
-      }
-      return next;
-    });
-    void loadIssues();
-  };
-
-  const openDetail = (issueId: string) => {
-    setSelectedIssueId(issueId);
-    setDetailOpen(true);
-  };
-
-  const handleDetailOpenChange = (open: boolean) => {
-    setDetailOpen(open);
-    if (!open) {
-      setSelectedIssueId(null);
-    }
   };
 
   return (
@@ -311,55 +286,80 @@ export function IssueOverview({ initialIssues, initialCounts, canManage, current
             <div className="space-y-3">
               {[0, 1, 2].map((index) => (
                 <div key={index} className="space-y-3 rounded-lg border border-border/40 bg-muted/10 p-4">
-                  <div className="h-5 w-2/3 animate-pulse rounded bg-muted/40" />
-                  <div className="flex gap-2">
-                    <div className="h-5 w-24 animate-pulse rounded bg-muted/30" />
-                    <div className="h-5 w-24 animate-pulse rounded bg-muted/30" />
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 animate-pulse rounded-full bg-muted/40" />
+                    <div className="h-5 flex-1 animate-pulse rounded bg-muted/40" />
                   </div>
                   <div className="h-4 w-full animate-pulse rounded bg-muted/30" />
-                  <div className="h-4 w-4/5 animate-pulse rounded bg-muted/20" />
+                  <div className="flex gap-2">
+                    <div className="h-4 w-24 animate-pulse rounded bg-muted/20" />
+                    <div className="h-4 w-32 animate-pulse rounded bg-muted/20" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : issues.length > 0 ? (
-            issues.map((issue) => (
-              <div key={issue.id} className="rounded-lg border border-border/40 bg-background/80 p-4 shadow-sm">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge className={cn("border", ISSUE_STATUS_BADGE_CLASSES[issue.status])}>
-                        {ISSUE_STATUS_LABELS[issue.status]}
-                      </Badge>
-                      <Badge className={cn("border", ISSUE_PRIORITY_BADGE_CLASSES[issue.priority])}>
-                        {ISSUE_PRIORITY_LABELS[issue.priority]}
-                      </Badge>
-                      <Badge className={cn("border", ISSUE_CATEGORY_BADGE_CLASSES[issue.category])}>
-                        {ISSUE_CATEGORY_LABELS[issue.category]}
-                      </Badge>
-                      <Badge className={cn("border", ISSUE_VISIBILITY_BADGE_CLASSES[issue.visibility])}>
-                        {ISSUE_VISIBILITY_LABELS[issue.visibility]}
-                      </Badge>
+            issues.map((issue) => {
+              const shortId = issue.id.slice(0, 8);
+              const lastActivity = formatRelativeFromNow(new Date(issue.lastActivityAt));
+              const authorName = issue.createdBy?.name || issue.createdBy?.email || null;
+              const metaItems = [
+                `#${shortId}`,
+                STATUS_ICON_MAP[issue.status].label,
+                `Aktualisiert ${lastActivity}`,
+              ];
+              if (authorName) {
+                metaItems.push(`Gemeldet von ${authorName}`);
+              }
+
+              return (
+                <Link
+                  key={issue.id}
+                  href={`/mitglieder/issues/${issue.id}`}
+                  className="group block rounded-lg border border-border/40 bg-background/80 p-4 shadow-sm transition hover:border-foreground/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition group-hover:bg-muted group-hover:text-foreground">
+                      <IssueStatusIcon status={issue.status} />
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-start gap-2">
+                        <h3 className="flex-1 text-lg font-semibold text-foreground transition group-hover:text-primary">
+                          {issue.title}
+                        </h3>
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                          <MessageSquare aria-hidden className="h-4 w-4" />
+                          {issue.commentCount}
+                        </span>
+                      </div>
+                      <p className="line-clamp-2 text-sm text-foreground/80">{issue.description}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        {metaItems.map((item, index) => (
+                          <span key={item} className="flex items-center gap-2">
+                            {index > 0 ? <span aria-hidden>•</span> : null}
+                            <span>{item}</span>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-1 text-xs">
+                        <Badge className={cn("border", ISSUE_STATUS_BADGE_CLASSES[issue.status])}>
+                          {ISSUE_STATUS_LABELS[issue.status]}
+                        </Badge>
+                        <Badge className={cn("border", ISSUE_PRIORITY_BADGE_CLASSES[issue.priority])}>
+                          {ISSUE_PRIORITY_LABELS[issue.priority]}
+                        </Badge>
+                        <Badge className={cn("border", ISSUE_CATEGORY_BADGE_CLASSES[issue.category])}>
+                          {ISSUE_CATEGORY_LABELS[issue.category]}
+                        </Badge>
+                        <Badge className={cn("border", ISSUE_VISIBILITY_BADGE_CLASSES[issue.visibility])}>
+                          {ISSUE_VISIBILITY_LABELS[issue.visibility]}
+                        </Badge>
+                      </div>
                     </div>
-                    <h3 className="mt-2 text-lg font-semibold text-foreground">{issue.title}</h3>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => openDetail(issue.id)}>
-                    Details ansehen
-                  </Button>
-                </div>
-                <p className="mt-3 text-sm text-foreground/80">{issue.description}</p>
-                <div className="mt-4 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-                  <div>
-                    <span className="font-semibold text-foreground/70">Erstellt:</span> {formatDateTime(issue.createdAt)}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground/70">Letzte Aktivität:</span> {formatDateTime(issue.lastActivityAt)}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground/70">Kommentare:</span> {issue.commentCount}
-                  </div>
-                </div>
-              </div>
-            ))
+                </Link>
+              );
+            })
           ) : (
             <div className="rounded-lg border border-dashed border-border/60 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
               Keine Anliegen gefunden. Passe die Filter an oder melde ein neues Anliegen.
@@ -367,24 +367,6 @@ export function IssueOverview({ initialIssues, initialCounts, canManage, current
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={detailOpen} onOpenChange={handleDetailOpenChange}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Anliegen-Details</DialogTitle>
-          </DialogHeader>
-          {selectedIssueId ? (
-            <IssueDetail
-              issueId={selectedIssueId}
-              canManage={canManage}
-              currentUserId={currentUserId}
-              onIssueUpdated={handleIssueUpdated}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">Kein Anliegen ausgewählt.</p>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
