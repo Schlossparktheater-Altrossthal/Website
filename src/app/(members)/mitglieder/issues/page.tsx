@@ -79,8 +79,6 @@ export default async function IssuesPage() {
       <IssueOverview
         initialIssues={initialIssues}
         initialCounts={counts}
-        canManage={canManage}
-        currentUserId={currentUserId}
       />
     </div>
   );
