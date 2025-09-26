@@ -1421,7 +1421,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 />
               </label>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Geburtsdatum</span>
                 <Input
@@ -1431,6 +1431,42 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 />
                 <span className="text-xs text-muted-foreground">Damit wissen wir, ob wir ein Eltern-Formular benötigen.</span>
               </label>
+              <div className="space-y-1 text-sm">
+                <span className="font-medium">Geschlecht</span>
+                <Select
+                  value={form.genderOption}
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      genderOption: value as GenderOption,
+                      genderCustom: value === "custom" ? prev.genderCustom : "",
+                    }))
+                  }
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Wähle eine Option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {genderOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.genderOption === "custom" && (
+                  <Input
+                    value={form.genderCustom}
+                    onChange={(event) => setForm((prev) => ({ ...prev, genderCustom: event.target.value }))}
+                    placeholder="Wie beschreibst du dich?"
+                  />
+                )}
+                <span className="text-xs text-muted-foreground">
+                  Hilft uns bei Anreden und Texten. Du kannst die Angabe später jederzeit ändern.
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Was machst du aktuell schulisch oder beruflich?</span>
                 <Input
@@ -1486,7 +1522,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 </div>
               </label>
               {requiresBackgroundClass && (
-                <label className="space-y-1 text-sm md:col-start-2">
+                <label className="space-y-1 text-sm lg:col-start-2">
                   <span className="font-medium">
                     {activeBackgroundTag?.classLabel ?? "Welche Klasse besuchst du?"}
                   </span>
@@ -1519,43 +1555,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                   )}
                 </label>
               )}
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1 text-sm">
-                <span className="font-medium">Geschlecht</span>
-                <Select
-                  value={form.genderOption}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      genderOption: value as GenderOption,
-                      genderCustom: value === "custom" ? prev.genderCustom : "",
-                    }))
-                  }
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Wähle eine Option" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {genderOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {form.genderOption === "custom" && (
-                  <Input
-                    value={form.genderCustom}
-                    onChange={(event) => setForm((prev) => ({ ...prev, genderCustom: event.target.value }))}
-                    placeholder="Wie beschreibst du dich?"
-                  />
-                )}
-                <span className="text-xs text-muted-foreground">
-                  Hilft uns bei Anreden und Texten. Du kannst die Angabe später jederzeit ändern.
-                </span>
-              </div>
-              <label className="space-y-1 text-sm">
+              <label className="space-y-1 text-sm lg:col-span-2">
                 <span className="font-medium">Seit wann bist du beim Theater?</span>
                 <Input
                   type="number"
