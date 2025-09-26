@@ -11,7 +11,7 @@ import {
 import { addDays, format, parseISO, startOfMonth, isValid } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { toast } from "sonner";
-import { CalendarDays, CircleX, Star } from "lucide-react";
+import { CalendarDays, CircleX, Clock, Star } from "lucide-react";
 
 import {
   MonthCalendar,
@@ -34,7 +34,7 @@ import type { HolidayRange } from "@/types/holidays";
 
 const DATE_FORMAT = "yyyy-MM-dd";
 
-export type BlockedDayKind = "BLOCKED" | "PREFERRED";
+export type BlockedDayKind = "BLOCKED" | "LIMITED" | "PREFERRED";
 
 export type BlockedDay = {
   id: string;
@@ -50,18 +50,29 @@ const KIND_OPTIONS: { kind: BlockedDayKind; title: string; description: string }
     description: "Du bist an diesem Tag nicht verfügbar.",
   },
   {
+    kind: "LIMITED",
+    title: "Eingeschränkt verfügbar",
+    description: "Nenne Zeitfenster oder Bedingungen für eine Teilnahme.",
+  },
+  {
     kind: "PREFERRED",
     title: "Bevorzugt kommen",
     description: "Du möchtest an diesem Tag besonders gern proben.",
   },
 ];
 
-const getSingleActionLabel = (kind: BlockedDayKind) =>
-  kind === "PREFERRED" ? "Bevorzugten Tag speichern" : "Sperrtermin eintragen";
+const getSingleActionLabel = (kind: BlockedDayKind) => {
+  if (kind === "PREFERRED") return "Bevorzugten Tag speichern";
+  if (kind === "LIMITED") return "Einschränkung speichern";
+  return "Sperrtermin eintragen";
+};
 
 const getBulkActionLabel = (kind: BlockedDayKind, count: number) => {
   if (kind === "PREFERRED") {
     return count > 1 ? `${count} Tage bevorzugen` : "Tag bevorzugen";
+  }
+  if (kind === "LIMITED") {
+    return count > 1 ? `${count} Einschränkungen setzen` : "Einschränkung setzen";
   }
   return count > 1 ? `${count} Tage sperren` : "Tag sperren";
 };
@@ -72,11 +83,19 @@ const getCreateToastMessage = (kind: BlockedDayKind, count: number) => {
       ? `${count} bevorzugte Tage eingetragen.`
       : "Bevorzugter Tag eingetragen.";
   }
+  if (kind === "LIMITED") {
+    return count > 1
+      ? `${count} eingeschränkte Tage eingetragen.`
+      : "Einschränkung eingetragen.";
+  }
   return count > 1 ? `${count} Sperrtermine eingetragen.` : "Sperrtermin eingetragen.";
 };
 
-const getUpdateToastMessage = (kind: BlockedDayKind) =>
-  kind === "PREFERRED" ? "Eintrag gespeichert." : "Sperrtermin aktualisiert.";
+const getUpdateToastMessage = (kind: BlockedDayKind) => {
+  if (kind === "PREFERRED") return "Eintrag gespeichert.";
+  if (kind === "LIMITED") return "Einschränkung gespeichert.";
+  return "Sperrtermin aktualisiert.";
+};
 
 const getRemoveToastMessage = (count: number) =>
   count > 1 ? `${count} Einträge entfernt.` : "Eintrag entfernt.";
@@ -242,6 +261,11 @@ export function BlockCalendar({
 
   const selectedBlockedCount = useMemo(
     () => selectedEntries.filter((entry) => entry.kind === "BLOCKED").length,
+    [selectedEntries]
+  );
+
+  const selectedLimitedCount = useMemo(
+    () => selectedEntries.filter((entry) => entry.kind === "LIMITED").length,
     [selectedEntries]
   );
 
@@ -533,6 +557,7 @@ export function BlockCalendar({
     (day: CalendarDay): CalendarDayRenderResult => {
       const entry = blockedByDate.get(day.key);
       const isBlockedEntry = entry?.kind === "BLOCKED";
+      const isLimitedEntry = entry?.kind === "LIMITED";
       const isPreferredEntry = entry?.kind === "PREFERRED";
       const isSelected = selectedDayKeys.has(day.key);
       const wasAdded = recentlyAdded.has(day.key);
@@ -548,7 +573,9 @@ export function BlockCalendar({
         entry
           ? isPreferredEntry
             ? `, bevorzugt${entry.reason ? `: ${entry.reason}` : ""}`
-            : `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
+            : isLimitedEntry
+              ? `, eingeschränkt verfügbar${entry.reason ? `: ${entry.reason}` : ""}`
+              : `, gesperrt${entry.reason ? `: ${entry.reason}` : ""}`
           : ", frei",
       ];
 
@@ -605,6 +632,8 @@ export function BlockCalendar({
           isBlockedEntry && "border-destructive/50 bg-destructive/10",
           isPreferredEntry &&
             "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-500/40 dark:bg-emerald-500/10",
+          isLimitedEntry &&
+            "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/50 dark:bg-amber-500/10 dark:text-amber-100",
           !entry && isHoliday &&
             "border-sky-400/60 bg-sky-50/80 dark:border-sky-500/40 dark:bg-sky-500/10",
           !entry &&
@@ -628,16 +657,20 @@ export function BlockCalendar({
                   "mt-auto flex items-center gap-1 text-xs font-semibold transition-opacity duration-300",
                   isPreferredEntry
                     ? "text-emerald-600 dark:text-emerald-200"
-                    : "text-destructive"
+                    : isLimitedEntry
+                      ? "text-amber-700 dark:text-amber-200"
+                      : "text-destructive"
                 )}
               >
                 {isPreferredEntry ? (
                   <Star className="h-4 w-4" />
+                ) : isLimitedEntry ? (
+                  <Clock className="h-4 w-4" />
                 ) : (
                   <CircleX className="h-4 w-4" />
                 )}
                 <span className="truncate" title={entry.reason ?? undefined}>
-                  {entry.reason ?? (isPreferredEntry ? "Bevorzugt" : "Gesperrt")}
+                  {entry.reason ?? (isPreferredEntry ? "Bevorzugt" : isLimitedEntry ? "Eingeschränkt" : "Gesperrt")}
                 </span>
               </span>
             ) : (
@@ -764,6 +797,13 @@ export function BlockCalendar({
                         : "Tage sind gesperrt"
                     }`
                   : null,
+                selectedLimitedCount > 0
+                  ? `${selectedLimitedCount} ${
+                      selectedLimitedCount === 1
+                        ? "Tag ist eingeschränkt"
+                        : "Tage sind eingeschränkt"
+                    }`
+                  : null,
                 selectedPreferredCount > 0
                   ? `${selectedPreferredCount} ${
                       selectedPreferredCount === 1
@@ -798,7 +838,7 @@ export function BlockCalendar({
               Aktion für freie Tage
             </p>
             <div
-              className="mt-2 grid gap-2 sm:grid-cols-2"
+              className="mt-2 grid gap-2 sm:grid-cols-3"
               role="radiogroup"
               aria-label="Aktion für ausgewählte Tage"
             >
@@ -837,7 +877,7 @@ export function BlockCalendar({
                 id="bulk-reason"
                 value={bulkReason}
                 onChange={(event) => setBulkReason(event.target.value)}
-                placeholder="z. B. Urlaub, Familienfeier"
+                placeholder="z. B. Urlaub, nur bis 20 Uhr"
                 maxLength={200}
                 disabled={bulkSubmitting}
               />
@@ -1096,7 +1136,7 @@ export function BlockCalendar({
         month={currentMonth}
         onMonthChange={handleMonthChange}
         transitionDirection={enterDir}
-        subtitle="Tippe auf einen Tag, um ihn zu sperren oder als bevorzugt zu markieren."
+        subtitle="Tippe auf einen Tag, um ihn zu sperren, einzuschränken oder als bevorzugt zu markieren."
         headerActions={
           <Button
             type="button"
@@ -1138,10 +1178,14 @@ export function BlockCalendar({
               {selectedEntry
                 ? selectedEntry.kind === "PREFERRED"
                   ? "Dieser Tag ist als bevorzugt markiert."
-                  : "Dieser Tag ist derzeit gesperrt."
+                  : selectedEntry.kind === "LIMITED"
+                    ? "Für diesen Tag ist eine eingeschränkte Verfügbarkeit hinterlegt."
+                    : "Dieser Tag ist derzeit gesperrt."
                 : selectedKind === "PREFERRED"
                   ? "Markiere den Tag als bevorzugten Probentermin."
-                  : "Blocke den Tag, wenn du nicht verfügbar bist."}
+                  : selectedKind === "LIMITED"
+                    ? "Halte fest, unter welchen Bedingungen du teilnehmen kannst."
+                    : "Blocke den Tag, wenn du nicht verfügbar bist."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1150,7 +1194,7 @@ export function BlockCalendar({
                 Aktion wählen
               </p>
               <div
-                className="grid gap-2 sm:grid-cols-2"
+                className="grid gap-2 sm:grid-cols-3"
                 role="radiogroup"
                 aria-label="Aktion für diesen Tag"
               >
@@ -1184,7 +1228,7 @@ export function BlockCalendar({
                 id="block-reason"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                placeholder="z. B. Urlaub, Familienfeier"
+                placeholder="z. B. Urlaub, nur bis 20 Uhr"
                 maxLength={200}
               />
               <p className="mt-1 text-xs text-muted-foreground">

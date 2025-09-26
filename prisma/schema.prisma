@@ -118,6 +118,7 @@ enum AvailabilityKind {
 
 enum BlockedDayKind {
   BLOCKED
+  LIMITED
   PREFERRED
 }
 
