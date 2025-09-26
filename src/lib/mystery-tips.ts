@@ -24,39 +24,44 @@ export type MysteryScoreboardEntry = {
 export async function getMysteryScoreboard(limit?: number): Promise<MysteryScoreboardEntry[]> {
   if (!process.env.DATABASE_URL) return [];
 
-  const totals = await groupMysteryTipSubmissionsByPlayer();
-  const correctCounts = await groupMysteryTipSubmissionsByPlayer({ isCorrect: true });
+  try {
+    const totals = await groupMysteryTipSubmissionsByPlayer();
+    const correctCounts = await groupMysteryTipSubmissionsByPlayer({ isCorrect: true });
 
-  const correctMap = new Map<string, number>();
-  for (const entry of correctCounts) {
-    correctMap.set(entry.playerName, entry._count?._all ?? 0);
+    const correctMap = new Map<string, number>();
+    for (const entry of correctCounts) {
+      correctMap.set(entry.playerName, entry._count?._all ?? 0);
+    }
+
+    const scoreboard = totals
+      .map<MysteryScoreboardEntry | null>((entry) => {
+        const playerName = entry.playerName.trim();
+        const totalScore = entry._sum.score ?? 0;
+        const totalSubmissions = entry._count?._all ?? 0;
+        if (!playerName || totalScore <= 0) return null;
+        return {
+          playerName,
+          totalScore,
+          totalSubmissions,
+          correctCount: correctMap.get(playerName) ?? 0,
+          lastUpdated: entry._max?.updatedAt ?? null,
+        };
+      })
+      .filter((entry): entry is MysteryScoreboardEntry => Boolean(entry));
+
+    scoreboard.sort((a: MysteryScoreboardEntry, b: MysteryScoreboardEntry) => {
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      if (b.correctCount !== a.correctCount) return b.correctCount - a.correctCount;
+      if (b.totalSubmissions !== a.totalSubmissions) return b.totalSubmissions - a.totalSubmissions;
+      return a.playerName.localeCompare(b.playerName, "de-DE", { sensitivity: "base" });
+    });
+
+    if (typeof limit === "number" && limit > 0) return scoreboard.slice(0, limit);
+    return scoreboard;
+  } catch (error) {
+    console.error("[mystery.scoreboard]", error);
+    return [];
   }
-
-  const scoreboard = totals
-    .map<MysteryScoreboardEntry | null>((entry) => {
-      const playerName = entry.playerName.trim();
-      const totalScore = entry._sum.score ?? 0;
-      const totalSubmissions = entry._count?._all ?? 0;
-      if (!playerName || totalScore <= 0) return null;
-      return {
-        playerName,
-        totalScore,
-        totalSubmissions,
-        correctCount: correctMap.get(playerName) ?? 0,
-        lastUpdated: entry._max?.updatedAt ?? null,
-      };
-    })
-    .filter((entry): entry is MysteryScoreboardEntry => Boolean(entry));
-
-  scoreboard.sort((a: MysteryScoreboardEntry, b: MysteryScoreboardEntry) => {
-    if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
-    if (b.correctCount !== a.correctCount) return b.correctCount - a.correctCount;
-    if (b.totalSubmissions !== a.totalSubmissions) return b.totalSubmissions - a.totalSubmissions;
-    return a.playerName.localeCompare(b.playerName, "de-DE", { sensitivity: "base" });
-  });
-
-  if (typeof limit === "number" && limit > 0) return scoreboard.slice(0, limit);
-  return scoreboard;
 }
 
 export async function getMysteryScoreboardEntry(playerName: string): Promise<MysteryScoreboardEntry | null> {
