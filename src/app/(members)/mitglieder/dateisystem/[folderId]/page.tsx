@@ -26,7 +26,7 @@ import { createMembersBreadcrumbItems, membersNavigationBreadcrumb } from "@/lib
 import { formatRelativeWithAbsolute } from "@/lib/datetime";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/roles";
 import { FileLibraryAccessTargetType, FileLibraryAccessType } from "@prisma/client";
-import { createFileLibraryFolder, updateFileLibraryPermissions } from "../actions";
+import { createFileLibraryFolder, deleteFileLibraryFolder, updateFileLibraryPermissions } from "../actions";
 
 const latestFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -283,11 +283,21 @@ export default async function FileLibraryFolderPage({
         description={folder.description ?? ""}
         breadcrumbs={breadcrumbItems}
         actions={
-          <Button asChild variant="outline">
-            <Link href="/mitglieder/dateisystem">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Zur Übersicht
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/mitglieder/dateisystem">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Zur Übersicht
+              </Link>
+            </Button>
+            {canManage ? (
+              <form action={deleteFileLibraryFolder}>
+                <input type="hidden" name="folderId" value={folder.id} />
+                <Button type="submit" variant="destructive">
+                  Ordner löschen
+                </Button>
+              </form>
+            ) : null}
+          </div>
         }
       />
 

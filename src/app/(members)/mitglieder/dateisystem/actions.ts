@@ -204,3 +204,37 @@ export async function updateFileLibraryPermissions(formData: FormData) {
   revalidatePath(basePath);
   revalidatePath(`${basePath}/${folderId}`);
 }
+
+export async function deleteFileLibraryFolder(formData: FormData) {
+  const session = await requireAuth();
+  const canManage = await hasPermission(session.user, "mitglieder.dateisystem.manage");
+  if (!canManage) {
+    throw new Error("Keine Berechtigung");
+  }
+
+  const rawFolderId = formData.get("folderId");
+  const folderId = typeof rawFolderId === "string" ? rawFolderId.trim() : "";
+  if (!folderId) {
+    throw new Error("Ordnerkennung fehlt");
+  }
+
+  const folder = await prisma.fileLibraryFolder.findUnique({
+    where: { id: folderId },
+    select: { id: true, parentId: true },
+  });
+
+  if (!folder) {
+    throw new Error("Ordner nicht gefunden");
+  }
+
+  await prisma.fileLibraryFolder.delete({ where: { id: folderId } });
+
+  const basePath = "/mitglieder/dateisystem";
+  revalidatePath(basePath);
+  if (folder.parentId) {
+    revalidatePath(`${basePath}/${folder.parentId}`);
+    redirect(`${basePath}/${folder.parentId}`);
+  }
+
+  redirect(basePath);
+}
