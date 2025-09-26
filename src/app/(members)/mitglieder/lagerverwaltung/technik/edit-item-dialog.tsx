@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,6 +25,12 @@ import {
 import { TECH_CATEGORY_LABEL, type TechnikInventoryCategory } from "./config";
 
 const INITIAL_STATE: TechnikInventoryActionState = { status: "idle" };
+
+const CURRENCY_FORMATTER = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+});
 
 function formatDateInput(value: Date | null | undefined): string {
   if (!value) {
@@ -62,7 +68,24 @@ export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
     INITIAL_STATE,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(() => `${item.quantity}`);
+  const [acquisitionCost, setAcquisitionCost] = useState(() =>
+    item.acquisitionCost !== null ? `${item.acquisitionCost}` : "",
+  );
   const categoryLabel = TECH_CATEGORY_LABEL[item.category];
+
+  const computedTotal = useMemo(() => {
+    const parsedQuantity = Number.parseInt(quantity, 10);
+    const parsedCost = Number.parseFloat(acquisitionCost);
+
+    if (!Number.isFinite(parsedQuantity) || !Number.isFinite(parsedCost)) {
+      return null;
+    }
+
+    const rawTotal = parsedQuantity * parsedCost;
+
+    return Math.round(rawTotal * 100) / 100;
+  }, [acquisitionCost, quantity]);
 
   useEffect(() => {
     if (state.status === "success") {
@@ -80,8 +103,10 @@ export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
   useEffect(() => {
     if (!open) {
       setErrorMessage(null);
+      setQuantity(`${item.quantity}`);
+      setAcquisitionCost(item.acquisitionCost !== null ? `${item.acquisitionCost}` : "");
     }
-  }, [open]);
+  }, [item.acquisitionCost, item.quantity, open]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -152,7 +177,8 @@ export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
                 type="number"
                 min={0}
                 step={1}
-                defaultValue={item.quantity}
+                value={quantity}
+                onChange={(event) => setQuantity(event.target.value)}
                 required
               />
             </div>
@@ -166,7 +192,8 @@ export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
                 type="number"
                 min={0}
                 step="0.01"
-                defaultValue={item.acquisitionCost ?? ""}
+                value={acquisitionCost}
+                onChange={(event) => setAcquisitionCost(event.target.value)}
                 required
               />
             </div>
@@ -174,17 +201,22 @@ export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor={`technik-total-edit-${item.id}`}>
-                Gesamtwert (EUR)
+                Gesamtwert (automatisch)
               </Label>
               <Input
                 id={`technik-total-edit-${item.id}`}
-                name="totalValue"
-                type="number"
-                min={0}
-                step="0.01"
-                defaultValue={item.totalValue ?? ""}
-                required
+                type="text"
+                readOnly
+                tabIndex={-1}
+                value={
+                  computedTotal !== null
+                    ? CURRENCY_FORMATTER.format(computedTotal)
+                    : "–"
+                }
               />
+              <p className="text-xs text-muted-foreground">
+                Berechnet als Menge × Anschaffungskosten.
+              </p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor={`technik-purchase-edit-${item.id}`}>

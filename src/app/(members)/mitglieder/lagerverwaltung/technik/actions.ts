@@ -46,10 +46,6 @@ const createItemSchema = z.object({
     .coerce
     .number()
     .min(0, "Die Anschaffungskosten dürfen nicht negativ sein."),
-  totalValue: z
-    .coerce
-    .number()
-    .min(0, "Der Gesamtwert darf nicht negativ sein."),
   details: z
     .string()
     .trim()
@@ -88,6 +84,12 @@ const createItemSchema = z.object({
 const updateItemSchema = createItemSchema.extend({
   id: z.string().cuid("Ungültige Inventar-ID."),
 });
+
+function calculateTotalValue(quantity: number, acquisitionCost: number): number {
+  const raw = quantity * acquisitionCost;
+
+  return Math.round(raw * 100) / 100;
+}
 
 async function generateSku(
   client: Prisma.TransactionClient,
@@ -137,7 +139,6 @@ export async function createTechnikInventoryItem(
       itemType: formData.get("itemType"),
       quantity: formData.get("quantity"),
       acquisitionCost: formData.get("acquisitionCost"),
-      totalValue: formData.get("totalValue"),
       details: formData.get("details") ?? undefined,
       lastUsedAt: formData.get("lastUsedAt") ?? undefined,
       purchaseDate: formData.get("purchaseDate"),
@@ -150,6 +151,7 @@ export async function createTechnikInventoryItem(
     }
 
     const values = parsed.data;
+    const totalValue = calculateTotalValue(values.quantity, values.acquisitionCost);
 
     const result = await prisma.$transaction(async (tx) => {
       const sku = await generateSku(tx, values.category);
@@ -161,7 +163,7 @@ export async function createTechnikInventoryItem(
           itemType: values.itemType,
           qty: values.quantity,
           acquisitionCost: values.acquisitionCost,
-          totalValue: values.totalValue,
+          totalValue,
           purchaseDate: values.purchaseDate,
           details: values.details ?? null,
           sku,
@@ -211,7 +213,6 @@ export async function updateTechnikInventoryItem(
       itemType: formData.get("itemType"),
       quantity: formData.get("quantity"),
       acquisitionCost: formData.get("acquisitionCost"),
-      totalValue: formData.get("totalValue"),
       details: formData.get("details") ?? undefined,
       lastUsedAt: formData.get("lastUsedAt") ?? undefined,
       purchaseDate: formData.get("purchaseDate"),
@@ -224,6 +225,7 @@ export async function updateTechnikInventoryItem(
     }
 
     const values = parsed.data;
+    const totalValue = calculateTotalValue(values.quantity, values.acquisitionCost);
 
     await prisma.inventoryItem.update({
       where: { id: values.id },
@@ -233,7 +235,7 @@ export async function updateTechnikInventoryItem(
         itemType: values.itemType,
         qty: values.quantity,
         acquisitionCost: values.acquisitionCost,
-        totalValue: values.totalValue,
+        totalValue,
         purchaseDate: values.purchaseDate,
         details: values.details ?? null,
         category: values.category as InventoryItemCategory,
