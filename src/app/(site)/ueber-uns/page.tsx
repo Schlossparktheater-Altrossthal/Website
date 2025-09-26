@@ -315,15 +315,18 @@ export default async function AboutPage() {
             </Text>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {highlights.map((item) => (
-              <Card key={item.label} className="bg-card/70">
-                <CardHeader>
-                  <p className="text-sm uppercase tracking-wide text-muted-foreground/80">{item.label}</p>
+              <Card
+                key={item.label}
+                className="border border-primary/20 bg-primary/5 shadow-md shadow-primary/10 backdrop-blur"
+              >
+                <CardHeader className="pb-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-primary/80">{item.label}</p>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-semibold text-primary">{item.value}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+                <CardContent className="pt-0">
+                  <p className="text-2xl font-semibold text-primary">{item.value}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{item.detail}</p>
                 </CardContent>
               </Card>
             ))}
