@@ -5,6 +5,7 @@ import { authenticateSyncRequest } from "../auth";
 import {
   applyIncomingEvents,
   buildSyncEtag,
+  SyncEventValidationError,
   type ApplyIncomingEventsResult,
 } from "@/lib/sync/server";
 
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const authResult = await authenticateSyncRequest(parsed.data.scope);
+  const authResult = await authenticateSyncRequest(request, parsed.data.scope);
   if (authResult.kind === "error") {
     return authResult.response;
   }
@@ -112,6 +113,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json(responseBody, { status, headers });
   } catch (error) {
+    if (error instanceof SyncEventValidationError) {
+      return NextResponse.json(
+        { error: error.message, issues: error.issues },
+        { status: 400 },
+      );
+    }
+
     console.error("Failed to apply incoming events", error);
     return NextResponse.json(
       { error: "Failed to apply sync events" },

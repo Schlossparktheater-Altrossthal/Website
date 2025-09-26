@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import type { OfflineScope } from "@/lib/offline/types";
+import { verifySyncToken } from "@/lib/sync/tokens";
 
 const INVENTORY_PERMISSIONS = [
   "mitglieder.lager.technik",
   "mitglieder.lager.kostueme",
 ] as const satisfies readonly string[];
+
+const tokenIssue = z.object({
+  code: z.literal("invalid_token"),
+  message: z.string(),
+});
 
 function logDeniedAccess(scope: OfflineScope, reason: string, userId?: string) {
   const context = userId ? `user=${userId}` : "anonymous";
@@ -29,11 +36,40 @@ type UnauthorizedResult = {
 
 export type SyncAuthorizationResult = AuthorizedResult | UnauthorizedResult;
 
-export async function authenticateSyncRequest(scope: OfflineScope): Promise<SyncAuthorizationResult> {
+function unauthorized(message: string, status: 401 | 403) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+export async function authenticateSyncRequest(
+  request: Request,
+  scope: OfflineScope,
+): Promise<SyncAuthorizationResult> {
+  const tokenHeader = request.headers.get("x-sync-token");
+  const claims = verifySyncToken(tokenHeader);
+
+  if (!claims) {
+    const issue = tokenIssue.safeParse(
+      tokenHeader
+        ? { code: "invalid_token" as const, message: "Invalid sync token" }
+        : { code: "invalid_token" as const, message: "Missing sync token" },
+    );
+
+    if (issue.success) {
+      logDeniedAccess(scope, issue.data.message.toLowerCase());
+    } else {
+      logDeniedAccess(scope, "invalid sync token");
+    }
+
+    return {
+      kind: "error",
+      response: unauthorized("Sync authentication required", 401),
+    } satisfies UnauthorizedResult;
+  }
+
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    logDeniedAccess(scope, "missing session");
+    logDeniedAccess(scope, "missing session", claims.userId);
     return {
       kind: "error",
       response: NextResponse.json({ error: "Authentication required" }, { status: 401 }),
@@ -41,6 +77,22 @@ export async function authenticateSyncRequest(scope: OfflineScope): Promise<Sync
   }
 
   const userId = typeof session.user.id === "string" ? session.user.id : undefined;
+
+  if (!userId) {
+    logDeniedAccess(scope, "session missing user id", claims.userId);
+    return {
+      kind: "error",
+      response: unauthorized("Session is incomplete", 403),
+    } satisfies UnauthorizedResult;
+  }
+
+  if (claims.userId !== userId) {
+    logDeniedAccess(scope, `token user mismatch (token=${claims.userId})`, userId);
+    return {
+      kind: "error",
+      response: unauthorized("Sync token does not match active session", 403),
+    } satisfies UnauthorizedResult;
+  }
 
   if (session.user.isDeactivated) {
     logDeniedAccess(scope, "deactivated account", userId);
