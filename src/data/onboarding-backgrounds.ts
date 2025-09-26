@@ -10,7 +10,6 @@ export interface BackgroundTag {
   readonly classHelper?: string;
   readonly classPlaceholder?: string;
   readonly classRequiredError?: string;
-  readonly getClassSuggestions?: () => readonly string[];
 }
 
 export function normalizeBackgroundLabel(value: string) {
@@ -22,48 +21,34 @@ export function normalizeBackgroundLabel(value: string) {
     .toLowerCase();
 }
 
-function createBszClassSuggestions() {
-  const now = new Date();
-  const relevantYears = [-1, 0, 1]
-    .map((offset) => now.getFullYear() + offset)
-    .filter((year) => year >= 2000 && year <= 2100)
-    .map((year) => String(year % 100).padStart(2, "0"));
-
-  const suggestions: string[] = [];
-  const pushUnique = (value: string) => {
-    if (!suggestions.includes(value)) {
-      suggestions.push(value);
-    }
-  };
-
-  for (const year of relevantYears) {
-    for (const suffix of ["A", "B", "C"]) {
-      pushUnique(`BFS ${year}${suffix}`);
-    }
-    pushUnique(`FO ${year}`);
-    pushUnique(`BG ${year}`);
-  }
-
-  ["BG 11", "BG 12", "BG 13", "FO 11", "FO 12", "BVJ", "BVJ+", "Berufsvorbereitung"].forEach(pushUnique);
-
-  return suggestions;
-}
-
 export const BACKGROUND_TAGS: readonly BackgroundTag[] = [
   {
     id: "bsz-altrossthal",
-    label: "BSZ Altroßthal / Canaletto",
+    label: "BSZ Altroßthal",
     value: "BSZ Altroßthal – Berufsschule",
     requiresClass: true,
     matchers: [
       ["bsz"],
-      ["altrossthal", "altrothal", "canaletto"],
+      ["altrossthal", "altrothal"],
     ],
-    classLabel: "Welche Klasse besuchst du am BSZ Altroßthal/Canaletto?",
+    classLabel: "Welche Klasse besuchst du am BSZ Altroßthal?",
     classHelper: "Damit können wir dich deinem Jahrgang zuordnen.",
     classPlaceholder: "z.B. BFS 23A",
     classRequiredError: "Bitte gib deine Klasse am BSZ Altroßthal an.",
-    getClassSuggestions: createBszClassSuggestions,
+  },
+  {
+    id: "bsz-canaletto",
+    label: "BSZ Canaletto",
+    value: "BSZ Canaletto – Berufliches Gymnasium",
+    requiresClass: true,
+    matchers: [
+      ["bsz"],
+      ["canaletto"],
+    ],
+    classLabel: "Welche Klasse besuchst du am BSZ Canaletto?",
+    classHelper: "Damit können wir dich deinem Jahrgang zuordnen.",
+    classPlaceholder: "z.B. BG 12",
+    classRequiredError: "Bitte gib deine Klasse am BSZ Canaletto an.",
   },
   {
     id: "bsz-agrar",
@@ -92,6 +77,20 @@ export function findMatchingBackgroundTag(value: string) {
     if (matches) {
       return tag;
     }
+  }
+  const schoolKeywords = ["schule", "schul", "bsz"];
+  if (schoolKeywords.some((keyword) => normalized.includes(keyword))) {
+    return {
+      id: "school-generic",
+      label: "Schule",
+      value,
+      requiresClass: true,
+      matchers: [] as readonly BackgroundMatcherGroup[],
+      classLabel: "Welche Klasse besuchst du?",
+      classHelper: "Bitte gib deine Klassenbezeichnung an, damit wir dich zuordnen können.",
+      classPlaceholder: "z.B. 11/2",
+      classRequiredError: "Bitte trag deine Klasse ein.",
+    } satisfies BackgroundTag;
   }
   return null;
 }
