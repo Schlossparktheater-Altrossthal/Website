@@ -23,6 +23,7 @@ const updateSchema = z.object({
     .object({
       siteTitle: z.string().trim().min(1).max(160).optional(),
       colorMode: colorModeSchema.optional(),
+      maintenanceMode: z.boolean().optional(),
       themeId: themeIdSchema.optional(),
     })
     .optional(),
@@ -120,6 +121,7 @@ export async function PUT(request: NextRequest) {
       await saveWebsiteSettings({
         siteTitle: settingsPayload?.siteTitle ?? undefined,
         colorMode: settingsPayload?.colorMode ?? undefined,
+        maintenanceMode: settingsPayload?.maintenanceMode ?? undefined,
         themeId: desiredThemeId,
       });
     }

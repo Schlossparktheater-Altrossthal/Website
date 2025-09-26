@@ -739,9 +739,11 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
     colorMode: initialSettings.colorMode,
     updatedAt: initialSettings.updatedAt,
     activeThemeId: initialSettings.theme.id,
+    maintenanceMode: initialSettings.maintenanceMode,
   }));
   const [siteTitle, setSiteTitle] = useState(initialSettings.siteTitle);
   const [colorMode, setColorMode] = useState<ThemeColorMode>(initialSettings.colorMode);
+  const [maintenanceMode, setMaintenanceMode] = useState(initialSettings.maintenanceMode);
   const [availableThemes, setAvailableThemes] = useState<ClientWebsiteThemeSummary[]>(mergedThemeSummaries);
   const [themeBaselines, setThemeBaselines] = useState<Record<string, ClientWebsiteTheme>>({
     [initialSettings.theme.id]: initialSettings.theme,
@@ -836,6 +838,9 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
     if (colorMode !== siteSnapshot.colorMode) {
       return true;
     }
+    if (maintenanceMode !== siteSnapshot.maintenanceMode) {
+      return true;
+    }
     if (themeName.trim() !== currentTheme.name.trim()) {
       return true;
     }
@@ -867,6 +872,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
     showSemanticTokens,
     siteSnapshot,
     currentTheme,
+    maintenanceMode,
   ]);
 
   const renameDisabled = isRenaming || isSaving || isLoadingTheme || currentTheme.isDefault;
@@ -1007,6 +1013,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
   function resetToBaseline() {
     setSiteTitle(siteSnapshot.siteTitle);
     setColorMode(siteSnapshot.colorMode);
+    setMaintenanceMode(siteSnapshot.maintenanceMode);
     populateFormFromTheme(currentTheme);
   }
 
@@ -1242,9 +1249,11 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
         colorMode: nextSettings.colorMode,
         updatedAt: nextSettings.updatedAt,
         activeThemeId: nextSettings.theme.id,
+        maintenanceMode: nextSettings.maintenanceMode,
       });
       setSiteTitle(nextSettings.siteTitle);
       setColorMode(nextSettings.colorMode);
+      setMaintenanceMode(nextSettings.maintenanceMode);
       setAvailableThemes((prev) => {
         const map = new Map(prev.map((entry) => [entry.id, entry] as const));
         map.set(nextSettings.theme.id, themeToSummary(nextSettings.theme));
@@ -1268,6 +1277,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
       const settingsPayload: Record<string, unknown> = {
         siteTitle,
         colorMode,
+        maintenanceMode,
       };
       if (activateTheme) {
         settingsPayload.themeId = currentTheme.id;
@@ -1317,9 +1327,11 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
         colorMode: nextSettings.colorMode,
         updatedAt: nextSettings.updatedAt,
         activeThemeId: nextSettings.theme.id,
+        maintenanceMode: nextSettings.maintenanceMode,
       });
       setSiteTitle(nextSettings.siteTitle);
       setColorMode(nextSettings.colorMode);
+      setMaintenanceMode(nextSettings.maintenanceMode);
 
       setAvailableThemes((prev) => {
         const map = new Map(prev.map((theme) => [theme.id, theme] as const));
@@ -1490,6 +1502,47 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Wartungsmodus</p>
+                <p className="text-xs text-muted-foreground">
+                  Blendet die öffentliche Website aus. Angemeldete Mitglieder behalten weiterhin vollen Zugriff.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={maintenanceMode}
+                onClick={() => setMaintenanceMode((prev) => !prev)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  maintenanceMode
+                    ? "border-warning/60 bg-warning/70"
+                    : "border-border/70 bg-background",
+                )}
+              >
+                <span className="sr-only">Wartungsmodus umschalten</span>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "inline-block h-5 w-5 rounded-full bg-background shadow transition-transform",
+                    maintenanceMode ? "translate-x-5" : "translate-x-1",
+                  )}
+                />
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Badge variant={maintenanceMode ? "warning" : "muted"}>
+                {maintenanceMode ? "Aktiv" : "Deaktiviert"}
+              </Badge>
+              <span className="text-muted-foreground">
+                {maintenanceMode
+                  ? "Besucher sehen eine Wartungsmeldung, der Login bleibt erreichbar."
+                  : "Die Website ist öffentlich sichtbar."}
+              </span>
             </div>
           </div>
         </CardContent>
