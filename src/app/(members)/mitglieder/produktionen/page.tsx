@@ -167,7 +167,10 @@ export default async function ProduktionenPage() {
             </p>
           </div>
           {shows.length > 0 ? (
-            <Badge variant="outline">{shows.length} Eintr{shows.length === 1 ? "ag" : "äge"}</Badge>
+            <Badge variant="outline">
+              {shows.length} Eintr
+              {shows.length === 1 ? "ag" : "äge"}
+            </Badge>
           ) : null}
         </div>
 
