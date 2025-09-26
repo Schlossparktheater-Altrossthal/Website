@@ -246,24 +246,106 @@ type InviteMeta = {
   whatsappLink: string | null;
 };
 
+type OnboardingWizardVariant = "default" | "regie";
+
 type OnboardingWizardProps = {
   sessionToken: string;
   invite: InviteMeta;
+  variant?: OnboardingWizardVariant;
 };
 
-const initialActingPreferences: PreferenceEntry[] = actingOptions.map((option) => ({
-  ...option,
-  domain: "acting",
-  enabled: false,
-  weight: 50,
-}));
+function createInitialActingPreferences(): PreferenceEntry[] {
+  return actingOptions.map((option) => ({
+    ...option,
+    domain: "acting",
+    enabled: false,
+    weight: 50,
+  }));
+}
 
-const initialCrewPreferences: PreferenceEntry[] = crewOptions.map((option) => ({
-  ...option,
-  domain: "crew",
-  enabled: false,
-  weight: 50,
-}));
+function createInitialCrewPreferences(variant: OnboardingWizardVariant): PreferenceEntry[] {
+  return crewOptions.map((option) => {
+    const isDirection = option.code === "crew_direction";
+    const enabled = variant === "regie" ? isDirection : false;
+    const weight = variant === "regie" && isDirection ? 80 : 50;
+    return {
+      ...option,
+      domain: "crew",
+      enabled,
+      weight,
+    } satisfies PreferenceEntry;
+  });
+}
+
+function getIntroHeading(variant: OnboardingWizardVariant) {
+  return variant === "regie"
+    ? "Willkommen im Regieteam"
+    : "Willkommen im Zukunftstheater";
+}
+
+function getIntroDescription(variant: OnboardingWizardVariant) {
+  if (variant === "regie") {
+    return "Nimm dir einen Moment Zeit, damit wir dich optimal in Probenplanung, Call Sheets und Produktionsabläufen unterstützen können.";
+  }
+  return "Schön, dass du da bist! Nimm dir 10 Minuten Zeit, such dir einen ruhigen Ort und lass uns gemeinsam herausfinden, wie du dich auf der Bühne oder hinter den Kulissen einbringen möchtest.";
+}
+
+function getFocusLabel(focus: "acting" | "tech" | "both", variant: OnboardingWizardVariant) {
+  if (variant === "regie" && focus === "tech") {
+    return "Regie & Organisation";
+  }
+  return focusLabels[focus];
+}
+
+function getFocusDescription(focus: "acting" | "tech" | "both", variant: OnboardingWizardVariant) {
+  if (variant === "regie" && focus === "tech") {
+    return "Du koordinierst Proben, Call Sheets und Teams hinter der Bühne.";
+  }
+  return focusDescriptions[focus];
+}
+
+function getCrewSectionHeading(variant: OnboardingWizardVariant) {
+  return variant === "regie" ? "Regie & Teams" : "Gewerke & Teams";
+}
+
+function getCrewSectionDescription(variant: OnboardingWizardVariant) {
+  return variant === "regie"
+    ? "Markiere, welche Verantwortungsbereiche du in Regie und Produktionsleitung übernimmst oder ergänze ein eigenes Aufgabenfeld."
+    : "Wähle bestehende Bereiche oder ergänze dein eigenes Gewerk, wenn dir noch etwas fehlt.";
+}
+
+function getDomainLabel(domain: "acting" | "crew", variant: OnboardingWizardVariant) {
+  if (domain === "acting") {
+    return "Schauspiel";
+  }
+  return variant === "regie" ? "Regie & Teams" : "Gewerke";
+}
+
+function createInitialFormState(variant: OnboardingWizardVariant) {
+  return {
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    passwordConfirm: "",
+    background: "",
+    backgroundClass: "",
+    notes: "",
+    dateOfBirth: "",
+    genderOption: "no_answer" as GenderOption,
+    genderCustom: "",
+    memberSinceYear: "",
+    focus: (variant === "regie" ? "tech" : "acting") as "acting" | "tech" | "both",
+    actingPreferences: createInitialActingPreferences(),
+    crewPreferences: createInitialCrewPreferences(variant),
+    interests: [] as string[],
+    nutritionStyle: "omnivore" as DietaryStyleOption,
+    nutritionCustomStyle: "",
+    nutritionStrictness: "flexible" as DietaryStrictnessOption,
+    photoConsent: { consent: true, skipDocument: false },
+    dietary: [] as DietaryEntry[],
+  };
+}
 
 function calculateAge(value: string | null) {
   if (!value) return null;
@@ -316,8 +398,9 @@ function formatProductionLabel(production: InviteMeta["production"]) {
   return `Produktion ${production.year}`;
 }
 
-export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps) {
+export function OnboardingWizard({ sessionToken, invite, variant = "default" }: OnboardingWizardProps) {
   const router = useRouter();
+  const isRegieVariant = variant === "regie";
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -335,29 +418,14 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    passwordConfirm: "",
-    background: "",
-    backgroundClass: "",
-    notes: "",
-    dateOfBirth: "",
-    genderOption: "no_answer" as GenderOption,
-    genderCustom: "",
-    memberSinceYear: "",
-    focus: "acting" as "acting" | "tech" | "both",
-    actingPreferences: initialActingPreferences,
-    crewPreferences: initialCrewPreferences,
-    interests: [] as string[],
-    nutritionStyle: "omnivore" as DietaryStyleOption,
-    nutritionCustomStyle: "",
-    nutritionStrictness: "flexible" as DietaryStrictnessOption,
-    photoConsent: { consent: true, skipDocument: false },
-    dietary: [] as DietaryEntry[],
-  });
+  const [form, setForm] = useState(() => createInitialFormState(variant));
+
+  useEffect(() => {
+    if (!isRegieVariant) {
+      return;
+    }
+    setForm((prev) => (prev.focus === "tech" ? prev : { ...prev, focus: "tech" }));
+  }, [isRegieVariant]);
 
   const [newInterest, setNewInterest] = useState("");
   const [dietaryDraft, setDietaryDraft] = useState({
@@ -1073,7 +1141,11 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         return;
       }
       setSuccess(true);
-      toast.success("Willkommen im Ensemble! Wir melden uns bei dir.");
+      toast.success(
+        isRegieVariant
+          ? "Willkommen im Regieteam! Wir melden uns bei dir."
+          : "Willkommen im Ensemble! Wir melden uns bei dir.",
+      );
 
       const signInEmail = typeof data?.user?.email === "string" ? data.user.email : form.email.trim();
       const signInResult = await signIn("credentials", {
@@ -1213,11 +1285,8 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       {step === 0 && (
         <Card className="border border-border/70 bg-background/80 shadow-xl">
           <CardContent className="space-y-5 px-5 py-6 text-center sm:space-y-6 sm:px-8 sm:py-8">
-            <h2 className="text-2xl font-semibold sm:text-3xl">Willkommen im Zukunftstheater</h2>
-            <p className="text-sm text-muted-foreground sm:text-base">
-              Schön, dass du da bist! Nimm dir 10 Minuten Zeit, such dir einen ruhigen Ort und lass uns gemeinsam herausfinden, wie du
-              dich auf der Bühne oder hinter den Kulissen einbringen möchtest.
-            </p>
+            <h2 className="text-2xl font-semibold sm:text-3xl">{getIntroHeading(variant)}</h2>
+            <p className="text-sm text-muted-foreground sm:text-base">{getIntroDescription(variant)}</p>
             <Button size="lg" onClick={goNext}>
               Los geht&apos;s
             </Button>
@@ -1412,38 +1481,58 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
       {step === 2 && (
         <Card className="border border-border/70">
           <CardHeader>
-            <CardTitle>Wohin zieht es dich?</CardTitle>
+            <CardTitle>
+              {isRegieVariant ? "Dein Bereich: Regie & Produktionsleitung" : "Wohin zieht es dich?"}
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Wähle aus, ob du dich eher im Schauspiel, hinter den Kulissen oder in beiden Welten siehst. Danach kannst du gewichten,
-              was dich am meisten reizt.
+              {isRegieVariant
+                ? "Wir bündeln deine Angaben für Regie, Produktionsleitung und Organisation, damit du sofort mit den richtigen Tools starten kannst."
+                : "Wähle aus, ob du dich eher im Schauspiel, hinter den Kulissen oder in beiden Welten siehst. Danach kannst du gewichten, was dich am meisten reizt."}
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex flex-wrap gap-3">
-              {[
-                { value: "acting", label: "Schauspiel", description: "Auf der Bühne stehen, Rollen gestalten." },
-                { value: "tech", label: "Gewerke", description: "Technik, Kostüm, Bühnenbild und Organisation." },
-                { value: "both", label: "Beides", description: "Ich möchte mich offen halten." },
-              ].map((option) => {
-                const active = form.focus === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={cn(
-                      "flex min-w-[180px] flex-1 flex-col gap-1 rounded-lg border p-4 text-left transition",
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/70 hover:text-foreground",
-                    )}
-                    onClick={() => setForm((prev) => ({ ...prev, focus: option.value as typeof prev.focus }))}
-                  >
-                    <span className="text-sm font-semibold">{option.label}</span>
-                    <span className="text-xs">{option.description}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {isRegieVariant ? (
+              <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-left">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-primary">Regie &amp; Organisation</p>
+                    <p className="text-xs text-muted-foreground sm:text-sm">
+                      Dein Fokus liegt auf Probenplanung, Call Sheets und Teamkoordination. Unten kannst du deine Schwerpunkte
+                      präzisieren.
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="w-fit border-primary/40 bg-primary/5 text-primary">
+                    Festgelegt
+                  </Badge>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: "acting", label: "Schauspiel", description: "Auf der Bühne stehen, Rollen gestalten." },
+                  { value: "tech", label: "Gewerke", description: "Technik, Kostüm, Bühnenbild und Organisation." },
+                  { value: "both", label: "Beides", description: "Ich möchte mich offen halten." },
+                ].map((option) => {
+                  const active = form.focus === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={cn(
+                        "flex min-w-[180px] flex-1 flex-col gap-1 rounded-lg border p-4 text-left transition",
+                        active
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/70 hover:text-foreground",
+                      )}
+                      onClick={() => setForm((prev) => ({ ...prev, focus: option.value as typeof prev.focus }))}
+                    >
+                      <span className="text-sm font-semibold">{option.label}</span>
+                      <span className="text-xs">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {(form.focus === "acting" || form.focus === "both") && (
               <section className="space-y-4">
@@ -1504,10 +1593,10 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
 
             {(form.focus === "tech" || form.focus === "both") && (
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Gewerke & Teams</h3>
-                <p className="text-xs text-muted-foreground">
-                  Wähle bestehende Bereiche oder ergänze dein eigenes Gewerk, wenn dir noch etwas fehlt.
-                </p>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  {getCrewSectionHeading(variant)}
+                </h3>
+                <p className="text-xs text-muted-foreground">{getCrewSectionDescription(variant)}</p>
                 <div className="grid gap-4 md:grid-cols-2">
                   {form.crewPreferences.map((pref) => {
                     const active = pref.enabled;
@@ -2144,10 +2233,10 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     focusBadgeStyles[form.focus],
                   )}
                   >
-                    {focusLabels[form.focus]}
+                    {getFocusLabel(form.focus, variant)}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">{focusDescriptions[form.focus]}</p>
+                <p className="text-xs text-muted-foreground">{getFocusDescription(form.focus, variant)}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {focusDomainMap[form.focus].map((domain) => {
                     const entries = preferenceSummary[domain];
@@ -2155,7 +2244,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     return (
                       <div key={domain} className="space-y-3 rounded-xl border border-border/60 bg-background/85 p-3">
                         <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
-                          <span>{domain === "acting" ? "Schauspiel" : "Gewerke"}</span>
+                          <span>{getDomainLabel(domain, variant)}</span>
                           <span>{stats.count} Auswahl{stats.count === 1 ? "" : "en"}</span>
                         </div>
                         {entries.length ? (
