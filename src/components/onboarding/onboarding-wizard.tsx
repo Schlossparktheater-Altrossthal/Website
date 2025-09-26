@@ -273,7 +273,7 @@ function normalizeForMatch(value: string) {
     .toLowerCase();
 }
 
-function requiresBszClass(value: string) {
+function isBszBackground(value: string) {
   if (!value) return false;
   const normalized = normalizeForMatch(value);
   if (!normalized.includes("bsz")) return false;
@@ -425,20 +425,20 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
   const isMinor = age !== null && age < 18;
-  const requiresBackgroundClass = useMemo(() => requiresBszClass(form.background), [form.background]);
+  const hasBszBackground = useMemo(() => isBszBackground(form.background), [form.background]);
   const backgroundClassLabel = useMemo(() => {
     const trimmed = form.backgroundClass.trim();
     return trimmed ? trimmed : null;
   }, [form.backgroundClass]);
 
   useEffect(() => {
-    if (requiresBackgroundClass) return;
+    if (hasBszBackground) return;
     if (!form.backgroundClass) return;
     setForm((prev) => {
       if (!prev.backgroundClass) return prev;
       return { ...prev, backgroundClass: "" };
     });
-  }, [form.backgroundClass, requiresBackgroundClass]);
+  }, [form.backgroundClass, hasBszBackground]);
 
   const genderLabel = useMemo(() => {
     if (form.genderOption === "custom") {
@@ -854,10 +854,6 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
         setError("Wo kommst du her? Schule, Uni, Ausbildung – ein Stichwort genügt.");
         return;
       }
-      if (requiresBackgroundClass && !form.backgroundClass.trim()) {
-        setError("Bitte gib deine Klasse am BSZ an.");
-        return;
-      }
       if (form.genderOption === "custom" && !form.genderCustom.trim()) {
         setError("Bitte beschreibe dein Geschlecht oder wähle eine Option aus der Liste.");
         return;
@@ -1270,7 +1266,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   ))}
                 </div>
               </label>
-              {requiresBackgroundClass && (
+              {hasBszBackground && (
                 <label className="space-y-1 text-sm md:col-start-2">
                   <span className="font-medium">Welche Klasse besuchst du am BSZ Altroßthal/Canaletto?</span>
                   <Input
@@ -1279,7 +1275,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                     placeholder="z.B. BFS 23A"
                   />
                   <span className="text-xs text-muted-foreground">
-                    Damit können wir dich deinem Jahrgang zuordnen.
+                    Optional: Damit können wir dich deinem Jahrgang zuordnen.
                   </span>
                 </label>
               )}
