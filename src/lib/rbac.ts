@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { Role } from "@/lib/roles";
+import { applyImpersonation } from "@/lib/auth/impersonation";
 
 export { ROLES, type Role } from "@/lib/roles";
 
@@ -25,8 +26,18 @@ export function hasRole(user: { role?: Role; roles?: Role[] } | null | undefined
   return roles.some((role) => owned.has(role));
 }
 
-export async function requireAuth(roles?: Role[]) {
+type SessionOptions = {
+  allowImpersonation?: boolean;
+};
+
+export async function getSession(options?: SessionOptions) {
   const session = await getServerSession(authOptions);
+  const allowImpersonation = options?.allowImpersonation !== false;
+  return applyImpersonation(session, allowImpersonation);
+}
+
+export async function requireAuth(roles?: Role[], options?: SessionOptions) {
+  const session = await getSession(options);
   if (!session?.user) redirect("/login");
   if (session.user.isDeactivated) redirect("/login?error=AccessDenied&reason=deactivated");
   if (roles && !hasRole(session.user, ...roles)) redirect("/");

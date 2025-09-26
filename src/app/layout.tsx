@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 import "./globals.css";
 import type { Viewport } from "next";
-import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import { ColorModeScript } from "@/components/theme/color-mode-script";
 import { ThemeStyleRegistry } from "@/components/theme/theme-style-registry";
@@ -13,7 +12,7 @@ import {
   resolveWebsiteSettings,
 } from "@/lib/website-settings";
 import { cn } from "@/lib/utils";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { createSyncToken } from "@/lib/sync/tokens";
 
@@ -68,7 +67,7 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let session: Session | null = null;
   try {
-    session = await getServerSession(authOptions);
+    session = await getSession();
   } catch (error) {
     console.error("Failed to load session", error);
   }

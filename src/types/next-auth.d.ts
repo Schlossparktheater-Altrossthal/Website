@@ -1,4 +1,5 @@
 import { AvatarSource, Role } from "@prisma/client";
+import type { ImpersonationDetails } from "@/lib/auth/impersonation";
 // augment next-auth types for session.user
 
 declare module "next-auth" {
@@ -18,6 +19,7 @@ declare module "next-auth" {
       deactivatedAt?: string | null;
     };
     analyticsSessionId?: string | null;
+    impersonation?: ImpersonationDetails | null;
   }
   interface User {
     firstName?: string | null;

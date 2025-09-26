@@ -30,6 +30,7 @@ import { formatRelativeFromNow } from "@/lib/datetime";
 import { getUserDisplayName } from "@/lib/names";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import { ImpersonationButton } from "./impersonation-button";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -628,6 +629,12 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     { id: member.id, label: displayName, isCurrent: true },
   ];
 
+  const canStartImpersonation = Boolean(
+    session.user?.id &&
+      session.user.id !== member.id &&
+      !(session.impersonation?.active ?? false),
+  );
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -635,17 +642,25 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
         description="Einblick in Kontaktdaten, Rollen und Engagement des Mitglieds."
         breadcrumbs={breadcrumbs}
         actions={
-          <Button
-            asChild
-            size="sm"
-            variant="outline"
-            className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
-          >
-            <Link href="/mitglieder/mitgliederverwaltung">
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              Zurück zur Übersicht
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
+            >
+              <Link href="/mitglieder/mitgliederverwaltung">
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Zurück zur Übersicht
+              </Link>
+            </Button>
+            {canStartImpersonation ? (
+              <ImpersonationButton
+                targetUserId={member.id}
+                targetName={displayName}
+              />
+            ) : null}
+          </div>
         }
       />
       <Tabs defaultValue="overview" className="space-y-6">

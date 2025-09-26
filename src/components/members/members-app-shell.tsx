@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MembersNav, type AssignmentFocus } from "@/components/members-nav";
 import { cn } from "@/lib/utils";
+import type { ImpersonationDetails } from "@/lib/auth/impersonation";
+import { ImpersonationBanner } from "@/components/members/impersonation-banner/impersonation-banner";
 
 const membersContentSectionVariants = cva("py-6 sm:py-8", {
   variants: {
@@ -178,6 +180,7 @@ interface MembersAppShellProps {
   hasDepartmentMemberships: boolean;
   contentLayout?: MembersContentLayoutConfig;
   globalFooter?: React.ReactNode;
+  impersonation?: ImpersonationDetails | null;
 }
 
 interface MembersTopbarSlots {
@@ -344,6 +347,7 @@ export function MembersAppShell({
   hasDepartmentMemberships,
   contentLayout,
   globalFooter,
+  impersonation,
 }: MembersAppShellProps) {
   const [topbarContent, setTopbarContentState] =
     React.useState<MembersTopbarSlots>(INITIAL_TOPBAR);
@@ -442,6 +446,11 @@ export function MembersAppShell({
             content={topbarContent}
             containerClassName={contentClasses.container}
           />
+          {impersonation?.active ? (
+            <div className={cn(contentClasses.container, "py-4 sm:py-5")}>
+              <ImpersonationBanner details={impersonation} />
+            </div>
+          ) : null}
           <main className="flex-1 pb-12">
             {contentHeader ? (
               <header className="border-b border-border/60 bg-background/60">

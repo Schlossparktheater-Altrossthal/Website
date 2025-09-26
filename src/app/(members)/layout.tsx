@@ -145,6 +145,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               activeProduction={activeProduction ?? undefined}
               assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
+              impersonation={session.impersonation ?? null}
               globalFooter={
                 <SiteFooter
                   buildInfo={buildInfo}
