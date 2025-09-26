@@ -65,6 +65,14 @@ type SelectedBlockedDay = {
   holidayEntries: HolidayRange[];
 };
 
+type HolidaySegment = {
+  key: string;
+  titles: string[];
+  isHoliday: boolean;
+  span: number;
+  showDivider: boolean;
+};
+
 function prepareMembers(members: OverviewMember[]): PreparedMember[] {
   return members.map((member) => {
     const blockedMap = new Map<string, BlockedDay>();
@@ -243,6 +251,79 @@ export function BlockOverview({
     [visibleDayInfo],
   );
   const holidayMap = useMemo(() => createHolidayMap(holidays), [holidays]);
+  const holidaySegments = useMemo(() => {
+    if (!visibleDayInfo.length) return [] as HolidaySegment[];
+
+    const segments: HolidaySegment[] = [];
+    let currentSignature: string | null = null;
+    let currentTitles: string[] = [];
+    let currentSpan = 0;
+    let currentIsHoliday = false;
+    let currentStartIndex = 0;
+    let currentStartKey = "";
+
+    const signatureForEntries = (entries: HolidayRange[]) =>
+      entries
+        .map((entry) => entry.id ?? `${entry.title ?? "holiday"}:${entry.startDate}:${entry.endDate}`)
+        .sort()
+        .join("|");
+
+    for (let index = 0; index < visibleDayInfo.length; index += 1) {
+      const { key } = visibleDayInfo[index];
+      const entries = holidayMap.get(key) ?? [];
+      const signature = entries.length ? signatureForEntries(entries) : "";
+
+      if (signature === currentSignature) {
+        currentSpan += 1;
+        continue;
+      }
+
+      if (currentSpan > 0) {
+        const startInfo = visibleDayInfo[currentStartIndex];
+        const weekday = startInfo?.day.getDay();
+        const showDivider =
+          !!startInfo &&
+          sortedPreferredWeekdays.length > 0 &&
+          weekday === sortedPreferredWeekdays[0] &&
+          currentStartIndex !== 0;
+
+        segments.push({
+          key: `${currentStartKey}:${currentSignature || "none"}`,
+          titles: currentTitles,
+          isHoliday: currentIsHoliday,
+          span: currentSpan,
+          showDivider,
+        });
+      }
+
+      currentSignature = signature;
+      currentTitles = entries.map((entry) => entry.title).filter(Boolean);
+      currentSpan = 1;
+      currentIsHoliday = entries.length > 0;
+      currentStartIndex = index;
+      currentStartKey = key;
+    }
+
+    if (currentSpan > 0) {
+      const startInfo = visibleDayInfo[currentStartIndex];
+      const weekday = startInfo?.day.getDay();
+      const showDivider =
+        !!startInfo &&
+        sortedPreferredWeekdays.length > 0 &&
+        weekday === sortedPreferredWeekdays[0] &&
+        currentStartIndex !== 0;
+
+      segments.push({
+        key: `${currentStartKey}:${currentSignature || "none"}`,
+        titles: currentTitles,
+        isHoliday: currentIsHoliday,
+        span: currentSpan,
+        showDivider,
+      });
+    }
+
+    return segments;
+  }, [holidayMap, sortedPreferredWeekdays, visibleDayInfo]);
   const summary = useMemo(() => summarizeMembers(preparedMembers, dayKeys), [preparedMembers, dayKeys]);
 
   const holidaysInRange = useMemo(() => {
@@ -385,9 +466,12 @@ export function BlockOverview({
       <div className="hidden sm:block">
         <div className="relative max-h-[70vh] overflow-auto rounded-2xl border border-border/60 bg-card shadow-sm">
           <table className="w-full min-w-[960px] border-collapse text-xs">
-            <thead>
+            <thead className="sticky top-0 z-30 bg-card/95">
               <tr>
-                <th className="sticky top-0 left-0 z-40 border-b border-r border-border/60 bg-card/95 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <th
+                  rowSpan={2}
+                  className="sticky top-0 left-0 z-40 border-b border-r border-border/60 bg-card/95 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                >
                   Mitglied
                 </th>
                 {visibleDayInfo.map(({ day, key }, index) => {
@@ -400,17 +484,11 @@ export function BlockOverview({
                     weekday === sortedPreferredWeekdays[0] &&
                     index !== 0;
                   const isFirstOfMonth = format(day, "d") === "1";
-                  const holidayEntries = holidayMap.get(key) ?? [];
-                  const holidayTitles = holidayEntries.map((holiday) => holiday.title).filter(Boolean);
-                  const holidayTitleSummary =
-                    holidayEntries.length > 1
-                      ? `${holidayTitles[0] ?? "Ferien"} +${holidayEntries.length - 1}`
-                      : holidayTitles[0] ?? "Ferien";
                   return (
                     <th
                       key={key}
                       className={cn(
-                        "sticky top-0 z-30 border-b border-border/60 bg-card/95 px-3 py-2 text-center align-bottom text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/90",
+                        "border-b border-border/60 bg-card/95 px-3 py-2 text-center align-bottom text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/90",
                         showDivider && "border-l border-border/60",
                         isPreferredDay && "text-foreground",
                         isExceptionDay && !isPreferredDay && "text-muted-foreground",
@@ -441,15 +519,36 @@ export function BlockOverview({
                             {format(day, "MMM", { locale: de })}
                           </span>
                         ) : null}
-                        {holidayEntries.length ? (
-                          <span
-                            className="rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-500/20 dark:text-sky-200"
-                            title={holidayTitles.join(", ")}
-                          >
-                            {holidayTitleSummary}
-                          </span>
-                        ) : null}
                       </div>
+                    </th>
+                  );
+                })}
+              </tr>
+              <tr>
+                {holidaySegments.map((segment) => {
+                  const summaryLabel =
+                    segment.titles.length > 1
+                      ? `${segment.titles[0] ?? "Ferien"} +${segment.titles.length - 1}`
+                      : segment.titles[0] ?? "Ferien";
+                  return (
+                    <th
+                      key={segment.key}
+                      colSpan={segment.span}
+                      scope="col"
+                      className={cn(
+                        "border-b border-border/60 px-2 py-1 text-center align-middle text-[10px] font-semibold uppercase tracking-wide",
+                        segment.isHoliday
+                          ? "bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200"
+                          : "bg-card/95 text-transparent",
+                        segment.showDivider && "border-l border-border/60",
+                      )}
+                      aria-hidden={!segment.isHoliday}
+                    >
+                      {segment.isHoliday ? (
+                        <span title={segment.titles.join(", ")}>{summaryLabel}</span>
+                      ) : (
+                        <span className="sr-only">Keine Ferien</span>
+                      )}
                     </th>
                   );
                 })}
