@@ -915,10 +915,15 @@ model InventoryItem {
   id        String  @id @default(cuid())
   sku       String  @unique @default(cuid())
   name      String
+  manufacturer     String?
+  itemType         String?
   qty       Int
   location  String?
   owner     String?
   condition String?
+  acquisitionCost  Float?
+  totalValue       Float?
+  purchaseDate     DateTime?
   category         InventoryItemCategory @default(accessories)
   details          String?
   lastUsedAt       DateTime?

@@ -14,9 +14,14 @@ export interface InventoryItemRecord {
   id: string;
   sku: string;
   name: string;
+  manufacturer?: string | null;
+  itemType?: string | null;
   quantity: number;
   updatedAt: string;
   category: InventoryItemCategoryValue;
+  acquisitionCost?: number | null;
+  totalValue?: number | null;
+  purchaseDate?: string | null;
   details?: string | null;
   lastUsedAt?: string | null;
   lastInventoryAt?: string | null;
