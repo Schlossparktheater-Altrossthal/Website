@@ -14,7 +14,10 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
 import { RenewOnboardingInviteButton } from "./renew-onboarding-invite-button";
-import { OnboardingShowFilter } from "./onboarding-show-filter";
+import {
+  ONBOARDING_SHOW_FILTER_ALL_VALUE,
+  OnboardingShowFilter,
+} from "./onboarding-show-filter";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const percentFormat = new Intl.NumberFormat("de-DE", {
@@ -73,7 +76,7 @@ export default async function OnboardingAnalyticsPage({
     : null;
 
   const showFilterOptions = [
-    { value: "", label: "Alle Onboardings" },
+    { value: ONBOARDING_SHOW_FILTER_ALL_VALUE, label: "Alle Onboardings" },
     ...analytics.shows.map((show) => ({ value: show.id, label: formatShowTitle(show) })),
   ];
 
@@ -114,7 +117,7 @@ export default async function OnboardingAnalyticsPage({
   const dietaryStats = selectedShow ? summarizeDietary(visibleProfiles) : analytics.dietary;
 
   const visibleShowSummaries = selectedShow ? [selectedShow] : analytics.shows;
-  const showFilterValue = selectedShow?.id ?? "";
+  const showFilterValue = selectedShow?.id ?? ONBOARDING_SHOW_FILTER_ALL_VALUE;
 
   const summaryByShowId = new Map(analytics.shows.map((show) => [show.id, show] as const));
 
