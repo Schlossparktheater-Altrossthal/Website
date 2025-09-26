@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { describeInvite, generateInviteToken, hashInviteToken, calculateInviteStatus } from "@/lib/member-invites";
+import { onboardingPathForHash, onboardingPathForToken } from "@/lib/member-invite-links";
 import { sortRoles, ROLES, type Role } from "@/lib/roles";
 
 const DATE_LIMIT_YEARS = 5;
@@ -106,7 +107,9 @@ export async function GET() {
       isExhausted: status.isExhausted,
       pendingSessions: pending,
       completedSessions: completed,
-      shareUrl: status.isActive ? `/onboarding/${invite.tokenHash}` : null,
+      shareUrl: status.isActive
+        ? onboardingPathForHash(invite.tokenHash, invite.roles)
+        : null,
       recentClicks,
     };
   });
@@ -185,8 +188,8 @@ export async function POST(request: NextRequest) {
       createdAt: invite.createdAt.toISOString(),
       expiresAt: invite.expiresAt ? invite.expiresAt.toISOString() : null,
       token,
-      inviteUrl: `/onboarding/${token}`,
-      shareUrl: `/onboarding/${invite.tokenHash}`,
+      inviteUrl: onboardingPathForToken(token, invite.roles),
+      shareUrl: onboardingPathForHash(invite.tokenHash, invite.roles),
       show: invite.show,
     },
   });

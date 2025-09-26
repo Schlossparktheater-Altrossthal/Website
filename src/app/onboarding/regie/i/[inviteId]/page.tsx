@@ -5,7 +5,7 @@ import { onboardingPathForHash } from "@/lib/member-invite-links";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingInviteShortLinkPage({
+export default async function RegieOnboardingInviteShortLinkPage({
   params,
 }: {
   params: Promise<{ inviteId: string }>;

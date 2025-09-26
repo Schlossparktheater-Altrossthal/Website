@@ -3,16 +3,16 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus, generateInviteToken, hashInviteToken } from "@/lib/member-invites";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
-import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import {
   onboardingPathForHash,
   onboardingPathForToken,
   resolveOnboardingVariant,
 } from "@/lib/member-invite-links";
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingInvitePage({
+export default async function RegieOnboardingPage({
   params,
 }: {
   params: Promise<{ token: string }>;
@@ -50,6 +50,14 @@ export default async function OnboardingInvitePage({
     );
   }
 
+  const variant = resolveOnboardingVariant(invite.roles);
+  if (variant !== "regie") {
+    const targetPath = isHashedToken
+      ? onboardingPathForHash(token, invite.roles)
+      : onboardingPathForToken(token, invite.roles);
+    redirect(targetPath);
+  }
+
   const status = calculateInviteStatus(invite);
   if (!status.isActive) {
     return (
@@ -61,14 +69,6 @@ export default async function OnboardingInvitePage({
         </p>
       </main>
     );
-  }
-
-  const variant = resolveOnboardingVariant(invite.roles);
-  if (variant === "regie") {
-    const targetPath = isHashedToken
-      ? onboardingPathForHash(token, invite.roles)
-      : onboardingPathForToken(token, invite.roles);
-    redirect(targetPath);
   }
 
   const sessionToken = generateInviteToken(32);
@@ -99,6 +99,7 @@ export default async function OnboardingInvitePage({
             : null,
           whatsappLink,
         }}
+        variant="regie"
       />
     </main>
   );

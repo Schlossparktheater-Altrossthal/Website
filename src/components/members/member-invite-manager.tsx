@@ -21,6 +21,11 @@ import {
 } from "@/components/ui/dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS, ROLES, sortRoles } from "@/lib/roles";
+import {
+  onboardingPathForToken,
+  onboardingShortPathForInvite,
+  resolveOnboardingVariant,
+} from "@/lib/member-invite-links";
 import { cn } from "@/lib/utils";
 import { formatRelativeFromNow } from "@/lib/datetime";
 
@@ -285,7 +290,7 @@ export function MemberInviteManager() {
         return;
       }
 
-      const shortPath = invite.id ? `/onboarding/i/${invite.id}` : null;
+      const shortPath = invite.id ? onboardingShortPathForInvite(invite.id, invite.roles) : null;
       const absoluteDisplayLink = shortPath ? buildAbsoluteUrl(shortPath) : null;
 
       setDownloadingPdfFor(invite.id);
@@ -391,14 +396,19 @@ export function MemberInviteManager() {
         const match = normalizedInvites.find((entry) => entry.id === prev.id);
         if (!match) return prev;
         const nextShareUrl = match.shareUrl ?? null;
-        const fallbackInviteUrl = prev.inviteUrl ?? (prev.token ? `/onboarding/${prev.token}` : null);
+        const nextRoles = Array.isArray(match.roles)
+          ? normalizeRoles(match.roles as Role[])
+          : prev.roles;
+        const fallbackInviteUrl = prev.token
+          ? onboardingPathForToken(prev.token, nextRoles)
+          : null;
         return {
           ...prev,
           label: match.label ?? null,
           note: match.note ?? null,
           expiresAt: match.expiresAt ?? null,
           maxUses: typeof match.maxUses === "number" ? match.maxUses : null,
-          roles: Array.isArray(match.roles) ? normalizeRoles(match.roles) : prev.roles,
+          roles: nextRoles,
           showId: match.showId,
           production: match.production,
           shareUrl: nextShareUrl,
@@ -573,14 +583,19 @@ export function MemberInviteManager() {
           setFreshInvite((prev) => {
             if (!prev) return prev;
             const nextShareUrl = updatedInvite.isActive ? prev.shareUrl : null;
-            const fallbackInviteUrl = prev.inviteUrl ?? (prev.token ? `/onboarding/${prev.token}` : null);
+            const nextRoles = Array.isArray(updatedInvite.roles)
+              ? normalizeRoles(updatedInvite.roles as Role[])
+              : prev.roles;
+            const fallbackInviteUrl = prev.token
+              ? onboardingPathForToken(prev.token, nextRoles)
+              : null;
             return {
               ...prev,
               label: updatedInvite.label ?? null,
               note: updatedInvite.note ?? null,
               expiresAt: updatedInvite.expiresAt ?? null,
               maxUses: typeof updatedInvite.maxUses === "number" ? updatedInvite.maxUses : null,
-              roles: Array.isArray(updatedInvite.roles) ? normalizeRoles(updatedInvite.roles) : prev.roles,
+              roles: nextRoles,
               showId:
                 typeof updatedInvite.showId === "string" && updatedInvite.showId.trim()
                   ? updatedInvite.showId
@@ -639,24 +654,30 @@ export function MemberInviteManager() {
         const inviteId = typeof data.invite.id === "string" && data.invite.id.trim().length
           ? data.invite.id
           : data.invite.token;
+        const createdRoles = normalizeRoles(
+          Array.isArray(data.invite.roles)
+            ? (data.invite.roles as Role[])
+            : form.roles,
+        );
+        const computedInviteUrl = data.invite.token
+          ? onboardingPathForToken(data.invite.token, createdRoles)
+          : null;
         const linkCandidate = typeof data.invite.shareUrl === "string"
           ? data.invite.shareUrl
-          : data.invite.inviteUrl ?? null;
+          : data.invite.inviteUrl ?? computedInviteUrl;
         setFreshInvite({
           id: inviteId,
           token: data.invite.token,
           inviteUrl:
             typeof data.invite.inviteUrl === "string"
               ? data.invite.inviteUrl
-              : data.invite.token
-                ? `/onboarding/${data.invite.token}`
-                : null,
+              : computedInviteUrl,
           shareUrl: data.invite.shareUrl ?? null,
           label: data.invite.label ?? null,
           note: data.invite.note ?? null,
           expiresAt: data.invite.expiresAt ?? null,
           maxUses: typeof data.invite.maxUses === "number" ? data.invite.maxUses : null,
-          roles: Array.isArray(data.invite.roles) ? data.invite.roles : [],
+          roles: createdRoles,
           showId: typeof data.invite.showId === "string" ? data.invite.showId : form.showId,
           production:
             data.invite.show && typeof data.invite.show === "object"
@@ -910,18 +931,21 @@ export function MemberInviteManager() {
           ) : (
             <div className="grid gap-4">
               {sortedInvites.map((invite) => {
-                const status = statusForInvite(invite);
-                const isFresh = freshInvite?.id === invite.id;
-                const isExpanded = expandedInviteId === invite.id;
-                const sharePath = invite.shareUrl ?? null;
-                const shareLinkDisplay = sharePath ? buildAbsoluteUrl(sharePath) ?? sharePath : null;
-                const isProcessing = processingInviteId === invite.id;
-                const isDownloading = downloadingPdfFor === invite.id;
-                const metaItems: string[] = [];
-                if (invite.production) {
-                  metaItems.push(formatProductionLabel(invite.production));
-                }
-                metaItems.push(`Erstellt am ${formatDate(invite.createdAt)}`);
+              const status = statusForInvite(invite);
+              const isFresh = freshInvite?.id === invite.id;
+              const isExpanded = expandedInviteId === invite.id;
+              const sharePath = invite.shareUrl ?? null;
+              const shareLinkDisplay = sharePath ? buildAbsoluteUrl(sharePath) ?? sharePath : null;
+              const isProcessing = processingInviteId === invite.id;
+              const isDownloading = downloadingPdfFor === invite.id;
+              const metaItems: string[] = [];
+              if (invite.production) {
+                metaItems.push(formatProductionLabel(invite.production));
+              }
+              if (resolveOnboardingVariant(invite.roles) === "regie") {
+                metaItems.push("Variante: Regie-Onboarding");
+              }
+              metaItems.push(`Erstellt am ${formatDate(invite.createdAt)}`);
                 if (invite.expiresAt) {
                   metaItems.push(`Gültig bis ${formatDate(invite.expiresAt)}`);
                 }
