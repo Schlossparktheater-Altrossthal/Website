@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth-dev-test-users";
 import { ensureDevTestUser } from "@/lib/dev-auth";
 import { ROLES, type Role } from "@/lib/roles";
+import { getAuthSecret } from "@/lib/auth-secret";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const SESSION_COOKIE_NAME = IS_PRODUCTION
@@ -59,10 +60,7 @@ async function createSessionCookie({
   email: string;
   role: Role;
 }) {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    throw new Error("AUTH_SECRET missing");
-  }
+  const secret = getAuthSecret();
 
   const devUser = await ensureDevTestUser(email, role);
   const now = Math.floor(Date.now() / 1000);
