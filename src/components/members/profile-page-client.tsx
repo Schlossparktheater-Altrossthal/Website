@@ -59,6 +59,8 @@ import {
   sortMeasurements,
 } from "@/data/measurements";
 import { resolveDietaryStyleLabel } from "@/data/dietary-preferences";
+import { MembersContentLayout } from "@/components/members/members-app-shell";
+import { PageHeaderStatus } from "@/design-system/patterns/page-header";
 
 interface MeasurementEntry {
   id: string;
@@ -281,6 +283,13 @@ function ProfilePageContent({
     useProfileCompletion();
   const completionProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
   const nextChecklistItem = checklistItems.find((item) => !item.complete) ?? null;
+  const headerStatusState = isComplete ? "online" : total > 0 ? "warning" : "idle";
+  const HeaderStatusIcon: LucideIcon = isComplete ? Sparkles : ClipboardList;
+  const headerStatusLabel = isComplete
+    ? "Profil vollständig"
+    : total > 0
+      ? `${completed}/${total} Profilaufgaben`
+      : "Profil prüfen";
 
   const measurementEntries = canManageMeasurements ? measurementState : [];
 
@@ -720,7 +729,31 @@ function ProfilePageContent({
 
   return (
     <>
-      <div className="relative space-y-10 sm:space-y-12">
+      <MembersContentLayout width="2xl" spacing="comfortable" gap="lg" />
+      <PageHeader
+        title="Mein Profil"
+        description="Halte deine Angaben aktuell, damit Teams und Kolleg*innen optimal planen können."
+        status={
+          <PageHeaderStatus
+            state={headerStatusState}
+            icon={<HeaderStatusIcon className="h-4 w-4" aria-hidden />}
+          >
+            {headerStatusLabel}
+          </PageHeaderStatus>
+        }
+        actions={
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => openEditor(activeTab)}
+          >
+            Profilbereich bearbeiten
+          </Button>
+        }
+      />
+
+      <div className="relative space-y-10 pb-12 sm:space-y-12">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-gradient-to-b from-primary/15 via-transparent to-transparent blur-3xl"
@@ -735,12 +768,22 @@ function ProfilePageContent({
             className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-secondary/10"
           />
           <div className="relative space-y-8 p-6 sm:p-8">
-            <PageHeader
-              variant="section"
-              title="Mein Profil"
-              description="Halte deine Angaben aktuell, damit Teams und Kolleg*innen optimal planen können."
-              className="max-w-2xl text-balance"
-            />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1.5">
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground">Profil-Highlights</h2>
+                <p className="text-sm text-muted-foreground">
+                  Kennzahlen und Schnellzugriffe rund um deine Angaben.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <PageHeaderStatus
+                  state={headerStatusState}
+                  icon={<HeaderStatusIcon className="h-4 w-4" aria-hidden />}
+                >
+                  {headerStatusLabel}
+                </PageHeaderStatus>
+              </div>
+            </div>
             {showWhatsappNotice ? (
               <div className="space-y-2 rounded-2xl border border-emerald-300/60 bg-emerald-50/80 p-4 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3">
