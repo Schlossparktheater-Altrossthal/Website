@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { authenticateSyncRequest } from "../auth";
 import { buildSyncEtag, selectBaseline } from "@/lib/sync/server";
 
 const querySchema = z.object({
@@ -23,17 +24,32 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const parsed = querySchema.parse({
-      scope: url.searchParams.get("scope"),
-      cursor: url.searchParams.get("cursor") ?? undefined,
-      limit: url.searchParams.get("limit") ?? undefined,
-    });
+  const url = new URL(request.url);
+  const parseResult = querySchema.safeParse({
+    scope: url.searchParams.get("scope"),
+    cursor: url.searchParams.get("cursor") ?? undefined,
+    limit: url.searchParams.get("limit") ?? undefined,
+  });
 
-    const baseline = await selectBaseline(parsed.scope, {
-      cursor: parsed.cursor ?? null,
-      limit: parsed.limit ?? null,
+  if (!parseResult.success) {
+    return NextResponse.json(
+      {
+        error: "Invalid sync baseline request",
+        issues: parseResult.error.issues,
+      },
+      { status: 400 },
+    );
+  }
+
+  const authResult = await authenticateSyncRequest(parseResult.data.scope);
+  if (authResult.kind === "error") {
+    return authResult.response;
+  }
+
+  try {
+    const baseline = await selectBaseline(parseResult.data.scope, {
+      cursor: parseResult.data.cursor ?? null,
+      limit: parseResult.data.limit ?? null,
     });
 
     const etag = buildSyncEtag(
@@ -52,16 +68,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(baseline, { headers });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid sync baseline request",
-          issues: error.issues,
-        },
-        { status: 400 },
-      );
-    }
-
     console.error("Failed to select sync baseline", error);
     return NextResponse.json(
       { error: "Failed to create sync baseline" },

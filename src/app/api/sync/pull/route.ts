@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { authenticateSyncRequest } from "../auth";
 import { buildSyncEtag, selectDeltas } from "@/lib/sync/server";
 
 const payloadSchema = z.object({
@@ -10,12 +11,33 @@ const payloadSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  let json: unknown;
   try {
-    const json = await request.json();
-    const payload = payloadSchema.parse(json);
+    json = await request.json();
+  } catch (error) {
+    console.error("Failed to parse sync pull payload", error);
+    return NextResponse.json(
+      { error: "Invalid sync pull payload" },
+      { status: 400 },
+    );
+  }
 
-    const deltas = await selectDeltas(payload.scope, payload.lastServerSeq, {
-      limit: payload.limit ?? null,
+  const parsed = payloadSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid sync pull payload", issues: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+
+  const authResult = await authenticateSyncRequest(parsed.data.scope);
+  if (authResult.kind === "error") {
+    return authResult.response;
+  }
+
+  try {
+    const deltas = await selectDeltas(parsed.data.scope, parsed.data.lastServerSeq, {
+      limit: parsed.data.limit ?? null,
     });
 
     const latestEvent = deltas.events.at(-1);
@@ -37,13 +59,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(deltas, { headers });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid sync pull payload", issues: error.issues },
-        { status: 400 },
-      );
-    }
-
     console.error("Failed to select sync deltas", error);
     return NextResponse.json(
       { error: "Failed to load sync events" },

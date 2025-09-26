@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { authenticateSyncRequest } from "../auth";
 import {
   applyIncomingEvents,
   buildSyncEtag,
@@ -65,18 +66,39 @@ function normalizeMutationResult(result: ApplyIncomingEventsResult) {
 }
 
 export async function POST(request: Request) {
+  let json: unknown;
   try {
-    const json = await request.json();
-    const payload = payloadSchema.parse(json);
+    json = await request.json();
+  } catch (error) {
+    console.error("Failed to parse sync push payload", error);
+    return NextResponse.json(
+      { error: "Invalid sync push payload" },
+      { status: 400 },
+    );
+  }
 
-    const result = await applyIncomingEvents(payload);
+  const parsed = payloadSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid sync push payload", issues: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+
+  const authResult = await authenticateSyncRequest(parsed.data.scope);
+  if (authResult.kind === "error") {
+    return authResult.response;
+  }
+
+  try {
+    const result = await applyIncomingEvents(parsed.data);
     const responseBody = normalizeMutationResult(result);
 
     const etag = buildSyncEtag(
       "push",
-      payload.scope,
+      parsed.data.scope,
       responseBody.serverSeq,
-      payload.clientMutationId,
+      parsed.data.clientMutationId,
     );
 
     const headers = new Headers({
@@ -90,13 +112,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(responseBody, { status, headers });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid sync push payload", issues: error.issues },
-        { status: 400 },
-      );
-    }
-
     console.error("Failed to apply incoming events", error);
     return NextResponse.json(
       { error: "Failed to apply sync events" },

@@ -1,6 +1,22 @@
 import type { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+const getServerSessionMock = vi.fn(async () => ({ user: { id: "user-1", isDeactivated: false } }));
+const allowedPermissions = new Set<string>();
+const hasPermissionMock = vi.fn(async (_user: unknown, key: string) => allowedPermissions.has(key));
+
+vi.mock("next-auth", () => ({
+  getServerSession: getServerSessionMock,
+}));
+
+vi.mock("@/lib/auth", () => ({
+  authOptions: {},
+}));
+
+vi.mock("@/lib/permissions", () => ({
+  hasPermission: hasPermissionMock,
+}));
+
 type SyncScopeValue = "inventory" | "tickets";
 type TicketStatusValue = "unused" | "checked_in" | "invalid" | "pending";
 
@@ -642,10 +658,49 @@ function resetDatabase() {
 
 beforeEach(() => {
   resetDatabase();
+  allowedPermissions.clear();
+  getServerSessionMock.mockReset();
+  getServerSessionMock.mockResolvedValue({ user: { id: "user-1", isDeactivated: false } });
+  hasPermissionMock.mockReset();
+  hasPermissionMock.mockImplementation(async (_user: unknown, key: string) =>
+    allowedPermissions.has(key),
+  );
 });
 
 describe("sync API integration", () => {
+  test("rejects unauthenticated baseline requests", async () => {
+    getServerSessionMock.mockResolvedValueOnce(null);
+
+    const request = new Request("http://localhost/api/sync/initial?scope=inventory");
+    const response = await initialRoute(request);
+
+    expect(response.status).toBe(401);
+  });
+
+  test("rejects sync pull without scanner permission", async () => {
+    const request = new Request("http://localhost/api/sync/pull", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope: "tickets", lastServerSeq: 0 }),
+    });
+
+    const response = await pullRoute(request);
+    expect(response.status).toBe(403);
+  });
+
+  test("rejects inventory baseline when inventory permissions are missing", async () => {
+    allowedPermissions.add("mitglieder.scan");
+
+    const request = new Request("http://localhost/api/sync/initial?scope=inventory");
+    const response = await initialRoute(request);
+
+    expect(response.status).toBe(403);
+  });
+
   test("returns paginated inventory baseline with cache headers", async () => {
+    allowedPermissions.add("mitglieder.scan");
+    allowedPermissions.add("mitglieder.lager.technik");
+
     await prismaStub.inventoryItem.createMany({
       data: [
         { id: "item-a", name: "Akkupack", qty: 4 },
@@ -674,6 +729,8 @@ describe("sync API integration", () => {
   });
 
   test("returns incremental ticket events when pulling after a server sequence", async () => {
+    allowedPermissions.add("mitglieder.scan");
+
     const mutation = (await prismaStub.syncMutation.create({
       data: {
         clientMutationId: "seed-mutation",
@@ -732,6 +789,8 @@ describe("sync API integration", () => {
   });
 
   test("applies incoming ticket events and skips duplicates by dedupe key", async () => {
+    allowedPermissions.add("mitglieder.scan");
+
     const existingMutation = (await prismaStub.syncMutation.create({
       data: {
         clientMutationId: "existing",
