@@ -5,24 +5,30 @@ vi.mock("next/cache", () => ({
   unstable_cache: <T extends (...args: unknown[]) => unknown>(fn: T) => fn,
 }));
 
-const resolvedSettings = {
-  id: "default",
-  freezeDays: 7,
-  preferredWeekdays: [6, 0],
-  exceptionWeekdays: [5],
-  holidaySource: {
-    mode: "default" as const,
-    url: null,
-    effectiveUrl: "https://example.com/ferien.ics",
-  },
-  holidayStatus: {
-    status: "unknown" as const,
-    message: null,
-    checkedAt: null,
-  },
-  updatedAt: null,
-  cacheKey: "default|https://example.com/ferien.ics",
-};
+const { defaultHolidayUrl, resolvedSettings } = vi.hoisted(() => {
+  const url = "https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics";
+  return {
+    defaultHolidayUrl: url,
+    resolvedSettings: {
+      id: "default",
+      freezeDays: 7,
+      preferredWeekdays: [6, 0],
+      exceptionWeekdays: [5],
+      holidaySource: {
+        mode: "default" as const,
+        url: null,
+        effectiveUrl: url,
+      },
+      holidayStatus: {
+        status: "unknown" as const,
+        message: null,
+        checkedAt: null,
+      },
+      updatedAt: null,
+      cacheKey: "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics",
+    },
+  } as const;
+});
 
 vi.mock("@/lib/sperrliste-settings", () => ({
   readSperrlisteSettings: vi.fn().mockResolvedValue(null),
@@ -34,11 +40,11 @@ vi.mock("@/lib/sperrliste-settings", () => ({
       holidayStatus: { ...resolvedSettings.holidayStatus },
     })),
   applyHolidaySourceStatus: vi.fn().mockResolvedValue(undefined),
-  getDefaultHolidaySourceUrl: vi.fn(() => resolvedSettings.holidaySource.effectiveUrl),
+  getDefaultHolidaySourceUrl: vi.fn(() => defaultHolidayUrl),
 }));
 
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
-import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
+import { getSaxonySchoolHolidayRanges, isHolidaySourceUrlAllowed } from "@/lib/holidays";
 
 describe("getSaxonySchoolHolidayRanges", () => {
   let previousOutboundToggle: string | undefined;
@@ -82,5 +88,19 @@ describe("getSaxonySchoolHolidayRanges", () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(ranges).toEqual(expected);
+  });
+});
+
+describe("isHolidaySourceUrlAllowed", () => {
+  it("allows the configured default feed", () => {
+    expect(isHolidaySourceUrlAllowed(defaultHolidayUrl)).toBe(true);
+  });
+
+  it("rejects non-HTTPS protocols", () => {
+    expect(isHolidaySourceUrlAllowed("http://www.feiertage-deutschland.de/test.ics")).toBe(false);
+  });
+
+  it("rejects unknown hosts", () => {
+    expect(isHolidaySourceUrlAllowed("https://untrusted.example.com/feed.ics")).toBe(false);
   });
 });

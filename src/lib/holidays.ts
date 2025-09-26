@@ -18,6 +18,163 @@ export type { HolidayRange } from "@/types/holidays";
 const FALLBACK_SAXONY_HOLIDAY_FEED = "https://ferien-api.de/api/v1/holidays/SN";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const HOLIDAY_FETCH_TIMEOUT_MS = 10_000;
+const HOLIDAY_FETCH_MAX_BYTES = 1_000_000; // 1 MB
+const HOLIDAY_PROTOCOL_ALLOWLIST = new Set(["https:"]);
+
+const STATIC_ALLOWED_HOSTS = [
+  "www.feiertage-deutschland.de",
+  "ferien-api.de",
+];
+
+function collectAllowedHosts() {
+  const hosts = new Set<string>();
+  for (const host of STATIC_ALLOWED_HOSTS) {
+    hosts.add(host);
+  }
+
+  const envHosts = process.env.SPERRELISTE_HOLIDAY_HOST_ALLOWLIST;
+  if (envHosts) {
+    for (const entry of envHosts.split(",")) {
+      const trimmed = entry.trim().toLowerCase();
+      if (trimmed) {
+        hosts.add(trimmed);
+      }
+    }
+  }
+
+  for (const candidate of [getDefaultHolidaySourceUrl(), FALLBACK_SAXONY_HOLIDAY_FEED]) {
+    try {
+      const hostname = new URL(candidate).hostname.toLowerCase();
+      if (hostname) {
+        hosts.add(hostname);
+      }
+    } catch {
+      // ignore invalid URLs from configuration
+    }
+  }
+
+  return hosts;
+}
+
+const HOLIDAY_HOST_ALLOWLIST = collectAllowedHosts();
+
+class HolidaySourceError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message);
+    this.name = "HolidaySourceError";
+    if (options?.cause !== undefined) {
+      (this as Error & { cause?: unknown }).cause = options.cause;
+    }
+  }
+}
+
+function normaliseHostname(url: string) {
+  try {
+    const parsed = new URL(url);
+    const protocol = parsed.protocol.toLowerCase();
+    if (!HOLIDAY_PROTOCOL_ALLOWLIST.has(protocol)) {
+      return null;
+    }
+    return parsed.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+export function isHolidaySourceUrlAllowed(url: string) {
+  const hostname = normaliseHostname(url);
+  if (!hostname) {
+    return false;
+  }
+  return HOLIDAY_HOST_ALLOWLIST.has(hostname);
+}
+
+function ensureHolidaySourceUrlAllowed(url: string) {
+  if (isHolidaySourceUrlAllowed(url)) {
+    return;
+  }
+  console.warn("[holidays] blocked holiday source", { url });
+  throw new HolidaySourceError("Ferienquelle ist nicht erlaubt.");
+}
+
+function createAbortSignal(timeoutMs: number) {
+  const timeoutFactory = (AbortSignal as typeof AbortSignal & { timeout?: (ms: number) => AbortSignal }).timeout;
+  if (typeof timeoutFactory === "function") {
+    return timeoutFactory(timeoutMs);
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+  if (typeof timeout.unref === "function") {
+    timeout.unref();
+  }
+  return controller.signal;
+}
+
+async function readResponseBody(response: Response) {
+  const headerLength = response.headers.get("content-length");
+  if (headerLength) {
+    const numeric = Number.parseInt(headerLength, 10);
+    if (!Number.isNaN(numeric) && numeric > HOLIDAY_FETCH_MAX_BYTES) {
+      console.warn("[holidays] blocked holiday source due to declared size", {
+        url: response.url,
+        contentLength: numeric,
+      });
+      throw new HolidaySourceError("Ferienquelle lieferte zu viele Daten.");
+    }
+  }
+
+  const stream = response.body?.getReader();
+  if (!stream) {
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > HOLIDAY_FETCH_MAX_BYTES) {
+      console.warn("[holidays] blocked holiday source due to payload size", {
+        url: response.url,
+        contentLength: arrayBuffer.byteLength,
+      });
+      throw new HolidaySourceError("Ferienquelle lieferte zu viele Daten.");
+    }
+    return new Uint8Array(arrayBuffer);
+  }
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { value, done } = await stream.read();
+    if (done) {
+      break;
+    }
+    if (!value) {
+      continue;
+    }
+    total += value.byteLength;
+    if (total > HOLIDAY_FETCH_MAX_BYTES) {
+      await stream.cancel();
+      console.warn("[holidays] blocked holiday source due to streaming payload size", {
+        url: response.url,
+        contentLength: total,
+      });
+      throw new HolidaySourceError("Ferienquelle lieferte zu viele Daten.");
+    }
+    chunks.push(value);
+  }
+
+  const buffer = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    buffer.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return buffer;
+}
+
+function decodeBodyBytes(bytes: Uint8Array) {
+  const decoder = new TextDecoder("utf-8");
+  return decoder.decode(bytes);
+}
 
 type HolidayFetchStatus = {
   status: HolidaySourceStatus;
@@ -235,39 +392,61 @@ async function fetchFallbackHolidayFeed() {
 }
 
 async function fetchHolidayUrl(url: string) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "text/calendar, application/json;q=0.9,*/*;q=0.1",
-      "User-Agent": "Theaterverein Kalenderbot/1.0 (+https://devtheater.beegreenx.de)",
-      Referer: "https://devtheater.beegreenx.de/mitglieder/sperrliste",
-    },
-    next: { revalidate: 60 * 60 * 12 },
-  });
+  ensureHolidaySourceUrlAllowed(url);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Accept: "text/calendar, application/json;q=0.9,*/*;q=0.1",
+        "User-Agent": "Theaterverein Kalenderbot/1.0 (+https://devtheater.beegreenx.de)",
+        Referer: "https://devtheater.beegreenx.de/mitglieder/sperrliste",
+      },
+      signal: createAbortSignal(HOLIDAY_FETCH_TIMEOUT_MS),
+      next: { revalidate: 60 * 60 * 12 },
+    });
+  } catch (error) {
+    console.error("[holidays] holiday source fetch failed", { url, error });
+    throw new HolidaySourceError("Ferienquelle konnte nicht geladen werden.", { cause: error });
+  }
 
   if (!response.ok) {
-    throw new Error(`Unexpected response: ${response.status}`);
+    console.warn("[holidays] holiday source returned unexpected status", {
+      url,
+      status: response.status,
+    });
+    throw new HolidaySourceError("Ferienquelle konnte nicht geladen werden.");
   }
 
   const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
   const isJson = contentType.includes("json") || url.toLowerCase().endsWith(".json");
+  const bodyBytes = await readResponseBody(response);
+  const bodyText = decodeBodyBytes(bodyBytes);
 
   if (isJson) {
-    const payload = await response.json();
-    const ranges = parseFallbackHolidayRanges(payload);
-    if (ranges.length === 0) {
-      throw new Error("Ferienquelle lieferte keine verwertbaren Daten.");
+    try {
+      const payload = JSON.parse(bodyText);
+      const ranges = parseFallbackHolidayRanges(payload);
+      if (ranges.length === 0) {
+        throw new HolidaySourceError("Ferienquelle lieferte keine verwertbaren Daten.");
+      }
+      return ranges;
+    } catch (error) {
+      if (error instanceof HolidaySourceError) {
+        throw error;
+      }
+      console.warn("[holidays] holiday source returned invalid JSON", { url, error });
+      throw new HolidaySourceError("Ferienquelle lieferte kein gültiges JSON.");
     }
-    return ranges;
   }
 
-  const body = await response.text();
-  if (!body.trim()) {
-    throw new Error("Ferienquelle lieferte keine Daten.");
+  if (!bodyText.trim()) {
+    throw new HolidaySourceError("Ferienquelle lieferte keine Daten.");
   }
 
-  const ranges = parseHolidayRanges(body);
+  const ranges = parseHolidayRanges(bodyText);
   if (ranges.length === 0) {
-    throw new Error("Ferienquelle lieferte keine Termine.");
+    throw new HolidaySourceError("Ferienquelle lieferte keine Termine.");
   }
   return ranges;
 }
