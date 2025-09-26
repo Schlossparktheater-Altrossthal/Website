@@ -212,6 +212,8 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.font("Helvetica-Bold").fontSize(16).fillColor(palette.sunrise).text("Backstage-Check-in", { align: "center" });
 
     doc.moveDown(0.8);
+    const qrTopPadding = Math.max(doc.currentLineHeight(true) * 0.8, 12);
+    doc.y += qrTopPadding;
     const qrData = QRCode.create(data.link, {
       errorCorrectionLevel: "H",
     });
