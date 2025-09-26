@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import type { FormEvent } from "react";
 import { toast } from "sonner";
 import type { Role } from "@prisma/client";
-import { ChevronDown, ChevronUp, Copy, Download, ExternalLink, Pencil, Power, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, Download, ExternalLink, MessageCircle, Pencil, Power, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import {
 } from "@/lib/member-invite-links";
 import { cn } from "@/lib/utils";
 import { formatRelativeFromNow } from "@/lib/datetime";
+import { updateOnboardingSettingsAction } from "@/app/(members)/mitglieder/produktionen/actions";
 
 const ASSIGNABLE_ROLES = ROLES.filter((role) => role !== "admin" && role !== "owner");
 const ASSIGNABLE_ROLE_SET = new Set<Role>(ASSIGNABLE_ROLES);
@@ -108,6 +110,7 @@ type ProductionSummary = {
   id: string;
   title: string | null;
   year: number;
+  whatsappLink: string | null;
 };
 
 type InviteSummary = {
@@ -184,6 +187,12 @@ type InviteForPdf = {
   roles: Role[];
 };
 
+type OnboardingSettingsDialogState = {
+  showId: string;
+  label: string;
+  whatsappLink: string;
+};
+
 export function MemberInviteManager() {
   const [invites, setInvites] = useState<InviteSummary[]>([]);
   const [productions, setProductions] = useState<ProductionSummary[]>([]);
@@ -199,6 +208,11 @@ export function MemberInviteManager() {
   const [editingInvite, setEditingInvite] = useState<EditableInviteFields | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [updatingInviteId, setUpdatingInviteId] = useState<string | null>(null);
+  const [onboardingSettings, setOnboardingSettings] =
+    useState<OnboardingSettingsDialogState | null>(null);
+  const [onboardingSettingsOpen, setOnboardingSettingsOpen] = useState(false);
+  const [onboardingSettingsError, setOnboardingSettingsError] = useState<string | null>(null);
+  const [onboardingSettingsPending, startOnboardingSettingsTransition] = useTransition();
   const [editForm, setEditForm] = useState<EditInviteState>({
     label: "",
     note: "",
@@ -428,6 +442,29 @@ export function MemberInviteManager() {
       setLoading(false);
     }
   }, [normalizeRoles]);
+
+  const openOnboardingSettings = useCallback(
+    (showId: string) => {
+      if (!showId) {
+        toast.error("Bitte wähle zuerst eine Produktion.");
+        return;
+      }
+      const production = productions.find((entry) => entry.id === showId);
+      if (!production) {
+        toast.error("Produktion konnte nicht gefunden werden.");
+        return;
+      }
+
+      setOnboardingSettings({
+        showId: production.id,
+        label: formatProductionLabel(production),
+        whatsappLink: production.whatsappLink ?? "",
+      });
+      setOnboardingSettingsError(null);
+      setOnboardingSettingsOpen(true);
+    },
+    [productions],
+  );
 
   useEffect(() => {
     void loadInvites();
@@ -708,6 +745,39 @@ export function MemberInviteManager() {
     }
   };
 
+  const handleOnboardingSettingsSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!onboardingSettings) {
+        return;
+      }
+
+      const formData = new FormData(event.currentTarget);
+      const isClear = formData.get("clear") === "1";
+
+      startOnboardingSettingsTransition(() => {
+        setOnboardingSettingsError(null);
+        void (async () => {
+          try {
+            await updateOnboardingSettingsAction(formData);
+            toast.success(isClear ? "WhatsApp-Link entfernt." : "WhatsApp-Link gespeichert.");
+            await loadInvites();
+            setOnboardingSettingsOpen(false);
+            setOnboardingSettings(null);
+          } catch (error) {
+            console.error("[MemberInviteManager] onboarding settings", error);
+            const message =
+              error instanceof Error && error.message
+                ? error.message
+                : "Onboarding-Einstellungen konnten nicht gespeichert werden.";
+            setOnboardingSettingsError(message);
+          }
+        })();
+      });
+    },
+    [loadInvites, onboardingSettings],
+  );
+
   const copyFreshInvite = async () => {
     if (!freshInvite) return;
     try {
@@ -942,6 +1012,9 @@ export function MemberInviteManager() {
               if (invite.production) {
                 metaItems.push(formatProductionLabel(invite.production));
               }
+              if (invite.production?.whatsappLink) {
+                metaItems.push("WhatsApp-Link hinterlegt");
+              }
               if (resolveOnboardingVariant(invite.roles) === "regie") {
                 metaItems.push("Variante: Regie-Onboarding");
               }
@@ -1081,17 +1154,68 @@ export function MemberInviteManager() {
                         )}
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-3">
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium uppercase text-muted-foreground">Produktion</p>
-                              <p className="text-sm text-foreground">
-                                {invite.production ? formatProductionLabel(invite.production) : "–"}
-                              </p>
-                            </div>
-                            <div className="space-y-2">
-                              <p className="text-xs font-medium uppercase text-muted-foreground">Onboarding-Link</p>
-                              {sharePath ? (
-                                <>
-                                  <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium uppercase text-muted-foreground">Produktion</p>
+                            <p className="text-sm text-foreground">
+                              {invite.production ? formatProductionLabel(invite.production) : "–"}
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium uppercase text-muted-foreground">
+                              WhatsApp-Beitrittslink
+                            </p>
+                            {invite.production?.whatsappLink ? (
+                              <>
+                                <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
+                                  {invite.production.whatsappLink}
+                                </code>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 gap-2 px-3 text-xs"
+                                    asChild
+                                  >
+                                    <a
+                                      href={invite.production.whatsappLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                      Öffnen
+                                    </a>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 gap-2 px-3 text-xs"
+                                    onClick={() => openOnboardingSettings(invite.showId)}
+                                  >
+                                    <MessageCircle className="h-4 w-4" />
+                                    Einstellungen
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span>Kein Link hinterlegt.</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 gap-2 px-3 text-xs"
+                                  onClick={() => openOnboardingSettings(invite.showId)}
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                  Link hinzufügen
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium uppercase text-muted-foreground">Onboarding-Link</p>
+                            {sharePath ? (
+                              <>
+                                <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
                                     {shareLinkDisplay}
                                   </code>
                                   <div className="flex flex-wrap gap-2 pt-1">
@@ -1268,8 +1392,25 @@ export function MemberInviteManager() {
                 disabled={isUpdatingCurrentInvite}
               />
             </label>
-            <label className="space-y-1 text-sm">
-              <span className="font-medium">Produktion</span>
+            <div className="space-y-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">Produktion</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 gap-1.5 px-3 text-xs text-primary hover:bg-primary/10 hover:text-primary"
+                  onClick={() => openOnboardingSettings(editForm.showId)}
+                  disabled={
+                    isUpdatingCurrentInvite ||
+                    productions.length === 0 ||
+                    !editForm.showId
+                  }
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Onboarding-Einstellungen
+                </Button>
+              </div>
               <Select
                 value={editForm.showId}
                 onValueChange={(value) => setEditForm((prev) => ({ ...prev, showId: value }))}
@@ -1290,8 +1431,12 @@ export function MemberInviteManager() {
                 <span className="text-xs text-muted-foreground">
                   Keine Produktionen vorhanden – lege zuerst eine Produktion an.
                 </span>
-              ) : null}
-            </label>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  WhatsApp-Beitrittslinks verwaltest du pro Produktion.
+                </span>
+              )}
+            </div>
             <label className="space-y-1 text-sm">
               <span className="font-medium">Notiz</span>
               <Textarea
@@ -1395,8 +1540,21 @@ export function MemberInviteManager() {
                 placeholder="z.B. Sommercrew 2025"
               />
             </label>
-            <label className="space-y-1 text-sm">
-              <span className="font-medium">Produktion</span>
+            <div className="space-y-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">Produktion</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 gap-1.5 px-3 text-xs text-primary hover:bg-primary/10 hover:text-primary"
+                  onClick={() => openOnboardingSettings(form.showId)}
+                  disabled={productions.length === 0 || !form.showId || creating}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Onboarding-Einstellungen
+                </Button>
+              </div>
               <Select
                 value={form.showId}
                 onValueChange={(value) => setForm((prev) => ({ ...prev, showId: value }))}
@@ -1417,8 +1575,12 @@ export function MemberInviteManager() {
                 <span className="text-xs text-muted-foreground">
                   Keine Produktionen vorhanden – lege zuerst eine Produktion an.
                 </span>
-              ) : null}
-            </label>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  WhatsApp-Beitrittslinks verwaltest du pro Produktion.
+                </span>
+              )}
+            </div>
             <label className="space-y-1 text-sm">
               <span className="font-medium">Notiz (optional)</span>
               <Textarea
@@ -1492,6 +1654,88 @@ export function MemberInviteManager() {
               {creating ? "Erstelle …" : "Link erzeugen"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={onboardingSettingsOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            if (onboardingSettingsPending) return;
+            setOnboardingSettingsOpen(false);
+            setOnboardingSettings(null);
+            setOnboardingSettingsError(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Onboarding-Einstellungen</DialogTitle>
+            <DialogDescription>
+              Hinterlege optional den WhatsApp-Beitrittslink für
+              {" "}
+              {onboardingSettings?.label ?? "diese Produktion"}.
+            </DialogDescription>
+          </DialogHeader>
+          {onboardingSettings ? (
+            <form onSubmit={handleOnboardingSettingsSubmit} className="space-y-4">
+              <input type="hidden" name="showId" value={onboardingSettings.showId} />
+              <input type="hidden" name="redirectPath" value="/mitglieder/mitgliederverwaltung" />
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="onboarding-whatsapp-link">
+                  WhatsApp-Beitrittslink
+                </label>
+                <Input
+                  id="onboarding-whatsapp-link"
+                  name="whatsappLink"
+                  placeholder="https://chat.whatsapp.com/..."
+                  value={onboardingSettings.whatsappLink}
+                  onChange={(event) =>
+                    setOnboardingSettings((prev) =>
+                      prev ? { ...prev, whatsappLink: event.target.value } : prev,
+                    )
+                  }
+                  disabled={onboardingSettingsPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Nur offizielle WhatsApp-Beitrittslinks werden akzeptiert. Lass das Feld leer, um den Link zu entfernen.
+                </p>
+              </div>
+              {onboardingSettingsError ? (
+                <p className="text-sm text-destructive">{onboardingSettingsError}</p>
+              ) : null}
+              <DialogFooter className="gap-2 pt-4 sm:space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (onboardingSettingsPending) return;
+                    setOnboardingSettingsOpen(false);
+                    setOnboardingSettings(null);
+                    setOnboardingSettingsError(null);
+                  }}
+                  disabled={onboardingSettingsPending}
+                >
+                  Abbrechen
+                </Button>
+                {onboardingSettings.whatsappLink ? (
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    name="clear"
+                    value="1"
+                    className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={onboardingSettingsPending}
+                  >
+                    Link entfernen
+                  </Button>
+                ) : null}
+                <Button type="submit" disabled={onboardingSettingsPending}>
+                  {onboardingSettingsPending ? "Speichere …" : "Einstellungen speichern"}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
         </DialogContent>
       </Dialog>
     </Card>
