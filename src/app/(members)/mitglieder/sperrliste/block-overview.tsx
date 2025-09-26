@@ -411,23 +411,27 @@ export function BlockOverview({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
+        <div className="mt-5 grid gap-2 text-[13px] leading-5 sm:grid-cols-3">
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
-            <div className="text-[11px] uppercase tracking-wide text-slate-300/80">Teammitglieder</div>
-            <div className="mt-1 text-xl font-semibold sm:text-2xl">{preparedMembers.length}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">Teammitglieder</div>
+            <div className="mt-1 text-lg font-semibold sm:text-xl">{preparedMembers.length}</div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
-            <div className="text-[11px] uppercase tracking-wide text-slate-300/80">Gesperrte Tage im Monat</div>
-            <div className="mt-1 text-xl font-semibold sm:text-2xl">{summary.total}</div>
-            <div className="text-[11px] text-slate-300/80">Davon bevorstehend: {summary.upcoming}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">Gesperrte Tage</div>
+            <div className="mt-1 flex items-baseline gap-2 text-lg font-semibold sm:text-xl">
+              <span>{summary.total}</span>
+              <span className="text-[11px] font-medium text-slate-300/80">({summary.upcoming} bevorstehend)</span>
+            </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
-            <div className="text-[11px] uppercase tracking-wide text-slate-300/80">Ferien in der Ansicht</div>
-            <div className="mt-1 text-xl font-semibold sm:text-2xl">{holidaysInRange.length}</div>
-            <div className="text-[11px] text-slate-300/80">
-              {busiestMember
-                ? `Meiste Sperren: ${busiestMember.name} (${busiestMember.total})`
-                : "Aktuell keine Häufungen"}
+            <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">Ferien in der Ansicht</div>
+            <div className="mt-1 flex items-baseline gap-2 text-lg font-semibold sm:text-xl">
+              <span>{holidaysInRange.length}</span>
+              <span className="text-[11px] font-medium text-slate-300/80">
+                {busiestMember
+                  ? `Top-Sperren: ${busiestMember.name} (${busiestMember.total})`
+                  : "Keine Häufungen"}
+              </span>
             </div>
           </div>
         </div>
