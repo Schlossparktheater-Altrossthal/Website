@@ -1,11 +1,28 @@
 export type OfflineScope = "inventory" | "tickets";
 
+export type InventoryItemCategoryValue =
+  | "light"
+  | "sound"
+  | "network"
+  | "video"
+  | "instruments"
+  | "cables"
+  | "cases"
+  | "accessories";
+
 export interface InventoryItemRecord {
   id: string;
   sku: string;
   name: string;
   quantity: number;
   updatedAt: string;
+  category: InventoryItemCategoryValue;
+  details?: string | null;
+  lastUsedAt?: string | null;
+  lastInventoryAt?: string | null;
+  location?: string | null;
+  owner?: string | null;
+  condition?: string | null;
 }
 
 export type TicketStatus = "unused" | "checked_in" | "invalid" | "pending";
