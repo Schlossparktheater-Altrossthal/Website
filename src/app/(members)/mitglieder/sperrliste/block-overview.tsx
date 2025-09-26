@@ -130,11 +130,11 @@ function LegendItem({
   className?: string;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-background/70 px-3 py-2 shadow-sm backdrop-blur">
+    <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-3 py-2 shadow-sm">
       <span
         aria-hidden
         className={cn(
-          "h-8 w-8 shrink-0 rounded-full border border-border/60 bg-card shadow-inner",
+          "h-8 w-8 shrink-0 rounded-md border border-border/60 bg-muted",
           className,
         )}
       />
@@ -336,7 +336,7 @@ export function BlockOverview({
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-muted-foreground lg:max-w-xl">
             Tippe oder fahre über die Tageszellen, um Gründe und Ferieninfos zu sehen. Gesperrte Tage leuchten warm, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription} {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
           </p>
@@ -344,38 +344,38 @@ export function BlockOverview({
             <LegendItem
               label="Gesperrt"
               description="Eingetragene Abwesenheiten"
-              className="border-destructive/70 bg-gradient-to-br from-destructive/80 via-destructive/60 to-destructive/30 shadow-[0_12px_30px_-18px_rgba(220,38,38,0.65)]"
+              className="border-destructive/60 bg-destructive/20 text-destructive"
             />
             <LegendItem
               label="Bevorzugt"
               description="Freiwillige Wunschtermine"
-              className="border-emerald-400/60 bg-gradient-to-br from-emerald-500/25 via-emerald-500/15 to-emerald-500/5 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.45)]"
+              className="border-emerald-400/60 bg-emerald-500/20 text-emerald-700 dark:text-emerald-100"
             />
             <LegendItem
               label="Ausnahme"
               description="Seltene Probenfenster"
-              className="border-amber-400/60 bg-gradient-to-br from-amber-500/25 via-amber-500/15 to-amber-500/5 shadow-[0_12px_30px_-18px_rgba(251,191,36,0.45)]"
+              className="border-amber-400/60 bg-amber-500/20 text-amber-700 dark:text-amber-100"
             />
             <LegendItem
               label="Ferien"
               description="Automatische Kalenderdaten"
-              className="border-sky-400/50 bg-gradient-to-br from-sky-500/25 via-sky-500/15 to-sky-500/5 shadow-[0_12px_30px_-18px_rgba(56,189,248,0.45)]"
+              className="border-sky-400/60 bg-sky-500/15 text-sky-700 dark:text-sky-200"
             />
             <LegendItem
               label="Frei"
               description="Keine Konflikte gemeldet"
-              className="border-border/50 bg-card/60"
+              className="border-border/60 bg-muted/40 text-muted-foreground"
             />
           </div>
         </div>
       </div>
 
       <div className="hidden sm:block">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] border-separate border-spacing-y-2">
+        <div className="relative max-h-[70vh] overflow-auto rounded-2xl border border-border/60 bg-card shadow-sm">
+          <table className="w-full min-w-[960px] border-collapse text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 z-20 rounded-xl bg-background/95 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="sticky top-0 left-0 z-40 border-b border-r border-border/60 bg-card/95 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Mitglied
                 </th>
                 {visibleDayInfo.map(({ day, key }, index) => {
@@ -393,7 +393,7 @@ export function BlockOverview({
                     <th
                       key={key}
                       className={cn(
-                        "px-3 pb-3 text-center align-bottom text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80",
+                        "sticky top-0 z-30 border-b border-border/60 bg-card/95 px-3 py-2 text-center align-bottom text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/90",
                         showDivider && "border-l border-border/60",
                         isPreferredDay && "text-primary",
                         isExceptionDay && "text-amber-600",
@@ -411,12 +411,12 @@ export function BlockOverview({
                           {format(day, "d", { locale: de })}
                         </span>
                         {isFirstOfMonth ? (
-                          <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                          <span className="rounded-full bg-muted/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
                             {format(day, "MMM", { locale: de })}
                           </span>
                         ) : null}
                         {holidayEntries.length ? (
-                          <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-500/20 dark:text-sky-200">
+                          <span className="rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-500/20 dark:text-sky-200">
                             Ferien
                           </span>
                         ) : null}
@@ -430,10 +430,10 @@ export function BlockOverview({
               {preparedMembers.map((member) => {
                 const stats = summary.totals.get(member.id);
                 return (
-                  <tr key={member.id} className="align-top">
+                  <tr key={member.id} className="align-top transition-colors hover:bg-muted/40">
                     <th
                       scope="row"
-                      className="sticky left-0 z-10 min-w-[220px] rounded-2xl border border-border/60 bg-background/95 px-4 py-3 text-left shadow-sm"
+                      className="sticky left-0 z-30 min-w-[220px] border-b border-r border-border/60 bg-card/95 px-4 py-3 text-left"
                     >
                       <div className="flex items-start gap-3">
                         <UserAvatar
@@ -498,55 +498,57 @@ export function BlockOverview({
                         <td
                           key={key}
                           className={cn(
-                            "px-2 py-2 text-center align-top text-xs",
+                            "border-b border-border/40 px-2 py-2 text-center align-top text-xs",
                             showDivider && "border-l border-border/60",
-                            isPreferredDay && !entry && "bg-muted/30",
+                            isPreferredDay && !entry && "bg-muted/40",
                             isExceptionDay && !entry && "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100",
                           )}
                         >
                           <div
                             className={cn(
-                              "flex h-full min-h-[64px] flex-col items-center justify-center rounded-xl border border-transparent px-2 py-3 text-xs leading-5 shadow-sm transition-all",
+                              "flex h-full min-h-[56px] flex-col items-center justify-center rounded-lg border border-transparent px-2 py-2 text-xs leading-5 transition-colors",
                               isBlocked &&
-                                "border-destructive/70 bg-gradient-to-br from-destructive/80 via-destructive/60 to-destructive/25 text-destructive-foreground shadow-[0_12px_30px_-20px_rgba(220,38,38,0.65)]",
+                                "border-destructive/60 bg-destructive/15 text-destructive",
                               isPreferred &&
-                                "border-emerald-400/50 bg-gradient-to-br from-emerald-500/25 via-emerald-500/15 to-emerald-500/10 text-emerald-900 shadow-[0_12px_30px_-20px_rgba(16,185,129,0.55)] dark:text-emerald-100",
+                                "border-emerald-400/60 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100",
                               !entry && isHoliday &&
-                                "border-sky-400/40 bg-gradient-to-br from-sky-500/20 via-sky-500/10 to-sky-500/5 text-sky-900 dark:text-sky-100",
+                                "border-sky-400/40 bg-sky-500/10 text-sky-900 dark:text-sky-100",
+                              !entry && !isHoliday &&
+                                "border-border/50 bg-muted/20 text-muted-foreground/80",
                               !entry && !isHoliday && isPreferredDay &&
-                                "border-primary/40 bg-primary/5 text-primary dark:border-primary/60 dark:bg-primary/10 dark:text-primary-foreground",
+                                "border-primary/40 bg-primary/5 text-primary dark:bg-primary/10 dark:text-primary-foreground",
                               !entry && !isHoliday && isExceptionDay &&
-                                "border-amber-300/60 bg-amber-100/60 text-amber-900 dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-100",
-                              !entry && !isHoliday && !isPreferredDay && !isExceptionDay &&
-                                "bg-card/40 text-muted-foreground",
-                              isToday(day) && "ring-2 ring-primary/70",
-                              !isSameMonth(day, currentMonth) && "opacity-60",
+                                "border-amber-400/40 bg-amber-500/10 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100",
+                              isToday(day) && "ring-1 ring-primary/60",
+                              !isSameMonth(day, currentMonth) && "opacity-70",
                             )}
                             aria-label={label.join(". ")}
-                            title={
-                              entry
-                                ? entry.reason ?? (isPreferred ? "Bevorzugt" : "Gesperrt")
-                                : isHoliday
-                                  ? holidayEntries[0]?.title ?? "Ferien"
-                                  : "Frei"
-                            }
+                            title={label.join(". ")}
                           >
                             {entry ? (
                               <>
-                                <span className="text-xs font-semibold uppercase tracking-wide">
+                                <span className="text-[11px] font-semibold uppercase tracking-wide">
                                   {isPreferred ? "Bevorzugt" : "Gesperrt"}
                                 </span>
-                                <span className="mt-1 line-clamp-3 text-xs leading-5">
-                                  {entry.reason ?? (isPreferred ? "Ohne Angabe" : "Ohne Grund")}
-                                </span>
+                                {entry.reason ? (
+                                  <span className="mt-1 line-clamp-2 text-[11px] leading-4">{entry.reason}</span>
+                                ) : null}
+                                {!entry.reason && !isPreferred ? (
+                                  <span className="mt-1 text-[11px] leading-4 text-muted-foreground/80">Ohne Grund</span>
+                                ) : null}
+                                {!entry.reason && isPreferred ? (
+                                  <span className="mt-1 text-[11px] leading-4 text-muted-foreground/80">Ohne Angabe</span>
+                                ) : null}
                               </>
                             ) : isHoliday ? (
                               <>
-                                <span className="text-xs font-semibold uppercase tracking-wide">Ferien</span>
-                                <span className="mt-1 line-clamp-3 text-xs leading-5">
-                                  {holidayEntries[0]?.title}
-                                </span>
+                                <span className="text-[11px] font-semibold uppercase tracking-wide">Ferien</span>
+                                <span className="mt-1 line-clamp-2 text-[11px] leading-4">{holidayEntries[0]?.title}</span>
                               </>
+                            ) : isPreferredDay ? (
+                              <span className="text-[11px] font-medium leading-4 text-primary/90">Bevorzugt</span>
+                            ) : isExceptionDay ? (
+                              <span className="text-[11px] font-medium leading-4 text-amber-700 dark:text-amber-100">Ausnahme</span>
                             ) : (
                               <span className="text-xs font-medium leading-5 text-muted-foreground/80">Frei</span>
                             )}
