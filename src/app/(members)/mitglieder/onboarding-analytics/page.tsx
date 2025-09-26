@@ -18,6 +18,7 @@ import {
   ONBOARDING_SHOW_FILTER_ALL_VALUE,
   OnboardingShowFilter,
 } from "./onboarding-show-filter";
+import { OnboardingProfileFilters } from "./onboarding-profile-filters";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const percentFormat = new Intl.NumberFormat("de-DE", {
@@ -45,6 +46,27 @@ type PlanningBucket = {
   code: string;
   label: string;
   candidates: PlanningCandidate[];
+};
+
+type StatusFilter = "all" | "completed" | "open";
+type FocusFilter = "all" | "acting" | "tech" | "both";
+type MembershipFilter = "all" | "member" | "prospect";
+type DomainFilter = "all" | "acting" | "crew" | "both" | "none";
+
+const PROFILE_FILTER_ALL_VALUE = "__all__";
+
+type ShowRow = {
+  id: string;
+  show: OnboardingShowSummary | null;
+  invites: OnboardingShowSummary["invites"] | null;
+  filteredCount: number;
+  filteredCompleted: number;
+  filteredOpen: number;
+  focus: Record<OnboardingTalentProfile["focus"], number>;
+  interests: OnboardingInterestStat[];
+  preferences: OnboardingRolePreferenceStat[];
+  pendingPhotoConsents: number;
+  guardianDocumentsMissing: number;
 };
 
 export default async function OnboardingAnalyticsPage({
@@ -79,45 +101,112 @@ export default async function OnboardingAnalyticsPage({
     { value: ONBOARDING_SHOW_FILTER_ALL_VALUE, label: "Alle Onboardings" },
     ...analytics.shows.map((show) => ({ value: show.id, label: formatShowTitle(show) })),
   ];
+  const showFilterValue = selectedShow?.id ?? ONBOARDING_SHOW_FILTER_ALL_VALUE;
 
-  const visibleProfiles = selectedShow
+  const statusParam = readSearchParam(resolvedSearchParams, "status");
+  const focusParam = readSearchParam(resolvedSearchParams, "focus");
+  const membershipParam = readSearchParam(resolvedSearchParams, "membership");
+  const domainParam = readSearchParam(resolvedSearchParams, "domain");
+
+  const statusFilter = resolveFilterValue<StatusFilter>(
+    statusParam,
+    ["all", "completed", "open"],
+    "all",
+  );
+  const focusFilter = resolveFilterValue<FocusFilter>(
+    focusParam,
+    ["all", "acting", "tech", "both"],
+    "all",
+  );
+  const membershipFilter = resolveFilterValue<MembershipFilter>(
+    membershipParam,
+    ["all", "member", "prospect"],
+    "all",
+  );
+  const domainFilter = resolveFilterValue<DomainFilter>(
+    domainParam,
+    ["all", "acting", "crew", "both", "none"],
+    "all",
+  );
+
+  const statusSelectValue = resolveSelectValue(statusParam, ["all", "completed", "open"]);
+  const focusSelectValue = resolveSelectValue(focusParam, ["all", "acting", "tech", "both"]);
+  const membershipSelectValue = resolveSelectValue(membershipParam, ["all", "member", "prospect"]);
+  const domainSelectValue = resolveSelectValue(domainParam, ["all", "acting", "crew", "both", "none"]);
+
+  const baseProfiles = selectedShow
     ? analytics.talentProfiles.filter((profile) => profile.show?.id === selectedShow.id)
     : analytics.talentProfiles;
 
-  const totalProfiles = visibleProfiles.length;
-  const completedProfiles = visibleProfiles.filter((profile) => Boolean(profile.completedAt)).length;
-  const openProfiles = Math.max(totalProfiles - completedProfiles, 0);
+  const filteredProfiles = baseProfiles.filter((profile) => {
+    if (statusFilter === "completed" && !profile.completedAt) return false;
+    if (statusFilter === "open" && profile.completedAt) return false;
+    if (focusFilter !== "all" && profile.focus !== focusFilter) return false;
+    if (membershipFilter === "member" && !profile.memberSinceYear) return false;
+    if (membershipFilter === "prospect" && profile.memberSinceYear) return false;
 
-  const focusCounts = visibleProfiles.reduce(
-    (acc, profile) => {
-      acc[profile.focus] = (acc[profile.focus] ?? 0) + 1;
-      return acc;
-    },
-    { acting: 0, tech: 0, both: 0 } as Record<OnboardingTalentProfile["focus"], number>,
-  );
+    const hasActingPreference = profile.preferences.some((pref) => pref.domain === "acting");
+    const hasCrewPreference = profile.preferences.some((pref) => pref.domain === "crew");
+
+    if (domainFilter === "acting" && (!hasActingPreference || hasCrewPreference)) return false;
+    if (domainFilter === "crew" && (!hasCrewPreference || hasActingPreference)) return false;
+    if (domainFilter === "both" && (!hasActingPreference || !hasCrewPreference)) return false;
+    if (domainFilter === "none" && (hasActingPreference || hasCrewPreference)) return false;
+
+    return true;
+  });
+
+  const totalProfiles = filteredProfiles.length;
+  const completedProfiles = filteredProfiles.filter((profile) => Boolean(profile.completedAt)).length;
+  const openProfiles = Math.max(totalProfiles - completedProfiles, 0);
+  const completionRate = totalProfiles > 0 ? completedProfiles / totalProfiles : 0;
+
+  const focusCounts = countFocus(filteredProfiles);
   const totalFocus = Math.max(focusCounts.acting + focusCounts.tech + focusCounts.both, 1);
 
   const invitesOverview = selectedShow ? selectedShow.invites : analytics.invites;
   const inactiveInvites =
     invitesOverview.expired + invitesOverview.disabled + invitesOverview.exhausted;
 
-  const pendingPhotoConsentsCount = selectedShow
-    ? selectedShow.pendingPhotoConsents
-    : analytics.pendingPhotoConsents;
-  const minorsPendingDocumentsCount = selectedShow
-    ? selectedShow.guardianDocumentsMissing
-    : analytics.minorsPendingDocuments;
+  const pendingPhotoConsentsCount = filteredProfiles.filter(
+    (profile) => profile.hasPendingPhotoConsent,
+  ).length;
+  const minorsPendingDocumentsCount = filteredProfiles.filter(
+    (profile) => profile.requiresGuardianDocument,
+  ).length;
 
-  const interestStats: OnboardingInterestStat[] = selectedShow
-    ? selectedShow.interests
-    : analytics.interests;
-  const rolePreferenceStats: OnboardingRolePreferenceStat[] = selectedShow
-    ? selectedShow.rolePreferences
-    : analytics.rolePreferences;
-  const dietaryStats = selectedShow ? summarizeDietary(visibleProfiles) : analytics.dietary;
+  const interestStats: OnboardingInterestStat[] = aggregateInterestStats(filteredProfiles);
+  const rolePreferenceStats: OnboardingRolePreferenceStat[] = aggregateRolePreferenceStats(
+    filteredProfiles,
+  );
+  const dietaryStats = summarizeDietary(filteredProfiles);
 
-  const visibleShowSummaries = selectedShow ? [selectedShow] : analytics.shows;
-  const showFilterValue = selectedShow?.id ?? ONBOARDING_SHOW_FILTER_ALL_VALUE;
+  const membershipCounts = filteredProfiles.reduce(
+    (acc, profile) => {
+      if (profile.memberSinceYear) {
+        acc.members += 1;
+      } else {
+        acc.prospects += 1;
+      }
+      return acc;
+    },
+    { members: 0, prospects: 0 },
+  );
+
+  const actingPoolCount = filteredProfiles.filter((profile) =>
+    profile.preferences.some((pref) => pref.domain === "acting"),
+  ).length;
+  const crewPoolCount = filteredProfiles.filter((profile) =>
+    profile.preferences.some((pref) => pref.domain === "crew"),
+  ).length;
+  const hybridPoolCount = filteredProfiles.filter((profile) => {
+    const hasActingPreference = profile.preferences.some((pref) => pref.domain === "acting");
+    const hasCrewPreference = profile.preferences.some((pref) => pref.domain === "crew");
+    return hasActingPreference && hasCrewPreference;
+  }).length;
+  const actingPoolShare = totalProfiles > 0 ? actingPoolCount / totalProfiles : 0;
+  const crewPoolShare = totalProfiles > 0 ? crewPoolCount / totalProfiles : 0;
+  const hybridPoolShare = totalProfiles > 0 ? hybridPoolCount / totalProfiles : 0;
 
   const summaryByShowId = new Map(analytics.shows.map((show) => [show.id, show] as const));
 
@@ -125,7 +214,7 @@ export default async function OnboardingAnalyticsPage({
     string,
     { show: OnboardingTalentProfile["show"]; profiles: OnboardingTalentProfile[]; summary: OnboardingShowSummary | null }
   >();
-  for (const profile of visibleProfiles) {
+  for (const profile of filteredProfiles) {
     const showId = profile.show?.id ?? "__unassigned";
     if (!profilesByShow.has(showId)) {
       profilesByShow.set(showId, {
@@ -145,6 +234,52 @@ export default async function OnboardingAnalyticsPage({
     const bTitle = formatShowTitle(b.show);
     return aTitle.localeCompare(bTitle, "de-DE");
   });
+
+  const showRows: ShowRow[] = (selectedShow ? [selectedShow] : analytics.shows).map((show) => {
+    const bucket = profilesByShow.get(show.id);
+    const profilesForShow = bucket?.profiles ?? [];
+    const filteredCompleted = profilesForShow.filter((profile) => profile.completedAt).length;
+    const filteredOpen = Math.max(profilesForShow.length - filteredCompleted, 0);
+
+    return {
+      id: show.id,
+      show,
+      invites: show.invites,
+      filteredCount: profilesForShow.length,
+      filteredCompleted,
+      filteredOpen,
+      focus: countFocus(profilesForShow),
+      interests: aggregateInterestStats(profilesForShow).slice(0, 3),
+      preferences: aggregateRolePreferenceStats(profilesForShow).slice(0, 3),
+      pendingPhotoConsents: profilesForShow.filter((profile) => profile.hasPendingPhotoConsent).length,
+      guardianDocumentsMissing: profilesForShow.filter((profile) => profile.requiresGuardianDocument).length,
+    } satisfies ShowRow;
+  });
+
+  const unassignedBucket = profilesByShow.get("__unassigned");
+  if (!selectedShow && unassignedBucket && unassignedBucket.profiles.length > 0) {
+    const profilesForShow = unassignedBucket.profiles;
+    const filteredCompleted = profilesForShow.filter((profile) => profile.completedAt).length;
+    const filteredOpen = Math.max(profilesForShow.length - filteredCompleted, 0);
+
+    showRows.push({
+      id: "__unassigned",
+      show: null,
+      invites: null,
+      filteredCount: profilesForShow.length,
+      filteredCompleted,
+      filteredOpen,
+      focus: countFocus(profilesForShow),
+      interests: aggregateInterestStats(profilesForShow).slice(0, 3),
+      preferences: aggregateRolePreferenceStats(profilesForShow).slice(0, 3),
+      pendingPhotoConsents: profilesForShow.filter((profile) => profile.hasPendingPhotoConsent).length,
+      guardianDocumentsMissing: profilesForShow.filter((profile) => profile.requiresGuardianDocument).length,
+    } satisfies ShowRow);
+  }
+
+  const relevantShowRows = selectedShow
+    ? showRows
+    : showRows.filter((row) => row.filteredCount > 0 || (row.invites?.total ?? 0) > 0);
 
   const actingPreferenceCodes = ["acting_lead", "acting_medium", "acting_scout", "acting_statist"];
   const crewPreferenceCodes = [
@@ -171,69 +306,6 @@ export default async function OnboardingAnalyticsPage({
 
   const sortCandidates = (list: PlanningCandidate[]) =>
     list.sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name, "de-DE"));
-
-  const actingCandidateMap = new Map<string, PlanningCandidate[]>();
-  const crewCandidateMap = new Map<string, PlanningCandidate[]>();
-  const additionalActingCodes = new Set<string>();
-  const additionalCrewCodes = new Set<string>();
-
-  for (const code of actingPreferenceCodes) {
-    actingCandidateMap.set(code, []);
-  }
-  for (const code of crewPreferenceCodes) {
-    crewCandidateMap.set(code, []);
-  }
-
-  for (const profile of visibleProfiles) {
-    for (const pref of profile.preferences) {
-      if (pref.domain === "acting") {
-        if (!actingCandidateMap.has(pref.code)) {
-          actingCandidateMap.set(pref.code, []);
-          additionalActingCodes.add(pref.code);
-        }
-        actingCandidateMap.get(pref.code)!.push(toPlanningCandidate(profile, pref));
-      }
-      if (pref.domain === "crew") {
-        if (!crewCandidateMap.has(pref.code)) {
-          crewCandidateMap.set(pref.code, []);
-          additionalCrewCodes.add(pref.code);
-        }
-        crewCandidateMap.get(pref.code)!.push(toPlanningCandidate(profile, pref));
-      }
-    }
-  }
-
-  for (const bucket of actingCandidateMap.values()) {
-    sortCandidates(bucket);
-  }
-  for (const bucket of crewCandidateMap.values()) {
-    sortCandidates(bucket);
-  }
-
-  const actingBucketOrder = [
-    ...actingPreferenceCodes,
-    ...Array.from(additionalActingCodes).sort((a, b) =>
-      humanizePreference(a).localeCompare(humanizePreference(b), "de-DE"),
-    ),
-  ];
-  const crewBucketOrder = [
-    ...crewPreferenceCodes,
-    ...Array.from(additionalCrewCodes).sort((a, b) =>
-      humanizePreference(a).localeCompare(humanizePreference(b), "de-DE"),
-    ),
-  ];
-
-  const actingPlanningBuckets: PlanningBucket[] = actingBucketOrder.map((code) => ({
-    code,
-    label: humanizePreference(code),
-    candidates: actingCandidateMap.get(code) ?? [],
-  }));
-
-  const crewPlanningBuckets: PlanningBucket[] = crewBucketOrder.map((code) => ({
-    code,
-    label: humanizePreference(code),
-    candidates: crewCandidateMap.get(code) ?? [],
-  }));
 
   const showPlanning = groupedProfiles.map(({ show, profiles }) => {
     const actingMap = new Map<string, PlanningCandidate[]>();
@@ -314,10 +386,18 @@ export default async function OnboardingAnalyticsPage({
           <h1 className="text-2xl font-semibold">Onboarding Analytics</h1>
           <p className="text-sm text-muted-foreground">
             Überblick über Einladungen, Produktionen und individuelle Antworten aus dem Onboarding-Wizard.
+            Nutze die Filter, um gezielt nach Mitgliedern, Schwerpunkten und Gewerken zu suchen.
           </p>
         </div>
         <OnboardingShowFilter options={showFilterOptions} value={showFilterValue} />
       </div>
+
+      <OnboardingProfileFilters
+        status={statusSelectValue}
+        focus={focusSelectValue}
+        membership={membershipSelectValue}
+        domain={domainSelectValue}
+      />
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
@@ -326,69 +406,141 @@ export default async function OnboardingAnalyticsPage({
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          <section className="grid gap-4 lg:grid-cols-4">
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Gefilterte Profile</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                <p className="text-3xl font-semibold">{numberFormat.format(totalProfiles)}</p>
+                {totalProfiles > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    {numberFormat.format(completedProfiles)} abgeschlossen · {numberFormat.format(openProfiles)} offen
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Keine Profile im aktuellen Filter.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Abschlussquote</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                <p className="text-3xl font-semibold">
+                  {totalProfiles > 0 ? percentFormat.format(completionRate) : "–"}
+                </p>
+                {totalProfiles > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    {numberFormat.format(completedProfiles)} von {numberFormat.format(totalProfiles)} Profilen abgeschlossen
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Kein Abschlusswert verfügbar.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Mitgliedschaft</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Bereits Mitglied</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(membershipCounts.members)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Noch kein Mitglied</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(membershipCounts.prospects)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/70">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Präferenz-Pools</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Schauspiel</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(actingPoolCount)}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({percentFormat.format(actingPoolShare)})
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Gewerke</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(crewPoolCount)}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({percentFormat.format(crewPoolShare)})
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Beides kombiniert</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(hybridPoolCount)}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({percentFormat.format(hybridPoolShare)})
+                    </span>
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Card className="border border-border/70">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Onboardings gesamt</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Einladungen &amp; Nutzung</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(totalProfiles)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {numberFormat.format(completedProfiles)} abgeschlossen · {numberFormat.format(openProfiles)} offen
-                </p>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Aktiv</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(invitesOverview.active)} / {numberFormat.format(invitesOverview.total)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Zu erneuern</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(inactiveInvites)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Verbrauchte Slots</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(invitesOverview.totalUsage)}
+                  </span>
+                </div>
               </CardContent>
             </Card>
 
             <Card className="border border-border/70">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Aktive Einladungen</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Offene To-dos</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(invitesOverview.active)}</p>
-                <p className="text-xs text-muted-foreground">von {numberFormat.format(invitesOverview.total)} insgesamt</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/70">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Abgelaufene Links</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(inactiveInvites)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {numberFormat.format(invitesOverview.expired)} abgelaufen · {numberFormat.format(invitesOverview.disabled)}{" "}
-                  deaktiviert · {numberFormat.format(invitesOverview.exhausted)} ausgeschöpft
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/70">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Verbrauchte Slots</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(invitesOverview.totalUsage)}</p>
-                <p className="text-xs text-muted-foreground">registrierte Abschlüsse über den Wizard</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/70">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Fotoeinverständnisse offen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(pendingPhotoConsentsCount)}</p>
-                <p className="text-xs text-muted-foreground">Status &bdquo;Pending&ldquo; benötigt Freigabe</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-border/70">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Elternformulare ausstehend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-semibold">{numberFormat.format(minorsPendingDocumentsCount)}</p>
-                <p className="text-xs text-muted-foreground">Minderjährige ohne hochgeladenes Elternformular</p>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Fotoeinverständnisse</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(pendingPhotoConsentsCount)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-muted-foreground">Elternformulare</span>
+                  <span className="font-semibold text-foreground">
+                    {numberFormat.format(minorsPendingDocumentsCount)}
+                  </span>
+                </div>
               </CardContent>
             </Card>
           </section>
@@ -397,23 +549,24 @@ export default async function OnboardingAnalyticsPage({
             <CardHeader>
               <CardTitle>Produktionen &amp; Fortschritt</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Zeigt, welche Produktionen aktive Onboardings haben und wo noch Aufgaben offen sind.
+                Gefilterte Kennzahlen nach Produktion inklusive offener Aufgaben.
               </p>
             </CardHeader>
             <CardContent>
-              {visibleShowSummaries.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Noch keine Onboardings erfasst.</p>
+              {relevantShowRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Keine Daten im aktuellen Filter.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-border text-sm">
                     <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                       <tr>
                         <th className="px-3 py-2 text-left">Produktion</th>
-                        <th className="px-3 py-2 text-left">Onboardings</th>
+                        <th className="px-3 py-2 text-left">Gefilterte Profile</th>
+                        <th className="px-3 py-2 text-left">Abschlussquote</th>
                         <th className="px-3 py-2 text-left">Abgeschlossen</th>
                         <th className="px-3 py-2 text-left">Offen</th>
                         <th className="px-3 py-2 text-left">Einladungen aktiv</th>
-                        <th className="px-3 py-2 text-left">Einladungen offen/ablaufend</th>
+                        <th className="px-3 py-2 text-left">Erneuern</th>
                         <th className="px-3 py-2 text-left">Foto-EV offen</th>
                         <th className="px-3 py-2 text-left">Elternformulare</th>
                         <th className="px-3 py-2 text-left">Fokus</th>
@@ -422,112 +575,85 @@ export default async function OnboardingAnalyticsPage({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/70">
-                      {visibleShowSummaries.map((show) => (
-                        <tr key={show.id} className="bg-background/60">
-                          <td className="px-3 py-2 font-medium">{formatShowTitle(show)}</td>
-                          <td className="px-3 py-2">{numberFormat.format(show.onboardingCount)}</td>
-                          <td className="px-3 py-2 text-success">{numberFormat.format(show.completedCount)}</td>
-                          <td className="px-3 py-2 text-warning">{numberFormat.format(show.openCount)}</td>
-                          <td className="px-3 py-2">
-                            {numberFormat.format(show.invites.active)} / {numberFormat.format(show.invites.total)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {numberFormat.format(show.invites.expired + show.invites.disabled + show.invites.exhausted)}
-                          </td>
-                          <td className="px-3 py-2">{numberFormat.format(show.pendingPhotoConsents)}</td>
-                          <td className="px-3 py-2">{numberFormat.format(show.guardianDocumentsMissing)}</td>
-                          <td className="px-3 py-2">
-                            <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-                              <span>S: {numberFormat.format(show.focus.acting)}</span>
-                              <span>G: {numberFormat.format(show.focus.tech)}</span>
-                              <span>H: {numberFormat.format(show.focus.both)}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2">
-                            {show.interests.length ? (
-                              <div className="flex flex-wrap gap-2">
-                                {show.interests.slice(0, 3).map((interest) => (
-                                  <Badge
-                                    key={`${show.id}-interest-${interest.name}`}
-                                    variant="muted"
-                                    className="justify-start"
-                                  >
-                                    <span>{interest.name}</span>
-                                    <span className="text-[10px] uppercase text-muted-foreground">
-                                      {numberFormat.format(interest.count)}
-                                    </span>
-                                  </Badge>
-                                ))}
-                                {show.interests.length > 3 ? (
-                                  <Badge variant="ghost" className="text-xs text-muted-foreground">
-                                    +{numberFormat.format(show.interests.length - 3)} weitere
-                                  </Badge>
-                                ) : null}
+                      {relevantShowRows.map((row) => {
+                        const invites = row.invites;
+                        const invitesToRenew = invites
+                          ? invites.expired + invites.disabled + invites.exhausted
+                          : 0;
+                        const completionShare =
+                          row.filteredCount > 0
+                            ? percentFormat.format(row.filteredCompleted / row.filteredCount)
+                            : '–';
+
+                        return (
+                          <tr key={row.id} className="bg-background/60">
+                            <td className="px-3 py-2 font-medium">{formatShowTitle(row.show ?? null)}</td>
+                            <td className="px-3 py-2">{numberFormat.format(row.filteredCount)}</td>
+                            <td className="px-3 py-2">{completionShare}</td>
+                            <td className="px-3 py-2 text-success">{numberFormat.format(row.filteredCompleted)}</td>
+                            <td className="px-3 py-2 text-warning">{numberFormat.format(row.filteredOpen)}</td>
+                            <td className="px-3 py-2">
+                              {invites
+                                ? `${numberFormat.format(invites.active)} / ${numberFormat.format(invites.total)}`
+                                : '–'}
+                            </td>
+                            <td className="px-3 py-2">{numberFormat.format(invitesToRenew)}</td>
+                            <td className="px-3 py-2">{numberFormat.format(row.pendingPhotoConsents)}</td>
+                            <td className="px-3 py-2">{numberFormat.format(row.guardianDocumentsMissing)}</td>
+                            <td className="px-3 py-2">
+                              <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+                                <span>S: {numberFormat.format(row.focus.acting)}</span>
+                                <span>G: {numberFormat.format(row.focus.tech)}</span>
+                                <span>H: {numberFormat.format(row.focus.both)}</span>
                               </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Keine Angaben</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2">
-                            {show.rolePreferences.length ? (
-                              <div className="flex flex-wrap gap-2">
-                                {show.rolePreferences.slice(0, 3).map((pref) => (
-                                  <Badge
-                                    key={`${show.id}-pref-${pref.code}`}
-                                    variant="outline"
-                                    className="justify-start"
-                                  >
-                                    <span className="font-medium">{humanizePreference(pref.code)}</span>
-                                    <span className="text-[10px] uppercase text-muted-foreground">
-                                      {pref.domain === "acting" ? "S" : "G"} · {weightFormat.format(pref.averageWeight)}
-                                    </span>
-                                  </Badge>
-                                ))}
-                                {show.rolePreferences.length > 3 ? (
-                                  <Badge variant="ghost" className="text-xs text-muted-foreground">
-                                    +{numberFormat.format(show.rolePreferences.length - 3)} weitere
-                                  </Badge>
-                                ) : null}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Keine Angaben</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.interests.length ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {row.interests.map((interest) => (
+                                    <Badge
+                                      key={`${row.id}-interest-${interest.name}`}
+                                      variant="muted"
+                                      className="justify-start"
+                                    >
+                                      <span>{interest.name}</span>
+                                      <span className="text-[10px] uppercase text-muted-foreground">
+                                        {numberFormat.format(interest.count)}
+                                      </span>
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Keine Angaben</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.preferences.length ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {row.preferences.map((pref) => (
+                                    <Badge
+                                      key={`${row.id}-pref-${pref.code}`}
+                                      variant="outline"
+                                      className="justify-start"
+                                    >
+                                      <span className="font-medium">{humanizePreference(pref.code)}</span>
+                                      <span className="text-[10px] uppercase text-muted-foreground">
+                                        {pref.domain === 'acting' ? 'S' : 'G'} · {weightFormat.format(pref.averageWeight)}
+                                      </span>
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Keine Angaben</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card className="border border-border/70">
-            <CardHeader>
-              <CardTitle>Planung nach Präferenzen</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Listen pro Rollengröße und Gewerk, sortiert nach Wunschgewichtung der Talente.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-lg border border-border/60 bg-background/60 p-4">
-                  <PlanningBucketSection
-                    heading="Schauspiel · Wunschlisten"
-                    buckets={actingPlanningBuckets}
-                    emptyLabel="Noch keine Rollenwünsche hinterlegt."
-                    variant={selectedShow ? "compact" : "global"}
-                  />
-                </div>
-                <div className="rounded-lg border border-border/60 bg-background/60 p-4">
-                  <PlanningBucketSection
-                    heading="Gewerke · Wunschlisten"
-                    buckets={crewPlanningBuckets}
-                    emptyLabel="Noch keine Gewerke-Präferenzen hinterlegt."
-                    variant={selectedShow ? "compact" : "global"}
-                  />
-                </div>
-              </div>
             </CardContent>
           </Card>
 
@@ -659,7 +785,7 @@ export default async function OnboardingAnalyticsPage({
                             {entry.domain === "acting" ? "Schauspiel" : "Gewerke"}
                           </td>
                           <td className="px-3 py-2 font-medium">{humanizePreference(entry.code)}</td>
-                          <td className="px-3 py-2">{entry.averageWeight}</td>
+                          <td className="px-3 py-2">{weightFormat.format(entry.averageWeight)}</td>
                           <td className="px-3 py-2">{entry.responses}</td>
                         </tr>
                       ))}
@@ -1175,6 +1301,89 @@ function PlanningBucketSection({
       )}
     </div>
   );
+}
+
+function readSearchParam(
+  params: Record<string, string | string[] | undefined> | undefined,
+  key: string,
+): string | null {
+  const raw = params?.[key];
+  if (Array.isArray(raw)) {
+    return typeof raw[0] === "string" ? raw[0] : null;
+  }
+  return typeof raw === "string" ? raw : null;
+}
+
+function resolveFilterValue<T extends string>(
+  value: string | null,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  if (!value || value === PROFILE_FILTER_ALL_VALUE) {
+    return fallback;
+  }
+  return (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
+}
+
+function resolveSelectValue(value: string | null, allowed: readonly string[]): string {
+  if (!value || value === PROFILE_FILTER_ALL_VALUE || value === "all") {
+    return PROFILE_FILTER_ALL_VALUE;
+  }
+  return allowed.includes(value) ? value : PROFILE_FILTER_ALL_VALUE;
+}
+
+function countFocus(profiles: OnboardingTalentProfile[]) {
+  return profiles.reduce(
+    (acc, profile) => {
+      acc[profile.focus] = (acc[profile.focus] ?? 0) + 1;
+      return acc;
+    },
+    { acting: 0, tech: 0, both: 0 } as Record<OnboardingTalentProfile["focus"], number>,
+  );
+}
+
+function aggregateInterestStats(profiles: OnboardingTalentProfile[]): OnboardingInterestStat[] {
+  const counts = new Map<string, number>();
+  for (const profile of profiles) {
+    for (const interest of profile.interests) {
+      counts.set(interest, (counts.get(interest) ?? 0) + 1);
+    }
+  }
+
+  return Array.from(counts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "de-DE"));
+}
+
+function aggregateRolePreferenceStats(
+  profiles: OnboardingTalentProfile[],
+): OnboardingRolePreferenceStat[] {
+  const totals = new Map<
+    string,
+    { domain: OnboardingRolePreferenceStat["domain"]; code: string; total: number; count: number }
+  >();
+
+  for (const profile of profiles) {
+    for (const pref of profile.preferences) {
+      const key = `${pref.domain}:${pref.code}`;
+      const existing = totals.get(key);
+      if (existing) {
+        existing.total += pref.weight;
+        existing.count += 1;
+      } else {
+        totals.set(key, { domain: pref.domain, code: pref.code, total: pref.weight, count: 1 });
+      }
+    }
+  }
+
+  return Array.from(totals.values())
+    .map((entry) => ({
+      domain: entry.domain,
+      code: entry.code,
+      averageWeight: Math.round((entry.total / entry.count) * 10) / 10,
+      responses: entry.count,
+    }))
+    .sort((a, b) => b.averageWeight - a.averageWeight || b.responses - a.responses);
 }
 
 function summarizeDietary(profiles: OnboardingTalentProfile[]) {
