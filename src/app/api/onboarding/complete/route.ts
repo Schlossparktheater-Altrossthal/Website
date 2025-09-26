@@ -248,7 +248,8 @@ export async function POST(request: NextRequest) {
   }
 
   const age = calculateAge(dateOfBirth);
-  const photoConsent = payload.photoConsent ?? { consent: true };
+  const photoConsent = payload.photoConsent ?? { consent: true, skipDocument: false };
+  const skipDocument = Boolean(photoConsent.skipDocument);
 
   let documentBuffer: Buffer | null = null;
   let documentMime: string | null = null;
@@ -270,11 +271,11 @@ export async function POST(request: NextRequest) {
     documentSize = documentBuffer.length;
   }
 
-  if (!documentBuffer) {
+  if (!documentBuffer && photoConsent.consent && !skipDocument) {
     const missingDocumentMessage =
       age !== null && age < 18
-        ? "Bitte lade die unterschriebene Einverständniserklärung deiner Erziehungsberechtigten hoch."
-        : "Bitte lade dein unterschriebenes Einverständnis hoch oder unterschreibe digital.";
+        ? "Bitte lade die unterschriebene Einverständniserklärung deiner Erziehungsberechtigten hoch oder wähle aus, dass du sie später nachreichst."
+        : "Bitte lade dein unterschriebenes Einverständnis hoch, unterschreibe digital oder markiere, dass du es später nachreichst.";
     return NextResponse.json({ error: missingDocumentMessage }, { status: 400 });
   }
 
@@ -341,6 +342,7 @@ export async function POST(request: NextRequest) {
     photoConsent: {
       consent: photoConsent.consent,
       hasDocument: Boolean(documentBuffer),
+      skipDocument,
     },
   };
 
