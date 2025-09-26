@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { describeInvite, generateInviteToken, hashInviteToken, calculateInviteStatus } from "@/lib/member-invites";
+import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { onboardingPathForHash, onboardingPathForToken } from "@/lib/member-invite-links";
 import { sortRoles, ROLES, type Role } from "@/lib/roles";
 
@@ -74,12 +75,12 @@ export async function GET() {
           select: { id: true, createdAt: true, completedAt: true },
           orderBy: { createdAt: "desc" },
         },
-        show: { select: { id: true, title: true, year: true } },
+        show: { select: { id: true, title: true, year: true, meta: true } },
       },
     }),
     prisma.show.findMany({
       orderBy: { year: "desc" },
-      select: { id: true, title: true, year: true },
+      select: { id: true, title: true, year: true, meta: true },
     }),
   ]);
 
@@ -89,6 +90,15 @@ export async function GET() {
     const completed = invite.redemptions.filter((r) => r.completedAt).length;
     const pending = invite.redemptions.length - completed;
     const recentClicks = invite.redemptions.slice(0, 3).map((entry) => entry.createdAt.toISOString());
+    const production = invite.show
+      ? {
+          id: invite.show.id,
+          title: invite.show.title,
+          year: invite.show.year,
+          whatsappLink: getOnboardingWhatsAppLink(invite.show.meta),
+        }
+      : null;
+
     return {
       id: invite.id,
       label: invite.label,
@@ -100,7 +110,7 @@ export async function GET() {
       roles: invite.roles,
       isDisabled: invite.isDisabled,
       createdBy: invite.createdBy,
-      show: invite.show,
+      show: production,
       remainingUses: status.remainingUses,
       isActive: status.isActive,
       isExpired: status.isExpired,
@@ -114,7 +124,14 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ invites: formatted, productions });
+  const formattedProductions = productions.map((show) => ({
+    id: show.id,
+    title: show.title,
+    year: show.year,
+    whatsappLink: getOnboardingWhatsAppLink(show.meta),
+  }));
+
+  return NextResponse.json({ invites: formatted, productions: formattedProductions });
 }
 
 export async function POST(request: NextRequest) {
