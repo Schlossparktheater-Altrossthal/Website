@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import type { Session } from "next-auth";
 import { getServerSession } from "next-auth";
 import { execSync } from "node:child_process";
@@ -70,6 +71,8 @@ function getCommitInfo(): CommitInfo | null {
 }
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
+  noStore();
+
   let session: Session | null = null;
   try {
     session = await getServerSession(authOptions);
