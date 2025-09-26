@@ -289,6 +289,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.restore();
 
     doc.save();
+    const moduleRadius = (qrModuleSize / 2) * 0.82;
     doc.fillColor(palette.qrModulePrimary);
     for (let row = 0; row < qrModuleCount; row += 1) {
       for (let col = 0; col < qrModuleCount; col += 1) {
@@ -298,8 +299,10 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
 
         const moduleX = qrContentX + col * qrModuleSize;
         const moduleY = qrContentY + row * qrModuleSize;
+        const centerX = moduleX + qrModuleSize / 2;
+        const centerY = moduleY + qrModuleSize / 2;
 
-        doc.rect(moduleX, moduleY, qrModuleSize, qrModuleSize).fill();
+        doc.circle(centerX, centerY, moduleRadius).fill();
       }
     }
     doc.restore();
@@ -308,23 +311,19 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       const finderX = qrContentX + offset.col * qrModuleSize;
       const finderY = qrContentY + offset.row * qrModuleSize;
       const finderDimension = finderSize * qrModuleSize;
-      const finderInnerDimension = (finderSize - 2) * qrModuleSize;
-      const finderCoreDimension = (finderSize - 4) * qrModuleSize;
+      const finderGradient = doc
+        .linearGradient(finderX, finderY, finderX + finderDimension, finderY + finderDimension)
+        .stop(0, palette.qrFinderOuter)
+        .stop(1, palette.qrFinderInner);
 
       doc
+        .save()
         .rect(finderX, finderY, finderDimension, finderDimension)
-        .fillColor(palette.qrFinderOuter)
-        .fill();
-
-      doc
-        .rect(finderX + qrModuleSize, finderY + qrModuleSize, finderInnerDimension, finderInnerDimension)
-        .fillColor(palette.qrModuleSecondary)
-        .fill();
-
-      doc
-        .rect(finderX + qrModuleSize * 2, finderY + qrModuleSize * 2, finderCoreDimension, finderCoreDimension)
-        .fillColor(palette.qrFinderCore)
-        .fill();
+        .fill(finderGradient)
+        .lineWidth(Math.max(qrModuleSize * 0.6, 2))
+        .strokeColor(palette.qrFinderCore)
+        .stroke()
+        .restore();
     }
 
     doc.y = qrY + qrSize + 28;
