@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
+import { requireAuth } from "@/lib/rbac";
 import {
   checkInTicket,
   TicketCheckInError,
@@ -54,6 +56,13 @@ function formatScanEvent(event: TicketCheckInResult["scanEvent"]) {
 }
 
 export async function POST(request: Request) {
+  const session = await requireAuth();
+  const allowed = await hasPermission(session.user, "mitglieder.scan");
+
+  if (!allowed) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const json = await request.json();
     const payload = payloadSchema.parse(json);
