@@ -76,6 +76,15 @@ const ArchiveIcon = createMembersNavIcon(
   </>,
 );
 
+const FileLibraryIcon = createMembersNavIcon(
+  <>
+    <path d="M4 6a2 2 0 0 1 2-2h5l3 3h4a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
+    <path d="M11 4v4h5" />
+    <path d="M8 13h8" />
+    <path d="M8 17h5" />
+  </>,
+);
+
 const IssuesIcon = createMembersNavIcon(
   <>
     <path d="M21 15a2 2 0 0 1-2 2H9l-4 4v-4H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
@@ -355,6 +364,12 @@ export const membersNavigation = [
         label: "Archiv und Bilder",
         permissionKey: "mitglieder.galerie",
         icon: ArchiveIcon,
+      },
+      {
+        href: "/mitglieder/dateisystem",
+        label: "Dateisystem",
+        permissionKey: "mitglieder.dateisystem",
+        icon: FileLibraryIcon,
       },
       {
         href: "/mitglieder/sperrliste",
