@@ -27,8 +27,13 @@ import type {
 } from "@/data/dietary-preferences";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -277,37 +282,6 @@ function SummaryField({ label, onClick, description, children }: SummaryFieldPro
   }
 
   return <div className={baseClasses}>{content}</div>;
-}
-
-interface EditorPanelProps {
-  title: string;
-  description?: string;
-  onClose: () => void;
-  children: ReactNode;
-}
-
-function EditorPanel({ title, description, onClose, children }: EditorPanelProps) {
-  return (
-    <div className="rounded-3xl border border-border/60 bg-background/95 p-6 shadow-xl shadow-primary/10">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1.5">
-          <h4 className="text-lg font-semibold text-foreground">{title}</h4>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="self-start text-muted-foreground hover:text-primary"
-          onClick={onClose}
-        >
-          Schließen
-        </Button>
-      </div>
-      <Separator className="my-6" />
-      <div className="space-y-6">{children}</div>
-    </div>
-  );
 }
 
 interface ProfilePageClientProps {
@@ -706,6 +680,112 @@ export function ProfilePageClient({
     (item) => item.id !== "masse" || canManageMeasurements,
   );
 
+  let editorDialog:
+    | {
+        title: string;
+        description?: string;
+        content: ReactNode;
+        size?: "wide";
+      }
+    | null = null;
+
+  if (activeEditor === "stammdaten") {
+    editorDialog = {
+      title: "Stammdaten bearbeiten",
+      description: "Passe Name, Kontaktadresse und Login-Daten an.",
+      size: "wide",
+      content: (
+        <ProfileForm
+          userId={profileUser.id}
+          initialFirstName={profileUser.firstName}
+          initialLastName={profileUser.lastName}
+          initialName={profileUser.name}
+          initialEmail={profileUser.email}
+          initialAvatarSource={toAvatarSource(profileUser.avatarSource)}
+          initialAvatarUpdatedAt={profileUser.avatarUpdatedAt}
+          initialDateOfBirth={profileUser.dateOfBirth}
+          onProfileChange={(next) => {
+            setProfileUser((prev) => ({
+              ...prev,
+              firstName: next.firstName,
+              lastName: next.lastName,
+              name: next.name,
+              email: next.email,
+              avatarSource: next.avatarSource ?? null,
+              avatarUpdatedAt: next.avatarUpdatedAt,
+              dateOfBirth: next.dateOfBirth,
+            }));
+            setPhotoSummary((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    dateOfBirth: next.dateOfBirth,
+                    age: calculateAge(next.dateOfBirth),
+                  }
+                : prev,
+            );
+          }}
+        />
+      ),
+    };
+  } else if (activeEditor === "onboarding") {
+    editorDialog = {
+      title: "Onboarding-Angaben bearbeiten",
+      description:
+        "Passe Schwerpunkt, Hintergrund und Hinweise aus deinem Onboarding an.",
+      size: "wide",
+      content: (
+        <ProfileOnboardingEditor
+          initialState={onboardingState}
+          onChange={(next) => {
+            setOnboardingState(next);
+          }}
+        />
+      ),
+    };
+  } else if (activeEditor === "ernaehrung") {
+    editorDialog = {
+      title: "Ernährung & Allergien bearbeiten",
+      description: "Pflege Ernährungsstil und medizinische Hinweise.",
+      content: (
+        <ProfileDietaryPreferences
+          initialPreference={preferenceState}
+          initialAllergies={allergyState}
+          onDietaryChange={({ preference, allergies: nextAllergies }) => {
+            setPreferenceState(preference);
+            setAllergyState(nextAllergies);
+          }}
+        />
+      ),
+    };
+  } else if (activeEditor === "masse" && canManageMeasurements) {
+    editorDialog = {
+      title: "Maße & Kostümplanung",
+      description: "Erfasse oder aktualisiere deine Körpermaße.",
+      size: "wide",
+      content: (
+        <MemberMeasurementsManager
+          initialMeasurements={measurementEntries}
+          onMeasurementsChange={(entries) =>
+            setMeasurementState(sortMeasurements(entries))
+          }
+        />
+      ),
+    };
+  } else if (activeEditor === "interessen") {
+    editorDialog = {
+      title: "Interessen & Engagement",
+      description: "Pflege Schlagworte, um passende Aufgaben zu finden.",
+      content: <ProfileInterestsCard />,
+    };
+  } else if (activeEditor === "freigaben") {
+    editorDialog = {
+      title: "Freigaben & Fotoeinverständnis",
+      description: "Verwalte Einverständnisse und lade Dokumente hoch.",
+      content: <PhotoConsentCard onSummaryChange={handlePhotoSummaryChange} />,
+    };
+  }
+
   return (
     <ProfileCompletionProvider initialItems={checklist}>
       <div className="relative space-y-10 sm:space-y-12">
@@ -881,45 +961,6 @@ export function ProfilePageClient({
                     </SummaryField>
                   </div>
 
-                  {activeEditor === "stammdaten" ? (
-                    <EditorPanel
-                      title="Stammdaten bearbeiten"
-                      description="Passe Name, Kontaktadresse und Login-Daten an."
-                      onClose={closeEditor}
-                    >
-                      <ProfileForm
-                        userId={profileUser.id}
-                        initialFirstName={profileUser.firstName}
-                        initialLastName={profileUser.lastName}
-                        initialName={profileUser.name}
-                        initialEmail={profileUser.email}
-                        initialAvatarSource={toAvatarSource(profileUser.avatarSource)}
-                        initialAvatarUpdatedAt={profileUser.avatarUpdatedAt}
-                        initialDateOfBirth={profileUser.dateOfBirth}
-                        onProfileChange={(next) => {
-                          setProfileUser((prev) => ({
-                            ...prev,
-                            firstName: next.firstName,
-                            lastName: next.lastName,
-                            name: next.name,
-                            email: next.email,
-                            avatarSource: next.avatarSource ?? null,
-                            avatarUpdatedAt: next.avatarUpdatedAt,
-                            dateOfBirth: next.dateOfBirth,
-                          }));
-                          setPhotoSummary((prev) =>
-                            prev
-                              ? {
-                                  ...prev,
-                                  dateOfBirth: next.dateOfBirth,
-                                  age: calculateAge(next.dateOfBirth),
-                                }
-                              : prev,
-                          );
-                        }}
-                      />
-                    </EditorPanel>
-                  ) : null}
                 </TabsContent>
 
                 <TabsContent value="onboarding" className="space-y-6">
@@ -988,20 +1029,6 @@ export function ProfilePageClient({
                     )}
                   </SummaryField>
 
-                  {activeEditor === "onboarding" ? (
-                    <EditorPanel
-                      title="Onboarding-Angaben bearbeiten"
-                      description="Passe Schwerpunkt, Hintergrund und Hinweise aus deinem Onboarding an."
-                      onClose={closeEditor}
-                    >
-                      <ProfileOnboardingEditor
-                        initialState={onboardingState}
-                        onChange={(next) => {
-                          setOnboardingState(next);
-                        }}
-                      />
-                    </EditorPanel>
-                  ) : null}
                 </TabsContent>
 
                 <TabsContent value="ernaehrung" className="space-y-6">
@@ -1049,22 +1076,6 @@ export function ProfilePageClient({
                     )}
                   </SummaryField>
 
-                  {activeEditor === "ernaehrung" ? (
-                    <EditorPanel
-                      title="Ernährung & Allergien bearbeiten"
-                      description="Pflege Ernährungsstil und medizinische Hinweise."
-                      onClose={closeEditor}
-                    >
-                      <ProfileDietaryPreferences
-                        initialPreference={preferenceState}
-                        initialAllergies={allergyState}
-                        onDietaryChange={({ preference, allergies: nextAllergies }) => {
-                          setPreferenceState(preference);
-                          setAllergyState(nextAllergies);
-                        }}
-                      />
-                    </EditorPanel>
-                  ) : null}
                 </TabsContent>
 
                 {canManageMeasurements ? (
@@ -1130,20 +1141,6 @@ export function ProfilePageClient({
                       </p>
                     ) : null}
 
-                    {activeEditor === "masse" ? (
-                      <EditorPanel
-                        title="Maße & Kostümplanung"
-                        description="Erfasse oder aktualisiere deine Körpermaße."
-                        onClose={closeEditor}
-                      >
-                        <MemberMeasurementsManager
-                          initialMeasurements={measurementEntries}
-                          onMeasurementsChange={(entries) =>
-                            setMeasurementState(sortMeasurements(entries))
-                          }
-                        />
-                      </EditorPanel>
-                    ) : null}
                   </TabsContent>
                 ) : null}
 
@@ -1158,15 +1155,6 @@ export function ProfilePageClient({
                     </span>
                   </SummaryField>
 
-                  {activeEditor === "interessen" ? (
-                    <EditorPanel
-                      title="Interessen & Engagement"
-                      description="Pflege Schlagworte, um passende Aufgaben zu finden."
-                      onClose={closeEditor}
-                    >
-                      <ProfileInterestsCard />
-                    </EditorPanel>
-                  ) : null}
                 </TabsContent>
 
                 <TabsContent value="freigaben" className="space-y-6">
@@ -1246,21 +1234,37 @@ export function ProfilePageClient({
                     </SummaryField>
                   ) : null}
 
-                  {activeEditor === "freigaben" ? (
-                    <EditorPanel
-                      title="Freigaben & Fotoeinverständnis"
-                      description="Verwalte Einverständnisse und lade Dokumente hoch."
-                      onClose={closeEditor}
-                    >
-                      <PhotoConsentCard onSummaryChange={handlePhotoSummaryChange} />
-                    </EditorPanel>
-                  ) : null}
                 </TabsContent>
               </div>
             </Tabs>
           </section>
         </div>
       </div>
+      <Dialog
+        open={!!editorDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeEditor();
+          }
+        }}
+      >
+        {editorDialog ? (
+          <DialogContent
+            className={cn(
+              "max-h-[90vh] overflow-y-auto sm:max-w-3xl",
+              editorDialog.size === "wide" && "sm:max-w-4xl",
+            )}
+          >
+            <DialogHeader>
+              <DialogTitle>{editorDialog.title}</DialogTitle>
+              {editorDialog.description ? (
+                <DialogDescription>{editorDialog.description}</DialogDescription>
+              ) : null}
+            </DialogHeader>
+            <div className="space-y-6">{editorDialog.content}</div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </ProfileCompletionProvider>
   );
 }
