@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { Loader2, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentAdminEntry } from "@/types/photo-consent";
 
@@ -29,6 +31,8 @@ type ProcessedEntry = PhotoConsentAdminEntry & { status: "approved" | "rejected"
 
 type ActionHandler = (id: string, action: PhotoConsentAction) => void | Promise<void>;
 
+type StatusFilter = "all" | PhotoConsentAdminEntry["status"];
+
 const pendingHighlightClasses: Record<PendingEntry["status"], string> = {
   pending:
     "border-l-4 border-amber-400/80 bg-amber-400/10 dark:border-amber-300/60 dark:bg-amber-400/15",
@@ -45,6 +49,13 @@ const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+
+const STATUS_FILTERS: Array<{ value: StatusFilter; label: string }> = [
+  { value: "all", label: "Alle" },
+  { value: "pending", label: "Offen" },
+  { value: "approved", label: "Freigegeben" },
+  { value: "rejected", label: "Abgelehnt" },
+];
 
 function formatWithFormatter(
   value: string | null | undefined,
@@ -103,6 +114,8 @@ export function PhotoConsentAdminPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,9 +139,53 @@ export function PhotoConsentAdminPanel() {
     void load();
   }, [load]);
 
-  const pendingEntries = useMemo(() => entries.filter(isPendingEntry), [entries]);
-  const processedEntries = useMemo(() => entries.filter(isProcessedEntry), [entries]);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const allPendingEntries = useMemo(() => entries.filter(isPendingEntry), [entries]);
+  const allProcessedEntries = useMemo(() => entries.filter(isProcessedEntry), [entries]);
+
+  const filteredEntries = useMemo(() => {
+    return entries.filter((entry) => {
+      if (statusFilter !== "all" && entry.status !== statusFilter) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const parts: string[] = [
+        entry.name ?? "",
+        entry.email ?? "",
+        entry.approvedByName ?? "",
+        entry.documentName ?? "",
+        entry.rejectionReason ?? "",
+        entry.userId,
+        entry.submittedAt,
+        entry.updatedAt,
+        entry.approvedAt ?? "",
+        entry.dateOfBirth ?? "",
+      ];
+
+      if (entry.age !== null && entry.age !== undefined) {
+        parts.push(String(entry.age));
+      }
+
+      const formattedBirthDate = formatDate(entry.dateOfBirth);
+      if (formattedBirthDate) {
+        parts.push(formattedBirthDate);
+      }
+
+      const haystack = parts.join(" ").toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
+  }, [entries, normalizedSearch, statusFilter]);
+
+  const pendingEntries = useMemo(() => filteredEntries.filter(isPendingEntry), [filteredEntries]);
+  const processedEntries = useMemo(() => filteredEntries.filter(isProcessedEntry), [filteredEntries]);
+
   const hasEntries = entries.length > 0;
+  const hasFilteredEntries = filteredEntries.length > 0;
 
   const handleAction = useCallback(
     async (id: string, action: PhotoConsentAction) => {
@@ -178,10 +235,10 @@ export function PhotoConsentAdminPanel() {
   );
 
   const summary = useMemo(() => {
-    const rejected = processedEntries.filter((entry) => entry.status === "rejected").length;
+    const rejected = allProcessedEntries.filter((entry) => entry.status === "rejected").length;
     const missingBirthdays = entries.filter((entry) => entry.requiresDateOfBirth).length;
-    return { pending: pendingEntries.length, rejected, missingBirthdays };
-  }, [entries, pendingEntries, processedEntries]);
+    return { pending: allPendingEntries.length, rejected, missingBirthdays };
+  }, [allPendingEntries, allProcessedEntries, entries]);
 
   return (
     <Card className="border border-border/70 bg-background">
@@ -198,72 +255,124 @@ export function PhotoConsentAdminPanel() {
           <Badge variant="destructive">Abgelehnt: {summary.rejected}</Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button type="button" size="sm" variant="outline" onClick={() => void load()} disabled={loading}>
-            Aktualisieren
-          </Button>
+      <CardContent className="space-y-6">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Nach Namen, E-Mail oder Details suchen"
+                aria-label="Fotoeinverständnisse durchsuchen"
+                className="pl-9"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {STATUS_FILTERS.map((filter) => (
+                <Button
+                  key={filter.value}
+                  type="button"
+                  size="sm"
+                  variant={statusFilter === filter.value ? "default" : "outline"}
+                  onClick={() => setStatusFilter(filter.value)}
+                  className={cn(
+                    "transition-shadow",
+                    statusFilter === filter.value ? "shadow-sm" : undefined,
+                  )}
+                >
+                  {filter.label}
+                </Button>
+              ))}
+            </div>
+          </div>
           {error && <span className="text-sm text-destructive">{error}</span>}
         </div>
 
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Lade Einträge …</p>
-        ) : !hasEntries ? (
-          <p className="text-sm text-muted-foreground">Bisher liegen keine Fotoeinverständnisse vor.</p>
-        ) : (
-          <div className="space-y-8">
-            {pendingEntries.length > 0 && (
+        <div>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Lade Einträge …</p>
+          ) : !hasEntries ? (
+            <p className="text-sm text-muted-foreground">Bisher liegen keine Fotoeinverständnisse vor.</p>
+          ) : !hasFilteredEntries ? (
+            <p className="text-sm text-muted-foreground">
+              Keine Fotoeinverständnisse entsprechen deiner Suche oder Filterung.
+            </p>
+          ) : (
+            <div className="space-y-8">
+              {pendingEntries.length > 0 && (
+                <section className="space-y-3">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">
+                      Offene Fotoeinverständnisse
+                    </h3>
+                    <p className="text-xs text-foreground/60">
+                      Diese Personen warten auf eine Entscheidung oder benötigen zusätzliche Unterlagen.
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {pendingEntries.map((entry) => (
+                      <PendingEntryCard
+                        key={entry.id}
+                        entry={entry}
+                        onAction={handleAction}
+                        processing={processing}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <section className="space-y-3">
                 <div className="space-y-1">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-                    Offene Fotoeinverständnisse
+                    Abgeschlossene Einträge
                   </h3>
                   <p className="text-xs text-foreground/60">
-                    Diese Personen warten auf eine Entscheidung oder benötigen zusätzliche Unterlagen.
+                    Kompakte Übersicht über freigegebene oder gesperrte Fotoeinverständnisse.
                   </p>
                 </div>
-                <div className="space-y-3">
-                  {pendingEntries.map((entry) => (
-                    <PendingEntryCard
-                      key={entry.id}
-                      entry={entry}
-                      onAction={handleAction}
-                      processing={processing}
-                    />
-                  ))}
-                </div>
+
+                {processedEntries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Noch keine freigegebenen oder abgelehnten Einverständnisse vorhanden.
+                  </p>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {processedEntries.map((entry) => (
+                      <ProcessedEntryCard
+                        key={entry.id}
+                        entry={entry}
+                        onAction={handleAction}
+                        processing={processing}
+                      />
+                    ))}
+                  </div>
+                )}
               </section>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 p-4 text-center shadow-sm">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void load()}
+            disabled={loading}
+            className="min-w-[10rem]"
+          >
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
             )}
-
-            <section className="space-y-3">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-                  Abgeschlossene Einträge
-                </h3>
-                <p className="text-xs text-foreground/60">
-                  Kompakte Übersicht über freigegebene oder gesperrte Fotoeinverständnisse.
-                </p>
-              </div>
-
-              {processedEntries.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Noch keine freigegebenen oder abgelehnten Einverständnisse vorhanden.
-                </p>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {processedEntries.map((entry) => (
-                    <ProcessedEntryCard
-                      key={entry.id}
-                      entry={entry}
-                      onAction={handleAction}
-                      processing={processing}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-        )}
+            {loading ? "Aktualisiere …" : "Aktualisieren"}
+          </Button>
+          <p className="mt-2 text-xs text-primary/80">
+            Synchronisiere neue Einreichungen oder aktualisierte Entscheidungen.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
