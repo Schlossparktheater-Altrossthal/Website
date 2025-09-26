@@ -18,7 +18,15 @@ import {
 import { de } from "date-fns/locale/de";
 import { ArrowRightLeft, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
 import { combineNameParts } from "@/lib/names";
@@ -48,6 +56,13 @@ export type OverviewMember = {
 type PreparedMember = OverviewMember & {
   displayName: string;
   blockedMap: Map<string, BlockedDay>;
+};
+
+type SelectedBlockedDay = {
+  member: PreparedMember;
+  entry: BlockedDay;
+  date: Date;
+  holidayEntries: HolidayRange[];
 };
 
 function prepareMembers(members: OverviewMember[]): PreparedMember[] {
@@ -160,6 +175,8 @@ export function BlockOverview({
   exceptionWeekdays?: number[];
 }) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedBlockedDay, setSelectedBlockedDay] = useState<SelectedBlockedDay | null>(null);
 
   const daysInView = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
@@ -338,12 +355,12 @@ export function BlockOverview({
       <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-muted-foreground lg:max-w-xl">
-            Tippe oder fahre über die Tageszellen, um Gründe und Ferieninfos zu sehen. Gesperrte Tage leuchten warm, eingeschränkte Slots schimmern in bernsteinfarbenen Tönen, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription} {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
+            Klicke oder tippe auf rot markierte Sperrtage, um Hintergründe und Ferieninfos zu lesen. Gesperrte Tage erscheinen kompakt in Rot, eingeschränkte Slots schimmern in bernsteinfarbenen Tönen, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription} {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <LegendItem
               label="Gesperrt"
-              description="Eingetragene Abwesenheiten"
+              description="Eingetragene Abwesenheiten – Details per Klick"
               className="border-destructive/60 bg-destructive/20 text-destructive"
             />
             <LegendItem
@@ -511,6 +528,17 @@ export function BlockOverview({
                         }
                       }
 
+                      const openDetails = () => {
+                        if (!entry || !isBlocked) return;
+                        setSelectedBlockedDay({
+                          member,
+                          entry,
+                          date: day,
+                          holidayEntries,
+                        });
+                        setDetailsOpen(true);
+                      };
+
                       return (
                         <td
                           key={key}
@@ -521,52 +549,69 @@ export function BlockOverview({
                             isExceptionDay && !entry && "bg-primary/5 dark:bg-primary/15",
                           )}
                         >
-                          <div
-                            className={cn(
-                              "flex h-full min-h-[56px] flex-col items-center justify-center rounded-lg border border-transparent px-2 py-2 text-xs leading-5 transition-colors",
-                              isBlocked &&
-                                "border-destructive/60 bg-destructive/15 text-destructive",
-                              isLimited &&
-                                "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100",
-                              isPreferred &&
-                                "border-emerald-400/60 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100",
-                              !entry && isHoliday &&
-                                "border-sky-400/40 bg-sky-500/10 text-sky-900 dark:text-sky-100",
-                              !entry && !isHoliday &&
-                                "border-border/50 bg-muted/20 text-muted-foreground/80",
-                              !entry && !isHoliday && isPreferredDay &&
-                                "border-primary/40 bg-primary/10 text-primary/90 dark:border-primary/50 dark:bg-primary/20 dark:text-primary-foreground",
-                              !entry && !isHoliday && isExceptionDay &&
-                                "border-primary/25 bg-primary/5 text-primary/75 dark:border-primary/40 dark:bg-primary/15 dark:text-primary-foreground/80",
-                              isToday(day) && "ring-1 ring-primary/60",
-                              !isSameMonth(day, currentMonth) && "opacity-70",
-                            )}
-                            aria-label={label.join(". ")}
-                            title={label.join(". ")}
-                          >
-                            {entry ? (
-                              <>
-                                <span className="text-[11px] font-semibold uppercase tracking-wide">
-                                  {isPreferred ? "Bevorzugt" : isLimited ? "Eingeschränkt" : "Gesperrt"}
-                                </span>
-                                {entry.reason ? (
-                                  <span className="mt-1 line-clamp-2 text-[11px] leading-4">{entry.reason}</span>
-                                ) : (
-                                  <span className="mt-1 text-[11px] leading-4 text-muted-foreground/80">
-                                    {isPreferred ? "Ohne Angabe" : isLimited ? "Keine Details" : "Ohne Grund"}
+                          {isBlocked && entry ? (
+                            <button
+                              type="button"
+                              onClick={openDetails}
+                              className={cn(
+                                "flex h-full min-h-[56px] w-full flex-col items-center justify-center rounded-lg border border-destructive/70 bg-destructive/20 text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                isToday(day) && "ring-1 ring-primary/60",
+                                !isSameMonth(day, currentMonth) && "opacity-70",
+                              )}
+                              aria-label={[...label, "Details öffnen"].join(". ")}
+                              title={label.join(". ")}
+                            >
+                              <span className="flex h-10 w-full items-center justify-center">
+                                <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-destructive" />
+                              </span>
+                              <span className="sr-only">Sperrtermin öffnen</span>
+                            </button>
+                          ) : (
+                            <div
+                              className={cn(
+                                "flex h-full min-h-[56px] flex-col items-center justify-center rounded-lg border border-transparent px-2 py-2 text-xs leading-5 transition-colors",
+                                isLimited &&
+                                  "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100",
+                                isPreferred &&
+                                  "border-emerald-400/60 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100",
+                                !entry && isHoliday &&
+                                  "border-sky-400/40 bg-sky-500/10 text-sky-900 dark:text-sky-100",
+                                !entry && !isHoliday &&
+                                  "border-border/50 bg-muted/20 text-muted-foreground/80",
+                                !entry && !isHoliday && isPreferredDay &&
+                                  "border-primary/40 bg-primary/10 text-primary/90 dark:border-primary/50 dark:bg-primary/20 dark:text-primary-foreground",
+                                !entry && !isHoliday && isExceptionDay &&
+                                  "border-primary/25 bg-primary/5 text-primary/75 dark:border-primary/40 dark:bg-primary/15 dark:text-primary-foreground/80",
+                                isToday(day) && "ring-1 ring-primary/60",
+                                !isSameMonth(day, currentMonth) && "opacity-70",
+                              )}
+                              aria-label={label.join(". ")}
+                              title={label.join(". ")}
+                            >
+                              {entry ? (
+                                <>
+                                  <span className="text-[11px] font-semibold uppercase tracking-wide">
+                                    {isPreferred ? "Bevorzugt" : "Eingeschränkt"}
                                   </span>
-                                )}
-                              </>
-                            ) : isHoliday ? (
-                              <span className="sr-only">{holidayEntries[0]?.title ?? "Ferien"}</span>
-                            ) : isPreferredDay ? (
-                              <span className="sr-only">Bevorzugter Probentag</span>
-                            ) : isExceptionDay ? (
-                              <span className="sr-only">Ausnahmeprobentag</span>
-                            ) : (
-                              <span className="text-xs font-medium leading-5 text-muted-foreground/80">Frei</span>
-                            )}
-                          </div>
+                                  {entry.reason ? (
+                                    <span className="mt-1 line-clamp-2 text-[11px] leading-4">{entry.reason}</span>
+                                  ) : (
+                                    <span className="mt-1 text-[11px] leading-4 text-muted-foreground/80">
+                                      {isPreferred ? "Ohne Angabe" : "Keine Details"}
+                                    </span>
+                                  )}
+                                </>
+                              ) : isHoliday ? (
+                                <span className="sr-only">{holidayEntries[0]?.title ?? "Ferien"}</span>
+                              ) : isPreferredDay ? (
+                                <span className="sr-only">Bevorzugter Probentag</span>
+                              ) : isExceptionDay ? (
+                                <span className="sr-only">Ausnahmeprobentag</span>
+                              ) : (
+                                <span className="text-xs font-medium leading-5 text-muted-foreground/80">Frei</span>
+                              )}
+                            </div>
+                          )}
                         </td>
                       );
                     })}
@@ -636,42 +681,75 @@ export function BlockOverview({
                       label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`);
                     }
 
+                    const openDetails = () => {
+                      if (!entry || !isBlocked) return;
+                      setSelectedBlockedDay({
+                        member,
+                        entry,
+                        date: day,
+                        holidayEntries,
+                      });
+                      setDetailsOpen(true);
+                    };
+
                     return (
-                      <div
-                        key={key}
-                        className={cn(
-                          "flex min-w-[64px] shrink-0 snap-center flex-col items-center rounded-2xl border border-border/50 px-2 py-2 text-center text-xs leading-5 shadow-sm",
-                          isBlocked && "border-destructive/60 bg-destructive/15 text-destructive",
-                          isLimited &&
-                            "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100",
-                          isPreferred && "border-emerald-400/50 bg-emerald-500/15 text-emerald-700 dark:text-emerald-100",
-                          !entry && isHoliday && "border-sky-400/40 bg-sky-500/15 text-sky-800 dark:text-sky-100",
-                          !entry && !isHoliday && "bg-muted/30 text-muted-foreground",
-                          isToday(day) && "ring-2 ring-primary/70",
-                        )}
-                        aria-label={label.join(". ")}
-                        title={
-                          entry
-                            ? entry.reason ?? (isPreferred ? "Bevorzugt" : isLimited ? "Eingeschränkt" : "Gesperrt")
-                            : isHoliday
-                              ? holidayEntries[0]?.title ?? "Ferien"
-                              : "Frei"
-                        }
-                      >
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground/90">
-                          {format(day, "EE", { locale: de })}
-                        </span>
-                        <span className="text-sm font-semibold">
-                          {format(day, "d", { locale: de })}
-                        </span>
-                        {entry ? (
-                          <span className="mt-1 line-clamp-2 text-xs leading-4">
-                            {entry.reason ?? (isPreferred ? "Ohne Angabe" : isLimited ? "Eingeschränkt" : "Gesperrt")}
-                          </span>
-                        ) : isHoliday ? (
-                          <span className="mt-1 line-clamp-2 text-xs leading-4">{holidayEntries[0]?.title}</span>
+                      <div key={key} className="min-w-[64px] shrink-0 snap-center">
+                        {isBlocked && entry ? (
+                          <button
+                            type="button"
+                            onClick={openDetails}
+                            className={cn(
+                              "flex h-full w-full flex-col items-center rounded-2xl border border-destructive/70 bg-destructive/20 px-2 py-2 text-center text-xs leading-5 text-destructive shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                              isToday(day) && "ring-2 ring-primary/70",
+                            )}
+                            aria-label={[...label, "Details öffnen"].join(". ")}
+                            title={label.join(". ")}
+                          >
+                            <span className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                              {format(day, "EE", { locale: de })}
+                            </span>
+                            <span className="text-sm font-semibold">{format(day, "d", { locale: de })}</span>
+                            <span className="mt-2 flex h-8 w-full items-center justify-center">
+                              <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-destructive" />
+                            </span>
+                            <span className="sr-only">Sperrtermin öffnen</span>
+                          </button>
                         ) : (
-                          <span className="mt-1 text-xs leading-4 text-muted-foreground">frei</span>
+                          <div
+                            className={cn(
+                              "flex h-full flex-col items-center rounded-2xl border border-border/50 px-2 py-2 text-center text-xs leading-5 shadow-sm",
+                              isLimited &&
+                                "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100",
+                              isPreferred && "border-emerald-400/50 bg-emerald-500/15 text-emerald-700 dark:text-emerald-100",
+                              !entry && isHoliday && "border-sky-400/40 bg-sky-500/15 text-sky-800 dark:text-sky-100",
+                              !entry && !isHoliday && "bg-muted/30 text-muted-foreground",
+                              isToday(day) && "ring-2 ring-primary/70",
+                            )}
+                            aria-label={label.join(". ")}
+                            title={
+                              entry
+                                ? entry.reason ?? (isPreferred ? "Bevorzugt" : "Eingeschränkt")
+                                : isHoliday
+                                  ? holidayEntries[0]?.title ?? "Ferien"
+                                  : "Frei"
+                            }
+                          >
+                            <span className="text-xs uppercase tracking-wide text-muted-foreground/90">
+                              {format(day, "EE", { locale: de })}
+                            </span>
+                            <span className="text-sm font-semibold">
+                              {format(day, "d", { locale: de })}
+                            </span>
+                            {entry ? (
+                              <span className="mt-1 line-clamp-2 text-xs leading-4">
+                                {entry.reason ?? (isPreferred ? "Ohne Angabe" : "Eingeschränkt")}
+                              </span>
+                            ) : isHoliday ? (
+                              <span className="mt-1 line-clamp-2 text-xs leading-4">{holidayEntries[0]?.title}</span>
+                            ) : (
+                              <span className="mt-1 text-xs leading-4 text-muted-foreground">frei</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
@@ -686,6 +764,56 @@ export function BlockOverview({
           );
         })}
       </div>
+      <Dialog
+        open={detailsOpen}
+        onOpenChange={(open) => {
+          setDetailsOpen(open);
+          if (!open) {
+            setSelectedBlockedDay(null);
+          }
+        }}
+      >
+        <DialogContent aria-describedby="blocked-day-details">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedBlockedDay
+                ? format(selectedBlockedDay.date, "EEEE, d. MMMM yyyy", { locale: de })
+                : "Sperrtermin"}
+            </DialogTitle>
+            {selectedBlockedDay ? (
+              <DialogDescription>
+                Sperrtermin von {selectedBlockedDay.member.displayName}
+              </DialogDescription>
+            ) : null}
+          </DialogHeader>
+          {selectedBlockedDay ? (
+            <div className="space-y-4" id="blocked-day-details">
+              <div className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Grund
+                </span>
+                <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm leading-6 text-muted-foreground/90">
+                  {selectedBlockedDay.entry.reason?.trim() || "Kein Grund hinterlegt."}
+                </p>
+              </div>
+              {selectedBlockedDay.holidayEntries.length ? (
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Ferien am Tag
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBlockedDay.holidayEntries.map((holiday) => (
+                      <Badge key={holiday.id} variant="info">
+                        {holiday.title}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
