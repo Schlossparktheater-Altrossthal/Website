@@ -218,7 +218,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       errorCorrectionLevel: "H",
     });
     const qrModuleCount = qrData.modules.size;
-    const qrQuietZone = 2;
+    const qrQuietZone = 4;
     const qrTargetSize = Math.min(availableWidth, 192);
     const qrModuleSize = qrTargetSize / (qrModuleCount + qrQuietZone * 2);
     const qrSize = qrModuleSize * (qrModuleCount + qrQuietZone * 2);
@@ -227,7 +227,6 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     const qrContentX = qrX + qrQuietZone * qrModuleSize;
     const qrContentY = qrY + qrQuietZone * qrModuleSize;
 
-    const moduleRadius = Math.min(qrModuleSize * 0.45, 3.5);
     const finderSize = 7;
     const finderOffsets = [
       { row: 0, col: 0 },
@@ -289,12 +288,8 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.roundedRect(qrX, qrY, qrSize, qrSize, 16).fill("#ffffff");
     doc.restore();
 
-    const moduleGradient = doc
-      .linearGradient(qrContentX, qrContentY, qrContentX + qrSize - qrQuietZone * qrModuleSize * 2, qrContentY + qrSize)
-      .stop(0, palette.qrGradientStart)
-      .stop(1, palette.qrGradientEnd);
-
     doc.save();
+    doc.fillColor(palette.qrModulePrimary);
     for (let row = 0; row < qrModuleCount; row += 1) {
       for (let col = 0; col < qrModuleCount; col += 1) {
         if (!qrData.modules.get(row, col) || isFinderModule(row, col)) {
@@ -304,7 +299,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
         const moduleX = qrContentX + col * qrModuleSize;
         const moduleY = qrContentY + row * qrModuleSize;
 
-        doc.roundedRect(moduleX, moduleY, qrModuleSize, qrModuleSize, moduleRadius).fill(moduleGradient);
+        doc.rect(moduleX, moduleY, qrModuleSize, qrModuleSize).fill();
       }
     }
     doc.restore();
@@ -316,34 +311,18 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       const finderInnerDimension = (finderSize - 2) * qrModuleSize;
       const finderCoreDimension = (finderSize - 4) * qrModuleSize;
 
-      const finderGradient = doc
-        .linearGradient(finderX, finderY, finderX + finderDimension, finderY + finderDimension)
-        .stop(0, palette.qrFinderOuter)
-        .stop(1, palette.qrFinderInner);
+      doc
+        .rect(finderX, finderY, finderDimension, finderDimension)
+        .fillColor(palette.qrFinderOuter)
+        .fill();
 
       doc
-        .roundedRect(finderX, finderY, finderDimension, finderDimension, moduleRadius * 2)
-        .fill(finderGradient);
-
-      doc
-        .roundedRect(
-          finderX + qrModuleSize,
-          finderY + qrModuleSize,
-          finderInnerDimension,
-          finderInnerDimension,
-          moduleRadius * 1.6,
-        )
+        .rect(finderX + qrModuleSize, finderY + qrModuleSize, finderInnerDimension, finderInnerDimension)
         .fillColor(palette.qrModuleSecondary)
         .fill();
 
       doc
-        .roundedRect(
-          finderX + qrModuleSize * 2,
-          finderY + qrModuleSize * 2,
-          finderCoreDimension,
-          finderCoreDimension,
-          moduleRadius,
-        )
+        .rect(finderX + qrModuleSize * 2, finderY + qrModuleSize * 2, finderCoreDimension, finderCoreDimension)
         .fillColor(palette.qrFinderCore)
         .fill();
     }
