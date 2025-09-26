@@ -242,7 +242,7 @@ const credentialsProvider = Credentials({
   },
 });
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   adapter: PrismaAdapter(prisma),
   useSecureCookies,
   // Use JWT sessions for reliability in dev (works with Credentials + Email).
@@ -411,5 +411,7 @@ export const authOptions: NextAuthOptions = {
       });
     },
   },
-  secret: getAuthSecret(),
-};
+  get secret() {
+    return getAuthSecret();
+  },
+} satisfies NextAuthOptions;
