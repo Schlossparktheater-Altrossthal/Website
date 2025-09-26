@@ -1,0 +1,41 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+
+import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+
+  const profiles = await prisma.memberOnboardingProfile.findMany({
+    select: { backgroundClass: true },
+    where: { backgroundClass: { not: null } },
+  });
+
+  const counts = new Map<string, { name: string; count: number }>();
+
+  for (const entry of profiles) {
+    const raw = entry.backgroundClass ?? "";
+    const normalized = raw.replace(/\s+/g, " ").trim();
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    const existing = counts.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      counts.set(key, { name: normalized, count: 1 });
+    }
+  }
+
+  const classes = Array.from(counts.values())
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.name.localeCompare(b.name, "de");
+    })
+    .slice(0, 20);
+
+  return NextResponse.json({ classes });
+}

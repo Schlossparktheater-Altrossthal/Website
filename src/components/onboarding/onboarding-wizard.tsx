@@ -377,6 +377,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(
     () => [...BASE_BACKGROUND_SUGGESTIONS],
   );
+  const [backgroundClassSuggestions, setBackgroundClassSuggestions] = useState<string[]>([]);
   const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
@@ -489,10 +490,6 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
     [form.background],
   );
   const requiresBackgroundClass = activeBackgroundTag?.requiresClass ?? false;
-  const backgroundClassSuggestions = useMemo(
-    () => activeBackgroundTag?.getClassSuggestions?.() ?? [],
-    [activeBackgroundTag],
-  );
   const backgroundTagValueKeys = useMemo(
     () => new Set(BACKGROUND_TAGS.map((tag) => normalizeBackgroundLabel(tag.value))),
     [],
@@ -519,6 +516,46 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       return { ...prev, backgroundClass: "" };
     });
   }, [form.backgroundClass, requiresBackgroundClass]);
+
+  useEffect(() => {
+    if (!requiresBackgroundClass) {
+      setBackgroundClassSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    const loadBackgroundClasses = async () => {
+      try {
+        const response = await fetch("/api/onboarding/background-classes", { cache: "no-store" });
+        const data = await response.json().catch(() => null);
+        if (cancelled || !Array.isArray(data?.classes)) return;
+        const entries = data.classes
+          .map((entry: unknown): string | null => {
+            if (typeof entry === "string") {
+              return entry.trim();
+            }
+            if (entry && typeof entry === "object") {
+              const record = entry as { name?: unknown };
+              if (typeof record.name === "string") {
+                return record.name.trim();
+              }
+            }
+            return null;
+          })
+          .filter((value: string | null): value is string => Boolean(value && value.length > 0));
+        const unique = Array.from(new Set<string>(entries));
+        if (cancelled) return;
+        setBackgroundClassSuggestions(unique);
+      } catch {
+        if (!cancelled) {
+          setBackgroundClassSuggestions([]);
+        }
+      }
+    };
+    void loadBackgroundClasses();
+    return () => {
+      cancelled = true;
+    };
+  }, [requiresBackgroundClass]);
 
   const genderLabel = useMemo(() => {
     if (form.genderOption === "custom") {
