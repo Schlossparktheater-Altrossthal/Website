@@ -2230,7 +2230,8 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
           <CardHeader>
             <CardTitle>Gibt es noch etwas, das wir wissen sollten?</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Teile besondere Erfahrungen, Wünsche oder Hinweise – alles, was uns beim Kennenlernen helfen kann.
+              Teile besondere Erfahrungen, Wünsche oder Hinweise – alles, was uns beim Kennenlernen helfen kann. Auch Hinweise
+              auf Krankheiten oder gesundheitliche Besonderheiten kannst du hier ergänzen.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -2238,7 +2239,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
               <Textarea
                 value={form.notes}
                 onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-                placeholder="Optional: Besondere Erfahrungen, Wünsche oder Hinweise für das Team"
+                placeholder="Optional: Besondere Erfahrungen, Wünsche oder Hinweise – inkl. gesundheitlicher Besonderheiten"
                 className="min-h-[120px]"
                 maxLength={1000}
                 aria-label="Gibt es noch etwas, das wir wissen sollten?"
