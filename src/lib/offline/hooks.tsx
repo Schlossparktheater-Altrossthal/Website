@@ -56,13 +56,19 @@ async function refreshScopeFromDb(scope: OfflineScope) {
 
 export function OfflineSyncStatusProvider({
   children,
+  authToken,
 }: {
   children: React.ReactNode;
+  authToken?: string | null;
 }) {
   const storage = useOfflineStorage();
   const isReady = storage.isSupported && storage.isReady;
-  const [client] = React.useState(() => new SyncClient());
+  const [client] = React.useState(() => new SyncClient(fetch, authToken ?? null));
   const [scopes, setScopes] = React.useState(createInitialScopeState);
+
+  React.useEffect(() => {
+    client.setAuthToken(authToken ?? null);
+  }, [authToken, client]);
 
   const updateScope = React.useCallback(
     (scope: OfflineScope, updater: (state: SyncScopeState) => SyncScopeState) => {

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const authResult = await authenticateSyncRequest(parsed.data.scope);
+  const authResult = await authenticateSyncRequest(request, parsed.data.scope);
   if (authResult.kind === "error") {
     return authResult.response;
   }

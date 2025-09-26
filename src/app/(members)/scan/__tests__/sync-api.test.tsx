@@ -1,6 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+const originalAuthSecret = process.env.AUTH_SECRET;
+process.env.AUTH_SECRET = "test-sync-secret";
+
+const { createSyncToken } = await import("@/lib/sync/tokens");
+
 const getServerSessionMock = vi.fn(async () => ({ user: { id: "user-1", isDeactivated: false } }));
 const allowedPermissions = new Set<string>();
 const hasPermissionMock = vi.fn(async (_user: unknown, key: string) => allowedPermissions.has(key));
@@ -70,6 +75,17 @@ const fakeDb: {
 };
 
 let serverSeqCounter = 0;
+let syncToken: string;
+
+function createSyncRequest(url: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers as HeadersInit | undefined);
+
+  if (syncToken) {
+    headers.set("X-Sync-Token", syncToken);
+  }
+
+  return new Request(url, { ...init, headers });
+}
 
 function normalizeScope(value: unknown): SyncScopeValue {
   if (value === "inventory") {
@@ -665,20 +681,52 @@ beforeEach(() => {
   hasPermissionMock.mockImplementation(async (_user: unknown, key: string) =>
     allowedPermissions.has(key),
   );
+  syncToken = createSyncToken("user-1");
+});
+
+afterAll(() => {
+  if (typeof originalAuthSecret === "undefined") {
+    delete process.env.AUTH_SECRET;
+  } else {
+    process.env.AUTH_SECRET = originalAuthSecret;
+  }
 });
 
 describe("sync API integration", () => {
   test("rejects unauthenticated baseline requests", async () => {
     getServerSessionMock.mockResolvedValueOnce(null);
 
-    const request = new Request("http://localhost/api/sync/initial?scope=inventory");
+    const request = createSyncRequest("http://localhost/api/sync/initial?scope=inventory");
     const response = await initialRoute(request);
 
     expect(response.status).toBe(401);
   });
 
+  test("rejects sync baseline when sync token header is missing", async () => {
+    allowedPermissions.add("mitglieder.scan");
+
+    const request = new Request("http://localhost/api/sync/initial?scope=tickets");
+    const response = await initialRoute(request);
+
+    expect(response.status).toBe(401);
+  });
+
+  test("rejects sync pull with mismatched token user", async () => {
+    allowedPermissions.add("mitglieder.scan");
+    syncToken = createSyncToken("user-2");
+
+    const request = createSyncRequest("http://localhost/api/sync/pull", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope: "tickets", lastServerSeq: 0 }),
+    });
+
+    const response = await pullRoute(request);
+    expect(response.status).toBe(403);
+  });
+
   test("rejects sync pull without scanner permission", async () => {
-    const request = new Request("http://localhost/api/sync/pull", {
+    const request = createSyncRequest("http://localhost/api/sync/pull", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scope: "tickets", lastServerSeq: 0 }),
@@ -691,7 +739,7 @@ describe("sync API integration", () => {
   test("rejects inventory baseline when inventory permissions are missing", async () => {
     allowedPermissions.add("mitglieder.scan");
 
-    const request = new Request("http://localhost/api/sync/initial?scope=inventory");
+    const request = createSyncRequest("http://localhost/api/sync/initial?scope=inventory");
     const response = await initialRoute(request);
 
     expect(response.status).toBe(403);
@@ -709,7 +757,7 @@ describe("sync API integration", () => {
       ],
     });
 
-    const request = new Request(
+    const request = createSyncRequest(
       "http://localhost/api/sync/initial?scope=inventory&limit=2",
     );
 
@@ -767,7 +815,7 @@ describe("sync API integration", () => {
       },
     });
 
-    const pullRequest = new Request("http://localhost/api/sync/pull", {
+    const pullRequest = createSyncRequest("http://localhost/api/sync/pull", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scope: "tickets", lastServerSeq: 0, limit: 10 }),
@@ -824,7 +872,7 @@ describe("sync API integration", () => {
       },
     });
 
-    const pushRequest = new Request("http://localhost/api/sync/push", {
+    const pushRequest = createSyncRequest("http://localhost/api/sync/push", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -837,14 +885,28 @@ describe("sync API integration", () => {
             id: "evt-new",
             dedupeKey: "ticket:T-2",
             type: "ticket.checkin",
-            payload: { ticketId: "T-2", status: "checked_in" },
+            payload: {
+              ticketId: "T-2",
+              code: "CODE-T-2",
+              eventId: "event-1",
+              status: "checked_in",
+              attemptedAt: "2025-01-10T10:00:00.000Z",
+              source: "scanner",
+            },
             occurredAt: "2025-01-10T10:00:00.000Z",
           },
           {
             id: "evt-duplicate",
             dedupeKey: "ticket:T-1",
             type: "ticket.checkin",
-            payload: { ticketId: "T-1", status: "checked_in" },
+            payload: {
+              ticketId: "T-1",
+              code: "CODE-T-1",
+              eventId: "event-1",
+              status: "checked_in",
+              attemptedAt: "2025-01-10T10:05:00.000Z",
+              source: "scanner",
+            },
             occurredAt: "2025-01-10T10:05:00.000Z",
           },
         ],
@@ -862,5 +924,34 @@ describe("sync API integration", () => {
     ]);
     expect(payload.events).toHaveLength(1);
     expect(payload.events[0]).toMatchObject({ id: "evt-new", dedupeKey: "ticket:T-2" });
+  });
+
+  test("rejects incoming events with invalid payload structure", async () => {
+    allowedPermissions.add("mitglieder.scan");
+
+    const request = createSyncRequest("http://localhost/api/sync/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scope: "tickets",
+        clientId: "scanner-error",
+        clientMutationId: "invalid-1",
+        lastKnownServerSeq: 0,
+        events: [
+          {
+            type: "ticket.checkin",
+            occurredAt: new Date("2025-01-10T11:00:00.000Z").toISOString(),
+            payload: { status: "checked_in" },
+          },
+        ],
+      }),
+    });
+
+    const response = await pushRoute(request);
+    expect(response.status).toBe(400);
+
+    const body = await response.json();
+    expect(body).toMatchObject({ error: "Invalid ticket event payload" });
+    expect(Array.isArray(body.issues)).toBe(true);
   });
 });

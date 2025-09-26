@@ -205,9 +205,16 @@ export class SyncClient {
   private backgroundSyncPromise: Promise<void> | null = null;
   private serviceWorkerMessageHandler: ((event: MessageEvent) => void) | null = null;
 
-  constructor(fetcher: typeof fetch = fetch) {
+  private authToken: string | null;
+
+  constructor(fetcher: typeof fetch = fetch, authToken?: string | null) {
     this.fetcher = fetcher;
+    this.authToken = authToken ?? null;
     this.initializeBackgroundSyncBridge();
+  }
+
+  setAuthToken(token: string | null): void {
+    this.authToken = token ?? null;
   }
 
   private initializeBackgroundSyncBridge() {
@@ -731,8 +738,19 @@ export class SyncClient {
         timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
 
       try {
+        if (!this.authToken) {
+          throw new SyncError(
+            "Sync authentication token is missing.",
+            "http",
+          );
+        }
+
+        const headers = new Headers(init.headers as HeadersInit | undefined);
+        headers.set("X-Sync-Token", this.authToken);
+
         const response = await this.fetcher(input, {
           ...init,
+          headers,
           signal: controller.signal,
         });
 
@@ -741,6 +759,14 @@ export class SyncClient {
         }
 
         if (!response.ok && !accepted.has(response.status)) {
+          if (response.status === 401) {
+            throw new SyncError("Sync authentication failed. Please sign in again.", "http");
+          }
+
+          if (response.status === 403) {
+            throw new SyncError("Sync permission denied for offline synchronisation.", "http");
+          }
+
           if (this.shouldRetryStatus(response.status) && attempt < retries) {
             await this.delay(this.getBackoffDelay(attempt));
             attempt += 1;

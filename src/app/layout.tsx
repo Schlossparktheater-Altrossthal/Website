@@ -14,6 +14,8 @@ import {
 } from "@/lib/website-settings";
 import { cn } from "@/lib/utils";
 import { authOptions } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+import { createSyncToken } from "@/lib/sync/tokens";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
@@ -73,6 +75,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   let resolvedSettings = resolveWebsiteSettings(null);
 
+  let syncToken: string | null = null;
+
+  if (session?.user && !session.user.isDeactivated && typeof session.user.id === "string") {
+    try {
+      const canScan = await hasPermission(session.user, "mitglieder.scan");
+
+      if (canScan) {
+        syncToken = createSyncToken(session.user.id);
+      }
+    } catch (error) {
+      console.error("Failed to prepare sync token", error);
+    }
+  }
+
   if (process.env.DATABASE_URL) {
     try {
       const record = await readWebsiteSettings();
@@ -111,7 +127,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           "overflow-x-hidden",
         )}
       >
-        <Providers session={session}>
+        <Providers session={session} syncToken={syncToken}>
           <a
             href="#main"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-card/90 focus:px-3 focus:py-2"

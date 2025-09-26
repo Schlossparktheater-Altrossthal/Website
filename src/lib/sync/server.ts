@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
+import { z, type ZodIssue } from "zod";
+
 import type {
   InventoryItemRecord,
   OfflineScope,
@@ -76,6 +78,40 @@ export interface ApplyIncomingEventsInput {
   lastKnownServerSeq: number;
 }
 
+type NormalizedIncomingEvent = Required<IncomingEventInput>;
+
+const finiteNumber = z
+  .number()
+  .refine((value) => Number.isFinite(value), { message: "Value must be a finite number" });
+
+const inventoryEventPayloadSchema = z
+  .object({
+    itemId: z.string().min(1),
+    sku: z.string().min(1).optional(),
+    name: z.string().min(1).optional(),
+    delta: finiteNumber.refine((value) => Number.isInteger(value), {
+      message: "delta must be an integer",
+    }),
+    quantity: finiteNumber.refine((value) => Number.isInteger(value) && value >= 0, {
+      message: "quantity must be a non-negative integer",
+    }),
+    adjustedAt: z.string().datetime(),
+    source: z.string().min(1),
+    reason: z.string().min(1).optional(),
+  })
+  .strict();
+
+const ticketEventPayloadSchema = z
+  .object({
+    ticketId: z.string().min(1),
+    code: z.string().min(1),
+    eventId: z.string().min(1),
+    status: z.literal("checked_in"),
+    attemptedAt: z.string().datetime(),
+    source: z.string().min(1),
+  })
+  .strict();
+
 export interface SkippedIncomingEvent {
   id: string;
   dedupeKey?: string | null;
@@ -102,6 +138,13 @@ export type ApplyIncomingEventsResult =
       events: ServerSyncEvent[];
       mutation?: SyncMutation;
     };
+
+export class SyncEventValidationError extends Error {
+  constructor(message: string, public readonly issues: ZodIssue[]) {
+    super(message);
+    this.name = "SyncEventValidationError";
+  }
+}
 
 function getDb(client?: Prisma.TransactionClient): DbClient {
   return client ?? prisma;
@@ -310,7 +353,7 @@ export async function selectDeltas(
   };
 }
 
-function normalizeIncomingEvent(event: IncomingEventInput): Required<IncomingEventInput> {
+function normalizeIncomingEvent(event: IncomingEventInput): NormalizedIncomingEvent {
   const occurredAt = new Date(event.occurredAt);
 
   if (Number.isNaN(occurredAt.getTime())) {
@@ -323,7 +366,60 @@ function normalizeIncomingEvent(event: IncomingEventInput): Required<IncomingEve
     type: event.type,
     payload: event.payload,
     occurredAt: occurredAt.toISOString(),
-  } satisfies Required<IncomingEventInput>;
+  } satisfies NormalizedIncomingEvent;
+}
+
+function validateIncomingEventPayload(
+  scope: OfflineScope,
+  event: NormalizedIncomingEvent,
+): Record<string, unknown> {
+  if (scope === "inventory") {
+    if (event.type !== "inventory.adjustment") {
+      const issue: ZodIssue = {
+        code: z.ZodIssueCode.custom,
+        path: ["type"],
+        message: "Expected inventory.adjustment event type",
+      };
+
+      throw new SyncEventValidationError("Unsupported inventory event type", [issue]);
+    }
+
+    const result = inventoryEventPayloadSchema.safeParse(event.payload);
+
+    if (!result.success) {
+      throw new SyncEventValidationError("Invalid inventory event payload", result.error.issues);
+    }
+
+    return result.data;
+  }
+
+  if (scope === "tickets") {
+    if (event.type !== "ticket.checkin") {
+      const issue: ZodIssue = {
+        code: z.ZodIssueCode.custom,
+        path: ["type"],
+        message: "Expected ticket.checkin event type",
+      };
+
+      throw new SyncEventValidationError("Unsupported ticket event type", [issue]);
+    }
+
+    const result = ticketEventPayloadSchema.safeParse(event.payload);
+
+    if (!result.success) {
+      throw new SyncEventValidationError("Invalid ticket event payload", result.error.issues);
+    }
+
+    return result.data;
+  }
+
+  const issue: ZodIssue = {
+    code: z.ZodIssueCode.custom,
+    path: ["scope"],
+    message: `Unsupported scope ${scope}`,
+  };
+
+  throw new SyncEventValidationError("Unsupported sync scope", [issue]);
 }
 
 export async function applyIncomingEvents(
@@ -331,6 +427,10 @@ export async function applyIncomingEvents(
 ): Promise<ApplyIncomingEventsResult> {
   const normalizedScope = toSyncScope(payload.scope);
   const normalizedEvents = payload.events.map(normalizeIncomingEvent);
+  const validatedEvents = normalizedEvents.map((event) => ({
+    ...event,
+    payload: validateIncomingEventPayload(payload.scope, event),
+  } satisfies NormalizedIncomingEvent));
 
   return prisma.$transaction(async (tx) => {
     const currentSeq = await getLatestServerSeq(normalizedScope, tx);
@@ -361,8 +461,8 @@ export async function applyIncomingEvents(
       } satisfies ApplyIncomingEventsResult;
     }
 
-    const eventIds = normalizedEvents.map((event) => event.id);
-    const dedupeKeys = normalizedEvents
+    const eventIds = validatedEvents.map((event) => event.id);
+    const dedupeKeys = validatedEvents
       .map((event) => event.dedupeKey)
       .filter((key): key is string => typeof key === "string" && key.length > 0);
 
@@ -388,9 +488,9 @@ export async function applyIncomingEvents(
     const existingDedupeSet = new Set(existingDedupe.map((event) => event.dedupeKey).filter(Boolean));
 
     const skipped: SkippedIncomingEvent[] = [];
-    const filtered: Required<IncomingEventInput>[] = [];
+    const filtered: NormalizedIncomingEvent[] = [];
 
-    for (const event of normalizedEvents) {
+    for (const event of validatedEvents) {
       if (existingIdSet.has(event.id)) {
         skipped.push({ id: event.id, dedupeKey: event.dedupeKey, reason: "duplicate-id" });
         continue;

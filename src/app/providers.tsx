@@ -19,9 +19,11 @@ function WebVitalsInitializer({ analyticsSessionId }: { analyticsSessionId?: str
 export function Providers({
   children,
   session,
+  syncToken,
 }: {
   children: React.ReactNode;
   session?: Session | null;
+  syncToken?: string | null;
 }) {
   const [client] = React.useState(() => new QueryClient());
   return (
@@ -29,7 +31,7 @@ export function Providers({
       <WebVitalsInitializer analyticsSessionId={session?.analyticsSessionId ?? null} />
       <QueryClientProvider client={client}>
         <OfflineStorageProvider>
-          <OfflineSyncStatusProvider>
+          <OfflineSyncStatusProvider authToken={syncToken}>
             <PwaProvider>
               <RealtimeProvider>
                 <FrontendEditingProvider>

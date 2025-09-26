@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const authResult = await authenticateSyncRequest(parseResult.data.scope);
+  const authResult = await authenticateSyncRequest(request, parseResult.data.scope);
   if (authResult.kind === "error") {
     return authResult.response;
   }
