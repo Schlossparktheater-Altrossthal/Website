@@ -153,8 +153,18 @@ export default function SchulkatzePage() {
       </div>
 
       <section className="layout-container pb-12 pt-16 sm:pt-24">
-        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
-          <div className="max-w-3xl space-y-6">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-10">
+          <figure className="relative order-first mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg lg:order-2">
+            <SchulkatzeImageRotator
+              images={schulkatzeImages}
+              alt="Schulkatze Dennis Dieter von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
+            />
+            <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+              Dennis Dieter von Altroßthal ist seit 2024 Teil unserer Schulgemeinschaft.
+            </figcaption>
+          </figure>
+
+          <div className="max-w-3xl space-y-6 lg:order-1">
             <Text variant="eyebrow" uppercase tone="primary">
               Schulkultur
             </Text>
@@ -174,15 +184,6 @@ export default function SchulkatzePage() {
               wie Fürsorge und Rücksicht eine Gemeinschaft stärken – auch ohne feste Dienste oder eine eigene AG.
             </Text>
           </div>
-          <figure className="relative mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg">
-            <SchulkatzeImageRotator
-              images={schulkatzeImages}
-              alt="Schulkatze Dennis Dieter von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
-            />
-            <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-              Dennis Dieter von Altroßthal ist seit 2024 Teil unserer Schulgemeinschaft.
-            </figcaption>
-          </figure>
         </div>
       </section>
 
@@ -209,7 +210,7 @@ export default function SchulkatzePage() {
       </section>
 
       <section className="layout-container pb-16">
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1.15fr_0.85fr]">
           <Card className="h-full space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">

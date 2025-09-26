@@ -346,17 +346,17 @@ export default async function AboutPage() {
               Lass das Karussell auf dich wirken oder halte es an, indem du mit der Maus über die Karten fährst.
             </Text>
           </div>
-          <div className="group relative mt-8 overflow-hidden">
+          <div className="group relative mt-8 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-hidden sm:px-0">
             <div
-              className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background via-background/80 to-transparent"
+              className="pointer-events-none absolute inset-y-0 left-0 hidden w-12 bg-gradient-to-r from-background via-background/80 to-transparent sm:block"
               aria-hidden
             />
             <div
-              className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background via-background/80 to-transparent"
+              className="pointer-events-none absolute inset-y-0 right-0 hidden w-12 bg-gradient-to-l from-background via-background/80 to-transparent sm:block"
               aria-hidden
             />
             <div
-              className="flex w-max gap-6 px-6 py-6 animate-carousel group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused] motion-reduce:animate-none"
+              className="flex w-max gap-4 px-2 py-6 touch-pan-x snap-x snap-mandatory sm:gap-6 sm:px-6 sm:animate-carousel sm:touch-auto sm:snap-none group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused] motion-reduce:animate-none"
               role="list"
               aria-label="Gewerke des Ensembles"
               style={{ animationDuration: "75s" }}
@@ -368,7 +368,8 @@ export default async function AboutPage() {
                       key={`${title}-${groupIndex}`}
                       role={groupIndex === 0 ? "listitem" : "presentation"}
                       aria-hidden={groupIndex > 0}
-                      className="flex w-[min(22rem,80vw)] shrink-0 flex-col justify-between gap-4 rounded-2xl border-border/40 bg-card/70 p-6 shadow-lg"
+                      tabIndex={groupIndex === 0 ? 0 : -1}
+                      className="flex w-[min(18.5rem,80vw)] shrink-0 snap-center flex-col justify-between gap-4 rounded-2xl border-border/40 bg-card/70 p-6 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:w-[22rem] sm:snap-start"
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -390,7 +391,7 @@ export default async function AboutPage() {
             </div>
           </div>
           <Text variant="small" tone="muted" className="mt-4">
-            Tipp: Mit Tastaturfokus oder einem Fingertipp lässt sich das Karussell ebenfalls anhalten.
+            Tipp: Auf dem Handy kannst du die Karten seitlich wischen und in Ruhe lesen. Auf größeren Bildschirmen hält ein Mauszeiger die Rotation an.
           </Text>
         </div>
       </section>
