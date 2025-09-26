@@ -14,6 +14,7 @@ import { verifyPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
 import { ensureDevTestUser } from "@/lib/dev-auth";
 import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
+import { getAuthSecret } from "@/lib/auth-secret";
 
 type MutableToken = JWT & {
   id?: string;
@@ -410,5 +411,5 @@ export const authOptions: NextAuthOptions = {
       });
     },
   },
-  secret: process.env.AUTH_SECRET,
+  secret: getAuthSecret(),
 };
