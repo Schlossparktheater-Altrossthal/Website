@@ -161,20 +161,31 @@ type MetricItem = {
   tone: MetricTone;
 };
 
+const DASHBOARD_CARD_SURFACE =
+  "rounded-3xl border border-border/60 bg-gradient-to-br from-background via-background/95 to-background shadow-lg shadow-primary/5 backdrop-blur";
+
+const DASHBOARD_CARD_ACCENT =
+  "rounded-3xl border border-primary/45 bg-gradient-to-br from-primary/12 via-background/95 to-background shadow-xl shadow-primary/10 backdrop-blur";
+
 const METRIC_CARD_CLASSES: Record<MetricTone, string> = {
-  neutral: "border-border/60 bg-card shadow-sm",
-  accent: "border-primary/40 bg-primary/5 shadow-sm",
-  positive: "border-success/40 bg-success/10 shadow-sm",
-  warning: "border-warning/40 bg-warning/10 shadow-sm",
-  destructive: "border-destructive/40 bg-destructive/10 shadow-sm",
+  neutral:
+    "border-border/60 bg-gradient-to-br from-background via-background/95 to-background shadow-lg shadow-primary/5 backdrop-blur",
+  accent:
+    "border-primary/50 bg-gradient-to-br from-primary/18 via-primary/10 to-background shadow-xl shadow-primary/10 text-primary",
+  positive:
+    "border-success/50 bg-gradient-to-br from-success/18 via-success/10 to-background shadow-xl text-success",
+  warning:
+    "border-warning/50 bg-gradient-to-br from-warning/18 via-warning/10 to-background shadow-xl text-warning",
+  destructive:
+    "border-destructive/50 bg-gradient-to-br from-destructive/18 via-destructive/10 to-background shadow-xl text-destructive",
 };
 
 const METRIC_ICON_CLASSES: Record<MetricTone, string> = {
-  neutral: "border-border/50 bg-muted/10 text-muted-foreground",
-  accent: "border-primary/40 bg-primary/10 text-primary",
-  positive: "border-success/40 bg-success/10 text-success",
-  warning: "border-warning/40 bg-warning/10 text-warning",
-  destructive: "border-destructive/40 bg-destructive/10 text-destructive",
+  neutral: "border-border/50 bg-background/80 text-muted-foreground",
+  accent: "border-primary/40 bg-primary/15 text-primary",
+  positive: "border-success/45 bg-success/15 text-success",
+  warning: "border-warning/45 bg-warning/15 text-warning",
+  destructive: "border-destructive/45 bg-destructive/15 text-destructive",
 };
 
 interface MembersDashboardProps {
@@ -811,10 +822,14 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   }, [connectionStatus]);
 
   const connectionToneClasses: Record<"online" | "offline" | "warning" | "error", string> = {
-    online: "border-success/40 bg-success/10 text-success",
-    warning: "border-warning/40 bg-warning/10 text-warning",
-    error: "border-destructive/40 bg-destructive/10 text-destructive",
-    offline: "border-border/60 bg-muted/10 text-muted-foreground",
+    online:
+      "border-success/50 bg-gradient-to-r from-success/20 via-success/10 to-success/5 text-success",
+    warning:
+      "border-warning/50 bg-gradient-to-r from-warning/18 via-warning/10 to-warning/5 text-warning",
+    error:
+      "border-destructive/50 bg-gradient-to-r from-destructive/15 via-destructive/10 to-destructive/5 text-destructive",
+    offline:
+      "border-border/60 bg-gradient-to-r from-muted/20 via-background/85 to-background text-muted-foreground",
   };
   const connectionBadgeClass = connectionToneClasses[connectionMeta.state];
 
@@ -972,9 +987,9 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
     if (!profileCompletion.complete) {
       return (
-        <div className="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+        <div className="flex flex-col gap-3 rounded-2xl border border-warning/50 bg-gradient-to-br from-warning/20 via-warning/10 to-warning/5 p-4 text-sm text-warning">
           <div className="flex items-start gap-2">
-            <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-warning/50 bg-warning/15">
+            <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-warning/50 bg-warning/20">
               <CalendarRange className="h-4 w-4" />
             </div>
             <div className="space-y-1">
@@ -988,7 +1003,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             type="button"
             variant="outline"
             size="sm"
-            className="border-warning/40 text-warning hover:bg-warning/10"
+            className="border-warning/45 bg-gradient-to-r from-warning/20 via-warning/10 to-warning/5 text-warning transition hover:border-warning/60 hover:bg-warning/15"
             asChild
           >
             <Link href="/mitglieder/profil">Profil aktualisieren</Link>
@@ -998,8 +1013,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     }
 
     return (
-      <div className="flex items-start gap-3 rounded-2xl border border-success/40 bg-success/10 p-4 text-sm text-success">
-        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-success/50 bg-success/15">
+      <div className="flex items-start gap-3 rounded-2xl border border-success/50 bg-gradient-to-br from-success/20 via-success/10 to-success/5 p-4 text-sm text-success">
+        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-success/50 bg-success/20">
           <CheckCircle2 className="h-4 w-4" />
         </div>
         <div>
@@ -1135,8 +1150,16 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     }
 
     return (
-      <Card className="rounded-3xl border border-border/60 bg-card shadow-sm">
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <Card className={cn(DASHBOARD_CARD_SURFACE, "relative overflow-hidden")}>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-28 -top-16 h-48 w-48 rounded-full bg-primary/10 opacity-40 blur-3xl dark:bg-primary/20"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 bottom-0 h-44 w-44 rounded-full bg-amber-200/20 opacity-40 blur-3xl dark:bg-amber-500/20"
+        />
+        <CardHeader className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <CardTitle className="text-lg font-semibold">Aktive Produktion</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -1147,7 +1170,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             {statusBadgeLabel}
           </Badge>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="relative z-10 space-y-3">
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">{productionLabel}</p>
             <p className="text-xs text-muted-foreground">
@@ -1239,8 +1262,16 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       : null;
 
     return (
-      <Card className="rounded-3xl border border-border/60 bg-card shadow-sm">
-        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <Card className={cn(DASHBOARD_CARD_SURFACE, "relative overflow-hidden")}>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-28 top-0 h-48 w-48 rounded-full bg-primary/12 opacity-40 blur-3xl dark:bg-primary/20"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 bottom-0 h-44 w-44 rounded-full bg-emerald-200/20 opacity-40 blur-3xl dark:bg-emerald-500/20"
+        />
+        <CardHeader className="relative z-10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-lg">Dein Onboarding</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -1253,7 +1284,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           </div>
           {statusBadge}
         </CardHeader>
-        <CardContent className="space-y-4 text-sm">
+        <CardContent className="relative z-10 space-y-4 text-sm">
           <div className="space-y-2 rounded-xl border border-border/50 bg-muted/10 p-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Sparkles className="h-4 w-4 text-primary" />
@@ -1479,8 +1510,16 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
       <div className="space-y-10 pb-12">
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <Card className="rounded-3xl border border-border/60 bg-card shadow-sm">
-            <CardContent className="space-y-6 p-6">
+          <Card className={cn(DASHBOARD_CARD_ACCENT, "relative overflow-hidden")}>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -left-24 -top-24 h-48 w-48 rounded-full bg-primary/20 opacity-60 blur-3xl dark:bg-primary/30"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-24 bottom-0 h-44 w-44 rounded-full bg-emerald-300/25 opacity-70 blur-3xl dark:bg-emerald-500/20"
+            />
+            <CardContent className="relative z-10 space-y-6 p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/40 bg-primary/10 text-primary">
@@ -1494,7 +1533,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                   </div>
                 </div>
                 {onlineUsers.length ? (
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/10 px-3 py-1 text-xs text-muted-foreground">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-gradient-to-r from-muted/20 via-background/85 to-background px-3 py-1 text-xs text-muted-foreground backdrop-blur">
                     <Users className="h-3.5 w-3.5" />
                     <span>{numberFormatter.format(onlineUsers.length)} online</span>
                   </div>
@@ -1517,14 +1556,18 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               {profileReminder ? <div>{profileReminder}</div> : null}
             </CardContent>
           </Card>
-          <Card className="rounded-3xl border border-border/60 bg-card shadow-sm">
-            <CardHeader className="space-y-1 p-6 pb-4">
+          <Card className={cn(DASHBOARD_CARD_SURFACE, "relative overflow-hidden")}>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-24 top-1/2 h-44 w-44 -translate-y-1/2 rounded-full bg-primary/10 opacity-60 blur-3xl dark:bg-primary/20"
+            />
+            <CardHeader className="relative z-10 space-y-1 p-6 pb-4">
               <CardTitle className="text-base font-semibold">Schnellaktionen</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Direkt zu den wichtigsten Bereichen springen.
               </p>
             </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <CardContent className="relative z-10 p-6 pt-0">
               {quickActions.length ? (
                 <div className="grid gap-2 sm:grid-cols-2">
                   {quickActions.map((link) => {
@@ -1533,10 +1576,14 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                       <Link
                         key={link.href}
                         href={link.href}
-                        className="group flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/10 px-3 py-3 text-sm font-medium transition hover:border-primary/40 hover:bg-primary/5"
+                        className="group relative flex items-center justify-between gap-3 overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-muted/20 via-background/90 to-background px-3 py-3 text-sm font-medium transition hover:border-primary/45 hover:bg-primary/5"
                       >
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-primary/10 opacity-0 transition duration-300 group-hover:opacity-80"
+                        />
                         <span className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-card text-muted-foreground transition group-hover:border-primary/40 group-hover:text-primary">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-background/80 text-muted-foreground transition group-hover:border-primary/45 group-hover:text-primary">
                             <Icon className="h-4 w-4" />
                           </span>
                           {link.label}
@@ -1591,16 +1638,20 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             {onboardingCard}
           </div>
           <div className="space-y-6">
-            <Card className="h-full rounded-3xl border border-border/60 bg-card shadow-sm">
-              <CardHeader className="space-y-1 pb-4">
+            <Card className={cn("relative h-full overflow-hidden", DASHBOARD_CARD_SURFACE)}>
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-24 top-0 h-40 w-40 rounded-full bg-success/15 opacity-40 blur-3xl dark:bg-success/25"
+              />
+              <CardHeader className="relative z-10 space-y-1 pb-4">
                 <CardTitle>Aktive Mitglieder</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
                 </p>
               </CardHeader>
-              <CardContent className="flex h-full flex-col gap-4">
+              <CardContent className="relative z-10 flex h-full flex-col gap-4">
                 {onlineList.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-gradient-to-br from-muted/20 via-background/90 to-background p-4 text-sm text-muted-foreground">
                     {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
                   </div>
                 ) : (
@@ -1608,7 +1659,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                     {onlineList.map((user) => (
                       <li
                         key={`${user.id}-${user.joinedAt.getTime()}`}
-                        className="flex items-center justify-between rounded-2xl border border-border/50 bg-muted/10 px-4 py-3"
+                        className="flex items-center justify-between rounded-2xl border border-border/50 bg-gradient-to-r from-muted/20 via-background/90 to-background px-4 py-3"
                       >
                         <div className="flex items-center gap-3">
                           <span className="flex h-2.5 w-2.5 rounded-full bg-success" />
@@ -1622,20 +1673,24 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               </CardContent>
             </Card>
 
-            <Card className="h-full rounded-3xl border border-border/60 bg-card shadow-sm">
-              <CardHeader className="space-y-1 pb-4">
+            <Card className={cn("relative h-full overflow-hidden", DASHBOARD_CARD_SURFACE)}>
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -left-24 top-0 h-40 w-40 rounded-full bg-primary/12 opacity-40 blur-3xl dark:bg-primary/20"
+              />
+              <CardHeader className="relative z-10 space-y-1 pb-4">
                 <CardTitle>Aktivitäten</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Neueste Proben, Zusagen und Benachrichtigungen.
                 </p>
               </CardHeader>
-              <CardContent className="flex h-full flex-col gap-4">
+              <CardContent className="relative z-10 flex h-full flex-col gap-4">
                 {isLoading && recentActivities.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-gradient-to-br from-muted/20 via-background/90 to-background p-4 text-sm text-muted-foreground">
                     Lade Aktivitäten …
                   </div>
                 ) : recentActivities.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-gradient-to-br from-muted/20 via-background/90 to-background p-4 text-sm text-muted-foreground">
                     Noch keine Aktivitäten erfasst.
                   </div>
                 ) : (
@@ -1643,7 +1698,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                     {recentActivities.map((activity) => (
                       <li
                         key={`${activity.id}-${activity.timestamp.getTime()}`}
-                        className="flex items-center gap-3 rounded-2xl border border-border/50 bg-muted/10 px-4 py-3"
+                        className="flex items-center gap-3 rounded-2xl border border-border/50 bg-gradient-to-r from-muted/20 via-background/90 to-background px-4 py-3"
                       >
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
                           {getActivityIcon(activity.type)}
