@@ -120,6 +120,33 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 const BASE_BACKGROUND_SUGGESTIONS = ["Schule", "Berufsschule", "Universität", "Ausbildung", "Beruf"] as const;
 
+function createBszClassSuggestions(): string[] {
+  const now = new Date();
+  const relevantYears = [-1, 0, 1]
+    .map((offset) => now.getFullYear() + offset)
+    .filter((year) => year >= 2000 && year <= 2100)
+    .map((year) => String(year % 100).padStart(2, "0"));
+
+  const suggestions: string[] = [];
+  const pushUnique = (value: string) => {
+    if (!suggestions.includes(value)) {
+      suggestions.push(value);
+    }
+  };
+
+  for (const year of relevantYears) {
+    for (const suffix of ["A", "B", "C"]) {
+      pushUnique(`BFS ${year}${suffix}`);
+    }
+    pushUnique(`FO ${year}`);
+    pushUnique(`BG ${year}`);
+  }
+
+  ["BG 11", "BG 12", "BG 13", "FO 11", "FO 12", "BVJ", "BVJ+", "Berufsvorbereitung"].forEach(pushUnique);
+
+  return suggestions;
+}
+
 const allergyLevelStyles = ALLERGY_LEVEL_STYLES;
 
 const weightLabels: { threshold: number; label: string }[] = [
@@ -304,6 +331,7 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
   const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(
     () => [...BASE_BACKGROUND_SUGGESTIONS],
   );
+  const [bszClassSuggestions] = useState<string[]>(() => createBszClassSuggestions());
   const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
 
@@ -1305,6 +1333,23 @@ export function OnboardingWizard({ sessionToken, invite }: OnboardingWizardProps
                   <span className="text-xs text-muted-foreground">
                     Optional: Damit können wir dich deinem Jahrgang zuordnen.
                   </span>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {bszClassSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            backgroundClass: suggestion,
+                          }))
+                        }
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
                 </label>
               )}
             </div>
