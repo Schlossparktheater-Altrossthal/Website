@@ -107,7 +107,7 @@ const updateSchema = z
     donationSource: z.string().max(160).optional().nullable(),
     donorContact: z.string().max(200).optional().nullable(),
     tags: z.any().optional(),
-    showId: z.string().optional().nullable(),
+    showId: z.string().optional(),
     budgetId: z.string().optional().nullable(),
     visibilityScope: z.enum(["finance", "board"] as const).optional(),
     attachments: z.array(attachmentSchema).optional(),
@@ -194,10 +194,24 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     data.tags = payload.tags;
   }
   if (payload.showId !== undefined) {
-    data.show = payload.showId ? { connect: { id: payload.showId } } : { disconnect: true };
+    const showExists = await prisma.show.count({ where: { id: payload.showId } });
+    if (!showExists) {
+      return NextResponse.json({ error: "Produktion nicht gefunden" }, { status: 400 });
+    }
+    data.show = { connect: { id: payload.showId } };
   }
+  const targetShowId = payload.showId ?? entry.showId;
+
   if (payload.budgetId !== undefined) {
-    data.budget = payload.budgetId ? { connect: { id: payload.budgetId } } : { disconnect: true };
+    if (payload.budgetId) {
+      const budget = await prisma.financeBudget.findUnique({ where: { id: payload.budgetId }, select: { showId: true } });
+      if (!budget || budget.showId !== targetShowId) {
+        return NextResponse.json({ error: "Budget gehört nicht zur gewählten Produktion" }, { status: 400 });
+      }
+      data.budget = { connect: { id: payload.budgetId } };
+    } else {
+      data.budget = { disconnect: true };
+    }
   }
   if (payload.bookingDate !== undefined) {
     const parsedDate = parseDate(payload.bookingDate);

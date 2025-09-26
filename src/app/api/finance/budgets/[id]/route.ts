@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -11,7 +12,7 @@ const updateSchema = z
     plannedAmount: z.number().finite().nonnegative().optional(),
     currency: z.string().trim().min(1).max(10).optional(),
     notes: z.string().max(400).optional().nullable(),
-    showId: z.string().optional().nullable(),
+    showId: z.string().optional(),
   })
   .strict();
 
@@ -35,15 +36,31 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     return NextResponse.json({ error: "Keine Änderungen übermittelt" }, { status: 400 });
   }
 
+  const data: Prisma.FinanceBudgetUpdateInput = {};
+
+  if (payload.category !== undefined) {
+    data.category = payload.category.trim();
+  }
+  if (payload.plannedAmount !== undefined) {
+    data.plannedAmount = payload.plannedAmount;
+  }
+  if (payload.currency !== undefined) {
+    data.currency = payload.currency.toUpperCase();
+  }
+  if (payload.notes !== undefined) {
+    data.notes = payload.notes?.trim() ?? null;
+  }
+  if (payload.showId !== undefined) {
+    const showExists = await prisma.show.count({ where: { id: payload.showId } });
+    if (!showExists) {
+      return NextResponse.json({ error: "Produktion nicht gefunden" }, { status: 400 });
+    }
+    data.show = { connect: { id: payload.showId } };
+  }
+
   const updated = await prisma.financeBudget.update({
     where: { id },
-    data: {
-      category: payload.category?.trim(),
-      plannedAmount: payload.plannedAmount,
-      currency: payload.currency?.toUpperCase(),
-      notes: payload.notes?.trim() ?? null,
-      showId: payload.showId ?? null,
-    },
+    data,
     include: { show: { select: { id: true, title: true, year: true } } },
   });
 

@@ -980,7 +980,7 @@ model FinanceEntry {
   donationSource  String?
   donorContact    String?
   tags            Json?
-  showId          String?
+  showId          String
   budgetId        String?
   visibilityScope VisibilityScope    @default(finance)
   createdById     String
@@ -989,7 +989,7 @@ model FinanceEntry {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
-  show           Show?          @relation(fields: [showId], references: [id], onDelete: SetNull)
+  show           Show           @relation(fields: [showId], references: [id], onDelete: Cascade)
   budget         FinanceBudget? @relation(fields: [budgetId], references: [id], onDelete: SetNull)
   createdBy      User           @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   approvedBy     User?          @relation("FinanceEntryApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
@@ -1018,14 +1018,14 @@ model FinanceAttachment {
 
 model FinanceBudget {
   id            String         @id @default(cuid())
-  showId        String?
+  showId        String
   category      String
   plannedAmount Float          @default(0)
   currency      String         @default("EUR")
   notes         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  show          Show?          @relation(fields: [showId], references: [id], onDelete: SetNull)
+  show          Show           @relation(fields: [showId], references: [id], onDelete: Cascade)
   entries       FinanceEntry[]
 
   @@index([showId, category])

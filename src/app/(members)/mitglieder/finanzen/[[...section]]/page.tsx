@@ -2,6 +2,7 @@ import type { FinanceEntryStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { getActiveProductionId } from "@/lib/active-production";
 import { FinanceOverview } from "@/components/members/finance/finance-overview";
 import {
   createEmptyFinanceSummary,
@@ -20,11 +21,25 @@ const VALID_SECTIONS = new Set(["dashboard", "buchungen", "budgets", "export"]);
 
 interface PageProps {
   params: Promise<{ section?: string[] }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function FinancePage({ params }: PageProps) {
+function normalizeQueryParam(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : null;
+  }
+  if (Array.isArray(value)) {
+    const first = value[0];
+    return typeof first === "string" && first.trim().length ? first.trim() : null;
+  }
+  return null;
+}
+
+export default async function FinancePage({ params, searchParams }: PageProps) {
   const session = await requireAuth();
   const resolvedParams = await params;
+  const resolvedSearch = (await searchParams) ?? {};
   const [canView, canManage, canApprove, canExport] = await Promise.all([
     hasPermission(session.user, "mitglieder.finanzen"),
     hasPermission(session.user, "mitglieder.finanzen.manage"),
@@ -49,10 +64,47 @@ export default async function FinancePage({ params }: PageProps) {
     ? (requestedSection as "dashboard" | "buchungen" | "budgets" | "export")
     : "dashboard";
 
+  const shows = await prisma.show.findMany({
+    orderBy: { year: "desc" },
+    select: { id: true, title: true, year: true },
+  });
+
+  const showOptions = shows.map((show) => ({ id: show.id, title: show.title, year: show.year }));
+  const requestedShowId = normalizeQueryParam(resolvedSearch.showId);
+  const activeProductionId = await getActiveProductionId(session.user?.id);
+
+  const preferredShowIds = [requestedShowId, activeProductionId].filter(
+    (value): value is string => typeof value === "string" && value.length > 0,
+  );
+
+  let selectedShowId: string | null = null;
+  for (const candidate of preferredShowIds) {
+    if (showOptions.some((show) => show.id === candidate)) {
+      selectedShowId = candidate;
+      break;
+    }
+  }
+
+  if (!selectedShowId) {
+    selectedShowId = showOptions[0]?.id ?? null;
+  }
+
+  if (!selectedShowId) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Finanzen" description="Es ist noch keine Produktion verfügbar." />
+        <div className="rounded-lg border border-muted-foreground/30 bg-muted/10 p-6 text-sm text-muted-foreground">
+          Bitte lege zunächst eine Produktion an, um Finanzdaten zu erfassen.
+        </div>
+      </div>
+    );
+  }
+
   const entriesPromise = prisma.financeEntry.findMany({
     where: {
       visibilityScope: { in: allowedScopes },
       status: { in: DEFAULT_STATUS_FILTER },
+      showId: selectedShowId,
     },
     orderBy: { bookingDate: "desc" },
     take: 200,
@@ -71,7 +123,8 @@ export default async function FinancePage({ params }: PageProps) {
   });
 
   const budgetsPromise = prisma.financeBudget.findMany({
-    orderBy: [{ show: { year: "desc" } }, { category: "asc" }],
+    where: { showId: selectedShowId },
+    orderBy: { category: "asc" },
     include: { show: { select: { id: true, title: true, year: true } } },
   });
 
@@ -79,7 +132,11 @@ export default async function FinancePage({ params }: PageProps) {
     const [totals, pending, donations] = await Promise.all([
       prisma.financeEntry.groupBy({
         by: ["type"],
-        where: { visibilityScope: { in: allowedScopes }, status: { in: ["pending", "approved", "paid"] } },
+        where: {
+          visibilityScope: { in: allowedScopes },
+          status: { in: ["pending", "approved", "paid"] },
+          showId: selectedShowId,
+        },
         _sum: { amount: true },
       }),
       prisma.financeEntry.aggregate({
@@ -87,6 +144,7 @@ export default async function FinancePage({ params }: PageProps) {
           kind: "invoice",
           status: { in: ["pending", "approved"] },
           visibilityScope: { in: allowedScopes },
+          showId: selectedShowId,
         },
         _sum: { amount: true },
         _count: { _all: true },
@@ -96,6 +154,7 @@ export default async function FinancePage({ params }: PageProps) {
           kind: "donation",
           status: { in: ["approved", "paid"] },
           visibilityScope: { in: allowedScopes },
+          showId: selectedShowId,
         },
         _sum: { amount: true },
       }),
@@ -116,14 +175,10 @@ export default async function FinancePage({ params }: PageProps) {
     return summary;
   })();
 
-  const [entriesRaw, budgetsRaw, summary, shows, members] = await Promise.all([
+  const [entriesRaw, budgetsRaw, summary, members] = await Promise.all([
     entriesPromise,
     budgetsPromise,
     summaryPromise,
-    prisma.show.findMany({
-      orderBy: { year: "desc" },
-      select: { id: true, title: true, year: true },
-    }),
     prisma.user.findMany({
       orderBy: [{ name: "asc" }, { email: "asc" }],
       select: { id: true, name: true, email: true },
@@ -138,6 +193,7 @@ export default async function FinancePage({ params }: PageProps) {
           budgetId: { in: budgetIds },
           status: { in: ["approved", "paid"] },
           visibilityScope: { in: allowedScopes },
+          showId: selectedShowId,
         },
         _sum: { amount: true },
         _count: { _all: true },
@@ -167,8 +223,8 @@ export default async function FinancePage({ params }: PageProps) {
   const entries = entriesRaw.map((entry) => mapFinanceEntry(entry as FinanceEntryWithRelations));
   const budgetDtos = budgets.map((budget) => mapFinanceBudget(budget));
 
-  const showOptions = shows.map((show) => ({ id: show.id, title: show.title, year: show.year }));
   const memberOptions = members.map((member) => ({ id: member.id, name: member.name, email: member.email }));
+  const activeShow = showOptions.find((show) => show.id === selectedShowId) ?? null;
 
   return (
     <FinanceOverview
@@ -182,6 +238,8 @@ export default async function FinancePage({ params }: PageProps) {
       canExport={canExport}
       allowedScopes={allowedScopes}
       activeSection={activeSection}
+      selectedShowId={selectedShowId}
+      activeShow={activeShow}
     />
   );
 }

@@ -45,8 +45,10 @@ export async function GET(request: NextRequest) {
   const statusParam = url.searchParams.get("status");
   const kindParam = url.searchParams.get("kind");
   const typeParam = url.searchParams.get("type");
-  const showParam = url.searchParams.get("showId");
-  const budgetParam = url.searchParams.get("budgetId");
+  const showParamRaw = url.searchParams.get("showId");
+  const showParam = typeof showParamRaw === "string" ? showParamRaw.trim() : "";
+  const budgetParamRaw = url.searchParams.get("budgetId");
+  const budgetParam = typeof budgetParamRaw === "string" ? budgetParamRaw.trim() : "";
   const searchParam = url.searchParams.get("q");
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
@@ -68,11 +70,17 @@ export async function GET(request: NextRequest) {
     where.type = typeParam;
   }
 
-  if (showParam) {
-    where.showId = showParam;
+  if (!showParam) {
+    return NextResponse.json({ error: "Produktion erforderlich" }, { status: 400 });
   }
 
+  where.showId = showParam;
+
   if (budgetParam) {
+    const budget = await prisma.financeBudget.findUnique({ where: { id: budgetParam }, select: { showId: true } });
+    if (!budget || budget.showId !== showParam) {
+      return NextResponse.json({ error: "Budget gehört nicht zur gewählten Produktion" }, { status: 400 });
+    }
     where.budgetId = budgetParam;
   }
 
@@ -164,7 +172,7 @@ const payloadSchema = z.object({
   donationSource: z.string().max(160).optional().nullable(),
   donorContact: z.string().max(200).optional().nullable(),
   tags: z.any().optional(),
-  showId: z.string().optional().nullable(),
+  showId: z.string().min(1, "Produktion auswählen"),
   budgetId: z.string().optional().nullable(),
   visibilityScope: z.enum(["finance", "board"] as const).optional(),
   attachments: z.array(attachmentSchema).optional(),
@@ -196,6 +204,18 @@ export async function POST(request: NextRequest) {
   const payload = parsed.data;
   const allowedScopes = resolveAllowedVisibilityScopes(session.user, canApprove);
   const status = payload.status ?? (payload.kind === "invoice" ? "pending" : payload.kind === "donation" ? "approved" : "draft");
+
+  const showExists = await prisma.show.count({ where: { id: payload.showId } });
+  if (!showExists) {
+    return NextResponse.json({ error: "Produktion nicht gefunden" }, { status: 400 });
+  }
+
+  if (payload.budgetId) {
+    const budget = await prisma.financeBudget.findUnique({ where: { id: payload.budgetId }, select: { showId: true } });
+    if (!budget || budget.showId !== payload.showId) {
+      return NextResponse.json({ error: "Budget gehört nicht zur gewählten Produktion" }, { status: 400 });
+    }
+  }
 
   if ((status === "approved" || status === "paid") && !canApprove) {
     return NextResponse.json({ error: "Freigabe-Rechte erforderlich" }, { status: 403 });
@@ -235,7 +255,7 @@ export async function POST(request: NextRequest) {
         donationSource: payload.donationSource?.trim() ?? null,
         donorContact: payload.donorContact?.trim() ?? null,
         tags: payload.tags ?? null,
-        showId: payload.showId ?? null,
+        showId: payload.showId,
         budgetId: payload.budgetId ?? null,
         visibilityScope,
         createdById: userId,

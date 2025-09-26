@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -9,7 +9,7 @@ const STATUS_FOR_TOTALS: FinanceEntryStatus[] = ["pending", "approved", "paid"];
 const STATUS_FOR_DONATIONS: FinanceEntryStatus[] = ["approved", "paid"];
 const PENDING_STATUSES: FinanceEntryStatus[] = ["pending", "approved"];
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const [canView, canApprove] = await Promise.all([
     hasPermission(session.user, "mitglieder.finanzen"),
@@ -21,11 +21,17 @@ export async function GET() {
   }
 
   const allowedScopes = resolveAllowedVisibilityScopes(session.user, canApprove);
+  const showIdRaw = request.nextUrl.searchParams.get("showId");
+  const showId = typeof showIdRaw === "string" ? showIdRaw.trim() : "";
+
+  if (!showId) {
+    return NextResponse.json({ error: "Produktion erforderlich" }, { status: 400 });
+  }
 
   const [totals, pending, donations] = await Promise.all([
     prisma.financeEntry.groupBy({
       by: ["type"],
-      where: { visibilityScope: { in: allowedScopes }, status: { in: STATUS_FOR_TOTALS } },
+      where: { visibilityScope: { in: allowedScopes }, status: { in: STATUS_FOR_TOTALS }, showId },
       _sum: { amount: true },
     }),
     prisma.financeEntry.aggregate({
@@ -33,6 +39,7 @@ export async function GET() {
         kind: "invoice",
         status: { in: PENDING_STATUSES },
         visibilityScope: { in: allowedScopes },
+        showId,
       },
       _sum: { amount: true },
       _count: { _all: true },
@@ -42,6 +49,7 @@ export async function GET() {
         kind: "donation",
         status: { in: STATUS_FOR_DONATIONS },
         visibilityScope: { in: allowedScopes },
+        showId,
       },
       _sum: { amount: true },
     }),

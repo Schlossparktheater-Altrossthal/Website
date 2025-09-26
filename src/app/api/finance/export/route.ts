@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -19,7 +19,7 @@ function escapeCsv(value: unknown): string {
   return `"${str.replace(/"/g, '""')}"`;
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const [canView, canApprove, canExport] = await Promise.all([
     hasPermission(session.user, "mitglieder.finanzen"),
@@ -36,12 +36,18 @@ export async function GET(request: Request) {
   const statusParam = url.searchParams.get("status");
   const kindParam = url.searchParams.get("kind");
   const typeParam = url.searchParams.get("type");
-  const showParam = url.searchParams.get("showId");
+  const showParamRaw = url.searchParams.get("showId");
+  const showParam = typeof showParamRaw === "string" ? showParamRaw.trim() : "";
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
 
+  if (!showParam) {
+    return NextResponse.json({ error: "Produktion erforderlich" }, { status: 400 });
+  }
+
   const where: Prisma.FinanceEntryWhereInput = {
     visibilityScope: { in: allowedScopes },
+    showId: showParam,
   };
 
   if (statusParam && isFinanceEntryStatus(statusParam)) {
@@ -53,10 +59,6 @@ export async function GET(request: Request) {
   if (typeParam && isFinanceType(typeParam)) {
     where.type = typeParam;
   }
-  if (showParam) {
-    where.showId = showParam;
-  }
-
   const fromDate = parseDate(fromParam);
   const toDate = parseDate(toParam);
   if (fromDate || toDate) {
