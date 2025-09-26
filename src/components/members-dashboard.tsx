@@ -1637,8 +1637,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             {activeProductionCard}
             {onboardingCard}
           </div>
-          <div className="space-y-6">
-            <Card className={cn("relative h-full overflow-hidden", DASHBOARD_CARD_SURFACE)}>
+          <div className="space-y-6 xl:self-start">
+            <Card className={cn("relative overflow-hidden", DASHBOARD_CARD_SURFACE)}>
               <div
                 aria-hidden
                 className="pointer-events-none absolute -right-24 top-0 h-40 w-40 rounded-full bg-success/15 opacity-40 blur-3xl dark:bg-success/25"
@@ -1649,7 +1649,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                   Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
                 </p>
               </CardHeader>
-              <CardContent className="relative z-10 flex h-full flex-col gap-4">
+              <CardContent className="relative z-10 flex flex-col gap-4">
                 {onlineList.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-border/60 bg-gradient-to-br from-muted/20 via-background/90 to-background p-4 text-sm text-muted-foreground">
                     {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
@@ -1673,7 +1673,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               </CardContent>
             </Card>
 
-            <Card className={cn("relative h-full overflow-hidden", DASHBOARD_CARD_SURFACE)}>
+            <Card className={cn("relative overflow-hidden", DASHBOARD_CARD_SURFACE)}>
               <div
                 aria-hidden
                 className="pointer-events-none absolute -left-24 top-0 h-40 w-40 rounded-full bg-primary/12 opacity-40 blur-3xl dark:bg-primary/20"
@@ -1684,7 +1684,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                   Neueste Proben, Zusagen und Benachrichtigungen.
                 </p>
               </CardHeader>
-              <CardContent className="relative z-10 flex h-full flex-col gap-4">
+              <CardContent className="relative z-10 flex flex-col gap-4">
                 {isLoading && recentActivities.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-border/60 bg-gradient-to-br from-muted/20 via-background/90 to-background p-4 text-sm text-muted-foreground">
                     Lade Aktivitäten …
