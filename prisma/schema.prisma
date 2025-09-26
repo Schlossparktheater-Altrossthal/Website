@@ -86,6 +86,17 @@ enum GalleryMediaType {
   video
 }
 
+enum FileLibraryAccessType {
+  VIEW
+  DOWNLOAD
+  UPLOAD
+}
+
+enum FileLibraryAccessTargetType {
+  SYSTEM_ROLE
+  APP_ROLE
+}
+
 enum AvailabilityStatus {
   blocked
   available
@@ -300,6 +311,8 @@ model User {
   finalRehearsalDutiesAssigned FinalRehearsalDuty[] @relation("FinalRehearsalDutyAssignee")
   finalRehearsalDutiesCreated  FinalRehearsalDuty[] @relation("FinalRehearsalDutyCreatedBy")
   galleryItems           GalleryItem[]
+  fileLibraryFoldersCreated FileLibraryFolder[] @relation("FileLibraryFoldersCreated")
+  fileLibraryItemsUploaded  FileLibraryItem[]   @relation("FileLibraryItemsUploaded")
 }
 
 model Account {
@@ -789,6 +802,7 @@ model AppRole {
   sortIndex  Int     @default(0)
   grants     AppRolePermission[]
   users      UserAppRole[]
+  fileLibraryAccesses FileLibraryFolderAccess[]
 }
 
 model AppRolePermission {
@@ -1145,6 +1159,60 @@ model GalleryItem {
   uploadedBy   User             @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
   @@index([year, createdAt])
+}
+
+model FileLibraryFolder {
+  id              String                    @id @default(cuid())
+  parentId        String?
+  name            String
+  description     String?
+  allowAllView    Boolean                   @default(true)
+  allowAllDownload Boolean                  @default(true)
+  allowAllUpload  Boolean                   @default(false)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  createdById     String?
+
+  parent          FileLibraryFolder?        @relation("FileLibraryFolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children        FileLibraryFolder[]       @relation("FileLibraryFolderHierarchy")
+  createdBy       User?                     @relation("FileLibraryFoldersCreated", fields: [createdById], references: [id], onDelete: SetNull)
+  files           FileLibraryItem[]
+  accessRules     FileLibraryFolderAccess[]
+
+  @@index([parentId])
+}
+
+model FileLibraryItem {
+  id           String             @id @default(cuid())
+  folderId     String
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  data         Bytes
+  description  String?
+  uploadedById String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  folder       FileLibraryFolder  @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  uploadedBy   User?              @relation("FileLibraryItemsUploaded", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([folderId, createdAt])
+}
+
+model FileLibraryFolderAccess {
+  id          String                     @id @default(cuid())
+  folderId    String
+  accessType  FileLibraryAccessType
+  targetType  FileLibraryAccessTargetType
+  systemRole  Role?
+  appRoleId   String?
+
+  folder      FileLibraryFolder          @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  appRole     AppRole?                   @relation(fields: [appRoleId], references: [id], onDelete: Cascade)
+
+  @@index([folderId, accessType])
+  @@unique([folderId, accessType, systemRole, appRoleId])
 }
 
 model MemberInvite {

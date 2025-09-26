@@ -96,6 +96,20 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "self",
   },
   {
+    key: "mitglieder.dateisystem",
+    label: "Dateisystem öffnen",
+    description:
+      "Greift auf das gemeinsame Dateisystem mit Ordnerstruktur, Dokumenten und Downloads zu.",
+    category: "self",
+  },
+  {
+    key: "mitglieder.dateisystem.manage",
+    label: "Dateisystem verwalten",
+    description:
+      "Struktur und Zugriffsrechte des Dateisystems pflegen, Dateien moderieren und Freigaben steuern.",
+    category: "membership",
+  },
+  {
     key: "mitglieder.issues",
     label: "Feedback & Support nutzen",
     description:
@@ -595,6 +609,12 @@ async function resolveRoleContext(user: UserLike): Promise<ResolvedRoleContext> 
   );
 
   return { systemRoles, customRoleIds, departmentIds };
+}
+
+export type PermissionRoleContext = ResolvedRoleContext;
+
+export async function getPermissionRoleContext(user: UserLike): Promise<PermissionRoleContext> {
+  return resolveRoleContext(user);
 }
 
 function getBaselinePermissions(user: UserLike) {
