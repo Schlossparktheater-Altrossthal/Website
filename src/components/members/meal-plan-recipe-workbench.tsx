@@ -369,95 +369,103 @@ export function MealPlanRecipeWorkbench({
                         ) : null}
                       </div>
                       <Badge variant="outline" className="border-primary/30 bg-primary/10 text-[11px] text-primary">
-                        {assignedCount}/{day.slots.length} belegt
+                        {day.slots.length > 0
+                          ? `${assignedCount}/${day.slots.length} belegt`
+                          : "Keine Slots"}
                       </Badge>
                     </div>
                     <div className="space-y-3">
-                      {day.slots.map((slot) => {
-                        const assignment = dayAssignments[slot.slot];
-                        const recipe = assignment ? recipeMap.get(assignment) ?? null : null;
-                        const SlotIcon = SLOT_ICONS[slot.slot] ?? ChefHat;
-                        return (
-                          <div
-                            key={`${day.key}-${slot.slot}`}
-                            className="space-y-2 rounded-xl border border-border/60 bg-background/96 p-3 shadow-inner"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-start gap-2">
-                                <div className="rounded-full border border-primary/30 bg-primary/10 p-1 text-primary">
-                                  <SlotIcon className="h-4 w-4" />
+                      {day.slots.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Aktuell sind keine Slots hinterlegt. Lege eigene Rezepte in der Essensplanung an.
+                        </p>
+                      ) : (
+                        day.slots.map((slot) => {
+                          const assignment = dayAssignments[slot.slot];
+                          const recipe = assignment ? recipeMap.get(assignment) ?? null : null;
+                          const SlotIcon = SLOT_ICONS[slot.slot] ?? ChefHat;
+                          return (
+                            <div
+                              key={`${day.key}-${slot.slot}`}
+                              className="space-y-2 rounded-xl border border-border/60 bg-background/96 p-3 shadow-inner"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-start gap-2">
+                                  <div className="rounded-full border border-primary/30 bg-primary/10 p-1 text-primary">
+                                    <SlotIcon className="h-4 w-4" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{slot.slot}</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {recipe ? recipe.title : "Noch ohne Rezept"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {recipe
+                                        ? recipe.description
+                                        : "Weise im Tab „Essensplanung“ ein Gericht zu, um Menü und Einkaufslisten zu aktualisieren."}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{slot.slot}</p>
-                                  <p className="text-sm font-semibold text-foreground">
-                                    {recipe ? recipe.title : "Noch ohne Rezept"}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {recipe
-                                      ? recipe.description
-                                      : "Weise im Tab „Essensplanung“ ein Gericht zu, um Menü und Einkaufslisten zu aktualisieren."}
-                                  </p>
-                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "shrink-0 border-transparent text-[11px]",
+                                    styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
+                                  )}
+                                >
+                                  {slot.focusLabel}
+                                </Badge>
                               </div>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "shrink-0 border-transparent text-[11px]",
-                                  styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
-                                )}
-                              >
-                                {slot.focusLabel}
-                              </Badge>
+                              {recipe ? (
+                                <div className="space-y-2 text-[11px]">
+                                  {recipe.highlights.length ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {recipe.highlights.map((highlight) => (
+                                        <Badge
+                                          key={`${recipe.id}-highlight-${highlight}`}
+                                          variant="muted"
+                                          size="sm"
+                                          className="border-primary/30 bg-primary/10 text-primary"
+                                        >
+                                          {highlight}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  {recipe.avoids.length ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {recipe.avoids.map((avoid) => (
+                                        <Badge
+                                          key={`${recipe.id}-avoid-${avoid}`}
+                                          variant="outline"
+                                          size="sm"
+                                          className="border-emerald-300/40 bg-emerald-500/10 text-emerald-500"
+                                        >
+                                          ohne {avoid}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  {recipe.caution && recipe.caution.length ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {recipe.caution.map((entry) => (
+                                        <Badge
+                                          key={`${recipe.id}-caution-${entry}`}
+                                          variant="destructive"
+                                          size="sm"
+                                          className="bg-destructive/15 text-destructive"
+                                        >
+                                          Achtung: {entry}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
                             </div>
-                            {recipe ? (
-                              <div className="space-y-2 text-[11px]">
-                                {recipe.highlights.length ? (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {recipe.highlights.map((highlight) => (
-                                      <Badge
-                                        key={`${recipe.id}-highlight-${highlight}`}
-                                        variant="muted"
-                                        size="sm"
-                                        className="border-primary/30 bg-primary/10 text-primary"
-                                      >
-                                        {highlight}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                ) : null}
-                                {recipe.avoids.length ? (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {recipe.avoids.map((avoid) => (
-                                      <Badge
-                                        key={`${recipe.id}-avoid-${avoid}`}
-                                        variant="outline"
-                                        size="sm"
-                                        className="border-emerald-300/40 bg-emerald-500/10 text-emerald-500"
-                                      >
-                                        ohne {avoid}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                ) : null}
-                                {recipe.caution && recipe.caution.length ? (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {recipe.caution.map((entry) => (
-                                      <Badge
-                                        key={`${recipe.id}-caution-${entry}`}
-                                        variant="destructive"
-                                        size="sm"
-                                        className="bg-destructive/15 text-destructive"
-                                      >
-                                        Achtung: {entry}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 );
@@ -687,164 +695,170 @@ export function MealPlanRecipeWorkbench({
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {day.slots.map((slot) => {
-                      const selectedId = selectedRecipes[day.key]?.[slot.slot];
+                    {day.slots.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Es sind keine Slots definiert. Nutze eigene Rezepte, um den Plan zu füllen.
+                      </p>
+                    ) : (
+                      day.slots.map((slot) => {
+                        const selectedId = selectedRecipes[day.key]?.[slot.slot];
 
-                      const recommendedOptions = recipes.filter(
-                        (recipe) => !recipe.idealSlots || recipe.idealSlots.includes(slot.slot),
-                      );
-                      const fallbackOptions = recipes.filter(
-                        (recipe) => recipe.idealSlots && !recipe.idealSlots.includes(slot.slot),
-                      );
+                        const recommendedOptions = recipes.filter(
+                          (recipe) => !recipe.idealSlots || recipe.idealSlots.includes(slot.slot),
+                        );
+                        const fallbackOptions = recipes.filter(
+                          (recipe) => recipe.idealSlots && !recipe.idealSlots.includes(slot.slot),
+                        );
 
-                      const recipe = selectedId ? recipeMap.get(selectedId) : null;
-                      const scaleFactor = recipe ? participantCount / (recipe.servings > 0 ? recipe.servings : 1) : 1;
-                      const scaledParticipantCount = recipe ? numberFormatter.format(participantCount) : null;
-                      const baseServings = recipe ? numberFormatter.format(recipe.servings) : null;
-                      const scaleFactorLabel = recipe ? numberFormatter.format(scaleFactor) : null;
+                        const recipe = selectedId ? recipeMap.get(selectedId) : null;
+                        const scaleFactor = recipe ? participantCount / (recipe.servings > 0 ? recipe.servings : 1) : 1;
+                        const scaledParticipantCount = recipe ? numberFormatter.format(participantCount) : null;
+                        const baseServings = recipe ? numberFormatter.format(recipe.servings) : null;
+                        const scaleFactorLabel = recipe ? numberFormatter.format(scaleFactor) : null;
 
-                      return (
-                        <div
-                          key={`${day.key}-${slot.slot}`}
-                          className="relative space-y-3 rounded-xl border border-border/60 bg-background/98 p-4 shadow-sm"
-                        >
-                          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" aria-hidden />
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{slot.slot}</div>
-                              <div className="text-sm font-semibold text-foreground">
-                                {recipe ? recipe.title : "Rezept auswählen"}
-                              </div>
-                              {recipe ? (
-                                <p className="text-xs text-muted-foreground">{recipe.description}</p>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">
-                                  Wähle ein Rezept, um Details und Mengen zu sehen.
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "border-transparent text-[11px]",
-                                  styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
-                                )}
-                              >
-                                {slot.focusLabel}
-                              </Badge>
-                            </div>
-                          </div>
-                          <Select
-                            value={selectedId ?? undefined}
-                            onValueChange={(value) => handleRecipeSelect(day.key, slot.slot, value)}
+                        return (
+                          <div
+                            key={`${day.key}-${slot.slot}`}
+                            className="relative space-y-3 rounded-xl border border-border/60 bg-background/98 p-4 shadow-sm"
                           >
-                            <SelectTrigger className="h-11 text-left">
-                              <SelectValue placeholder="Rezept auswählen" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[320px] w-[280px] p-1">
-                              <SelectGroup>
-                                <SelectLabel>Empfehlungen</SelectLabel>
-                                {recommendedOptions.length === 0 ? (
-                                  <SelectItem value="__recommended-empty" disabled className="whitespace-normal text-xs">
-                                    Keine passenden Vorschläge
-                                  </SelectItem>
+                            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" aria-hidden />
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{slot.slot}</div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {recipe ? recipe.title : "Rezept auswählen"}
+                                </div>
+                                {recipe ? (
+                                  <p className="text-xs text-muted-foreground">{recipe.description}</p>
                                 ) : (
-                                  recommendedOptions.map((entry) => renderRecipeOption(entry))
+                                  <p className="text-xs text-muted-foreground">
+                                    Wähle ein Rezept, um Details und Mengen zu sehen.
+                                  </p>
                                 )}
-                              </SelectGroup>
-                              {fallbackOptions.length ? (
-                                <>
-                                  <SelectSeparator />
-                                  <SelectGroup>
-                                    <SelectLabel>Weitere Rezepte</SelectLabel>
-                                    {fallbackOptions.map((entry) => renderRecipeOption(entry))}
-                                  </SelectGroup>
-                                </>
-                              ) : null}
-                            </SelectContent>
-                          </Select>
-                          {recipe ? (
-                            <div className="space-y-3">
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                <span>
-                                  Basis: {baseServings} Portionen · skaliert auf {scaledParticipantCount} ({scaleFactorLabel}×)
-                                </span>
                               </div>
-                              <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-                                {recipe.highlights.map((highlight) => (
-                                  <Badge
-                                    key={`${recipe.id}-highlight-${highlight}`}
-                                    variant="muted"
-                                    size="sm"
-                                    className="border-primary/30 bg-primary/10 text-primary"
-                                  >
-                                    {highlight}
-                                  </Badge>
-                                ))}
-                                {recipe.avoids.map((avoid) => (
-                                  <Badge
-                                    key={`${recipe.id}-avoid-${avoid}`}
-                                    variant="outline"
-                                    size="sm"
-                                    className="border-emerald-300/40 bg-emerald-500/10 text-emerald-500"
-                                  >
-                                    ohne {avoid}
-                                  </Badge>
-                                ))}
+                              <div className="flex flex-wrap gap-1.5">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "border-transparent text-[11px]",
+                                    styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
+                                  )}
+                                >
+                                  {slot.focusLabel}
+                                </Badge>
                               </div>
-                              {recipe.caution && recipe.caution.length ? (
-                                <div className="flex flex-wrap gap-1.5 text-[11px]">
-                                  {recipe.caution.map((entry) => (
+                            </div>
+                            <Select
+                              value={selectedId ?? undefined}
+                              onValueChange={(value) => handleRecipeSelect(day.key, slot.slot, value)}
+                            >
+                              <SelectTrigger className="h-11 text-left">
+                                <SelectValue placeholder="Rezept auswählen" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[320px] w-[280px] p-1">
+                                <SelectGroup>
+                                  <SelectLabel>Empfehlungen</SelectLabel>
+                                  {recommendedOptions.length === 0 ? (
+                                    <SelectItem value="__recommended-empty" disabled className="whitespace-normal text-xs">
+                                      Keine passenden Vorschläge
+                                    </SelectItem>
+                                  ) : (
+                                    recommendedOptions.map((entry) => renderRecipeOption(entry))
+                                  )}
+                                </SelectGroup>
+                                {fallbackOptions.length ? (
+                                  <>
+                                    <SelectSeparator />
+                                    <SelectGroup>
+                                      <SelectLabel>Weitere Rezepte</SelectLabel>
+                                      {fallbackOptions.map((entry) => renderRecipeOption(entry))}
+                                    </SelectGroup>
+                                  </>
+                                ) : null}
+                              </SelectContent>
+                            </Select>
+                            {recipe ? (
+                              <div className="space-y-3">
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                  <span>
+                                    Basis: {baseServings} Portionen · skaliert auf {scaledParticipantCount} ({scaleFactorLabel}×)
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+                                  {recipe.highlights.map((highlight) => (
                                     <Badge
-                                      key={`${recipe.id}-caution-${entry}`}
-                                      variant="destructive"
+                                      key={`${recipe.id}-highlight-${highlight}`}
+                                      variant="muted"
                                       size="sm"
-                                      className="bg-destructive/15 text-destructive"
+                                      className="border-primary/30 bg-primary/10 text-primary"
                                     >
-                                      Achtung: {entry}
+                                      {highlight}
+                                    </Badge>
+                                  ))}
+                                  {recipe.avoids.map((avoid) => (
+                                    <Badge
+                                      key={`${recipe.id}-avoid-${avoid}`}
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-emerald-300/40 bg-emerald-500/10 text-emerald-500"
+                                    >
+                                      ohne {avoid}
                                     </Badge>
                                   ))}
                                 </div>
-                              ) : null}
-                              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-                                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Skalierte Zutaten
-                                </div>
-                                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                                  {recipe.ingredients.map((ingredient) => {
-                                    const scaledAmount = ingredient.amount * scaleFactor;
-                                    const rounded = Math.round(scaledAmount * 100) / 100;
-                                    return (
-                                      <li
-                                        key={`${recipe.id}-${ingredient.name}-${ingredient.unit}`}
-                                        className="flex items-baseline justify-between gap-2"
+                                {recipe.caution && recipe.caution.length ? (
+                                  <div className="flex flex-wrap gap-1.5 text-[11px]">
+                                    {recipe.caution.map((entry) => (
+                                      <Badge
+                                        key={`${recipe.id}-caution-${entry}`}
+                                        variant="destructive"
+                                        size="sm"
+                                        className="bg-destructive/15 text-destructive"
                                       >
-                                        <span className="font-medium text-foreground">
-                                          {numberFormatter.format(rounded)} {ingredient.unit}
-                                        </span>
-                                        <span className="text-right">{ingredient.name}</span>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </div>
-                              <div className="rounded-xl border border-border/50 bg-muted/10 p-3">
-                                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Zubereitung
+                                        Achtung: {entry}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Skalierte Zutaten
+                                  </div>
+                                  <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                                    {recipe.ingredients.map((ingredient) => {
+                                      const scaledAmount = ingredient.amount * scaleFactor;
+                                      const rounded = Math.round(scaledAmount * 100) / 100;
+                                      return (
+                                        <li
+                                          key={`${recipe.id}-${ingredient.name}-${ingredient.unit}`}
+                                          className="flex items-baseline justify-between gap-2"
+                                        >
+                                          <span className="font-medium text-foreground">
+                                            {numberFormatter.format(rounded)} {ingredient.unit}
+                                          </span>
+                                          <span className="text-right">{ingredient.name}</span>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
                                 </div>
-                                <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
-                                  {recipe.instructions.map((instruction, index) => (
-                                    <li key={`${recipe.id}-instruction-${index}`}>{instruction}</li>
-                                  ))}
-                                </ol>
+                                <div className="rounded-xl border border-border/50 bg-muted/10 p-3">
+                                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Zubereitung
+                                  </div>
+                                  <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+                                    {recipe.instructions.map((instruction, index) => (
+                                      <li key={`${recipe.id}-instruction-${index}`}>{instruction}</li>
+                                    ))}
+                                  </ol>
+                                </div>
                               </div>
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+                            ) : null}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               ))}
