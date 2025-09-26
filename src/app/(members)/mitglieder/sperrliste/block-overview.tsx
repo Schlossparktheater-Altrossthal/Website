@@ -314,19 +314,19 @@ export function BlockOverview({
         </div>
 
         <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-inner">
-            <div className="text-xs uppercase tracking-wide text-slate-300/80">Teammitglieder</div>
-            <div className="mt-1 text-2xl font-semibold">{preparedMembers.length}</div>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
+            <div className="text-[11px] uppercase tracking-wide text-slate-300/80">Teammitglieder</div>
+            <div className="mt-1 text-xl font-semibold sm:text-2xl">{preparedMembers.length}</div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-inner">
-            <div className="text-xs uppercase tracking-wide text-slate-300/80">Gesperrte Tage im Monat</div>
-            <div className="mt-1 text-2xl font-semibold">{summary.total}</div>
-            <div className="text-xs text-slate-300/80">Davon bevorstehend: {summary.upcoming}</div>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
+            <div className="text-[11px] uppercase tracking-wide text-slate-300/80">Gesperrte Tage im Monat</div>
+            <div className="mt-1 text-xl font-semibold sm:text-2xl">{summary.total}</div>
+            <div className="text-[11px] text-slate-300/80">Davon bevorstehend: {summary.upcoming}</div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-inner">
-            <div className="text-xs uppercase tracking-wide text-slate-300/80">Ferien in der Ansicht</div>
-            <div className="mt-1 text-2xl font-semibold">{holidaysInRange.length}</div>
-            <div className="text-xs text-slate-300/80">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
+            <div className="text-[11px] uppercase tracking-wide text-slate-300/80">Ferien in der Ansicht</div>
+            <div className="mt-1 text-xl font-semibold sm:text-2xl">{holidaysInRange.length}</div>
+            <div className="text-[11px] text-slate-300/80">
               {busiestMember
                 ? `Meiste Sperren: ${busiestMember.name} (${busiestMember.total})`
                 : "Aktuell keine Häufungen"}
