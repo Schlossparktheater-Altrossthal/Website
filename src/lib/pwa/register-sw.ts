@@ -38,6 +38,8 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
   const deferredPrompt = React.useRef<BeforeInstallPromptEvent | null>(null);
   const installToastId = React.useRef<string | number | null>(null);
   const updateToastId = React.useRef<string | number | null>(null);
+  const hadControllerRef = React.useRef(false);
+  const shouldReloadOnControllingRef = React.useRef(false);
   const isScannerPath = pathname?.startsWith(SCANNER_PATH_PREFIX) ?? false;
   const shouldOfferInstallRef = React.useRef(isScannerPath);
 
@@ -114,6 +116,9 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     let wb: Workbox | null = null;
     let isMounted = true;
 
+    hadControllerRef.current = Boolean(navigator.serviceWorker.controller);
+    shouldReloadOnControllingRef.current = hadControllerRef.current;
+
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       const { data } = event;
 
@@ -144,6 +149,8 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
+          shouldReloadOnControllingRef.current = true;
+
           void wb
             .messageSW({ type: "SKIP_WAITING" })
             .catch((error) =>
@@ -169,6 +176,10 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
           if (updateToastId.current) {
             toast.dismiss(updateToastId.current);
             updateToastId.current = null;
+          }
+
+          if (!shouldReloadOnControllingRef.current && !hadControllerRef.current) {
+            return;
           }
 
           window.location.reload();
