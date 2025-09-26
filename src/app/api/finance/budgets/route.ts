@@ -10,10 +10,10 @@ const budgetSchema = z.object({
   plannedAmount: z.number().finite().nonnegative(),
   currency: z.string().trim().min(1).max(10).default("EUR"),
   notes: z.string().max(400).optional().nullable(),
-  showId: z.string().optional().nullable(),
+  showId: z.string().min(1, "Produktion auswählen"),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const [canView, canApprove] = await Promise.all([
     hasPermission(session.user, "mitglieder.finanzen"),
@@ -26,8 +26,16 @@ export async function GET() {
 
   const allowedScopes = resolveAllowedVisibilityScopes(session.user, canApprove);
 
+  const showIdRaw = request.nextUrl.searchParams.get("showId");
+  const showId = typeof showIdRaw === "string" ? showIdRaw.trim() : "";
+
+  if (!showId) {
+    return NextResponse.json({ error: "Produktion erforderlich" }, { status: 400 });
+  }
+
   const budgetsRaw = await prisma.financeBudget.findMany({
-    orderBy: [{ show: { year: "desc" } }, { category: "asc" }],
+    where: { showId },
+    orderBy: [{ category: "asc" }],
     include: { show: { select: { id: true, title: true, year: true } } },
   });
 
@@ -42,6 +50,7 @@ export async function GET() {
       budgetId: { in: budgetIds },
       status: { in: ["approved", "paid"] },
       visibilityScope: { in: allowedScopes },
+      showId,
     },
     _sum: { amount: true },
     _count: { _all: true },
@@ -85,13 +94,17 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = parsed.data;
+  const showExists = await prisma.show.count({ where: { id: payload.showId } });
+  if (!showExists) {
+    return NextResponse.json({ error: "Produktion nicht gefunden" }, { status: 400 });
+  }
   const budget = await prisma.financeBudget.create({
     data: {
       category: payload.category.trim(),
       plannedAmount: payload.plannedAmount,
       currency: payload.currency.toUpperCase(),
       notes: payload.notes?.trim() ?? null,
-      showId: payload.showId ?? null,
+      showId: payload.showId,
     },
     include: { show: { select: { id: true, title: true, year: true } } },
   });

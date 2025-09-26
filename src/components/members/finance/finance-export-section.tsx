@@ -14,7 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-export function FinanceExportSection() {
+type FinanceExportSectionProps = {
+  showId: string;
+};
+
+export function FinanceExportSection({ showId }: FinanceExportSectionProps) {
   const [status, setStatus] = useState<string>("all");
   const [kind, setKind] = useState<string>("all");
   const [type, setType] = useState<string>("all");
@@ -24,13 +28,14 @@ export function FinanceExportSection() {
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
+    params.set("showId", showId);
     if (status !== "all") params.set("status", status);
     if (kind !== "all") params.set("kind", kind);
     if (type !== "all") params.set("type", type);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     return params.toString();
-  }, [status, kind, type, from, to]);
+  }, [status, kind, type, from, to, showId]);
 
   const downloadUrl = query ? `/api/finance/export?${query}` : "/api/finance/export";
 

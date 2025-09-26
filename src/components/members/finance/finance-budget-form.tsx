@@ -31,7 +31,7 @@ const budgetSchema = z.object({
     }, "Planwert muss eine positive Zahl sein"),
   currency: z.string().trim().min(1).max(10),
   notes: z.string().max(400).optional().nullable(),
-  showId: z.string().optional().nullable(),
+  showId: z.string().min(1, "Produktion auswählen"),
 });
 
 type FinanceBudgetFormValues = z.infer<typeof budgetSchema>;
@@ -42,6 +42,7 @@ type FinanceBudgetFormProps = {
   onUpdated?: (budget: FinanceBudgetDTO) => void;
   onCancelEdit?: () => void;
   initialBudget?: FinanceBudgetDTO | null;
+  defaultShowId: string;
 };
 
 function formatShowOption(show: { id: string; title: string | null; year: number }) {
@@ -51,14 +52,13 @@ function formatShowOption(show: { id: string; title: string | null; year: number
   return parts.join(" • ") || "Unbenannte Produktion";
 }
 
-const EMPTY_SELECT_VALUE = "__none__";
-
 export function FinanceBudgetForm({
   showOptions,
   onCreated,
   onUpdated,
   onCancelEdit,
   initialBudget,
+  defaultShowId,
 }: FinanceBudgetFormProps) {
   const form = useForm<FinanceBudgetFormValues>({
     resolver: zodResolver(budgetSchema),
@@ -67,13 +67,13 @@ export function FinanceBudgetForm({
       plannedAmount: "",
       currency: "EUR",
       notes: "",
-      showId: "",
+      showId: defaultShowId,
     },
   });
 
   useEffect(() => {
     if (!initialBudget) {
-      form.reset({ category: "", plannedAmount: "", currency: "EUR", notes: "", showId: "" });
+      form.reset({ category: "", plannedAmount: "", currency: "EUR", notes: "", showId: defaultShowId });
       return;
     }
     form.reset({
@@ -81,9 +81,15 @@ export function FinanceBudgetForm({
       plannedAmount: initialBudget.plannedAmount.toString(),
       currency: initialBudget.currency,
       notes: initialBudget.notes ?? "",
-      showId: initialBudget.show.id ?? "",
+      showId: initialBudget.show.id ?? defaultShowId,
     });
-  }, [initialBudget, form]);
+  }, [initialBudget, form, defaultShowId]);
+
+  useEffect(() => {
+    if (!initialBudget) {
+      form.setValue("showId", defaultShowId);
+    }
+  }, [defaultShowId, form, initialBudget]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     const payload = {
@@ -91,7 +97,7 @@ export function FinanceBudgetForm({
       plannedAmount: Number(values.plannedAmount.replace(",", ".")),
       currency: values.currency.trim().toUpperCase(),
       notes: values.notes?.trim() || undefined,
-      showId: values.showId || undefined,
+      showId: values.showId,
     };
 
     const targetUrl = initialBudget ? `/api/finance/budgets/${initialBudget.id}` : "/api/finance/budgets";
@@ -180,22 +186,18 @@ export function FinanceBudgetForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Produktion</FormLabel>
-                <Select
-                  value={field.value ? field.value : EMPTY_SELECT_VALUE}
-                  onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Produktion auswählen" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value={EMPTY_SELECT_VALUE}>Keiner Produktion zugeordnet</SelectItem>
-                    {showOptions.map((show) => (
-                      <SelectItem key={show.id} value={show.id}>
-                        {formatShowOption(show)}
-                      </SelectItem>
-                    ))}
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Produktion auswählen" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {showOptions.map((show) => (
+                        <SelectItem key={show.id} value={show.id}>
+                          {formatShowOption(show)}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

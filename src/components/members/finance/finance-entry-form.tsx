@@ -59,7 +59,7 @@ const financeEntryFormSchema = z
     category: z.string().max(120).optional().nullable(),
     bookingDate: z.string().min(1, "Buchungsdatum wählen"),
     dueDate: z.string().optional().nullable(),
-    showId: z.string().optional().nullable(),
+    showId: z.string().min(1, "Produktion auswählen"),
     budgetId: z.string().optional().nullable(),
     memberPaidById: z.string().optional().nullable(),
     invoiceNumber: z.string().max(120).optional().nullable(),
@@ -96,6 +96,7 @@ type FinanceEntryFormProps = {
   budgetOptions: FinanceBudgetDTO[];
   allowedScopes: VisibilityScope[];
   canApprove: boolean;
+  defaultShowId: string;
   onAfterSubmit?: () => void;
 };
 
@@ -120,6 +121,7 @@ export function FinanceEntryForm({
   budgetOptions,
   allowedScopes,
   canApprove,
+  defaultShowId,
   onAfterSubmit,
 }: FinanceEntryFormProps) {
   const defaultScope = allowedScopes.includes("finance") ? "finance" : allowedScopes[0] ?? "finance";
@@ -135,7 +137,7 @@ export function FinanceEntryForm({
       category: "",
       bookingDate: new Date().toISOString().slice(0, 10),
       dueDate: "",
-      showId: "",
+      showId: defaultShowId,
       budgetId: "",
       memberPaidById: "",
       invoiceNumber: "",
@@ -153,10 +155,23 @@ export function FinanceEntryForm({
   const watchKind = form.watch("kind");
   const watchShowId = form.watch("showId");
 
+  useEffect(() => {
+    form.setValue("showId", defaultShowId);
+    form.setValue("budgetId", "");
+  }, [defaultShowId, form]);
+
   const filteredBudgets = useMemo(() => {
     if (!watchShowId) return budgetOptions;
     return budgetOptions.filter((budget) => budget.show.id === watchShowId);
   }, [budgetOptions, watchShowId]);
+
+  useEffect(() => {
+    const currentBudgetId = form.getValues("budgetId");
+    if (!currentBudgetId) return;
+    if (!filteredBudgets.some((budget) => budget.id === currentBudgetId)) {
+      form.setValue("budgetId", "");
+    }
+  }, [filteredBudgets, form]);
 
   useEffect(() => {
     const currentStatus = form.getValues("status");
@@ -193,7 +208,7 @@ export function FinanceEntryForm({
         category: values.category?.trim() || undefined,
         bookingDate: values.bookingDate,
         dueDate: values.dueDate ? values.dueDate : undefined,
-        showId: values.showId || undefined,
+        showId: values.showId,
         budgetId: values.budgetId || undefined,
         memberPaidById: values.memberPaidById || undefined,
         invoiceNumber: values.invoiceNumber?.trim() || undefined,
@@ -234,7 +249,7 @@ export function FinanceEntryForm({
         category: "",
         bookingDate: new Date().toISOString().slice(0, 10),
         dueDate: "",
-        showId: values.showId ?? "",
+        showId: values.showId,
         budgetId: values.budgetId ?? "",
         memberPaidById: values.kind === "invoice" ? values.memberPaidById ?? "" : "",
         invoiceNumber: "",
@@ -432,17 +447,13 @@ export function FinanceEntryForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Produktion</FormLabel>
-                <Select
-                  value={field.value ? field.value : EMPTY_SELECT_VALUE}
-                  onValueChange={(value) => field.onChange(value === EMPTY_SELECT_VALUE ? "" : value)}
-                >
+                <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Produktion auswählen" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={EMPTY_SELECT_VALUE}>Keine Zuordnung</SelectItem>
                     {showOptions.map((show) => (
                       <SelectItem key={show.id} value={show.id}>
                         {formatShowLabel(show)}

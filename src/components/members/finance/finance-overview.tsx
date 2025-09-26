@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import type { VisibilityScope } from "@prisma/client";
 import type { FinanceBudgetDTO, FinanceEntryDTO, FinanceSummaryDTO } from "@/app/api/finance/utils";
@@ -15,6 +16,13 @@ import { FinanceExportSection } from "./finance-export-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   FINANCE_ENTRY_STATUS_LABELS,
   FINANCE_ENTRY_STATUS_TONES,
@@ -56,6 +64,8 @@ type FinanceOverviewProps = {
   canExport: boolean;
   allowedScopes: VisibilityScope[];
   activeSection: "dashboard" | "buchungen" | "budgets" | "export";
+  selectedShowId: string;
+  activeShow: { id: string; title: string | null; year: number } | null;
 };
 
 export function FinanceOverview({
@@ -69,6 +79,8 @@ export function FinanceOverview({
   canExport,
   allowedScopes,
   activeSection,
+  selectedShowId,
+  activeShow,
 }: FinanceOverviewProps) {
   const [entries, setEntries] = useState<FinanceEntryDTO[]>(initialEntries);
   const [summary, setSummary] = useState<FinanceSummaryDTO>(initialSummary);
@@ -77,6 +89,11 @@ export function FinanceOverview({
   const [editingBudget, setEditingBudget] = useState<FinanceBudgetDTO | null>(null);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [currentShowId, setCurrentShowId] = useState<string>(selectedShowId);
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     setEntries(initialEntries);
@@ -94,10 +111,29 @@ export function FinanceOverview({
     setShowEntryForm(activeSection === "buchungen");
   }, [activeSection]);
 
+  useEffect(() => {
+    setCurrentShowId(selectedShowId);
+  }, [selectedShowId]);
+
+  const showQuery = useMemo(() => {
+    return currentShowId ? `?showId=${encodeURIComponent(currentShowId)}` : "";
+  }, [currentShowId]);
+
+  const handleShowChange = useCallback(
+    (value: string) => {
+      setCurrentShowId(value);
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      params.set("showId", value);
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
   const refreshSummary = useCallback(async () => {
+    if (!currentShowId) return;
     setLoadingSummary(true);
     try {
-      const response = await fetch("/api/finance/summary");
+      const response = await fetch(`/api/finance/summary${showQuery}`);
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error ?? "Übersicht konnte nicht geladen werden");
       if (data?.summary) {
@@ -108,11 +144,12 @@ export function FinanceOverview({
     } finally {
       setLoadingSummary(false);
     }
-  }, []);
+  }, [currentShowId, showQuery]);
 
   const refreshBudgets = useCallback(async () => {
+    if (!currentShowId) return;
     try {
-      const response = await fetch("/api/finance/budgets");
+      const response = await fetch(`/api/finance/budgets${showQuery}`);
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error ?? "Budgets konnten nicht geladen werden");
       if (data?.budgets) {
@@ -121,12 +158,13 @@ export function FinanceOverview({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Budgets konnten nicht geladen werden");
     }
-  }, []);
+  }, [currentShowId, showQuery]);
 
   const refreshEntries = useCallback(async () => {
+    if (!currentShowId) return;
     setLoadingEntries(true);
     try {
-      const response = await fetch("/api/finance");
+      const response = await fetch(`/api/finance${showQuery}`);
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error ?? "Buchungen konnten nicht geladen werden");
       if (data?.entries) {
@@ -137,7 +175,7 @@ export function FinanceOverview({
     } finally {
       setLoadingEntries(false);
     }
-  }, []);
+  }, [currentShowId, showQuery]);
 
   const handleEntryCreated = useCallback(
     (entry: FinanceEntryDTO) => {
@@ -181,6 +219,28 @@ export function FinanceOverview({
   const recentEntries = useMemo(() => entries.slice(0, 5), [entries]);
   const net = summary.totalIncome - summary.totalExpense;
   const budgetOptions = budgets;
+  const currentShow = useMemo(() => {
+    return showOptions.find((show) => show.id === currentShowId) ?? activeShow ?? null;
+  }, [activeShow, currentShowId, showOptions]);
+
+  const formattedActiveShow = currentShow
+    ? `${currentShow.year} • ${currentShow.title ?? "Unbenannte Produktion"}`
+    : "Produktion auswählen";
+
+  const showSwitcher = (
+    <Select value={currentShowId} onValueChange={handleShowChange}>
+      <SelectTrigger className="w-[220px]">
+        <SelectValue placeholder="Produktion wählen">{formattedActiveShow}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {showOptions.map((show) => (
+          <SelectItem key={show.id} value={show.id}>
+            {`${show.year} • ${show.title ?? "Unbenannte Produktion"}`}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   function renderDashboard() {
     return (
@@ -189,7 +249,8 @@ export function FinanceOverview({
           title="Finanzen"
           description="Einnahmen, Ausgaben und offene Rechnungen auf einen Blick."
           actions={
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {showSwitcher}
               {canManage ? (
                 <Button asChild variant="secondary">
                   <Link href="/mitglieder/finanzen/buchungen">Neue Buchung</Link>
@@ -265,11 +326,14 @@ export function FinanceOverview({
           title="Finanzbuchungen"
           description="Erfasse Rechnungen, Spenden und sonstige Buchungen."
           actions={
-            canManage ? (
-              <Button type="button" onClick={() => setShowEntryForm((prev) => !prev)}>
-                {showEntryForm ? "Formular ausblenden" : "Neue Buchung"}
-              </Button>
-            ) : undefined
+            <div className="flex flex-wrap items-center gap-2">
+              {showSwitcher}
+              {canManage ? (
+                <Button type="button" onClick={() => setShowEntryForm((prev) => !prev)}>
+                  {showEntryForm ? "Formular ausblenden" : "Neue Buchung"}
+                </Button>
+              ) : null}
+            </div>
           }
         />
 
@@ -287,6 +351,7 @@ export function FinanceOverview({
                   budgetOptions={budgetOptions}
                   allowedScopes={allowedScopes}
                   canApprove={canApprove}
+                  defaultShowId={currentShowId}
                   onAfterSubmit={() => setShowEntryForm(false)}
                 />
               ) : (
@@ -317,6 +382,7 @@ export function FinanceOverview({
         <PageHeader
           title="Budgets"
           description="Plane Budgetrahmen pro Produktion und vergleiche sie mit den Ist-Ausgaben."
+          actions={<div className="flex flex-wrap items-center gap-2">{showSwitcher}</div>}
         />
 
         {canManage ? (
@@ -331,6 +397,7 @@ export function FinanceOverview({
                 onCreated={handleBudgetCreated}
                 onUpdated={handleBudgetUpdated}
                 onCancelEdit={() => setEditingBudget(null)}
+                defaultShowId={currentShowId}
               />
             </CardContent>
           </Card>
@@ -357,8 +424,13 @@ export function FinanceOverview({
         <PageHeader
           title="Exporte"
           description="Erzeuge CSV-Dateien für Buchungslisten oder weiterführende Auswertungen."
+          actions={<div className="flex flex-wrap items-center gap-2">{showSwitcher}</div>}
         />
-        {canExport ? <FinanceExportSection /> : <p className="text-sm text-muted-foreground">Für Exporte fehlen die Berechtigungen.</p>}
+        {canExport ? (
+          <FinanceExportSection showId={currentShowId} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Für Exporte fehlen die Berechtigungen.</p>
+        )}
       </div>
     );
   }
