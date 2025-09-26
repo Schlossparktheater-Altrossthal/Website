@@ -34,14 +34,13 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
   const currentUser = session.user ?? { id: null };
   const accessContext = await resolveFileLibraryAccessContext(currentUser);
   const canManage = accessContext.canManage;
-  const canUpload = await userHasFileLibraryAccess(currentUser, item.folder, "upload", accessContext);
   const canView = await userHasFileLibraryAccess(currentUser, item.folder, "view", accessContext);
 
   if (!canView) {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }
 
-  if (!canManage && (!canUpload || item.uploadedById !== userId)) {
+  if (!canManage && item.uploadedById !== userId) {
     return NextResponse.json({ error: "Nur eigene Uploads können gelöscht werden." }, { status: 403 });
   }
 
