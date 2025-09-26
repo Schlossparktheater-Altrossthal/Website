@@ -49,6 +49,7 @@ type NotificationRealtimeEvent = {
     title: string;
     body?: string | null;
     type?: "info" | "warning" | "success" | "error";
+    actionUrl?: string | null;
   };
 };
 
@@ -213,11 +214,34 @@ export function NotificationBell({ className }: { className?: string }) {
       }
 
       if (browserNotificationsSupported) {
+        const notificationUrlCandidates = [
+          event.notification.actionUrl,
+          "/mitglieder",
+        ];
+
+        let resolvedNotificationUrl: string | null = null;
+
+        for (const candidate of notificationUrlCandidates) {
+          const trimmed = typeof candidate === "string" ? candidate.trim() : "";
+          if (!trimmed) {
+            continue;
+          }
+
+          try {
+            resolvedNotificationUrl = new URL(trimmed, window.location.origin).toString();
+            break;
+          } catch (error) {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn("[NotificationBell] invalid notification url", error);
+            }
+          }
+        }
+
         void showBrowserNotification({
           title: event.notification.title,
           body: description,
           tag: event.notification.id,
-          data: { url: "/mitglieder" },
+          ...(resolvedNotificationUrl ? { url: resolvedNotificationUrl } : {}),
         });
       }
 
