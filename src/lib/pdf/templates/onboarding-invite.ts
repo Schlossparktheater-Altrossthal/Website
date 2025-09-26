@@ -32,6 +32,7 @@ const onboardingInviteSchema = z.object({
     .string()
     .url()
     .transform((value) => value.trim()),
+  displayLink: optionalString,
   headline: optionalString,
   inviteLabel: optionalString,
   note: optionalString,
@@ -86,6 +87,20 @@ function formatDate(date: Date) {
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function formatLinkForDisplay(link: string) {
+  try {
+    const url = new URL(link);
+    const host = url.host.replace(/^www\./i, "");
+    const pathname = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
+    const search = url.search ?? "";
+    const hash = url.hash ?? "";
+    const compact = `${host}${pathname}${search}${hash}`;
+    return compact || link;
+  } catch {
+    return link;
+  }
 }
 
 export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
@@ -331,11 +346,13 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.moveDown(0.9);
     doc.font("Helvetica-Bold").fontSize(14).fillColor(palette.text).text("Direkter Zugang", { align: "center" });
     doc.moveDown(0.25);
+    const displayLink = data.displayLink ?? data.link;
+    const manualLink = formatLinkForDisplay(displayLink);
     doc
       .font("Helvetica")
       .fontSize(12)
       .fillColor(palette.sunrise)
-      .text(data.link, { align: "center", link: data.link, underline: true });
+      .text(manualLink, { align: "center", link: data.link, underline: true });
 
     doc.moveDown(0.4);
     doc

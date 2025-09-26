@@ -285,6 +285,9 @@ export function MemberInviteManager() {
         return;
       }
 
+      const shortPath = invite.id ? `/onboarding/i/${invite.id}` : null;
+      const absoluteDisplayLink = shortPath ? buildAbsoluteUrl(shortPath) : null;
+
       setDownloadingPdfFor(invite.id);
       try {
         const response = await fetch("/api/pdfs/onboarding-invite", {
@@ -292,6 +295,7 @@ export function MemberInviteManager() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             link: absoluteUrl,
+            displayLink: absoluteDisplayLink ?? absoluteUrl,
             headline: invite.label,
             inviteLabel: invite.label,
             note: invite.note,
