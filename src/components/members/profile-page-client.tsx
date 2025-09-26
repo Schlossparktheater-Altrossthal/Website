@@ -234,54 +234,22 @@ function renderText(value: string | null | undefined): ReactNode {
 
 interface SummaryFieldProps {
   label: string;
-  onClick?: () => void;
   description?: string;
   children: ReactNode;
 }
 
-function SummaryField({ label, onClick, description, children }: SummaryFieldProps) {
-  const content = (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-3">
+function SummaryField({ label, description, children }: SummaryFieldProps) {
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-5 shadow-sm backdrop-blur">
+      <div className="flex flex-col gap-3">
         <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           {label}
         </span>
-        {onClick ? (
-          <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-primary/70 transition-colors group-hover:text-primary sm:inline">
-            Bearbeiten
-          </span>
-        ) : null}
+        <div className="text-sm text-foreground">{children}</div>
+        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       </div>
-      <div className="text-sm text-foreground">{children}</div>
-      {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      {onClick ? (
-        <span className="text-[10px] font-medium uppercase tracking-widest text-primary/70 transition-colors group-hover:text-primary sm:hidden">
-          Zum Bearbeiten tippen
-        </span>
-      ) : null}
     </div>
   );
-
-  const baseClasses = cn(
-    "group relative w-full overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-5 text-left shadow-sm backdrop-blur transition-colors",
-  );
-
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-          baseClasses,
-          "hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-        )}
-      >
-        {content}
-      </button>
-    );
-  }
-
-  return <div className={baseClasses}>{content}</div>;
 }
 
 interface ProfilePageClientProps {
@@ -452,19 +420,31 @@ export function ProfilePageClient({
     null,
   );
 
-  const handleTabChange = useCallback((value: string) => {
-    const next = value as ProfileTabId;
-    setActiveTab(next);
-    setActiveEditor((current) => (current === next ? current : null));
-  }, []);
+  const selectTab = useCallback(
+    (section: ProfileTabId) => {
+      if (section === "masse" && !canManageMeasurements) {
+        return false;
+      }
+      setActiveTab(section);
+      setActiveEditor(section);
+      return true;
+    },
+    [canManageMeasurements],
+  );
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      selectTab(value as ProfileTabId);
+    },
+    [selectTab],
+  );
 
   const handleNavigateToSection = useCallback(
     (section: ProfileTabId) => {
-      if (section === "masse" && !canManageMeasurements) {
+      const didSelect = selectTab(section);
+      if (!didSelect) {
         return;
       }
-      setActiveTab(section);
-      setActiveEditor((current) => (current === section ? current : null));
       if (typeof window !== "undefined") {
         window.requestAnimationFrame(() => {
           const element = document.getElementById("profile-tabs");
@@ -478,18 +458,7 @@ export function ProfilePageClient({
         });
       }
     },
-    [canManageMeasurements],
-  );
-
-  const openEditor = useCallback(
-    (section: ProfileTabId) => {
-      if (section === "masse" && !canManageMeasurements) {
-        return;
-      }
-      setActiveTab(section);
-      setActiveEditor(section);
-    },
-    [canManageMeasurements],
+    [selectTab],
   );
 
   const closeEditor = useCallback(() => {
@@ -497,8 +466,8 @@ export function ProfilePageClient({
   }, []);
 
   const handleManagePhoto = useCallback(() => {
-    openEditor("freigaben");
-  }, [openEditor]);
+    selectTab("freigaben");
+  }, [selectTab]);
 
   const handlePhotoSummaryChange = useCallback(
     (summary: PhotoConsentSummary | null) => {
@@ -885,11 +854,16 @@ export function ProfilePageClient({
                 {visibleTabItems.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <TabsTrigger
-                      key={item.id}
-                      value={item.id}
-                      className="!flex h-full flex-col items-start gap-2 rounded-2xl px-3 py-3 text-left shadow-sm transition hover:bg-primary/5 hover:text-foreground sm:px-4 sm:py-4"
-                    >
+                  <TabsTrigger
+                    key={item.id}
+                    value={item.id}
+                    onClick={() => {
+                      if (activeTab === item.id) {
+                        selectTab(item.id);
+                      }
+                    }}
+                    className="!flex h-full flex-col items-start gap-2 rounded-2xl px-3 py-3 text-left shadow-sm transition hover:bg-primary/5 hover:text-foreground sm:px-4 sm:py-4"
+                  >
                       <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <Icon className="h-4 w-4" aria-hidden />
                         {item.label}
@@ -903,35 +877,24 @@ export function ProfilePageClient({
               <div className="space-y-8">
                 <TabsContent value="stammdaten" className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <SummaryField
-                      label="Vorname"
-                      onClick={() => openEditor("stammdaten")}
-                    >
+                    <SummaryField label="Vorname">
                       {renderText(profileUser.firstName)}
                     </SummaryField>
-                    <SummaryField
-                      label="Nachname"
-                      onClick={() => openEditor("stammdaten")}
-                    >
+                    <SummaryField label="Nachname">
                       {renderText(profileUser.lastName)}
                     </SummaryField>
-                    <SummaryField
-                      label="Anzeigename"
-                      onClick={() => openEditor("stammdaten")}
-                    >
+                    <SummaryField label="Anzeigename">
                       {renderText(displayName || null)}
                     </SummaryField>
                     <SummaryField
                       label="E-Mail-Adresse"
                       description="Wir verwenden diese Adresse für Login und Benachrichtigungen."
-                      onClick={() => openEditor("stammdaten")}
                     >
                       {renderText(profileUser.email)}
                     </SummaryField>
                     <SummaryField
                       label="Geburtsdatum"
                       description="Hilft bei der Verwaltung notwendiger Einverständnisse."
-                      onClick={() => openEditor("stammdaten")}
                     >
                       {birthdate ? (
                         <span>{birthdate}</span>
@@ -944,7 +907,6 @@ export function ProfilePageClient({
                     <SummaryField
                       label="Profilbild"
                       description="Quelle und Aktualisierung deines Avatars."
-                      onClick={() => openEditor("stammdaten")}
                     >
                       <div className="space-y-1">
                         <span>{avatarSourceLabel}</span>
@@ -971,7 +933,6 @@ export function ProfilePageClient({
                         ? `Zuletzt bearbeitet am ${onboardingUpdatedAtDetail}`
                         : "Noch keine Angaben aus dem Onboarding."
                     }
-                    onClick={() => openEditor("onboarding")}
                   >
                     <div className="space-y-1">
                       {onboardingFocusLabel ? (
@@ -985,10 +946,7 @@ export function ProfilePageClient({
                     </div>
                   </SummaryField>
 
-                  <SummaryField
-                    label="Hintergrund"
-                    onClick={() => openEditor("onboarding")}
-                  >
+                  <SummaryField label="Hintergrund">
                     {onboardingState.background ? (
                       <span>{onboardingState.background}</span>
                     ) : (
@@ -996,10 +954,7 @@ export function ProfilePageClient({
                     )}
                   </SummaryField>
 
-                  <SummaryField
-                    label="Klasse/Jahrgang"
-                    onClick={() => openEditor("onboarding")}
-                  >
+                  <SummaryField label="Klasse/Jahrgang">
                     {onboardingState.backgroundClass ? (
                       <span>{onboardingState.backgroundClass}</span>
                     ) : (
@@ -1007,10 +962,7 @@ export function ProfilePageClient({
                     )}
                   </SummaryField>
 
-                  <SummaryField
-                    label="Mitglied seit"
-                    onClick={() => openEditor("onboarding")}
-                  >
+                  <SummaryField label="Mitglied seit">
                     {onboardingMemberSince ? (
                       <span>{onboardingMemberSince}</span>
                     ) : (
@@ -1018,10 +970,7 @@ export function ProfilePageClient({
                     )}
                   </SummaryField>
 
-                  <SummaryField
-                    label="Notizen"
-                    onClick={() => openEditor("onboarding")}
-                  >
+                  <SummaryField label="Notizen">
                     {onboardingState.notes ? (
                       <p className="whitespace-pre-wrap text-sm">{onboardingState.notes}</p>
                     ) : (
@@ -1035,7 +984,6 @@ export function ProfilePageClient({
                   <div className="grid gap-4">
                     <SummaryField
                       label="Ernährungsstil"
-                      onClick={() => openEditor("ernaehrung")}
                     >
                       <div className="space-y-1">
                         <span>{dietaryStyle.label}</span>
@@ -1048,10 +996,7 @@ export function ProfilePageClient({
                     </SummaryField>
                   </div>
 
-                  <SummaryField
-                    label="Allergien & Unverträglichkeiten"
-                    onClick={() => openEditor("ernaehrung")}
-                  >
+                  <SummaryField label="Allergien & Unverträglichkeiten">
                     {allergyState.length ? (
                       <div className="flex flex-wrap gap-2">
                         {allergyState.slice(0, 6).map((entry) => (
@@ -1083,7 +1028,6 @@ export function ProfilePageClient({
                     <SummaryField
                       label="Erfasste Maße"
                       description="Gib dem Kostüm-Team aktuelle Werte an die Hand."
-                      onClick={() => openEditor("masse")}
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge
@@ -1110,7 +1054,6 @@ export function ProfilePageClient({
                           <SummaryField
                             key={entry.type}
                             label={MEASUREMENT_TYPE_LABELS[entry.type]}
-                            onClick={() => openEditor("masse")}
                           >
                             <div className="flex flex-wrap items-baseline gap-2">
                               <span className="text-base font-semibold text-foreground">
@@ -1147,8 +1090,7 @@ export function ProfilePageClient({
                 <TabsContent value="interessen" className="space-y-6">
                   <SummaryField
                     label="Status"
-                    description="Tippe, um deine Interessen zu pflegen."
-                    onClick={() => openEditor("interessen")}
+                    description="Öffne den Bereich, um deine Interessen zu pflegen."
                   >
                     <span className="text-sm text-muted-foreground">
                       Interessen werden beim Öffnen geladen.
@@ -1160,7 +1102,6 @@ export function ProfilePageClient({
                 <TabsContent value="freigaben" className="space-y-6">
                   <SummaryField
                     label="Status"
-                    onClick={() => openEditor("freigaben")}
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline" className={cn("text-xs", photoStatusBadge)}>
@@ -1176,7 +1117,6 @@ export function ProfilePageClient({
 
                   <SummaryField
                     label="Geburtsdatum & Alter"
-                    onClick={() => openEditor("freigaben")}
                   >
                     {photoSummary?.dateOfBirth ? (
                       <div className="space-y-1">
@@ -1198,7 +1138,6 @@ export function ProfilePageClient({
 
                   <SummaryField
                     label="Dokumente"
-                    onClick={() => openEditor("freigaben")}
                   >
                     {photoSummary ? (
                       <div className="space-y-1">
@@ -1226,7 +1165,6 @@ export function ProfilePageClient({
                   {photoSummary?.rejectionReason ? (
                     <SummaryField
                       label="Hinweis"
-                      onClick={() => openEditor("freigaben")}
                     >
                       <span className="text-sm text-destructive">
                         {photoSummary.rejectionReason}
