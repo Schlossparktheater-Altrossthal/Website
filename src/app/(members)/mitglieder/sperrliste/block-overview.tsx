@@ -489,6 +489,8 @@ export function BlockOverview({
                     </th>
                     {visibleDayInfo.map(({ day, key }, index) => {
                       const entry = member.blockedMap.get(key);
+                      const trimmedReason = entry?.reason?.trim() || undefined;
+                      const hasReason = Boolean(trimmedReason);
                       const weekday = day.getDay();
                       const showDivider =
                         sortedPreferredWeekdays.length > 0 &&
@@ -505,15 +507,15 @@ export function BlockOverview({
                         format(day, "EEEE, d. MMMM yyyy", { locale: de }),
                         entry
                           ? isPreferred
-                            ? entry.reason
-                              ? `bevorzugt: ${entry.reason}`
+                            ? trimmedReason
+                              ? `bevorzugt: ${trimmedReason}`
                               : "bevorzugt"
                             : isLimited
-                              ? entry.reason
-                                ? `eingeschränkt: ${entry.reason}`
+                              ? trimmedReason
+                                ? `eingeschränkt: ${trimmedReason}`
                                 : "eingeschränkt"
-                              : entry.reason
-                                ? `gesperrt: ${entry.reason}`
+                              : trimmedReason
+                                ? `gesperrt: ${trimmedReason}`
                                 : "gesperrt"
                           : "frei",
                       ];
@@ -554,16 +556,24 @@ export function BlockOverview({
                               type="button"
                               onClick={openDetails}
                               className={cn(
-                                "flex h-full min-h-[56px] w-full flex-col items-center justify-center rounded-lg border border-destructive/70 bg-destructive/20 text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                "flex h-full min-h-[56px] w-full flex-col items-center justify-center rounded-lg border border-destructive/60 bg-destructive/15 px-2 py-2 text-xs leading-5 text-destructive shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-destructive/70 dark:bg-destructive/25 dark:text-destructive-foreground",
                                 isToday(day) && "ring-1 ring-primary/60",
                                 !isSameMonth(day, currentMonth) && "opacity-70",
                               )}
                               aria-label={[...label, "Details öffnen"].join(". ")}
                               title={label.join(". ")}
                             >
-                              <span className="flex h-10 w-full items-center justify-center">
-                                <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-destructive" />
-                              </span>
+                              <span className="text-[11px] font-semibold uppercase tracking-wide">Gesperrt</span>
+                              {hasReason ? (
+                                <span className="mt-1 flex items-start gap-2 text-left text-[11px] leading-4">
+                                  <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                                  <span className="line-clamp-2">{trimmedReason}</span>
+                                </span>
+                              ) : (
+                                <span className="mt-1 text-[11px] leading-4 text-destructive/80 dark:text-destructive-foreground/80">
+                                  Keine Details
+                                </span>
+                              )}
                               <span className="sr-only">Sperrtermin öffnen</span>
                             </button>
                           ) : (
@@ -593,8 +603,8 @@ export function BlockOverview({
                                   <span className="text-[11px] font-semibold uppercase tracking-wide">
                                     {isPreferred ? "Bevorzugt" : "Eingeschränkt"}
                                   </span>
-                                  {entry.reason ? (
-                                    <span className="mt-1 line-clamp-2 text-[11px] leading-4">{entry.reason}</span>
+                                  {trimmedReason ? (
+                                    <span className="mt-1 line-clamp-2 text-[11px] leading-4">{trimmedReason}</span>
                                   ) : (
                                     <span className="mt-1 text-[11px] leading-4 text-muted-foreground/80">
                                       {isPreferred ? "Ohne Angabe" : "Keine Details"}
@@ -667,14 +677,16 @@ export function BlockOverview({
                     const isBlocked = entry?.kind === "BLOCKED";
                     const isLimited = entry?.kind === "LIMITED";
                     const isPreferred = entry?.kind === "PREFERRED";
+                    const trimmedReason = entry?.reason?.trim() || undefined;
+                    const hasReason = Boolean(trimmedReason);
                     const label = [
                       format(day, "EEEE, d. MMMM yyyy", { locale: de }),
                       entry
                         ? isPreferred
-                          ? entry.reason ?? "bevorzugt"
+                          ? trimmedReason ?? "bevorzugt"
                           : isLimited
-                            ? entry.reason ?? "eingeschränkt"
-                            : entry.reason ?? "gesperrt"
+                            ? trimmedReason ?? "eingeschränkt"
+                            : trimmedReason ?? "gesperrt"
                         : "frei",
                     ];
                     if (isHoliday) {
@@ -699,7 +711,7 @@ export function BlockOverview({
                             type="button"
                             onClick={openDetails}
                             className={cn(
-                              "flex h-full w-full flex-col items-center rounded-2xl border border-destructive/70 bg-destructive/20 px-2 py-2 text-center text-xs leading-5 text-destructive shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                              "flex h-full w-full flex-col items-center rounded-2xl border border-destructive/60 bg-destructive/15 px-2 py-2 text-center text-xs leading-5 text-destructive shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-destructive/70 dark:bg-destructive/25 dark:text-destructive-foreground",
                               isToday(day) && "ring-2 ring-primary/70",
                             )}
                             aria-label={[...label, "Details öffnen"].join(". ")}
@@ -709,9 +721,16 @@ export function BlockOverview({
                               {format(day, "EE", { locale: de })}
                             </span>
                             <span className="text-sm font-semibold">{format(day, "d", { locale: de })}</span>
-                            <span className="mt-2 flex h-8 w-full items-center justify-center">
-                              <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-destructive" />
-                            </span>
+                            {hasReason ? (
+                              <span className="mt-2 flex items-start gap-2 text-left text-[11px] leading-4">
+                                <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                                <span className="line-clamp-2">{trimmedReason}</span>
+                              </span>
+                            ) : (
+                              <span className="mt-2 text-[11px] leading-4 text-destructive/80 dark:text-destructive-foreground/80">
+                                Keine Details
+                              </span>
+                            )}
                             <span className="sr-only">Sperrtermin öffnen</span>
                           </button>
                         ) : (
@@ -728,7 +747,7 @@ export function BlockOverview({
                             aria-label={label.join(". ")}
                             title={
                               entry
-                                ? entry.reason ?? (isPreferred ? "Bevorzugt" : "Eingeschränkt")
+                                ? trimmedReason ?? (isPreferred ? "Bevorzugt" : "Eingeschränkt")
                                 : isHoliday
                                   ? holidayEntries[0]?.title ?? "Ferien"
                                   : "Frei"
@@ -742,7 +761,7 @@ export function BlockOverview({
                             </span>
                             {entry ? (
                               <span className="mt-1 line-clamp-2 text-xs leading-4">
-                                {entry.reason ?? (isPreferred ? "Ohne Angabe" : "Eingeschränkt")}
+                                {trimmedReason ?? (isPreferred ? "Ohne Angabe" : "Eingeschränkt")}
                               </span>
                             ) : isHoliday ? (
                               <span className="mt-1 line-clamp-2 text-xs leading-4">{holidayEntries[0]?.title}</span>
