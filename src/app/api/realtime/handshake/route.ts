@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSession } from '@/lib/rbac';
 import {
   createHandshakeToken,
   resolveHandshakeSecret,
@@ -13,7 +12,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Realtime server is not configured.' }, { status: 500 });
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   const userId = session?.user?.id;
   if (!userId) {
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });

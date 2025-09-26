@@ -1,12 +1,11 @@
 import { unstable_noStore as noStore } from "next/cache";
 import type { Session } from "next-auth";
-import { getServerSession } from "next-auth";
 import { execSync } from "node:child_process";
 
 import { MysticBackground } from "@/components/mystic-background";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/rbac";
 import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
 
 const buildInfo = getBuildInfo();
@@ -75,7 +74,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
 
   let session: Session | null = null;
   try {
-    session = await getServerSession(authOptions);
+    session = await getSession();
   } catch (error) {
     console.error("Failed to load session", error);
   }

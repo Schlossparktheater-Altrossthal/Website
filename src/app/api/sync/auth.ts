@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
 
-import { authOptions } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import type { OfflineScope } from "@/lib/offline/types";
 import { verifySyncToken } from "@/lib/sync/tokens";
+import { getSession } from "@/lib/rbac";
 
 const INVENTORY_PERMISSIONS = [
   "mitglieder.lager.technik",
@@ -22,7 +21,7 @@ function logDeniedAccess(scope: OfflineScope, reason: string, userId?: string) {
   console.warn(`[sync] Access denied for scope=${scope}: ${reason} (${context})`);
 }
 
-type SessionResult = Awaited<ReturnType<typeof getServerSession>>;
+type SessionResult = Awaited<ReturnType<typeof getSession>>;
 
 type AuthorizedResult = {
   kind: "ok";
@@ -66,7 +65,7 @@ export async function authenticateSyncRequest(
     } satisfies UnauthorizedResult;
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
 
   if (!session?.user) {
     logDeniedAccess(scope, "missing session", claims.userId);
