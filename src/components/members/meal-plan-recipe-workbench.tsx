@@ -6,15 +6,11 @@ import { useMemo, useState } from "react";
 import {
   CalendarRange,
   ChefHat,
-  Coffee,
   ListChecks,
-  Moon,
   NotebookPen,
   Plus,
   Sparkles,
   Trash2,
-  UtensilsCrossed,
-  type LucideIcon,
 } from "lucide-react";
 
 import type { DietaryStyleOption } from "@/data/dietary-preferences";
@@ -33,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { buildShoppingList } from "@/lib/meal-planning/shopping-list";
 import type { PlannerAssignments, PlannerDay, PlannerRecipe } from "@/lib/meal-planning/types";
@@ -60,12 +55,6 @@ type RecipeDraft = {
   slot: string;
   ingredients: IngredientDraft[];
   instructions: string[];
-};
-
-const SLOT_ICONS: Record<string, LucideIcon> = {
-  Frühstück: Coffee,
-  Mittag: UtensilsCrossed,
-  Abendbrot: Moon,
 };
 
 export function MealPlanRecipeWorkbench({
@@ -313,170 +302,9 @@ export function MealPlanRecipeWorkbench({
   );
 
   return (
-    <Tabs defaultValue="menu" className="space-y-6">
-      <TabsList className="!grid grid-cols-1 gap-2 rounded-2xl border border-border/60 bg-muted/30 p-2 sm:grid-cols-2">
-        <TabsTrigger value="menu" className="justify-center">
-          <CalendarRange className="h-4 w-4" />
-          <span>Menüplan</span>
-        </TabsTrigger>
-        <TabsTrigger value="planner" className="justify-center">
-          <NotebookPen className="h-4 w-4" />
-          <span>Essensplanung</span>
-        </TabsTrigger>
-      </TabsList>
+    <div className="space-y-6">
 
-      <TabsContent value="menu" className="space-y-6">
-        <Card className="border border-border/70 bg-background/95 shadow-[0_18px_50px_rgba(15,23,42,0.24)]">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center gap-2 text-primary">
-              <CalendarRange className="h-5 w-5" />
-              <CardTitle className="text-base font-semibold">Menüplan nach Wochentagen</CardTitle>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Frühstück, Mittag und Abendbrot im Überblick – inklusive Fokus-Stil, Highlights und Allergiehinweisen. Änderungen in
-              der Essensplanung werden hier sofort sichtbar.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-2xl border border-dashed border-border/60 bg-background/85 p-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2 text-primary">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-sm font-semibold text-foreground">
-                  Nutze den Tab „Essensplanung“, um Slots zu befüllen und Allergiehinweise zu ergänzen.
-                </span>
-              </div>
-              <p className="mt-2">
-                Alle hinterlegten Rezepte erscheinen automatisch mit ihren Highlights, vermiedenen Allergenen und Warnhinweisen.
-              </p>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {days.map((day) => {
-                const dayAssignments = selectedRecipes[day.key] ?? {};
-                const assignedCount = day.slots.filter((slot) => {
-                  const assignedId = dayAssignments[slot.slot];
-                  return assignedId !== null && assignedId !== undefined && assignedId !== "";
-                }).length;
-                return (
-                  <div
-                    key={day.key}
-                    className="flex h-full flex-col gap-3 rounded-2xl border border-border/60 bg-background/98 p-4 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{day.label}</p>
-                        {day.dateLabel ? (
-                          <p className="text-xs text-muted-foreground/80">{day.dateLabel}</p>
-                        ) : null}
-                      </div>
-                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-[11px] text-primary">
-                        {day.slots.length > 0
-                          ? `${assignedCount}/${day.slots.length} belegt`
-                          : "Keine Slots"}
-                      </Badge>
-                    </div>
-                    <div className="space-y-3">
-                      {day.slots.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Aktuell sind keine Slots hinterlegt. Lege eigene Rezepte in der Essensplanung an.
-                        </p>
-                      ) : (
-                        day.slots.map((slot) => {
-                          const assignment = dayAssignments[slot.slot];
-                          const recipe = assignment ? recipeMap.get(assignment) ?? null : null;
-                          const SlotIcon = SLOT_ICONS[slot.slot] ?? ChefHat;
-                          return (
-                            <div
-                              key={`${day.key}-${slot.slot}`}
-                              className="space-y-2 rounded-xl border border-border/60 bg-background/96 p-3 shadow-inner"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-start gap-2">
-                                  <div className="rounded-full border border-primary/30 bg-primary/10 p-1 text-primary">
-                                    <SlotIcon className="h-4 w-4" />
-                                  </div>
-                                  <div>
-                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{slot.slot}</p>
-                                    <p className="text-sm font-semibold text-foreground">
-                                      {recipe ? recipe.title : "Noch ohne Rezept"}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {recipe
-                                        ? recipe.description
-                                        : "Weise im Tab „Essensplanung“ ein Gericht zu, um Menü und Einkaufslisten zu aktualisieren."}
-                                    </p>
-                                  </div>
-                                </div>
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "shrink-0 border-transparent text-[11px]",
-                                    styleBadgeVariants[slot.focusStyle] ?? "border-border/60 bg-muted/40 text-muted-foreground",
-                                  )}
-                                >
-                                  {slot.focusLabel}
-                                </Badge>
-                              </div>
-                              {recipe ? (
-                                <div className="space-y-2 text-[11px]">
-                                  {recipe.highlights.length ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {recipe.highlights.map((highlight) => (
-                                        <Badge
-                                          key={`${recipe.id}-highlight-${highlight}`}
-                                          variant="muted"
-                                          size="sm"
-                                          className="border-primary/30 bg-primary/10 text-primary"
-                                        >
-                                          {highlight}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  ) : null}
-                                  {recipe.avoids.length ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {recipe.avoids.map((avoid) => (
-                                        <Badge
-                                          key={`${recipe.id}-avoid-${avoid}`}
-                                          variant="outline"
-                                          size="sm"
-                                          className="border-emerald-300/40 bg-emerald-500/10 text-emerald-500"
-                                        >
-                                          ohne {avoid}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  ) : null}
-                                  {recipe.caution && recipe.caution.length ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {recipe.caution.map((entry) => (
-                                        <Badge
-                                          key={`${recipe.id}-caution-${entry}`}
-                                          variant="destructive"
-                                          size="sm"
-                                          className="bg-destructive/15 text-destructive"
-                                        >
-                                          Achtung: {entry}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="planner" className="space-y-6">
-        <Card className="border border-border/70 bg-background/95 shadow-[0_18px_50px_rgba(15,23,42,0.24)]">
+      <Card className="border border-border/70 bg-background/95 shadow-[0_18px_50px_rgba(15,23,42,0.24)]">
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-2 text-primary">
@@ -509,6 +337,11 @@ export function MealPlanRecipeWorkbench({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Button asChild className="gap-2">
+                  <Link href="/mitglieder/endproben-woche/menueplan">
+                    <CalendarRange className="h-4 w-4" /> Menüplan ansehen
+                  </Link>
+                </Button>
                 <Button variant="outline" className="gap-2" onClick={() => setShowCustomForm((prev) => !prev)}>
                   <Sparkles className="h-4 w-4" />
                   {showCustomForm ? "Formular schließen" : "Eigenes Rezept anlegen"}
@@ -912,8 +745,7 @@ export function MealPlanRecipeWorkbench({
               </ul>
             )}
           </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+      </Card>
+    </div>
   );
 }
