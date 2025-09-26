@@ -30,6 +30,24 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("de-DE", {
 });
 const DATE_FORMATTER = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
+function deriveTotalValue(
+  quantity: number,
+  acquisitionCost: number | null,
+  storedTotalValue: number | null,
+): number | null {
+  if (storedTotalValue !== null && !Number.isNaN(storedTotalValue)) {
+    return storedTotalValue;
+  }
+
+  if (acquisitionCost === null || Number.isNaN(acquisitionCost)) {
+    return null;
+  }
+
+  const raw = quantity * acquisitionCost;
+
+  return Math.round(raw * 100) / 100;
+}
+
 type TechnikInventoryItem = {
   id: string;
   sku: string;
@@ -140,7 +158,11 @@ export default async function TechnikInventoryPage({
     itemType: item.itemType ?? null,
     quantity: item.qty,
     acquisitionCost: item.acquisitionCost ?? null,
-    totalValue: item.totalValue ?? null,
+    totalValue: deriveTotalValue(
+      item.qty,
+      item.acquisitionCost ?? null,
+      item.totalValue ?? null,
+    ),
     purchaseDate: item.purchaseDate ?? null,
     details: item.details ?? null,
     category: item.category as TechnikInventoryCategory,
