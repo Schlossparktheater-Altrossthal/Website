@@ -5,7 +5,11 @@ import { themeDescriptionSchema, themeNameSchema, themeTokensSchema } from "../.
 
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
-import { getWebsiteTheme, saveWebsiteTheme } from "@/lib/website-settings";
+import {
+  LockedWebsiteThemeError,
+  getWebsiteTheme,
+  saveWebsiteTheme,
+} from "@/lib/website-settings";
 
 const updateThemeSchema = z
   .object({
@@ -80,6 +84,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json({ theme: await getWebsiteTheme(updated.id) });
   } catch (error) {
+    if (error instanceof LockedWebsiteThemeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Failed to update website theme", error);
     return NextResponse.json({ error: "Theme konnte nicht aktualisiert werden." }, { status: 500 });
   }

@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       name: theme.name,
       description: theme.description,
       isDefault: theme.isDefault,
+      isPreset: theme.isPreset,
       updatedAt: theme.updatedAt,
     };
     return NextResponse.json({ theme, summary });

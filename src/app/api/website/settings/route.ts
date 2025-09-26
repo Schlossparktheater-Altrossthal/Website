@@ -6,6 +6,7 @@ import { themeDescriptionSchema, themeIdSchema, themeNameSchema, themeTokensSche
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import {
+  LockedWebsiteThemeError,
   ensureWebsiteSettingsRecord,
   readWebsiteSettings,
   resolveWebsiteSettings,
@@ -134,6 +135,9 @@ export async function PUT(request: NextRequest) {
       theme: savedTheme ? toClientWebsiteTheme(resolveWebsiteTheme(savedTheme)) : undefined,
     });
   } catch (error) {
+    if (error instanceof LockedWebsiteThemeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Failed to save website settings", error);
     return NextResponse.json({ error: "Die Einstellungen konnten nicht gespeichert werden." }, { status: 500 });
   }

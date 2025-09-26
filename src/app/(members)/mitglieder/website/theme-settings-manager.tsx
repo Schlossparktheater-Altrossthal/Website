@@ -51,6 +51,9 @@ const UPDATED_AT_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   timeStyle: "short",
 });
 
+const LOCKED_THEME_MESSAGE =
+  "Standard-Designs können nicht bearbeitet werden. Dupliziere das Theme, um Anpassungen vorzunehmen.";
+
 type FamilyFormFields = {
   l: string | number;
   c: string | number;
@@ -121,6 +124,12 @@ function sortThemeSummaries(themes: ClientWebsiteThemeSummary[]): ClientWebsiteT
     if (!a.isDefault && b.isDefault) {
       return 1;
     }
+    if (a.isPreset && !b.isPreset) {
+      return -1;
+    }
+    if (!a.isPreset && b.isPreset) {
+      return 1;
+    }
     return a.name.localeCompare(b.name);
   });
 }
@@ -131,6 +140,7 @@ function themeToSummary(theme: ClientWebsiteTheme): ClientWebsiteThemeSummary {
     name: theme.name,
     description: theme.description,
     isDefault: theme.isDefault,
+    isPreset: theme.isPreset,
     updatedAt: theme.updatedAt,
   };
 }
@@ -749,6 +759,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
     [initialSettings.theme.id]: initialSettings.theme,
   });
   const [currentTheme, setCurrentTheme] = useState<ClientWebsiteTheme>(initialSettings.theme);
+  const themeEditingLocked = currentTheme.isDefault || currentTheme.isPreset;
   const [themeName, setThemeName] = useState(initialSettings.theme.name);
   const [themeDescription, setThemeDescription] = useState(initialSettings.theme.description ?? "");
   const [radius, setRadius] = useState(initialSettings.theme.tokens.radius.base);
@@ -875,7 +886,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
     maintenanceMode,
   ]);
 
-  const renameDisabled = isRenaming || isSaving || isLoadingTheme || currentTheme.isDefault;
+  const renameDisabled = isRenaming || isSaving || isLoadingTheme || themeEditingLocked;
 
   useEffect(() => {
     const styleElement = document.getElementById("website-theme-style") as HTMLStyleElement | null;
@@ -1178,8 +1189,8 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
   }
 
   function openRenameDialog() {
-    if (currentTheme.isDefault) {
-      toast.info("Das Standard-Theme kann nicht umbenannt werden.");
+    if (themeEditingLocked) {
+      toast.info("Standard-Designs können nicht umbenannt werden. Bitte dupliziere das Theme.");
       return;
     }
     setRenameValue(themeName);
@@ -1192,8 +1203,8 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
       toast.error("Der Theme-Name darf nicht leer sein.");
       return;
     }
-    if (currentTheme.isDefault) {
-      toast.error("Das Standard-Theme kann nicht umbenannt werden.");
+    if (themeEditingLocked) {
+      toast.error("Standard-Designs können nicht umbenannt werden.");
       setRenameDialogOpen(false);
       return;
     }
@@ -1283,28 +1294,33 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
         settingsPayload.themeId = currentTheme.id;
       }
 
+      const payload: Record<string, unknown> = {
+        settings: settingsPayload,
+        activateTheme,
+      };
+
+      if (!themeEditingLocked) {
+        payload.theme = {
+          id: currentTheme.id,
+          name: themeName,
+          description: themeDescription.length > 0 ? themeDescription : null,
+          tokens: {
+            radius: { base: radius },
+            parameters,
+            modes: previewModes,
+            meta: {
+              ...(currentTheme.tokens.meta ?? {}),
+              modes: modeKeys,
+              generatedAt: new Date().toISOString(),
+            },
+          },
+        };
+      }
+
       const response = await fetch("/api/website/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          settings: settingsPayload,
-          theme: {
-            id: currentTheme.id,
-            name: themeName,
-            description: themeDescription.length > 0 ? themeDescription : null,
-            tokens: {
-              radius: { base: radius },
-              parameters,
-              modes: previewModes,
-              meta: {
-                ...(currentTheme.tokens.meta ?? {}),
-                modes: modeKeys,
-                generatedAt: new Date().toISOString(),
-              },
-            },
-          },
-          activateTheme,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json().catch(() => null);
@@ -1384,7 +1400,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                   <SelectItem key={theme.id} value={theme.id}>
                     {theme.name}
                     {theme.id === siteSnapshot.activeThemeId ? " • Aktiv" : ""}
-                    {theme.isDefault ? " • Standard" : ""}
+                    {theme.isDefault ? " • Standard" : theme.isPreset ? " • Standarddesign" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1408,7 +1424,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
             >
               {isDuplicatingTheme ? "Theme wird dupliziert…" : "Theme duplizieren"}
             </Button>
-            {currentTheme.isDefault ? (
+            {themeEditingLocked ? (
               <TooltipProvider delayDuration={150}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1425,7 +1441,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" align="center" className="max-w-xs text-center">
-                    Standard-Themes können nicht umbenannt werden.
+                    Standard-Designs können nicht umbenannt werden.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1462,7 +1478,11 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                 {activeThemeSummary?.name ?? "Unbekannt"}
               </span>
             </span>
-            {currentTheme.isDefault ? <Badge variant="outline">Standard</Badge> : null}
+            {themeEditingLocked ? (
+              <Badge variant="outline">
+                {currentTheme.isDefault ? "Standard" : "Standarddesign"}
+              </Badge>
+            ) : null}
             <Badge variant={currentTheme.id === siteSnapshot.activeThemeId ? "default" : "outline"}>
               {currentTheme.id === siteSnapshot.activeThemeId ? "Aktuell ausgewählt" : "Inaktiv"}
             </Badge>
@@ -1556,7 +1576,24 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
           </p>
         </CardHeader>
         <CardContent className="space-y-8">
-          <div className="grid gap-4 sm:grid-cols-2">
+          {themeEditingLocked ? (
+            <div className="flex items-start gap-3 rounded-md border border-border/70 bg-muted/40 p-3 text-sm leading-6 text-muted-foreground">
+              <Info className="mt-0.5 h-4 w-4 text-muted-foreground" aria-hidden />
+              <div>
+                <p className="font-medium text-foreground">Standard-Design geschützt</p>
+                <p>{LOCKED_THEME_MESSAGE}</p>
+              </div>
+            </div>
+          ) : null}
+          <fieldset
+            className={cn(
+              "space-y-8",
+              themeEditingLocked && "pointer-events-none select-none opacity-60",
+            )}
+            aria-disabled={themeEditingLocked}
+            disabled={themeEditingLocked}
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="theme-name">Theme-Name</Label>
               <Input
@@ -2093,6 +2130,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
               </div>
             ) : null}
           </section>
+          </fieldset>
         </CardContent>
       </Card>
 
