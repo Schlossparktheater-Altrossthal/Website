@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
 
 import { DistributionBars } from "./distribution-bars";
+import { FocusDistributionSummary } from "./focus-distribution-summary";
 import { InterestsSection } from "./interests-section";
 import { MetricCard } from "./metric-card";
 import { NutritionSection } from "./nutrition-section";
@@ -72,6 +73,7 @@ export function GlobalOverviewTab({ data, participants }: GlobalOverviewTabProps
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <FocusDistributionSummary items={data.focusDistribution} />
         {data.kpis.map((metric, index) => (
           <MetricCard key={metric.id} metric={metric} index={index} />
         ))}
