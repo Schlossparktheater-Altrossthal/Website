@@ -86,6 +86,7 @@ const CHECKLIST_TARGET_LABELS: Record<ProfileChecklistTarget, string> = {
   masse: "Maße",
   interessen: "Interessen",
   freigaben: "Freigaben",
+  onboarding: "Onboarding",
 };
 const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "stammdaten",
@@ -93,6 +94,7 @@ const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "masse",
   "interessen",
   "freigaben",
+  "onboarding",
 ];
 
 const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
