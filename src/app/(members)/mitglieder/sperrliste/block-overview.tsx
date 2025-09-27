@@ -591,8 +591,8 @@ export function BlockOverview({
                           size={44}
                           className="h-11 w-11"
                         />
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold">{member.displayName}</div>
+                        <div className="min-w-0 text-foreground">
+                          <div className="truncate text-sm font-semibold text-foreground">{member.displayName}</div>
                           <div className="text-xs text-muted-foreground">
                             {stats?.total ? `${stats.total} Sperrtermin${stats.total === 1 ? "" : "e"}` : "Keine Sperrtermine"}
                           </div>
@@ -675,7 +675,7 @@ export function BlockOverview({
                               type="button"
                               onClick={openDetails}
                               className={cn(
-                                "group relative flex h-12 w-full min-w-0 items-center justify-center rounded-lg border border-transparent bg-transparent px-3 text-xs font-medium uppercase tracking-[0.2em] text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80",
+                                "group relative flex h-12 w-full min-w-0 items-center justify-center rounded-lg border border-destructive/40 bg-destructive/10 px-3 text-xs font-medium uppercase tracking-[0.2em] text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:bg-destructive/15 hover:text-destructive/90",
                                 isToday(day) && "ring-1 ring-primary/60",
                                 !isSameMonth(day, currentMonth) && "opacity-70",
                               )}
