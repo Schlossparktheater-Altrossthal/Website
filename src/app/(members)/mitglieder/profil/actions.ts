@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 
-import type { AllergyLevel, MeasurementType, MeasurementUnit, OnboardingFocus } from "@prisma/client";
+import type { AllergyLevel, MeasurementType, MeasurementUnit, OnboardingFocus, PayoutMethod } from "@prisma/client";
 
 const BASE_URL = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
 
@@ -47,8 +47,16 @@ export type UpdateProfileBasicsResult = {
     avatarSource: string | null;
     avatarUpdatedAt: string | null;
     dateOfBirth: string | null;
+    payoutMethod: PayoutMethod;
+    payoutAccountHolder: string | null;
+    payoutIban: string | null;
+    payoutBankName: string | null;
+    payoutPaypalHandle: string | null;
+    payoutNote: string | null;
   };
 };
+
+const PAYOUT_METHOD_VALUES = ["BANK_TRANSFER", "PAYPAL", "OTHER"] as const satisfies readonly PayoutMethod[];
 
 export async function updateProfileBasicsAction(formData: FormData): Promise<ActionResult<UpdateProfileBasicsResult>> {
   try {
@@ -94,6 +102,24 @@ export async function updateProfileBasicsAction(formData: FormData): Promise<Act
             typeof user.avatarUpdatedAt === "string" && user.avatarUpdatedAt.trim() ? user.avatarUpdatedAt : null,
           dateOfBirth:
             typeof user.dateOfBirth === "string" && user.dateOfBirth.trim() ? user.dateOfBirth : null,
+          payoutMethod:
+            typeof user.payoutMethod === "string" && PAYOUT_METHOD_VALUES.includes(user.payoutMethod as PayoutMethod)
+              ? (user.payoutMethod as PayoutMethod)
+              : "BANK_TRANSFER",
+          payoutAccountHolder:
+            typeof user.payoutAccountHolder === "string" && user.payoutAccountHolder.trim()
+              ? user.payoutAccountHolder
+              : null,
+          payoutIban:
+            typeof user.payoutIban === "string" && user.payoutIban.trim() ? user.payoutIban : null,
+          payoutBankName:
+            typeof user.payoutBankName === "string" && user.payoutBankName.trim() ? user.payoutBankName : null,
+          payoutPaypalHandle:
+            typeof user.payoutPaypalHandle === "string" && user.payoutPaypalHandle.trim()
+              ? user.payoutPaypalHandle
+              : null,
+          payoutNote:
+            typeof user.payoutNote === "string" && user.payoutNote.trim() ? user.payoutNote : null,
         },
       },
     };

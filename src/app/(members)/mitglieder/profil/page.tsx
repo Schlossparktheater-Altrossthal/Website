@@ -53,6 +53,12 @@ export default async function ProfilePage() {
           role: { select: { id: true, name: true, systemRole: true, isSystem: true } },
         },
       },
+      payoutMethod: true,
+      payoutAccountHolder: true,
+      payoutIban: true,
+      payoutBankName: true,
+      payoutPaypalHandle: true,
+      payoutNote: true,
       interests: {
         select: {
           interest: { select: { name: true } },
@@ -246,6 +252,12 @@ export default async function ProfilePage() {
           avatarUpdatedAt: user.avatarImageUpdatedAt?.toISOString() ?? null,
           roles,
           customRoles,
+          payoutMethod: user.payoutMethod,
+          payoutAccountHolder: user.payoutAccountHolder ?? null,
+          payoutIban: user.payoutIban ?? null,
+          payoutBankName: user.payoutBankName ?? null,
+          payoutPaypalHandle: user.payoutPaypalHandle ?? null,
+          payoutNote: user.payoutNote ?? null,
         }}
         onboarding={onboarding}
         interests={interestNames}

@@ -17,6 +17,12 @@ enum Role {
   admin
 }
 
+enum PayoutMethod {
+  BANK_TRANSFER
+  PAYPAL
+  OTHER
+}
+
 enum SyncScope {
   inventory
   tickets
@@ -265,6 +271,12 @@ model User {
   avatarImage         Bytes?
   avatarImageMime     String?
   avatarImageUpdatedAt DateTime?
+  payoutMethod         PayoutMethod @default(BANK_TRANSFER)
+  payoutAccountHolder  String?
+  payoutIban           String?
+  payoutBankName       String?
+  payoutPaypalHandle   String?
+  payoutNote           String?
 
   accounts     Account[]
   sessions     Session[]
