@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   ArrowRight,
   AlertTriangle,
+  Check,
   CheckCircle2,
   CalendarDays,
   Loader2,
@@ -80,14 +81,6 @@ const AVATAR_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const CURRENT_YEAR = new Date().getFullYear();
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
-const CHECKLIST_TARGET_LABELS: Record<ProfileChecklistTarget, string> = {
-  stammdaten: "Stammdaten",
-  ernaehrung: "Ernährung & Allergien",
-  masse: "Maße",
-  interessen: "Interessen",
-  freigaben: "Freigaben",
-  onboarding: "Onboarding",
-};
 const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "stammdaten",
   "ernaehrung",
@@ -755,26 +748,19 @@ function ProfileClientInner({
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)] xl:items-start xl:gap-8">
-        <ProfileOverviewCard
-          user={user}
-          displayName={displayName}
-          sortedRoles={sortedRoles}
-          summary={summary}
-          onboarding={onboarding}
-          createdAtLabel={createdAtLabel}
-          memberSinceLabel={memberSinceLabel}
-          percentComplete={percentComplete}
-          highlights={highlightTiles}
-        />
-        <div className="space-y-4">
-          <ChecklistCard
-            summary={summary}
-            activeTarget={activeChecklistTarget}
-            onNavigate={(target) => setActiveTab(target)}
-          />
-        </div>
-      </div>
+      <ProfileOverviewCard
+        user={user}
+        displayName={displayName}
+        sortedRoles={sortedRoles}
+        summary={summary}
+        onboarding={onboarding}
+        createdAtLabel={createdAtLabel}
+        memberSinceLabel={memberSinceLabel}
+        percentComplete={percentComplete}
+        highlights={highlightTiles}
+        activeChecklistTarget={activeChecklistTarget}
+        onChecklistNavigate={(target) => setActiveTab(target)}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex w-full flex-wrap gap-2 rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
@@ -859,6 +845,8 @@ type ProfileOverviewCardProps = {
   memberSinceLabel: string | null;
   percentComplete: number;
   highlights: HighlightTileConfig[];
+  activeChecklistTarget?: ProfileChecklistTarget;
+  onChecklistNavigate?: (target: ProfileChecklistTarget) => void;
 };
 
 function ProfileOverviewCard({
@@ -871,6 +859,8 @@ function ProfileOverviewCard({
   memberSinceLabel,
   percentComplete,
   highlights,
+  activeChecklistTarget,
+  onChecklistNavigate,
 }: ProfileOverviewCardProps) {
   const email = user.email?.trim() ?? "";
   const show = onboarding?.show ?? null;
@@ -880,6 +870,7 @@ function ProfileOverviewCard({
       : `${percentComplete}% vollständig`
     : null;
   const checklistCountLabel = summary.total ? `${summary.completed}/${summary.total}` : null;
+  const hasChecklistItems = summary.items.length > 0;
 
   return (
     <Card className="border border-border/70 bg-gradient-to-br from-background/85 via-background/70 to-background/80 shadow-sm">
@@ -980,6 +971,69 @@ function ProfileOverviewCard({
             </div>
           </div>
         ) : null}
+        {hasChecklistItems ? (
+          <div className="space-y-1">
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Checkliste</span>
+            <ul className="space-y-1">
+              {summary.items.map((item) => {
+                const target = item.targetSection ?? null;
+                const isActive = target ? activeChecklistTarget === target : false;
+                const isComplete = item.complete;
+
+                const content = (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded border text-[0.65rem]",
+                        isComplete
+                          ? "border-success/60 bg-success/10 text-success"
+                          : "border-border/60 bg-background text-muted-foreground/30",
+                        isActive ? "ring-1 ring-primary/40" : "",
+                      )}
+                      aria-hidden
+                    >
+                      {isComplete ? <Check className="h-3 w-3" aria-hidden /> : null}
+                    </span>
+                    <span
+                      className={cn(
+                        "truncate text-xs",
+                        isComplete ? "text-muted-foreground/80 line-through" : "text-foreground",
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                );
+
+                if (target) {
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => onChecklistNavigate?.(target)}
+                        className={cn(
+                          "flex w-full items-center rounded-md px-2 py-1 text-left transition",
+                          isActive
+                            ? "bg-primary/10 text-foreground ring-1 ring-primary/30"
+                            : "hover:bg-muted/50 text-foreground/90",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                        )}
+                      >
+                        {content}
+                      </button>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li key={item.id} className="rounded-md px-2 py-1">
+                    {content}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
         {show ? (
           <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
             <Users className="h-4 w-4 text-muted-foreground/80" aria-hidden />
@@ -998,128 +1052,6 @@ function ProfileOverviewCard({
           </div>
         </CardContent>
       ) : null}
-    </Card>
-  );
-}
-
-type ChecklistCardProps = {
-  summary: ProfileCompletionSummary;
-  activeTarget?: ProfileChecklistTarget;
-  onNavigate: (target: ProfileChecklistTarget) => void;
-};
-
-function ChecklistCard({ summary, activeTarget, onNavigate }: ChecklistCardProps) {
-  const percent = summary.total ? Math.round((summary.completed / summary.total) * 100) : 0;
-  const hasItems = summary.items.length > 0;
-
-  return (
-    <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-sm">
-      <CardHeader className="space-y-2">
-        <CardTitle className="flex items-center justify-between gap-2 text-base font-semibold text-foreground">
-          <span>Profil-Checkliste</span>
-          {summary.total ? (
-            <span className="text-xs font-medium text-muted-foreground">{summary.completed}/{summary.total}</span>
-          ) : null}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Halte deine Stammdaten, Ernährungspräferenzen und Freigaben aktuell.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {summary.total ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>Fortschritt</span>
-              <span>{percent}%</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  summary.complete
-                    ? "bg-gradient-to-r from-success/80 via-success/70 to-success/90"
-                    : "bg-gradient-to-r from-primary/70 via-primary/80 to-primary/90",
-                )}
-                style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        {hasItems ? (
-          <ul className="space-y-3">
-            {summary.items.map((item) => {
-              const Icon = item.complete ? CheckCircle2 : AlertTriangle;
-              const iconClasses = item.complete ? "text-success" : "text-warning";
-              const sectionLabel = item.targetSection ? CHECKLIST_TARGET_LABELS[item.targetSection] : null;
-              const isActive = Boolean(item.targetSection && activeTarget === item.targetSection);
-
-              const content = (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex flex-1 gap-3">
-                    <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", iconClasses)} aria-hidden />
-                    <div className="space-y-1">
-                      <div className="text-sm font-semibold text-foreground">{item.label}</div>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                  {sectionLabel ? (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "self-start rounded-full border-border/60 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide transition",
-                        isActive ? "border-primary/70 text-primary" : "text-muted-foreground",
-                        item.complete ? "border-success/60 text-success" : "",
-                      )}
-                    >
-                      {sectionLabel}
-                    </Badge>
-                  ) : null}
-                </div>
-              );
-
-              if (item.targetSection) {
-                const target = item.targetSection;
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => onNavigate(target)}
-                      className={cn(
-                        "w-full rounded-lg border border-border/50 bg-background/80 p-3 text-left shadow-sm transition",
-                        item.complete ? "border-success/60" : "hover:border-primary/60 hover:shadow-md",
-                        isActive ? "border-primary/60 shadow-md ring-2 ring-primary/30" : "",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                      )}
-                    >
-                      {content}
-                    </button>
-                  </li>
-                );
-              }
-
-              return (
-                <li key={item.id}>
-                  <div className={cn("rounded-lg border border-border/50 bg-background/80 p-3 shadow-sm", item.complete ? "border-success/60" : "")}
-                  >
-                    {content}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <div className="rounded-md border border-border/50 bg-background/70 p-4 text-sm text-muted-foreground">
-            Checkliste wird vorbereitet …
-          </div>
-        )}
-
-        {summary.complete && hasItems ? (
-          <div className="rounded-md border border-success/40 bg-success/10 px-3 py-2 text-xs font-medium text-success">
-            Stark! Alle Checkpunkte sind erledigt.
-          </div>
-        ) : null}
-      </CardContent>
     </Card>
   );
 }
