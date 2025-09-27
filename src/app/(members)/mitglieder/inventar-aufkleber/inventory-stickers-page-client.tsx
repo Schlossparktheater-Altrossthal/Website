@@ -32,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/typography";
 import type { MembersBreadcrumbItem } from "@/lib/members-breadcrumbs";
+import { buildInventoryItemUrl, formatInventoryLinkLabel } from "@/lib/inventory/sticker-links";
 import { cn } from "@/lib/utils";
 
 type InventoryItemOption = {
@@ -59,6 +60,8 @@ type StickerPreviewEntry = {
   code: string;
   primaryText: string;
   secondaryText?: string;
+  qrValue: string;
+  linkLabel: string;
 };
 
 interface InventoryStickersPageClientProps {
@@ -103,13 +106,13 @@ function applyTemplate(template: string, context: TemplateContext) {
   });
 }
 
-function useQrCodeData(code: string) {
-  const [dataUrl, setDataUrl] = useState<string | null>(() => qrCodeCache.get(code) ?? null);
+function useQrCodeData(value: string) {
+  const [dataUrl, setDataUrl] = useState<string | null>(() => qrCodeCache.get(value) ?? null);
 
   useEffect(() => {
     let isMounted = true;
 
-    const cached = qrCodeCache.get(code);
+    const cached = qrCodeCache.get(value);
     if (cached) {
       setDataUrl(cached);
       return () => {
@@ -117,15 +120,15 @@ function useQrCodeData(code: string) {
       };
     }
 
-    QRCode.toDataURL(code, { margin: 1, width: 256 })
+    QRCode.toDataURL(value, { margin: 1, width: 256 })
       .then((url) => {
-        qrCodeCache.set(code, url);
+        qrCodeCache.set(value, url);
         if (isMounted) {
           setDataUrl(url);
         }
       })
       .catch((error) => {
-        console.error(`[inventory-stickers] Failed to render QR code for ${code}`, error);
+        console.error(`[inventory-stickers] Failed to render QR code for ${value}`, error);
         if (isMounted) {
           setDataUrl(null);
         }
@@ -134,7 +137,7 @@ function useQrCodeData(code: string) {
     return () => {
       isMounted = false;
     };
-  }, [code]);
+  }, [value]);
 
   return dataUrl;
 }
@@ -144,7 +147,7 @@ function StickerPreviewCard({
 }: {
   entry: StickerPreviewEntry;
 }) {
-  const dataUrl = useQrCodeData(entry.code);
+  const dataUrl = useQrCodeData(entry.qrValue);
 
   return (
     <div className="relative aspect-[3/2] break-inside-avoid-page">
@@ -185,8 +188,22 @@ function StickerPreviewCard({
           </div>
         </div>
         <div className="mt-2 border-t border-dashed border-border/70 pt-1.5 print:border-black/40">
+          <Text
+            variant="eyebrow"
+            tone="muted"
+            className="block text-[9px] uppercase tracking-[0.28em] text-muted-foreground/80 print:text-black/60"
+          >
+            Inventarnummer
+          </Text>
           <Text className="font-mono text-sm tracking-[0.18em] text-foreground/90 print:text-black">
             {entry.code}
+          </Text>
+          <Text
+            variant="caption"
+            tone="muted"
+            className="mt-1 block break-all text-[10px] text-muted-foreground print:text-black/70"
+          >
+            {entry.linkLabel}
           </Text>
         </div>
       </div>
@@ -244,6 +261,15 @@ export default function InventoryStickersPageClient({
 }: InventoryStickersPageClientProps) {
   const [stickers, setStickers] = useState<StickerEntry[]>([]);
   const [inventoryQuery, setInventoryQuery] = useState("");
+  const [stickerBaseUrl, setStickerBaseUrl] = useState<string>(
+    () => process.env.NEXT_PUBLIC_BASE_URL?.trim() ?? "",
+  );
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.origin) {
+      setStickerBaseUrl(window.location.origin);
+    }
+  }, []);
 
   const sequenceForm = useForm<SequenceFormValues>({
     resolver: zodResolver(sequenceFormSchema) as Resolver<SequenceFormValues>,
@@ -280,18 +306,27 @@ export default function InventoryStickersPageClient({
 
     for (const entry of stickers) {
       const copies = Math.max(0, entry.copies);
+      if (copies === 0) {
+        continue;
+      }
+
+      const qrValue = buildInventoryItemUrl(entry.code, stickerBaseUrl);
+      const linkLabel = formatInventoryLinkLabel(qrValue);
+
       for (let index = 0; index < copies; index += 1) {
         entries.push({
           key: `${entry.key}-${index}`,
           code: entry.code,
           primaryText: entry.primaryText,
           secondaryText: entry.secondaryText,
+          qrValue,
+          linkLabel,
         });
       }
     }
 
     return entries;
-  }, [stickers]);
+  }, [stickers, stickerBaseUrl]);
 
   const filteredInventory = useMemo(() => {
     const normalized = inventoryQuery.trim().toLowerCase();
