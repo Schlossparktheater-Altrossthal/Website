@@ -1,5 +1,7 @@
-import { redirect } from 'next/navigation';
+import { MembersDashboard } from "@/components/members-dashboard";
+import { requireAuth } from "@/lib/rbac";
 
-export default function MembersDashboardPage() {
-  redirect('/mitglieder');
+export default async function MembersDashboardPage() {
+  await requireAuth();
+  return <MembersDashboard />;
 }
