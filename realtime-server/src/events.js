@@ -213,6 +213,29 @@ export function createEventHandlers({ io, logger, toISO }) {
     return true;
   }
 
+  function broadcastOnboardingDashboardUpdate(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+
+    const { onboardingId, dashboard, broadcastToGlobal } = payload;
+    if (typeof onboardingId !== 'string' || !onboardingId.trim()) return false;
+    if (!dashboard || typeof dashboard !== 'object') return false;
+
+    const event = {
+      type: 'onboarding_dashboard_update',
+      onboardingId,
+      dashboard,
+      timestamp: formatTimestamp(Date.now()),
+    };
+
+    io.to(`onboarding_${onboardingId}`).emit('onboarding_dashboard_update', event);
+
+    if (broadcastToGlobal) {
+      io.to('global').emit('onboarding_dashboard_update', event);
+    }
+
+    return true;
+  }
+
   function handleServerEvent(eventType, data) {
     switch (eventType) {
       case 'attendance_updated':
@@ -227,6 +250,8 @@ export function createEventHandlers({ io, logger, toISO }) {
         return broadcastInventoryEvent(data);
       case 'ticket_scan_event':
         return broadcastTicketScanEvent(data);
+      case 'onboarding_dashboard_update':
+        return broadcastOnboardingDashboardUpdate(data);
       default:
         return false;
     }
@@ -253,6 +278,9 @@ export function createEventHandlers({ io, logger, toISO }) {
     if (room.startsWith('show_')) {
       return isValidRoomIdentifier(room, 'show_'.length);
     }
+    if (room.startsWith('onboarding_')) {
+      return isValidRoomIdentifier(room, 'onboarding_'.length);
+    }
     return false;
   }
 
@@ -276,6 +304,7 @@ export function createEventHandlers({ io, logger, toISO }) {
     sendNotification,
     broadcastInventoryEvent,
     broadcastTicketScanEvent,
+    broadcastOnboardingDashboardUpdate,
     handleServerEvent,
     validateRoom,
   };

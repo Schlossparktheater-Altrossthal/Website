@@ -8,6 +8,10 @@ import {
   type DietaryStrictnessOption,
 } from "@/data/dietary-preferences";
 import { prisma } from "@/lib/prisma";
+import {
+  broadcastOnboardingDashboardForUser,
+  broadcastOnboardingDashboardSnapshot,
+} from "@/lib/onboarding/dashboard-events";
 import { requireAuth } from "@/lib/rbac";
 
 function parseRequestBody(body: unknown) {
@@ -70,8 +74,19 @@ export async function PUT(request: NextRequest) {
       select: {
         dietaryPreference: true,
         dietaryPreferenceStrictness: true,
+        showId: true,
       },
     });
+
+    try {
+      if (profile.showId) {
+        await broadcastOnboardingDashboardSnapshot(profile.showId);
+      } else {
+        await broadcastOnboardingDashboardForUser(userId);
+      }
+    } catch (error) {
+      console.error("[Profile][Dietary] realtime update failed", error);
+    }
 
     return NextResponse.json({
       preference: {
