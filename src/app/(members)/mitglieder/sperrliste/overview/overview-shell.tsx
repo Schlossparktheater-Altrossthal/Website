@@ -1,6 +1,6 @@
 'use client';
 
-import { format, isSameMonth, isToday } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { de } from 'date-fns/locale/de';
 import { ArrowRightLeft, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
@@ -16,6 +16,7 @@ import {
   type PreparedMember,
   type VisibleDayInfo,
 } from './useBlockOverviewData';
+import { DesktopTimeline, timelineStatusStyles, type TimelineStatus } from './desktop-timeline';
 
 type LegendItemProps = {
   label: string;
@@ -203,261 +204,20 @@ export function OverviewShell({
       </div>
 
       <div className="hidden sm:block">
-        <div className="relative max-h-[70vh] overflow-auto rounded-2xl border border-border/60 bg-card shadow-sm">
-          <table className="w-full min-w-[960px] table-fixed border-collapse text-xs">
-            <thead className="sticky top-0 z-30 bg-card/95">
-              <tr>
-                <th
-                  rowSpan={2}
-                  className="sticky top-0 left-0 z-40 border-b border-r border-border/60 bg-card/95 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-                >
-                  Mitglied
-                </th>
-                {visibleDayInfo.map(({ day, key }, index) => {
-                  const weekday = day.getDay();
-                  const isPreferredDay = preferredWeekdaySet.has(weekday);
-                  const isExceptionDay = exceptionWeekdaySet.has(weekday);
-                  const isPreferredExtra = !isPreferredDay && !isExceptionDay;
-                  const showDivider =
-                    sortedPreferredWeekdays.length > 0 &&
-                    weekday === sortedPreferredWeekdays[0] &&
-                    index !== 0;
-                  const isFirstOfMonth = format(day, 'd') === '1';
-
-                  return (
-                    <th
-                      key={key}
-                      className={cn(
-                        'border-b border-border/60 bg-card/95 px-3 py-2 text-center align-bottom text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/90',
-                        showDivider && 'border-l border-border/60',
-                        isPreferredDay && 'text-foreground',
-                        isExceptionDay && !isPreferredDay && 'text-muted-foreground',
-                        isPreferredExtra && preferredDayKeys.has(key) && 'text-emerald-500',
-                      )}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span
-                          className={cn(
-                            'text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground/70',
-                            isToday(day) && 'text-primary',
-                          )}
-                        >
-                          {format(day, 'EE', { locale: de })}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-base font-semibold',
-                            isToday(day) && 'text-primary',
-                            isPreferredDay && 'font-bold',
-                          )}
-                        >
-                          {format(day, 'd', { locale: de })}
-                        </span>
-                        {isFirstOfMonth ? (
-                          <span className="rounded-full bg-muted/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-                            {format(day, 'MMM', { locale: de })}
-                          </span>
-                        ) : null}
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-              <tr>
-                {holidaySegments.map((segment) => {
-                  const summaryLabel =
-                    segment.titles.length > 1
-                      ? `${segment.titles[0] ?? 'Ferien'} +${segment.titles.length - 1}`
-                      : segment.titles[0] ?? 'Ferien';
-
-                  return (
-                    <th
-                      key={segment.key}
-                      colSpan={segment.span}
-                      scope="col"
-                      className={cn(
-                        'border-b border-border/60 px-2 py-1 text-center align-middle text-[10px] font-semibold uppercase tracking-wide',
-                        segment.isHoliday
-                          ? 'bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200'
-                          : 'bg-card/95 text-transparent',
-                        segment.showDivider && 'border-l border-border/60',
-                      )}
-                      aria-hidden={!segment.isHoliday}
-                    >
-                      {segment.isHoliday ? (
-                        <span title={segment.titles.join(', ')}>{summaryLabel}</span>
-                      ) : (
-                        <span className="sr-only">Keine Ferien</span>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {preparedMembers.map((member) => {
-                const stats = summary.totals.get(member.id);
-
-                return (
-                  <tr key={member.id} className="align-top transition-colors hover:bg-muted/40">
-                    <th
-                      scope="row"
-                      className="sticky left-0 z-30 min-w-[220px] border-b border-r border-border/60 bg-card/95 px-4 py-3 text-left"
-                    >
-                      <div className="flex items-start gap-3">
-                        <UserAvatar
-                          userId={member.id}
-                          email={member.email ?? undefined}
-                          firstName={member.firstName ?? undefined}
-                          lastName={member.lastName ?? undefined}
-                          name={member.displayName}
-                          avatarSource={member.avatarSource ?? undefined}
-                          avatarUpdatedAt={member.avatarUpdatedAt ?? undefined}
-                          size={44}
-                          className="h-11 w-11"
-                        />
-                        <div className="min-w-0 text-foreground">
-                          <div className="truncate text-sm font-semibold text-foreground">{member.displayName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {stats?.total ? `${stats.total} Sperrtermin${stats.total === 1 ? '' : 'e'}` : 'Keine Sperrtermine'}
-                          </div>
-                          {stats?.upcoming ? (
-                            <div className="text-sm leading-5 text-primary">{stats.upcoming} bevorstehend</div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </th>
-                    {visibleDayInfo.map(({ day, key }, index) => {
-                      const entry = member.blockedMap.get(key);
-                      const trimmedReason = entry?.reason?.trim() || undefined;
-                      const hasReason = Boolean(trimmedReason);
-                      const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
-                      const weekday = day.getDay();
-                      const showDivider =
-                        sortedPreferredWeekdays.length > 0 &&
-                        weekday === sortedPreferredWeekdays[0] &&
-                        index !== 0;
-                      const isPreferredDay = preferredWeekdaySet.has(weekday);
-                      const isExceptionDay = exceptionWeekdaySet.has(weekday);
-                      const holidayEntries = holidayMap.get(key) ?? [];
-                      const isHoliday = holidayEntries.length > 0;
-                      const isBlocked = entry?.kind === 'BLOCKED';
-                      const isLimited = entry?.kind === 'LIMITED';
-                      const isPreferred = entry?.kind === 'PREFERRED';
-                      const label = [
-                        format(day, 'EEEE, d. MMMM yyyy', { locale: de }),
-                        entry
-                          ? isPreferred
-                            ? trimmedReason ?? 'bevorzugt'
-                            : isLimited
-                              ? trimmedReason ?? 'eingeschränkt'
-                              : trimmedReason ?? 'gesperrt'
-                          : 'frei',
-                      ];
-
-                      if (isHoliday) {
-                        label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(', ')}`);
-                      }
-                      if (createdAtLabel) {
-                        label.push(`Eingetragen am ${createdAtLabel}`);
-                      }
-
-                      return (
-                        <td
-                          key={key}
-                          className={cn(
-                            'min-w-[72px] border-b border-border/60 px-1 py-1 align-top',
-                            showDivider && 'border-l border-border/60',
-                          )}
-                        >
-                          {isBlocked && entry ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onSelectBlockedDay({
-                                  member,
-                                  entry,
-                                  date: day,
-                                  holidayEntries,
-                                })
-                              }
-                              className={cn(
-                                'group relative flex h-12 w-full min-w-0 items-center gap-2 overflow-hidden rounded-lg border border-transparent bg-destructive/10 px-3 text-left text-xs font-medium text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80',
-                                !isSameMonth(day, currentMonth) && 'opacity-70',
-                                isToday(day) && 'ring-1 ring-primary/60',
-                              )}
-                              aria-label={[...label, 'Details öffnen'].join('. ')}
-                              title={label.join('. ')}
-                            >
-                              <span className="flex flex-1 items-center gap-2">
-                                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/70">
-                                  {format(day, 'EE', { locale: de })}
-                                </span>
-                                <span className="text-sm font-semibold">{format(day, 'd', { locale: de })}</span>
-                                {hasReason ? (
-                                  <span className="flex-1 truncate text-right normal-case tracking-normal text-[11px]">
-                                    {trimmedReason}
-                                  </span>
-                                ) : (
-                                  <span className="flex-1 truncate text-right normal-case tracking-normal text-[11px] text-destructive/70">
-                                    Keine Details
-                                  </span>
-                                )}
-                              </span>
-                              <span className="pointer-events-none absolute inset-x-2 bottom-2 h-1 rounded-full bg-destructive/20 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
-                              <span className="sr-only">Sperrtermin öffnen</span>
-                            </button>
-                          ) : (
-                            <div
-                              className={cn(
-                                'relative flex h-12 w-full min-w-0 items-center justify-center overflow-hidden rounded-lg border border-transparent bg-muted/20 px-3 text-[11px] font-medium transition-colors',
-                                isLimited &&
-                                  'border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100',
-                                isPreferred &&
-                                  'border-emerald-400/60 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100',
-                                !entry && isHoliday &&
-                                  'border-sky-400/40 bg-sky-500/10 text-sky-900 dark:text-sky-100',
-                                !entry && !isHoliday &&
-                                  'border-border/40 bg-background/60 text-muted-foreground/80 backdrop-blur',
-                                !entry && !isHoliday && isPreferredDay &&
-                                  'border-primary/40 bg-primary/10 text-primary/90 dark:border-primary/50 dark:bg-primary/20 dark:text-primary-foreground',
-                                !entry && !isHoliday && isExceptionDay &&
-                                  'border-primary/25 bg-primary/5 text-primary/75 dark:border-primary/40 dark:bg-primary/15 dark:text-primary-foreground/80',
-                                isToday(day) && 'ring-1 ring-primary/60',
-                                !isSameMonth(day, currentMonth) && 'opacity-70',
-                              )}
-                              aria-label={label.join('. ')}
-                              title={label.join('. ')}
-                            >
-                              {entry ? (
-                                <div className="flex w-full items-center justify-between gap-2 text-[10px] uppercase tracking-[0.18em]">
-                                  <span className="truncate">
-                                    {isPreferred ? 'Bevorzugt' : 'Eingeschränkt'}
-                                  </span>
-                                  <span className="truncate text-right normal-case tracking-normal text-[11px]">
-                                    {trimmedReason || (isPreferred ? 'Ohne Angabe' : 'Keine Details')}
-                                  </span>
-                                </div>
-                              ) : isHoliday ? (
-                                <span className="sr-only">{holidayEntries[0]?.title ?? 'Ferien'}</span>
-                              ) : isPreferredDay ? (
-                                <span className="sr-only">Bevorzugter Probentag</span>
-                              ) : isExceptionDay ? (
-                                <span className="sr-only">Ausnahmeprobentag</span>
-                              ) : (
-                                <span className="text-[11px] font-semibold uppercase tracking-[0.26em] text-muted-foreground/70">Frei</span>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DesktopTimeline
+          currentMonth={currentMonth}
+          preparedMembers={preparedMembers}
+          visibleDayInfo={visibleDayInfo}
+          holidaySegments={holidaySegments}
+          summary={summary}
+          preferredWeekdaySet={preferredWeekdaySet}
+          exceptionWeekdaySet={exceptionWeekdaySet}
+          sortedPreferredWeekdays={sortedPreferredWeekdays}
+          preferredDayKeys={preferredDayKeys}
+          holidayMap={holidayMap}
+          onSelectBlockedDay={onSelectBlockedDay}
+          formatCreatedAtLabel={formatCreatedAtLabel}
+        />
       </div>
 
       <div className="space-y-3 sm:hidden">
@@ -526,6 +286,20 @@ export function OverviewShell({
                       label.push(`Eingetragen am ${createdAtLabel}`);
                     }
 
+                    const baseId = `${member.id}-${key}-mobile`;
+                    const holidayId = isHoliday ? `${baseId}-holiday` : undefined;
+                    const createdAtId = createdAtLabel ? `${baseId}-created` : undefined;
+                    const describedBy = [holidayId, createdAtId].filter(Boolean).join(' ') || undefined;
+
+                    let status: TimelineStatus = 'freeMuted';
+                    if (isLimited) {
+                      status = 'limited';
+                    } else if (isPreferred) {
+                      status = 'preferred';
+                    } else if (!entry && isHoliday) {
+                      status = 'holiday';
+                    }
+
                     return (
                       <div key={key} className="min-w-[64px] shrink-0 snap-center">
                         {isBlocked && entry ? (
@@ -540,11 +314,12 @@ export function OverviewShell({
                               })
                             }
                             className={cn(
-                              'flex h-full w-full flex-col items-center rounded-2xl border border-transparent bg-transparent px-2 py-2 text-center text-xs leading-5 text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80',
+                              'flex h-full w-full flex-col items-center rounded-2xl border border-transparent px-2 py-2 text-center text-xs leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80',
+                              timelineStatusStyles({ status: 'blocked' }),
                               isToday(day) && 'ring-2 ring-primary/70',
                             )}
                             aria-label={[...label, 'Details öffnen'].join('. ')}
-                            title={label.join('. ')}
+                            aria-describedby={describedBy}
                           >
                             <span className="text-xs uppercase tracking-wide text-muted-foreground/80">
                               {format(day, 'EE', { locale: de })}
@@ -560,27 +335,29 @@ export function OverviewShell({
                                 Keine Details
                               </span>
                             )}
+                            {holidayId ? (
+                              <span id={holidayId} className="sr-only">
+                                {`Ferien: ${holidayEntries.map((h) => h.title).join(', ')}`}
+                              </span>
+                            ) : null}
+                            {createdAtId ? (
+                              <span id={createdAtId} className="sr-only">
+                                {`Eingetragen am ${createdAtLabel}`}
+                              </span>
+                            ) : null}
                             <span className="sr-only">Sperrtermin öffnen</span>
                           </button>
                         ) : (
                           <div
                             className={cn(
-                              'flex h-full flex-col items-center rounded-2xl border border-border/50 px-2 py-2 text-center text-xs leading-5 shadow-sm',
-                              isLimited &&
-                                'border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100',
-                              isPreferred && 'border-emerald-400/50 bg-emerald-500/15 text-emerald-700 dark:text-emerald-100',
-                              !entry && isHoliday && 'border-sky-400/40 bg-sky-500/15 text-sky-800 dark:text-sky-100',
-                              !entry && !isHoliday && 'bg-muted/30 text-muted-foreground',
+                              'flex h-full flex-col items-center rounded-2xl border border-transparent px-2 py-2 text-center text-xs leading-5 shadow-sm',
+                              timelineStatusStyles({ status }),
                               isToday(day) && 'ring-2 ring-primary/70',
                             )}
                             aria-label={label.join('. ')}
-                            title={
-                              entry
-                                ? trimmedReason ?? (isPreferred ? 'Bevorzugt' : 'Eingeschränkt')
-                                : isHoliday
-                                  ? holidayEntries[0]?.title ?? 'Ferien'
-                                  : 'Frei'
-                            }
+                            aria-describedby={describedBy}
+                            tabIndex={isLimited || isPreferred || (isHoliday && !entry) ? 0 : undefined}
+                            aria-selected={isToday(day) || undefined}
                           >
                             <span className="text-xs uppercase tracking-wide text-muted-foreground/90">
                               {format(day, 'EE', { locale: de })}
@@ -593,10 +370,17 @@ export function OverviewShell({
                                 {trimmedReason ?? (isPreferred ? 'Ohne Angabe' : 'Eingeschränkt')}
                               </span>
                             ) : isHoliday ? (
-                              <span className="mt-1 line-clamp-2 text-xs leading-4">{holidayEntries[0]?.title}</span>
+                              <span className="mt-1 line-clamp-2 text-xs leading-4" id={holidayId}>
+                                {holidayEntries[0]?.title}
+                              </span>
                             ) : (
                               <span className="mt-1 text-xs leading-4 text-muted-foreground">frei</span>
                             )}
+                            {createdAtId ? (
+                              <span id={createdAtId} className="sr-only">
+                                {`Eingetragen am ${createdAtLabel}`}
+                              </span>
+                            ) : null}
                           </div>
                         )}
                       </div>
