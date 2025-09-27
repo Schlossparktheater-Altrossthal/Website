@@ -13,7 +13,13 @@ import { DashboardClient } from "@/app/dashboard/onboarding/[onboardingId]/_comp
 
 export const dynamic = "force-dynamic";
 
-export default async function MembersOnboardingAnalyticsPage() {
+type MembersOnboardingAnalyticsPageProps = {
+  searchParams?: Promise<{ onboardingId?: string }>;
+};
+
+export default async function MembersOnboardingAnalyticsPage({
+  searchParams,
+}: MembersOnboardingAnalyticsPageProps) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.onboarding.analytics");
 
@@ -21,28 +27,34 @@ export default async function MembersOnboardingAnalyticsPage() {
     redirect("/mitglieder");
   }
 
-  const availableOnboardings = await getAvailableOnboardings();
+  const [availableOnboardings, resolvedSearchParams] = await Promise.all([
+    getAvailableOnboardings(),
+    searchParams ? searchParams : Promise.resolve(undefined),
+  ]);
+
+  const requestedOnboardingId = resolvedSearchParams?.onboardingId;
+  const availableIds = new Set(availableOnboardings.map((onboarding) => onboarding.id));
   const initialOnboarding = availableOnboardings[0];
 
-  if (!initialOnboarding) {
+  const selectedOnboardingId = requestedOnboardingId && availableIds.has(requestedOnboardingId)
+    ? requestedOnboardingId
+    : initialOnboarding?.id;
+
+  if (!selectedOnboardingId) {
     notFound();
   }
 
-  const dashboard = await getOnboardingDashboardData(initialOnboarding.id);
+  const dashboard = await getOnboardingDashboardData(selectedOnboardingId);
 
   if (!dashboard) {
     notFound();
-  }
-
-  if (availableOnboardings.length === 1) {
-    redirect(`/dashboard/onboarding/${initialOnboarding.id}`);
   }
 
   const options = availableOnboardings.length
     ? availableOnboardings
     : [
         {
-          id: initialOnboarding.id,
+          id: selectedOnboardingId,
           title: dashboard.onboarding.title,
           periodLabel: dashboard.onboarding.timeSpan,
           status: dashboard.onboarding.status,
@@ -52,7 +64,11 @@ export default async function MembersOnboardingAnalyticsPage() {
   return (
     <main id="main" className="space-y-6 pb-12">
       <Suspense fallback={<Skeleton className="h-[480px] w-full rounded-2xl" />}>
-        <DashboardClient onboardings={options} initialData={dashboard} />
+        <DashboardClient
+          onboardings={options}
+          initialData={dashboard}
+          navigateHrefTemplate="/mitglieder/onboarding?onboardingId=%s"
+        />
       </Suspense>
     </main>
   );
