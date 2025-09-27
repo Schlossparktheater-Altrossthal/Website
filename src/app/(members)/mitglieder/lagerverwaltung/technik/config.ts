@@ -82,3 +82,62 @@ export const TECH_CATEGORY_LABEL: Record<TechnikInventoryCategory, string> =
     (acc, entry) => ({ ...acc, [entry.value]: entry.label }),
     {} as Record<TechnikInventoryCategory, string>,
   );
+
+export const TECH_CATEGORY_TYPE_OPTIONS = {
+  light: [
+    "Scheinwerfer",
+    "Moving Head",
+    "LED-Bar",
+    "Lichtmischpult",
+    "Dimmer",
+  ],
+  sound: [
+    "Mischpult",
+    "Lautsprecher",
+    "Monitor",
+    "Mikrofon",
+    "Endstufe",
+  ],
+  network: [
+    "Switch",
+    "Router",
+    "Access Point",
+    "Netzwerk-Controller",
+    "Medienkonverter",
+  ],
+  video: [
+    "Kamera",
+    "Projektor",
+    "Bildmischer",
+    "Playback-System",
+    "Monitor",
+  ],
+  instruments: [
+    "Keyboard",
+    "Gitarre",
+    "Bass",
+    "Schlagzeug",
+    "Verstärker",
+  ],
+  cables: [
+    "Stromkabel",
+    "XLR-Kabel",
+    "Klinkenkabel",
+    "Multicore",
+    "DMX-Kabel",
+  ],
+  cases: [
+    "Flightcase",
+    "Rack",
+    "Tasche",
+    "Transportkoffer",
+    "Drawer",
+  ],
+  accessories: [
+    "Stativ",
+    "Adapter",
+    "Werkzeug",
+    "Ersatzteil",
+    "Verbrauchsmaterial",
+  ],
+} as const satisfies Record<TechnikInventoryCategory, readonly string[]>;

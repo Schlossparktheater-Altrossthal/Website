@@ -1,9 +1,11 @@
 import Link from "next/link";
 
 import { PageHeader } from "@/components/members/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -13,8 +15,8 @@ import type { InventoryItemCategory } from "@prisma/client";
 
 import { AddTechnikItemDialog } from "./add-item-dialog";
 import { EditTechnikItemDialog } from "./edit-item-dialog";
-import { InventoryCategoryPanel } from "./inventory-category-panel";
 import {
+  TECH_CATEGORY_LABEL,
   TECH_CATEGORY_VALUES,
   TECH_INVENTORY_CATEGORIES,
   type TechnikInventoryCategory,
@@ -126,12 +128,21 @@ export default async function TechnikInventoryPage({
   const query = rawQuery.trim();
   const normalizedQuery = query.toLowerCase();
 
-  const categoryFilter = TECH_CATEGORY_VALUES.map(
-    (value) => value as InventoryItemCategory,
-  );
+  const rawCategoryParam =
+    typeof resolvedSearch.category === "string" ? resolvedSearch.category : "all";
+  const selectedCategory: TechnikInventoryCategory | "all" = (
+    TECH_CATEGORY_VALUES as readonly string[]
+  ).includes(rawCategoryParam)
+    ? (rawCategoryParam as TechnikInventoryCategory)
+    : "all";
+
+  const prismaCategoryFilter: InventoryItemCategory[] =
+    selectedCategory === "all"
+      ? TECH_CATEGORY_VALUES.map((value) => value as InventoryItemCategory)
+      : [selectedCategory as InventoryItemCategory];
 
   const records = await prisma.inventoryItem.findMany({
-    where: { category: { in: categoryFilter } },
+    where: { category: { in: prismaCategoryFilter } },
     orderBy: [{ category: "asc" }, { sku: "asc" }],
     select: {
       id: true,
@@ -170,63 +181,37 @@ export default async function TechnikInventoryPage({
     lastInventoryAt: item.lastInventoryAt ?? null,
   }));
 
-  const grouped = TECH_INVENTORY_CATEGORIES.map((categoryConfig) => {
-    const categoryItems = items.filter(
-      (item) => item.category === categoryConfig.value,
-    );
-    const filteredItems = normalizedQuery.length
-      ? categoryItems.filter((item) => matchesQuery(item, normalizedQuery))
-      : categoryItems;
-
-    const itemCount = categoryItems.length;
-    const totalQuantity = categoryItems.reduce(
-      (sum, item) => sum + item.quantity,
-      0,
-    );
-    const filteredQuantity = filteredItems.reduce(
-      (sum, item) => sum + item.quantity,
-      0,
-    );
-
-    const summary = normalizedQuery.length
-      ? filteredItems.length
-        ? `${filteredItems.length} Treffer für „${query}“, ${itemCount} Artikel mit ${QUANTITY_FORMATTER.format(totalQuantity)} Einheiten insgesamt.`
-        : `Keine Treffer für „${query}“. ${itemCount} Artikel, ${QUANTITY_FORMATTER.format(totalQuantity)} Einheiten insgesamt.`
-      : itemCount > 0
-        ? `${itemCount} Artikel, ${QUANTITY_FORMATTER.format(totalQuantity)} Einheiten insgesamt.`
-        : "Noch keine Artikel in dieser Kategorie angelegt.";
-
-    const defaultOpen = normalizedQuery.length > 0 ? filteredItems.length > 0 : true;
-
-    return {
-      config: categoryConfig,
-      items: filteredItems,
-      allItems: categoryItems,
-      itemCount,
-      totalQuantity,
-      filteredCount: filteredItems.length,
-      filteredQuantity,
-      summary,
-      defaultOpen,
-    };
-  });
+  const filteredItems = normalizedQuery.length
+    ? items.filter((item) => matchesQuery(item, normalizedQuery))
+    : items;
 
   const totalItems = items.length;
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-  const filteredItemCount = normalizedQuery.length
-    ? grouped.reduce((sum, group) => sum + group.filteredCount, 0)
-    : totalItems;
-  const filteredQuantity = normalizedQuery.length
-    ? grouped.reduce((sum, group) => sum + group.filteredQuantity, 0)
-    : totalQuantity;
+  const filteredItemCount = filteredItems.length;
+  const filteredQuantity = filteredItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0,
+  );
+
+  const filterContext =
+    selectedCategory === "all"
+      ? "über alle Kategorien"
+      : `in der Kategorie ${TECH_CATEGORY_LABEL[selectedCategory]}`;
 
   const overviewText = normalizedQuery.length
     ? filteredItemCount > 0
-      ? `${filteredItemCount} Treffer für „${query}“, Gesamtbestand ${QUANTITY_FORMATTER.format(filteredQuantity)} Einheiten innerhalb des Filters (insgesamt ${totalItems} Artikel).`
-      : `Keine Treffer für „${query}“. Gesamtbestand ${QUANTITY_FORMATTER.format(totalQuantity)} Einheiten über ${totalItems} Artikel.`
+      ? `${filteredItemCount} Treffer für „${query}“ ${filterContext}, Gesamtbestand ${QUANTITY_FORMATTER.format(filteredQuantity)} Einheiten innerhalb des Filters (Basis: ${totalItems} Artikel).`
+      : `Keine Treffer für „${query}“ ${filterContext}. ${totalItems} Artikel mit ${QUANTITY_FORMATTER.format(totalQuantity)} Einheiten im Filter.`
     : totalItems > 0
-      ? `${totalItems} Artikel, Gesamtbestand ${QUANTITY_FORMATTER.format(totalQuantity)} Einheiten.`
-      : "Noch keine Technik-Artikel erfasst.";
+      ? `${totalItems} Artikel ${filterContext}, Gesamtbestand ${QUANTITY_FORMATTER.format(totalQuantity)} Einheiten.`
+      : selectedCategory === "all"
+        ? "Noch keine Technik-Artikel erfasst."
+        : `Noch keine Technik-Artikel in der Kategorie ${TECH_CATEGORY_LABEL[selectedCategory]} erfasst.`;
+
+  const defaultDialogCategory =
+    selectedCategory === "all" ? undefined : selectedCategory;
+  const hasItems = totalItems > 0;
+  const hasVisibleItems = filteredItemCount > 0;
 
   return (
     <div className="space-y-6">
@@ -242,144 +227,167 @@ export default async function TechnikInventoryPage({
         </CardHeader>
       </Card>
       <Card>
-        <CardHeader>
-          <CardTitle>Schnellsuche</CardTitle>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>Schnellsuche &amp; Filter</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Kombiniere Kategorie-Filter und Stichworte für präzise Ergebnisse.
+            </p>
+          </div>
+          <AddTechnikItemDialog defaultCategory={defaultDialogCategory} />
         </CardHeader>
         <CardContent>
-          <form className="flex flex-col gap-3 sm:flex-row sm:items-center" action="/mitglieder/lagerverwaltung/technik" method="get">
-            <Input
-              type="search"
-              name="q"
-              defaultValue={query}
-              placeholder="Hersteller, Modell, Typ oder Inventarnummer suchen"
-              className="w-full sm:max-w-md"
-            />
-            <div className="flex items-center gap-2">
-              <Button type="submit">Suchen</Button>
-              {query.length ? (
+          <form
+            className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-end"
+            action="/mitglieder/lagerverwaltung/technik"
+            method="get"
+          >
+            <div className="grid gap-1.5">
+              <Label htmlFor="technik-search">Suche</Label>
+              <Input
+                id="technik-search"
+                type="search"
+                name="q"
+                defaultValue={query}
+                placeholder="Hersteller, Modell, Typ oder Inventarnummer suchen"
+                className="w-full"
+              />
+            </div>
+            <div className="grid gap-1.5 md:max-w-xs">
+              <Label htmlFor="technik-category-filter">Kategorie</Label>
+              <select
+                id="technik-category-filter"
+                name="category"
+                defaultValue={selectedCategory === "all" ? "all" : selectedCategory}
+                className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="all">Alle Kategorien</option>
+                {TECH_INVENTORY_CATEGORIES.map((categoryOption) => (
+                  <option key={categoryOption.value} value={categoryOption.value}>
+                    {categoryOption.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end gap-2 md:justify-end">
+              <Button type="submit">Filtern</Button>
+              {query.length || selectedCategory !== "all" ? (
                 <Button variant="ghost" type="button" asChild>
                   <Link href="/mitglieder/lagerverwaltung/technik">Zurücksetzen</Link>
                 </Button>
               ) : null}
             </div>
           </form>
-          {query.length ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Ergebnisse werden live gefiltert. Suchbegriffe gelten für alle Kategorien.
-            </p>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Tippe einen Suchbegriff ein, um alle Kategorien gleichzeitig zu durchsuchen.
-            </p>
-          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Filter wirken auf die gesamte Liste. Lass beide Felder leer, um alle Artikel zu sehen.
+          </p>
         </CardContent>
       </Card>
-      <div className="grid gap-6">
-        {grouped.map(({
-          config,
-          items: categoryItems,
-          allItems,
-          summary,
-          defaultOpen,
-        }) => (
-          <InventoryCategoryPanel
-            key={config.value}
-            title={config.label}
-            description={config.description}
-            summary={summary}
-            defaultOpen={defaultOpen}
-            actions={<AddTechnikItemDialog category={config.value} />}
-          >
-            <div className="space-y-4 p-4 sm:p-6">
-              {allItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Lege den ersten Artikel für die Kategorie {config.label} an, um den Bestand zu tracken.
-                </p>
-              ) : categoryItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Keine Treffer für „{query}“ in dieser Kategorie.
-                </p>
-              ) : (
-                <div className="overflow-hidden rounded-md border border-border/60">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Artikel</TableHead>
-                          <TableHead className="min-w-[220px]">Bestand &amp; Kosten</TableHead>
-                          <TableHead className="min-w-[240px]">Historie</TableHead>
-                          <TableHead className="w-[80px] text-right">Aktionen</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {categoryItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="align-top">
-                              <div className="space-y-1">
-                                <p className="font-semibold text-foreground">
-                                  {item.manufacturer ?? "Unbekannter Hersteller"}
-                                </p>
-                                <p className="text-sm text-muted-foreground">{item.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {item.itemType ?? "Kein Typ angegeben"}
-                                </p>
-                                <p className="font-mono text-xs text-muted-foreground">#{item.sku}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="space-y-1 text-sm text-muted-foreground">
-                                <p>
-                                  <span className="font-medium text-foreground">Menge:</span>{" "}
-                                  {QUANTITY_FORMATTER.format(item.quantity)}
-                                </p>
-                                <p>
-                                  <span className="font-medium text-foreground">Kosten bei Anschaffung:</span>{" "}
-                                  {formatCurrency(item.acquisitionCost)}
-                                </p>
-                                <p>
-                                  <span className="font-medium text-foreground">Gesamtwert:</span>{" "}
-                                  {formatCurrency(item.totalValue)}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="space-y-1 text-sm text-muted-foreground">
-                                <p>
-                                  <span className="font-medium text-foreground">Kaufdatum:</span>{" "}
-                                  {formatDate(item.purchaseDate)}
-                                </p>
-                                <p>
-                                  <span className="font-medium text-foreground">Letzte Inventur:</span>{" "}
-                                  {formatDate(item.lastInventoryAt)}
-                                </p>
-                                <p>
-                                  <span className="font-medium text-foreground">Zuletzt benutzt:</span>{" "}
-                                  {formatDate(item.lastUsedAt)}
-                                </p>
-                                {item.details ? (
-                                  <p>
-                                    <span className="font-medium text-foreground">Anmerkungen:</span>{" "}
-                                    <span className="block whitespace-pre-line">
-                                      {item.details}
-                                    </span>
-                                  </p>
-                                ) : null}
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top text-right">
-                              <EditTechnikItemDialog item={item} />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-            </div>
-          </InventoryCategoryPanel>
-        ))}
-      </div>
+      {!hasItems ? (
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">
+              {selectedCategory === "all"
+                ? "Lege den ersten Artikel an, um den Technik-Bestand zu pflegen."
+                : `In der Kategorie ${TECH_CATEGORY_LABEL[selectedCategory]} sind noch keine Artikel angelegt.`}
+            </p>
+          </CardContent>
+        </Card>
+      ) : !hasVisibleItems ? (
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">
+              {`Keine Treffer für „${query}“ ${
+                selectedCategory === "all"
+                  ? "über alle Kategorien."
+                  : `in der Kategorie ${TECH_CATEGORY_LABEL[selectedCategory]}.`
+              }`}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Passe Kategorie oder Suchbegriff an, um weitere Artikel einzublenden.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="overflow-hidden rounded-md border border-border/60">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kategorie &amp; Artikel</TableHead>
+                  <TableHead className="min-w-[220px]">Bestand &amp; Kosten</TableHead>
+                  <TableHead className="min-w-[240px]">Historie</TableHead>
+                  <TableHead className="w-[80px] text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="align-top">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">
+                            {TECH_CATEGORY_LABEL[item.category]}
+                          </Badge>
+                          <p className="font-semibold text-foreground">
+                            {item.manufacturer ?? "Unbekannter Hersteller"}
+                          </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.itemType ?? "Kein Typ angegeben"}
+                        </p>
+                        <p className="font-mono text-xs text-muted-foreground">#{item.sku}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        <p>
+                          <span className="font-medium text-foreground">Menge:</span>{" "}
+                          {QUANTITY_FORMATTER.format(item.quantity)}
+                        </p>
+                        <p>
+                          <span className="font-medium text-foreground">Kosten bei Anschaffung:</span>{" "}
+                          {formatCurrency(item.acquisitionCost)}
+                        </p>
+                        <p>
+                          <span className="font-medium text-foreground">Gesamtwert:</span>{" "}
+                          {formatCurrency(item.totalValue)}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        <p>
+                          <span className="font-medium text-foreground">Kaufdatum:</span>{" "}
+                          {formatDate(item.purchaseDate)}
+                        </p>
+                        <p>
+                          <span className="font-medium text-foreground">Letzte Inventur:</span>{" "}
+                          {formatDate(item.lastInventoryAt)}
+                        </p>
+                        <p>
+                          <span className="font-medium text-foreground">Zuletzt benutzt:</span>{" "}
+                          {formatDate(item.lastUsedAt)}
+                        </p>
+                        {item.details ? (
+                          <p>
+                            <span className="font-medium text-foreground">Anmerkungen:</span>{" "}
+                            <span className="block whitespace-pre-line">{item.details}</span>
+                          </p>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top text-right">
+                      <EditTechnikItemDialog item={item} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
