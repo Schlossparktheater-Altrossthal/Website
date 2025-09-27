@@ -70,6 +70,15 @@ export type AggregateSessionMetricsResult = {
   sessionInsights: SessionInsight[];
   trafficSources: TrafficSourceInsight[];
   realtimeSummary: RealtimeSummary;
+  sessionSummary: SessionSummary;
+};
+
+export type SessionSummary = {
+  windowStart: Date;
+  windowEnd: Date;
+  peakConcurrentUsers: number;
+  membersRealtimeEvents: number;
+  membersAvgSessionDurationSeconds: number;
 };
 
 function toTimestamp(date: Date | string | number): number {
@@ -313,6 +322,44 @@ export function aggregateSessionMetrics({
     eventCounts[type] = (eventCounts[type] ?? 0) + 1;
   }
 
+  const memberRealtimeEvents = totalEvents;
+
+  const memberSessions = sessions.filter((session) => Boolean(session.isMember));
+  const memberDurations = memberSessions.map((session) => computeDurationSeconds(session, fallbackEnd));
+  const membersAvgSessionDurationSeconds = Math.round(average(memberDurations));
+
+  const concurrencyWindowStart = windowStart;
+  const concurrencyEvents: Array<{ timestamp: number; delta: number }> = [];
+
+  for (const session of sessions) {
+    const start = Math.max(toTimestamp(session.startedAt), concurrencyWindowStart.getTime());
+    const rawEnd = session.endedAt ?? session.lastSeenAt ?? fallbackEnd;
+    const endTimestamp = Math.max(start, Math.min(toTimestamp(rawEnd), windowEnd.getTime()));
+
+    if (endTimestamp <= concurrencyWindowStart.getTime()) {
+      continue;
+    }
+
+    concurrencyEvents.push({ timestamp: start, delta: 1 });
+    concurrencyEvents.push({ timestamp: endTimestamp, delta: -1 });
+  }
+
+  concurrencyEvents.sort((a, b) => {
+    if (a.timestamp === b.timestamp) {
+      return b.delta - a.delta;
+    }
+    return a.timestamp - b.timestamp;
+  });
+
+  let activeUsers = 0;
+  let peakConcurrentUsers = 0;
+  for (const event of concurrencyEvents) {
+    activeUsers += event.delta;
+    if (activeUsers > peakConcurrentUsers) {
+      peakConcurrentUsers = activeUsers;
+    }
+  }
+
   const realtimeSummary: RealtimeSummary = {
     windowStart,
     windowEnd,
@@ -324,5 +371,12 @@ export function aggregateSessionMetrics({
     sessionInsights,
     trafficSources,
     realtimeSummary,
+    sessionSummary: {
+      windowStart,
+      windowEnd,
+      peakConcurrentUsers,
+      membersRealtimeEvents: memberRealtimeEvents,
+      membersAvgSessionDurationSeconds,
+    },
   };
 }

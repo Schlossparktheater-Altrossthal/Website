@@ -62,11 +62,14 @@ async function main() {
         frontendRequests: summary.frontendRequests,
         frontendAvgResponseMs: summary.frontendAvgResponseMs,
         frontendAvgPayloadBytes: summary.frontendAvgPayloadBytes,
+        cacheHitRate: summary.cacheHitRate,
+        frontendCacheHitRate: summary.frontendCacheHitRate,
         membersRequests: summary.membersRequests,
         membersAvgResponseMs: summary.membersAvgResponseMs,
         apiRequests: summary.apiRequests,
         apiAvgResponseMs: summary.apiAvgResponseMs,
         apiErrorRate: summary.apiErrorRate,
+        apiBackgroundJobs: summary.apiBackgroundJobs,
       },
     });
 

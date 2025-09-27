@@ -1405,11 +1405,14 @@ model AnalyticsHttpSummary {
   frontendRequests          Int      @default(0)
   frontendAvgResponseMs     Float    @default(0)
   frontendAvgPayloadBytes   Float    @default(0)
+  cacheHitRate              Float    @default(0)
+  frontendCacheHitRate      Float    @default(0)
   membersRequests           Int      @default(0)
   membersAvgResponseMs      Float    @default(0)
   apiRequests               Int      @default(0)
   apiAvgResponseMs          Float    @default(0)
   apiErrorRate              Float    @default(0)
+  apiBackgroundJobs         Int      @default(0)
   generatedAt               DateTime @default(now())
 
   @@map("analytics_http_summary")
@@ -1626,6 +1629,19 @@ model AnalyticsRealtimeSummary {
   generatedAt DateTime @default(now())
 
   @@map("analytics_realtime_summary")
+  @@index([windowEnd])
+}
+
+model AnalyticsSessionSummary {
+  id                                 String   @id @default(cuid())
+  windowStart                        DateTime
+  windowEnd                          DateTime
+  peakConcurrentUsers                Int      @default(0)
+  membersRealtimeEvents              Int      @default(0)
+  membersAvgSessionDurationSeconds   Float    @default(0)
+  generatedAt                        DateTime @default(now())
+
+  @@map("analytics_session_summary")
   @@index([windowEnd])
 }
 
