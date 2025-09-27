@@ -194,18 +194,19 @@ export default async function ProfilePage() {
   const hasBirthdate = Boolean(user.dateOfBirth);
   const hasDietaryPreference = Boolean(user.onboardingProfile?.dietaryPreference?.trim());
 
+  const onboardingProfile = user.onboardingProfile;
+  const whatsappLink = onboardingProfile?.show
+    ? getOnboardingWhatsAppLink(onboardingProfile.show.meta)
+    : null;
+
   const checklist = buildProfileChecklist({
     hasBasicData,
     hasBirthdate,
     hasDietaryPreference,
     hasMeasurements,
     photoConsent: { consentGiven: photoConsentSummary.status === "approved" },
+    hasWhatsappVisit: whatsappLink ? Boolean(onboardingProfile?.whatsappLinkVisitedAt) : undefined,
   });
-
-  const onboardingProfile = user.onboardingProfile;
-  const whatsappLink = onboardingProfile?.show
-    ? getOnboardingWhatsAppLink(onboardingProfile.show.meta)
-    : null;
 
   const onboarding = onboardingProfile
     ? {
