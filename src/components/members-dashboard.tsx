@@ -39,9 +39,7 @@ import {
   PiggyBank,
   CalendarRange,
   UtensilsCrossed,
-  MessageCircle,
   ArrowUpRight,
-  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -60,37 +58,6 @@ interface DashboardStats {
   unreadNotifications: number;
 }
 
-type OnboardingPhotoStatus = "none" | "pending" | "approved" | "rejected";
-
-interface OnboardingDomainStats {
-  count: number;
-  averageWeight: number;
-}
-
-interface OnboardingOverview {
-  completed: boolean;
-  completedAt: Date | null;
-  focus: "acting" | "tech" | "both" | null;
-  background: string | null;
-  backgroundClass: string | null;
-  notes: string | null;
-  whatsappLink: string | null;
-  whatsappLinkVisitedAt: Date | null;
-  stats: {
-    acting: OnboardingDomainStats;
-    crew: OnboardingDomainStats;
-    interests: { count: number; top: string[] };
-    dietary: { count: number; highlights: { name: string; level: string | null }[] };
-  };
-  photoConsent: {
-    status: OnboardingPhotoStatus;
-    consentGiven: boolean;
-    hasDocument: boolean;
-    updatedAt: Date | null;
-  };
-  passwordSet: boolean;
-}
-
 interface FinalRehearsalWeekInfo {
   showId: string;
   title: string | null;
@@ -103,44 +70,6 @@ const INITIAL_STATS: DashboardStats = {
   totalMembers: 0,
   rehearsalsThisWeek: 0,
   unreadNotifications: 0,
-};
-
-const ONBOARDING_FOCUS_LABELS: Record<"acting" | "tech" | "both", string> = {
-  acting: "Schauspiel",
-  tech: "Gewerke",
-  both: "Schauspiel & Gewerke",
-};
-
-const ONBOARDING_FOCUS_DESCRIPTIONS: Record<"acting" | "tech" | "both", string> = {
-  acting: "Du möchtest auf der Bühne wirken und Rollen gestalten.",
-  tech: "Du möchtest hinter den Kulissen organisieren, bauen oder für Licht & Ton sorgen.",
-  both: "Du bleibst flexibel zwischen Bühne und Gewerken und entscheidest situativ.",
-};
-
-const ONBOARDING_DOMAIN_ACCENT: Record<"acting" | "crew", string> = {
-  acting: "from-primary/60 via-primary/30 to-transparent",
-  crew: "from-info/60 via-info/30 to-transparent",
-};
-
-const ONBOARDING_PHOTO_STATUS_LABELS: Record<OnboardingPhotoStatus, string> = {
-  none: "Ausstehend",
-  pending: "In Prüfung",
-  approved: "Freigabe erteilt",
-  rejected: "Abgelehnt",
-};
-
-const ONBOARDING_PHOTO_STATUS_CLASSES: Record<OnboardingPhotoStatus, string> = {
-  none: "border border-border/60 bg-muted/40 text-muted-foreground",
-  pending: "border border-warning/45 bg-warning/15 text-warning",
-  approved: "border border-success/45 bg-success/15 text-success",
-  rejected: "border border-destructive/45 bg-destructive/15 text-destructive",
-};
-
-const DIETARY_LEVEL_LABELS: Record<string, string> = {
-  MILD: "Leicht",
-  MODERATE: "Mittel",
-  SEVERE: "Stark",
-  LETHAL: "Kritisch",
 };
 
 type QuickActionLink = {
@@ -273,7 +202,6 @@ type OverviewStatsPayload = {
 type OverviewResponse = {
   stats?: OverviewStatsPayload;
   recentActivities?: unknown;
-  onboarding?: unknown;
   finalRehearsalWeek?: unknown;
   profileCompletion?: unknown;
   activeProduction?: unknown;
@@ -330,12 +258,6 @@ function parseRecentActivities(value: unknown): RecentActivity[] {
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 }
 
-const isFocusValue = (value: unknown): value is "acting" | "tech" | "both" =>
-  value === "acting" || value === "tech" || value === "both";
-
-const isPhotoStatus = (value: unknown): value is OnboardingPhotoStatus =>
-  value === "pending" || value === "approved" || value === "rejected" || value === "none";
-
 function parseIsoDate(value: unknown): Date | null {
   if (value instanceof Date && !Number.isNaN(value.valueOf())) {
     return value;
@@ -349,96 +271,6 @@ function parseIsoDate(value: unknown): Date | null {
     }
   }
   return null;
-}
-
-function parseStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
-    .filter((entry): entry is string => Boolean(entry));
-}
-
-function parseOnboardingOverview(value: unknown): OnboardingOverview | null {
-  if (!isRecord(value)) return null;
-
-  const completed = Boolean(value.completed);
-  const focusRaw = value.focus;
-  const focus = isFocusValue(focusRaw) ? focusRaw : null;
-  const background = typeof value.background === "string" && value.background.trim() ? value.background : null;
-  const backgroundClass =
-    typeof value.backgroundClass === "string" && value.backgroundClass.trim()
-      ? value.backgroundClass
-      : null;
-  const notes = typeof value.notes === "string" && value.notes.trim() ? value.notes : null;
-  const completedAt = parseIsoDate(value.completedAt);
-
-  const statsRecord = isRecord(value.stats) ? value.stats : {};
-  const parseDomain = (entry: unknown): OnboardingDomainStats => {
-    if (!isRecord(entry)) return { count: 0, averageWeight: 0 };
-    const count = typeof entry.count === "number" && Number.isFinite(entry.count) ? entry.count : 0;
-    const averageWeight = typeof entry.averageWeight === "number" && Number.isFinite(entry.averageWeight)
-      ? entry.averageWeight
-      : 0;
-    return { count, averageWeight };
-  };
-
-  const actingStats = parseDomain(statsRecord.acting);
-  const crewStats = parseDomain(statsRecord.crew);
-
-  const interestsRecord = isRecord(statsRecord.interests) ? statsRecord.interests : {};
-  const interestCount = typeof interestsRecord.count === "number" && Number.isFinite(interestsRecord.count)
-    ? interestsRecord.count
-    : 0;
-  const interestTop = parseStringArray(interestsRecord.top);
-
-  const dietaryRecord = isRecord(statsRecord.dietary) ? statsRecord.dietary : {};
-  const dietaryCount = typeof dietaryRecord.count === "number" && Number.isFinite(dietaryRecord.count)
-    ? dietaryRecord.count
-    : 0;
-  const dietaryHighlights = Array.isArray(dietaryRecord.highlights)
-    ? dietaryRecord.highlights
-        .map((entry) => {
-          if (!isRecord(entry)) return null;
-          const name = typeof entry.name === "string" && entry.name.trim() ? entry.name : null;
-          const level = typeof entry.level === "string" && entry.level.trim() ? entry.level : null;
-          if (!name) return null;
-          return { name, level };
-        })
-        .filter((entry): entry is { name: string; level: string | null } => entry !== null)
-    : [];
-
-  const photoRecord = isRecord(value.photoConsent) ? value.photoConsent : {};
-  const statusRaw = photoRecord.status;
-  const status: OnboardingPhotoStatus = isPhotoStatus(statusRaw) ? statusRaw : "none";
-  const consentGiven = Boolean(photoRecord.consentGiven);
-  const hasDocument = Boolean(photoRecord.hasDocument);
-  const updatedAt = parseIsoDate(photoRecord.updatedAt);
-
-  const passwordSet = Boolean(value.passwordSet);
-  const whatsappLink =
-    typeof value.whatsappLink === "string" && value.whatsappLink.trim()
-      ? value.whatsappLink.trim()
-      : null;
-  const whatsappLinkVisitedAt = parseIsoDate(value.whatsappLinkVisitedAt);
-
-  return {
-    completed,
-    completedAt,
-    focus,
-    background,
-    backgroundClass,
-    notes,
-    whatsappLink,
-    whatsappLinkVisitedAt,
-    stats: {
-      acting: actingStats,
-      crew: crewStats,
-      interests: { count: interestCount, top: interestTop },
-      dietary: { count: dietaryCount, highlights: dietaryHighlights },
-    },
-    photoConsent: { status, consentGiven, hasDocument, updatedAt },
-    passwordSet,
-  };
 }
 
 function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null {
@@ -583,10 +415,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [onboarding, setOnboarding] = useState<OnboardingOverview | null>(null);
-  const [onboardingLoaded, setOnboardingLoaded] = useState(false);
-  const [whatsappDismissed, setWhatsappDismissed] = useState(false);
-  const [whatsappVisitPending, setWhatsappVisitPending] = useState(false);
   const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(null);
   const [profileCompletion, setProfileCompletion] = useState<
     { complete: boolean; completed: number; total: number } | null
@@ -599,57 +427,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   useEffect(() => {
     setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
   }, [liveOnline]);
-
-  useEffect(() => {
-    setWhatsappDismissed(false);
-  }, [onboarding?.whatsappLink]);
-
-  const showWhatsAppCallout = Boolean(
-    onboarding?.whatsappLink && !onboarding.whatsappLinkVisitedAt && !whatsappDismissed,
-  );
-
-  const handleDashboardWhatsappVisit = useCallback(() => {
-    if (!onboarding?.whatsappLink || onboarding.whatsappLinkVisitedAt || whatsappVisitPending) {
-      return;
-    }
-
-    setWhatsappVisitPending(true);
-
-    const send = async () => {
-      try {
-        const response = await fetch("/api/onboarding/whatsapp-visit", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({}),
-          keepalive: true,
-        });
-
-        if (!response.ok) {
-          throw new Error(`RequestFailed:${response.status}`);
-        }
-
-        const data = (await response.json().catch(() => null)) as { visitedAt?: string } | null;
-        const visitedIso = typeof data?.visitedAt === "string" ? data.visitedAt.trim() : "";
-        const parsedVisited = visitedIso ? new Date(visitedIso) : new Date();
-        const visitedDate = Number.isNaN(parsedVisited.valueOf()) ? new Date() : parsedVisited;
-
-        setOnboarding((prev) =>
-          prev
-            ? {
-                ...prev,
-                whatsappLinkVisitedAt: visitedDate,
-              }
-            : prev,
-        );
-      } catch (error) {
-        console.error("[dashboard.whatsapp] visit failed", error);
-      } finally {
-        setWhatsappVisitPending(false);
-      }
-    };
-
-    void send();
-  }, [onboarding, whatsappVisitPending]);
 
   useEffect(() => {
     let cancelled = false;
@@ -686,7 +463,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           return next;
         });
 
-        setOnboarding(parseOnboardingOverview(payload?.onboarding));
         setFinalRehearsalWeek(parseFinalRehearsalWeek(payload?.finalRehearsalWeek));
         setProfileCompletion(parseProfileCompletion(payload?.profileCompletion));
         setActiveProduction(parseActiveProduction(payload?.activeProduction));
@@ -700,7 +476,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       } finally {
         if (!cancelled) {
           setIsLoading(false);
-          setOnboardingLoaded(true);
           setActiveProductionLoaded(true);
         }
       }
@@ -1201,263 +976,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     otherMemberships,
   ]);
 
-  const onboardingCard = useMemo(() => {
-    if (!onboardingLoaded) {
-      return (
-        <Card className="rounded-3xl border border-dashed border-border/60 bg-card shadow-sm">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            Onboarding-Status wird geladen …
-          </CardContent>
-        </Card>
-      );
-    }
 
-    if (!onboarding) {
-      return (
-        <Card className="rounded-3xl border border-dashed border-border/60 bg-card shadow-sm">
-          <CardContent className="space-y-2 p-6 text-sm text-muted-foreground">
-            <p>Noch keine Onboarding-Daten vorhanden.</p>
-            <p>Nutze den Einladungslink oder melde dich beim Team.</p>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    const focusLabel = onboarding.focus ? ONBOARDING_FOCUS_LABELS[onboarding.focus] : "Noch offen";
-    const focusDescription = onboarding.focus
-      ? ONBOARDING_FOCUS_DESCRIPTIONS[onboarding.focus]
-      : "Triff deine Wahl, sobald du soweit bist.";
-    const completedAtLabel = onboarding.completedAt
-      ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(onboarding.completedAt)
-      : null;
-    const statusBadge = onboarding.completed ? (
-      <Badge variant="secondary" className="border-success/45 bg-success/15 text-success">
-        Abgeschlossen
-      </Badge>
-    ) : (
-      <Badge variant="outline" className="border-warning/45 text-warning">
-        In Bearbeitung
-      </Badge>
-    );
-
-    const photoStatus = onboarding.photoConsent.status;
-    const photoBadgeClass = ONBOARDING_PHOTO_STATUS_CLASSES[photoStatus];
-    const photoLabel = ONBOARDING_PHOTO_STATUS_LABELS[photoStatus];
-    const photoText = (() => {
-      switch (photoStatus) {
-        case "approved":
-          return "Freigabe erteilt – du bist für Fotoeinsätze freigeschaltet.";
-        case "pending":
-          return "Wird geprüft – du erhältst eine Benachrichtigung nach der Freigabe.";
-        case "rejected":
-          return "Der Antrag wurde abgelehnt – bitte kontaktiere das Team bei Fragen.";
-        default:
-          return onboarding.photoConsent.consentGiven
-            ? "Einverständnis liegt vor, Dokument wird noch erwartet."
-            : "Noch keine Zustimmung erfasst.";
-      }
-    })();
-    const photoUpdatedLabel = onboarding.photoConsent.updatedAt
-      ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(onboarding.photoConsent.updatedAt)
-      : null;
-
-    return (
-      <Card className={cn(DASHBOARD_CARD_SURFACE, "relative overflow-hidden")}>
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-28 top-0 h-48 w-48 rounded-full bg-primary/12 opacity-40 blur-3xl dark:bg-primary/20"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-24 bottom-0 h-44 w-44 rounded-full bg-emerald-200/20 opacity-40 blur-3xl dark:bg-emerald-500/20"
-        />
-        <CardHeader className="relative z-10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="text-lg">Dein Onboarding</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {onboarding.completed
-                ? completedAtLabel
-                  ? `Abgeschlossen am ${completedAtLabel}.`
-                  : "Abgeschlossen."
-                : "Noch in Bearbeitung – behalte deine nächsten Schritte im Blick."}
-            </p>
-          </div>
-          {statusBadge}
-        </CardHeader>
-        <CardContent className="relative z-10 space-y-4 text-sm">
-          <div className="space-y-2 rounded-xl border border-border/50 bg-muted/10 p-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Sparkles className="h-4 w-4 text-primary" />
-              {focusLabel}
-            </div>
-            <p className="text-xs text-muted-foreground">{focusDescription}</p>
-            {onboarding.background && (
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-                  {onboarding.background}
-                </Badge>
-                {onboarding.backgroundClass && (
-                  <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-                    Klasse {onboarding.backgroundClass}
-                  </Badge>
-                )}
-              </div>
-            )}
-            {!onboarding.background && onboarding.backgroundClass && (
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-                  Klasse {onboarding.backgroundClass}
-                </Badge>
-              </div>
-            )}
-            {onboarding.notes && (
-              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{onboarding.notes}</p>
-            )}
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(["acting", "crew"] as const).map((domain) => {
-              const stats = onboarding.stats[domain];
-              const normalizedWeight =
-                stats.averageWeight > 0 && stats.averageWeight <= 1
-                  ? stats.averageWeight * 100
-                  : stats.averageWeight;
-              const averageWeight = Math.max(0, Math.min(100, Math.round(normalizedWeight)));
-              return (
-                <div key={domain} className="space-y-2 rounded-xl border border-border/60 bg-muted/10 p-3">
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
-                    <span>{domain === "acting" ? "Schauspiel" : "Gewerke"}</span>
-                    <span>
-                      {stats.count} Bereich
-                      {stats.count === 1 ? "" : "e"}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
-                    <div
-                      className={cn("h-full rounded-full bg-gradient-to-r", ONBOARDING_DOMAIN_ACCENT[domain])}
-                      style={{ width: `${averageWeight}%` }}
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">Ø Intensität: {averageWeight}%</p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="space-y-2 rounded-xl border border-border/60 bg-muted/10 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">Interessen</span>
-              <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
-                {onboarding.stats.interests.count}
-              </Badge>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {onboarding.stats.interests.top.length ? (
-                onboarding.stats.interests.top.map((interest) => (
-                  <Badge key={interest} variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-                    {interest}
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-muted-foreground">Keine Angaben</span>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2 rounded-xl border border-border/60 bg-muted/10 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">Essenshinweise</span>
-              <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
-                {onboarding.stats.dietary.count}
-              </Badge>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {onboarding.stats.dietary.count && onboarding.stats.dietary.highlights.length ? (
-                onboarding.stats.dietary.highlights.map((item, index) => (
-                  <Badge
-                    key={`${item.name}-${index}`}
-                    variant="outline"
-                    className="flex items-center gap-1 border-border/50 text-foreground/80"
-                  >
-                    <span className="font-medium">{item.name}</span>
-                    {item.level ? (
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {DIETARY_LEVEL_LABELS[item.level] ?? item.level}
-                      </span>
-                    ) : null}
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-muted-foreground">Keine Hinweise</span>
-              )}
-            </div>
-          </div>
-
-          {showWhatsAppCallout ? (
-            <div className="space-y-2 rounded-xl border border-emerald-300/60 bg-emerald-50 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                  <MessageCircle className="h-4 w-4" />
-                  WhatsApp-Gruppe
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setWhatsappDismissed(true)}
-                  className="rounded-full border border-transparent p-1 text-emerald-900/70 transition hover:border-emerald-300 hover:text-emerald-900"
-                  aria-label="Hinweis ausblenden"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <p className="text-xs text-emerald-900/80">
-                Tritt der Ensemble-Gruppe bei, um Ansprechpersonen und aktuelle Infos zu erhalten.
-              </p>
-              <Button
-                asChild
-                size="sm"
-                variant="outline"
-                className="border-emerald-400/60 text-emerald-900"
-              >
-                <a
-                  href={onboarding.whatsappLink ?? "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleDashboardWhatsappVisit}
-                >
-                  {whatsappVisitPending ? "Wird geöffnet …" : "WhatsApp öffnen"}
-                </a>
-              </Button>
-            </div>
-          ) : null}
-
-          <div className="space-y-2 rounded-xl border border-border/60 bg-muted/10 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase text-muted-foreground">Fotoerlaubnis</span>
-              <Badge variant="outline" className={photoBadgeClass}>
-                {photoLabel}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">{photoText}</p>
-            {!onboarding.photoConsent.hasDocument && onboarding.photoConsent.consentGiven && (
-              <p className="text-[11px] text-warning">Hinweis: Dokument noch ausstehend.</p>
-            )}
-            {photoUpdatedLabel ? (
-              <p className="text-[11px] text-muted-foreground">Zuletzt aktualisiert am {photoUpdatedLabel}</p>
-            ) : null}
-            <p className="text-xs text-muted-foreground">
-              Passwort: {onboarding.passwordSet ? "gesetzt" : "wird nach Abschluss aktiviert"}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }, [
-    handleDashboardWhatsappVisit,
-    onboarding,
-    onboardingLoaded,
-    showWhatsAppCallout,
-    whatsappVisitPending,
-  ]);
 
   if (!session?.user) {
     return (
@@ -1635,7 +1154,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <div className="space-y-6">
             {activeProductionCard}
-            {onboardingCard}
           </div>
           <div className="space-y-6 xl:self-start">
             <Card className={cn("relative overflow-hidden", DASHBOARD_CARD_SURFACE)}>

@@ -271,12 +271,6 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "finances",
   },
   {
-    key: "mitglieder.onboarding.analytics",
-    label: "Onboarding-Analytics öffnen",
-    description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
-    category: "analytics",
-  },
-  {
     key: "mitglieder.server.analytics",
     label: "Server-Statistiken einsehen",
     description: "Auslastung, Antwortzeiten und Nutzungsverhalten in der Server-Statistik abrufen.",
