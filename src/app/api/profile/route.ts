@@ -3,22 +3,37 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { sortRoles, type Role } from "@/lib/roles";
-import type { AvatarSource } from "@prisma/client";
+import type { AvatarSource, PayoutMethod } from "@prisma/client";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
 const AVATAR_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const AVATAR_SOURCE_VALUES = ["GRAVATAR", "UPLOAD", "INITIALS"] as const;
+const PAYOUT_METHOD_VALUES = ["BANK_TRANSFER", "PAYPAL", "OTHER"] as const;
 
 const isAvatarSource = (value: string): value is AvatarSource =>
   (AVATAR_SOURCE_VALUES as readonly string[]).includes(value);
+
+const isPayoutMethod = (value: string): value is PayoutMethod =>
+  (PAYOUT_METHOD_VALUES as readonly string[]).includes(value);
 
 function parseAvatarSource(value: unknown): AvatarSource | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toUpperCase();
   return isAvatarSource(normalized) ? (normalized as AvatarSource) : null;
 }
+
+function parsePayoutMethod(value: unknown): PayoutMethod | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  return isPayoutMethod(normalized) ? (normalized as PayoutMethod) : null;
+}
+
+const IBAN_REGEX = /^[A-Z]{2}[0-9]{2}[0-9A-Z]{11,30}$/;
+const PAYPAL_HANDLE_REGEX = /^(?:https?:\/\/)?(?:www\.)?paypal\.me\/.+|^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
+
+const normalizeIban = (value: string) => value.replace(/\s+/g, "").toUpperCase();
 
 function parseBooleanFlag(value: unknown): boolean {
   if (typeof value === "string") {
@@ -49,6 +64,12 @@ export async function GET() {
       avatarSource: true,
       avatarImageUpdatedAt: true,
       dateOfBirth: true,
+      payoutMethod: true,
+      payoutAccountHolder: true,
+      payoutIban: true,
+      payoutBankName: true,
+      payoutPaypalHandle: true,
+      payoutNote: true,
     },
   });
 
@@ -69,6 +90,12 @@ export async function GET() {
     avatarSource: user.avatarSource,
     avatarUpdatedAt: user.avatarImageUpdatedAt?.toISOString() ?? null,
     dateOfBirth: user.dateOfBirth?.toISOString() ?? null,
+    payoutMethod: user.payoutMethod,
+    payoutAccountHolder: user.payoutAccountHolder ?? null,
+    payoutIban: user.payoutIban ?? null,
+    payoutBankName: user.payoutBankName ?? null,
+    payoutPaypalHandle: user.payoutPaypalHandle ?? null,
+    payoutNote: user.payoutNote ?? null,
   });
 }
 
@@ -106,6 +133,24 @@ export async function PUT(request: NextRequest) {
 
   if (!body) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      firstName: true,
+      lastName: true,
+      payoutMethod: true,
+      payoutAccountHolder: true,
+      payoutIban: true,
+      payoutBankName: true,
+      payoutPaypalHandle: true,
+      payoutNote: true,
+    },
+  });
+
+  if (!existingUser) {
+    return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
 
   const updates: Record<string, unknown> = {};
@@ -171,15 +216,8 @@ export async function PUT(request: NextRequest) {
   }
 
   if (firstNameProvided || lastNameProvided) {
-    const existingNames = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { firstName: true, lastName: true },
-    });
-    if (!existingNames) {
-      return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
-    }
-    const effectiveFirstName = firstNameProvided ? parsedFirstName : existingNames.firstName;
-    const effectiveLastName = lastNameProvided ? parsedLastName : existingNames.lastName;
+    const effectiveFirstName = firstNameProvided ? parsedFirstName : existingUser.firstName;
+    const effectiveLastName = lastNameProvided ? parsedLastName : existingUser.lastName;
     updates.name = combineNameParts(effectiveFirstName, effectiveLastName);
   } else if (fallbackNameProvided) {
     updates.name = fallbackFullName;
@@ -195,6 +233,157 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Ungültige E-Mail-Adresse" }, { status: 400 });
     }
     updates.email = email;
+  }
+
+  let payoutMethodProvided = false;
+  let parsedPayoutMethod: PayoutMethod | null = null;
+  if ("payoutMethod" in body) {
+    payoutMethodProvided = true;
+    const parsed = parsePayoutMethod(body.payoutMethod);
+    if (!parsed) {
+      return NextResponse.json({ error: "Ungültige Auszahlungsart" }, { status: 400 });
+    }
+    parsedPayoutMethod = parsed;
+  }
+
+  let payoutAccountHolderProvided = false;
+  let parsedPayoutAccountHolder: string | null = null;
+  if ("payoutAccountHolder" in body) {
+    payoutAccountHolderProvided = true;
+    const value = body.payoutAccountHolder;
+    if (typeof value !== "string") {
+      return NextResponse.json({ error: "Ungültiger Kontoinhaber" }, { status: 400 });
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > 160) {
+      return NextResponse.json({ error: "Kontoinhaber darf maximal 160 Zeichen lang sein" }, { status: 400 });
+    }
+    parsedPayoutAccountHolder = trimmed ? trimmed : null;
+  }
+
+  let payoutIbanProvided = false;
+  let parsedPayoutIban: string | null = null;
+  if ("payoutIban" in body) {
+    payoutIbanProvided = true;
+    const value = body.payoutIban;
+    if (typeof value !== "string") {
+      return NextResponse.json({ error: "Ungültige IBAN" }, { status: 400 });
+    }
+    const normalized = normalizeIban(value);
+    if (normalized && !IBAN_REGEX.test(normalized)) {
+      return NextResponse.json({ error: "Bitte gib eine gültige IBAN an" }, { status: 400 });
+    }
+    parsedPayoutIban = normalized ? normalized : null;
+  }
+
+  let payoutBankNameProvided = false;
+  let parsedPayoutBankName: string | null = null;
+  if ("payoutBankName" in body) {
+    payoutBankNameProvided = true;
+    const value = body.payoutBankName;
+    if (typeof value !== "string") {
+      return NextResponse.json({ error: "Ungültiger Bankname" }, { status: 400 });
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > 160) {
+      return NextResponse.json({ error: "Bankname darf maximal 160 Zeichen lang sein" }, { status: 400 });
+    }
+    parsedPayoutBankName = trimmed ? trimmed : null;
+  }
+
+  let payoutPaypalHandleProvided = false;
+  let parsedPayoutPaypalHandle: string | null = null;
+  if ("payoutPaypalHandle" in body) {
+    payoutPaypalHandleProvided = true;
+    const value = body.payoutPaypalHandle;
+    if (typeof value !== "string") {
+      return NextResponse.json({ error: "Ungültige PayPal-Angabe" }, { status: 400 });
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > 160) {
+      return NextResponse.json({ error: "PayPal-Angabe darf maximal 160 Zeichen lang sein" }, { status: 400 });
+    }
+    if (trimmed && !PAYPAL_HANDLE_REGEX.test(trimmed)) {
+      return NextResponse.json(
+        { error: "Bitte gib deine PayPal-E-Mail-Adresse oder einen PayPal.me-Link an" },
+        { status: 400 },
+      );
+    }
+    parsedPayoutPaypalHandle = trimmed ? trimmed : null;
+  }
+
+  let payoutNoteProvided = false;
+  let parsedPayoutNote: string | null = null;
+  if ("payoutNote" in body) {
+    payoutNoteProvided = true;
+    const value = body.payoutNote;
+    if (typeof value !== "string") {
+      return NextResponse.json({ error: "Ungültige Notiz" }, { status: 400 });
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > 500) {
+      return NextResponse.json({ error: "Notizen dürfen maximal 500 Zeichen enthalten" }, { status: 400 });
+    }
+    parsedPayoutNote = trimmed ? trimmed : null;
+  }
+
+  const effectivePayoutMethod = parsedPayoutMethod ?? existingUser.payoutMethod;
+  const effectiveAccountHolder = payoutAccountHolderProvided
+    ? parsedPayoutAccountHolder
+    : existingUser.payoutAccountHolder;
+  const effectiveIban = payoutIbanProvided ? parsedPayoutIban : existingUser.payoutIban;
+  const effectiveBankName = payoutBankNameProvided ? parsedPayoutBankName : existingUser.payoutBankName;
+  const effectivePaypalHandle = payoutPaypalHandleProvided
+    ? parsedPayoutPaypalHandle
+    : existingUser.payoutPaypalHandle;
+  const effectivePayoutNote = payoutNoteProvided ? parsedPayoutNote : existingUser.payoutNote;
+
+  if (effectivePayoutMethod === "BANK_TRANSFER") {
+    if (!effectiveAccountHolder) {
+      return NextResponse.json({ error: "Bitte gib den Kontoinhaber an" }, { status: 400 });
+    }
+    if (!effectiveIban || !IBAN_REGEX.test(effectiveIban)) {
+      return NextResponse.json({ error: "Bitte gib eine gültige IBAN an" }, { status: 400 });
+    }
+    if (!effectiveBankName) {
+      return NextResponse.json({ error: "Bitte gib den Namen deiner Bank an" }, { status: 400 });
+    }
+  } else if (effectivePayoutMethod === "PAYPAL") {
+    if (!effectivePaypalHandle) {
+      return NextResponse.json(
+        { error: "Bitte hinterlege deine PayPal-Adresse oder deinen PayPal.me-Link" },
+        { status: 400 },
+      );
+    }
+    if (!PAYPAL_HANDLE_REGEX.test(effectivePaypalHandle)) {
+      return NextResponse.json(
+        { error: "Bitte gib eine gültige PayPal-Adresse oder einen PayPal.me-Link an" },
+        { status: 400 },
+      );
+    }
+  } else if (effectivePayoutMethod === "OTHER") {
+    if (!effectivePayoutNote) {
+      return NextResponse.json({ error: "Bitte beschreibe deine bevorzugte Auszahlung" }, { status: 400 });
+    }
+  }
+
+  if (payoutMethodProvided && parsedPayoutMethod) {
+    updates.payoutMethod = parsedPayoutMethod;
+  }
+  if (payoutAccountHolderProvided) {
+    updates.payoutAccountHolder = parsedPayoutAccountHolder;
+  }
+  if (payoutIbanProvided) {
+    updates.payoutIban = parsedPayoutIban;
+  }
+  if (payoutBankNameProvided) {
+    updates.payoutBankName = parsedPayoutBankName;
+  }
+  if (payoutPaypalHandleProvided) {
+    updates.payoutPaypalHandle = parsedPayoutPaypalHandle;
+  }
+  if (payoutNoteProvided) {
+    updates.payoutNote = parsedPayoutNote;
   }
 
   if ("password" in body) {
@@ -309,6 +498,12 @@ export async function PUT(request: NextRequest) {
         avatarSource: true,
         avatarImageUpdatedAt: true,
         dateOfBirth: true,
+        payoutMethod: true,
+        payoutAccountHolder: true,
+        payoutIban: true,
+        payoutBankName: true,
+        payoutPaypalHandle: true,
+        payoutNote: true,
       },
     });
 
@@ -327,6 +522,12 @@ export async function PUT(request: NextRequest) {
         avatarSource: updated.avatarSource,
         avatarUpdatedAt: updated.avatarImageUpdatedAt?.toISOString() ?? null,
         dateOfBirth: updated.dateOfBirth?.toISOString() ?? null,
+        payoutMethod: updated.payoutMethod,
+        payoutAccountHolder: updated.payoutAccountHolder ?? null,
+        payoutIban: updated.payoutIban ?? null,
+        payoutBankName: updated.payoutBankName ?? null,
+        payoutPaypalHandle: updated.payoutPaypalHandle ?? null,
+        payoutNote: updated.payoutNote ?? null,
       },
     });
   } catch (error: unknown) {

@@ -63,7 +63,7 @@ import {
 import { getUserDisplayName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
-import { AllergyLevel, type OnboardingFocus, type Role } from "@prisma/client";
+import { AllergyLevel, type OnboardingFocus, type PayoutMethod, type Role } from "@prisma/client";
 
 import {
   deleteAllergyAction,
@@ -86,6 +86,7 @@ const CHECKLIST_TARGET_LABELS: Record<ProfileChecklistTarget, string> = {
   masse: "Maße",
   interessen: "Interessen",
   freigaben: "Freigaben",
+  onboarding: "Onboarding",
 };
 const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "stammdaten",
@@ -93,6 +94,7 @@ const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "masse",
   "interessen",
   "freigaben",
+  "onboarding",
 ];
 
 const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
@@ -100,6 +102,15 @@ const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
   tech: "Gewerke",
   both: "Schauspiel & Gewerke",
 };
+
+const PAYOUT_METHOD_OPTIONS: Array<{ value: PayoutMethod; label: string }> = [
+  { value: "BANK_TRANSFER", label: "Banküberweisung" },
+  { value: "PAYPAL", label: "PayPal" },
+  { value: "OTHER", label: "Andere Option" },
+];
+
+const IBAN_REGEX = /^[A-Z]{2}[0-9]{2}[0-9A-Z]{11,30}$/;
+const PAYPAL_HANDLE_REGEX = /^(?:https?:\/\/)?(?:www\.)?paypal\.me\/.+|^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
 
 function formatDateLabel(value: string | null | undefined) {
   if (!value) return null;
@@ -123,6 +134,12 @@ type ProfileClientProps = {
     avatarUpdatedAt: string | null;
     roles: Role[];
     customRoles: { id: string; name: string }[];
+    payoutMethod: PayoutMethod;
+    payoutAccountHolder: string | null;
+    payoutIban: string | null;
+    payoutBankName: string | null;
+    payoutPaypalHandle: string | null;
+    payoutNote: string | null;
   };
   onboarding: {
     focus: string;
@@ -177,6 +194,12 @@ type BasicsFormState = {
   confirmPassword: string;
   avatarSource: "GRAVATAR" | "UPLOAD" | "INITIALS";
   removeAvatar: boolean;
+  payoutMethod: PayoutMethod;
+  payoutAccountHolder: string;
+  payoutIban: string;
+  payoutBankName: string;
+  payoutPaypalHandle: string;
+  payoutNote: string;
 };
 
 type DietaryFormState = {
@@ -248,6 +271,40 @@ const basicsSchema = z
     confirmPassword: z.string(),
     avatarSource: z.enum(["GRAVATAR", "UPLOAD", "INITIALS"]),
     removeAvatar: z.boolean(),
+    payoutMethod: z.enum(["BANK_TRANSFER", "PAYPAL", "OTHER"]),
+    payoutAccountHolder: z
+      .string()
+      .transform((value) => value.trim())
+      .refine((value) => value.length <= 160, {
+        message: "Kontoinhaber darf maximal 160 Zeichen haben.",
+      }),
+    payoutIban: z
+      .string()
+      .transform((value) => value.replace(/\s+/g, "").toUpperCase())
+      .refine((value) => value.length === 0 || IBAN_REGEX.test(value), {
+        message: "Ungültige IBAN.",
+      }),
+    payoutBankName: z
+      .string()
+      .transform((value) => value.trim())
+      .refine((value) => value.length <= 160, {
+        message: "Bankname darf maximal 160 Zeichen haben.",
+      }),
+    payoutPaypalHandle: z
+      .string()
+      .transform((value) => value.trim())
+      .refine((value) => value.length === 0 || value.length <= 160, {
+        message: "PayPal-Angabe darf maximal 160 Zeichen haben.",
+      })
+      .refine((value) => value.length === 0 || PAYPAL_HANDLE_REGEX.test(value), {
+        message: "Bitte gib deine PayPal-E-Mail-Adresse oder einen PayPal.me-Link an.",
+      }),
+    payoutNote: z
+      .string()
+      .transform((value) => value.trim())
+      .refine((value) => value.length <= 500, {
+        message: "Notiz darf maximal 500 Zeichen enthalten.",
+      }),
   })
   .superRefine((data, ctx) => {
     if (data.password && data.password.length > 0 && data.password.length < 6) {
@@ -255,6 +312,45 @@ const basicsSchema = z
     }
     if (data.password && data.password !== data.confirmPassword) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Passwörter stimmen nicht überein", path: ["confirmPassword"] });
+    }
+    if (data.payoutMethod === "BANK_TRANSFER") {
+      if (!data.payoutAccountHolder) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Bitte gib den Kontoinhaber an.",
+          path: ["payoutAccountHolder"],
+        });
+      }
+      if (!data.payoutIban) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Bitte gib eine gültige IBAN an.",
+          path: ["payoutIban"],
+        });
+      }
+      if (!data.payoutBankName) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Bitte gib den Namen deiner Bank an.",
+          path: ["payoutBankName"],
+        });
+      }
+    } else if (data.payoutMethod === "PAYPAL") {
+      if (!data.payoutPaypalHandle) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Bitte hinterlege deine PayPal-Adresse oder deinen PayPal.me-Link.",
+          path: ["payoutPaypalHandle"],
+        });
+      }
+    } else if (data.payoutMethod === "OTHER") {
+      if (!data.payoutNote) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Bitte beschreibe kurz deine bevorzugte Auszahlung.",
+          path: ["payoutNote"],
+        });
+      }
     }
   });
 
@@ -1072,6 +1168,12 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
         ? (user.avatarSource as BasicsFormState["avatarSource"])
         : "INITIALS",
     removeAvatar: false,
+    payoutMethod: user.payoutMethod,
+    payoutAccountHolder: user.payoutAccountHolder ?? "",
+    payoutIban: user.payoutIban ?? "",
+    payoutBankName: user.payoutBankName ?? "",
+    payoutPaypalHandle: user.payoutPaypalHandle ?? "",
+    payoutNote: user.payoutNote ?? "",
   }));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
@@ -1091,8 +1193,27 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
         user.avatarSource === "GRAVATAR" || user.avatarSource === "UPLOAD" || user.avatarSource === "INITIALS"
           ? (user.avatarSource as BasicsFormState["avatarSource"])
           : prev.avatarSource,
+      payoutMethod: user.payoutMethod,
+      payoutAccountHolder: user.payoutAccountHolder ?? "",
+      payoutIban: user.payoutIban ?? "",
+      payoutBankName: user.payoutBankName ?? "",
+      payoutPaypalHandle: user.payoutPaypalHandle ?? "",
+      payoutNote: user.payoutNote ?? "",
     }));
-  }, [user.firstName, user.lastName, user.displayName, user.email, user.dateOfBirth, user.avatarSource]);
+  }, [
+    user.firstName,
+    user.lastName,
+    user.displayName,
+    user.email,
+    user.dateOfBirth,
+    user.avatarSource,
+    user.payoutMethod,
+    user.payoutAccountHolder,
+    user.payoutIban,
+    user.payoutBankName,
+    user.payoutPaypalHandle,
+    user.payoutNote,
+  ]);
 
   useEffect(() => {
     if (!avatarFile) {
@@ -1106,11 +1227,16 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
-    setFormState((prev) => ({ ...prev, [name]: value }));
+    const nextValue = name === "payoutIban" ? value.replace(/\s+/g, "").toUpperCase() : value;
+    setFormState((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleAvatarSourceChange = (value: BasicsFormState["avatarSource"]) => {
     setFormState((prev) => ({ ...prev, avatarSource: value, removeAvatar: false }));
+  };
+
+  const handlePayoutMethodChange = (value: PayoutMethod) => {
+    setFormState((prev) => ({ ...prev, payoutMethod: value }));
   };
 
   const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1182,6 +1308,12 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     if (avatarFile) {
       formData.append("avatarFile", avatarFile);
     }
+    formData.append("payoutMethod", data.payoutMethod);
+    formData.append("payoutAccountHolder", data.payoutAccountHolder);
+    formData.append("payoutIban", data.payoutIban);
+    formData.append("payoutBankName", data.payoutBankName);
+    formData.append("payoutPaypalHandle", data.payoutPaypalHandle);
+    formData.append("payoutNote", data.payoutNote);
 
     setSubmitting(true);
     try {
@@ -1213,12 +1345,27 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
         dateOfBirth: payload.dateOfBirth,
         avatarSource: payload.avatarSource,
         avatarUpdatedAt: payload.avatarUpdatedAt,
+        payoutMethod: payload.payoutMethod,
+        payoutAccountHolder: payload.payoutAccountHolder,
+        payoutIban: payload.payoutIban,
+        payoutBankName: payload.payoutBankName,
+        payoutPaypalHandle: payload.payoutPaypalHandle,
+        payoutNote: payload.payoutNote,
       };
 
       await onUserUpdated(nextUser);
       resetPasswordFields();
       setAvatarFile(null);
-      setFormState((prev) => ({ ...prev, removeAvatar: false }));
+      setFormState((prev) => ({
+        ...prev,
+        payoutMethod: payload.payoutMethod,
+        payoutAccountHolder: payload.payoutAccountHolder ?? "",
+        payoutIban: payload.payoutIban ?? "",
+        payoutBankName: payload.payoutBankName ?? "",
+        payoutPaypalHandle: payload.payoutPaypalHandle ?? "",
+        payoutNote: payload.payoutNote ?? "",
+        removeAvatar: false,
+      }));
       toast.success("Stammdaten aktualisiert");
     } finally {
       setSubmitting(false);
@@ -1325,6 +1472,105 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
               ) : null}
             </div>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payoutMethod">Bevorzugte Auszahlung</Label>
+            <Select value={formState.payoutMethod} onValueChange={(value) => handlePayoutMethodChange(value as PayoutMethod)}>
+              <SelectTrigger id="payoutMethod">
+                <SelectValue placeholder="Auszahlungsart wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYOUT_METHOD_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {fieldErrors.payoutMethod ? <p className="text-sm text-destructive">{fieldErrors.payoutMethod}</p> : null}
+            <p className="text-xs text-muted-foreground">
+              Diese Angaben nutzen wir, um dir Auslagen zu erstatten oder Gagen auszuzahlen.
+            </p>
+          </div>
+
+          {formState.payoutMethod === "BANK_TRANSFER" ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="payoutAccountHolder">Kontoinhaber</Label>
+                <Input
+                  id="payoutAccountHolder"
+                  name="payoutAccountHolder"
+                  value={formState.payoutAccountHolder}
+                  onChange={handleInputChange}
+                  autoComplete="name"
+                />
+                {fieldErrors.payoutAccountHolder ? (
+                  <p className="text-sm text-destructive">{fieldErrors.payoutAccountHolder}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payoutBankName">Bank</Label>
+                <Input
+                  id="payoutBankName"
+                  name="payoutBankName"
+                  value={formState.payoutBankName}
+                  onChange={handleInputChange}
+                  autoComplete="organization"
+                />
+                {fieldErrors.payoutBankName ? (
+                  <p className="text-sm text-destructive">{fieldErrors.payoutBankName}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="payoutIban">IBAN</Label>
+                <Input
+                  id="payoutIban"
+                  name="payoutIban"
+                  value={formState.payoutIban}
+                  onChange={handleInputChange}
+                  autoComplete="off"
+                />
+                {fieldErrors.payoutIban ? <p className="text-sm text-destructive">{fieldErrors.payoutIban}</p> : null}
+                <p className="text-xs text-muted-foreground">Wir speichern die IBAN ohne Leerzeichen.</p>
+              </div>
+            </div>
+          ) : null}
+
+          {formState.payoutMethod === "PAYPAL" ? (
+            <div className="space-y-2">
+              <Label htmlFor="payoutPaypalHandle">PayPal-Adresse</Label>
+              <Input
+                id="payoutPaypalHandle"
+                name="payoutPaypalHandle"
+                value={formState.payoutPaypalHandle}
+                onChange={handleInputChange}
+                placeholder="paypal@example.com oder https://paypal.me/deinname"
+                autoComplete="off"
+              />
+              {fieldErrors.payoutPaypalHandle ? (
+                <p className="text-sm text-destructive">{fieldErrors.payoutPaypalHandle}</p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                Nutze deine PayPal-E-Mail-Adresse oder einen PayPal.me-Link.
+              </p>
+            </div>
+          ) : null}
+
+          {formState.payoutMethod === "OTHER" ? (
+            <div className="space-y-2">
+              <Label htmlFor="payoutNote">Auszahlungsdetails</Label>
+              <Textarea
+                id="payoutNote"
+                name="payoutNote"
+                value={formState.payoutNote}
+                onChange={handleInputChange}
+                rows={3}
+                placeholder="Beschreibe kurz, wie wir dir Geld senden sollen."
+              />
+              {fieldErrors.payoutNote ? <p className="text-sm text-destructive">{fieldErrors.payoutNote}</p> : null}
+              <p className="text-xs text-muted-foreground">Zum Beispiel Revolut, Wise oder andere Konten.</p>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label>Passwort zurücksetzen</Label>

@@ -13,7 +13,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { AttendanceStatus, OnboardingFocus, PhotoConsentStatus, Prisma, TaskStatus } from "@prisma/client";
+import type {
+  AttendanceStatus,
+  OnboardingFocus,
+  PhotoConsentStatus,
+  PayoutMethod,
+  Prisma,
+  TaskStatus,
+} from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +49,15 @@ const percentFormatter = new Intl.NumberFormat("de-DE", {
   maximumFractionDigits: 1,
 });
 const monthFormatter = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" });
+
+const PAYOUT_METHOD_LABELS: Record<PayoutMethod, string> = {
+  BANK_TRANSFER: "Banküberweisung",
+  PAYPAL: "PayPal",
+  OTHER: "Andere Option",
+};
+
+const formatIban = (value: string | null | undefined) =>
+  value ? value.replace(/(.{4})/g, "$1 ").trim() : "—";
 
 const ATTENDANCE_STATUS_ORDER: AttendanceStatus[] = ["yes", "maybe", "no", "emergency"];
 
@@ -335,6 +351,12 @@ const memberSelect = {
   createdAt: true,
   dateOfBirth: true,
   deactivatedAt: true,
+  payoutMethod: true,
+  payoutAccountHolder: true,
+  payoutIban: true,
+  payoutBankName: true,
+  payoutPaypalHandle: true,
+  payoutNote: true,
   onboardingProfile: {
     select: {
       memberSinceYear: true,
@@ -979,6 +1001,46 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                     <div className="space-y-1">
                       <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mitglieds-ID</dt>
                       <dd className="text-xs font-mono text-muted-foreground">{member.id}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Bevorzugte Auszahlung
+                      </dt>
+                      <dd className="text-sm font-medium text-foreground">
+                        {PAYOUT_METHOD_LABELS[member.payoutMethod]}
+                      </dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kontoinhaber</dt>
+                      <dd className="text-sm font-medium text-foreground">
+                        {member.payoutAccountHolder?.trim() || "—"}
+                      </dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bank</dt>
+                      <dd className="text-sm font-medium text-foreground">
+                        {member.payoutBankName?.trim() || "—"}
+                      </dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">IBAN</dt>
+                      <dd className="text-sm font-medium text-foreground font-mono">
+                        {member.payoutIban ? formatIban(member.payoutIban) : "—"}
+                      </dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PayPal</dt>
+                      <dd className="text-sm font-medium text-foreground break-all">
+                        {member.payoutPaypalHandle?.trim() || "—"}
+                      </dd>
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Hinweise zur Auszahlung
+                      </dt>
+                      <dd className="text-sm text-foreground">
+                        {member.payoutNote?.trim() || "—"}
+                      </dd>
                     </div>
                   </dl>
                 </CardContent>
