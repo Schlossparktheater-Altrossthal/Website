@@ -11,6 +11,10 @@ import {
   type OnboardingDashboardData,
   type OnboardingSummary,
 } from "./dashboard-schemas";
+import {
+  optimizeRoleAllocation,
+  type AllocationOptimizerResult,
+} from "./allocation-optimizer";
 
 interface DateRange {
   start?: Date | null;
@@ -232,76 +236,12 @@ interface CandidateInput {
   crewShares: Map<string, number>;
 }
 
-interface BuildAllocationArgs {
-  roles: AllocationRole[];
-  candidates: CandidateInput[];
+export interface DashboardComputationOptions {
+  capacityOverrides?: Map<string, number> | Record<string, number>;
 }
 
-function recomputeAllocation({ roles, candidates }: BuildAllocationArgs): AllocationRole[] {
-  const candidateLookup = new Map<string, CandidateInput>();
-  candidates.forEach((candidate) => {
-    candidateLookup.set(candidate.userId, candidate);
-  });
-
-  return roles.map((role) => {
-    const baseCandidates = role.candidates
-      .map((candidate) => {
-        const source = candidateLookup.get(candidate.userId);
-        if (!source) {
-          return candidate;
-        }
-        const share =
-          role.domain === "acting"
-            ? source.actingShares.get(role.roleId) ?? candidate.normalizedShare
-            : source.crewShares.get(role.roleId) ?? candidate.normalizedShare;
-
-        const focusAlignment = source.focus === "both" || source.focus === (role.domain === "acting" ? "acting" : "tech");
-        const qualityFactor = focusAlignment ? candidate.qualityFactor + 0.1 : candidate.qualityFactor;
-        const score = share * qualityFactor;
-        const maxScore = Math.max(...role.candidates.map((item) => item.score), 1);
-
-        return {
-          ...candidate,
-          normalizedShare: share,
-          qualityFactor,
-          score,
-          confidence: normalizeConfidence(score, maxScore),
-        } satisfies AllocationCandidate;
-      })
-      .sort((a, b) => b.score - a.score);
-
-    return {
-      ...role,
-      candidates: baseCandidates,
-    } satisfies AllocationRole;
-  });
-}
-
-function buildConflictList(roles: AllocationRole[]): OnboardingDashboardData["allocation"]["conflicts"] {
-  return roles
-    .flatMap((role) => {
-      if (role.candidates.length < 2) {
-        return [];
-      }
-      const [primary, secondary] = role.candidates;
-      const delta = Math.abs(primary.score - secondary.score);
-      if (delta > 0.05) {
-        return [];
-      }
-      return [
-        {
-          roleId: role.roleId,
-          label: role.label,
-          candidates: role.candidates.slice(0, 3).map((candidate) => ({
-            userId: candidate.userId,
-            name: candidate.name,
-            score: roundTo(candidate.score, 3),
-            tieBreaker: candidate.justification,
-          })),
-        },
-      ];
-    })
-    .slice(0, 12);
+function recomputeAllocation(roles: AllocationRole[]): AllocationOptimizerResult {
+  return optimizeRoleAllocation(roles);
 }
 
 function buildFairnessMetrics(
@@ -402,6 +342,7 @@ export const getAvailableOnboardings = cache(async (): Promise<OnboardingSummary
 
 async function computeOnboardingDashboardData(
   onboardingId: string,
+  options: DashboardComputationOptions = {},
 ): Promise<OnboardingDashboardData | null> {
 
   const show = await prisma.show.findUnique({
@@ -830,16 +771,37 @@ async function computeOnboardingDashboardData(
     return Math.max(2, Math.round(demand * 0.6));
   };
 
-  const allocationRoles: AllocationRole[] = Array.from(allRoles.entries()).map(([roleId, meta]) => ({
-    roleId,
-    label: meta.label,
-    domain: meta.domain,
-    demand: meta.demand,
-    capacity: defaultCapacity(meta.demand),
-    candidates: roleCandidates.get(roleId) ?? [],
-  }));
+  const capacityOverrides = options.capacityOverrides
+    ? options.capacityOverrides instanceof Map
+      ? options.capacityOverrides
+      : new Map(
+          Object.entries(options.capacityOverrides).map(([roleId, value]) => [
+            roleId,
+            Number(value),
+          ]),
+        )
+    : null;
 
-  const recalculatedRoles = recomputeAllocation({ roles: allocationRoles, candidates: candidateInputs });
+  const allocationRoles: AllocationRole[] = Array.from(allRoles.entries()).map(([roleId, meta]) => {
+    const overrideValue = capacityOverrides?.get(roleId);
+    const normalizedOverride =
+      typeof overrideValue === "number" && Number.isFinite(overrideValue)
+        ? Math.max(0, Math.round(overrideValue))
+        : undefined;
+    const capacity = normalizedOverride ?? defaultCapacity(meta.demand);
+
+    return {
+      roleId,
+      label: meta.label,
+      domain: meta.domain,
+      demand: meta.demand,
+      capacity,
+      candidates: roleCandidates.get(roleId) ?? [],
+      slots: [],
+    } satisfies AllocationRole;
+  });
+
+  const optimization = recomputeAllocation(allocationRoles);
 
   const history = await prisma.show.findMany({
     where: {
@@ -1031,7 +993,7 @@ async function computeOnboardingDashboardData(
       },
     },
     allocation: {
-      roles: recalculatedRoles,
+      roles: optimization.roles,
       fairness: buildFairnessMetrics(
         show.onboardingProfiles.map((profile) => ({
           gender: profile.gender,
@@ -1039,7 +1001,8 @@ async function computeOnboardingDashboardData(
           focus: profile.focus,
         })),
       ),
-      conflicts: buildConflictList(recalculatedRoles),
+      conflicts: optimization.conflicts,
+      optimizer: optimization.summary,
     },
     history: historySnapshots,
   });
@@ -1047,9 +1010,14 @@ async function computeOnboardingDashboardData(
   return dashboard;
 }
 
-export async function loadOnboardingDashboardSnapshot(onboardingId: string) {
-  return computeOnboardingDashboardData(onboardingId);
+export async function loadOnboardingDashboardSnapshot(
+  onboardingId: string,
+  options?: DashboardComputationOptions,
+) {
+  return computeOnboardingDashboardData(onboardingId, options);
 }
 
-export const getOnboardingDashboardData = cache(computeOnboardingDashboardData);
+export const getOnboardingDashboardData = cache((onboardingId: string) =>
+  computeOnboardingDashboardData(onboardingId),
+);
 

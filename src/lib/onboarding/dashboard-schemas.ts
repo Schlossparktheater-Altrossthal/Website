@@ -105,6 +105,18 @@ export const allocationCandidateSchema = z.object({
   justification: z.string(),
   interests: z.array(z.string()).default([]),
   experienceYears: z.number().optional(),
+  adjustedScore: z.number().optional(),
+  fairnessPenalty: z.number().optional(),
+  delta: z.number().optional(),
+});
+
+export const allocationSlotSchema = z.object({
+  slotId: z.string(),
+  index: z.number(),
+  candidate: allocationCandidateSchema.nullable(),
+  adjustedScore: z.number().nullable(),
+  fairnessPenalty: z.number().nullable(),
+  alternatives: z.array(allocationCandidateSchema),
 });
 
 export const allocationRoleSchema = z.object({
@@ -114,6 +126,9 @@ export const allocationRoleSchema = z.object({
   capacity: z.number(),
   demand: z.number(),
   candidates: z.array(allocationCandidateSchema),
+  slots: z.array(allocationSlotSchema).default([]),
+  optimizedScore: z.number().optional(),
+  unmatchedDemand: z.number().optional(),
 });
 
 export const fairnessMetricSchema = z.object({
@@ -128,6 +143,8 @@ export const fairnessMetricSchema = z.object({
 export const conflictItemSchema = z.object({
   roleId: z.string(),
   label: z.string(),
+  slotIndex: z.number(),
+  delta: z.number(),
   candidates: z.array(
     z.object({
       userId: z.string(),
@@ -136,6 +153,21 @@ export const conflictItemSchema = z.object({
       tieBreaker: z.string(),
     }),
   ),
+});
+
+export const optimizerFairnessBucketSchema = z.object({
+  bucketId: z.string(),
+  label: z.string(),
+  capacity: z.number(),
+  used: z.number(),
+  utilization: z.number(),
+});
+
+export const optimizerSummarySchema = z.object({
+  totalSlots: z.number(),
+  totalAssignments: z.number(),
+  averageScore: z.number().nullable(),
+  fairnessBuckets: z.array(optimizerFairnessBucketSchema),
 });
 
 export const historySnapshotSchema = z.object({
@@ -178,6 +210,7 @@ export const onboardingAllocationSectionSchema = z.object({
   roles: z.array(allocationRoleSchema),
   fairness: z.array(fairnessMetricSchema),
   conflicts: z.array(conflictItemSchema),
+  optimizer: optimizerSummarySchema,
 });
 
 export const onboardingDashboardSchema = z.object({
@@ -195,3 +228,4 @@ export type OnboardingDashboardData = z.infer<typeof onboardingDashboardSchema>;
 export type OnboardingSummary = z.infer<typeof onboardingSummarySchema>;
 export type AllocationRole = z.infer<typeof allocationRoleSchema>;
 export type AllocationCandidate = z.infer<typeof allocationCandidateSchema>;
+export type AllocationSlot = z.infer<typeof allocationSlotSchema>;

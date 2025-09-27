@@ -1,64 +1,38 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { CheckCircle2, Loader2, UsersRound } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, UsersRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AllocationCandidate, AllocationRole, OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
+import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
 
-function computeAssignments(
-  roles: AllocationRole[],
-  capacities: Map<string, number>,
-): Array<{
-  role: AllocationRole;
-  capacity: number;
-  slots: Array<{
-    slotId: string;
-    candidate: AllocationCandidate | null;
-    alternatives: AllocationCandidate[];
-  }>;
-}> {
-  return roles.map((role) => {
-    const capacity = Math.max(0, capacities.get(role.roleId) ?? role.capacity);
-    const sorted = [...role.candidates].sort((a, b) => b.score - a.score);
-    const slots = Array.from({ length: capacity || 1 }).map((_, index) => {
-      const candidate = sorted[index] ?? null;
-      const alternatives = sorted.filter((_, idx) => idx !== index).slice(0, 2);
-      return {
-        slotId: `${role.roleId}-${index + 1}`,
-        candidate,
-        alternatives,
-      };
-    });
-    return { role, capacity, slots };
-  });
-}
+import { recalculateAllocationAction } from "./actions";
 
 type AllocationTabProps = {
+  onboardingId: string;
   allocation: OnboardingDashboardData["allocation"];
 };
 
-export function AllocationTab({ allocation }: AllocationTabProps) {
+export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) {
   const [draftCapacities, setDraftCapacities] = useState(() =>
     new Map(allocation.roles.map((role) => [role.roleId, role.capacity])),
   );
   const [appliedCapacities, setAppliedCapacities] = useState(() =>
     new Map(allocation.roles.map((role) => [role.roleId, role.capacity])),
   );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRecalculating, startTransition] = useTransition();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setDraftCapacities(new Map(allocation.roles.map((role) => [role.roleId, role.capacity])));
     setAppliedCapacities(new Map(allocation.roles.map((role) => [role.roleId, role.capacity])));
+    setErrorMessage(null);
   }, [allocation.roles]);
-
-  const assignments = useMemo(
-    () => computeAssignments(allocation.roles, appliedCapacities),
-    [allocation.roles, appliedCapacities],
-  );
 
   const pendingChanges = useMemo(() => {
     return allocation.roles.some((role) => {
@@ -80,8 +54,30 @@ export function AllocationTab({ allocation }: AllocationTabProps) {
   );
 
   const handleApply = () => {
+    const overrides = Array.from(draftCapacities.entries()).map(([roleId, capacity]) => ({
+      roleId,
+      capacity,
+    }));
+
     startTransition(() => {
-      setAppliedCapacities(new Map(draftCapacities));
+      setErrorMessage(null);
+      void (async () => {
+        try {
+          const dashboard = await recalculateAllocationAction({
+            onboardingId,
+            capacities: overrides,
+          });
+          queryClient.setQueryData(["onboarding-dashboard", onboardingId], dashboard);
+          const nextCapacities = new Map(
+            dashboard.allocation.roles.map((role) => [role.roleId, role.capacity] as const),
+          );
+          setAppliedCapacities(nextCapacities);
+          setDraftCapacities(new Map(nextCapacities));
+        } catch (error) {
+          console.error("Failed to recompute allocation", error);
+          setErrorMessage("Optimierung fehlgeschlagen. Bitte später erneut versuchen.");
+        }
+      })();
     });
   };
 
@@ -98,6 +94,14 @@ export function AllocationTab({ allocation }: AllocationTabProps) {
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>
+                Optimiert: {allocation.optimizer.totalAssignments} / {allocation.optimizer.totalSlots} Slots belegt
+              </span>
+              {allocation.optimizer.averageScore !== null ? (
+                <span>Ø Score {allocation.optimizer.averageScore.toFixed(2)}</span>
+              ) : null}
+            </div>
             {capacityChart.map((entry, index) => {
               const overbooked = entry.demand > entry.capacity;
               return (
@@ -132,74 +136,131 @@ export function AllocationTab({ allocation }: AllocationTabProps) {
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {assignments.map((assignment) => (
-              <div key={assignment.role.roleId} className="space-y-3 rounded-xl border border-border/40 bg-card/60 p-4 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground/80">{assignment.role.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {assignment.capacity} Slots · Nachfrage {assignment.role.demand}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="gap-1 text-xs uppercase tracking-[0.14em]">
-                    <UsersRound className="h-3.5 w-3.5" />
-                    {assignment.role.domain === "acting" ? "Acting" : "Crew"}
-                  </Badge>
-                </div>
-                <div className="space-y-3">
-                  {assignment.slots.map((slot, index) => (
-                    <div
-                      key={slot.slotId}
-                      className="rounded-lg border border-border/30 bg-background/60 p-3"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-foreground/85">
-                          Slot {index + 1}
-                        </span>
-                        {slot.candidate ? (
-                          <Badge variant="success" className="gap-1 text-xs">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Score {slot.candidate.score.toFixed(2)} · Konfidenz {Math.round(slot.candidate.confidence * 100)}%
-                          </Badge>
-                        ) : (
-                          <Badge variant="warning" className="text-xs">Noch unbesetzt</Badge>
-                        )}
-                      </div>
-                      {slot.candidate ? (
-                        <div className="mt-2 space-y-1 text-sm">
-                          <p className="font-medium">{slot.candidate.name}</p>
-                          <p className="text-muted-foreground">{slot.candidate.justification}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Fokus {slot.candidate.focus ?? "–"} · Erfahrung {slot.candidate.experienceYears ?? 0} Jahre
-                          </p>
-                          {slot.candidate.interests.length ? (
-                            <p className="text-xs text-muted-foreground">
-                              Interessen: {slot.candidate.interests.slice(0, 3).join(", ")}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-sm text-muted-foreground">Noch keine passende Zuordnung.</p>
-                      )}
-                      {slot.alternatives.length ? (
-                        <div className="mt-3 space-y-1">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                            Alternativen
-                          </p>
-                          <ul className="space-y-1 text-xs text-muted-foreground">
-                            {slot.alternatives.map((candidate) => (
-                              <li key={`${slot.slotId}-${candidate.userId}`}>
-                                {candidate.name} · Score {candidate.score.toFixed(2)} · Konfidenz {Math.round(candidate.confidence * 100)}%
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
+            {allocation.roles.map((role) => {
+              const capacity = appliedCapacities.get(role.roleId) ?? role.capacity;
+              const assignedCount = role.slots.filter((slot) => slot.candidate).length;
+              const unmatchedLabel =
+                typeof role.unmatchedDemand === "number" && role.unmatchedDemand > 0
+                  ? ` · Offene Plätze ${role.unmatchedDemand}`
+                  : "";
+              const assignmentSummary = role.slots.length
+                ? ` · Belegt ${assignedCount}/${role.slots.length}`
+                : "";
+
+              return (
+                <div
+                  key={role.roleId}
+                  className="space-y-3 rounded-xl border border-border/40 bg-card/60 p-4 shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground/80">{role.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {capacity} Slots · Nachfrage {role.demand}
+                        {assignmentSummary}
+                        {unmatchedLabel}
+                      </p>
                     </div>
-                  ))}
+                    <Badge variant="outline" className="gap-1 text-xs uppercase tracking-[0.14em]">
+                      <UsersRound className="h-3.5 w-3.5" />
+                      {role.domain === "acting" ? "Acting" : "Crew"}
+                    </Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {role.slots.length ? (
+                      role.slots.map((slot, index) => {
+                        const candidate = slot.candidate;
+                        const displayScore = candidate
+                          ? typeof candidate.adjustedScore === "number"
+                            ? candidate.adjustedScore
+                            : candidate.score
+                          : null;
+                        const confidence = candidate && typeof candidate.confidence === "number"
+                          ? Math.round(candidate.confidence * 100)
+                          : null;
+
+                        return (
+                          <div
+                            key={slot.slotId}
+                            className="rounded-lg border border-border/30 bg-background/60 p-3"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-foreground/85">
+                                Slot {index + 1}
+                              </span>
+                              {candidate ? (
+                                <Badge variant="success" className="gap-1 text-xs">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  {displayScore !== null ? `Score ${displayScore.toFixed(2)}` : "Score –"}
+                                  {confidence !== null ? ` · Konfidenz ${confidence}%` : ""}
+                                </Badge>
+                              ) : (
+                                <Badge variant="warning" className="text-xs">Noch unbesetzt</Badge>
+                              )}
+                            </div>
+                            {candidate ? (
+                              <div className="mt-2 space-y-1 text-sm">
+                                <p className="font-medium">{candidate.name}</p>
+                                <p className="text-muted-foreground">{candidate.justification}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Fokus {candidate.focus ?? "–"} · Erfahrung {candidate.experienceYears ?? 0} Jahre
+                                </p>
+                                {typeof slot.fairnessPenalty === "number" && slot.fairnessPenalty > 0 ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    Fairness-Malus {slot.fairnessPenalty.toFixed(2)}
+                                  </p>
+                                ) : null}
+                                {candidate.interests.length ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    Interessen: {candidate.interests.slice(0, 3).join(", ")}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <p className="mt-2 text-sm text-muted-foreground">Noch keine passende Zuordnung.</p>
+                            )}
+                            {slot.alternatives.length ? (
+                              <div className="mt-3 space-y-1">
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                  Alternativen
+                                </p>
+                                <ul className="space-y-1 text-xs text-muted-foreground">
+                                  {slot.alternatives.map((candidateAlt) => {
+                                    const altScore =
+                                      typeof candidateAlt.adjustedScore === "number"
+                                        ? candidateAlt.adjustedScore
+                                        : candidateAlt.score;
+                                    const altConfidence =
+                                      typeof candidateAlt.confidence === "number"
+                                        ? Math.round(candidateAlt.confidence * 100)
+                                        : null;
+                                    const deltaLabel =
+                                      candidateAlt.delta !== undefined
+                                        ? ` · Δ ${Math.abs(candidateAlt.delta).toFixed(2)}`
+                                        : "";
+                                    return (
+                                      <li key={`${slot.slotId}-${candidateAlt.userId}`}>
+                                        {candidateAlt.name} · Score {altScore.toFixed(2)}
+                                        {altConfidence !== null ? ` · Konfidenz ${altConfidence}%` : ""}
+                                        {deltaLabel}
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Keine Slots definiert – bitte Kapazitäten erhöhen, um Vorschläge zu erhalten.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       </div>
@@ -288,6 +349,11 @@ export function AllocationTab({ allocation }: AllocationTabProps) {
                 "Neu berechnen"
               )}
             </Button>
+            {errorMessage ? (
+              <p className="flex items-center gap-2 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5" /> {errorMessage}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -302,8 +368,10 @@ export function AllocationTab({ allocation }: AllocationTabProps) {
             ) : (
               <div className="space-y-3">
                 {allocation.conflicts.map((conflict) => (
-                  <div key={conflict.roleId} className="rounded-lg border border-border/40 bg-background/60 p-3">
-                    <p className="text-sm font-semibold text-foreground/85">{conflict.label}</p>
+                  <div key={`${conflict.roleId}-${conflict.slotIndex}`} className="rounded-lg border border-border/40 bg-background/60 p-3">
+                    <p className="text-sm font-semibold text-foreground/85">
+                      {conflict.label} · Slot {conflict.slotIndex + 1} · Δ {conflict.delta.toFixed(2)}
+                    </p>
                     <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                       {conflict.candidates.map((candidate) => (
                         <li key={candidate.userId}>

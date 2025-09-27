@@ -137,7 +137,10 @@ export function DashboardClient({ initialData, onboardings }: DashboardClientPro
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <AllocationTab allocation={currentData.allocation} />
+              <AllocationTab
+                onboardingId={currentData.onboarding.id}
+                allocation={currentData.allocation}
+              />
             </motion.div>
           </TabsContent>
           {historyAvailable ? (
