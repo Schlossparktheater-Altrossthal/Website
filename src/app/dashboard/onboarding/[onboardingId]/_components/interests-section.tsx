@@ -1,6 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { scaleSequential } from "d3-scale";
+import { interpolatePuBuGn } from "d3-scale-chromatic";
+import type { CallbacksProp, OptionsProp, Props as WordCloudProps, Word } from "react-wordcloud";
+import "tippy.js/dist/tippy.css";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +20,8 @@ import {
 } from "@/lib/onboarding/dashboard-schemas";
 
 import { DistributionBars } from "./distribution-bars";
+
+const ReactWordcloud = dynamic<WordCloudProps>(() => import("react-wordcloud"), { ssr: false });
 
 type InterestsSectionProps = {
   topTags: Array<z.infer<typeof distributionEntrySchema>>;
@@ -32,6 +40,54 @@ const clusterColors: Record<string, string> = {
 };
 
 export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, diversity }: InterestsSectionProps) {
+  const words = useMemo<Word[]>(
+    () => wordCloud.map((entry) => ({ text: entry.tag, value: entry.weight })),
+    [wordCloud],
+  );
+
+  const maxWeight = useMemo(() => words.reduce((max, word) => Math.max(max, word.value), 0), [words]);
+
+  const colorScale = useMemo(() => {
+    const safeMax = maxWeight > 0 ? maxWeight : 1;
+    return scaleSequential(interpolatePuBuGn).domain([0, safeMax]);
+  }, [maxWeight]);
+
+  const callbacks = useMemo<CallbacksProp | undefined>(() => {
+    if (!words.length) {
+      return undefined;
+    }
+    return {
+      getWordColor: (word) => colorScale(word.value),
+      getWordTooltip: (word) =>
+        `${word.text} – ${word.value.toLocaleString("de-DE")}${word.value === 1 ? " Nennung" : " Nennungen"}`,
+    } satisfies CallbacksProp;
+  }, [colorScale, words.length]);
+
+  const wordCloudOptions = useMemo<OptionsProp>(() => {
+    const maxFont = Math.max(28, Math.min(68, 18 + maxWeight * 3));
+    return {
+      rotations: 3,
+      rotationAngles: [-20, 20],
+      fontFamily: "var(--font-sans)",
+      fontStyle: "normal",
+      fontWeight: "600",
+      fontSizes: [14, maxFont],
+      padding: 2,
+      scale: "sqrt",
+      spiral: "rectangular",
+      deterministic: true,
+      enableTooltip: true,
+      enableOptimizations: true,
+      transitionDuration: 720,
+      tooltipOptions: { placement: "top" },
+      colors: ["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9"],
+    } satisfies OptionsProp;
+  }, [maxWeight]);
+
+  const topWord = useMemo(() => {
+    return wordCloud.length ? [...wordCloud].sort((a, b) => b.weight - a.weight)[0] : undefined;
+  }, [wordCloud]);
+
   const sortedEdges = [...coOccurrences]
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 8);
@@ -46,26 +102,35 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
             Schriftgröße entspricht relativer Häufigkeit der Nennung.
           </p>
         </CardHeader>
-        <CardContent>
-          {wordCloud.length === 0 ? (
+        <CardContent className="space-y-4">
+          {words.length === 0 ? (
             <p className="text-sm text-muted-foreground">Keine Interessen hinterlegt.</p>
           ) : (
-            <div className="flex flex-wrap gap-3">
-              {wordCloud.map((entry) => {
-                const scale = Math.min(2.4, 0.8 + entry.weight / (wordCloud[0]?.weight ?? 1));
-                return (
-                  <motion.span
-                    key={`${entry.tag}-${entry.weight}`}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale }}
-                    transition={{ duration: 0.35 }}
-                    className="rounded-full bg-muted/60 px-3 py-1 text-sm font-medium text-foreground/80 shadow-sm"
-                  >
-                    {entry.tag}
-                  </motion.span>
-                );
-              })}
-            </div>
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+                {topWord ? (
+                  <span className="flex items-center gap-2">
+                    dominant:
+                    <motion.span
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary"
+                    >
+                      {topWord.tag}
+                    </motion.span>
+                    <span className="text-xs text-muted-foreground/80">
+                      {topWord.weight.toLocaleString("de-DE")}
+                      {topWord.weight === 1 ? " Nennung" : " Nennungen"}
+                    </span>
+                  </span>
+                ) : null}
+                <span>{words.length} Stichwörter</span>
+              </div>
+              <div className="relative h-[300px] w-full overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-background via-muted/40 to-background p-2">
+                <ReactWordcloud words={words} callbacks={callbacks} options={wordCloudOptions} />
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
