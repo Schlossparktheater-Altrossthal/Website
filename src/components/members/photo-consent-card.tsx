@@ -11,10 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
+const MAX_NOTE_LENGTH = 1000;
 const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
 const statusLabels: Record<PhotoConsentSummary["status"], string> = {
@@ -53,6 +55,7 @@ const EMPTY_SUMMARY: PhotoConsentSummary = {
   approvedAt: null,
   approvedByName: null,
   rejectionReason: null,
+  exclusionNote: null,
   requiresDateOfBirth: false,
   age: null,
   dateOfBirth: null,
@@ -111,6 +114,9 @@ export function PhotoConsentCard({
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [note, setNote] = useState("");
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -144,7 +150,7 @@ export function PhotoConsentCard({
   const requiresDateOfBirth = summary?.requiresDateOfBirth ?? false;
   const status = summary?.status ?? "none";
   const isCollapsible = status === "approved" || status === "rejected";
-  const showContent = !isCollapsible || expanded;
+  const showContent = !isCollapsible || expanded || editing;
 
   const statusBadge = useMemo(() => {
     return (
@@ -169,6 +175,25 @@ export function PhotoConsentCard({
       input.value = "";
     }
   };
+
+  useEffect(() => {
+    setNote(summary?.exclusionNote ?? "");
+    setNoteError(null);
+  }, [summary?.exclusionNote]);
+
+  useEffect(() => {
+    if (status === "approved") {
+      setEditing(false);
+    } else {
+      setEditing(true);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (editing) {
+      setExpanded(true);
+    }
+  }, [editing]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -196,6 +221,9 @@ export function PhotoConsentCard({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setDocumentError(null);
+    setNoteError(null);
+
+    const trimmedNote = note.trim();
 
     if (!confirm) {
       setDocumentError("Bitte bestätige dein Einverständnis");
@@ -207,10 +235,16 @@ export function PhotoConsentCard({
       return;
     }
 
+    if (trimmedNote.length > MAX_NOTE_LENGTH) {
+      setNoteError(`Bitte kürze deine Hinweise auf maximal ${MAX_NOTE_LENGTH} Zeichen`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const formData = new FormData();
       formData.append("confirm", "1");
+      formData.append("exclusionNote", trimmedNote);
       if (documentFile) {
         formData.append("document", documentFile);
       }
@@ -236,6 +270,8 @@ export function PhotoConsentCard({
       setSummary(consent);
       setConfirm(false);
       resetFileInput();
+      setNote(consent?.exclusionNote ?? "");
+      setNoteError(null);
       toast.success("Fotoeinverständnis übermittelt");
     } catch {
       setDocumentError("Netzwerkfehler beim Übermitteln");
@@ -245,6 +281,27 @@ export function PhotoConsentCard({
   };
 
   const showIntro = !loading && status !== "approved";
+
+  const handleStartEditing = () => {
+    setEditing(true);
+    setConfirm(false);
+    setDocumentError(null);
+    setNoteError(null);
+    setNote(summary?.exclusionNote ?? "");
+    resetFileInput();
+  };
+
+  const handleCancelEditing = () => {
+    if (status !== "approved") {
+      return;
+    }
+    setEditing(false);
+    setConfirm(false);
+    setDocumentError(null);
+    setNote(summary?.exclusionNote ?? "");
+    setNoteError(null);
+    resetFileInput();
+  };
 
   useEffect(() => {
     setExpanded(!isCollapsible);
@@ -323,9 +380,31 @@ export function PhotoConsentCard({
                 Zuletzt bearbeitet am {formatDate(summary?.updatedAt) ?? formatDate(summary?.submittedAt) ?? "unbekannt"}.
               </p>
             )}
+            {status === "approved" && summary?.exclusionNote && (
+              <p className="text-xs text-foreground/70">
+                Deine Ausschlüsse: {summary.exclusionNote}
+              </p>
+            )}
             <p className="text-xs text-foreground/70">
               Tippe auf „Details anzeigen“, um alle Informationen und Optionen einzublenden.
             </p>
+            {status === "approved" && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    setExpanded(true);
+                    handleStartEditing();
+                  }}
+                >
+                  Einwilligung bearbeiten
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
+                  Status aktualisieren
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -351,7 +430,7 @@ export function PhotoConsentCard({
               <div className="rounded-md border border-warning/45 bg-warning/15 p-3 text-warning">
                 Bitte hinterlege dein Geburtsdatum im <Link className="underline" href="/mitglieder/profil">Profil</Link>, damit wir prüfen können, ob ein Elternformular notwendig ist.
               </div>
-            ) : status === "approved" ? (
+            ) : status === "approved" && !editing ? (
               <div className="space-y-2 rounded-md border border-success/45 bg-success/15 p-3 text-success">
                 <p>Vielen Dank – deine Fotoeinwilligung ist freigegeben.</p>
                 <ul className="text-xs text-success/90">
@@ -363,9 +442,32 @@ export function PhotoConsentCard({
                     <li>Dokument zuletzt hochgeladen am {formatDate(summary.documentUploadedAt)}.</li>
                   )}
                 </ul>
+                {summary?.exclusionNote && (
+                  <div className="rounded-md border border-success/40 bg-background/80 p-3 text-success/90">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-success">
+                      Deine Ausschlüsse
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-success/90">
+                      {summary.exclusionNote}
+                    </p>
+                  </div>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button type="button" size="sm" onClick={handleStartEditing}>
+                    Einwilligung bearbeiten
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
+                    Status aktualisieren
+                  </Button>
+                </div>
               </div>
             ) : (
               <form className="space-y-5" onSubmit={handleSubmit}>
+                {status === "approved" && (
+                  <div className="rounded-md border border-info/40 bg-info/10 p-3 text-xs text-info">
+                    Deine Freigabe wird nach dem Speichern erneut geprüft.
+                  </div>
+                )}
                 {summary?.status === "rejected" && summary.rejectionReason && (
                   <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
                     Ablehnungsgrund: {summary.rejectionReason}
@@ -386,6 +488,31 @@ export function PhotoConsentCard({
                     </span>
                   </label>
                   <p className="mt-3 text-xs text-foreground/60">Du kannst dein Okay hier jederzeit widerrufen.</p>
+                </div>
+
+                <div className="space-y-2 rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+                  <div className="text-sm font-semibold text-foreground">Optional: Bereiche ausschließen</div>
+                  <p className="text-xs text-foreground/60">
+                    Notiere hier, auf welchen Kanälen oder Motiven du nicht erscheinen möchtest (z. B. Social Media, Presse, Nahaufnahmen).
+                  </p>
+                  <Textarea
+                    value={note}
+                    onChange={(event) => {
+                      setNote(event.target.value);
+                      if (noteError) {
+                        setNoteError(null);
+                      }
+                    }}
+                    maxLength={MAX_NOTE_LENGTH}
+                    rows={4}
+                    disabled={submitting}
+                    placeholder="Zum Beispiel: keine Fotos auf Instagram oder keine Solo-Porträts"
+                  />
+                  <div className="flex justify-between text-[11px] text-foreground/50">
+                    <span>Max. {MAX_NOTE_LENGTH} Zeichen</span>
+                    <span>{note.length}/{MAX_NOTE_LENGTH}</span>
+                  </div>
+                  {noteError && <p className="text-sm text-destructive">{noteError}</p>}
                 </div>
 
                 {requiresDocument && (
@@ -426,6 +553,17 @@ export function PhotoConsentCard({
                   <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={submitting}>
                     Status aktualisieren
                   </Button>
+                  {status === "approved" && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCancelEditing}
+                      disabled={submitting}
+                    >
+                      Bearbeitung abbrechen
+                    </Button>
+                  )}
                 </div>
 
                 <div className="text-xs text-foreground/60">

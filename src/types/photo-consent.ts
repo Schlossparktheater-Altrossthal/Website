@@ -9,6 +9,7 @@ export type PhotoConsentSummary = {
   approvedAt: string | null;
   approvedByName: string | null;
   rejectionReason: string | null;
+  exclusionNote: string | null;
   requiresDateOfBirth: boolean;
   age: number | null;
   dateOfBirth: string | null;
@@ -29,6 +30,7 @@ export type PhotoConsentAdminEntry = {
   approvedAt: string | null;
   approvedByName: string | null;
   rejectionReason: string | null;
+  exclusionNote: string | null;
   hasDocument: boolean;
   requiresDocument: boolean;
   requiresDateOfBirth: boolean;

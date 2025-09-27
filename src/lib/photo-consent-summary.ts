@@ -7,6 +7,7 @@ type ConsentRecord = {
   updatedAt?: Date | null;
   approvedAt?: Date | null;
   rejectionReason?: string | null;
+  exclusionNote?: string | null;
   documentUploadedAt?: Date | null;
   documentName?: string | null;
   documentMime?: string | null;
@@ -57,6 +58,7 @@ export function buildPhotoConsentSummary(
     approvedAt: consent?.approvedAt?.toISOString() ?? null,
     approvedByName: consent?.approvedByName ?? null,
     rejectionReason: consent?.rejectionReason ?? null,
+    exclusionNote: consent?.exclusionNote ?? null,
     age,
     dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
     documentName: consent?.documentName ?? null,
