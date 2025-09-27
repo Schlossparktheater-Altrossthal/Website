@@ -80,6 +80,20 @@ const AVATAR_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const CURRENT_YEAR = new Date().getFullYear();
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+const CHECKLIST_TARGET_LABELS: Record<ProfileChecklistTarget, string> = {
+  stammdaten: "Stammdaten",
+  ernaehrung: "Ernährung & Allergien",
+  masse: "Maße",
+  interessen: "Interessen",
+  freigaben: "Freigaben",
+};
+const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
+  "stammdaten",
+  "ernaehrung",
+  "masse",
+  "interessen",
+  "freigaben",
+];
 
 const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
   acting: "Schauspiel",
@@ -350,6 +364,10 @@ function ProfileClientInner({
   const [measurementDialogOpen, setMeasurementDialogOpen] = useState(false);
   const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
   const [activeTab, setActiveTab] = useState<string>("stammdaten");
+  const activeChecklistTarget = useMemo<ProfileChecklistTarget | undefined>(() => {
+    const maybeTarget = activeTab as ProfileChecklistTarget;
+    return CHECKLIST_TARGETS.includes(maybeTarget) ? maybeTarget : undefined;
+  }, [activeTab]);
 
   const [, setChecklistState] = useState<ChecklistState>(() => ({
     hasBasicData: Boolean(initialUser.firstName?.trim() && initialUser.email?.trim()),
@@ -653,7 +671,11 @@ function ProfileClientInner({
           percentComplete={percentComplete}
         />
         <div className="space-y-4">
-          <ChecklistCard summary={summary} onNavigate={setActiveTab} />
+          <ChecklistCard
+            summary={summary}
+            activeTarget={activeChecklistTarget}
+            onNavigate={(target) => setActiveTab(target)}
+          />
           {highlightTiles.length ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {highlightTiles.map((tile) => (
@@ -881,10 +903,11 @@ function ProfileOverviewCard({
 
 type ChecklistCardProps = {
   summary: ProfileCompletionSummary;
+  activeTarget?: ProfileChecklistTarget;
   onNavigate: (target: ProfileChecklistTarget) => void;
 };
 
-function ChecklistCard({ summary, onNavigate }: ChecklistCardProps) {
+function ChecklistCard({ summary, activeTarget, onNavigate }: ChecklistCardProps) {
   const percent = summary.total ? Math.round((summary.completed / summary.total) * 100) : 0;
   const hasItems = summary.items.length > 0;
 
@@ -927,32 +950,58 @@ function ChecklistCard({ summary, onNavigate }: ChecklistCardProps) {
             {summary.items.map((item) => {
               const Icon = item.complete ? CheckCircle2 : AlertTriangle;
               const iconClasses = item.complete ? "text-success" : "text-warning";
+              const sectionLabel = item.targetSection ? CHECKLIST_TARGET_LABELS[item.targetSection] : null;
+              const isActive = Boolean(item.targetSection && activeTarget === item.targetSection);
+
+              const content = (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-1 gap-3">
+                    <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", iconClasses)} aria-hidden />
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold text-foreground">{item.label}</div>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                    </div>
+                  </div>
+                  {sectionLabel ? (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "self-start rounded-full border-border/60 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide transition",
+                        isActive ? "border-primary/70 text-primary" : "text-muted-foreground",
+                        item.complete ? "border-success/60 text-success" : "",
+                      )}
+                    >
+                      {sectionLabel}
+                    </Badge>
+                  ) : null}
+                </div>
+              );
+
+              if (item.targetSection) {
+                const target = item.targetSection;
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(target)}
+                      className={cn(
+                        "w-full rounded-lg border border-border/50 bg-background/80 p-3 text-left shadow-sm transition",
+                        item.complete ? "border-success/60" : "hover:border-primary/60 hover:shadow-md",
+                        isActive ? "border-primary/60 shadow-md ring-2 ring-primary/30" : "",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                      )}
+                    >
+                      {content}
+                    </button>
+                  </li>
+                );
+              }
 
               return (
-                <li key={item.id} className="rounded-lg border border-border/50 bg-background/80 p-3 shadow-sm">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex flex-1 gap-3">
-                      <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", iconClasses)} aria-hidden />
-                      <div className="space-y-1">
-                        <div className="text-sm font-semibold text-foreground">{item.label}</div>
-                        <p className="text-xs text-muted-foreground">{item.description}</p>
-                      </div>
-                    </div>
-                    {item.targetSection ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="self-start rounded-full border-border/60 text-xs font-semibold uppercase tracking-wide"
-                        onClick={() => {
-                          if (item.targetSection) {
-                            onNavigate(item.targetSection);
-                          }
-                        }}
-                      >
-                        Bereich öffnen
-                      </Button>
-                    ) : null}
+                <li key={item.id}>
+                  <div className={cn("rounded-lg border border-border/50 bg-background/80 p-3 shadow-sm", item.complete ? "border-success/60" : "")}
+                  >
+                    {content}
                   </div>
                 </li>
               );
