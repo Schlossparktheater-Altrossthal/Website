@@ -98,6 +98,7 @@ async function main() {
     await tx.analyticsSessionInsight.deleteMany({});
     await tx.analyticsTrafficSource.deleteMany({});
     await tx.analyticsRealtimeSummary.deleteMany({});
+    await tx.analyticsSessionSummary.deleteMany({});
 
     if (result.sessionInsights.length > 0) {
       await tx.analyticsSessionInsight.createMany({
@@ -130,6 +131,16 @@ async function main() {
         windowEnd: result.realtimeSummary.windowEnd,
         totalEvents: result.realtimeSummary.totalEvents,
         eventCounts: result.realtimeSummary.eventCounts,
+      },
+    });
+
+    await tx.analyticsSessionSummary.create({
+      data: {
+        windowStart: result.sessionSummary.windowStart,
+        windowEnd: result.sessionSummary.windowEnd,
+        peakConcurrentUsers: result.sessionSummary.peakConcurrentUsers,
+        membersRealtimeEvents: result.sessionSummary.membersRealtimeEvents,
+        membersAvgSessionDurationSeconds: result.sessionSummary.membersAvgSessionDurationSeconds,
       },
     });
 

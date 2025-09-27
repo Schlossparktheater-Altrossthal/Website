@@ -7,6 +7,7 @@ import type {
   AnalyticsHttpSummary,
   AnalyticsRealtimeSummary,
   AnalyticsSessionInsight,
+  AnalyticsSessionSummary,
   AnalyticsTrafficSource,
 } from "@prisma/client";
 
@@ -268,6 +269,7 @@ function applyHttpSummaryOverrides(base: ServerSummary, row: AnalyticsHttpSummar
   const uptime = Number.isFinite(row.uptimePercentage ?? NaN)
     ? clamp(Number(row.uptimePercentage), 0, 100)
     : base.uptimePercentage;
+  const cacheHitRate = Number.isFinite(row.cacheHitRate) ? clamp(Number(row.cacheHitRate), 0, 1) : base.cacheHitRate;
 
   return {
     ...base,
@@ -275,6 +277,7 @@ function applyHttpSummaryOverrides(base: ServerSummary, row: AnalyticsHttpSummar
     requestsLast24h: totalRequests,
     averageResponseTimeMs: Math.round(averageResponse),
     errorRate: totalRequests > 0 ? clamp(totalErrors / totalRequests, 0, 1) : 0,
+    cacheHitRate,
   };
 }
 
@@ -291,6 +294,10 @@ function applyRequestBreakdownOverrides(base: RequestBreakdown, row: AnalyticsHt
         hasFrontendData && Number.isFinite(row.frontendAvgResponseMs) && row.frontendAvgResponseMs >= 0
           ? Math.round(row.frontendAvgResponseMs)
           : base.frontend.avgResponseTimeMs,
+      cacheHitRate:
+        hasFrontendData && Number.isFinite(row.frontendCacheHitRate)
+          ? clamp(Number(row.frontendCacheHitRate), 0, 1)
+          : base.frontend.cacheHitRate,
       avgPayloadKb:
         hasFrontendData && Number.isFinite(frontendPayloadKb) && frontendPayloadKb >= 0
           ? Math.round(frontendPayloadKb * 10) / 10
@@ -315,6 +322,10 @@ function applyRequestBreakdownOverrides(base: RequestBreakdown, row: AnalyticsHt
         hasApiData && Number.isFinite(row.apiErrorRate) && row.apiErrorRate >= 0
           ? clamp(Number(row.apiErrorRate), 0, 1)
           : base.api.errorRate,
+      backgroundJobs:
+        Number.isFinite(row.apiBackgroundJobs) && row.apiBackgroundJobs >= 0
+          ? Math.round(Number(row.apiBackgroundJobs))
+          : base.api.backgroundJobs,
     },
   };
 }
@@ -363,6 +374,38 @@ function applyRealtimeSummaryOverride(
     ...summary,
     realtimeEventsLast24h: Math.max(0, row.totalEvents),
   };
+}
+
+function applySessionSummaryOverride(
+  summary: ServerSummary,
+  breakdown: RequestBreakdown,
+  row: AnalyticsSessionSummary | null,
+): { summary: ServerSummary; breakdown: RequestBreakdown } {
+  if (!row) {
+    return { summary, breakdown };
+  }
+
+  const updatedSummary: ServerSummary = {
+    ...summary,
+    peakConcurrentUsers: Math.max(0, Math.round(Number(row.peakConcurrentUsers ?? 0))),
+  };
+
+  const membersRealtimeEvents = Math.max(0, Math.round(Number(row.membersRealtimeEvents ?? 0)));
+  const avgSessionDurationSeconds = Math.max(
+    0,
+    Math.round(Number(row.membersAvgSessionDurationSeconds ?? 0)),
+  );
+
+  const updatedBreakdown: RequestBreakdown = {
+    ...breakdown,
+    members: {
+      ...breakdown.members,
+      realtimeEvents: membersRealtimeEvents,
+      avgSessionDurationSeconds,
+    },
+  };
+
+  return { summary: updatedSummary, breakdown: updatedBreakdown };
 }
 
 async function loadHttpAggregationsFromDatabase() {
@@ -581,6 +624,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       httpAggregates,
       deviceOverrides,
       pageMetricsResult,
+      sessionSummaryRow,
       sessionInsightsRows,
       trafficSourceRows,
       realtimeSummaryRow,
@@ -598,6 +642,14 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         console.error("[server-analytics] Failed to load page performance metrics", error);
         return null;
       }),
+      prisma.analyticsSessionSummary
+        .findFirst({
+          orderBy: { windowEnd: "desc" },
+        })
+        .catch((error) => {
+          console.error("[server-analytics] Failed to load session summary", error);
+          return null;
+        }),
       prisma.analyticsSessionInsight.findMany({
         orderBy: { generatedAt: "desc" },
       }).catch((error) => {
@@ -627,6 +679,12 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     if (httpAggregates?.summary) {
       summary = applyHttpSummaryOverrides(summary, httpAggregates.summary);
       requestBreakdown = applyRequestBreakdownOverrides(requestBreakdown, httpAggregates.summary);
+    }
+
+    if (sessionSummaryRow) {
+      const updated = applySessionSummaryOverride(summary, requestBreakdown, sessionSummaryRow);
+      summary = updated.summary;
+      requestBreakdown = updated.breakdown;
     }
 
     if (httpAggregates?.peakHours && httpAggregates.peakHours.length > 0) {

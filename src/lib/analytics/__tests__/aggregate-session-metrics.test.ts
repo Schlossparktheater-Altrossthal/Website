@@ -170,5 +170,10 @@ describe("aggregateSessionMetrics", () => {
     expect(result.realtimeSummary.windowStart.toISOString()).toBe(
       new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
     );
+
+    expect(result.sessionSummary.peakConcurrentUsers).toBe(1);
+    expect(result.sessionSummary.membersRealtimeEvents).toBe(3);
+    expect(result.sessionSummary.membersAvgSessionDurationSeconds).toBe(3150);
+    expect(result.sessionSummary.windowEnd.toISOString()).toBe(now.toISOString());
   });
 });

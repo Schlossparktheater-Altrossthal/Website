@@ -7,8 +7,8 @@ import type {
 
 export type HttpRequestLike = Pick<
   AnalyticsHttpRequest,
-  "timestamp" | "area" | "statusCode" | "durationMs" | "payloadBytes"
-> & { timestamp: Date };
+  "timestamp" | "area" | "statusCode" | "durationMs" | "payloadBytes" | "route" | "method"
+> & { timestamp: Date; route: string; method: string };
 
 export type UptimeHeartbeatLike = Pick<
   AnalyticsUptimeHeartbeat,
@@ -29,11 +29,14 @@ export type HttpSummaryAggregation = {
   frontendRequests: number;
   frontendAvgResponseMs: number;
   frontendAvgPayloadBytes: number;
+  cacheHitRate: number;
+  frontendCacheHitRate: number;
   membersRequests: number;
   membersAvgResponseMs: number;
   apiRequests: number;
   apiAvgResponseMs: number;
   apiErrorRate: number;
+  apiBackgroundJobs: number;
 };
 
 export type HttpPeakHourAggregation = Pick<
@@ -119,6 +122,28 @@ function normalizeArea(area: AnalyticsRequestArea | null | undefined): Analytics
   return "unknown";
 }
 
+function normalizeRoute(route: string | null | undefined): string {
+  if (typeof route !== "string") {
+    return "/";
+  }
+  const trimmed = route.split("?")[0]?.trim() ?? "/";
+  if (!trimmed) {
+    return "/";
+  }
+  if (trimmed === "/") {
+    return trimmed;
+  }
+  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+}
+
+function normalizeMethod(method: string | null | undefined): string {
+  if (typeof method !== "string") {
+    return "GET";
+  }
+  const normalized = method.trim().toUpperCase();
+  return normalized ? normalized : "GET";
+}
+
 function normalizeRequests(requests: HttpRequestLike[]): HttpRequestLike[] {
   return requests
     .map((request) => ({
@@ -127,6 +152,8 @@ function normalizeRequests(requests: HttpRequestLike[]): HttpRequestLike[] {
       statusCode: Number.isFinite(request.statusCode) ? Math.trunc(request.statusCode) : 0,
       durationMs: sanitizeDuration(request.durationMs),
       payloadBytes: sanitizePayload(request.payloadBytes),
+      route: normalizeRoute(request.route),
+      method: normalizeMethod(request.method),
     }))
     .filter((request) => Number.isFinite(request.timestamp.getTime()));
 }
@@ -189,6 +216,50 @@ function calculateAreaErrorRate(requests: HttpRequestLike[]): number {
     return count;
   }, 0);
   return clampNumber(errors / requests.length, 0, 1);
+}
+
+function isLikelyStaticAsset(route: string): boolean {
+  const lower = route.toLowerCase();
+  return /(\.json|\.js|\.mjs|\.css|\.ico|\.png|\.jpg|\.jpeg|\.gif|\.svg|\.webp|\.txt|\.xml|\.map)$/.test(lower);
+}
+
+function isLikelyCacheHit(request: HttpRequestLike): boolean {
+  if (request.statusCode === 304) {
+    return true;
+  }
+
+  if (request.area !== "public") {
+    return false;
+  }
+
+  if (isLikelyStaticAsset(request.route)) {
+    return true;
+  }
+
+  if (request.method === "GET" && request.durationMs <= 150 && request.payloadBytes > 0) {
+    return true;
+  }
+
+  return false;
+}
+
+const NON_GET_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function isBackgroundJobRequest(request: HttpRequestLike): boolean {
+  if (request.area !== "api") {
+    return false;
+  }
+
+  const route = request.route.toLowerCase();
+  if (route.startsWith("/api/cron") || route.startsWith("/api/jobs") || route.includes("/queue")) {
+    return true;
+  }
+
+  if (NON_GET_METHODS.has(request.method)) {
+    return true;
+  }
+
+  return false;
 }
 
 function aggregatePeakHours(
@@ -271,7 +342,20 @@ export function aggregateHttpMetrics({
   const durations = normalizedRequests.map((request) => sanitizeDuration(request.durationMs));
   const payloads = normalizedRequests.map((request) => sanitizePayload(request.payloadBytes));
 
+  const cacheHits = normalizedRequests.reduce(
+    (count, request) => (isLikelyCacheHit(request) ? count + 1 : count),
+    0,
+  );
+  const backgroundJobs = normalizedRequests.reduce(
+    (count, request) => (isBackgroundJobRequest(request) ? count + 1 : count),
+    0,
+  );
+
   const groups = groupByArea(normalizedRequests);
+  const frontendCacheHits = groups.public.reduce(
+    (count, request) => (isLikelyCacheHit(request) ? count + 1 : count),
+    0,
+  );
 
   const summary: HttpSummaryAggregation = {
     windowStart: normalizedWindowStart,
@@ -287,11 +371,14 @@ export function aggregateHttpMetrics({
     frontendRequests: groups.public.length,
     frontendAvgResponseMs: calculateAreaAverage(groups.public),
     frontendAvgPayloadBytes: calculateAreaPayloadAverage(groups.public),
+    cacheHitRate: totalRequests > 0 ? cacheHits / totalRequests : 0,
+    frontendCacheHitRate: groups.public.length > 0 ? frontendCacheHits / groups.public.length : 0,
     membersRequests: groups.members.length,
     membersAvgResponseMs: calculateAreaAverage(groups.members),
     apiRequests: groups.api.length,
     apiAvgResponseMs: calculateAreaAverage(groups.api),
     apiErrorRate: calculateAreaErrorRate(groups.api),
+    apiBackgroundJobs: backgroundJobs,
   };
 
   const peakHours = aggregatePeakHours(
