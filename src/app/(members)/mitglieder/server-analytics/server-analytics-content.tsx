@@ -5,6 +5,16 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRealtime } from "@/hooks/useRealtime";
 import type {
@@ -15,7 +25,9 @@ import type {
 } from "@/lib/server-analytics";
 import type { ServerAnalyticsRealtimeEvent } from "@/lib/realtime/types";
 import { cn } from "@/lib/utils";
-import { updateServerLogStatusAction } from "./actions";
+import { toast } from "sonner";
+
+import { resetServerAnalyticsAction, updateServerLogStatusAction } from "./actions";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const decimalFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -29,6 +41,12 @@ const dateTimeFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", t
 const uptimeFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const ANIMATION_DURATION_MS = 450;
+
+const RESET_ERROR_MESSAGES: Record<string, string> = {
+  not_authorized: "Du darfst diese Aktion nicht ausführen.",
+  no_database: "Ohne Datenbankverbindung können keine Statistiken zurückgesetzt werden.",
+  reset_failed: "Statistiken konnten nicht zurückgesetzt werden. Bitte versuche es später erneut.",
+};
 
 function formatDuration(totalSeconds: number) {
   const seconds = Math.round(totalSeconds);
@@ -261,15 +279,19 @@ const statusUpdateOrder: ServerLogEvent["status"][] = ["open", "monitoring", "re
 
 type ServerAnalyticsContentProps = {
   initialAnalytics: ServerAnalytics;
+  canReset?: boolean;
 };
 
-export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsContentProps) {
+export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: ServerAnalyticsContentProps) {
   const { socket, isConnected, connectionStatus } = useRealtime();
   const [analytics, setAnalytics] = useState<ServerAnalytics>(initialAnalytics);
   const [generatedAt, setGeneratedAt] = useState<Date>(() => parseGeneratedAt(initialAnalytics.generatedAt));
   const [hasLiveUpdate, setHasLiveUpdate] = useState(false);
   const [pendingLogId, setPendingLogId] = useState<string | null>(null);
   const [isStatusUpdating, startStatusUpdate] = useTransition();
+  const [isResetting, startResetTransition] = useTransition();
+  const [isResetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const displayAnalytics = useAnimatedAnalytics(analytics);
 
   useEffect(() => {
@@ -374,6 +396,47 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
     });
   };
 
+  const handleResetDialogOpenChange = (open: boolean) => {
+    if (isResetting) {
+      return;
+    }
+    if (!open) {
+      setResetError(null);
+    }
+    setResetDialogOpen(open);
+  };
+
+  const handleResetConfirm = () => {
+    setResetError(null);
+    startResetTransition(async () => {
+      try {
+        const result = await resetServerAnalyticsAction();
+        if (result.success) {
+          setAnalytics(result.analytics);
+          setGeneratedAt(parseGeneratedAt(result.analytics.generatedAt));
+          setHasLiveUpdate(false);
+          toast.success("Serverstatistiken wurden zurückgesetzt.");
+          setResetDialogOpen(false);
+          if (socket) {
+            socket.emit("get_server_analytics");
+          }
+        } else {
+          const message = RESET_ERROR_MESSAGES[result.error] ??
+            "Statistiken konnten nicht zurückgesetzt werden.";
+          setResetError(message);
+          toast.error(message);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unbekannter Fehler beim Zurücksetzen der Statistiken.";
+        setResetError(message);
+        toast.error(message);
+      }
+    });
+  };
+
   const {
     logs: relevantLogs,
     warningCount,
@@ -417,19 +480,69 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Server- & Nutzungsstatistiken</h1>
-        <p className="text-sm text-muted-foreground">
-          Umfassender Überblick über Auslastung, Performance und Nutzungsverhalten. Die Kennzahlen helfen bei der Optimierung
-          der öffentlichen Seiten und des Mitgliederbereichs.
-        </p>
-        <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
-          <span className="flex items-center gap-1 font-medium text-foreground/80">
-            <span className={cn("h-2 w-2 rounded-full", connectionDotClass)} />
-            {connectionText}
-          </span>
-          <span>Letzte Aktualisierung: {lastUpdatedLabel}</span>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold">Server- & Nutzungsstatistiken</h1>
+          <p className="text-sm text-muted-foreground">
+            Umfassender Überblick über Auslastung, Performance und Nutzungsverhalten. Die Kennzahlen helfen bei der Optimierung
+            der öffentlichen Seiten und des Mitgliederbereichs.
+          </p>
+          <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
+            <span className="flex items-center gap-1 font-medium text-foreground/80">
+              <span className={cn("h-2 w-2 rounded-full", connectionDotClass)} />
+              {connectionText}
+            </span>
+            <span>Letzte Aktualisierung: {lastUpdatedLabel}</span>
+          </div>
         </div>
+        {canReset ? (
+          <div className="flex items-start justify-start lg:justify-end">
+            <Dialog open={isResetDialogOpen} onOpenChange={handleResetDialogOpenChange}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="self-start"
+                  disabled={isResetting}
+                >
+                  Statistiken zurücksetzen
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg space-y-4">
+                <DialogHeader>
+                  <DialogTitle>Serverstatistiken zurücksetzen</DialogTitle>
+                  <DialogDescription>
+                    Dadurch werden alle gespeicherten Analytics-Daten gelöscht – inklusive Requests, Sessions, Realtime-Events
+                    und Serverlogs. Dieser Schritt kann nicht rückgängig gemacht werden.
+                  </DialogDescription>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  Nach dem Zurücksetzen zeigt die Auswertung wieder Demodaten, bis neue Messwerte gesammelt wurden.
+                </p>
+                {resetError ? (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {resetError}
+                  </div>
+                ) : null}
+                <DialogFooter className="pt-2">
+                  <DialogClose asChild>
+                    <Button variant="outline" disabled={isResetting}>
+                      Abbrechen
+                    </Button>
+                  </DialogClose>
+                  <Button
+                    variant="destructive"
+                    onClick={handleResetConfirm}
+                    disabled={isResetting}
+                    data-state={isResetting ? "loading" : undefined}
+                  >
+                    Jetzt zurücksetzen
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        ) : null}
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">

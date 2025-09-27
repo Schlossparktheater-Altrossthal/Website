@@ -11,7 +11,10 @@ export default async function ServerAnalyticsPage() {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Server-Statistiken</div>;
   }
 
+  const user = session.user!;
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const isOwner = user.role === "owner" || roles.includes("owner");
   const analytics = await collectServerAnalytics();
 
-  return <ServerAnalyticsContent initialAnalytics={analytics} />;
+  return <ServerAnalyticsContent initialAnalytics={analytics} canReset={isOwner} />;
 }
