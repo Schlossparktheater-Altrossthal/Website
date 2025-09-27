@@ -198,6 +198,7 @@ type ChecklistState = {
   hasDietaryPreference: boolean;
   hasMeasurements?: boolean;
   photoConsentGiven?: boolean;
+  hasWhatsappVisit?: boolean;
 };
 
 type HighlightTileConfig = {
@@ -356,6 +357,7 @@ function ProfileClientInner({
     hasDietaryPreference: Boolean(initialOnboarding?.dietaryPreference?.trim()),
     hasMeasurements: canManageMeasurements ? initialMeasurements.length > 0 : undefined,
     photoConsentGiven: summary.items.find((item) => item.id === "photo-consent")?.complete ?? undefined,
+    hasWhatsappVisit: whatsappLink ? Boolean(initialOnboarding?.whatsappLinkVisitedAt) : undefined,
   }));
 
   const buildSummaryFromState = useCallback(
@@ -369,8 +371,9 @@ function ProfileClientInner({
           state.photoConsentGiven === undefined
             ? undefined
             : { consentGiven: Boolean(state.photoConsentGiven) },
+        hasWhatsappVisit: whatsappLink ? state.hasWhatsappVisit : undefined,
       }),
-    [canManageMeasurements],
+    [canManageMeasurements, whatsappLink],
   );
 
   const updateChecklist = useCallback(
@@ -500,6 +503,67 @@ function ProfileClientInner({
     [hasPhotoConsentChecklist, updateChecklist],
   );
 
+  const handleWhatsAppVisit = useCallback(async () => {
+    if (!whatsappLink) {
+      throw new Error("Kein WhatsApp-Link verfügbar.");
+    }
+
+    const alreadyVisited = Boolean(onboarding?.whatsappLinkVisitedAt);
+    window.open(whatsappLink, "_blank", "noopener,noreferrer");
+
+    try {
+      const response = await fetch("/api/onboarding/whatsapp-visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { error?: unknown; visitedAt?: unknown }
+        | null;
+
+      if (!response.ok) {
+        const message =
+          typeof data?.error === "string" && data.error.trim()
+            ? data.error
+            : "Aktion fehlgeschlagen";
+        throw new Error(message);
+      }
+
+      const visitedAt =
+        typeof data?.visitedAt === "string" && data.visitedAt
+          ? data.visitedAt
+          : new Date().toISOString();
+
+      setOnboarding((prev) => {
+        if (!prev) {
+          return {
+            focus: "acting",
+            background: null,
+            backgroundClass: null,
+            notes: null,
+            memberSinceYear: null,
+            dietaryPreference: null,
+            dietaryPreferenceStrictness: null,
+            whatsappLinkVisitedAt: visitedAt,
+            updatedAt: null,
+            show: null,
+          } satisfies OnboardingProfile;
+        }
+
+        return { ...prev, whatsappLinkVisitedAt: visitedAt } satisfies OnboardingProfile;
+      });
+
+      updateChecklist({ hasWhatsappVisit: true });
+
+      return { visitedAt, alreadyVisited } as const;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Aktion fehlgeschlagen");
+    }
+  }, [onboarding, updateChecklist, whatsappLink]);
+
   const dietaryPreference = useMemo(
     () => ({
       label: onboarding?.dietaryPreference ?? null,
@@ -540,15 +604,23 @@ function ProfileClientInner({
         tone: whatsappVisitedAt ? "success" : "info",
         action: (
           <Button
-            asChild
+            type="button"
             size="sm"
             variant="outline"
             className="mt-2 w-full justify-between rounded-full border-border/70 text-sm font-semibold"
+            onClick={() => {
+              void handleWhatsAppVisit()
+                .then(({ alreadyVisited }) => {
+                  toast.success(alreadyVisited ? "WhatsApp-Link geöffnet" : "WhatsApp-Besuch vermerkt");
+                })
+                .catch((error) => {
+                  const message = error instanceof Error ? error.message : "Aktion fehlgeschlagen";
+                  toast.error(message);
+                });
+            }}
           >
-            <a href={whatsappLink} target="_blank" rel="noreferrer">
-              <span>{whatsappVisitedAt ? "Erneut öffnen" : "Chat öffnen"}</span>
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </a>
+            <span>{whatsappVisitedAt ? "Erneut öffnen" : "Chat öffnen"}</span>
+            <ArrowRight className="h-4 w-4" aria-hidden />
           </Button>
         ),
       });
@@ -561,6 +633,7 @@ function ProfileClientInner({
     onboardingBackground,
     onboardingFocusLabel,
     onboardingNotes,
+    handleWhatsAppVisit,
     whatsappLink,
     whatsappVisitedAt,
     whatsappVisitedAtLabel,
@@ -655,6 +728,7 @@ function ProfileClientInner({
             onOnboardingChange={setOnboarding}
             whatsappLink={whatsappLink}
             whatsappVisitedAt={whatsappVisitedAt}
+            onWhatsAppVisit={handleWhatsAppVisit}
             dietaryPreference={dietaryPreference}
           />
         </TabsContent>
@@ -1939,19 +2013,21 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
   );
 }
 
-type OnboardingSectionProps = {
+export type OnboardingSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
   onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
   whatsappLink: string | null;
   whatsappVisitedAt: string | null;
+  onWhatsAppVisit?: () => Promise<{ visitedAt: string | null; alreadyVisited: boolean }>;
   dietaryPreference: { label: string | null; strictnessLabel: string | null };
 };
 
-function OnboardingSection({
+export function OnboardingSection({
   onboarding,
   onOnboardingChange,
   whatsappLink,
   whatsappVisitedAt,
+  onWhatsAppVisit,
   dietaryPreference,
 }: OnboardingSectionProps) {
   const initialForm = useMemo<OnboardingFormState>(() => ({
@@ -1968,6 +2044,7 @@ function OnboardingSection({
   const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(() => ["Schule", "Ausbildung", "Beruf"]);
   const [classSuggestions, setClassSuggestions] = useState<string[]>([]);
   const [whatsappSubmitting, setWhatsappSubmitting] = useState(false);
+  const whatsappVisitedLabel = useMemo(() => formatDate(whatsappVisitedAt), [whatsappVisitedAt]);
 
   useEffect(() => {
     setFormState(initialForm);
@@ -2101,33 +2178,19 @@ function OnboardingSection({
   };
 
   const handleWhatsAppClick = async () => {
-    if (!whatsappLink) return;
-    window.open(whatsappLink, "_blank", "noopener,noreferrer");
+    if (!whatsappLink) {
+      return;
+    }
+
+    if (!onWhatsAppVisit) {
+      window.open(whatsappLink, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     setWhatsappSubmitting(true);
     try {
-      const response = await fetch("/api/onboarding/whatsapp-visit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(typeof data?.error === "string" ? data.error : "Aktion fehlgeschlagen");
-      }
-      const visitedAt = typeof data?.visitedAt === "string" ? data.visitedAt : new Date().toISOString();
-      const next: OnboardingProfile = {
-        focus: onboarding?.focus ?? "acting",
-        background: onboarding?.background ?? null,
-        backgroundClass: onboarding?.backgroundClass ?? null,
-        notes: onboarding?.notes ?? null,
-        memberSinceYear: onboarding?.memberSinceYear ?? null,
-        updatedAt: onboarding?.updatedAt ?? null,
-        dietaryPreference: onboarding?.dietaryPreference ?? null,
-        dietaryPreferenceStrictness: onboarding?.dietaryPreferenceStrictness ?? null,
-        whatsappLinkVisitedAt: visitedAt,
-        show: onboarding?.show ?? null,
-      };
-      onOnboardingChange(next);
-      toast.success("WhatsApp-Besuch vermerkt");
+      const result = await onWhatsAppVisit();
+      toast.success(result.alreadyVisited ? "WhatsApp-Link geöffnet" : "WhatsApp-Besuch vermerkt");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Aktion fehlgeschlagen";
       toast.error(message);
@@ -2142,14 +2205,38 @@ function OnboardingSection({
         <CardTitle className="text-base font-semibold">Onboarding-Angaben</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {whatsappLink && !whatsappVisitedAt ? (
-          <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm text-primary">
+        {whatsappLink ? (
+          <div
+            className={cn(
+              "flex flex-col gap-2 rounded-lg border p-4 text-sm",
+              whatsappVisitedAt
+                ? "border-success/40 bg-success/10 text-success"
+                : "border-primary/40 bg-primary/10 text-primary",
+            )}
+          >
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              <span>WhatsApp-Onboarding steht noch aus.</span>
+              {whatsappVisitedAt ? (
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              )}
+              <span>
+                {whatsappVisitedAt
+                  ? `WhatsApp-Onboarding bestätigt${whatsappVisitedLabel
+                      ? ` am ${whatsappVisitedLabel}`
+                      : ""}.`
+                  : "WhatsApp-Onboarding steht noch aus."}
+              </span>
             </div>
-            <p className="text-xs text-primary/80">
-              Öffne die Gruppe jetzt – wir markieren dich anschließend als informiert.
+            <p
+              className={cn(
+                "text-xs",
+                whatsappVisitedAt ? "text-success/80" : "text-primary/80",
+              )}
+            >
+              {whatsappVisitedAt
+                ? "Du kannst den Infokanal jederzeit erneut öffnen."
+                : "Öffne die Gruppe jetzt – wir markieren dich anschließend als informiert."}
             </p>
             <Button size="sm" onClick={handleWhatsAppClick} disabled={whatsappSubmitting}>
               {whatsappSubmitting ? (

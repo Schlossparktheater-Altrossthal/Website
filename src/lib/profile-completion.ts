@@ -3,14 +3,16 @@ export type ProfileChecklistItemId =
   | "birthdate"
   | "dietary"
   | "measurements"
-  | "photo-consent";
+  | "photo-consent"
+  | "whatsapp";
 
 export type ProfileChecklistTarget =
   | "stammdaten"
   | "ernaehrung"
   | "masse"
   | "interessen"
-  | "freigaben";
+  | "freigaben"
+  | "onboarding";
 
 export type ProfileChecklistItem = {
   id: ProfileChecklistItemId;
@@ -33,6 +35,7 @@ type ChecklistInput = {
   hasDietaryPreference: boolean;
   hasMeasurements?: boolean;
   photoConsent?: { consentGiven: boolean };
+  hasWhatsappVisit?: boolean;
 };
 
 export function buildProfileChecklist(
@@ -69,6 +72,16 @@ export function buildProfileChecklist(
       description: "Ermöglicht dem Kostüm-Team passgenaue Planung.",
       complete: Boolean(input.hasMeasurements),
       targetSection: "masse",
+    });
+  }
+
+  if (input.hasWhatsappVisit !== undefined) {
+    items.push({
+      id: "whatsapp",
+      label: "WhatsApp-Infokanal bestätigt",
+      description: "Bestätige den Zugriff auf unseren WhatsApp-Infokanal.",
+      complete: Boolean(input.hasWhatsappVisit),
+      targetSection: "onboarding",
     });
   }
 
