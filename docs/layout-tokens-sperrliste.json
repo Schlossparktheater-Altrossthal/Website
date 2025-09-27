@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "version": "2025-04-14",
+    "source": "Figma · Sperrliste · Responsive Layout v2",
+    "description": "Layout-Token-Mapping für Kennzahlen-Karten, Timeline und Kalender im Sperrlistenbereich"
+  },
+  "grid": {
+    "desktop": {
+      "columns": 12,
+      "gutter": "--space-lg",
+      "columnWidth": "fluid",
+      "margin": "clamp(1.5rem, 4vw, 3rem)"
+    },
+    "tablet": {
+      "columns": 8,
+      "gutter": "--space-md"
+    },
+    "mobile": {
+      "columns": 4,
+      "gutter": "--space-sm"
+    },
+    "timeline": {
+      "subgrid": 7,
+      "columnMin": "9.5rem",
+      "gap": "--space-2xs"
+    }
+  },
+  "components": {
+    "statsCard": {
+      "minHeight": {
+        "desktop": "11rem",
+        "tablet": "11rem",
+        "mobile": "9.5rem"
+      },
+      "padding": {
+        "desktop": {
+          "x": "--space-lg",
+          "y": "--space-md"
+        },
+        "mobile": {
+          "x": "--space-md",
+          "y": "--space-md"
+        }
+      },
+      "gap": "--space-sm",
+      "tokens": {
+        "background": "--card",
+        "label": "text-caption",
+        "valueDesktop": "text-display",
+        "valueMobile": "text-h3"
+      }
+    },
+    "timelineCell": {
+      "height": "4.5rem",
+      "grid": "grid-rows-[auto_auto]",
+      "background": "--muted",
+      "states": {
+        "preferred": "--accent",
+        "exception": "--warning",
+        "blocked": "--destructive",
+        "holiday": "--info"
+      }
+    },
+    "timelineCardMobile": {
+      "minHeight": "7.5rem",
+      "snap": "scroll-m-[--space-sm]",
+      "gap": "--space-xs"
+    },
+    "calendarDay": {
+      "minHeightMobile": "4.25rem",
+      "minHeightSm": "6rem",
+      "padding": "--space-xs",
+      "gap": "--space-2xs",
+      "focus": "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    }
+  },
+  "spacing": {
+    "sectionDesktop": "--space-xl",
+    "sectionMobile": "--space-lg",
+    "block": {
+      "default": "--space-lg",
+      "compact": "--space-md"
+    }
+  },
+  "typography": {
+    "headline": "text-h2",
+    "subheadline": "text-body-lg",
+    "label": "text-caption",
+    "tableHeader": "text-body-sm",
+    "body": "text-body"
+  }
+}
