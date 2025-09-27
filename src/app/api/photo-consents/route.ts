@@ -24,6 +24,7 @@ type ConsentRecord = {
   updatedAt: Date;
   approvedAt: Date | null;
   rejectionReason: string | null;
+  exclusionNote: string | null;
   documentUploadedAt: Date | null;
   documentName: string | null;
   documentMime: string | null;
@@ -88,6 +89,7 @@ function buildSummary(user: UserRecord): PhotoConsentSummary {
     approvedAt: consent?.approvedAt ? consent.approvedAt.toISOString() : null,
     approvedByName: consent?.approvedBy?.name ?? null,
     rejectionReason: consent?.rejectionReason ?? null,
+    exclusionNote: consent?.exclusionNote ?? null,
     requiresDateOfBirth,
     age,
     dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
@@ -138,6 +140,7 @@ export async function GET() {
           updatedAt: true,
           approvedAt: true,
           rejectionReason: true,
+          exclusionNote: true,
           documentUploadedAt: true,
           documentName: true,
           documentMime: true,
@@ -193,6 +196,9 @@ export async function POST(request: NextRequest) {
   if (!parseBoolean(body.confirm)) {
     return NextResponse.json({ error: "Bitte bestätige dein Einverständnis" }, { status: 400 });
   }
+
+  const rawExclusionNote = typeof body.exclusionNote === "string" ? body.exclusionNote.trim() : "";
+  const exclusionNote = rawExclusionNote ? rawExclusionNote.slice(0, 1000) : null;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -295,6 +301,7 @@ export async function POST(request: NextRequest) {
         approvedAt: null,
         approvedById: null,
         rejectionReason: null,
+        exclusionNote,
         ...docData,
       },
       update: {
@@ -303,6 +310,7 @@ export async function POST(request: NextRequest) {
         approvedAt: null,
         approvedById: null,
         rejectionReason: null,
+        exclusionNote,
         ...(documentBuffer ? docData : {}),
       },
       select: {
@@ -312,6 +320,7 @@ export async function POST(request: NextRequest) {
         updatedAt: true,
         approvedAt: true,
         rejectionReason: true,
+        exclusionNote: true,
         documentUploadedAt: true,
         documentName: true,
         documentMime: true,

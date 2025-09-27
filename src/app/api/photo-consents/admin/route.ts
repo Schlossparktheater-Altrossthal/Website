@@ -17,6 +17,7 @@ type ConsentWithUser = {
   updatedAt: Date;
   approvedAt: Date | null;
   rejectionReason: string | null;
+  exclusionNote: string | null;
   documentUploadedAt: Date | null;
   documentName: string | null;
   documentMime: string | null;
@@ -75,6 +76,7 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
     approvedAt: consent.approvedAt ? consent.approvedAt.toISOString() : null,
     approvedByName: approverName,
     rejectionReason: consent.rejectionReason ?? null,
+    exclusionNote: consent.exclusionNote ?? null,
     hasDocument: Boolean(consent.documentUploadedAt),
     requiresDocument,
     requiresDateOfBirth,

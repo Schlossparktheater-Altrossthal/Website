@@ -160,6 +160,7 @@ export function PhotoConsentAdminPanel() {
         entry.approvedByName ?? "",
         entry.documentName ?? "",
         entry.rejectionReason ?? "",
+        entry.exclusionNote ?? "",
         entry.userId,
         entry.submittedAt,
         entry.updatedAt,
@@ -462,6 +463,14 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
         <div className="space-y-1">
           <div>Eingegangen: {submittedAt}</div>
           <div>Aktualisiert: {updatedAt}</div>
+          {entry.exclusionNote && (
+            <div className="rounded-md border border-border/60 bg-background/60 p-2 text-foreground/80">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Ausschlüsse
+              </div>
+              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed">{entry.exclusionNote}</p>
+            </div>
+          )}
           {entry.documentName && (
             <div>
               Dokument: {entry.documentName}
@@ -600,11 +609,19 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
           )}
         </div>
 
-      <div className="space-y-1 text-xs text-foreground/70">
+      <div className="space-y-2 text-xs text-foreground/70">
         <div>Aktualisiert: {updatedAt}</div>
         {approvedAt && <div>Freigegeben am {approvedAt}</div>}
         {entry.approvedByName && <div>Bearbeitet durch {entry.approvedByName}</div>}
         {entry.rejectionReason && <div className="text-destructive">Grund: {entry.rejectionReason}</div>}
+        {entry.exclusionNote && (
+          <div className="rounded-md border border-border/60 bg-background/60 p-2 text-foreground/80">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Ausschlüsse
+            </div>
+            <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed">{entry.exclusionNote}</p>
+          </div>
+        )}
         {entry.documentName && (
           <div>
             Dokument: {entry.documentName}

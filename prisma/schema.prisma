@@ -1140,6 +1140,7 @@ model PhotoConsent {
   approvedAt       DateTime?
   approvedById     String?
   rejectionReason  String?
+  exclusionNote    String?             @db.Text
   documentName     String?
   documentMime     String?
   documentSize     Int?
