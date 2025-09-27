@@ -47,3 +47,44 @@ Der Einstieg in die Sperrliste erfolgt über zwei Registerkarten, die dank `over
 1. Prüfen, ob für sehr schmale Geräte (<360 px) ein alternativer Kalender-Modus mit horizontalem Scrollen oder Wochenansicht sinnvoll ist.
 2. Typografische Hierarchie mobiler Zusatztexte leicht vergrößern (11–12 px) und Zeilenhöhe erhöhen, um Barrierefreiheit zu stärken.
 3. Scroll-Indikatoren (Gradient, Icon) an mobilen horizontalen Listen ergänzen, damit Nutzer das Wischen intuitiv erkennen.
+
+## Gestaltungs-Lastenheft & Layoutabstimmung
+
+### Alignment mit Design & Operations
+- Gemeinsamer Workshop mit Design und Operations am 14. April 2025: Konsens über ein einheitliches Komponentenraster und dokumentierte Responsiv-Token. Die Ergebnisse sind im Figma-Board **„Sperrliste · Responsive Layout v2“** (Projekt _Members App_) abgelegt; dort referenzieren die Seiten _Dashboard Overview_ und _Mobile Detail_ die jeweils finalen Frames.
+- Das Board enthält zusätzlich ein „Token Overlay“, das beim Inspektionsmodus sämtliche Tailwind-Utilities, CSS-Custom-Properties und semantischen Token-Namen aus `src/design-system/tokens.json` einblendet. So lassen sich Designentscheidungen direkt auf Code-Artefakte zurückführen.
+- Operations hat die Spezifikation in das Deployment-Runbook übernommen: In der Sektion „UI Calibrations“ werden die festen Höhenwerte als Akzeptanzkriterium beim visuellen Smoke-Test geprüft.
+
+### Grid-Definition
+- **Desktop (≥1024 px):** 12-Spalten-Raster mit 72 px Gesamtgutter (je 36 px innerer Abstand, abgebildet über `gap-x-[--space-lg]`). Seitenränder folgen `clamp(1.5rem, 4vw, 3rem)` und verweisen auf `--layout-gutter`.
+- **Tablet (768–1023 px):** 8-Spalten-Raster, Gutter `--space-md` (24 px), Kartenbreiten richten sich nach 2- bzw. 4-Spalten-Layouts.
+- **Mobil (<768 px):** 4-Spalten-Raster mit `--space-sm` (16 px) als Gutter; Elemente mit höherer Priorität nutzen `grid-column: span 4`, sekundäre Informationen optional `span 2`.
+- Für die Timeline wird ab `lg` eine verschachtelte Struktur genutzt: äußeres 12er-Raster, innerhalb der Scrollfläche ein 7-Spalten-Subgrid (`grid-template-columns: repeat(7, minmax(9.5rem, 1fr))`), sodass die Tagesbreite konsistent bleibt.
+
+### Abstände & Rhythmus
+- Vertikale Section-Abstände folgen `--space-xl` (48 px) auf Desktop und `--space-lg` (32 px) auf Mobile. Komponentenblöcke (z. B. Tab-Pane + Content) halten `--space-lg` bzw. `--space-md` ein.
+- Karteninterne Polsterung: `--space-lg` in Desktop- und `--space-md` in Mobil-Frames; Kennzahlen-Karten nutzen zusätzlich `gap-[--space-sm]`.
+- Timeline-Zellen und Blockkalender teilen sich `gap-[--space-2xs]` horizontal (8 px) für Events/Badges sowie `gap-[--space-xs]` vertikal (12 px) für Titel + Meta.
+
+### Typografie
+- Headline-Hierarchie: Bereichstitel `text-h2`, Untertitel/Legende `text-body-lg` mit `text-muted-foreground`. Kennzahlen-Labels setzen `text-caption` (Tracking `wide`), Werte `text-display` oder `text-h1` je nach Informationsdichte.
+- Mobile Reflow: Kennzahlen wechseln auf `text-h3` für Werte, Labels bleiben `text-caption` mit `uppercase` und `tracking-[0.32em]`.
+- Tabellenkopf der Timeline verwendet `text-body-sm` mit `font-semibold`; Zellen-Inhalte setzen `text-body` und Highlight-Badges `text-caption`.
+
+### Zustands- & Feedbackfarben
+- Kennzahlen-Karten: Basisfläche `var(--card)`; positive Entwicklung `badge`-Akzent `success/soft`, negative Entwicklung `destructive/soft`. Prozentwerte referenzieren `text-success-600` bzw. `text-destructive-500`.
+- Timeline-Zellen: Standardzustand `--muted`, bevorzugte Tage `--accent` (80 % Deckkraft), Ausnahmen `--warning`, Sperrtermine `--destructive`. Hover nutzt `ring-2 ring-primary/40`, Fokuszustände `outline-none focus-visible:ring-2 focus-visible:ring-offset-2`.
+- Kalenderbadges: Ferieninformationen auf `info/soft`, Drag-Selection mit `accent/20` als Hintergrundoverlay.
+
+### Fixhöhen & responsive Kennzahlen
+| Element | Desktop-Höhe | Tablet-Höhe | Mobil-Höhe | Tokens/Utilities |
+| --- | --- | --- | --- | --- |
+| Kennzahlen-Karte (Sperrliste Overview) | 176 px (`h-[11rem]`) | 176 px | 152 px (`h-[9.5rem]`) | `min-h-[11rem] sm:min-h-[11rem] lg:min-h-[11rem]`, Padding `px-[--space-lg] py-[--space-md]` |
+| Timeline-Zelle (Tabellenmodus) | 72 px | 72 px | – (mobil nicht sichtbar) | `h-[4.5rem]`, `grid-rows-[auto_auto]` |
+| Timeline-Karte (mobil) | – | – | 120 px | `min-h-[7.5rem]`, Snap-Spacing `scroll-m-[--space-sm]` |
+| Kalender-Tag (BlockCalendar) | 96 px (`sm`-Breakpoint) | 96 px | 68 px (`h-[4.25rem]`) | `min-h-[4.25rem] sm:min-h-[6rem]`, Fokus `ring-offset-background` |
+
+### Dokumentation & Übergabe
+- Die Figma-Frames enthalten eine „Dev Ready“-Seite mit roten Messlinien. Für jede Komponente sind Token-Namen, Tailwind-Klassen sowie min-/max-Werte in Notizen dokumentiert.
+- Im Repository ergänzt `docs/layout-tokens-sperrliste.json` (siehe Figma-Verlinkung) die maschinenlesbare Exportdatei. Diese wird künftig in das automatisierte Token-Script (`pnpm design-system:tokens`) eingehängt.
+- QA-Checkliste erweitert: Prüfschritt 4 („Visuelle Regression“) verlangt Screenshots der Kennzahlen-Karten in den Breakpoints 375 px, 834 px, 1280 px und Abgleich der Höhen mit den oben genannten Sollwerten.
