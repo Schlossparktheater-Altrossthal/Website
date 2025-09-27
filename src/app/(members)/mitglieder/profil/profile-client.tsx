@@ -1,15 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { toast } from "sonner";
 import {
+  ArrowRight,
   AlertTriangle,
   CheckCircle2,
+  CalendarDays,
   Loader2,
+  Mail,
   Pencil,
   Plus,
+  MessageCircle,
+  Sparkles,
   ShieldCheck,
   Trash2,
   Users,
@@ -50,7 +55,11 @@ import { BACKGROUND_TAGS, findMatchingBackgroundTag, normalizeBackgroundLabel } 
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
 import { UserAvatar } from "@/components/user-avatar";
-import type { ProfileCompletionSummary } from "@/lib/profile-completion";
+import {
+  buildProfileChecklist,
+  type ProfileChecklistTarget,
+  type ProfileCompletionSummary,
+} from "@/lib/profile-completion";
 import { getUserDisplayName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
@@ -71,6 +80,21 @@ const AVATAR_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const CURRENT_YEAR = new Date().getFullYear();
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+
+const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
+  acting: "Schauspiel",
+  tech: "Gewerke",
+  both: "Schauspiel & Gewerke",
+};
+
+function formatDateLabel(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) {
+    return null;
+  }
+  return dateFormatter.format(date);
+}
 
 type ProfileClientProps = {
   user: {
@@ -166,6 +190,24 @@ type OnboardingFormState = {
   backgroundClass: string;
   notes: string;
   memberSinceYear: string;
+};
+
+type ChecklistState = {
+  hasBasicData: boolean;
+  hasBirthdate: boolean;
+  hasDietaryPreference: boolean;
+  hasMeasurements?: boolean;
+  photoConsentGiven?: boolean;
+};
+
+type HighlightTileConfig = {
+  id: string;
+  icon: ReactNode;
+  title: string;
+  description: string;
+  hint?: string | null;
+  tone?: "default" | "info" | "success" | "warning";
+  action?: ReactNode;
 };
 
 const basicsSchema = z
@@ -290,7 +332,7 @@ function ProfileClientInner({
   canManageMeasurements,
   whatsappLink,
 }: ProfileClientInnerProps) {
-  const { setItemCompletion } = useProfileCompletion();
+  const { summary, replaceSummary } = useProfileCompletion();
   const { update: refreshSession } = useSession();
 
   const [user, setUser] = useState<ProfileUser>(initialUser);
@@ -306,6 +348,47 @@ function ProfileClientInner({
   );
   const [measurementDialogOpen, setMeasurementDialogOpen] = useState(false);
   const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("stammdaten");
+
+  const [, setChecklistState] = useState<ChecklistState>(() => ({
+    hasBasicData: Boolean(initialUser.firstName?.trim() && initialUser.email?.trim()),
+    hasBirthdate: Boolean(initialUser.dateOfBirth),
+    hasDietaryPreference: Boolean(initialOnboarding?.dietaryPreference?.trim()),
+    hasMeasurements: canManageMeasurements ? initialMeasurements.length > 0 : undefined,
+    photoConsentGiven: summary.items.find((item) => item.id === "photo-consent")?.complete ?? undefined,
+  }));
+
+  const buildSummaryFromState = useCallback(
+    (state: ChecklistState) =>
+      buildProfileChecklist({
+        hasBasicData: state.hasBasicData,
+        hasBirthdate: state.hasBirthdate,
+        hasDietaryPreference: state.hasDietaryPreference,
+        hasMeasurements: canManageMeasurements ? Boolean(state.hasMeasurements) : undefined,
+        photoConsent:
+          state.photoConsentGiven === undefined
+            ? undefined
+            : { consentGiven: Boolean(state.photoConsentGiven) },
+      }),
+    [canManageMeasurements],
+  );
+
+  const updateChecklist = useCallback(
+    (patch: Partial<ChecklistState> = {}) => {
+      setChecklistState((prev) => {
+        const next = { ...prev, ...patch };
+        const nextSummary = buildSummaryFromState(next);
+        replaceSummary(nextSummary);
+        return next;
+      });
+    },
+    [buildSummaryFromState, replaceSummary],
+  );
+
+  const hasPhotoConsentChecklist = useMemo(
+    () => summary.items.some((item) => item.id === "photo-consent"),
+    [summary.items],
+  );
 
   const displayName = useMemo(
     () =>
@@ -323,19 +406,50 @@ function ProfileClientInner({
 
   const sortedRoles = useMemo(() => Array.from(new Set<Role>(user.roles)).sort(), [user.roles]);
 
+  const createdAtLabel = useMemo(() => formatDateLabel(user.createdAt), [user.createdAt]);
+  const memberSinceLabel = useMemo(() => {
+    if (onboarding?.memberSinceYear) {
+      return `Seit ${onboarding.memberSinceYear}`;
+    }
+    if (createdAtLabel) {
+      return `Seit ${createdAtLabel}`;
+    }
+    return null;
+  }, [createdAtLabel, onboarding?.memberSinceYear]);
+
+  const onboardingFocusLabel = useMemo(() => {
+    if (!onboarding?.focus) return null;
+    return ONBOARDING_FOCUS_LABELS[onboarding.focus as OnboardingFocus] ?? null;
+  }, [onboarding?.focus]);
+
+  const onboardingBackground = onboarding?.background ?? null;
+  const onboardingNotes = onboarding?.notes ?? null;
+
+  const whatsappVisitedAt = onboarding?.whatsappLinkVisitedAt ?? null;
+  const whatsappVisitedAtLabel = useMemo(
+    () => formatDateLabel(whatsappVisitedAt),
+    [whatsappVisitedAt],
+  );
+
+  const percentComplete = summary.total
+    ? Math.round((summary.completed / summary.total) * 100)
+    : 0;
+
   const handleUserUpdated = useCallback(
     async (nextUser: ProfileUser) => {
       setUser(nextUser);
       const basicsComplete = Boolean(nextUser.firstName?.trim() && nextUser.email?.trim());
-      setItemCompletion("basics", basicsComplete);
-      setItemCompletion("birthdate", Boolean(nextUser.dateOfBirth));
+      updateChecklist({
+        hasBasicData: basicsComplete,
+        hasBirthdate: Boolean(nextUser.dateOfBirth),
+      });
       try {
         await refreshSession?.();
       } catch (error) {
         console.error("[profile][session-update]", error);
       }
     },
-    [refreshSession, setItemCompletion],
+    [refreshSession, updateChecklist],
   );
 
   const handleDietaryUpdated = useCallback(
@@ -361,27 +475,29 @@ function ProfileClientInner({
           dietaryPreferenceStrictness: preference.strictnessLabel,
         };
       });
-      setItemCompletion("dietary", Boolean(preference.label?.trim()));
+      updateChecklist({ hasDietaryPreference: Boolean(preference.label?.trim()) });
     },
-    [setItemCompletion],
+    [updateChecklist],
   );
 
   const handleMeasurementsUpdated = useCallback(
     (nextMeasurements: Measurement[]) => {
       setMeasurements(nextMeasurements);
       if (canManageMeasurements) {
-        setItemCompletion("measurements", nextMeasurements.length > 0);
+        updateChecklist({ hasMeasurements: nextMeasurements.length > 0 });
       }
     },
-    [canManageMeasurements, setItemCompletion],
+    [canManageMeasurements, updateChecklist],
   );
 
   const handlePhotoConsentSummary = useCallback(
-    (summary: PhotoConsentSummary | null) => {
-      if (!summary) return;
-      setItemCompletion("photo-consent", summary.status === "approved");
+    (nextSummary: PhotoConsentSummary | null) => {
+      if (!hasPhotoConsentChecklist) {
+        return;
+      }
+      updateChecklist({ photoConsentGiven: Boolean(nextSummary && nextSummary.status === "approved") });
     },
-    [setItemCompletion],
+    [hasPhotoConsentChecklist, updateChecklist],
   );
 
   const dietaryPreference = useMemo(
@@ -392,61 +508,111 @@ function ProfileClientInner({
     [onboarding?.dietaryPreference, onboarding?.dietaryPreferenceStrictness],
   );
 
-  const whatsappVisitedAt = onboarding?.whatsappLinkVisitedAt ?? null;
+  const highlightTiles = useMemo<HighlightTileConfig[]>(() => {
+    const items: HighlightTileConfig[] = [
+      {
+        id: "membership",
+        icon: <CalendarDays className="h-5 w-5" aria-hidden />,
+        title: "Mitgliedschaft",
+        description: memberSinceLabel ?? "Trage dein Eintrittsjahr im Onboarding ein.",
+        hint: createdAtLabel ? `Profil erstellt am ${createdAtLabel}.` : null,
+        tone: memberSinceLabel ? "default" : "warning",
+      },
+      {
+        id: "onboarding-focus",
+        icon: <Sparkles className="h-5 w-5" aria-hidden />,
+        title: "Onboarding-Schwerpunkt",
+        description: onboardingFocusLabel ?? "Kein Schwerpunkt hinterlegt.",
+        hint: onboardingBackground ?? onboardingNotes,
+        tone: onboardingFocusLabel ? "info" : "warning",
+      },
+    ];
+
+    if (whatsappLink) {
+      items.push({
+        id: "whatsapp",
+        icon: <MessageCircle className="h-5 w-5" aria-hidden />,
+        title: "Team-Chat",
+        description: whatsappVisitedAtLabel
+          ? `Bereits geöffnet am ${whatsappVisitedAtLabel}.`
+          : "Öffne den WhatsApp-Infokanal für aktuelle Updates.",
+        hint: whatsappVisitedAtLabel ? null : "Der Link öffnet sich in einem neuen Tab.",
+        tone: whatsappVisitedAt ? "success" : "info",
+        action: (
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="mt-2 w-full justify-between rounded-full border-border/70 text-sm font-semibold"
+          >
+            <a href={whatsappLink} target="_blank" rel="noreferrer">
+              <span>{whatsappVisitedAt ? "Erneut öffnen" : "Chat öffnen"}</span>
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
+          </Button>
+        ),
+      });
+    }
+
+    return items;
+  }, [
+    createdAtLabel,
+    memberSinceLabel,
+    onboardingBackground,
+    onboardingFocusLabel,
+    onboardingNotes,
+    whatsappLink,
+    whatsappVisitedAt,
+    whatsappVisitedAtLabel,
+  ]);
 
   return (
     <div className="space-y-8">
-      <Card className="border border-border/60">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Profilüberblick</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <UserAvatar
-            userId={user.id}
-            email={user.email}
-            firstName={user.firstName}
-            lastName={user.lastName}
-            name={displayName}
-            size={72}
-            className="h-18 w-18 border border-border/70"
-            avatarSource={user.avatarSource}
-            avatarUpdatedAt={user.avatarUpdatedAt}
-          />
-          <div className="space-y-2">
-            <div className="text-xl font-semibold text-foreground">{displayName}</div>
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-              {sortedRoles.map((role) => (
-                <Badge key={role} variant="outline">
-                  {role}
-                </Badge>
-              ))}
-              {user.customRoles.map((role) => (
-                <Badge key={role.id} variant="secondary">
-                  {role.name}
-                </Badge>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)] xl:items-start xl:gap-8">
+        <ProfileOverviewCard
+          user={user}
+          displayName={displayName}
+          sortedRoles={sortedRoles}
+          summary={summary}
+          onboarding={onboarding}
+          createdAtLabel={createdAtLabel}
+          memberSinceLabel={memberSinceLabel}
+          percentComplete={percentComplete}
+        />
+        <div className="space-y-4">
+          <ChecklistCard summary={summary} onNavigate={setActiveTab} />
+          {highlightTiles.length ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {highlightTiles.map((tile) => (
+                <ProfileHighlightTile key={tile.id} {...tile} />
               ))}
             </div>
-            <div className="text-sm text-muted-foreground">{user.email}</div>
-            {onboarding?.show ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Users className="h-4 w-4" aria-hidden="true" />
-                <span>
-                  Produktion: {onboarding.show.title ? `${onboarding.show.title} (${onboarding.show.year})` : onboarding.show.year}
-                </span>
-              </div>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
+          ) : null}
+        </div>
+      </div>
 
-      <Tabs defaultValue="stammdaten" className="space-y-6">
-        <TabsList className="flex w-full flex-wrap gap-2">
-          <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-          <TabsTrigger value="ernaehrung">Ernährung &amp; Allergien</TabsTrigger>
-          {canManageMeasurements ? <TabsTrigger value="masse">Maße</TabsTrigger> : null}
-          <TabsTrigger value="interessen">Interessen</TabsTrigger>
-          <TabsTrigger value="freigaben">Freigaben</TabsTrigger>
-          <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="flex w-full flex-wrap gap-2 rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
+          <TabsTrigger value="stammdaten" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            Stammdaten
+          </TabsTrigger>
+          <TabsTrigger value="ernaehrung" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            Ernährung &amp; Allergien
+          </TabsTrigger>
+          {canManageMeasurements ? (
+            <TabsTrigger value="masse" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+              Maße
+            </TabsTrigger>
+          ) : null}
+          <TabsTrigger value="interessen" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            Interessen
+          </TabsTrigger>
+          <TabsTrigger value="freigaben" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            Freigaben
+          </TabsTrigger>
+          <TabsTrigger value="onboarding" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            Onboarding
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="stammdaten" className="space-y-6">
@@ -493,6 +659,273 @@ function ProfileClientInner({
           />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+type ProfileOverviewCardProps = {
+  user: ProfileUser;
+  displayName: string;
+  sortedRoles: Role[];
+  summary: ProfileCompletionSummary;
+  onboarding: ProfileClientProps["onboarding"];
+  createdAtLabel: string | null;
+  memberSinceLabel: string | null;
+  percentComplete: number;
+};
+
+function ProfileOverviewCard({
+  user,
+  displayName,
+  sortedRoles,
+  summary,
+  onboarding,
+  createdAtLabel,
+  memberSinceLabel,
+  percentComplete,
+}: ProfileOverviewCardProps) {
+  const email = user.email?.trim() ?? "";
+  const show = onboarding?.show ?? null;
+  const checklistBadgeLabel = summary.total
+    ? summary.complete
+      ? "Profil vollständig"
+      : `${percentComplete}% vollständig`
+    : null;
+  const checklistCountLabel = summary.total ? `${summary.completed}/${summary.total}` : null;
+
+  return (
+    <Card className="border border-border/70 bg-gradient-to-br from-background/85 via-background/70 to-background/80 shadow-sm">
+      <CardHeader className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <UserAvatar
+              userId={user.id}
+              email={user.email}
+              firstName={user.firstName}
+              lastName={user.lastName}
+              name={displayName}
+              size={80}
+              className="h-20 w-20 border border-border/70 text-xl shadow-sm"
+              avatarSource={user.avatarSource}
+              avatarUpdatedAt={user.avatarUpdatedAt}
+            />
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-xl font-semibold leading-tight text-foreground">{displayName}</CardTitle>
+                {checklistBadgeLabel ? (
+                  <Badge
+                    variant={summary.complete ? "secondary" : "outline"}
+                    className={cn(
+                      "gap-2 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wide",
+                      summary.complete
+                        ? "border-success/60 bg-success/10 text-success"
+                        : "border-primary/50 bg-primary/10 text-primary",
+                    )}
+                  >
+                    {checklistBadgeLabel}
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {email ? (
+                  <a
+                    href={`mailto:${email}`}
+                    className="inline-flex items-center gap-2 font-medium text-foreground transition hover:text-primary"
+                  >
+                    <Mail className="h-4 w-4" aria-hidden />
+                    {email}
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-muted-foreground/80">
+                    <Mail className="h-4 w-4" aria-hidden />
+                    Keine E-Mail hinterlegt
+                  </span>
+                )}
+                {memberSinceLabel || createdAtLabel ? (
+                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                    <CalendarDays className="h-4 w-4" aria-hidden />
+                    {memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {sortedRoles.map((role) => (
+            <Badge
+              key={role}
+              variant="outline"
+              className="rounded-full border-border/70 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wide"
+            >
+              {role}
+            </Badge>
+          ))}
+          {user.customRoles.map((role) => (
+            <Badge
+              key={role.id}
+              variant="secondary"
+              className="rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wide"
+            >
+              {role.name}
+            </Badge>
+          ))}
+        </div>
+        {summary.total ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span>Profilstatus</span>
+              <span>{checklistCountLabel}</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full border border-border/60 bg-muted/50">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  summary.complete
+                    ? "bg-gradient-to-r from-success/80 via-success/70 to-success/90"
+                    : "bg-gradient-to-r from-primary/80 via-primary/70 to-primary/90",
+                )}
+                style={{ width: `${Math.min(100, Math.max(0, percentComplete))}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+        {show ? (
+          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
+            <Users className="h-4 w-4 text-muted-foreground/80" aria-hidden />
+            <span>
+              Produktion: {show.title ? `${show.title} (${show.year})` : show.year}
+            </span>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+type ChecklistCardProps = {
+  summary: ProfileCompletionSummary;
+  onNavigate: (target: ProfileChecklistTarget) => void;
+};
+
+function ChecklistCard({ summary, onNavigate }: ChecklistCardProps) {
+  const percent = summary.total ? Math.round((summary.completed / summary.total) * 100) : 0;
+  const hasItems = summary.items.length > 0;
+
+  return (
+    <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-sm">
+      <CardHeader className="space-y-2">
+        <CardTitle className="flex items-center justify-between gap-2 text-base font-semibold text-foreground">
+          <span>Profil-Checkliste</span>
+          {summary.total ? (
+            <span className="text-xs font-medium text-muted-foreground">{summary.completed}/{summary.total}</span>
+          ) : null}
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Halte deine Stammdaten, Ernährungspräferenzen und Freigaben aktuell.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {summary.total ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span>Fortschritt</span>
+              <span>{percent}%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  summary.complete
+                    ? "bg-gradient-to-r from-success/80 via-success/70 to-success/90"
+                    : "bg-gradient-to-r from-primary/70 via-primary/80 to-primary/90",
+                )}
+                style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {hasItems ? (
+          <ul className="space-y-3">
+            {summary.items.map((item) => {
+              const Icon = item.complete ? CheckCircle2 : AlertTriangle;
+              const iconClasses = item.complete ? "text-success" : "text-warning";
+
+              return (
+                <li key={item.id} className="rounded-lg border border-border/50 bg-background/80 p-3 shadow-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex flex-1 gap-3">
+                      <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", iconClasses)} aria-hidden />
+                      <div className="space-y-1">
+                        <div className="text-sm font-semibold text-foreground">{item.label}</div>
+                        <p className="text-xs text-muted-foreground">{item.description}</p>
+                      </div>
+                    </div>
+                    {item.targetSection ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="self-start rounded-full border-border/60 text-xs font-semibold uppercase tracking-wide"
+                        onClick={() => {
+                          if (item.targetSection) {
+                            onNavigate(item.targetSection);
+                          }
+                        }}
+                      >
+                        Bereich öffnen
+                      </Button>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="rounded-md border border-border/50 bg-background/70 p-4 text-sm text-muted-foreground">
+            Checkliste wird vorbereitet …
+          </div>
+        )}
+
+        {summary.complete && hasItems ? (
+          <div className="rounded-md border border-success/40 bg-success/10 px-3 py-2 text-xs font-medium text-success">
+            Stark! Alle Checkpunkte sind erledigt.
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+type ProfileHighlightTileProps = Omit<HighlightTileConfig, "id">;
+
+function ProfileHighlightTile({
+  icon,
+  title,
+  description,
+  hint,
+  tone = "default",
+  action,
+}: ProfileHighlightTileProps) {
+  const toneClasses: Record<NonNullable<ProfileHighlightTileProps["tone"]>, string> = {
+    default: "border-border/60 bg-background/70",
+    info: "border-primary/30 bg-primary/10",
+    success: "border-success/40 bg-success/10",
+    warning: "border-warning/45 bg-warning/10",
+  };
+
+  return (
+    <div className={cn("flex h-full flex-col gap-3 rounded-lg border p-4 shadow-sm", toneClasses[tone])}>
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <span className="text-muted-foreground/80">{icon}</span>
+        <span>{title}</span>
+      </div>
+      <p className="text-xs text-muted-foreground">{description}</p>
+      {hint ? <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground/70">{hint}</p> : null}
+      {action ? <div className="mt-auto">{action}</div> : null}
     </div>
   );
 }
