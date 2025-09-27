@@ -565,6 +565,12 @@ export const membersNavigation = [
         icon: ServerAnalyticsIcon,
       },
       {
+        href: "/mitglieder/onboarding",
+        label: "Onboarding-Statistiken",
+        permissionKey: "mitglieder.onboarding.analytics",
+        icon: DashboardIcon,
+      },
+      {
         href: "/mitglieder/rechte",
         label: "Rechteverwaltung",
         permissionKey: "mitglieder.rechte",
