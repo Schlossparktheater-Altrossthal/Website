@@ -123,6 +123,7 @@ export type OptimizationInsight = {
 
 export type ServerAnalytics = {
   generatedAt: string;
+  isDemoData: boolean;
   summary: ServerSummary;
   resourceUsage: ServerResourceUsage[];
   requestBreakdown: RequestBreakdown;
@@ -136,7 +137,7 @@ export type ServerAnalytics = {
   serverLogs: ServerLogEvent[];
 };
 
-type StaticAnalyticsData = Omit<ServerAnalytics, "generatedAt">;
+type StaticAnalyticsData = Omit<ServerAnalytics, "generatedAt" | "isDemoData">;
 
 const STATIC_ANALYTICS = staticAnalyticsData as StaticAnalyticsData;
 
@@ -610,6 +611,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   }));
   let latestHttpSummary: AnalyticsHttpSummary | null = null;
   let hasDynamicOptimizationData = false;
+  let isDemoData = true;
 
   const pageMetadata = new Map<string, PagePerformanceEntry>();
   for (const entry of STATIC_ANALYTICS.publicPages) {
@@ -621,6 +623,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
 
   try {
     resourceUsage = await collectSystemResourceUsage();
+    isDemoData = false;
   } catch (error) {
     console.error("[server-analytics] Verwende statische Ressourcenwerte", error);
   }
@@ -687,16 +690,19 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       summary = applyHttpSummaryOverrides(summary, httpAggregates.summary);
       requestBreakdown = applyRequestBreakdownOverrides(requestBreakdown, httpAggregates.summary);
       hasDynamicOptimizationData = true;
+      isDemoData = false;
     }
 
     if (sessionSummaryRow) {
       const updated = applySessionSummaryOverride(summary, requestBreakdown, sessionSummaryRow);
       summary = updated.summary;
       requestBreakdown = updated.breakdown;
+      isDemoData = false;
     }
 
     if (httpAggregates?.peakHours && httpAggregates.peakHours.length > 0) {
       peakHours = convertHttpPeakHours(httpAggregates.peakHours);
+      isDemoData = false;
     }
 
     if (Array.isArray(deviceOverrides)) {
@@ -704,6 +710,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       if (deviceOverrides.length > 0) {
         hasDynamicOptimizationData = true;
       }
+      isDemoData = false;
     }
 
     if (Array.isArray(pageMetricsResult)) {
@@ -715,19 +722,23 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         publicPages = [];
         memberPages = [];
       }
+      isDemoData = false;
     }
 
     if (Array.isArray(sessionInsightsRows) && sessionInsightsRows.length > 0) {
       sessionInsights = convertSessionInsightsFromDatabase(sessionInsightsRows);
       hasDynamicOptimizationData = true;
+      isDemoData = false;
     }
 
     if (Array.isArray(trafficSourceRows) && trafficSourceRows.length > 0) {
       trafficSources = convertTrafficSourcesFromDatabase(trafficSourceRows);
+      isDemoData = false;
     }
 
     if (realtimeSummaryRow) {
       summary = applyRealtimeSummaryOverride(summary, realtimeSummaryRow);
+      isDemoData = false;
     }
 
     if (Array.isArray(criticalLogs) && criticalLogs.length > 0) {
@@ -735,6 +746,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         ...entry,
         tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
       }));
+      isDemoData = false;
     } else {
       serverLogs = serverLogs.map((entry) => ({
         ...entry,
@@ -763,6 +775,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
 
   return {
     generatedAt: new Date().toISOString(),
+    isDemoData,
     ...STATIC_ANALYTICS,
     summary,
     requestBreakdown,

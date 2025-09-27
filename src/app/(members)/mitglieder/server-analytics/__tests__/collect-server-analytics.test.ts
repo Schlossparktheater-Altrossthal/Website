@@ -96,5 +96,6 @@ describe("collectServerAnalytics", () => {
     expect(analytics.requestBreakdown.members.realtimeEvents).toBe(12);
     expect(analytics.requestBreakdown.members.avgSessionDurationSeconds).toBe(450);
     expect(analytics.requestBreakdown.api.backgroundJobs).toBe(21);
+    expect(analytics.isDemoData).toBe(false);
   });
 });

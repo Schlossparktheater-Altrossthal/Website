@@ -322,6 +322,9 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
     }
   }, [connectionStatus, hasLiveUpdate]);
 
+  const showMockDataBadge = displayAnalytics.isDemoData;
+  const renderMockDataBadge = () => (showMockDataBadge ? <MockDataBadge /> : null);
+
   const connectionDotClass = useMemo(() => {
     switch (connectionStatus) {
       case "connected":
@@ -447,7 +450,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               Verfügbarkeit
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -459,7 +462,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               Anfragen (24h)
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -471,7 +474,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               Ø Antwortzeit
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -483,7 +486,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               Peak gleichzeitiger Nutzer
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -495,7 +498,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               Cache-Hit-Rate
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -507,7 +510,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               Realtime-Ereignisse (24h)
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -519,7 +522,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               Fehlerquote
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -567,7 +570,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Stoßzeiten & Lastverteilung
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
             <p className="text-sm text-muted-foreground">Zeitfenster mit erhöhter Auslastung innerhalb der letzten 7 Tage.</p>
           </CardHeader>
@@ -596,7 +599,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Seitenperformance – Öffentlicher Bereich
-            <MockDataBadge />
+            {renderMockDataBadge()}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Ladezeiten, Verweildauer und Zielerfüllung auf den wichtigsten öffentlichen Seiten.
@@ -654,7 +657,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Seitenperformance – Mitgliederbereich
-            <MockDataBadge />
+            {renderMockDataBadge()}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Nutzungsverhalten der eingeloggten Mitglieder inklusive Verweildauer und Erfolgsquote in den Arbeitsbereichen.
@@ -713,7 +716,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Traffic-Kanäle
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Entwicklung der wichtigsten Besucherquellen inklusive Konversionsrate.
@@ -792,7 +795,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Session Insights
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Vergleich von neuen, wiederkehrenden und eingeloggten Nutzergruppen.
@@ -830,7 +833,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Optimierungspotenziale
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Konkrete Hebel zur Verbesserung der Ladezeiten und Nutzerführung basierend auf den gemessenen Daten.
@@ -863,7 +866,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   Warnungen
-                  <MockDataBadge />
+                  {renderMockDataBadge()}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -875,7 +878,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   Fehler
-                  <MockDataBadge />
+                  {renderMockDataBadge()}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -887,7 +890,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   Offene Vorfälle
-                  <MockDataBadge />
+                  {renderMockDataBadge()}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -914,7 +917,7 @@ export function ServerAnalyticsContent({ initialAnalytics }: ServerAnalyticsCont
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Warn- & Fehlermeldungen
-              <MockDataBadge />
+              {renderMockDataBadge()}
             </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Automatisch aggregierte Serverlogs der letzten 48 Stunden.

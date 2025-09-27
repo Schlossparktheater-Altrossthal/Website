@@ -26,10 +26,11 @@ vi.mock("@/hooks/useRealtime", () => ({
   }),
 }));
 
-function createAnalytics(): ServerAnalytics {
-  const now = new Date().toISOString();
-  return {
+function createAnalytics(overrides: Partial<ServerAnalytics> = {}): ServerAnalytics {
+  const now = overrides.generatedAt ?? new Date().toISOString();
+  const analytics: ServerAnalytics = {
     generatedAt: now,
+    isDemoData: false,
     summary: {
       uptimePercentage: 99.9,
       requestsLast24h: 1_200,
@@ -71,6 +72,11 @@ function createAnalytics(): ServerAnalytics {
       },
     ],
   };
+
+  return {
+    ...analytics,
+    ...overrides,
+  };
 }
 
 describe("ServerAnalyticsContent", () => {
@@ -106,5 +112,19 @@ describe("ServerAnalyticsContent", () => {
     });
 
     expect(screen.queryByRole("button", { name: "Als gelöst markieren" })).not.toBeInTheDocument();
+  });
+
+  it("renders the demo badge when demo data is active", () => {
+    const analytics = createAnalytics({ isDemoData: true });
+    render(<ServerAnalyticsContent initialAnalytics={analytics} />);
+
+    expect(screen.getAllByText("Demo").length).toBeGreaterThan(0);
+  });
+
+  it("hides the demo badge when real data is available", () => {
+    const analytics = createAnalytics({ isDemoData: false });
+    render(<ServerAnalyticsContent initialAnalytics={analytics} />);
+
+    expect(screen.queryByText("Demo")).not.toBeInTheDocument();
   });
 });
