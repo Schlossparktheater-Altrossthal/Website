@@ -765,6 +765,7 @@ function ProfileClientInner({
           createdAtLabel={createdAtLabel}
           memberSinceLabel={memberSinceLabel}
           percentComplete={percentComplete}
+          highlights={highlightTiles}
         />
         <div className="space-y-4">
           <ChecklistCard
@@ -772,13 +773,6 @@ function ProfileClientInner({
             activeTarget={activeChecklistTarget}
             onNavigate={(target) => setActiveTab(target)}
           />
-          {highlightTiles.length ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {highlightTiles.map((tile) => (
-                <ProfileHighlightTile key={tile.id} {...tile} />
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -864,6 +858,7 @@ type ProfileOverviewCardProps = {
   createdAtLabel: string | null;
   memberSinceLabel: string | null;
   percentComplete: number;
+  highlights: HighlightTileConfig[];
 };
 
 function ProfileOverviewCard({
@@ -875,6 +870,7 @@ function ProfileOverviewCard({
   createdAtLabel,
   memberSinceLabel,
   percentComplete,
+  highlights,
 }: ProfileOverviewCardProps) {
   const email = user.email?.trim() ?? "";
   const show = onboarding?.show ?? null;
@@ -993,6 +989,15 @@ function ProfileOverviewCard({
           </div>
         ) : null}
       </CardContent>
+      {highlights.length ? (
+        <CardContent className="space-y-3 border-t border-border/50 bg-background/60">
+          <div className="space-y-3">
+            {highlights.map((tile) => (
+              <ProfileHighlightTile key={tile.id} {...tile} />
+            ))}
+          </div>
+        </CardContent>
+      ) : null}
     </Card>
   );
 }
