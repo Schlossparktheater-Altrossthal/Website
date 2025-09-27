@@ -16,6 +16,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   createTechnikInventoryItem,
@@ -24,6 +31,9 @@ import {
 import {
   TECH_CATEGORY_LABEL,
   TECH_CATEGORY_PREFIX,
+  TECH_CATEGORY_TYPE_OPTIONS,
+  TECH_CATEGORY_VALUES,
+  TECH_INVENTORY_CATEGORIES,
   type TechnikInventoryCategory,
 } from "./config";
 
@@ -36,10 +46,12 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("de-DE", {
 });
 
 interface AddTechnikItemDialogProps {
-  category: TechnikInventoryCategory;
+  defaultCategory?: TechnikInventoryCategory;
 }
 
-export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
+export function AddTechnikItemDialog({
+  defaultCategory,
+}: AddTechnikItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(
     createTechnikInventoryItem,
@@ -48,10 +60,22 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [quantity, setQuantity] = useState("1");
   const [acquisitionCost, setAcquisitionCost] = useState("");
+  const [category, setCategory] = useState<TechnikInventoryCategory>(
+    defaultCategory ?? TECH_CATEGORY_VALUES[0],
+  );
+  const [selectedType, setSelectedType] = useState<string>(() => {
+    const options = TECH_CATEGORY_TYPE_OPTIONS[
+      defaultCategory ?? TECH_CATEGORY_VALUES[0]
+    ];
+
+    return options.at(0) ?? "custom";
+  });
+  const [customType, setCustomType] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   const categoryLabel = TECH_CATEGORY_LABEL[category];
   const prefix = TECH_CATEGORY_PREFIX[category];
+  const typeOptions = TECH_CATEGORY_TYPE_OPTIONS[category];
 
   const computedTotal = useMemo(() => {
     const parsedQuantity = Number.parseInt(quantity, 10);
@@ -74,6 +98,7 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
       setErrorMessage(null);
       setQuantity("1");
       setAcquisitionCost("");
+      setCustomType("");
     }
 
     if (state.status === "error") {
@@ -84,9 +109,30 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
 
   useEffect(() => {
     if (!open) {
+      const fallbackCategory = defaultCategory ?? TECH_CATEGORY_VALUES[0];
+      setCategory(fallbackCategory);
+      const fallbackType =
+        TECH_CATEGORY_TYPE_OPTIONS[fallbackCategory].at(0) ?? "custom";
+      setSelectedType(fallbackType);
+      setCustomType("");
       setErrorMessage(null);
     }
-  }, [open]);
+  }, [defaultCategory, open]);
+
+  useEffect(() => {
+    const options = TECH_CATEGORY_TYPE_OPTIONS[category];
+    const matchesOption = options.some((option) => option === selectedType);
+
+    if (selectedType !== "custom" && !matchesOption) {
+      setSelectedType(options.at(0) ?? "custom");
+    }
+  }, [category, selectedType]);
+
+  useEffect(() => {
+    if (selectedType !== "custom") {
+      setCustomType("");
+    }
+  }, [selectedType]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -109,6 +155,26 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
           <input type="hidden" name="category" value={category} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
+              <Label htmlFor="technik-category">Kategorie</Label>
+              <Select
+                value={category}
+                onValueChange={(value) =>
+                  setCategory(value as TechnikInventoryCategory)
+                }
+              >
+                <SelectTrigger id="technik-category">
+                  <SelectValue placeholder="Kategorie wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TECH_INVENTORY_CATEGORIES.map((entry) => (
+                    <SelectItem key={entry.value} value={entry.value}>
+                      {entry.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
               <Label htmlFor={`technik-manufacturer-${category}`}>
                 Hersteller
               </Label>
@@ -120,7 +186,7 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
                 maxLength={120}
               />
             </div>
-            <div className="grid gap-1.5">
+            <div className="grid gap-1.5 sm:col-span-2">
               <Label htmlFor={`technik-name-${category}`}>
                 Modellbezeichnung
               </Label>
@@ -136,13 +202,38 @@ export function AddTechnikItemDialog({ category }: AddTechnikItemDialogProps) {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-1.5">
               <Label htmlFor={`technik-type-${category}`}>Typ</Label>
-              <Input
-                id={`technik-type-${category}`}
-                name="itemType"
-                placeholder="z. B. LED-Fluter"
-                required
-                maxLength={120}
-              />
+              <Select
+                value={selectedType}
+                onValueChange={(value) => setSelectedType(value)}
+              >
+                <SelectTrigger id={`technik-type-${category}`}>
+                  <SelectValue placeholder="Typ wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {typeOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Eigener Typ …</SelectItem>
+                </SelectContent>
+              </Select>
+              {selectedType === "custom" ? (
+                <Input
+                  className="mt-2"
+                  name="itemType"
+                  placeholder="Typ eintragen"
+                  required
+                  maxLength={120}
+                  value={customType}
+                  onChange={(event) => setCustomType(event.target.value)}
+                />
+              ) : (
+                <input type="hidden" name="itemType" value={selectedType} />
+              )}
+              <p className="text-xs text-muted-foreground">
+                Vorgeschlagene Typen passen zur gewählten Kategorie.
+              </p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor={`technik-quantity-${category}`}>Menge</Label>
