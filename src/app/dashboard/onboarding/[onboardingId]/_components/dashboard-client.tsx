@@ -31,9 +31,14 @@ async function fetchDashboard(onboardingId: string): Promise<OnboardingDashboard
 type DashboardClientProps = {
   initialData: OnboardingDashboardData;
   onboardings: OnboardingSummary[];
+  navigateHrefTemplate?: string;
 };
 
-export function DashboardClient({ initialData, onboardings }: DashboardClientProps) {
+export function DashboardClient({
+  initialData,
+  onboardings,
+  navigateHrefTemplate = "/dashboard/onboarding/%s",
+}: DashboardClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { socket, joinRoom, leaveRoom } = useRealtime();
@@ -88,7 +93,10 @@ export function DashboardClient({ initialData, onboardings }: DashboardClientPro
     if (!nextId) return;
     setSelectedOnboarding(nextId);
     startTransition(() => {
-      router.replace(`/dashboard/onboarding/${nextId}`);
+      const targetHref = navigateHrefTemplate.includes("%s")
+        ? navigateHrefTemplate.replace("%s", nextId)
+        : `${navigateHrefTemplate}${navigateHrefTemplate.endsWith("/") ? "" : "/"}${nextId}`;
+      router.replace(targetHref);
     });
   };
 
