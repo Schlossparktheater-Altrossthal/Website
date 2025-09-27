@@ -580,6 +580,10 @@ export function BlockCalendar({
           : ", frei",
       ];
 
+      if (day.isToday) {
+        ariaLabelParts.push(", Heute");
+      }
+
       if (!entry) {
         if (isPreferredDay) {
           ariaLabelParts.push(", bevorzugter Probentag");
@@ -641,7 +645,10 @@ export function BlockCalendar({
             !isHoliday &&
             (isPreferredDay || isExceptionDay) &&
             "border-primary/30 bg-[linear-gradient(135deg,_rgba(129,140,248,0.12),_rgba(129,140,248,0))] dark:border-primary/40 dark:bg-[linear-gradient(135deg,_rgba(99,102,241,0.18),_rgba(129,140,248,0.06))]",
-          day.isToday && !isSelected && "ring-2 ring-primary/80",
+          day.isToday &&
+            !isSelected &&
+            "border-primary/60 bg-primary/10 ring-2 ring-primary/70 dark:border-primary/60 dark:bg-primary/15",
+          day.isToday && isSelected && "ring-2 ring-primary",
           isSelected && "border-primary ring-2 ring-primary/60",
           "hover:shadow-sm hover:-translate-y-[1px]",
           wasAdded && "added-anim",
@@ -651,6 +658,12 @@ export function BlockCalendar({
         "aria-label": ariaLabelParts.join(""),
         content: (
           <>
+            {day.isToday ? (
+              <span className="pointer-events-none absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary shadow-sm ring-1 ring-primary/40 dark:bg-primary/25">
+                <CalendarDays className="h-3 w-3" aria-hidden />
+                <span>Heute</span>
+              </span>
+            ) : null}
             {holidayContent}
             {entry ? (
               <span
