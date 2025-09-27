@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 import { liveQuery } from "dexie";
@@ -18,6 +19,12 @@ import { useInventory } from "@/lib/offline/useInventory";
 import type { OfflineScope, TicketRecord } from "@/lib/offline/types";
 import type { SyncScopeState } from "@/lib/offline/sync-client";
 import type { MembersBreadcrumbItem } from "@/lib/members-breadcrumbs";
+import {
+  buildInventoryItemUrl,
+  formatInventoryLinkLabel,
+  parseInventoryStickerInput,
+  type InventoryStickerDetails,
+} from "@/lib/inventory/sticker-links";
 
 interface ScanPageClientProps {
   breadcrumb: MembersBreadcrumbItem;
@@ -27,7 +34,15 @@ type Mode = "inventory" | "ticket";
 type InventoryAction = "increment" | "decrement";
 
 type InventoryFeedback =
-  | { type: "success"; code: string; delta: number; itemName: string; quantity: number }
+  | {
+      type: "success";
+      code: string;
+      delta: number;
+      itemName: string;
+      quantity: number;
+      itemUrl: string;
+      linkLabel: string;
+    }
   | { type: "error"; code: string; message: string };
 
 type TicketFeedback =
@@ -284,8 +299,9 @@ export default function ScanPageClient({ breadcrumb }: ScanPageClientProps) {
       .sort((a, b) => a.label.localeCompare(b.label, "de"));
   }, [bufferEntries, inventoryLookup]);
   const handleInventoryScan = useCallback(
-    async (code: string) => {
-      if (!code || isInventoryBusy) {
+    async (details: InventoryStickerDetails) => {
+      const normalizedCode = details.code.trim();
+      if (!normalizedCode || isInventoryBusy) {
         return;
       }
 
@@ -293,20 +309,28 @@ export default function ScanPageClient({ breadcrumb }: ScanPageClientProps) {
       const delta = inventoryAction === "increment" ? 1 : -1;
 
       try {
-        const result = await adjustQuantity(code, delta, { source: "scanner" });
+        const result = await adjustQuantity(normalizedCode, delta, { source: "scanner" });
+        const resolvedCode = result.item.sku ?? normalizedCode;
+        const runtimeOrigin =
+          typeof window !== "undefined" && window.location.origin
+            ? window.location.origin
+            : undefined;
+        const itemUrl = buildInventoryItemUrl(resolvedCode, runtimeOrigin);
         setInventoryFeedback({
           type: "success",
-          code,
+          code: resolvedCode,
           delta,
           itemName: result.item.name,
           quantity: result.item.quantity,
+          itemUrl,
+          linkLabel: formatInventoryLinkLabel(itemUrl),
         });
         toast.success(
           `${result.item.name}: Bestand ${delta > 0 ? `+${delta}` : delta} → ${result.item.quantity}`,
         );
       } catch (error) {
         const message = getErrorMessage(error);
-        setInventoryFeedback({ type: "error", code, message });
+        setInventoryFeedback({ type: "error", code: normalizedCode, message });
         toast.error(message);
       } finally {
         setIsInventoryBusy(false);
@@ -431,24 +455,32 @@ export default function ScanPageClient({ breadcrumb }: ScanPageClientProps) {
 
   const handleScan = useCallback(
     (rawCode: string) => {
-      const code = rawCode.trim();
-      if (!code) {
+      const trimmed = rawCode.trim();
+      if (!trimmed) {
         return;
       }
 
       const now = Date.now();
       const { code: lastCode, at } = lastScanRef.current;
 
-      if (lastCode === code && now - at < 1500) {
+      if (lastCode === trimmed && now - at < 1500) {
         return;
       }
 
-      lastScanRef.current = { code, at: now };
+      lastScanRef.current = { code: trimmed, at: now };
 
       if (mode === "inventory") {
-        void handleInventoryScan(code);
+        const details = parseInventoryStickerInput(trimmed);
+        if (!details.code) {
+          const message = "Inventarcode konnte nicht erkannt werden.";
+          setInventoryFeedback({ type: "error", code: trimmed, message });
+          toast.error(message);
+          return;
+        }
+
+        void handleInventoryScan(details);
       } else {
-        void handleTicketScan(code);
+        void handleTicketScan(trimmed);
       }
     },
     [handleInventoryScan, handleTicketScan, mode],
@@ -607,10 +639,20 @@ export default function ScanPageClient({ breadcrumb }: ScanPageClientProps) {
                       </Badge>
                     </div>
                     {inventoryFeedback.type === "success" ? (
-                      <p className="mt-2 text-sm">
-                        {inventoryFeedback.itemName}: Δ {inventoryFeedback.delta > 0 ? `+${inventoryFeedback.delta}` : inventoryFeedback.delta}
-                        {" "}→ {inventoryFeedback.quantity}
-                      </p>
+                      <>
+                        <p className="mt-2 text-sm">
+                          {inventoryFeedback.itemName}: Δ {inventoryFeedback.delta > 0 ? `+${inventoryFeedback.delta}` : inventoryFeedback.delta}
+                          {" "}→ {inventoryFeedback.quantity}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={inventoryFeedback.itemUrl}>Artikel-Übersicht öffnen</Link>
+                          </Button>
+                          <span className="text-xs text-muted-foreground break-all">
+                            {inventoryFeedback.linkLabel}
+                          </span>
+                        </div>
+                      </>
                     ) : (
                       <p className="mt-2 text-sm">{inventoryFeedback.message}</p>
                     )}
