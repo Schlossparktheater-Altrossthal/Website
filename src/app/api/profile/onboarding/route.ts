@@ -3,6 +3,10 @@ import { OnboardingFocus } from "@prisma/client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import {
+  broadcastOnboardingDashboardForUser,
+  broadcastOnboardingDashboardSnapshot,
+} from "@/lib/onboarding/dashboard-events";
 import { requireAuth } from "@/lib/rbac";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -99,8 +103,19 @@ export async function PUT(request: NextRequest) {
         notes: true,
         memberSinceYear: true,
         updatedAt: true,
+        showId: true,
       },
     });
+
+    try {
+      if (profile.showId) {
+        await broadcastOnboardingDashboardSnapshot(profile.showId);
+      } else {
+        await broadcastOnboardingDashboardForUser(userId);
+      }
+    } catch (error) {
+      console.error("[Profile][Onboarding] realtime update failed", error);
+    }
 
     return NextResponse.json({
       onboarding: {

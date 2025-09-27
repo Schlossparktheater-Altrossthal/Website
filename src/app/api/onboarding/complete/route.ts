@@ -8,6 +8,7 @@ import { sortRoles, ROLES, type Role } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
+import { broadcastOnboardingDashboardSnapshot } from "@/lib/onboarding/dashboard-events";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -498,6 +499,12 @@ export async function POST(request: NextRequest) {
 
       return { userId: user.id, email: user.email };
     });
+
+    try {
+      await broadcastOnboardingDashboardSnapshot(invite.showId);
+    } catch (error) {
+      console.error("[onboarding.complete] realtime update failed", error);
+    }
 
     return NextResponse.json({ ok: true, user: result });
   } catch (error) {

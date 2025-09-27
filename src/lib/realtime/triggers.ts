@@ -1,3 +1,5 @@
+import type { OnboardingDashboardData } from '@/lib/onboarding/dashboard-schemas';
+
 import { emitRealtimeEvent } from './event-client';
 
 /**
@@ -91,6 +93,21 @@ export class RealtimeTriggers {
   }
 
   /**
+   * Broadcast updated onboarding dashboard snapshot to listeners
+   */
+  static async broadcastOnboardingDashboardUpdate(data: {
+    onboardingId: string;
+    dashboard: OnboardingDashboardData;
+    broadcastToGlobal?: boolean;
+  }) {
+    await emitRealtimeEvent('onboarding_dashboard_update', {
+      onboardingId: data.onboardingId,
+      dashboard: data.dashboard,
+      broadcastToGlobal: Boolean(data.broadcastToGlobal),
+    });
+  }
+
+  /**
    * Get list of users currently online in a rehearsal
    */
   static async getOnlineUsersInRehearsal(rehearsalId: string): Promise<string[]> {
@@ -121,6 +138,7 @@ export const {
   broadcastRehearsalCreated,
   broadcastRehearsalUpdated,
   sendNotification,
+  broadcastOnboardingDashboardUpdate,
   getOnlineUsersInRehearsal,
   isUserOnline,
   getOnlineUserCount,

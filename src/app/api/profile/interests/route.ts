@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
+import { broadcastOnboardingDashboardForUser } from "@/lib/onboarding/dashboard-events";
 
 const MAX_INTEREST_LENGTH = 80;
 
@@ -146,6 +147,12 @@ export async function PUT(request: NextRequest) {
 
       return normalized.map((entry) => interestByLower.get(entry.lower)?.name ?? entry.value);
     });
+
+    try {
+      await broadcastOnboardingDashboardForUser(userId);
+    } catch (error) {
+      console.error("[profile.interests] realtime update failed", error);
+    }
 
     return NextResponse.json({ ok: true, interests: updatedNames });
   } catch (error) {

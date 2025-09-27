@@ -400,9 +400,10 @@ export const getAvailableOnboardings = cache(async (): Promise<OnboardingSummary
   });
 });
 
-export const getOnboardingDashboardData = cache(async (
+async function computeOnboardingDashboardData(
   onboardingId: string,
-): Promise<OnboardingDashboardData | null> => {
+): Promise<OnboardingDashboardData | null> {
+
   const show = await prisma.show.findUnique({
     where: { id: onboardingId },
     select: {
@@ -1044,4 +1045,11 @@ export const getOnboardingDashboardData = cache(async (
   });
 
   return dashboard;
-});
+}
+
+export async function loadOnboardingDashboardSnapshot(onboardingId: string) {
+  return computeOnboardingDashboardData(onboardingId);
+}
+
+export const getOnboardingDashboardData = cache(computeOnboardingDashboardData);
+
