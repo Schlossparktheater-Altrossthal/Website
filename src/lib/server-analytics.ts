@@ -12,6 +12,7 @@ import type {
 } from "@prisma/client";
 
 import staticAnalyticsData from "@/data/server-analytics-static.json" with { type: "json" };
+import { deriveOptimizationInsights } from "@/lib/analytics/derive-optimization-insights";
 import type { LoadedServerLog } from "@/lib/analytics/load-server-logs";
 import { loadLatestCriticalServerLogs } from "@/lib/analytics/load-server-logs";
 import { loadDeviceBreakdownFromDatabase, loadPagePerformanceMetrics } from "@/lib/server-analytics-data";
@@ -604,6 +605,11 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   let peakHours: PeakHour[] = (STATIC_ANALYTICS.peakHours ?? []).map((entry) => ({ ...entry }));
   let trafficSources: TrafficSource[] = STATIC_ANALYTICS.trafficSources.map((entry) => ({ ...entry }));
   let sessionInsights: SessionInsight[] = STATIC_ANALYTICS.sessionInsights.map((entry) => ({ ...entry }));
+  let optimizationInsights: OptimizationInsight[] = STATIC_ANALYTICS.optimizationInsights.map((entry) => ({
+    ...entry,
+  }));
+  let latestHttpSummary: AnalyticsHttpSummary | null = null;
+  let hasDynamicOptimizationData = false;
 
   const pageMetadata = new Map<string, PagePerformanceEntry>();
   for (const entry of STATIC_ANALYTICS.publicPages) {
@@ -677,8 +683,10 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     ]);
 
     if (httpAggregates?.summary) {
+      latestHttpSummary = httpAggregates.summary;
       summary = applyHttpSummaryOverrides(summary, httpAggregates.summary);
       requestBreakdown = applyRequestBreakdownOverrides(requestBreakdown, httpAggregates.summary);
+      hasDynamicOptimizationData = true;
     }
 
     if (sessionSummaryRow) {
@@ -693,12 +701,16 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
 
     if (Array.isArray(deviceOverrides)) {
       deviceBreakdown = deviceOverrides.map((entry) => ({ ...entry }));
+      if (deviceOverrides.length > 0) {
+        hasDynamicOptimizationData = true;
+      }
     }
 
     if (Array.isArray(pageMetricsResult)) {
       if (pageMetricsResult.length > 0) {
         publicPages = buildAggregatedPageEntries(pageMetricsResult, "public", pageMetadata);
         memberPages = buildAggregatedPageEntries(pageMetricsResult, "members", pageMetadata);
+        hasDynamicOptimizationData = true;
       } else {
         publicPages = [];
         memberPages = [];
@@ -707,6 +719,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
 
     if (Array.isArray(sessionInsightsRows) && sessionInsightsRows.length > 0) {
       sessionInsights = convertSessionInsightsFromDatabase(sessionInsightsRows);
+      hasDynamicOptimizationData = true;
     }
 
     if (Array.isArray(trafficSourceRows) && trafficSourceRows.length > 0) {
@@ -738,6 +751,16 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     }));
   }
 
+  optimizationInsights = deriveOptimizationInsights({
+    publicPages,
+    memberPages,
+    deviceStats: deviceBreakdown,
+    sessionInsights,
+    httpSummary: latestHttpSummary,
+    fallback: STATIC_ANALYTICS.optimizationInsights,
+    useFallbackOnly: !hasDynamicOptimizationData,
+  });
+
   return {
     generatedAt: new Date().toISOString(),
     ...STATIC_ANALYTICS,
@@ -750,6 +773,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     memberPages,
     trafficSources,
     sessionInsights,
+    optimizationInsights,
     serverLogs,
   };
 }

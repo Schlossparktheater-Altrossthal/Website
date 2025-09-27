@@ -273,36 +273,28 @@
   ],
   "optimizationInsights": [
     {
-      "id": "homepage-lcp",
+      "id": "fallback-lcp-home",
       "area": "Frontend",
-      "title": "Hero-Sektion der Startseite optimieren",
-      "description": "Das große Titelbild verursacht 220 ms LCP-Verzögerung. Eine WebP-Variante oder serverseitige Skalierung würde den Wert deutlich verbessern.",
+      "title": "LCP auf Startseite verbessern",
+      "description": "Der Hero-Abschnitt bremst den First Paint. Komprimierte Medien und priorisierte Fonts helfen, unter 1,5 s zu kommen.",
       "impact": "Hoch",
-      "metric": "LCP Startseite 1,82 s (Ziel < 1,5 s)"
+      "metric": "LCP Startseite 1,82 s"
     },
     {
-      "id": "gallery-images",
+      "id": "fallback-device-mobile",
       "area": "Frontend",
-      "title": "Galerie-Bilder stärker komprimieren",
-      "description": "49 % der Galerie-Aufrufe erfolgen mobil. Größere JPEG-Dateien bremsen das Laden – eine zusätzliche 1200px-Variante hilft.",
+      "title": "Performance auf Mobil-Geräten verbessern",
+      "description": "Mobilgeräte stellen 39 % der Sitzungen, warten aber länger auf den Seitenaufbau. Responsive Bildgrößen und Code-Splitting reduzieren die Ladezeit.",
       "impact": "Mittel",
-      "metric": "Durchschnittliche Bildgröße 1,8 MB"
+      "metric": "Ladezeit Mobil 1,62 s bei 39 % Anteil"
     },
     {
-      "id": "members-cache",
-      "area": "Mitgliederbereich",
-      "title": "Produktionslisten stärker cachen",
-      "description": "Die Tabellen für Produktionen werden bei jedem Seitenaufruf neu berechnet. Eine Cache-Schicht reduziert die Antwortzeit um ~40 ms.",
-      "impact": "Hoch",
-      "metric": "Antwortzeit Produktionen 214 ms (Ziel < 180 ms)"
-    },
-    {
-      "id": "issues-index",
-      "area": "Infrastruktur",
-      "title": "Index für Feedback-Suche ergänzen",
-      "description": "Die Volltextsuche über das Issue-Board scannt aktuell 42k Einträge sequenziell. Ein GIN-Index verkürzt die Dauer deutlich.",
+      "id": "fallback-segment-new-visitors",
+      "area": "Frontend",
+      "title": "Neue Besucher: Rückkehrquote steigern",
+      "description": "Neue Besucher brechen nach wenigen Seiten ab. Eine kürzere Intro-Strecke und klarere CTAs stärken die Retention.",
       "impact": "Mittel",
-      "metric": "Suche im Issue-Board 420 ms (Ziel < 250 ms)"
+      "metric": "Retention 36 % bei 41 % Anteil"
     }
   ],
   "serverLogs": [
