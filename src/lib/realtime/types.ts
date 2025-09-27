@@ -3,6 +3,7 @@ import { AttendanceStatus } from "@prisma/client";
 import type { InventoryItemRecord, TicketRecord } from "@/lib/offline/types";
 import type { ServerSyncEvent } from "@/lib/offline/sync-client";
 import type { ServerAnalytics } from "@/lib/server-analytics";
+import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
 
 // Base Event Interface
 export interface BaseRealtimeEvent {
@@ -97,6 +98,12 @@ export interface TicketScanRealtimeEvent extends BaseRealtimeEvent {
   payload: TicketRealtimePayload;
 }
 
+export interface OnboardingDashboardUpdateEvent extends BaseRealtimeEvent {
+  type: 'onboarding_dashboard_update';
+  onboardingId: string;
+  dashboard: OnboardingDashboardData;
+}
+
 export interface UserPresenceEvent extends BaseRealtimeEvent {
   type: 'user_presence';
   action: 'join' | 'leave';
@@ -159,6 +166,7 @@ export type RealtimeEvent =
   | NotificationCreatedEvent
   | InventoryRealtimeEvent
   | TicketScanRealtimeEvent
+  | OnboardingDashboardUpdateEvent
   | UserPresenceEvent
   | OnlineStatsUpdateEvent
   | ServerAnalyticsRealtimeEvent
@@ -171,6 +179,7 @@ export type RoomType =
   | `user_${string}`           // User-specific room
   | `rehearsal_${string}`      // Rehearsal-specific room
   | `show_${string}`           // Show-specific room
+  | `onboarding_${string}`     // Onboarding dashboard room
   | 'global';                  // Global announcements
 
 // Client to Server Events
@@ -192,6 +201,7 @@ export interface ServerToClientEvents {
   notification_created: (event: NotificationCreatedEvent) => void;
   inventory_event: (event: InventoryRealtimeEvent) => void;
   ticket_scan_event: (event: TicketScanRealtimeEvent) => void;
+  onboarding_dashboard_update: (event: OnboardingDashboardUpdateEvent) => void;
   user_presence: (event: UserPresenceEvent) => void;
   online_stats_update: (event: OnlineStatsUpdateEvent) => void;
   server_analytics_update: (event: ServerAnalyticsRealtimeEvent) => void;
