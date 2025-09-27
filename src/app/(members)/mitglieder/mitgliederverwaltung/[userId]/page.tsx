@@ -31,6 +31,7 @@ import { getUserDisplayName } from "@/lib/names";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { ImpersonationButton } from "./impersonation-button";
+import { getRolePreferenceDescription, getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -124,57 +125,6 @@ const PHOTO_STATUS_CLASSES: Record<PhotoConsentStatus, string> = {
   rejected: "border-destructive/45 bg-destructive/10 text-destructive",
 };
 
-const ROLE_PREFERENCE_DEFINITIONS: Record<string, { title: string; description: string }> = {
-  acting_statist: {
-    title: "Statistenrolle",
-    description: "Auf der Bühne ohne Text – Präsenz in Bildern und Szenen.",
-  },
-  acting_scout: {
-    title: "Schnupperrolle",
-    description: "Kleine Auftritte zum Reinschnuppern mit überschaubarer Textmenge.",
-  },
-  acting_medium: {
-    title: "Mittlere Rolle",
-    description: "Spürbar auf der Bühne, mit Verantwortung im Ensemble und regelmäßigem Proben.",
-  },
-  acting_lead: {
-    title: "Große Rolle",
-    description: "Haupt- oder zentrale Nebenrolle mit intensiver Vorbereitung und Bühnenpräsenz.",
-  },
-  crew_stage: {
-    title: "Bühnenbild & Ausstattung",
-    description: "Räume entwerfen, Kulissen bauen und für beeindruckende Bilder sorgen.",
-  },
-  crew_tech: {
-    title: "Licht & Ton",
-    description: "Shows inszenieren mit Licht, Klang, Effekten und technischer Präzision.",
-  },
-  crew_costume: {
-    title: "Kostüm",
-    description: "Looks entwickeln, nähen, Fundus pflegen und Outfits anpassen.",
-  },
-  crew_makeup: {
-    title: "Maske & Make-up",
-    description: "Maskenbild, Styling, Perücken und schnelle Verwandlungen hinter der Bühne.",
-  },
-  crew_direction: {
-    title: "Regieassistenz & Orga",
-    description: "Abläufe koordinieren, Proben strukturieren, Teams im Hintergrund führen.",
-  },
-  crew_music: {
-    title: "Musik & Klang",
-    description: "Arrangements entwickeln, Proben begleiten und Produktionen musikalisch tragen.",
-  },
-  crew_props: {
-    title: "Requisite",
-    description: "Requisiten gestalten, organisieren und für reibungslose Szenen sorgen.",
-  },
-  crew_marketing: {
-    title: "Werbung & Social Media",
-    description: "Kampagnen planen, Content erstellen und Produktionen sichtbar machen.",
-  },
-};
-
 const ROLE_PREFERENCE_WEIGHT_LABELS: { threshold: number; label: string }[] = [
   { threshold: 0, label: "Nur mal reinschauen" },
   { threshold: 25, label: "Locker interessiert" },
@@ -238,17 +188,11 @@ type RolePreferenceEntry = {
 };
 
 function resolveRolePreferenceTitle(code: string) {
-  if (code.startsWith("custom-")) {
-    return "Eigenes Gewerk";
-  }
-  return ROLE_PREFERENCE_DEFINITIONS[code]?.title ?? code;
+  return getRolePreferenceTitle(code);
 }
 
 function resolveRolePreferenceDescription(code: string) {
-  if (code.startsWith("custom-")) {
-    return "Vom Mitglied individuell ergänzt.";
-  }
-  return ROLE_PREFERENCE_DEFINITIONS[code]?.description ?? null;
+  return getRolePreferenceDescription(code);
 }
 
 function resolveRolePreferenceWeightLabel(weight: number) {

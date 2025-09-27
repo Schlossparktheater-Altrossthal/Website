@@ -3,6 +3,7 @@ import { differenceInYears, isAfter, isBefore, isWithinInterval } from "date-fns
 
 import { prisma } from "@/lib/prisma";
 import type { AllergyLevel, OnboardingFocus } from "@prisma/client";
+import { getRolePreferenceTitle } from "./role-preferences";
 import {
   onboardingDashboardSchema,
   onboardingSummarySchema,
@@ -548,8 +549,8 @@ async function computeOnboardingDashboardData(
     actingRoles.forEach((actingValue, actingRole) => {
       crewRoles.forEach((crewValue, crewRole) => {
         roleHeatmap.push({
-          x: actingRole,
-          y: crewRole,
+          x: getRolePreferenceTitle(actingRole),
+          y: getRolePreferenceTitle(crewRole),
           value: roundTo(actingValue * crewValue, 3),
         });
       });
@@ -727,7 +728,7 @@ async function computeOnboardingDashboardData(
 
     roleCandidates.set(roleId, candidates);
     allRoles.set(roleId, {
-      label: roleId,
+      label: getRolePreferenceTitle(roleId),
       domain: "acting",
       demand: value.userCount,
     });
@@ -759,7 +760,7 @@ async function computeOnboardingDashboardData(
 
     roleCandidates.set(roleId, candidates);
     allRoles.set(roleId, {
-      label: roleId,
+      label: getRolePreferenceTitle(roleId),
       domain: "crew",
       demand: value.userCount,
     });
@@ -926,14 +927,14 @@ async function computeOnboardingDashboardData(
       photoConsentRate: participants ? consentCount / participants : null,
       rolesActing: Array.from(actingTotals.entries()).map(([roleId, meta]) => ({
         roleId,
-        label: roleId,
+        label: getRolePreferenceTitle(roleId),
         domain: "acting",
         normalizedShare: roundTo(meta.shareSum / Math.max(meta.userCount, 1), 3),
         participantShare: toPercentage(meta.userCount, participants || 1),
       })),
       rolesCrew: Array.from(crewTotals.entries()).map(([roleId, meta]) => ({
         roleId,
-        label: roleId,
+        label: getRolePreferenceTitle(roleId),
         domain: "crew",
         normalizedShare: roundTo(meta.shareSum / Math.max(meta.userCount, 1), 3),
         participantShare: toPercentage(meta.userCount, participants || 1),

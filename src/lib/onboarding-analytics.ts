@@ -2,6 +2,7 @@ import type { AllergyLevel, OnboardingFocus, RolePreferenceDomain } from "@prism
 
 import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus } from "@/lib/member-invites";
+import { getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
 
 export type OnboardingInviteSummary = {
   id: string;
@@ -22,6 +23,7 @@ export type OnboardingInterestStat = { name: string; count: number };
 export type OnboardingRolePreferenceStat = {
   code: string;
   domain: RolePreferenceDomain;
+  title: string;
   averageWeight: number;
   responses: number;
 };
@@ -309,6 +311,7 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
     .map((bucket) => ({
       code: bucket.code,
       domain: bucket.domain,
+      title: getRolePreferenceTitle(bucket.code),
       responses: bucket.responses,
       averageWeight: bucket.responses ? Math.round((bucket.total / bucket.responses) * 10) / 10 : 0,
     }))
@@ -451,6 +454,7 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
         .map((bucket) => ({
           code: bucket.code,
           domain: bucket.domain,
+          title: getRolePreferenceTitle(bucket.code),
           responses: bucket.responses,
           averageWeight: bucket.responses
             ? Math.round((bucket.total / bucket.responses) * 10) / 10

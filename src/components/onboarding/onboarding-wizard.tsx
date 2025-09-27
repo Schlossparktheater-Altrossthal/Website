@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 import {
   DIETARY_STYLE_OPTIONS,
   DIETARY_STRICTNESS_OPTIONS,
@@ -45,71 +46,8 @@ const allergyLevelLabels: Record<AllergyLevel, string> = {
   LETHAL: "Kritisch (Notfall)",
 };
 
-const actingOptions = [
-  {
-    code: "acting_statist",
-    title: "Statistenrolle",
-    description: "Auf der Bühne ohne Text – Präsenz in Bildern und Szenen.",
-  },
-  {
-    code: "acting_scout",
-    title: "Schnupperrolle",
-    description: "Kleine Auftritte zum Reinschnuppern mit überschaubarer Textmenge.",
-  },
-  {
-    code: "acting_medium",
-    title: "Mittlere Rolle",
-    description: "Spürbar auf der Bühne, mit Verantwortung im Ensemble und regelmäßigem Proben.",
-  },
-  {
-    code: "acting_lead",
-    title: "Große Rolle",
-    description: "Haupt- oder zentrale Nebenrolle mit intensiver Vorbereitung und Bühnenpräsenz.",
-  },
-];
-
-const crewOptions = [
-  {
-    code: "crew_stage",
-    title: "Bühnenbild & Ausstattung",
-    description: "Räume entwerfen, Kulissen bauen und für beeindruckende Bilder sorgen.",
-  },
-  {
-    code: "crew_tech",
-    title: "Licht & Ton",
-    description: "Shows inszenieren mit Licht, Klang, Effekten und technischer Präzision.",
-  },
-  {
-    code: "crew_costume",
-    title: "Kostüm",
-    description: "Looks entwickeln, nähen, Fundus pflegen und Outfits anpassen.",
-  },
-  {
-    code: "crew_makeup",
-    title: "Maske & Make-up",
-    description: "Maskenbild, Styling, Perücken und schnelle Verwandlungen hinter der Bühne.",
-  },
-  {
-    code: "crew_direction",
-    title: "Regieassistenz & Orga",
-    description: "Abläufe koordinieren, Proben strukturieren, Teams im Hintergrund führen.",
-  },
-  {
-    code: "crew_music",
-    title: "Musik & Klang",
-    description: "Arrangements entwickeln, Proben begleiten und Produktionen musikalisch tragen.",
-  },
-  {
-    code: "crew_props",
-    title: "Requisite",
-    description: "Requisiten gestalten, organisieren und für reibungslose Szenen sorgen.",
-  },
-  {
-    code: "crew_marketing",
-    title: "Werbung & Social Media",
-    description: "Kampagnen planen, Content erstellen und unsere Produktionen sichtbar machen.",
-  },
-];
+const actingOptions = listRolePreferenceDefinitions("acting");
+const crewOptions = listRolePreferenceDefinitions("crew");
 
 const genderOptions = [
   { value: "female", label: "Weiblich" },
@@ -234,7 +172,9 @@ type OnboardingWizardProps = {
 
 function createInitialActingPreferences(): PreferenceEntry[] {
   return actingOptions.map((option) => ({
-    ...option,
+    code: option.code,
+    title: option.title,
+    description: option.description,
     domain: "acting",
     enabled: false,
     weight: 50,
@@ -247,7 +187,9 @@ function createInitialCrewPreferences(variant: OnboardingWizardVariant): Prefere
     const enabled = variant === "regie" ? isDirection : false;
     const weight = variant === "regie" && isDirection ? 80 : 50;
     return {
-      ...option,
+      code: option.code,
+      title: option.title,
+      description: option.description,
       domain: "crew",
       enabled,
       weight,
