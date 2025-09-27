@@ -126,7 +126,7 @@ export function DashboardClient({
           {historyAvailable ? <TabsTrigger value="history">Historie</TabsTrigger> : null}
         </TabsList>
         <AnimatePresence mode="wait">
-          <TabsContent value="global" className="space-y-6">
+          <TabsContent key="global" value="global" className="space-y-6">
             <motion.div
               key={`${currentData.onboarding.id}-global`}
               initial={{ opacity: 0, y: 12 }}
@@ -137,7 +137,7 @@ export function DashboardClient({
               <GlobalOverviewTab data={currentData.global} participants={currentData.onboarding.participants} />
             </motion.div>
           </TabsContent>
-          <TabsContent value="allocation" className="space-y-6">
+          <TabsContent key="allocation" value="allocation" className="space-y-6">
             <motion.div
               key={`${currentData.onboarding.id}-allocation`}
               initial={{ opacity: 0, y: 12 }}
@@ -152,7 +152,7 @@ export function DashboardClient({
             </motion.div>
           </TabsContent>
           {historyAvailable ? (
-            <TabsContent value="history" className="space-y-6">
+            <TabsContent key="history" value="history" className="space-y-6">
               <motion.div
                 key={`${currentData.onboarding.id}-history`}
                 initial={{ opacity: 0, y: 12 }}
