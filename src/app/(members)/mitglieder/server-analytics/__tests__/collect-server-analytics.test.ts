@@ -98,4 +98,15 @@ describe("collectServerAnalytics", () => {
     expect(analytics.requestBreakdown.api.backgroundJobs).toBe(21);
     expect(analytics.isDemoData).toBe(false);
   });
+
+  it("keeps the demo flag when no database connection is available", async () => {
+    delete process.env.DATABASE_URL;
+
+    const analytics = await collectServerAnalytics();
+
+    expect(prismaMock.analyticsHttpSummary.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.analyticsSessionSummary.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.analyticsRealtimeSummary.findFirst).not.toHaveBeenCalled();
+    expect(analytics.isDemoData).toBe(true);
+  });
 });

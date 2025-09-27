@@ -611,7 +611,32 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   }));
   let latestHttpSummary: AnalyticsHttpSummary | null = null;
   let hasDynamicOptimizationData = false;
-  let isDemoData = true;
+  const databaseSegments: Record<
+    | "httpSummary"
+    | "sessionSummary"
+    | "peakHours"
+    | "deviceBreakdown"
+    | "pageMetrics"
+    | "sessionInsights"
+    | "trafficSources"
+    | "realtimeSummary"
+    | "serverLogs",
+    boolean
+  > = {
+    httpSummary: false,
+    sessionSummary: false,
+    peakHours: false,
+    deviceBreakdown: false,
+    pageMetrics: false,
+    sessionInsights: false,
+    trafficSources: false,
+    realtimeSummary: false,
+    serverLogs: false,
+  };
+
+  const markSegmentAsHydrated = (segment: keyof typeof databaseSegments) => {
+    databaseSegments[segment] = true;
+  };
 
   const pageMetadata = new Map<string, PagePerformanceEntry>();
   for (const entry of STATIC_ANALYTICS.publicPages) {
@@ -623,7 +648,6 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
 
   try {
     resourceUsage = await collectSystemResourceUsage();
-    isDemoData = false;
   } catch (error) {
     console.error("[server-analytics] Verwende statische Ressourcenwerte", error);
   }
@@ -690,19 +714,19 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       summary = applyHttpSummaryOverrides(summary, httpAggregates.summary);
       requestBreakdown = applyRequestBreakdownOverrides(requestBreakdown, httpAggregates.summary);
       hasDynamicOptimizationData = true;
-      isDemoData = false;
+      markSegmentAsHydrated("httpSummary");
     }
 
     if (sessionSummaryRow) {
       const updated = applySessionSummaryOverride(summary, requestBreakdown, sessionSummaryRow);
       summary = updated.summary;
       requestBreakdown = updated.breakdown;
-      isDemoData = false;
+      markSegmentAsHydrated("sessionSummary");
     }
 
     if (httpAggregates?.peakHours && httpAggregates.peakHours.length > 0) {
       peakHours = convertHttpPeakHours(httpAggregates.peakHours);
-      isDemoData = false;
+      markSegmentAsHydrated("peakHours");
     }
 
     if (Array.isArray(deviceOverrides)) {
@@ -710,7 +734,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       if (deviceOverrides.length > 0) {
         hasDynamicOptimizationData = true;
       }
-      isDemoData = false;
+      markSegmentAsHydrated("deviceBreakdown");
     }
 
     if (Array.isArray(pageMetricsResult)) {
@@ -722,23 +746,23 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         publicPages = [];
         memberPages = [];
       }
-      isDemoData = false;
+      markSegmentAsHydrated("pageMetrics");
     }
 
     if (Array.isArray(sessionInsightsRows) && sessionInsightsRows.length > 0) {
       sessionInsights = convertSessionInsightsFromDatabase(sessionInsightsRows);
       hasDynamicOptimizationData = true;
-      isDemoData = false;
+      markSegmentAsHydrated("sessionInsights");
     }
 
     if (Array.isArray(trafficSourceRows) && trafficSourceRows.length > 0) {
       trafficSources = convertTrafficSourcesFromDatabase(trafficSourceRows);
-      isDemoData = false;
+      markSegmentAsHydrated("trafficSources");
     }
 
     if (realtimeSummaryRow) {
       summary = applyRealtimeSummaryOverride(summary, realtimeSummaryRow);
-      isDemoData = false;
+      markSegmentAsHydrated("realtimeSummary");
     }
 
     if (Array.isArray(criticalLogs) && criticalLogs.length > 0) {
@@ -746,7 +770,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         ...entry,
         tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
       }));
-      isDemoData = false;
+      markSegmentAsHydrated("serverLogs");
     } else {
       serverLogs = serverLogs.map((entry) => ({
         ...entry,
@@ -763,6 +787,8 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     }));
   }
 
+  const hasDatabaseData = Object.values(databaseSegments).some(Boolean);
+
   optimizationInsights = deriveOptimizationInsights({
     publicPages,
     memberPages,
@@ -775,7 +801,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
 
   return {
     generatedAt: new Date().toISOString(),
-    isDemoData,
+    isDemoData: !hasDatabaseData,
     ...STATIC_ANALYTICS,
     summary,
     requestBreakdown,
