@@ -95,6 +95,46 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function sanitizeCount(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return 0;
+  }
+  if (parsed === 0) {
+    return 0;
+  }
+  return Math.max(0, Math.round(parsed));
+}
+
+function mergeOnlineStatsIntoSummary(summary, getOnlineStatsSnapshot, previousPeak = 0) {
+  const baseSummary = summary ? { ...summary } : { ...BASELINE_ANALYTICS.summary };
+  const effectiveBasePeak = Number.isFinite(previousPeak)
+    ? Math.max(baseSummary.peakConcurrentUsers ?? 0, previousPeak)
+    : baseSummary.peakConcurrentUsers ?? 0;
+  const onlineStats =
+    typeof getOnlineStatsSnapshot === 'function' ? getOnlineStatsSnapshot() ?? null : null;
+
+  if (onlineStats && typeof onlineStats === 'object') {
+    const candidates = [
+      sanitizeCount(onlineStats.peakConcurrentUsers),
+      sanitizeCount(onlineStats.peak),
+      sanitizeCount(onlineStats.maxConcurrentUsers),
+    ];
+    if (candidates.every((value) => value === 0)) {
+      candidates.push(sanitizeCount(onlineStats.totalOnline));
+      candidates.push(sanitizeCount(onlineStats.currentConcurrentUsers));
+    }
+    const candidatePeak = Math.max(effectiveBasePeak, ...candidates);
+    if (Number.isFinite(candidatePeak) && candidatePeak >= 0) {
+      baseSummary.peakConcurrentUsers = candidatePeak;
+    }
+  } else if (Number.isFinite(effectiveBasePeak) && effectiveBasePeak > (baseSummary.peakConcurrentUsers ?? 0)) {
+    baseSummary.peakConcurrentUsers = effectiveBasePeak;
+  }
+
+  return baseSummary;
+}
+
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes <= 0) {
     return '0 B';
@@ -284,11 +324,13 @@ export function createAnalyticsManager({
   maxAgeMs,
   importAnalyticsModule = () => import('../../src/lib/server-analytics-data.js'),
   loadBaselineData = () => cloneBaselineAnalytics(),
+  loadStaticData,
   collectResourceUsage,
   getDatabaseUrl = () => process.env.DATABASE_URL,
   now = () => Date.now(),
   toISO = (value) => new Date(value).toISOString(),
   diskPath = process.cwd(),
+  getOnlineStatsSnapshot,
 } = {}) {
   const state = {
     latestAnalytics: null,
@@ -366,13 +408,21 @@ export function createAnalyticsManager({
     return state.modulePromise;
   }
 
+  const baselineLoader =
+    typeof loadStaticData === 'function' ? loadStaticData : loadBaselineData;
+
   function createFallbackSnapshot() {
-    const base = loadBaselineData();
-    return { generatedAt: toISO(now()), ...base };
+    const base = baselineLoader();
+    const summary = mergeOnlineStatsIntoSummary(
+      base.summary,
+      getOnlineStatsSnapshot,
+      state.latestAnalytics?.summary?.peakConcurrentUsers,
+    );
+    return { generatedAt: toISO(now()), ...base, summary };
   }
 
   async function collectAnalyticsSnapshot() {
-    const base = loadBaselineData();
+    const base = baselineLoader();
     let resourceUsage = base.resourceUsage;
     try {
       resourceUsage = await resourceUsageCollector({
@@ -383,6 +433,12 @@ export function createAnalyticsManager({
     } catch (error) {
       logError('[Realtime] Verwende statische Ressourcenwerte für Server-Analytics', error);
     }
+
+    const baseSummary = mergeOnlineStatsIntoSummary(
+      base.summary,
+      getOnlineStatsSnapshot,
+      state.latestAnalytics?.summary?.peakConcurrentUsers,
+    );
 
     let deviceBreakdown = base.deviceBreakdown ?? [];
     let publicPages = base.publicPages ?? [];
@@ -436,6 +492,7 @@ export function createAnalyticsManager({
     return {
       generatedAt: toISO(now()),
       ...base,
+      summary: baseSummary,
       resourceUsage,
       deviceBreakdown,
       publicPages,

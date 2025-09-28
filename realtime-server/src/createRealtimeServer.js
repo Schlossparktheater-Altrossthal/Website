@@ -130,11 +130,23 @@ export function createRealtimeServer(options = {}) {
   );
   const analyticsMaxAgeMs = Math.max(analyticsMaxAgeMsRaw, analyticsIntervalMs);
 
+  const {
+    broadcastOnlineStats,
+    emitUserPresence,
+    emitRehearsalUsersList,
+    registerUser,
+    unregisterUser,
+    handleServerEvent,
+    validateRoom,
+    getOnlineStatsSnapshot,
+  } = createEventHandlers({ io, logger, toISO });
+
   const analyticsManager = createAnalyticsManager({
     logger,
     intervalMs: analyticsIntervalMs,
     maxAgeMs: analyticsMaxAgeMs,
     toISO,
+    getOnlineStatsSnapshot,
   });
 
   const analyticsRecorder =
@@ -153,16 +165,6 @@ export function createRealtimeServer(options = {}) {
       logError(`[Realtime] Failed to submit analytics event ${eventType}`, error);
     }
   };
-
-  const {
-    broadcastOnlineStats,
-    emitUserPresence,
-    emitRehearsalUsersList,
-    registerUser,
-    unregisterUser,
-    handleServerEvent,
-    validateRoom,
-  } = createEventHandlers({ io, logger, toISO });
 
   analyticsManager.start(io);
 
@@ -394,6 +396,10 @@ export function createRealtimeServer(options = {}) {
       io.close((error) => {
         if (error) {
           reject(error);
+          return;
+        }
+        if (!httpServer.listening) {
+          resolve();
           return;
         }
         httpServer.close((closeError) => {
