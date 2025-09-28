@@ -10,6 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
@@ -130,59 +139,64 @@ export default async function ProduktionsGewerkePage() {
         summaryActions={summaryActions}
       />
 
-      <Card>
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-lg font-semibold">Neues Gewerk anlegen</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Definiere Verantwortungsbereiche mit Farben, Beschreibungen und optionalem Slug für eine bessere Orientierung.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form action={createDepartmentAction} className="grid gap-6">
-            <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
-            <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 sm:grid-cols-2">
-              <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Basisdaten
-              </legend>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Name</label>
-                <Input name="name" placeholder="z.B. Maske" required minLength={2} maxLength={80} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Slug (optional)</label>
-                <Input name="slug" placeholder="maske" maxLength={80} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Farbe</label>
-                <input
-                  type="color"
-                  name="color"
-                  defaultValue="#9333ea"
-                  className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <span className="text-sm font-medium">Beitritt</span>
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex justify-end">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm">Gewerk anlegen</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Neues Gewerk anlegen</DialogTitle>
+              <DialogDescription>
+                Definiere Verantwortungsbereiche mit Farben, Beschreibungen und optionalem Slug für eine bessere Orientierung.
+              </DialogDescription>
+            </DialogHeader>
+            <form action={createDepartmentAction} className="grid gap-6">
+              <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
+              <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 sm:grid-cols-2">
+                <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Basisdaten
+                </legend>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Name</label>
+                  <Input name="name" placeholder="z.B. Maske" required minLength={2} maxLength={80} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Slug (optional)</label>
+                  <Input name="slug" placeholder="maske" maxLength={80} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Farbe</label>
                   <input
-                    type="checkbox"
-                    name="requiresApproval"
-                    className="h-4 w-4 rounded border border-border"
+                    type="color"
+                    name="color"
+                    defaultValue="#9333ea"
+                    className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
                   />
-                  Leitung muss neue Mitglieder bestätigen, bevor sie beitreten.
-                </label>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <span className="text-sm font-medium">Beitritt</span>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      name="requiresApproval"
+                      className="h-4 w-4 rounded border border-border"
+                    />
+                    Leitung muss neue Mitglieder bestätigen, bevor sie beitreten.
+                  </label>
+                </div>
+              </fieldset>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Beschreibung</label>
+                <Textarea name="description" rows={2} maxLength={2000} placeholder="Kurzbeschreibung für das Gewerk" />
               </div>
-            </fieldset>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Beschreibung</label>
-              <Textarea name="description" rows={2} maxLength={2000} placeholder="Kurzbeschreibung für das Gewerk" />
-            </div>
-            <div>
-              <Button type="submit">Gewerk speichern</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              <DialogFooter className="pt-2 sm:justify-end">
+                <Button type="submit">Gewerk speichern</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         {departments.map((department) => {
