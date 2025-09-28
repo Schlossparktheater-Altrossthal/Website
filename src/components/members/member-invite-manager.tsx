@@ -113,6 +113,13 @@ type ProductionSummary = {
   whatsappLink: string | null;
 };
 
+function findValidShowId(productions: ProductionSummary[], candidateId: string) {
+  if (candidateId && productions.some((production) => production.id === candidateId)) {
+    return candidateId;
+  }
+  return productions[0]?.id ?? "";
+}
+
 type InviteSummary = {
   id: string;
   label: string | null;
@@ -196,6 +203,7 @@ type OnboardingSettingsDialogState = {
 export function MemberInviteManager() {
   const [invites, setInvites] = useState<InviteSummary[]>([]);
   const [productions, setProductions] = useState<ProductionSummary[]>([]);
+  const [preferredShowId, setPreferredShowId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -400,10 +408,21 @@ export function MemberInviteManager() {
         };
       });
       setInvites(normalizedInvites);
+      const defaultShowIdFromResponse =
+        typeof data?.defaultShowId === "string" ? data.defaultShowId : "";
+      const resolvedDefaultShowId = findValidShowId(productionsPayload, defaultShowIdFromResponse);
+      setPreferredShowId(resolvedDefaultShowId);
       setForm((prev) => {
-        if (prev.showId) return prev;
-        const defaultShowId = productionsPayload[0]?.id ?? "";
-        return { ...prev, showId: defaultShowId };
+        if (prev.showId && productionsPayload.some((production) => production.id === prev.showId)) {
+          return prev;
+        }
+        return { ...prev, showId: resolvedDefaultShowId };
+      });
+      setEditForm((prev) => {
+        if (prev.showId && productionsPayload.some((production) => production.id === prev.showId)) {
+          return prev;
+        }
+        return { ...prev, showId: resolvedDefaultShowId };
       });
       setFreshInvite((prev) => {
         if (!prev) return prev;
@@ -476,17 +495,33 @@ export function MemberInviteManager() {
     }
   }, []);
 
-  const resetForm = () => {
+  useEffect(() => {
+    setForm((prev) => {
+      const hasValidShow =
+        prev.showId && productions.some((production) => production.id === prev.showId);
+      if (hasValidShow) {
+        return prev;
+      }
+      const fallbackShowId = findValidShowId(productions, preferredShowId);
+      if (prev.showId === fallbackShowId) {
+        return prev;
+      }
+      return { ...prev, showId: fallbackShowId };
+    });
+  }, [productions, preferredShowId]);
+
+  const resetForm = useCallback(() => {
+    const fallbackShowId = findValidShowId(productions, preferredShowId);
     setForm({
       label: "",
       note: "",
       expiresAt: "",
       maxUses: "",
       roles: ["member"],
-      showId: productions[0]?.id ?? "",
+      showId: fallbackShowId,
     });
     setError(null);
-  };
+  }, [productions, preferredShowId]);
 
   const toggleRole = (role: Role) => {
     setForm((prev) => {
@@ -497,17 +532,18 @@ export function MemberInviteManager() {
     });
   };
 
-  const resetEditForm = () => {
+  const resetEditForm = useCallback(() => {
+    const fallbackShowId = findValidShowId(productions, preferredShowId);
     setEditForm({
       label: "",
       note: "",
       expiresAt: "",
       maxUses: "",
       roles: ["member"],
-      showId: productions[0]?.id ?? "",
+      showId: fallbackShowId,
     });
     setLockedRoles([]);
-  };
+  }, [productions, preferredShowId]);
 
   const closeEditModal = () => {
     if (updatingInviteId) return;
@@ -541,6 +577,10 @@ export function MemberInviteManager() {
     const dedupedLocked = Array.from(new Set(locked));
     const sanitizedEditable = normalizeRoles(editableRoles.length ? editableRoles : (["member"] as Role[]));
     setLockedRoles(dedupedLocked);
+    const resolvedShowId =
+      invite.showId && productions.some((production) => production.id === invite.showId)
+        ? invite.showId
+        : findValidShowId(productions, preferredShowId);
     setEditingInvite({
       ...invite,
       label: invite.label ?? null,
@@ -548,6 +588,7 @@ export function MemberInviteManager() {
       maxUses: typeof invite.maxUses === "number" ? invite.maxUses : null,
       expiresAt: invite.expiresAt ?? null,
       roles: normalizeRoles([...sanitizedEditable, ...dedupedLocked]),
+      showId: resolvedShowId,
     });
     setEditForm({
       label: invite.label ?? "",
@@ -557,7 +598,7 @@ export function MemberInviteManager() {
         ? String(invite.maxUses)
         : "",
       roles: sanitizedEditable,
-      showId: invite.showId ?? "",
+      showId: resolvedShowId,
     });
     setExpandedInviteId(invite.id);
     setEditModalOpen(true);
