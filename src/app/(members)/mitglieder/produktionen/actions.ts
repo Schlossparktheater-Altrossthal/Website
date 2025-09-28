@@ -200,6 +200,56 @@ export async function createProductionAction(formData: FormData): Promise<Produc
   }
 }
 
+export async function updateProductionAction(formData: FormData): Promise<ProductionActionResult> {
+  try {
+    const session = await requireAuth();
+    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    if (!allowed) {
+      throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
+    }
+
+    const showId = readString(formData, "showId", { label: "Produktion" });
+    const year = readInt(formData, "year", { label: "Jahr", min: 1900, max: 2200 });
+    const title = readOptionalString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
+    const synopsis = readOptionalString(formData, "synopsis", { label: "Kurzbeschreibung", minLength: 2, maxLength: 600 });
+    const startDate = parseOptionalDate(formData, "startDate", "Startdatum");
+    const endDate = parseOptionalDate(formData, "endDate", "Enddatum");
+    const revealDate = parseOptionalDate(formData, "revealDate", "Premierenankündigung");
+    const redirectPath = readOptionalString(formData, "redirectPath");
+
+    if (endDate && !startDate) {
+      throw new Error("Bitte gib auch ein Startdatum an, wenn du ein Enddatum festlegst.");
+    }
+    if (startDate && endDate && endDate < startDate) {
+      throw new Error("Das Enddatum darf nicht vor dem Startdatum liegen.");
+    }
+
+    const formatDateOnly = (date: Date) => date.toISOString().slice(0, 10);
+
+    await prisma.show.update({
+      where: { id: showId },
+      data: {
+        year,
+        title: title ?? null,
+        synopsis: synopsis ?? null,
+        dates:
+          startDate && endDate
+            ? `${formatDateOnly(startDate)}/${formatDateOnly(endDate)}`
+            : startDate
+                ? formatDateOnly(startDate)
+                : Prisma.JsonNull,
+        revealedAt: revealDate ?? null,
+      },
+    });
+
+    revalidateShow(showId, redirectPath, true);
+    return actionSuccess("Produktion wurde aktualisiert.");
+  } catch (error) {
+    console.error("updateProductionAction", error);
+    return actionFailure(error, "Produktion konnte nicht aktualisiert werden.");
+  }
+}
+
 export async function updateProductionTimelineAction(formData: FormData): Promise<void> {
   const redirectPath = parseRedirectPath(formData);
   try {

@@ -15,7 +15,7 @@ import { X } from "lucide-react";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
 import { updateOnboardingSettingsAction, updateProductionTimelineAction } from "../actions";
-import { SetActiveProductionForm } from "../production-forms-client";
+import { SetActiveProductionForm, UpdateProductionDialog } from "../production-forms-client";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
   if (show.title && show.title.trim()) return show.title;
@@ -66,6 +66,14 @@ export default async function ProduktionDetailPage({
     : null;
   const whatsappLink = getOnboardingWhatsAppLink(show.meta);
   const onboardingRedirect = `/mitglieder/produktionen/${show.id}`;
+  const updateDialogShow = {
+    id: show.id,
+    year: show.year,
+    title: show.title,
+    synopsis: show.synopsis,
+    dates: show.dates,
+    revealedAt: show.revealedAt ? show.revealedAt.toISOString() : null,
+  };
 
   return (
     <div className="space-y-10">
@@ -78,9 +86,20 @@ export default async function ProduktionDetailPage({
               <p className="max-w-2xl text-sm text-muted-foreground">{show.synopsis}</p>
             ) : null}
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <UpdateProductionDialog
+              show={updateDialogShow}
+              redirectPath={`/mitglieder/produktionen/${show.id}`}
+              trigger={
+                <Button variant="outline" size="sm">
+                  Produktion bearbeiten
+                </Button>
+              }
+            />
+            <Button asChild variant="outline" size="sm">
+              <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
+            </Button>
+          </div>
         </div>
       </section>
 

@@ -14,6 +14,7 @@ import {
   ClearActiveProductionForm,
   CreateProductionDialog,
   SetActiveProductionForm,
+  UpdateProductionDialog,
 } from "./production-forms-client";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
@@ -37,7 +38,7 @@ export default async function ProduktionenPage() {
   const [shows, activeProduction] = await Promise.all([
     prisma.show.findMany({
       orderBy: { year: "desc" },
-      select: { id: true, year: true, title: true, synopsis: true },
+      select: { id: true, year: true, title: true, synopsis: true, dates: true, revealedAt: true },
     }),
     getActiveProduction(session.user?.id),
   ]);
@@ -214,6 +215,22 @@ export default async function ProduktionenPage() {
                         showTitle={title}
                         redirectPath="/mitglieder/produktionen"
                         isActive={isActive}
+                      />
+                      <UpdateProductionDialog
+                        show={{
+                          id: show.id,
+                          year: show.year,
+                          title: show.title,
+                          synopsis: show.synopsis,
+                          dates: show.dates,
+                          revealedAt: show.revealedAt ? show.revealedAt.toISOString() : null,
+                        }}
+                        redirectPath="/mitglieder/produktionen"
+                        trigger={
+                          <Button size="sm" variant="ghost" className="flex-shrink-0">
+                            Bearbeiten
+                          </Button>
+                        }
                       />
                       <Button asChild size="sm" variant="outline" className="flex-shrink-0">
                         <Link href={`/mitglieder/produktionen/${show.id}`}>Details anzeigen</Link>
