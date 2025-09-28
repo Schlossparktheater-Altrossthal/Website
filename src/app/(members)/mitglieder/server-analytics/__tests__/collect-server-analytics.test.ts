@@ -40,7 +40,7 @@ describe("collectServerAnalytics", () => {
   });
 
   it("overrides static metrics with aggregated database values", async () => {
-    const httpSummary: Partial<AnalyticsHttpSummary> = {
+    const httpSummary = {
       windowStart: new Date("2024-01-01T10:00:00.000Z"),
       windowEnd: new Date("2024-01-01T11:00:00.000Z"),
       totalRequests: 200,
@@ -59,6 +59,17 @@ describe("collectServerAnalytics", () => {
       apiAvgResponseMs: 160,
       apiErrorRate: 0.08,
       apiBackgroundJobs: 21,
+      botRequests: 30,
+      botAvgResponseMs: 180,
+      botBlockedRequests: 4,
+      guestRequests: 90,
+      guestAvgResponseMs: 95,
+    } as AnalyticsHttpSummary & {
+      botRequests: number;
+      botAvgResponseMs: number;
+      botBlockedRequests: number;
+      guestRequests: number;
+      guestAvgResponseMs: number;
     };
 
     const sessionSummary: Partial<AnalyticsSessionSummary> = {
@@ -67,6 +78,7 @@ describe("collectServerAnalytics", () => {
       peakConcurrentUsers: 5,
       membersRealtimeEvents: 12,
       membersAvgSessionDurationSeconds: 450,
+      guestAvgSessionDurationSeconds: 260,
     };
 
     const realtimeSummary: Partial<AnalyticsRealtimeSummary> = {
@@ -96,6 +108,13 @@ describe("collectServerAnalytics", () => {
     expect(analytics.requestBreakdown.members.realtimeEvents).toBe(12);
     expect(analytics.requestBreakdown.members.avgSessionDurationSeconds).toBe(450);
     expect(analytics.requestBreakdown.api.backgroundJobs).toBe(21);
+    const loggedOutSegment = analytics.visitorDistribution.find((segment) => segment.id === "logged-out");
+    expect(loggedOutSegment?.requests).toBe(90);
+    expect(loggedOutSegment?.avgSessionDurationSeconds).toBe(260);
+    const botSegment = analytics.visitorDistribution.find((segment) => segment.id === "bot");
+    expect(botSegment?.requests).toBe(30);
+    expect(botSegment?.avgResponseTimeMs).toBe(180);
+    expect(botSegment?.blockedRequests).toBe(4);
     expect(analytics.isDemoData).toBe(false);
   });
 

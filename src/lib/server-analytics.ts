@@ -69,6 +69,17 @@ export type RequestBreakdown = {
   };
 };
 
+export type VisitorDistributionSegment = {
+  id: "logged-in" | "logged-out" | "bot";
+  label: string;
+  requests: number;
+  share: number;
+  avgResponseTimeMs: number;
+  avgSessionDurationSeconds?: number;
+  realtimeEvents?: number;
+  blockedRequests?: number;
+};
+
 export type PeakHour = {
   range: string;
   requests: number;
@@ -127,6 +138,7 @@ export type ServerAnalytics = {
   summary: ServerSummary;
   resourceUsage: ServerResourceUsage[];
   requestBreakdown: RequestBreakdown;
+  visitorDistribution: VisitorDistributionSegment[];
   peakHours: PeakHour[];
   publicPages: PagePerformanceEntry[];
   memberPages: PagePerformanceEntry[];
@@ -148,6 +160,10 @@ function clonePageEntries(entries: PagePerformanceEntry[]): PagePerformanceEntry
 }
 
 function cloneDeviceStats(entries: DeviceStat[]): DeviceStat[] {
+  return entries.map((entry) => ({ ...entry }));
+}
+
+function cloneVisitorDistribution(entries: VisitorDistributionSegment[]): VisitorDistributionSegment[] {
   return entries.map((entry) => ({ ...entry }));
 }
 
@@ -354,6 +370,85 @@ function convertSessionInsightsFromDatabase(rows: AnalyticsSessionInsight[]): Se
     share: clamp(Number(row.share ?? 0), 0, 1),
     conversionRate: clamp(Number(row.conversionRate ?? 0), 0, 1),
   }));
+}
+
+function deriveVisitorDistribution(
+  base: VisitorDistributionSegment[],
+  summary: ServerSummary,
+  requestBreakdown: RequestBreakdown,
+  httpSummary: AnalyticsHttpSummary | null,
+  sessionSummary: AnalyticsSessionSummary | null,
+): VisitorDistributionSegment[] {
+  const segments = cloneVisitorDistribution(base);
+  const totalFallback = Math.max(0, summary.requestsLast24h);
+  const extendedHttp = (httpSummary ?? {}) as AnalyticsHttpSummary & {
+    botRequests?: number | null;
+    botAvgResponseMs?: number | null;
+    botBlockedRequests?: number | null;
+    guestRequests?: number | null;
+    guestAvgResponseMs?: number | null;
+  };
+  const extendedSession = (sessionSummary ?? {}) as AnalyticsSessionSummary & {
+    guestAvgSessionDurationSeconds?: number | null;
+  };
+
+  const loggedIn = segments.find((segment) => segment.id === "logged-in");
+  if (loggedIn) {
+    loggedIn.requests = Math.max(0, requestBreakdown.members.requests);
+    loggedIn.avgResponseTimeMs = Math.max(0, requestBreakdown.members.avgResponseTimeMs);
+    loggedIn.avgSessionDurationSeconds = Math.max(
+      0,
+      Math.round(Number(requestBreakdown.members.avgSessionDurationSeconds ?? 0)),
+    );
+    loggedIn.realtimeEvents = Math.max(0, requestBreakdown.members.realtimeEvents);
+  }
+
+  const loggedOut = segments.find((segment) => segment.id === "logged-out");
+  if (loggedOut) {
+    const guestRequests = Number.isFinite(extendedHttp.guestRequests ?? NaN)
+      ? Math.max(0, Math.round(Number(extendedHttp.guestRequests)))
+      : Math.max(0, requestBreakdown.frontend.requests);
+    loggedOut.requests = guestRequests;
+    const guestResponseMs = extendedHttp.guestAvgResponseMs;
+    loggedOut.avgResponseTimeMs = Number.isFinite(guestResponseMs ?? NaN)
+      ? Math.max(0, Math.round(Number(guestResponseMs)))
+      : Math.max(0, requestBreakdown.frontend.avgResponseTimeMs);
+    const guestDuration = extendedSession.guestAvgSessionDurationSeconds;
+    if (Number.isFinite(guestDuration ?? NaN)) {
+      loggedOut.avgSessionDurationSeconds = Math.max(0, Math.round(Number(guestDuration)));
+    }
+  }
+
+  const bots = segments.find((segment) => segment.id === "bot");
+  if (bots) {
+    const botRequests = Number.isFinite(extendedHttp.botRequests ?? NaN)
+      ? Math.max(0, Math.round(Number(extendedHttp.botRequests)))
+      : Math.max(0, bots.requests);
+    bots.requests = botRequests;
+    const botResponse = extendedHttp.botAvgResponseMs;
+    if (Number.isFinite(botResponse ?? NaN) && Number(botResponse) >= 0) {
+      bots.avgResponseTimeMs = Math.round(Number(botResponse));
+    }
+    const botBlocked = extendedHttp.botBlockedRequests;
+    if (Number.isFinite(botBlocked ?? NaN) && Number(botBlocked) >= 0) {
+      bots.blockedRequests = Math.round(Number(botBlocked));
+    }
+  }
+
+  const totalRequests = segments.reduce((total, segment) => total + Math.max(0, segment.requests), 0);
+  const denominator = totalRequests > 0 ? totalRequests : totalFallback;
+
+  if (denominator > 0) {
+    segments.forEach((segment) => {
+      segment.share = clamp(segment.requests / denominator, 0, 1);
+    });
+  } else {
+    segments.forEach((segment) => {
+      segment.share = 0;
+    });
+  }
+
+  return segments;
 }
 
 function convertTrafficSourcesFromDatabase(rows: AnalyticsTrafficSource[]): TrafficSource[] {
@@ -606,6 +701,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     members: { ...STATIC_ANALYTICS.requestBreakdown.members },
     api: { ...STATIC_ANALYTICS.requestBreakdown.api },
   };
+  let visitorDistribution = cloneVisitorDistribution(STATIC_ANALYTICS.visitorDistribution);
   let peakHours: PeakHour[] = (STATIC_ANALYTICS.peakHours ?? []).map((entry) => ({ ...entry }));
   let trafficSources: TrafficSource[] = STATIC_ANALYTICS.trafficSources.map((entry) => ({ ...entry }));
   let sessionInsights: SessionInsight[] = STATIC_ANALYTICS.sessionInsights.map((entry) => ({ ...entry }));
@@ -758,6 +854,14 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       markSegmentAsHydrated("sessionInsights");
     }
 
+    visitorDistribution = deriveVisitorDistribution(
+      visitorDistribution,
+      summary,
+      requestBreakdown,
+      latestHttpSummary,
+      sessionSummaryRow,
+    );
+
     if (Array.isArray(trafficSourceRows) && trafficSourceRows.length > 0) {
       trafficSources = convertTrafficSourcesFromDatabase(trafficSourceRows);
       markSegmentAsHydrated("trafficSources");
@@ -808,6 +912,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     ...STATIC_ANALYTICS,
     summary,
     requestBreakdown,
+    visitorDistribution,
     peakHours,
     resourceUsage,
     deviceBreakdown,

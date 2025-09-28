@@ -45,6 +45,12 @@ const uptimeFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, 
 
 const ANIMATION_DURATION_MS = 450;
 
+const visitorSegmentAccentMap: Record<ServerAnalytics["visitorDistribution"][number]["id"], string> = {
+  "logged-in": "bg-indigo-500",
+  "logged-out": "bg-sky-500",
+  bot: "bg-amber-500",
+};
+
 const RESET_ERROR_MESSAGES: Record<string, string> = {
   not_authorized: "Du darfst diese Aktion nicht ausführen.",
   no_database: "Ohne Datenbankverbindung können keine Statistiken zurückgesetzt werden.",
@@ -621,6 +627,60 @@ export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: S
 
         <TabsContent value="overview" className="space-y-6">
           <OverviewMetrics metrics={overviewMetrics} renderBadge={renderMockDataBadge} />
+
+          <Card className="border border-border/70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Nutzertypen & Traffic
+                {renderMockDataBadge()}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Aufschlüsselung nach Gästen, eingeloggten Mitgliedern und erkannten Bots innerhalb der letzten 24 Stunden.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {displayAnalytics.visitorDistribution.map((segment) => {
+                  const barWidth = `${Math.min(Math.max(segment.share * 100, 0), 100).toFixed(1)}%`;
+                  const accentClass = visitorSegmentAccentMap[segment.id] ?? "bg-primary/70";
+
+                  return (
+                    <div
+                      key={segment.id}
+                      className="space-y-2 rounded-md border border-border/60 bg-background/60 p-3"
+                    >
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 space-y-1">
+                          <p className="text-sm font-semibold text-foreground">{segment.label}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Anteil {percentPreciseFormat.format(segment.share)}
+                          </p>
+                        </div>
+                        <div className="text-sm text-muted-foreground sm:text-right">
+                          <p className="text-lg font-semibold leading-none text-foreground">
+                            {numberFormat.format(segment.requests)} Requests
+                          </p>
+                          <p>Ø Antwortzeit {formatMs(segment.avgResponseTimeMs)}</p>
+                          {segment.avgSessionDurationSeconds ? (
+                            <p>Ø Sitzungsdauer {formatDuration(segment.avgSessionDurationSeconds)}</p>
+                          ) : null}
+                          {segment.realtimeEvents ? (
+                            <p>Realtime-Events {numberFormat.format(segment.realtimeEvents)}</p>
+                          ) : null}
+                          {segment.blockedRequests ? (
+                            <p>Geblockt {numberFormat.format(segment.blockedRequests)}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted">
+                        <div className={cn("h-2 rounded-full", accentClass)} style={{ width: barWidth }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border border-border/70">
