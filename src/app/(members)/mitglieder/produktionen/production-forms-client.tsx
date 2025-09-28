@@ -1,11 +1,20 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 import type { ProductionActionResult } from "./actions";
@@ -21,12 +30,14 @@ type CreateProductionFormProps = {
   suggestedYear: number;
   shouldSetActiveByDefault: boolean;
   redirectPath: string;
+  onSuccess?: () => void;
 };
 
 export function CreateProductionForm({
   suggestedYear,
   shouldSetActiveByDefault,
   redirectPath,
+  onSuccess,
 }: CreateProductionFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const action = useCallback(
@@ -49,8 +60,9 @@ export function CreateProductionForm({
     }
     const message = state.message ?? "Produktion wurde erstellt.";
     toast.success(message);
+    onSuccess?.();
     formRef.current?.reset();
-  }, [state]);
+  }, [state, onSuccess]);
 
   return (
     <form ref={formRef} action={formAction} className="grid gap-6">
@@ -125,6 +137,45 @@ export function CreateProductionForm({
         </div>
       </div>
     </form>
+  );
+}
+
+type CreateProductionDialogProps = {
+  suggestedYear: number;
+  shouldSetActiveByDefault: boolean;
+  redirectPath: string;
+  trigger?: ReactNode;
+};
+
+export function CreateProductionDialog({
+  suggestedYear,
+  shouldSetActiveByDefault,
+  redirectPath,
+  trigger,
+}: CreateProductionDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger ?? <Button>Neue Produktion anlegen</Button>}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader className="space-y-2">
+          <DialogTitle>Neue Produktion anlegen</DialogTitle>
+          <DialogDescription>
+            Erfasse Jahrgang, optionale Beschreibung und starte direkt in den modernen
+            Gewerke-, Rollen- und Szenen-Workflows.
+          </DialogDescription>
+        </DialogHeader>
+        <CreateProductionForm
+          redirectPath={redirectPath}
+          suggestedYear={suggestedYear}
+          shouldSetActiveByDefault={shouldSetActiveByDefault}
+          onSuccess={() => setOpen(false)}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }
 
