@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { getActiveProductionId } from "@/lib/active-production";
 import { describeInvite, generateInviteToken, hashInviteToken, calculateInviteStatus } from "@/lib/member-invites";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { onboardingPathForHash, onboardingPathForToken } from "@/lib/member-invite-links";
@@ -66,7 +67,19 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [invites, productions] = await Promise.all([
+  const userId = session.user?.id ?? null;
+
+  const activeMembershipPromise = userId
+    ? prisma.productionMembership.findMany({
+        where: {
+          userId,
+          OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+        },
+        select: { showId: true },
+      })
+    : Promise.resolve<{ showId: string }[]>([]);
+
+  const [invites, productions, activeMemberships] = await Promise.all([
     prisma.memberInvite.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -82,6 +95,7 @@ export async function GET() {
       orderBy: { year: "desc" },
       select: { id: true, title: true, year: true, meta: true },
     }),
+    activeMembershipPromise,
   ]);
 
   const now = new Date();
@@ -131,7 +145,23 @@ export async function GET() {
     whatsappLink: getOnboardingWhatsAppLink(show.meta),
   }));
 
-  return NextResponse.json({ invites: formatted, productions: formattedProductions });
+  let defaultShowId = "";
+  if (activeMemberships.length === 1) {
+    defaultShowId = activeMemberships[0]?.showId ?? "";
+  } else if (userId) {
+    const activeProductionId = await getActiveProductionId(userId);
+    defaultShowId = activeProductionId ?? "";
+  }
+
+  if (defaultShowId && !formattedProductions.some((show) => show.id === defaultShowId)) {
+    defaultShowId = "";
+  }
+
+  return NextResponse.json({
+    invites: formatted,
+    productions: formattedProductions,
+    defaultShowId: defaultShowId || null,
+  });
 }
 
 export async function POST(request: NextRequest) {
