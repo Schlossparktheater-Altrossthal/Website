@@ -8,10 +8,12 @@ export function createEventHandlers({ io, logger, toISO }) {
     typeof logger?.warn === 'function' ? (...args) => logger.warn(...args) : (...args) => console.warn(...args);
 
   const onlineUsers = new Map();
+  let peakConcurrentUsers = 0;
 
   function broadcastOnlineStats() {
     const snapshot = {
       totalOnline: onlineUsers.size,
+      peakConcurrentUsers,
       onlineUsers: Array.from(onlineUsers.entries()).map(([userId, info]) => ({
         id: userId,
         name: info.name,
@@ -93,6 +95,9 @@ export function createEventHandlers({ io, logger, toISO }) {
         user: { id: userId, name },
       });
     }
+    if (onlineUsers.size > peakConcurrentUsers) {
+      peakConcurrentUsers = onlineUsers.size;
+    }
     broadcastOnlineStats();
   }
 
@@ -113,6 +118,13 @@ export function createEventHandlers({ io, logger, toISO }) {
       existing.lastSeen = Date.now();
     }
     broadcastOnlineStats();
+  }
+
+  function getOnlineStatsSnapshot() {
+    return {
+      totalOnline: onlineUsers.size,
+      peakConcurrentUsers,
+    };
   }
 
   function broadcastAttendanceUpdate(payload) {
@@ -307,5 +319,6 @@ export function createEventHandlers({ io, logger, toISO }) {
     broadcastOnboardingDashboardUpdate,
     handleServerEvent,
     validateRoom,
+    getOnlineStatsSnapshot,
   };
 }

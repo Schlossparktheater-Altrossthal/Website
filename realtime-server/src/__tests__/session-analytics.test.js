@@ -54,7 +54,8 @@ test('records analytics events for socket lifecycle', async () => {
     client.emit('ping');
   });
 
-  client.emit('join_room', 'global');
+  client.emit('join_room', 'rehearsal_demo');
+  client.emit('leave_room', 'rehearsal_demo');
   client.emit('leave_room', 'global');
 
   await wait(50);

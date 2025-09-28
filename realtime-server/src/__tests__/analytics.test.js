@@ -96,7 +96,7 @@ test('analytics manager merges database overrides when module is available', asy
     ],
   };
 
-  const analyticsModule = await import('../../src/lib/server-analytics-data.js');
+  const analyticsModule = await import('../../../src/lib/server-analytics-data.js');
 
   let currentTime = 5000;
   const toISO = (value) => new Date(value).toISOString();
@@ -130,7 +130,7 @@ test('analytics manager merges database overrides when module is available', asy
   assert.equal(snapshot.deviceBreakdown[0].device, 'Desktop');
   assert.equal(snapshot.deviceBreakdown[0].sessions, 150);
   assert.equal(snapshot.deviceBreakdown[0].avgPageLoadMs, 420);
-  assert.equal(snapshot.deviceBreakdown[1].device, 'Mobile');
+  assert.equal(snapshot.deviceBreakdown[1].device, 'Mobil');
   assert.equal(snapshot.deviceBreakdown[1].sessions, 120);
   assert.equal(snapshot.deviceBreakdown[1].avgPageLoadMs, 520);
 
@@ -141,4 +141,47 @@ test('analytics manager merges database overrides when module is available', asy
   const memberPage = snapshot.memberPages.find((entry) => entry.path === '/members');
   assert.ok(memberPage);
   assert.equal(memberPage.loadTimeMs, 640);
+});
+
+test('analytics manager incorporates online peak concurrency statistics', async () => {
+  let currentTime = 10_000;
+  let stats = { totalOnline: 4, peakConcurrentUsers: 9 };
+  const toISO = (value) => new Date(value).toISOString();
+
+  const manager = createAnalyticsManager({
+    logger: { warn: () => {}, error: () => {} },
+    intervalMs: 2_000,
+    maxAgeMs: 4_000,
+    toISO,
+    now: () => currentTime,
+    loadBaselineData: () => ({
+      summary: { peakConcurrentUsers: 3 },
+      resourceUsage: [],
+      requestBreakdown: {
+        frontend: { requests: 0, avgResponseTimeMs: 0, cacheHitRate: 0, avgPayloadKb: 0 },
+        members: { requests: 0, avgResponseTimeMs: 0, realtimeEvents: 0, avgSessionDurationSeconds: 0 },
+        api: { requests: 0, avgResponseTimeMs: 0, backgroundJobs: 0, errorRate: 0 },
+      },
+      visitorDistribution: [],
+      peakHours: [],
+      publicPages: [],
+      memberPages: [],
+      trafficSources: [],
+      deviceBreakdown: [],
+      sessionInsights: [],
+      optimizationInsights: [],
+      serverLogs: [],
+    }),
+    collectResourceUsage: async () => [],
+    getDatabaseUrl: () => null,
+    getOnlineStatsSnapshot: () => stats,
+  });
+
+  const firstSnapshot = await manager.refresh();
+  assert.equal(firstSnapshot.summary.peakConcurrentUsers, 9);
+
+  stats = { totalOnline: 2, peakConcurrentUsers: 1 };
+  currentTime += 10_000;
+  const refreshedSnapshot = await manager.refresh();
+  assert.equal(refreshedSnapshot.summary.peakConcurrentUsers, 9);
 });
