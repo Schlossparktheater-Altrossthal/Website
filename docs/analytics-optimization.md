@@ -4,7 +4,7 @@ Dieses Dokument beschreibt die Heuristiken, mit denen `optimizationInsights` aus
 
 ## Grundlagen
 
-* **Page Metrics (`analytics_page_metrics`)** liefern die Rohdaten für Ladezeiten und LCP pro Route. Sie werden mit den statischen Metadaten aus `server-analytics-static.json` angereichert.
+* **Page Metrics (`analytics_page_metrics`)** liefern die Rohdaten für Ladezeiten und LCP pro Route. Sie werden optional mit den Basismetadaten aus `src/lib/server-analytics.ts` angereichert.
 * **Device Metrics (`analytics_device_metrics`)** geben Sessions und Ladezeiten je Gerätetyp aus.
 * **Session Insights (`analytics_session_insights`)** enthalten Retention, Seiten pro Sitzung und Segment-Anteile.
 * **HTTP Summary (`analytics_http_summary`)** stellt Backend-spezifische Kennzahlen (Fehlerquoten, Cache-Hit-Rate, Payload-Größen) bereit.
@@ -43,7 +43,7 @@ Alle Grenzwerte sind so gewählt, dass relevante Abweichungen gegenüber den Zie
    * **Cache-Hit-Rate**: `cacheHitRate ≤ 60 %` → Edge-Caching ausbauen.
    * **Payload-Größe**: `frontendAvgPayloadBytes ≥ 450 KB` → Payload reduzieren (Lazy Loading, Kompression).
 
-Die Heuristiken werden auf maximal sechs Empfehlungen begrenzt. Ergibt sich keine Empfehlung, kommen die drei Fallback-Einträge aus `server-analytics-static.json` zum Einsatz.
+Die Heuristiken werden auf maximal sechs Empfehlungen begrenzt. Ergibt sich keine Empfehlung, greifen die in `src/lib/server-analytics.ts` hinterlegten Fallback-Einträge.
 
 ## Fallback-Verhalten
 

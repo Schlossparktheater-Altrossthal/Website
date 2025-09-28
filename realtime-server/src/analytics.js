@@ -1,10 +1,73 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import { setTimeout as wait } from 'node:timers/promises';
-import { createRequire } from 'node:module';
-
-const require = createRequire(import.meta.url);
-const analyticsStaticData = require('../../src/data/server-analytics-static.json');
+const BASELINE_ANALYTICS = Object.freeze({
+  summary: {
+    uptimePercentage: 0,
+    requestsLast24h: 0,
+    averageResponseTimeMs: 0,
+    errorRate: 0,
+    peakConcurrentUsers: 0,
+    cacheHitRate: 0,
+    realtimeEventsLast24h: 0,
+  },
+  resourceUsage: [],
+  requestBreakdown: {
+    frontend: {
+      requests: 0,
+      avgResponseTimeMs: 0,
+      cacheHitRate: 0,
+      avgPayloadKb: 0,
+    },
+    members: {
+      requests: 0,
+      avgResponseTimeMs: 0,
+      realtimeEvents: 0,
+      avgSessionDurationSeconds: 0,
+    },
+    api: {
+      requests: 0,
+      avgResponseTimeMs: 0,
+      backgroundJobs: 0,
+      errorRate: 0,
+    },
+  },
+  visitorDistribution: [
+    {
+      id: 'logged-out',
+      label: 'Nicht eingeloggt',
+      requests: 0,
+      share: 0,
+      avgResponseTimeMs: 0,
+      avgSessionDurationSeconds: 0,
+    },
+    {
+      id: 'logged-in',
+      label: 'Eingeloggt',
+      requests: 0,
+      share: 0,
+      avgResponseTimeMs: 0,
+      avgSessionDurationSeconds: 0,
+      realtimeEvents: 0,
+    },
+    {
+      id: 'bot',
+      label: 'Bots & Crawler',
+      requests: 0,
+      share: 0,
+      avgResponseTimeMs: 0,
+      blockedRequests: 0,
+    },
+  ],
+  peakHours: [],
+  publicPages: [],
+  memberPages: [],
+  trafficSources: [],
+  deviceBreakdown: [],
+  sessionInsights: [],
+  optimizationInsights: [],
+  serverLogs: [],
+});
 
 const fallbackAnalyticsModule = {
   applyPagePerformanceMetrics(baseEntries = []) {
@@ -21,8 +84,8 @@ const fallbackAnalyticsModule = {
   },
 };
 
-function cloneStaticAnalyticsData() {
-  return JSON.parse(JSON.stringify(analyticsStaticData));
+function cloneBaselineAnalytics() {
+  return JSON.parse(JSON.stringify(BASELINE_ANALYTICS));
 }
 
 function clamp(value, min, max) {
@@ -220,7 +283,7 @@ export function createAnalyticsManager({
   intervalMs = 2000,
   maxAgeMs,
   importAnalyticsModule = () => import('../../src/lib/server-analytics-data.js'),
-  loadStaticData = () => cloneStaticAnalyticsData(),
+  loadBaselineData = () => cloneBaselineAnalytics(),
   collectResourceUsage,
   getDatabaseUrl = () => process.env.DATABASE_URL,
   now = () => Date.now(),
@@ -304,12 +367,12 @@ export function createAnalyticsManager({
   }
 
   function createFallbackSnapshot() {
-    const base = loadStaticData();
+    const base = loadBaselineData();
     return { generatedAt: toISO(now()), ...base };
   }
 
   async function collectAnalyticsSnapshot() {
-    const base = loadStaticData();
+    const base = loadBaselineData();
     let resourceUsage = base.resourceUsage;
     try {
       resourceUsage = await resourceUsageCollector({
