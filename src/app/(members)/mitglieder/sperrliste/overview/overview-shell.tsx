@@ -1,11 +1,7 @@
 'use client';
-
-import { format, isToday } from 'date-fns';
-import { de } from 'date-fns/locale/de';
-import { ArrowRightLeft, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { UserAvatar } from '@/components/user-avatar';
 import { cn } from '@/lib/utils';
 import type { HolidayRange } from '@/types/holidays';
 
@@ -16,7 +12,8 @@ import {
   type PreparedMember,
   type VisibleDayInfo,
 } from './useBlockOverviewData';
-import { DesktopTimeline, timelineStatusStyles, type TimelineStatus } from './desktop-timeline';
+import { DesktopTimeline } from './desktop-timeline';
+import { MobileTimeline } from './mobile-timeline';
 
 type LegendItemProps = {
   label: string;
@@ -220,182 +217,14 @@ export function OverviewShell({
         />
       </div>
 
-      <div className="space-y-3 sm:hidden">
-        {preparedMembers.map((member) => {
-          const stats = summary.totals.get(member.id);
-
-          return (
-            <div key={member.id} className="rounded-2xl border border-border/60 bg-background/95 p-4 shadow-sm">
-              <div className="flex items-start gap-3">
-                <UserAvatar
-                  userId={member.id}
-                  email={member.email ?? undefined}
-                  firstName={member.firstName ?? undefined}
-                  lastName={member.lastName ?? undefined}
-                  name={member.displayName}
-                  avatarSource={member.avatarSource ?? undefined}
-                  avatarUpdatedAt={member.avatarUpdatedAt ?? undefined}
-                  size={40}
-                  className="h-10 w-10"
-                />
-                <div className="flex-1">
-                  <div className="text-sm font-semibold">{member.displayName}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {stats?.total ? `${stats.total} Sperrtermin${stats.total === 1 ? '' : 'e'}` : 'Keine Sperrtermine'}
-                  </div>
-                  {stats?.upcoming ? (
-                    <div className="text-sm leading-5 text-primary">{stats.upcoming} bevorstehend</div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="relative mt-3">
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
-                />
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
-                />
-                <div className="flex gap-2 overflow-x-auto pb-1 pl-1 pr-4 [scrollbar-width:thin] snap-x snap-mandatory">
-                  {visibleDayInfo.map(({ day, key }) => {
-                    const entry = member.blockedMap.get(key);
-                    const holidayEntries = holidayMap.get(key) ?? [];
-                    const isHoliday = holidayEntries.length > 0;
-                    const isBlocked = entry?.kind === 'BLOCKED';
-                    const isLimited = entry?.kind === 'LIMITED';
-                    const isPreferred = entry?.kind === 'PREFERRED';
-                    const trimmedReason = entry?.reason?.trim() || undefined;
-                    const hasReason = Boolean(trimmedReason);
-                    const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
-                    const label = [
-                      format(day, 'EEEE, d. MMMM yyyy', { locale: de }),
-                      entry
-                        ? isPreferred
-                          ? trimmedReason ?? 'bevorzugt'
-                          : isLimited
-                            ? trimmedReason ?? 'eingeschränkt'
-                            : trimmedReason ?? 'gesperrt'
-                        : 'frei',
-                    ];
-
-                    if (isHoliday) {
-                      label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(', ')}`);
-                    }
-                    if (createdAtLabel) {
-                      label.push(`Eingetragen am ${createdAtLabel}`);
-                    }
-
-                    const baseId = `${member.id}-${key}-mobile`;
-                    const holidayId = isHoliday ? `${baseId}-holiday` : undefined;
-                    const createdAtId = createdAtLabel ? `${baseId}-created` : undefined;
-                    const describedBy = [holidayId, createdAtId].filter(Boolean).join(' ') || undefined;
-
-                    let status: TimelineStatus = 'freeMuted';
-                    if (isLimited) {
-                      status = 'limited';
-                    } else if (isPreferred) {
-                      status = 'preferred';
-                    } else if (!entry && isHoliday) {
-                      status = 'holiday';
-                    }
-
-                    return (
-                      <div key={key} className="min-w-[64px] shrink-0 snap-center">
-                        {isBlocked && entry ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onSelectBlockedDay({
-                                member,
-                                entry,
-                                date: day,
-                                holidayEntries,
-                              })
-                            }
-                            className={cn(
-                              'flex h-full w-full flex-col items-center rounded-2xl border border-transparent px-2 py-2 text-center text-xs leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-destructive/80',
-                              timelineStatusStyles({ status: 'blocked' }),
-                              isToday(day) && 'ring-2 ring-primary/70',
-                            )}
-                            aria-label={[...label, 'Details öffnen'].join('. ')}
-                            aria-describedby={describedBy}
-                          >
-                            <span className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                              {format(day, 'EE', { locale: de })}
-                            </span>
-                            <span className="text-sm font-semibold">{format(day, 'd', { locale: de })}</span>
-                            {hasReason ? (
-                              <span className="mt-2 flex items-start gap-2 text-left text-[11px] leading-4">
-                                <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
-                                <span className="line-clamp-2">{trimmedReason}</span>
-                              </span>
-                            ) : (
-                              <span className="mt-2 text-[11px] leading-4 text-destructive/70">
-                                Keine Details
-                              </span>
-                            )}
-                            {holidayId ? (
-                              <span id={holidayId} className="sr-only">
-                                {`Ferien: ${holidayEntries.map((h) => h.title).join(', ')}`}
-                              </span>
-                            ) : null}
-                            {createdAtId ? (
-                              <span id={createdAtId} className="sr-only">
-                                {`Eingetragen am ${createdAtLabel}`}
-                              </span>
-                            ) : null}
-                            <span className="sr-only">Sperrtermin öffnen</span>
-                          </button>
-                        ) : (
-                          <div
-                            className={cn(
-                              'flex h-full flex-col items-center rounded-2xl border border-transparent px-2 py-2 text-center text-xs leading-5 shadow-sm',
-                              timelineStatusStyles({ status }),
-                              isToday(day) && 'ring-2 ring-primary/70',
-                            )}
-                            aria-label={label.join('. ')}
-                            aria-describedby={describedBy}
-                            tabIndex={isLimited || isPreferred || (isHoliday && !entry) ? 0 : undefined}
-                            aria-selected={isToday(day) || undefined}
-                          >
-                            <span className="text-xs uppercase tracking-wide text-muted-foreground/90">
-                              {format(day, 'EE', { locale: de })}
-                            </span>
-                            <span className="text-sm font-semibold">
-                              {format(day, 'd', { locale: de })}
-                            </span>
-                            {entry ? (
-                              <span className="mt-1 line-clamp-2 text-xs leading-4">
-                                {trimmedReason ?? (isPreferred ? 'Ohne Angabe' : 'Eingeschränkt')}
-                              </span>
-                            ) : isHoliday ? (
-                              <span className="mt-1 line-clamp-2 text-xs leading-4" id={holidayId}>
-                                {holidayEntries[0]?.title}
-                              </span>
-                            ) : (
-                              <span className="mt-1 text-xs leading-4 text-muted-foreground">frei</span>
-                            )}
-                            {createdAtId ? (
-                              <span id={createdAtId} className="sr-only">
-                                {`Eingetragen am ${createdAtLabel}`}
-                              </span>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 flex items-center justify-center gap-2 text-xs leading-5 text-muted-foreground/90">
-                  <ArrowRightLeft className="h-4 w-4" aria-hidden />
-                  <span>Wische für weitere Tage</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <MobileTimeline
+        preparedMembers={preparedMembers}
+        visibleDayInfo={visibleDayInfo}
+        holidayMap={holidayMap}
+        summary={summary}
+        onSelectBlockedDay={onSelectBlockedDay}
+        formatCreatedAtLabel={formatCreatedAtLabel}
+      />
     </div>
   );
 }

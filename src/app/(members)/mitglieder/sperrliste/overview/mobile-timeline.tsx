@@ -1,0 +1,390 @@
+'use client';
+
+import { format, isToday } from 'date-fns';
+import { de } from 'date-fns/locale/de';
+import {
+  ArrowRightLeft,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+} from 'lucide-react';
+import * as React from 'react';
+
+import { UserAvatar } from '@/components/user-avatar';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import type { HolidayRange } from '@/types/holidays';
+
+import type { BlockedDay } from '../block-calendar';
+import {
+  timelineStatusStyles,
+  type TimelineStatus,
+} from './desktop-timeline';
+import type {
+  BlockOverviewSummary,
+  PreparedMember,
+  VisibleDayInfo,
+} from './useBlockOverviewData';
+
+const toneStyles = {
+  blocked: {
+    bullet: 'bg-destructive',
+    text: 'text-destructive/90',
+  },
+  limited: {
+    bullet: 'bg-amber-500',
+    text: 'text-amber-700 dark:text-amber-200',
+  },
+  preferred: {
+    bullet: 'bg-emerald-500',
+    text: 'text-emerald-600 dark:text-emerald-200',
+  },
+  holiday: {
+    bullet: 'bg-sky-500',
+    text: 'text-sky-700 dark:text-sky-200',
+  },
+} satisfies Record<
+  'blocked' | 'limited' | 'preferred' | 'holiday',
+  { bullet: string; text: string }
+>;
+
+type ReasonPreviewProps = {
+  reason: string;
+  label: string;
+  tone: keyof typeof toneStyles;
+};
+
+function ReasonPreview({ reason, label, tone }: ReasonPreviewProps) {
+  const [open, setOpen] = React.useState(false);
+
+  const handleOpen = React.useCallback(
+    (event: React.MouseEvent | React.KeyboardEvent) => {
+      event.stopPropagation();
+      if ('key' in event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+        } else {
+          return;
+        }
+      }
+      setOpen(true);
+    },
+    [],
+  );
+
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={handleOpen}
+            onKeyDown={handleOpen}
+            className={cn(
+              'group flex w-full cursor-pointer items-start gap-2 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              toneStyles[tone].text,
+            )}
+          >
+            <span
+              aria-hidden
+              className={cn(
+                'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full transition-colors',
+                toneStyles[tone].bullet,
+              )}
+            />
+            <span className="line-clamp-2 flex-1 text-[11px] leading-4">
+              {reason}
+            </span>
+            <Info
+              aria-hidden
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-colors group-hover:text-foreground"
+            />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="start" className="max-w-xs text-sm leading-5">
+          {reason}
+        </TooltipContent>
+      </Tooltip>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>{label}</SheetTitle>
+            <SheetDescription>Vollständige Begründung</SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <p className="text-sm leading-6 text-muted-foreground">{reason}</p>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+type MobileTimelineProps = {
+  preparedMembers: PreparedMember[];
+  visibleDayInfo: VisibleDayInfo[];
+  holidayMap: Map<string, HolidayRange[]>;
+  summary: BlockOverviewSummary;
+  onSelectBlockedDay: (selection: {
+    member: PreparedMember;
+    entry: BlockedDay;
+    date: Date;
+    holidayEntries: HolidayRange[];
+  }) => void;
+  formatCreatedAtLabel: (createdAt?: string | null) => string | null;
+};
+
+export function MobileTimeline({
+  preparedMembers,
+  visibleDayInfo,
+  holidayMap,
+  summary,
+  onSelectBlockedDay,
+  formatCreatedAtLabel,
+}: MobileTimelineProps) {
+  const showPaginationDots =
+    visibleDayInfo.length > 1 && visibleDayInfo.length <= 14;
+
+  return (
+    <TooltipProvider delayDuration={200} disableHoverableContent>
+      <div className="space-y-3 sm:hidden">
+        {preparedMembers.map((member) => {
+          const stats = summary.totals.get(member.id);
+
+          return (
+            <section
+              key={member.id}
+              className="rounded-2xl border border-border/60 bg-background/95 p-4 shadow-sm"
+            >
+              <div className="flex items-start gap-3">
+                <UserAvatar
+                  userId={member.id}
+                  email={member.email ?? undefined}
+                  firstName={member.firstName ?? undefined}
+                  lastName={member.lastName ?? undefined}
+                  name={member.displayName}
+                  avatarSource={member.avatarSource ?? undefined}
+                  avatarUpdatedAt={member.avatarUpdatedAt ?? undefined}
+                  size={40}
+                  className="h-10 w-10"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold">{member.displayName}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {stats?.total
+                      ? `${stats.total} Sperrtermin${stats.total === 1 ? '' : 'e'}`
+                      : 'Keine Sperrtermine'}
+                  </div>
+                  {stats?.upcoming ? (
+                    <div className="text-sm leading-5 text-primary">
+                      {stats.upcoming} bevorstehend
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="relative mt-3">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-3 left-0 flex w-8 items-center justify-start bg-gradient-to-r from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
+                >
+                  <ChevronLeft className="h-4 w-4 text-muted-foreground/70" />
+                </div>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-3 right-0 flex w-8 items-center justify-end bg-gradient-to-l from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
+                >
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
+                </div>
+                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pl-1 pr-6 [scrollbar-width:thin]">
+                  {visibleDayInfo.map(({ day, key }) => {
+                    const entry = member.blockedMap.get(key);
+                    const holidayEntries = holidayMap.get(key) ?? [];
+                    const isHoliday = holidayEntries.length > 0;
+                    const isBlocked = entry?.kind === 'BLOCKED';
+                    const isLimited = entry?.kind === 'LIMITED';
+                    const isPreferred = entry?.kind === 'PREFERRED';
+                    const trimmedReason = entry?.reason?.trim();
+                    const hasReason = Boolean(trimmedReason);
+                    const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
+                    const label = [
+                      format(day, 'EEEE, d. MMMM yyyy', { locale: de }),
+                      entry
+                        ? isPreferred
+                          ? trimmedReason ?? 'bevorzugt'
+                          : isLimited
+                            ? trimmedReason ?? 'eingeschränkt'
+                            : trimmedReason ?? 'gesperrt'
+                        : isHoliday
+                          ? `Ferien: ${holidayEntries
+                              .map((h) => h.title)
+                              .join(', ')}`
+                          : 'frei',
+                    ];
+
+                    if (createdAtLabel) {
+                      label.push(`Eingetragen am ${createdAtLabel}`);
+                    }
+
+                    const baseId = `${member.id}-${key}-mobile`;
+                    const createdAtId = createdAtLabel
+                      ? `${baseId}-created`
+                      : undefined;
+                    const describedBy = createdAtId ?? undefined;
+
+                    let status: TimelineStatus = 'freeMuted';
+                    if (isBlocked) {
+                      status = 'blocked';
+                    } else if (isLimited) {
+                      status = 'limited';
+                    } else if (isPreferred) {
+                      status = 'preferred';
+                    } else if (isHoliday) {
+                      status = 'holiday';
+                    }
+
+                    const isInteractive = Boolean(entry && isBlocked);
+                    const cardClasses = cn(
+                      'grid h-40 min-w-[9.5rem] shrink-0 grid-rows-[auto,1fr,auto] rounded-2xl border border-transparent px-2 py-2 text-center text-xs leading-5 shadow-sm transition-colors',
+                      timelineStatusStyles({ status }),
+                      isInteractive &&
+                        'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                      isToday(day) && 'ring-2 ring-primary/70',
+                    );
+
+                    const handleSelect = () => {
+                      if (isInteractive && entry) {
+                        onSelectBlockedDay({
+                          member,
+                          entry,
+                          date: day,
+                          holidayEntries,
+                        });
+                      }
+                    };
+
+                    const handleKeyDown = (
+                      event: React.KeyboardEvent<HTMLDivElement>,
+                    ) => {
+                      if (!isInteractive) {
+                        return;
+                      }
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleSelect();
+                      }
+                    };
+
+                    return (
+                      <div key={key} className="min-w-[9.5rem] shrink-0 snap-center">
+                        <div
+                          className={cardClasses}
+                          role={isInteractive ? 'button' : undefined}
+                          tabIndex={isInteractive ? 0 : undefined}
+                          aria-label={label.join('. ')}
+                          aria-describedby={describedBy}
+                          onClick={handleSelect}
+                          onKeyDown={handleKeyDown}
+                        >
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                              {format(day, 'EE', { locale: de })}
+                            </span>
+                            <span className="text-sm font-semibold">
+                              {format(day, 'd', { locale: de })}
+                            </span>
+                          </div>
+                          <div className="flex flex-1 flex-col items-center justify-center">
+                            {isInteractive && hasReason && trimmedReason ? (
+                              <ReasonPreview
+                                reason={trimmedReason}
+                                label={format(day, "d. MMMM yyyy", { locale: de })}
+                                tone="blocked"
+                              />
+                            ) : isLimited && trimmedReason ? (
+                              <ReasonPreview
+                                reason={trimmedReason}
+                                label={format(day, "d. MMMM yyyy", { locale: de })}
+                                tone="limited"
+                              />
+                            ) : isPreferred && trimmedReason ? (
+                              <ReasonPreview
+                                reason={trimmedReason}
+                                label={format(day, "d. MMMM yyyy", { locale: de })}
+                                tone="preferred"
+                              />
+                            ) : isHoliday ? (
+                              <div className="flex flex-col gap-1 px-1 text-[11px] leading-4">
+                                <span className="line-clamp-2 text-foreground">
+                                  {holidayEntries.map((h) => h.title).join(', ')}
+                                </span>
+                              </div>
+                            ) : entry ? (
+                              <div className="px-1 text-[11px] leading-4 text-muted-foreground">
+                                {isPreferred
+                                  ? 'Ohne Angabe'
+                                  : isLimited
+                                    ? 'Eingeschränkt'
+                                    : 'Ohne Details'}
+                              </div>
+                            ) : (
+                              <div className="text-[11px] leading-4 text-muted-foreground">
+                                frei
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground/80">
+                            {isInteractive ? (
+                              <span>Details öffnen</span>
+                            ) : createdAtLabel ? (
+                              <span id={createdAtId}>Eingetragen am {createdAtLabel}</span>
+                            ) : isHoliday ? (
+                              <span>Automatisch hinzugefügt</span>
+                            ) : (
+                              <span>&nbsp;</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {showPaginationDots ? (
+                  <div className="mt-2 flex items-center justify-center gap-1">
+                    {visibleDayInfo.map(({ day, key }) => (
+                      <span
+                        key={`${member.id}-${key}-dot`}
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full bg-muted',
+                          isToday(day) && 'bg-primary',
+                        )}
+                        aria-hidden
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                <div className="mt-2 flex items-center justify-center gap-2 text-xs leading-5 text-muted-foreground/90">
+                  <ArrowRightLeft className="h-4 w-4" aria-hidden />
+                  <span>Wische für weitere Tage</span>
+                </div>
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </TooltipProvider>
+  );
+}
