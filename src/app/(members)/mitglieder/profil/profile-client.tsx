@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Trash2,
   Users,
+  Utensils,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -699,6 +700,28 @@ function ProfileClientInner({
       },
     ];
 
+    const hasDietaryPreference = Boolean(dietaryPreference.label);
+    const dietaryDescription = hasDietaryPreference
+      ? [
+          dietaryPreference.label,
+          dietaryPreference.strictnessLabel ? `(${dietaryPreference.strictnessLabel})` : null,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : "Noch kein Ernährungsprofil hinterlegt.";
+    const allergiesLabel = allergies.length
+      ? `${allergies.length} Allergie${allergies.length === 1 ? "" : "n"} hinterlegt.`
+      : "Trage Allergien ein, damit das Küchenteam planen kann.";
+
+    items.push({
+      id: "dietary",
+      icon: <Utensils className="h-5 w-5" aria-hidden />,
+      title: "Ernährung",
+      description: dietaryDescription,
+      hint: allergiesLabel,
+      tone: hasDietaryPreference ? "default" : "info",
+    });
+
     if (whatsappLink) {
       items.push({
         id: "whatsapp",
@@ -740,6 +763,9 @@ function ProfileClientInner({
     onboardingBackground,
     onboardingFocusLabel,
     onboardingNotes,
+    allergies.length,
+    dietaryPreference.label,
+    dietaryPreference.strictnessLabel,
     handleWhatsAppVisit,
     whatsappLink,
     whatsappVisitedAt,
