@@ -44,6 +44,15 @@ function combineName(firstName, lastName) {
   return parts.length ? parts.join(" ") : null;
 }
 
+const ROLE_SORT_ORDER = ["member", "cast", "tech", "board", "finance", "admin", "owner"];
+const ROLE_ORDER = new Map(ROLE_SORT_ORDER.map((role, index) => [role, index]));
+
+function sortRoles(roles) {
+  return [...new Set(roles)].sort(
+    (a, b) => (ROLE_ORDER.get(a) ?? 0) - (ROLE_ORDER.get(b) ?? 0),
+  );
+}
+
 async function main() {
   const defaultThemeId = "default-website-theme";
   const themeTokens = JSON.parse(JSON.stringify(designTokens));
@@ -154,48 +163,52 @@ async function main() {
     },
   });
 
-  const emails = [
-    "member@example.com",
-    "cast@example.com",
-    "tech@example.com",
-    "board@example.com",
-    "finance@example.com",
-    "admin@example.com",
-    "owner@example.com",
+  const seedUsers = [
+    { email: "member@example.com", primaryRole: "member", supplementalRoles: [] },
+    { email: "cast@example.com", primaryRole: "cast", supplementalRoles: [] },
+    { email: "tech@example.com", primaryRole: "tech", supplementalRoles: [] },
+    { email: "board@example.com", primaryRole: "board", supplementalRoles: [] },
+    { email: "finance@example.com", primaryRole: "member", supplementalRoles: ["finance"] },
+    { email: "admin@example.com", primaryRole: "admin", supplementalRoles: [] },
+    { email: "owner@example.com", primaryRole: "owner", supplementalRoles: [] },
   ];
-  const roles = ["member", "cast", "tech", "board", "finance", "admin", "owner"];
+  const emails = seedUsers.map((entry) => entry.email);
   const defaultPasswordHash = await bcrypt.hash("password", 10);
 
-  for (let i = 0; i < emails.length; i++) {
-    const friendlyName = emails[i].split("@")[0] ?? "";
+  for (const entry of seedUsers) {
+    const friendlyName = entry.email.split("@")[0] ?? "";
     const normalizedName = friendlyName.replace(/[._-]+/g, " ");
     const { firstName, lastName } = splitFullName(normalizedName);
     const displayName = combineName(firstName, lastName);
+    const combinedRoles = sortRoles([entry.primaryRole, ...(entry.supplementalRoles ?? [])]);
 
     await prisma.user.upsert({
-      where: { email: emails[i] },
+      where: { email: entry.email },
       update: {
         firstName,
         lastName,
         name: displayName,
         passwordHash: defaultPasswordHash,
+        role: entry.primaryRole,
       },
       create: {
-        email: emails[i],
+        email: entry.email,
         firstName,
         lastName,
         name: displayName,
-        role: roles[i],
+        role: entry.primaryRole,
         passwordHash: defaultPasswordHash,
       },
     });
-    const userRecord = await prisma.user.findUnique({ where: { email: emails[i] } });
+    const userRecord = await prisma.user.findUnique({ where: { email: entry.email } });
     if (userRecord) {
-      await prisma.userRole.upsert({
-        where: { userId_role: { userId: userRecord.id, role: roles[i] } },
-        update: {},
-        create: { userId: userRecord.id, role: roles[i] },
-      });
+      await prisma.userRole.deleteMany({ where: { userId: userRecord.id } });
+      if (combinedRoles.length) {
+        await prisma.userRole.createMany({
+          data: combinedRoles.map((role) => ({ userId: userRecord.id, role })),
+          skipDuplicates: true,
+        });
+      }
     }
   }
 

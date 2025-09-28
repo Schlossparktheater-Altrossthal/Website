@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { sortRoles, type Role } from "@/lib/roles";
+import {
+  DEFAULT_PRIMARY_ROLE,
+  filterPrimaryRoles,
+  filterSupplementalRoles,
+  getHighestPrimaryRole,
+  sortRoles,
+  type Role,
+} from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
 import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
@@ -102,7 +109,12 @@ export async function POST(request: NextRequest) {
   const filteredRoles = Array.from(new Set(requestedRoles)).filter(
     (role): role is Role => typeof role === "string" && (ROLES as readonly string[]).includes(role),
   );
-  const roles = sortRoles(filteredRoles.length > 0 ? filteredRoles : ["member"]);
+  const primaryRoles = filterPrimaryRoles(filteredRoles);
+  const supplementalRoles = filterSupplementalRoles(filteredRoles);
+  const roles = sortRoles([
+    ...(primaryRoles.length ? primaryRoles : [DEFAULT_PRIMARY_ROLE]),
+    ...supplementalRoles,
+  ]);
 
   // Only owners may assign the owner role
   const actorRoles = new Set(session.user?.roles ?? (session.user?.role ? [session.user.role] : []));
@@ -111,7 +123,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Keep legacy primary role field for compatibility (highest role)
-  const primaryRole = roles[roles.length - 1];
+  const primaryRole = getHighestPrimaryRole(roles);
 
   try {
     const user = await prisma.user.create({

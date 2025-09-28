@@ -4,7 +4,15 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { isInviteUsable } from "@/lib/member-invites";
-import { sortRoles, ROLES, type Role } from "@/lib/roles";
+import {
+  DEFAULT_PRIMARY_ROLE,
+  ROLES,
+  filterPrimaryRoles,
+  filterSupplementalRoles,
+  getHighestPrimaryRole,
+  sortRoles,
+  type Role,
+} from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
@@ -312,8 +320,13 @@ export async function POST(request: NextRequest) {
   }
 
   const rolesFromInvite = invite.roles?.filter((role): role is Role => (ROLES as readonly string[]).includes(role)) ?? [];
-  const roles = sortRoles(rolesFromInvite.length ? rolesFromInvite : ["member"]);
-  const primaryRole = roles[roles.length - 1];
+  const primaryRoles = filterPrimaryRoles(rolesFromInvite);
+  const supplementalRoles = filterSupplementalRoles(rolesFromInvite);
+  const roles = sortRoles([
+    ...(primaryRoles.length ? primaryRoles : [DEFAULT_PRIMARY_ROLE]),
+    ...supplementalRoles,
+  ]);
+  const primaryRole = getHighestPrimaryRole(roles);
 
   const storedPayload = {
     firstName,

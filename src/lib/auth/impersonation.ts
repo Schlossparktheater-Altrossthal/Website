@@ -3,7 +3,7 @@ import type { Session } from "next-auth";
 
 import { prisma } from "@/lib/prisma";
 import { combineNameParts } from "@/lib/names";
-import { sortRoles, type Role } from "@/lib/roles";
+import { getHighestPrimaryRole, sortRoles, type Role } from "@/lib/roles";
 
 const IMPERSONATION_COOKIE_NAME = "member_impersonation";
 
@@ -176,7 +176,7 @@ export async function applyImpersonation(
     target.role as Role,
     ...target.roles.map((entry) => entry.role as Role),
   ]);
-  const primaryRole = combinedRoles[combinedRoles.length - 1] ?? null;
+  const primaryRole = getHighestPrimaryRole(combinedRoles);
 
   const targetFullName =
     combineNameParts(target.firstName, target.lastName) ??

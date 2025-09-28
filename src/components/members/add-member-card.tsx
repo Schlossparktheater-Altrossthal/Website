@@ -2,7 +2,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { describeRoles, ROLE_LABELS, ROLES, sortRoles, type Role } from "@/lib/roles";
+import {
+  DEFAULT_PRIMARY_ROLE,
+  PRIMARY_ROLES,
+  SUPPLEMENTAL_ROLES,
+  describeRoles,
+  hasPrimaryRole,
+  isPrimaryRole,
+  ROLE_LABELS,
+  sortRoles,
+  type Role,
+} from "@/lib/roles";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -23,15 +33,31 @@ export function AddMemberModal() {
   const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [roles, setRoles] = useState<Role[]>(["member"]);
+  const [roles, setRoles] = useState<Role[]>([DEFAULT_PRIMARY_ROLE]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const toggleRole = (role: Role) => {
     setError(null);
     setRoles((prev) => {
-      const next = prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role];
-      return sortRoles(next.length ? next : ["member"]);
+      const nextSet = new Set(prev);
+      if (nextSet.has(role)) {
+        nextSet.delete(role);
+      } else {
+        nextSet.add(role);
+      }
+
+      const nextRoles = sortRoles(Array.from(nextSet));
+      if (!hasPrimaryRole(nextRoles)) {
+        if (isPrimaryRole(role) && !nextSet.has(role)) {
+          // Prevent removing the final primary role without replacement
+          nextSet.add(role);
+        } else {
+          nextSet.add(DEFAULT_PRIMARY_ROLE);
+        }
+      }
+
+      return sortRoles(Array.from(nextSet));
     });
   };
 
@@ -41,7 +67,7 @@ export function AddMemberModal() {
     setLastName("");
     setPassword("");
     setConfirmPassword("");
-    setRoles(["member"]);
+    setRoles([DEFAULT_PRIMARY_ROLE]);
     setError(null);
   };
 
@@ -180,33 +206,65 @@ export function AddMemberModal() {
               </label>
             </div>
 
-            <div className="space-y-2">
-              <span className="text-sm font-medium">Rollen</span>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {ROLES.map((role) => {
-                  const active = roles.includes(role);
-                  return (
-                    <label
-                      key={role}
-                      className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
-                        active
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border hover:bg-accent/30"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
-                        checked={active}
-                        onChange={() => toggleRole(role)}
-                      />
-                      <span>{ROLE_LABELS[role] ?? role}</span>
-                    </label>
-                  );
-                })}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Kernrollen</span>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {PRIMARY_ROLES.map((role) => {
+                    const active = roles.includes(role);
+                    return (
+                      <label
+                        key={role}
+                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
+                          active
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:bg-accent/30"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
+                          checked={active}
+                          onChange={() => toggleRole(role)}
+                        />
+                        <span>{ROLE_LABELS[role] ?? role}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
+
+              {SUPPLEMENTAL_ROLES.length ? (
+                <div className="space-y-2">
+                  <span className="text-sm font-medium">Zusätzliche Berechtigungen</span>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {SUPPLEMENTAL_ROLES.map((role) => {
+                      const active = roles.includes(role);
+                      return (
+                        <label
+                          key={role}
+                          className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
+                            active
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border hover:bg-accent/30"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none"
+                            checked={active}
+                            onChange={() => toggleRole(role)}
+                          />
+                          <span>{ROLE_LABELS[role] ?? role}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               <p className="text-xs text-muted-foreground">
-                Zugewiesene Rollen: {describeRoles(roles)}
+                Zugewiesene Rollen: {describeRoles(sortRoles(roles))}
               </p>
             </div>
 

@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { sortRoles, type Role } from "@/lib/roles";
+import {
+  filterPrimaryRoles,
+  filterSupplementalRoles,
+  getHighestPrimaryRole,
+  hasPrimaryRole,
+  sortRoles,
+  type Role,
+} from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
 
@@ -30,11 +37,14 @@ export async function PUT(request: NextRequest) {
     (role): role is Role => typeof role === "string" && (ROLES as readonly string[]).includes(role),
   );
 
-  if (provided.length === 0) {
-    return NextResponse.json({ error: "Mindestens eine Rolle erforderlich" }, { status: 400 });
+  if (!hasPrimaryRole(provided)) {
+    return NextResponse.json({ error: "Mindestens eine Kernrolle erforderlich" }, { status: 400 });
   }
 
-  const orderedRoles = sortRoles(provided);
+  const orderedRoles = sortRoles([
+    ...filterPrimaryRoles(provided),
+    ...filterSupplementalRoles(provided),
+  ]);
 
   // Guard: Admins cannot assign or remove the owner role
   const actorRoles = new Set(session.user?.roles ?? (session.user?.role ? [session.user.role] : []));
@@ -72,7 +82,7 @@ export async function PUT(request: NextRequest) {
   }
 
   // Keep legacy primary role field for compatibility (highest role)
-  const primaryRole = orderedRoles[orderedRoles.length - 1];
+  const primaryRole = getHighestPrimaryRole(orderedRoles);
 
   try {
     const updated = await prisma.user.update({

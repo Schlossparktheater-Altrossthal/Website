@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
+import { filterPrimaryRoles, getHighestPrimaryRole } from "@/lib/roles";
 
 const MEMBER_ROLES = new Set<Role>([
   "member",
@@ -25,8 +26,18 @@ function determineMembership(roles: Role[] | undefined) {
     return { isMember: false, membershipRole: null as string | null };
   }
 
-  const membershipRole = normalized[normalized.length - 1];
-  return { isMember: true, membershipRole };
+  const primaryRoles = filterPrimaryRoles(normalized);
+  if (primaryRoles.length > 0) {
+    const membershipRole = getHighestPrimaryRole(primaryRoles);
+    return { isMember: true, membershipRole };
+  }
+
+  if (normalized.includes("finance")) {
+    return { isMember: true, membershipRole: "finance" };
+  }
+
+  const fallback = normalized[normalized.length - 1] ?? null;
+  return { isMember: true, membershipRole: fallback };
 }
 
 function sanitizePath(path: string | null | undefined): string | null {

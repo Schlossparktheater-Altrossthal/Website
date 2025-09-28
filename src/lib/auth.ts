@@ -8,7 +8,7 @@ import type { JWT } from "next-auth/jwt";
 import EmailProvider from "next-auth/providers/email";
 import Credentials from "next-auth/providers/credentials";
 import type { CredentialInput } from "next-auth/providers/credentials";
-import { sortRoles, ROLES } from "@/lib/roles";
+import { getHighestPrimaryRole, sortRoles, ROLES } from "@/lib/roles";
 import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
 import { verifyPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
@@ -227,6 +227,7 @@ const credentialsProvider = Credentials({
       user.role as Role,
       ...user.roles.map((r) => r.role as Role),
     ]);
+    const primaryRole = getHighestPrimaryRole(combinedRoles);
 
     return {
       id: user.id,
@@ -234,7 +235,7 @@ const credentialsProvider = Credentials({
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
       name: combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null),
-      role: combinedRoles[combinedRoles.length - 1],
+      role: primaryRole,
       roles: combinedRoles,
       avatarSource: user.avatarSource,
       avatarImageUpdatedAt: user.avatarImageUpdatedAt,
@@ -285,7 +286,7 @@ export const authOptions = {
         if (!roles || roles.length === 0) return;
         const sorted = sortRoles(roles);
         mutableToken.roles = sorted;
-        mutableToken.role = sorted[sorted.length - 1];
+        mutableToken.role = getHighestPrimaryRole(sorted);
       };
 
       if (user && isRecord(user)) {

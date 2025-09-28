@@ -3,7 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditIcon } from "@/components/ui/icons";
-import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
+import {
+  DEFAULT_PRIMARY_ROLE,
+  ROLE_BADGE_VARIANTS,
+  ROLE_LABELS,
+  hasPrimaryRole,
+  sortRoles,
+  type Role,
+} from "@/lib/roles";
 import { toast } from "sonner";
 import { UserEditModal } from "@/components/members/user-edit-modal";
 import { RolePicker } from "@/components/members/role-picker";
@@ -40,7 +47,13 @@ export function RoleManager({
     name?: string | null;
   }) => void;
 }) {
-  const initialSorted = useMemo(() => sortRoles(initialRoles), [initialRoles]);
+  const initialSorted = useMemo(() => {
+    const sorted = sortRoles(initialRoles);
+    if (hasPrimaryRole(sorted)) {
+      return sorted;
+    }
+    return sortRoles([...sorted, DEFAULT_PRIMARY_ROLE]);
+  }, [initialRoles]);
   const [selected, setSelected] = useState<Role[]>(initialSorted);
   const [saved, setSaved] = useState<Role[]>(initialSorted);
   const [selectedCustomIds, setSelectedCustomIds] = useState<string[]>([...initialCustomRoleIds]);
@@ -55,8 +68,11 @@ export function RoleManager({
 
   useEffect(() => {
     const sorted = sortRoles(initialRoles);
-    setSelected(sorted);
-    setSaved(sorted);
+    const normalized = hasPrimaryRole(sorted)
+      ? sorted
+      : sortRoles([...sorted, DEFAULT_PRIMARY_ROLE]);
+    setSelected(normalized);
+    setSaved(normalized);
   }, [initialRoles]);
 
   useEffect(() => {
@@ -86,8 +102,8 @@ export function RoleManager({
   const dirty = useMemo(() => selected.join("|") !== saved.join("|") || selectedCustomIds.join("|") !== savedCustomIds.join("|"), [selected, saved, selectedCustomIds, savedCustomIds]);
 
   const handleSave = async () => {
-    if (selected.length === 0) {
-      setError("Mindestens eine Rolle muss ausgewählt sein.");
+    if (!hasPrimaryRole(selected)) {
+      setError("Mindestens eine Kernrolle muss ausgewählt sein.");
       return;
     }
 
@@ -199,8 +215,11 @@ export function RoleManager({
               // prevent empty selection and enforce owner guard
               const nextSet = new Set<Role>(next);
               if (!canEditOwner) nextSet.delete("owner");
-              if (nextSet.size === 0) return; // keep at least one role
-              const arr = sortRoles(Array.from(nextSet));
+              const normalized = Array.from(nextSet);
+              if (!hasPrimaryRole(normalized)) {
+                return;
+              }
+              const arr = sortRoles(normalized);
               setSelected(arr);
               setError(null);
             }}
