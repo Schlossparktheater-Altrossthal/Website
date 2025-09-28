@@ -51,6 +51,33 @@
       "errorRate": 0.006
     }
   },
+  "visitorDistribution": [
+    {
+      "id": "logged-out",
+      "label": "Nicht eingeloggt",
+      "requests": 7100,
+      "share": 0.368,
+      "avgResponseTimeMs": 172,
+      "avgSessionDurationSeconds": 268
+    },
+    {
+      "id": "logged-in",
+      "label": "Eingeloggt",
+      "requests": 8421,
+      "share": 0.437,
+      "avgResponseTimeMs": 214,
+      "avgSessionDurationSeconds": 486,
+      "realtimeEvents": 3920
+    },
+    {
+      "id": "bot",
+      "label": "Bots & Crawler",
+      "requests": 3763,
+      "share": 0.195,
+      "avgResponseTimeMs": 320,
+      "blockedRequests": 540
+    }
+  ],
   "peakHours": [
     { "range": "08:00 – 10:00", "requests": 1820, "share": 0.12 },
     { "range": "12:00 – 14:00", "requests": 2140, "share": 0.14 },

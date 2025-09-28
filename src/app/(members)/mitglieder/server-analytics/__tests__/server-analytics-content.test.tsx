@@ -48,6 +48,33 @@ function createAnalytics(overrides: Partial<ServerAnalytics> = {}): ServerAnalyt
       members: { requests: 420, avgResponseTimeMs: 210, realtimeEvents: 80, avgSessionDurationSeconds: 360 },
       api: { requests: 180, avgResponseTimeMs: 240, backgroundJobs: 15, errorRate: 0.04 },
     },
+    visitorDistribution: [
+      {
+        id: "logged-out",
+        label: "Nicht eingeloggt",
+        requests: 600,
+        share: 0.48,
+        avgResponseTimeMs: 160,
+        avgSessionDurationSeconds: 300,
+      },
+      {
+        id: "logged-in",
+        label: "Eingeloggt",
+        requests: 420,
+        share: 0.34,
+        avgResponseTimeMs: 210,
+        avgSessionDurationSeconds: 360,
+        realtimeEvents: 80,
+      },
+      {
+        id: "bot",
+        label: "Bots & Crawler",
+        requests: 220,
+        share: 0.18,
+        avgResponseTimeMs: 320,
+        blockedRequests: 16,
+      },
+    ],
     peakHours: [],
     publicPages: [],
     memberPages: [],
@@ -126,5 +153,14 @@ describe("ServerAnalyticsContent", () => {
     render(<ServerAnalyticsContent initialAnalytics={analytics} />);
 
     expect(screen.queryByText("Demo")).not.toBeInTheDocument();
+  });
+
+  it("displays the visitor distribution", () => {
+    const analytics = createAnalytics();
+    render(<ServerAnalyticsContent initialAnalytics={analytics} />);
+
+    expect(screen.getByText("Nutzertypen & Traffic")).toBeInTheDocument();
+    expect(screen.getByText("Nicht eingeloggt")).toBeInTheDocument();
+    expect(screen.getByText("Bots & Crawler")).toBeInTheDocument();
   });
 });
