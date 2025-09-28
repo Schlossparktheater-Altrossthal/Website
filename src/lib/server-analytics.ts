@@ -187,7 +187,10 @@ function buildAggregatedPageEntries(
       title: base?.title ?? metric.path,
       views,
       uniqueVisitors: base?.uniqueVisitors ?? views,
-      avgTimeOnPageSeconds: base?.avgTimeOnPageSeconds ?? 0,
+      avgTimeOnPageSeconds:
+        metric.avgTimeOnPageSeconds !== null && metric.avgTimeOnPageSeconds !== undefined
+          ? metric.avgTimeOnPageSeconds
+          : base?.avgTimeOnPageSeconds ?? 0,
       loadTimeMs: metric.avgPageLoadMs,
       lcpMs: metric.lcpMs ?? base?.lcpMs ?? 0,
       bounceRate: base?.bounceRate ?? 0,

@@ -4,6 +4,7 @@ export type RawPageView = {
   deviceHint?: string | null;
   loadTimeMs?: number | null;
   lcpMs?: number | null;
+  timeOnPageMs?: number | null;
   weight?: number | null;
 };
 
@@ -12,6 +13,7 @@ export type AggregatedPageMetric = {
   scope: "public" | "members" | null;
   avgLoadMs: number;
   lcpMs: number | null;
+  avgTimeOnPageSeconds: number | null;
   weight: number;
 };
 
@@ -29,6 +31,8 @@ type PageBucket = {
   loadWeight: number;
   lcpSum: number;
   lcpWeight: number;
+  timeOnPageSum: number;
+  timeOnPageWeight: number;
   totalWeight: number;
 };
 
@@ -128,7 +132,7 @@ function normalizeDeviceKey(raw: string | null | undefined): string {
   return value.replace(/\s+/g, "_");
 }
 
-function normalizeDuration(value: number | null | undefined): number | null {
+function normalizeDuration(value: number | null | undefined, max = 900_000): number | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return null;
   }
@@ -136,7 +140,7 @@ function normalizeDuration(value: number | null | undefined): number | null {
   if (rounded <= 0) {
     return null;
   }
-  return Math.min(rounded, 900_000);
+  return Math.min(rounded, max);
 }
 
 function normalizeWeight(value: number | null | undefined): number {
@@ -165,7 +169,8 @@ export function aggregatePageMetrics(rawPageViews: RawPageView[]) {
 
     const loadTime = normalizeDuration(view.loadTimeMs);
     const lcp = normalizeDuration(view.lcpMs);
-    if (loadTime === null && lcp === null) {
+    const timeOnPage = normalizeDuration(view.timeOnPageMs, 86_400_000);
+    if (loadTime === null && lcp === null && timeOnPage === null) {
       continue;
     }
 
@@ -184,6 +189,8 @@ export function aggregatePageMetrics(rawPageViews: RawPageView[]) {
         loadWeight: 0,
         lcpSum: 0,
         lcpWeight: 0,
+        timeOnPageSum: 0,
+        timeOnPageWeight: 0,
         totalWeight: 0,
       });
     }
@@ -198,6 +205,10 @@ export function aggregatePageMetrics(rawPageViews: RawPageView[]) {
     if (lcp !== null) {
       pageBucket.lcpSum += lcp * weight;
       pageBucket.lcpWeight += weight;
+    }
+    if (timeOnPage !== null) {
+      pageBucket.timeOnPageSum += timeOnPage * weight;
+      pageBucket.timeOnPageWeight += weight;
     }
 
     const deviceKey = normalizeDeviceKey(view.deviceHint ?? null);
@@ -226,11 +237,15 @@ export function aggregatePageMetrics(rawPageViews: RawPageView[]) {
     }
     const avgLoad = bucket.loadWeight > 0 ? bucket.loadSum / bucket.loadWeight : 0;
     const avgLcp = bucket.lcpWeight > 0 ? bucket.lcpSum / bucket.lcpWeight : null;
+    const avgTimeOnPageMs =
+      bucket.timeOnPageWeight > 0 ? bucket.timeOnPageSum / bucket.timeOnPageWeight : null;
     pages.push({
       path: bucket.path,
       scope: bucket.scope,
       avgLoadMs: Math.max(0, Math.round(avgLoad)),
       lcpMs: avgLcp !== null ? Math.max(0, Math.round(avgLcp)) : null,
+      avgTimeOnPageSeconds:
+        avgTimeOnPageMs !== null ? Math.max(0, Math.round(avgTimeOnPageMs / 1000)) : null,
       weight: bucket.totalWeight,
     });
   }

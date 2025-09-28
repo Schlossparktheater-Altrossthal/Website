@@ -44,6 +44,11 @@ type WebVitalsContext = {
   device: DeviceHints;
   navigation: NavigationInsights;
   updatedAt: number;
+  startedAt: number;
+  metricId?: string;
+  timeOnPageReported?: boolean;
+  timeOnPageHandlerAttached?: boolean;
+  timeOnPageCleanup?: (() => void) | null;
 };
 
 declare global {
@@ -56,6 +61,7 @@ type PendingMetrics = {
   id: string;
   loadTimeMs?: number | null;
   lcpMs?: number | null;
+  timeOnPageMs?: number | null;
   timeoutId?: number;
   reported?: boolean;
 };
@@ -67,6 +73,7 @@ const LOAD_METRIC_NAMES = new Set([
   "TTFB",
   "FCP",
 ]);
+const MAX_TIME_ON_PAGE_MS = 86_400_000;
 
 function ensureContext(): WebVitalsContext | null {
   if (typeof window === "undefined") {
@@ -80,6 +87,40 @@ function normalizeDuration(value: number | null | undefined): number | null {
     return null;
   }
   return Math.round(value);
+}
+
+function normalizeTimeOnPageDuration(value: number | null | undefined): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  const rounded = Math.round(value);
+  if (rounded <= 0) {
+    return null;
+  }
+  if (rounded > MAX_TIME_ON_PAGE_MS) {
+    return MAX_TIME_ON_PAGE_MS;
+  }
+  return rounded;
+}
+
+function generateSessionId(fallback?: string): string {
+  if (typeof fallback === "string" && fallback.trim()) {
+    return fallback;
+  }
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const random = Math.random().toString(16).slice(2);
+  return `${Date.now()}-${random}`;
+}
+
+function getOrCreateSessionId(context: WebVitalsContext, fallback?: string): string {
+  if (context.metricId && typeof context.metricId === "string" && context.metricId.trim()) {
+    return context.metricId;
+  }
+  const sessionId = generateSessionId(fallback);
+  context.metricId = sessionId;
+  return sessionId;
 }
 
 function extractTrafficAttribution(context: WebVitalsContext) {
@@ -125,6 +166,7 @@ async function transmitMetrics(
   context: WebVitalsContext,
   loadTimeMs: number | null,
   lcpMs: number | null,
+  timeOnPageMs: number | null,
 ) {
   const traffic = extractTrafficAttribution(context);
 
@@ -137,6 +179,7 @@ async function transmitMetrics(
     metrics: {
       loadTime: loadTimeMs,
       lcp: lcpMs,
+      timeOnPage: timeOnPageMs,
     },
     device: {
       ...context.device,
@@ -174,6 +217,69 @@ async function transmitMetrics(
   }
 }
 
+function sendTimeOnPageMetric(context: WebVitalsContext, sessionId?: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (context.timeOnPageReported) {
+    return;
+  }
+
+  const resolvedSessionId = getOrCreateSessionId(context, sessionId);
+  const now = Date.now();
+  const startedAt = Number.isFinite(context.startedAt) ? context.startedAt : now;
+  const durationMs = Math.max(0, now - startedAt);
+  const normalized = normalizeTimeOnPageDuration(durationMs);
+  if (normalized === null) {
+    return;
+  }
+
+  context.timeOnPageReported = true;
+  const cleanup = context.timeOnPageCleanup;
+  context.timeOnPageCleanup = null;
+  context.timeOnPageHandlerAttached = false;
+
+  void transmitMetrics(resolvedSessionId, context, null, null, normalized).catch(() => {
+    // Swallow errors to avoid blocking unload.
+  });
+
+  if (typeof cleanup === "function") {
+    cleanup();
+  }
+}
+
+function ensureTimeOnPageTracking(context: WebVitalsContext, sessionId: string) {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return;
+  }
+  if (context.timeOnPageHandlerAttached) {
+    return;
+  }
+
+  context.timeOnPageHandlerAttached = true;
+  context.startedAt = Number.isFinite(context.startedAt) ? context.startedAt : Date.now();
+
+  const visibilityHandler = () => {
+    if (document.visibilityState === "hidden") {
+      sendTimeOnPageMetric(context, sessionId);
+    }
+  };
+
+  const unloadHandler = () => {
+    sendTimeOnPageMetric(context, sessionId);
+  };
+
+  document.addEventListener("visibilitychange", visibilityHandler);
+  window.addEventListener("pagehide", unloadHandler);
+  window.addEventListener("beforeunload", unloadHandler);
+
+  context.timeOnPageCleanup = () => {
+    document.removeEventListener("visibilitychange", visibilityHandler);
+    window.removeEventListener("pagehide", unloadHandler);
+    window.removeEventListener("beforeunload", unloadHandler);
+  };
+}
+
 function finalizeMetric(metricId: string) {
   const entry = pending.get(metricId);
   if (!entry) {
@@ -196,18 +302,23 @@ function attemptSend(metricId: string) {
     return;
   }
 
+  const sessionId = getOrCreateSessionId(context, metricId);
+  ensureTimeOnPageTracking(context, sessionId);
+
   const normalizedLoad =
     entry.loadTimeMs !== null && entry.loadTimeMs !== undefined
       ? normalizeDuration(entry.loadTimeMs)
       : normalizeDuration(context.navigation.loadTimeMs);
   const normalizedLcp = normalizeDuration(entry.lcpMs ?? undefined);
 
-  if (normalizedLoad === null && normalizedLcp === null) {
+  const normalizedTimeOnPage = normalizeTimeOnPageDuration(entry.timeOnPageMs);
+
+  if (normalizedLoad === null && normalizedLcp === null && normalizedTimeOnPage === null) {
     return;
   }
 
   entry.reported = true;
-  void transmitMetrics(metricId, context, normalizedLoad, normalizedLcp);
+  void transmitMetrics(sessionId, context, normalizedLoad, normalizedLcp, normalizedTimeOnPage);
   finalizeMetric(metricId);
 }
 
@@ -237,6 +348,22 @@ function storeMetric(metric: NextWebVitalsMetric) {
   pending.set(metric.id, existing);
   scheduleFallback(metric.id);
   attemptSend(metric.id);
+}
+
+export function flushWebVitals() {
+  const context = ensureContext();
+  if (!context) {
+    return;
+  }
+
+  try {
+    const sessionId = getOrCreateSessionId(context);
+    sendTimeOnPageMetric(context, sessionId);
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("[analytics] Failed to flush web vitals", error);
+    }
+  }
 }
 
 export function reportWebVitals(metric: NextWebVitalsMetric) {

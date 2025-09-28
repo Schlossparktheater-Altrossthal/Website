@@ -1453,6 +1453,7 @@ model AnalyticsPageView {
   deviceHint String?
   lcpMs      Float?
   loadTimeMs Float?
+  timeOnPageMs Int?
   weight     Int      @default(1)
   createdAt  DateTime @default(now())
   analyticsSessionId String?
@@ -1498,6 +1499,7 @@ model AnalyticsPageMetric {
   scope      String?
   avgLoadMs  Float    @map("avg_load")
   lcpMs      Float?   @map("lcp")
+  avgTimeOnPageSeconds Float? @map("avg_time_on_page")
   weight     Int      @default(0)
   generatedAt DateTime @default(now())
 

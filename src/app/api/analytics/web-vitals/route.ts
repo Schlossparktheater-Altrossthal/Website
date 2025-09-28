@@ -44,11 +44,13 @@ const metricsSchema = z
   .object({
     loadTime: z.number().nonnegative().max(900_000).optional().nullable(),
     lcp: z.number().nonnegative().max(900_000).optional().nullable(),
+    timeOnPage: z.number().nonnegative().max(86_400_000).optional().nullable(),
   })
   .refine((value) => {
     const hasLoad = typeof value.loadTime === "number" && value.loadTime > 0;
     const hasLcp = typeof value.lcp === "number" && value.lcp > 0;
-    return hasLoad || hasLcp;
+    const hasTimeOnPage = typeof value.timeOnPage === "number" && value.timeOnPage > 0;
+    return hasLoad || hasLcp || hasTimeOnPage;
   }, "At least one metric must be provided");
 
 const trafficSchema = z
@@ -147,6 +149,17 @@ function normalizeDurationMs(value: number | null | undefined): number | null {
     return null;
   }
   return clamp(rounded, 0, 900_000);
+}
+
+function normalizeTimeOnPageMs(value: number | null | undefined): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  const rounded = Math.round(value);
+  if (rounded <= 0) {
+    return null;
+  }
+  return clamp(rounded, 0, 86_400_000);
 }
 
 function sanitizeDeviceHint(value: string | null | undefined): string | null {
@@ -258,6 +271,7 @@ export async function POST(request: NextRequest) {
   const scope = inferScope(path, parsed.scope ?? null);
   const loadTimeMs = normalizeDurationMs(parsed.metrics.loadTime);
   const lcpMs = normalizeDurationMs(parsed.metrics.lcp);
+  const timeOnPageMs = normalizeTimeOnPageMs(parsed.metrics.timeOnPage);
   const weight = clamp(Math.round(parsed.weight ?? 1), 1, 10_000);
   const now = new Date();
   const analyticsSessionId = sanitizeAnalyticsSessionId(parsed.analyticsSessionId ?? null);
@@ -271,6 +285,7 @@ export async function POST(request: NextRequest) {
     deviceHint: sanitizeDeviceHint(parsed.device.deviceHint),
     lcpMs,
     loadTimeMs,
+    timeOnPageMs,
     weight,
     createdAt: now,
     analyticsSessionId,
@@ -313,6 +328,7 @@ export async function POST(request: NextRequest) {
           deviceHint: pageViewData.deviceHint,
           lcpMs: pageViewData.lcpMs,
           loadTimeMs: pageViewData.loadTimeMs,
+          timeOnPageMs: pageViewData.timeOnPageMs,
           weight: pageViewData.weight,
           analyticsSessionId: pageViewData.analyticsSessionId,
         },
