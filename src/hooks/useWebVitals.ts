@@ -3,6 +3,8 @@
 import { useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
+import { flushWebVitals } from "@/app/reportWebVitals";
+
 type WebVitalsScope = "public" | "members" | null;
 
 type DeviceConnection = {
@@ -47,6 +49,11 @@ type WebVitalsContext = {
   device: DeviceHints;
   navigation: NavigationInsights;
   updatedAt: number;
+  startedAt: number;
+  metricId?: string;
+  timeOnPageReported?: boolean;
+  timeOnPageHandlerAttached?: boolean;
+  timeOnPageCleanup?: (() => void) | null;
 };
 
 declare global {
@@ -60,6 +67,17 @@ export type UseWebVitalsOptions = {
   weight?: number;
   analyticsSessionId?: string | null;
 };
+
+function generateMetricId(seed?: string) {
+  const sanitizedSeed = typeof seed === "string" && seed ? seed.replace(/[^a-zA-Z0-9_-]/g, "-") : null;
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    const id = crypto.randomUUID();
+    return sanitizedSeed ? `${sanitizedSeed}-${id}` : id;
+  }
+  const random = Math.random().toString(16).slice(2);
+  const timestamp = Date.now();
+  return sanitizedSeed ? `${sanitizedSeed}-${timestamp}-${random}` : `${timestamp}-${random}`;
+}
 
 function normalizePath(pathname: string | null): string {
   if (!pathname) {
@@ -323,10 +341,20 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
   }, [options?.weight]);
 
   const analyticsSessionId = options?.analyticsSessionId ?? null;
+  const metricId = useMemo(() => generateMetricId(normalizedPath), [normalizedPath]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
+    }
+
+    const previous = window.__APP_WEB_VITALS__;
+    if (previous?.timeOnPageCleanup) {
+      try {
+        previous.timeOnPageCleanup();
+      } catch {
+        // ignore cleanup errors
+      }
     }
 
     const context: WebVitalsContext = {
@@ -337,6 +365,11 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
       device: collectDeviceHints(),
       navigation: collectNavigationInsights(),
       updatedAt: Date.now(),
+      startedAt: Date.now(),
+      metricId,
+      timeOnPageReported: false,
+      timeOnPageHandlerAttached: false,
+      timeOnPageCleanup: null,
     };
 
     window.__APP_WEB_VITALS__ = context;
@@ -351,8 +384,30 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
     window.addEventListener("resize", handleVisibilityChange);
 
     return () => {
+      try {
+        if (window.__APP_WEB_VITALS__ === context) {
+          flushWebVitals();
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.debug("[analytics] Failed to flush web vitals on cleanup", error);
+        }
+      }
+
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("resize", handleVisibilityChange);
+
+      if (window.__APP_WEB_VITALS__ === context) {
+        window.__APP_WEB_VITALS__ = undefined;
+      }
+
+      if (context.timeOnPageCleanup) {
+        try {
+          context.timeOnPageCleanup();
+        } catch {
+          // ignore cleanup issues
+        }
+      }
     };
-  }, [normalizedPath, scope, weight, analyticsSessionId]);
+  }, [normalizedPath, scope, weight, analyticsSessionId, metricId]);
 }

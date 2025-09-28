@@ -39,6 +39,7 @@ async function main() {
       deviceHint: true,
       loadTimeMs: true,
       lcpMs: true,
+      timeOnPageMs: true,
       weight: true,
     },
   });
@@ -56,6 +57,7 @@ async function main() {
           scope: page.scope,
           avgLoadMs: page.avgLoadMs,
           lcpMs: page.lcpMs,
+          avgTimeOnPageSeconds: page.avgTimeOnPageSeconds,
           weight: page.weight,
         })),
       });

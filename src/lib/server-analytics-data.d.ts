@@ -4,6 +4,7 @@ export type PagePerformanceMetricOverride = {
   path: string;
   avgPageLoadMs: number;
   lcpMs?: number | null;
+  avgTimeOnPageSeconds?: number | null;
   scope?: "public" | "members" | null;
   weight?: number;
 };

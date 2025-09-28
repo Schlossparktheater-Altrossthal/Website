@@ -70,6 +70,18 @@ const SCOPE_PATTERNS = [
   "scope",
 ];
 const LCP_PATTERNS = ["lcp", "largest", "hero"];
+const DWELL_PATTERNS = [
+  "time_on_page",
+  "time-on-page",
+  "time_spent",
+  "timespent",
+  "verweildauer",
+  "dwell",
+  "avg_time",
+  "avg_duration",
+  "time_per",
+  "duration",
+];
 const COUNT_PATTERNS = [
   "session",
   "visit",
@@ -185,7 +197,10 @@ function findColumn(table, patterns, exclude = new Set()) {
   return null;
 }
 
-function computeScore(table, { keywords = [], hasShare = false, hasScope = false, hasLcp = false, hasCount = false } = {}) {
+function computeScore(
+  table,
+  { keywords = [], hasShare = false, hasScope = false, hasLcp = false, hasCount = false, hasTimeOnPage = false } = {},
+) {
   let score = 0;
   const name = table.tableLower;
   const schema = table.schemaLower;
@@ -207,6 +222,7 @@ function computeScore(table, { keywords = [], hasShare = false, hasScope = false
   if (hasScope) score += 0.5;
   if (hasLcp) score += 0.5;
   if (hasCount) score += 0.5;
+  if (hasTimeOnPage) score += 0.5;
   score += table.columns.length * 0.02;
 
   return score;
@@ -288,6 +304,9 @@ async function resolvePageTable(prisma) {
       const lcpColumn = findColumn(table, LCP_PATTERNS, exclude);
       if (lcpColumn) exclude.add(lcpColumn.original);
 
+      const timeOnPageColumn = findColumn(table, DWELL_PATTERNS, exclude);
+      if (timeOnPageColumn) exclude.add(timeOnPageColumn.original);
+
       let countColumn = findColumn(table, COUNT_PATTERNS, exclude);
       if (countColumn && countColumn.original === loadColumn.original) {
         countColumn = null;
@@ -298,6 +317,7 @@ async function resolvePageTable(prisma) {
         hasScope: Boolean(scopeColumn),
         hasLcp: Boolean(lcpColumn),
         hasCount: Boolean(countColumn),
+        hasTimeOnPage: Boolean(timeOnPageColumn),
       });
 
       if (score > bestScore) {
@@ -310,6 +330,7 @@ async function resolvePageTable(prisma) {
             load: loadColumn.original,
             scope: scopeColumn ? scopeColumn.original : null,
             lcp: lcpColumn ? lcpColumn.original : null,
+            timeOnPage: timeOnPageColumn ? timeOnPageColumn.original : null,
             count: countColumn ? countColumn.original : null,
           },
         };
@@ -544,7 +565,7 @@ async function loadDeviceMetricsFromDedicatedView(prisma) {
 async function loadPageMetricsFromDedicatedView(prisma) {
   try {
     const rows = await prisma.$queryRawUnsafe(
-      "SELECT path, scope, avg_load, lcp, weight FROM analytics_page_metrics",
+      "SELECT path, scope, avg_load, lcp, avg_time_on_page, weight FROM analytics_page_metrics",
     );
     if (!Array.isArray(rows)) {
       return [];
@@ -568,11 +589,19 @@ async function loadPageMetricsFromDedicatedView(prisma) {
       const scope = normalizeScope(row?.scope ?? row?.SCOPE ?? null, normalizedPath);
       const lcpMsRaw = normalizeDurationToMs(row?.lcp ?? row?.LCP ?? row?.largest_contentful_paint);
       const weight = Math.max(0, Math.round(toNumber(row?.weight ?? row?.WEIGHT ?? row?.samples)));
+      const avgTimeOnPageSecondsRaw = toNumber(
+        row?.avg_time_on_page ?? row?.AVG_TIME_ON_PAGE ?? row?.avg_time_on_page_seconds,
+      );
+      const avgTimeOnPageSeconds =
+        Number.isFinite(avgTimeOnPageSecondsRaw) && avgTimeOnPageSecondsRaw > 0
+          ? Math.max(0, Math.round(avgTimeOnPageSecondsRaw))
+          : null;
 
       metrics.push({
         path: normalizedPath,
         avgPageLoadMs: Math.max(0, Math.round(avgLoadMs)),
         lcpMs: lcpMsRaw > 0 ? Math.max(0, Math.round(lcpMsRaw)) : null,
+        avgTimeOnPageSeconds,
         scope,
         weight: weight > 0 ? weight : undefined,
       });
@@ -705,6 +734,9 @@ export async function loadPagePerformanceMetrics() {
   if (match.columns.lcp) {
     selectParts.push(`${quoteIdentifier(match.columns.lcp)} AS lcp`);
   }
+  if (match.columns.timeOnPage) {
+    selectParts.push(`${quoteIdentifier(match.columns.timeOnPage)} AS time_on_page`);
+  }
   if (match.columns.count) {
     selectParts.push(`${quoteIdentifier(match.columns.count)} AS weight`);
   }
@@ -756,6 +788,8 @@ export async function loadPagePerformanceMetrics() {
         totalLoad: 0,
         totalLcp: 0,
         lcpWeight: 0,
+        totalTimeOnPageSeconds: 0,
+        timeOnPageWeight: 0,
       });
     }
 
@@ -766,6 +800,21 @@ export async function loadPagePerformanceMetrics() {
       bucket.totalLcp += lcpMs * weight;
       bucket.lcpWeight += weight;
     }
+
+    let timeOnPageSeconds = null;
+    if (match.columns.timeOnPage) {
+      const parsedTime = normalizeDurationToMs(
+        row.time_on_page ?? row.TIME_ON_PAGE ?? row.avg_time_on_page ?? row.timeOnPage,
+      );
+      if (Number.isFinite(parsedTime) && parsedTime > 0) {
+        timeOnPageSeconds = parsedTime / 1000;
+      }
+    }
+
+    if (timeOnPageSeconds !== null) {
+      bucket.totalTimeOnPageSeconds += timeOnPageSeconds * weight;
+      bucket.timeOnPageWeight += weight;
+    }
   }
 
   const result = [];
@@ -774,10 +823,16 @@ export async function loadPagePerformanceMetrics() {
     if (!Number.isFinite(bucket.totalWeight) || bucket.totalWeight <= 0) continue;
     const avgLoad = bucket.totalLoad / bucket.totalWeight;
     const avgLcp = bucket.lcpWeight > 0 ? bucket.totalLcp / bucket.lcpWeight : null;
+    const avgTimeOnPageSeconds =
+      bucket.timeOnPageWeight > 0
+        ? bucket.totalTimeOnPageSeconds / bucket.timeOnPageWeight
+        : null;
     result.push({
       path: bucket.path,
       avgPageLoadMs: Math.max(0, Math.round(avgLoad)),
       lcpMs: avgLcp !== null ? Math.max(0, Math.round(avgLcp)) : null,
+      avgTimeOnPageSeconds:
+        avgTimeOnPageSeconds !== null ? Math.max(0, Math.round(avgTimeOnPageSeconds)) : null,
       scope: bucket.scope,
       weight: bucket.totalWeight,
     });
@@ -874,6 +929,10 @@ export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
           entry.lcpMs === null || entry.lcpMs === undefined
             ? null
             : Math.max(0, Math.round(Number(entry.lcpMs))),
+        avgTimeOnPageSeconds:
+          entry.avgTimeOnPageSeconds === null || entry.avgTimeOnPageSeconds === undefined
+            ? null
+            : Math.max(0, Math.round(Number(entry.avgTimeOnPageSeconds))),
       });
     }
   }
@@ -900,6 +959,13 @@ export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
     }
     if (override.lcpMs !== null && override.lcpMs !== undefined && Number.isFinite(override.lcpMs)) {
       updates.lcpMs = override.lcpMs;
+    }
+    if (
+      override.avgTimeOnPageSeconds !== null &&
+      override.avgTimeOnPageSeconds !== undefined &&
+      Number.isFinite(override.avgTimeOnPageSeconds)
+    ) {
+      updates.avgTimeOnPageSeconds = override.avgTimeOnPageSeconds;
     }
 
     result.push({ ...entry, ...updates });

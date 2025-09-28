@@ -10,6 +10,7 @@ describe("aggregatePageMetrics", () => {
         scope: "public",
         loadTimeMs: 1_200,
         lcpMs: 900,
+        timeOnPageMs: 95_000,
         weight: 2,
         deviceHint: "Desktop",
       },
@@ -18,6 +19,7 @@ describe("aggregatePageMetrics", () => {
         scope: "Public",
         loadTimeMs: 1_500,
         lcpMs: null,
+        timeOnPageMs: 110_000,
         weight: 1,
         deviceHint: "desktop",
       },
@@ -26,6 +28,7 @@ describe("aggregatePageMetrics", () => {
         scope: null,
         loadTimeMs: 820,
         lcpMs: 640,
+        timeOnPageMs: 160_000,
         weight: 3,
         deviceHint: "iPhone",
       },
@@ -34,6 +37,7 @@ describe("aggregatePageMetrics", () => {
         scope: "members",
         loadTimeMs: 780,
         lcpMs: 610,
+        timeOnPageMs: 140_000,
         weight: 1,
         deviceHint: "iphone",
       },
@@ -53,6 +57,7 @@ describe("aggregatePageMetrics", () => {
         scope: "members",
         avgLoadMs: 810,
         lcpMs: 633,
+        avgTimeOnPageSeconds: 155,
         weight: 4,
       },
       {
@@ -60,6 +65,7 @@ describe("aggregatePageMetrics", () => {
         scope: "public",
         avgLoadMs: 1300,
         lcpMs: 900,
+        avgTimeOnPageSeconds: 100,
         weight: 3,
       },
     ]);
@@ -82,7 +88,7 @@ describe("aggregatePageMetrics", () => {
   it("ignores entries without metrics", () => {
     const result = aggregatePageMetrics([
       { path: "/foo", scope: "public", loadTimeMs: null, lcpMs: null, weight: 3 },
-      { path: "/bar", scope: "public", weight: 2 },
+      { path: "/bar", scope: "public", weight: 2, timeOnPageMs: null },
     ]);
 
     expect(result.pages).toEqual([]);

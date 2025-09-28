@@ -59,6 +59,7 @@ describe("web vitals analytics route", () => {
         metrics: {
           loadTime: 2_240.6,
           lcp: 1_480.2,
+          timeOnPage: 90_123.4,
         },
         device: {
           userAgent: "Mozilla/5.0",
@@ -98,6 +99,7 @@ describe("web vitals analytics route", () => {
           scope: "public",
           loadTimeMs: 2241,
           lcpMs: 1480,
+          timeOnPageMs: 90123,
           weight: 3,
         }),
       }),
@@ -182,5 +184,25 @@ describe("web vitals analytics route", () => {
     expect(upsertPageMock).not.toHaveBeenCalled();
     expect(upsertDeviceMock).not.toHaveBeenCalled();
     expect(upsertTrafficMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts payload with only time on page metric", async () => {
+    const response = await POST(
+      createRequest({
+        sessionId: "metric-999",
+        path: "/galerie",
+        metrics: { timeOnPage: 45_000 },
+        device: { userAgent: "Test", deviceHint: "Desktop" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(upsertPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          timeOnPageMs: 45000,
+        }),
+      }),
+    );
   });
 });
