@@ -12,7 +12,7 @@ import { ProductionWorkspaceHeader } from "@/components/production/workspace-hea
 
 import {
   ClearActiveProductionForm,
-  CreateProductionForm,
+  CreateProductionDialog,
   SetActiveProductionForm,
 } from "./production-forms-client";
 
@@ -104,14 +104,9 @@ export default async function ProduktionenPage() {
   ) : null;
 
   const headerActions = (
-    <>
-      <Button asChild variant="outline" size="sm">
-        <Link href="#produktionen">Produktion auswählen</Link>
-      </Button>
-      <Button asChild size="sm">
-        <Link href="#produktion-anlegen">Neue Produktion anlegen</Link>
-      </Button>
-    </>
+    <Button asChild variant="outline" size="sm">
+      <Link href="#produktionen">Produktion auswählen</Link>
+    </Button>
   );
 
   return (
@@ -166,33 +161,25 @@ export default async function ProduktionenPage() {
               Setze eine Produktion als aktiv, um Rollen, Szenen und Breakdown-Aufgaben gezielt zu bearbeiten.
             </p>
           </div>
-          {shows.length > 0 ? (
-            <Badge variant="outline">
-              {shows.length} Eintr
-              {shows.length === 1 ? "ag" : "äge"}
-            </Badge>
-          ) : null}
-        </div>
-
-        <Card id="produktion-anlegen" className="border-dashed border-primary/50 bg-primary/5">
-          <CardHeader className="space-y-2">
-            <CardTitle className="text-base font-semibold text-primary">Neue Produktion anlegen</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Erfasse Jahrgang, optionale Beschreibung und starte direkt in den modernen Gewerke-, Rollen- und Szenen-Workflows.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <CreateProductionForm
+          <div className="flex flex-wrap items-center gap-2">
+            {shows.length > 0 ? (
+              <Badge variant="outline">
+                {shows.length} Eintr
+                {shows.length === 1 ? "ag" : "äge"}
+              </Badge>
+            ) : null}
+            <CreateProductionDialog
               redirectPath="/mitglieder/produktionen"
               suggestedYear={suggestedYear}
               shouldSetActiveByDefault={shouldSetActiveByDefault}
+              trigger={<Button size="sm">Neue Produktion anlegen</Button>}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {shows.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Noch keine Produktionen angelegt. Nutze das Formular, um deine erste Produktion anzulegen.
+            Noch keine Produktionen angelegt. Nutze den Button „Neue Produktion anlegen“, um deine erste Produktion einzurichten.
           </p>
         ) : (
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
