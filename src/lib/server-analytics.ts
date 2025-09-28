@@ -11,7 +11,6 @@ import type {
   AnalyticsTrafficSource,
 } from "@prisma/client";
 
-import staticAnalyticsData from "@/data/server-analytics-static.json" with { type: "json" };
 import { deriveOptimizationInsights } from "@/lib/analytics/derive-optimization-insights";
 import type { LoadedServerLog } from "@/lib/analytics/load-server-logs";
 import { loadLatestCriticalServerLogs } from "@/lib/analytics/load-server-logs";
@@ -151,7 +150,79 @@ export type ServerAnalytics = {
 
 type StaticAnalyticsData = Omit<ServerAnalytics, "generatedAt" | "isDemoData">;
 
-const STATIC_ANALYTICS = staticAnalyticsData as StaticAnalyticsData;
+const DEFAULT_SUMMARY: ServerSummary = {
+  uptimePercentage: 0,
+  requestsLast24h: 0,
+  averageResponseTimeMs: 0,
+  errorRate: 0,
+  peakConcurrentUsers: 0,
+  cacheHitRate: 0,
+  realtimeEventsLast24h: 0,
+};
+
+const DEFAULT_REQUEST_BREAKDOWN: RequestBreakdown = {
+  frontend: {
+    requests: 0,
+    avgResponseTimeMs: 0,
+    cacheHitRate: 0,
+    avgPayloadKb: 0,
+  },
+  members: {
+    requests: 0,
+    avgResponseTimeMs: 0,
+    realtimeEvents: 0,
+    avgSessionDurationSeconds: 0,
+  },
+  api: {
+    requests: 0,
+    avgResponseTimeMs: 0,
+    backgroundJobs: 0,
+    errorRate: 0,
+  },
+};
+
+const DEFAULT_VISITOR_DISTRIBUTION: VisitorDistributionSegment[] = [
+  {
+    id: "logged-out",
+    label: "Nicht eingeloggt",
+    requests: 0,
+    share: 0,
+    avgResponseTimeMs: 0,
+    avgSessionDurationSeconds: 0,
+  },
+  {
+    id: "logged-in",
+    label: "Eingeloggt",
+    requests: 0,
+    share: 0,
+    avgResponseTimeMs: 0,
+    avgSessionDurationSeconds: 0,
+    realtimeEvents: 0,
+  },
+  {
+    id: "bot",
+    label: "Bots & Crawler",
+    requests: 0,
+    share: 0,
+    avgResponseTimeMs: 0,
+    blockedRequests: 0,
+  },
+];
+
+const DEFAULT_ANALYTICS: StaticAnalyticsData = {
+  summary: DEFAULT_SUMMARY,
+  resourceUsage: [],
+  requestBreakdown: DEFAULT_REQUEST_BREAKDOWN,
+  visitorDistribution: DEFAULT_VISITOR_DISTRIBUTION,
+  peakHours: [],
+  publicPages: [],
+  memberPages: [],
+  trafficSources: [],
+  deviceBreakdown: [],
+  sessionInsights: [],
+  optimizationInsights: [],
+  serverLogs: [],
+};
 
 const previousResourceUsage = new Map<string, number>();
 
@@ -687,25 +758,25 @@ async function collectSystemResourceUsage(): Promise<ServerResourceUsage[]> {
 }
 
 export async function collectServerAnalytics(): Promise<ServerAnalytics> {
-  let resourceUsage = STATIC_ANALYTICS.resourceUsage;
-  let deviceBreakdown = cloneDeviceStats(STATIC_ANALYTICS.deviceBreakdown);
-  let publicPages = clonePageEntries(STATIC_ANALYTICS.publicPages);
-  let memberPages = clonePageEntries(STATIC_ANALYTICS.memberPages);
-  let serverLogs: LoadedServerLog[] = (STATIC_ANALYTICS.serverLogs ?? []).map((entry) => ({
+  let resourceUsage = DEFAULT_ANALYTICS.resourceUsage.map((entry) => ({ ...entry }));
+  let deviceBreakdown = cloneDeviceStats(DEFAULT_ANALYTICS.deviceBreakdown);
+  let publicPages = clonePageEntries(DEFAULT_ANALYTICS.publicPages);
+  let memberPages = clonePageEntries(DEFAULT_ANALYTICS.memberPages);
+  let serverLogs: LoadedServerLog[] = (DEFAULT_ANALYTICS.serverLogs ?? []).map((entry) => ({
     ...entry,
     tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
   }));
-  let summary: ServerSummary = { ...STATIC_ANALYTICS.summary };
+  let summary: ServerSummary = { ...DEFAULT_ANALYTICS.summary };
   let requestBreakdown: RequestBreakdown = {
-    frontend: { ...STATIC_ANALYTICS.requestBreakdown.frontend },
-    members: { ...STATIC_ANALYTICS.requestBreakdown.members },
-    api: { ...STATIC_ANALYTICS.requestBreakdown.api },
+    frontend: { ...DEFAULT_ANALYTICS.requestBreakdown.frontend },
+    members: { ...DEFAULT_ANALYTICS.requestBreakdown.members },
+    api: { ...DEFAULT_ANALYTICS.requestBreakdown.api },
   };
-  let visitorDistribution = cloneVisitorDistribution(STATIC_ANALYTICS.visitorDistribution);
-  let peakHours: PeakHour[] = (STATIC_ANALYTICS.peakHours ?? []).map((entry) => ({ ...entry }));
-  let trafficSources: TrafficSource[] = STATIC_ANALYTICS.trafficSources.map((entry) => ({ ...entry }));
-  let sessionInsights: SessionInsight[] = STATIC_ANALYTICS.sessionInsights.map((entry) => ({ ...entry }));
-  let optimizationInsights: OptimizationInsight[] = STATIC_ANALYTICS.optimizationInsights.map((entry) => ({
+  let visitorDistribution = cloneVisitorDistribution(DEFAULT_ANALYTICS.visitorDistribution);
+  let peakHours: PeakHour[] = (DEFAULT_ANALYTICS.peakHours ?? []).map((entry) => ({ ...entry }));
+  let trafficSources: TrafficSource[] = DEFAULT_ANALYTICS.trafficSources.map((entry) => ({ ...entry }));
+  let sessionInsights: SessionInsight[] = DEFAULT_ANALYTICS.sessionInsights.map((entry) => ({ ...entry }));
+  let optimizationInsights: OptimizationInsight[] = DEFAULT_ANALYTICS.optimizationInsights.map((entry) => ({
     ...entry,
   }));
   let latestHttpSummary: AnalyticsHttpSummary | null = null;
@@ -738,10 +809,10 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   };
 
   const pageMetadata = new Map<string, PagePerformanceEntry>();
-  for (const entry of STATIC_ANALYTICS.publicPages) {
+  for (const entry of DEFAULT_ANALYTICS.publicPages) {
     pageMetadata.set(entry.path, entry);
   }
-  for (const entry of STATIC_ANALYTICS.memberPages) {
+  for (const entry of DEFAULT_ANALYTICS.memberPages) {
     pageMetadata.set(entry.path, entry);
   }
 
@@ -902,14 +973,14 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     deviceStats: deviceBreakdown,
     sessionInsights,
     httpSummary: latestHttpSummary,
-    fallback: STATIC_ANALYTICS.optimizationInsights,
+    fallback: DEFAULT_ANALYTICS.optimizationInsights,
     useFallbackOnly: !hasDynamicOptimizationData,
   });
 
   return {
     generatedAt: new Date().toISOString(),
     isDemoData: !hasDatabaseData,
-    ...STATIC_ANALYTICS,
+    ...DEFAULT_ANALYTICS,
     summary,
     requestBreakdown,
     visitorDistribution,
