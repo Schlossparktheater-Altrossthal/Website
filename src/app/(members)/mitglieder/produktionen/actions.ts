@@ -13,7 +13,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import { ACTIVE_PRODUCTION_COOKIE } from "@/lib/active-production";
+import { ACTIVE_PRODUCTION_COOKIE, getActiveProduction } from "@/lib/active-production";
 import { setOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
 export type ProductionActionResult =
@@ -456,6 +456,15 @@ async function requireProductionManager() {
   return { userId };
 }
 
+async function requireActiveProductionManager() {
+  const { userId } = await requireProductionManager();
+  const activeProduction = await getActiveProduction(userId);
+  if (!activeProduction) {
+    throw new Error("Bitte wähle zunächst eine aktive Produktion aus.");
+  }
+  return { userId, activeProduction };
+}
+
 async function ensureProductionManager() {
   try {
     const { userId } = await requireProductionManager();
@@ -581,7 +590,7 @@ export async function deleteDepartmentAction(formData: FormData): Promise<void> 
 }
 
 export async function addDepartmentMemberAction(formData: FormData): Promise<void> {
-  await requireProductionManager();
+  const { activeProduction } = await requireActiveProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const departmentId = readString(formData, "departmentId", { label: "Gewerk" });
@@ -598,6 +607,18 @@ export async function addDepartmentMemberAction(formData: FormData): Promise<voi
     ]);
     if (!department) throw new Error("Gewerk wurde nicht gefunden.");
     if (!user) throw new Error("Mitglied wurde nicht gefunden.");
+
+    const productionMembership = await prisma.productionMembership.findFirst({
+      where: {
+        showId: activeProduction.id,
+        userId,
+        OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+      },
+      select: { id: true },
+    });
+    if (!productionMembership) {
+      throw new Error("Mitglied gehört nicht zur aktiven Produktion.");
+    }
 
     await prisma.departmentMembership.upsert({
       where: { departmentId_userId: { departmentId, userId } },
@@ -625,15 +646,28 @@ export async function addDepartmentMemberAction(formData: FormData): Promise<voi
 }
 
 export async function updateDepartmentMemberAction(formData: FormData): Promise<void> {
-  await requireProductionManager();
+  const { activeProduction } = await requireActiveProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const membershipId = readString(formData, "membershipId", { label: "Mitgliedschaft" });
     const membership = await prisma.departmentMembership.findUnique({
       where: { id: membershipId },
+      select: { id: true, userId: true, role: true },
     });
     if (!membership) {
       throw new Error("Mitgliedschaft wurde nicht gefunden.");
+    }
+
+    const productionMembership = await prisma.productionMembership.findFirst({
+      where: {
+        showId: activeProduction.id,
+        userId: membership.userId,
+        OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+      },
+      select: { id: true },
+    });
+    if (!productionMembership) {
+      throw new Error("Mitglied gehört nicht zur aktiven Produktion.");
     }
 
     const role =
@@ -661,16 +695,28 @@ export async function updateDepartmentMemberAction(formData: FormData): Promise<
 }
 
 export async function removeDepartmentMemberAction(formData: FormData): Promise<void> {
-  await requireProductionManager();
+  const { activeProduction } = await requireActiveProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const membershipId = readString(formData, "membershipId", { label: "Mitgliedschaft" });
     const membership = await prisma.departmentMembership.findUnique({
       where: { id: membershipId },
-      select: { id: true },
+      select: { id: true, userId: true },
     });
     if (!membership) {
       throw new Error("Mitgliedschaft wurde nicht gefunden.");
+    }
+
+    const productionMembership = await prisma.productionMembership.findFirst({
+      where: {
+        showId: activeProduction.id,
+        userId: membership.userId,
+        OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+      },
+      select: { id: true },
+    });
+    if (!productionMembership) {
+      throw new Error("Mitglied gehört nicht zur aktiven Produktion.");
     }
 
     await prisma.departmentMembership.delete({ where: { id: membershipId } });

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
+import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
 import { formatUserName, ROLE_LABELS } from "../../meine-gewerke/utils";
 
@@ -41,6 +42,30 @@ export default async function ProduktionsGewerkePage() {
   }
 
   const activeProduction = await getActiveProduction(session.user?.id);
+
+  const headerActions = (
+    <Button asChild variant="outline" size="sm">
+      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
+    </Button>
+  );
+
+  if (!activeProduction) {
+    return (
+      <div className="space-y-10">
+        <ProductionWorkspaceHeader
+          title="Gewerke &amp; Zuständigkeiten"
+          description="Strukturiere dein Produktionsteam, vergib Verantwortlichkeiten und halte Kontaktdaten zentral fest."
+          activeWorkspace="departments"
+          production={null}
+          actions={headerActions}
+        />
+        <ProductionWorkspaceEmptyState
+          title="Keine aktive Produktion ausgewählt"
+          description="Wähle in der Produktionsübersicht eine aktive Produktion aus, um Gewerke und Zuständigkeiten zu bearbeiten."
+        />
+      </div>
+    );
+  }
 
   const [departments, users] = await Promise.all([
     prisma.department.findMany({
@@ -81,12 +106,6 @@ export default async function ProduktionsGewerkePage() {
     { label: "Gewerke", value: departments.length, hint: "Definierte Teams" },
     { label: "Zuordnungen", value: totalMemberships, hint: "Mitglieder mit Rollen" },
   ];
-
-  const headerActions = (
-    <Button asChild variant="outline" size="sm">
-      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
-    </Button>
-  );
 
   const summaryActions = activeProduction ? (
     <>
