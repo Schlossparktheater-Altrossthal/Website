@@ -2,7 +2,6 @@
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import type { HolidayRange } from '@/types/holidays';
 
 import type { BlockedDay } from '../block-calendar';
@@ -14,11 +13,16 @@ import {
 } from './useBlockOverviewData';
 import { DesktopTimeline } from './desktop-timeline';
 import { MobileTimeline } from './mobile-timeline';
+import {
+  timelineLegendItems,
+  timelineToneStyles,
+  type TimelineTone,
+} from './timeline-legend';
 
 type LegendItemProps = {
   label: string;
   description: string;
-  className?: string;
+  tone: TimelineTone;
 };
 
 type OverviewShellProps = {
@@ -52,21 +56,15 @@ type OverviewShellProps = {
   formatCreatedAtLabel: (createdAt?: string | null) => string | null;
 };
 
-function LegendItem({ label, description, className }: LegendItemProps) {
+function LegendItem({ label, description, tone }: LegendItemProps) {
+  const styles = timelineToneStyles({ tone });
+
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-3 py-2 shadow-sm">
-      <span
-        aria-hidden
-        className={cn(
-          'h-8 w-8 shrink-0 rounded-md border border-border/60 bg-muted',
-          className,
-        )}
-      />
+    <div className={styles.legendContainer()}>
+      <span aria-hidden className={styles.legendSwatch()} />
       <div className="flex flex-col">
-        <span className="text-xs font-semibold uppercase tracking-wide text-foreground/90">
-          {label}
-        </span>
-        <span className="text-[11px] leading-5 text-muted-foreground/80">{description}</span>
+        <span className={styles.legendLabel()}>{label}</span>
+        <span className={styles.legendDescription()}>{description}</span>
       </div>
     </div>
   );
@@ -153,16 +151,18 @@ export function OverviewShell({
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
             <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">Gesperrte Tage</div>
-            <div className="mt-1 flex items-baseline gap-2 text-lg font-semibold sm:text-xl">
+            <div className="mt-1 flex flex-col gap-1 text-lg font-semibold sm:text-xl">
               <span>{totalBlockedDays}</span>
-              <span className="text-[11px] font-medium text-slate-300/80">({upcomingBlockedDays} bevorstehend)</span>
+              <span className="text-[11px] font-medium text-slate-300/80 line-clamp-1">
+                {upcomingBlockedDays} bevorstehend
+              </span>
             </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
             <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">Ferien in der Ansicht</div>
-            <div className="mt-1 flex items-baseline gap-2 text-lg font-semibold sm:text-xl">
+            <div className="mt-1 flex flex-col gap-1 text-lg font-semibold sm:text-xl">
               <span>{holidaysInRangeCount}</span>
-              <span className="text-[11px] font-medium text-slate-300/80">
+              <span className="text-[11px] font-medium text-slate-300/80 line-clamp-2">
                 {busiestMember ? `Top-Sperren: ${busiestMember.name} (${busiestMember.total})` : 'Keine Häufungen'}
               </span>
             </div>
@@ -176,26 +176,9 @@ export function OverviewShell({
             Klicke oder tippe auf rot markierte Sperrtage, um Hintergründe und Ferieninfos zu lesen. Gesperrte Tage erscheinen kompakt in Rot, eingeschränkte Slots schimmern in bernsteinfarbenen Tönen, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription} {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <LegendItem
-              label="Gesperrt"
-              description="Eingetragene Abwesenheiten – Details per Klick"
-              className="border-destructive/60 bg-transparent"
-            />
-            <LegendItem
-              label="Eingeschränkt"
-              description="Teilnahme nur in bestimmten Zeitfenstern"
-              className="border-amber-300/60 bg-amber-200/40 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/20 dark:text-amber-100"
-            />
-            <LegendItem
-              label="Ferien"
-              description="Automatische Kalenderdaten"
-              className="border-sky-400/60 bg-sky-500/15 text-sky-700 dark:text-sky-200"
-            />
-            <LegendItem
-              label="Frei"
-              description="Keine Konflikte gemeldet"
-              className="border-border/60 bg-muted/40 text-muted-foreground"
-            />
+            {timelineLegendItems.map((item) => (
+              <LegendItem key={item.id} {...item} />
+            ))}
           </div>
         </div>
       </div>

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
+import { Activity, AlertTriangle, HardDrive, Radio, ShieldCheck, Timer, Users } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { resetServerAnalyticsAction, updateServerLogStatusAction } from "./actions";
+import { OverviewMetrics, type OverviewMetricDefinition } from "./overview-metrics";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const decimalFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -347,6 +350,65 @@ export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: S
   const showMockDataBadge = displayAnalytics.isDemoData;
   const renderMockDataBadge = () => (showMockDataBadge ? <MockDataBadge /> : null);
 
+  const overviewMetrics: OverviewMetricDefinition[] = [
+    {
+      id: "uptime",
+      label: "Verfügbarkeit",
+      value: `${uptimeFormat.format(displayAnalytics.summary.uptimePercentage)} %`,
+      description: "letzte 30 Tage",
+      icon: ShieldCheck,
+      tone: "emerald",
+    },
+    {
+      id: "requests",
+      label: "Anfragen (24h)",
+      value: numberFormat.format(displayAnalytics.summary.requestsLast24h),
+      description: "über alle Systeme hinweg",
+      icon: Activity,
+      tone: "violet",
+    },
+    {
+      id: "response-time",
+      label: "Ø Antwortzeit",
+      value: formatMs(displayAnalytics.summary.averageResponseTimeMs),
+      description: `95. Perzentil liegt bei ${formatMs(displayAnalytics.summary.averageResponseTimeMs * 1.6)}`,
+      icon: Timer,
+      tone: "sky",
+    },
+    {
+      id: "concurrent-users",
+      label: "Peak gleichzeitiger Nutzer",
+      value: numberFormat.format(displayAnalytics.summary.peakConcurrentUsers),
+      description: "innerhalb der letzten 24 Stunden",
+      icon: Users,
+      tone: "indigo",
+    },
+    {
+      id: "cache-hit",
+      label: "Cache-Hit-Rate",
+      value: percentPreciseFormat.format(displayAnalytics.summary.cacheHitRate),
+      description: "Edge- und Anwendungscache kombiniert",
+      icon: HardDrive,
+      tone: "amber",
+    },
+    {
+      id: "realtime-events",
+      label: "Realtime-Ereignisse (24h)",
+      value: numberFormat.format(displayAnalytics.summary.realtimeEventsLast24h),
+      description: "Socket.io Updates und Live-Sync",
+      icon: Radio,
+      tone: "rose",
+    },
+    {
+      id: "error-rate",
+      label: "Fehlerquote",
+      value: percentPreciseFormat.format(displayAnalytics.summary.errorRate),
+      description: "5xx/4xx im Verhältnis zu allen Requests",
+      icon: AlertTriangle,
+      tone: "slate",
+    },
+  ];
+
   const connectionDotClass = useMemo(() => {
     switch (connectionStatus) {
       case "connected":
@@ -558,92 +620,7 @@ export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: S
         </div>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Verfügbarkeit
-              {renderMockDataBadge()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{uptimeFormat.format(displayAnalytics.summary.uptimePercentage)} %</p>
-            <p className="text-xs text-muted-foreground">letzte 30 Tage</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Anfragen (24h)
-              {renderMockDataBadge()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.requestsLast24h)}</p>
-            <p className="text-xs text-muted-foreground">über alle Systeme hinweg</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Ø Antwortzeit
-              {renderMockDataBadge()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{formatMs(displayAnalytics.summary.averageResponseTimeMs)}</p>
-            <p className="text-xs text-muted-foreground">95. Perzentil liegt bei {formatMs(displayAnalytics.summary.averageResponseTimeMs * 1.6)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Peak gleichzeitiger Nutzer
-              {renderMockDataBadge()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.peakConcurrentUsers)}</p>
-            <p className="text-xs text-muted-foreground">innerhalb der letzten 24 Stunden</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Cache-Hit-Rate
-              {renderMockDataBadge()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{percentPreciseFormat.format(displayAnalytics.summary.cacheHitRate)}</p>
-            <p className="text-xs text-muted-foreground">Edge- und Anwendungscache kombiniert</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Realtime-Ereignisse (24h)
-              {renderMockDataBadge()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{numberFormat.format(displayAnalytics.summary.realtimeEventsLast24h)}</p>
-            <p className="text-xs text-muted-foreground">Socket.io Updates und Live-Sync</p>
-          </CardContent>
-        </Card>
-        <Card className="border border-border/70">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              Fehlerquote
-              {renderMockDataBadge()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{percentPreciseFormat.format(displayAnalytics.summary.errorRate)}</p>
-            <p className="text-xs text-muted-foreground">5xx/4xx im Verhältnis zu allen Requests</p>
-          </CardContent>
-        </Card>
-      </div>
+          <OverviewMetrics metrics={overviewMetrics} renderBadge={renderMockDataBadge} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border border-border/70">

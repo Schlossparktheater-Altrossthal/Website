@@ -32,42 +32,25 @@ import {
   timelineStatusStyles,
   type TimelineStatus,
 } from './desktop-timeline';
+import {
+  timelineToneStyles,
+  type TimelineTone,
+} from './timeline-legend';
 import type {
   BlockOverviewSummary,
   PreparedMember,
   VisibleDayInfo,
 } from './useBlockOverviewData';
 
-const toneStyles = {
-  blocked: {
-    bullet: 'bg-destructive',
-    text: 'text-destructive/90',
-  },
-  limited: {
-    bullet: 'bg-amber-500',
-    text: 'text-amber-700 dark:text-amber-200',
-  },
-  preferred: {
-    bullet: 'bg-emerald-500',
-    text: 'text-emerald-600 dark:text-emerald-200',
-  },
-  holiday: {
-    bullet: 'bg-sky-500',
-    text: 'text-sky-700 dark:text-sky-200',
-  },
-} satisfies Record<
-  'blocked' | 'limited' | 'preferred' | 'holiday',
-  { bullet: string; text: string }
->;
-
 type ReasonPreviewProps = {
   reason: string;
   label: string;
-  tone: keyof typeof toneStyles;
+  tone: TimelineTone;
 };
 
 function ReasonPreview({ reason, label, tone }: ReasonPreviewProps) {
   const [open, setOpen] = React.useState(false);
+  const toneClasses = timelineToneStyles({ tone });
 
   const handleOpen = React.useCallback(
     (event: React.MouseEvent | React.KeyboardEvent) => {
@@ -93,24 +76,27 @@ function ReasonPreview({ reason, label, tone }: ReasonPreviewProps) {
             tabIndex={0}
             onClick={handleOpen}
             onKeyDown={handleOpen}
-            className={cn(
-              'group flex w-full cursor-pointer items-start gap-2 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              toneStyles[tone].text,
-            )}
-          >
-            <span
-              aria-hidden
               className={cn(
-                'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full transition-colors',
-                toneStyles[tone].bullet,
+                'group flex w-full cursor-pointer items-start gap-2 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                toneClasses.text(),
               )}
-            />
-            <span className="line-clamp-2 flex-1 text-[11px] leading-4">
-              {reason}
-            </span>
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full transition-colors',
+                  toneClasses.bullet(),
+                )}
+              />
+              <span className="line-clamp-2 flex-1 text-[11px] leading-4">
+                {reason}
+              </span>
             <Info
               aria-hidden
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-colors group-hover:text-foreground"
+              className={cn(
+                'mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-colors group-hover:text-foreground',
+                toneClasses.text(),
+              )}
             />
           </span>
         </TooltipTrigger>
