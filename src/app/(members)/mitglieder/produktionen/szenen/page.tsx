@@ -10,6 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
@@ -201,70 +210,79 @@ export default async function ProduktionsSzenenPage() {
         summaryActions={summaryActions}
       />
 
-      <Card>
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-lg font-semibold">Neue Szene anlegen</CardTitle>
-          <p className="text-sm text-muted-foreground">Erfasse Orte, Tageszeiten, Reihenfolgen und Notizen, um den Szenenplan aktuell zu halten.</p>
-        </CardHeader>
-        <CardContent>
-          <form action={createSceneAction} method="post" className="grid gap-6">
-            <input type="hidden" name="showId" value={show.id} />
-            <input type="hidden" name="redirectPath" value={currentPath} />
-            <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-3">
-              <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Basisdaten
-              </legend>
+      <div className="flex justify-end">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm">Szene anlegen</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Neue Szene anlegen</DialogTitle>
+              <DialogDescription>
+                Erfasse Orte, Tageszeiten, Reihenfolgen und Notizen, um den Szenenplan aktuell zu halten.
+              </DialogDescription>
+            </DialogHeader>
+            <form action={createSceneAction} method="post" className="grid gap-6">
+              <input type="hidden" name="showId" value={show.id} />
+              <input type="hidden" name="redirectPath" value={currentPath} />
+              <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-3">
+                <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Basisdaten
+                </legend>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Nummer</label>
+                  <Input name="identifier" maxLength={40} placeholder="z.B. 1" />
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-sm font-medium">Titel</label>
+                  <Input name="title" maxLength={160} placeholder="z.B. Ankunft im Park" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Ort</label>
+                  <Input name="location" maxLength={120} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Tageszeit</label>
+                  <Input name="timeOfDay" maxLength={60} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Slug</label>
+                  <Input name="slug" maxLength={80} placeholder="szene-1" />
+                </div>
+              </fieldset>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Reihenfolge</label>
+                  <Input type="number" name="sequence" min={0} max={9999} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Dauer (Minuten)</label>
+                  <Input type="number" name="duration" min={0} max={600} />
+                </div>
+              </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Nummer</label>
-                <Input name="identifier" maxLength={40} placeholder="z.B. 1" />
-              </div>
-              <div className="space-y-1 md:col-span-2">
-                <label className="text-sm font-medium">Titel</label>
-                <Input name="title" maxLength={160} placeholder="z.B. Ankunft im Park" />
+                <label className="text-sm font-medium">Zusammenfassung</label>
+                <Textarea name="summary" rows={2} maxLength={600} />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Ort</label>
-                <Input name="location" maxLength={120} />
+                <label className="text-sm font-medium">Notizen</label>
+                <Textarea name="notes" rows={2} maxLength={400} />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Tageszeit</label>
-                <Input name="timeOfDay" maxLength={60} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Slug</label>
-                <Input name="slug" maxLength={80} placeholder="szene-1" />
-              </div>
-            </fieldset>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Reihenfolge</label>
-                <Input type="number" name="sequence" min={0} max={9999} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Dauer (Minuten)</label>
-                <Input type="number" name="duration" min={0} max={600} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Zusammenfassung</label>
-              <Textarea name="summary" rows={2} maxLength={600} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Notizen</label>
-              <Textarea name="notes" rows={2} maxLength={400} />
-            </div>
-            <div>
-              <Button type="submit">Szene speichern</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              <DialogFooter className="pt-2 sm:justify-end">
+                <Button type="submit">Szene speichern</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <section className="space-y-6">
         {show.scenes.length === 0 ? (
           <Card>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Noch keine Szenen erfasst. Lege eine Szene über das Formular oben an.</p>
+              <p className="text-sm text-muted-foreground">
+                Noch keine Szenen erfasst. Nutze den Button &bdquo;Szene anlegen&ldquo;, um den Ablaufplan zu starten.
+              </p>
             </CardContent>
           </Card>
         ) : (
