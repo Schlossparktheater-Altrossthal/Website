@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { Component, type ReactNode, useMemo } from "react";
 import { motion } from "framer-motion";
 import { scaleSequential } from "d3-scale";
 import { interpolatePuBuGn } from "d3-scale-chromatic";
@@ -23,6 +23,35 @@ import { DistributionBars } from "./distribution-bars";
 
 const ReactWordcloud = dynamic<WordCloudProps>(() => import("react-wordcloud"), { ssr: false });
 
+class WordCloudErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error("[onboarding.interests.wordcloud]", error);
+  }
+
+  componentDidUpdate(prevProps: Readonly<{ children: ReactNode }>) {
+    if (prevProps.children !== this.props.children && this.state.hasError) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          Wordcloud konnte nicht geladen werden. Bitte neu laden oder später erneut versuchen.
+        </p>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 type InterestsSectionProps = {
   topTags: Array<z.infer<typeof distributionEntrySchema>>;
   wordCloud: Array<{ tag: string; weight: number }>;
@@ -40,10 +69,11 @@ const clusterColors: Record<string, string> = {
 };
 
 export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, diversity }: InterestsSectionProps) {
-  const words = useMemo<Word[]>(
-    () => wordCloud.map((entry) => ({ text: entry.tag, value: entry.weight })),
-    [wordCloud],
-  );
+  const words = useMemo<Word[]>(() => {
+    return wordCloud
+      .map((entry) => ({ text: entry.tag, value: Number(entry.weight) || 0 }))
+      .filter((entry) => Number.isFinite(entry.value) && entry.value >= 0);
+  }, [wordCloud]);
 
   const maxWeight = useMemo(() => words.reduce((max, word) => Math.max(max, word.value), 0), [words]);
 
@@ -128,7 +158,9 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
                 <span>{words.length} Stichwörter</span>
               </div>
               <div className="relative h-[300px] w-full overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-background via-muted/40 to-background p-2">
-                <ReactWordcloud words={words} callbacks={callbacks} options={wordCloudOptions} />
+                <WordCloudErrorBoundary>
+                  <ReactWordcloud words={words} callbacks={callbacks} options={wordCloudOptions} />
+                </WordCloudErrorBoundary>
               </div>
             </>
           )}
