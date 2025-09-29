@@ -49,6 +49,7 @@ Die Heuristiken werden auf maximal sechs Empfehlungen begrenzt. Ergibt sich kein
 
 * Wird keine Datenbankverbindung hergestellt oder liefert keine der oben genannten Quellen Werte, bleiben die statischen Fallback-Einträge aktiv.
 * Sobald mindestens eine der Datenquellen Daten liefert, werden dynamische Insights berechnet. Reicht die Datenlage dennoch nicht für eine Empfehlung, greifen ebenfalls die Fallbacks.
+* Mock- oder Demo-Daten dienen ausschließlich als Notlösung für lokale Entwicklung oder Ausfallzeiten. In produktiven Umgebungen müssen die Statistiken vollständig aus den erfassten Messwerten generiert werden.
 
 ## Anpassung
 
