@@ -63,6 +63,7 @@ interface FinalRehearsalWeekInfo {
   title: string | null;
   year: number;
   startDate: Date;
+  endDate: Date | null;
 }
 
 const INITIAL_STATS: DashboardStats = {
@@ -92,6 +93,8 @@ type MetricItem = {
 
 const DASHBOARD_CARD_SURFACE =
   "rounded-3xl border border-border/60 bg-gradient-to-br from-background via-background/95 to-background shadow-lg shadow-primary/5 backdrop-blur";
+
+const DAY_IN_MS = 86_400_000;
 
 const DASHBOARD_CARD_ACCENT =
   "rounded-3xl border border-primary/45 bg-gradient-to-br from-primary/12 via-background/95 to-background shadow-xl shadow-primary/10 backdrop-blur";
@@ -290,6 +293,8 @@ function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null 
   const startDate = parseIsoDate(value.startDate);
   if (!startDate) return null;
 
+  const endDate = parseIsoDate(value.endDate);
+
   const title = typeof value.title === "string" && value.title.trim() ? value.title : null;
   const yearRaw = value.year;
   const year =
@@ -302,6 +307,7 @@ function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null 
     title,
     year,
     startDate,
+    endDate,
   };
 }
 
@@ -643,13 +649,26 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     const showLabel = finalRehearsalWeek.title
       ? finalRehearsalWeek.title
       : `Produktion ${finalRehearsalWeek.year}`;
-    const formattedDate = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(startDate);
+    const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+    const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endDay = finalRehearsalWeek.endDate
+      ? new Date(
+          finalRehearsalWeek.endDate.getFullYear(),
+          finalRehearsalWeek.endDate.getMonth(),
+          finalRehearsalWeek.endDate.getDate(),
+        )
+      : null;
+    const formattedStart = formatter.format(startDay);
+    const formattedEnd = endDay ? formatter.format(endDay) : null;
+    const rangeHint = formattedEnd
+      ? `${showLabel} · ${formattedStart} – ${formattedEnd}`
+      : `${showLabel} · Start am ${formattedStart}`;
+    const effectiveEnd = endDay ?? new Date(startDay.getTime() + 6 * DAY_IN_MS);
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
     const diffMs = startDay.getTime() - today.getTime();
-    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffMs / DAY_IN_MS);
 
     if (diffDays > 0) {
       let tone: "info" | "warning" | "destructive" = "info";
@@ -661,7 +680,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       return {
         label: "Tage bis Endprobenwoche",
         value: diffDays,
-        hint: `${showLabel} · Start am ${formattedDate}`,
+        hint: rangeHint,
         tone,
       } as const;
     }
@@ -670,15 +689,24 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       return {
         label: "Endprobenwoche",
         value: "Heute",
-        hint: `${showLabel} · Start am ${formattedDate}`,
+        hint: rangeHint,
+        tone: "warning" as const,
+      };
+    }
+
+    if (effectiveEnd.getTime() >= today.getTime()) {
+      return {
+        label: "Endprobenwoche",
+        value: "Läuft",
+        hint: rangeHint,
         tone: "warning" as const,
       };
     }
 
     return {
       label: "Endprobenwoche",
-      value: "Gestartet",
-      hint: `${showLabel} · Start am ${formattedDate}`,
+      value: "Abgeschlossen",
+      hint: rangeHint,
       tone: "positive" as const,
     };
   }, [finalRehearsalWeek]);

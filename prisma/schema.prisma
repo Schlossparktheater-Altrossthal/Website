@@ -378,6 +378,7 @@ model Show {
   posterUrl  String?
   revealedAt DateTime?
   finalRehearsalWeekStart DateTime?
+  finalRehearsalWeekEnd   DateTime?
   meta       Json?
   clues      Clue[]
   rehearsals Rehearsal[]

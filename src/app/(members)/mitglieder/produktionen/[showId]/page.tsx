@@ -61,9 +61,22 @@ export default async function ProduktionDetailPage({
   const finalRehearsalWeekStartValue = show.finalRehearsalWeekStart
     ? show.finalRehearsalWeekStart.toISOString().slice(0, 10)
     : "";
+  const finalRehearsalWeekEndValue = show.finalRehearsalWeekEnd
+    ? show.finalRehearsalWeekEnd.toISOString().slice(0, 10)
+    : "";
   const finalRehearsalWeekStartLabel = show.finalRehearsalWeekStart
     ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(show.finalRehearsalWeekStart)
     : null;
+  const finalRehearsalWeekEndLabel = show.finalRehearsalWeekEnd
+    ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(show.finalRehearsalWeekEnd)
+    : null;
+  const finalRehearsalWeekRangeLabel = finalRehearsalWeekStartLabel && finalRehearsalWeekEndLabel
+    ? `Aktueller Zeitraum: ${finalRehearsalWeekStartLabel} – ${finalRehearsalWeekEndLabel}`
+    : finalRehearsalWeekStartLabel
+      ? `Aktueller Start: ${finalRehearsalWeekStartLabel}`
+      : finalRehearsalWeekEndLabel
+        ? `Aktuelles Ende: ${finalRehearsalWeekEndLabel}`
+        : null;
   const whatsappLink = getOnboardingWhatsAppLink(show.meta);
   const onboardingRedirect = `/mitglieder/produktionen/${show.id}`;
   const updateDialogShow = {
@@ -159,7 +172,7 @@ export default async function ProduktionDetailPage({
         <CardHeader className="space-y-2">
           <CardTitle className="text-lg font-semibold">Endprobenwoche</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Hinterlege den Start der großen Endprobenwoche. Mitglieder sehen darauf basierend einen Countdown
+            Hinterlege den Zeitraum der großen Endprobenwoche. Mitglieder sehen darauf basierend einen Countdown
             im Dashboard.
           </p>
         </CardHeader>
@@ -180,10 +193,21 @@ export default async function ProduktionDetailPage({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                {finalRehearsalWeekStartLabel
-                  ? `Aktueller Start: ${finalRehearsalWeekStartLabel}`
-                  : "Kein Datum hinterlegt."}
+                {finalRehearsalWeekRangeLabel ?? "Kein Zeitraum hinterlegt."}
               </p>
+            </div>
+            <div className="space-y-2 sm:max-w-xs">
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="finalRehearsalWeekEnd">
+                  Ende der Endprobenwoche
+                </label>
+                <Input
+                  id="finalRehearsalWeekEnd"
+                  type="date"
+                  name="finalRehearsalWeekEnd"
+                  defaultValue={finalRehearsalWeekEndValue}
+                />
+              </div>
             </div>
             <Button type="submit" className="sm:w-auto">
               Zeitplan aktualisieren

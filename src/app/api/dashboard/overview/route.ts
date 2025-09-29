@@ -50,7 +50,13 @@ export async function GET() {
     const activeProductionPromise = activeProductionId
       ? prisma.show.findUnique({
           where: { id: activeProductionId },
-          select: { id: true, title: true, year: true, finalRehearsalWeekStart: true },
+          select: {
+            id: true,
+            title: true,
+            year: true,
+            finalRehearsalWeekStart: true,
+            finalRehearsalWeekEnd: true,
+          },
         })
       : null;
 
@@ -233,6 +239,7 @@ export async function GET() {
           title: activeProduction.title,
           year: activeProduction.year,
           startDate: activeProduction.finalRehearsalWeekStart.toISOString(),
+          endDate: activeProduction.finalRehearsalWeekEnd?.toISOString() ?? null,
         }
       : null;
 

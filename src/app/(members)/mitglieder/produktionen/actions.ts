@@ -132,6 +132,24 @@ export async function createProductionAction(formData: FormData): Promise<Produc
       "finalRehearsalWeekStart",
       "Start der Endprobenwoche",
     );
+    const finalRehearsalWeekEnd = parseOptionalDate(
+      formData,
+      "finalRehearsalWeekEnd",
+      "Ende der Endprobenwoche",
+    );
+
+    if (finalRehearsalWeekEnd && !finalRehearsalWeekStart) {
+      throw new Error(
+        "Bitte gib auch ein Startdatum an, wenn du ein Enddatum für die Endprobenwoche festlegst.",
+      );
+    }
+    if (
+      finalRehearsalWeekStart &&
+      finalRehearsalWeekEnd &&
+      finalRehearsalWeekEnd.getTime() < finalRehearsalWeekStart.getTime()
+    ) {
+      throw new Error("Das Ende der Endprobenwoche darf nicht vor dem Start liegen.");
+    }
     const setActive = parseCheckbox(formData.get("setActive"));
     const redirectPath = readOptionalString(formData, "redirectPath");
 
@@ -157,6 +175,7 @@ export async function createProductionAction(formData: FormData): Promise<Produc
                 : Prisma.JsonNull,
         revealedAt: revealDate ?? null,
         finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
+        finalRehearsalWeekEnd: finalRehearsalWeekEnd ?? null,
       },
       select: { id: true },
     });
@@ -215,6 +234,16 @@ export async function updateProductionAction(formData: FormData): Promise<Produc
     const startDate = parseOptionalDate(formData, "startDate", "Startdatum");
     const endDate = parseOptionalDate(formData, "endDate", "Enddatum");
     const revealDate = parseOptionalDate(formData, "revealDate", "Premierenankündigung");
+    const finalRehearsalWeekStart = parseOptionalDate(
+      formData,
+      "finalRehearsalWeekStart",
+      "Start der Endprobenwoche",
+    );
+    const finalRehearsalWeekEnd = parseOptionalDate(
+      formData,
+      "finalRehearsalWeekEnd",
+      "Ende der Endprobenwoche",
+    );
     const redirectPath = readOptionalString(formData, "redirectPath");
 
     if (endDate && !startDate) {
@@ -239,6 +268,8 @@ export async function updateProductionAction(formData: FormData): Promise<Produc
                 ? formatDateOnly(startDate)
                 : Prisma.JsonNull,
         revealedAt: revealDate ?? null,
+        finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
+        finalRehearsalWeekEnd: finalRehearsalWeekEnd ?? null,
       },
     });
 
@@ -265,10 +296,31 @@ export async function updateProductionTimelineAction(formData: FormData): Promis
       "finalRehearsalWeekStart",
       "Start der Endprobenwoche",
     );
+    const finalRehearsalWeekEnd = parseOptionalDate(
+      formData,
+      "finalRehearsalWeekEnd",
+      "Ende der Endprobenwoche",
+    );
+
+    if (finalRehearsalWeekEnd && !finalRehearsalWeekStart) {
+      throw new Error(
+        "Bitte gib auch ein Startdatum an, wenn du ein Enddatum für die Endprobenwoche festlegst.",
+      );
+    }
+    if (
+      finalRehearsalWeekStart &&
+      finalRehearsalWeekEnd &&
+      finalRehearsalWeekEnd.getTime() < finalRehearsalWeekStart.getTime()
+    ) {
+      throw new Error("Das Ende der Endprobenwoche darf nicht vor dem Start liegen.");
+    }
 
     await prisma.show.update({
       where: { id: showId },
-      data: { finalRehearsalWeekStart: finalRehearsalWeekStart ?? null },
+      data: {
+        finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
+        finalRehearsalWeekEnd: finalRehearsalWeekEnd ?? null,
+      },
     });
 
     revalidateShow(showId, redirectPath, true);

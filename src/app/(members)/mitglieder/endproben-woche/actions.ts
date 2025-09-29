@@ -7,6 +7,8 @@ import { hasPermission } from "@/lib/permissions";
 
 import { FINAL_WEEK_MANAGE_PERMISSION_KEY } from "./constants";
 
+const DAY_IN_MS = 86_400_000;
+
 type ReadOptions = {
   label?: string;
   minLength?: number;
@@ -124,12 +126,17 @@ async function ensureAssigneeExists(assigneeId: string): Promise<void> {
   }
 }
 
-function assertWithinFinalWeek(date: Date, weekStart: Date) {
+function assertWithinFinalWeek(date: Date, weekStart: Date, weekEnd?: Date | null) {
   const normalizedStart = normalizeDateOnly(weekStart);
-  const normalizedEnd = new Date(normalizedStart.getTime() + 6 * 86_400_000);
+  const normalizedEnd = weekEnd
+    ? normalizeDateOnly(weekEnd)
+    : new Date(normalizedStart.getTime() + 6 * DAY_IN_MS);
+  const effectiveEnd = normalizedEnd.getTime() >= normalizedStart.getTime()
+    ? normalizedEnd
+    : new Date(normalizedStart.getTime() + 6 * DAY_IN_MS);
   const dateIso = toDateIso(date);
   const startIso = toDateIso(normalizedStart);
-  const endIso = toDateIso(normalizedEnd);
+  const endIso = toDateIso(effectiveEnd);
   if (dateIso < startIso || dateIso > endIso) {
     throw new Error("Der Dienst muss innerhalb der definierten Endprobenwoche liegen.");
   }
@@ -169,7 +176,7 @@ export async function createFinalRehearsalDutyAction(formData: FormData): Promis
 
     const show = await prisma.show.findUnique({
       where: { id: showId },
-      select: { finalRehearsalWeekStart: true },
+      select: { finalRehearsalWeekStart: true, finalRehearsalWeekEnd: true },
     });
     if (!show) {
       throw new Error("Produktion wurde nicht gefunden.");
@@ -178,7 +185,7 @@ export async function createFinalRehearsalDutyAction(formData: FormData): Promis
       throw new Error("Für diese Produktion ist noch kein Start der Endprobenwoche hinterlegt.");
     }
 
-    assertWithinFinalWeek(date, show.finalRehearsalWeekStart);
+    assertWithinFinalWeek(date, show.finalRehearsalWeekStart, show.finalRehearsalWeekEnd);
 
     if (assigneeId) {
       await ensureAssigneeExists(assigneeId);
