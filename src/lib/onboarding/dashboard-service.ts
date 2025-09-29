@@ -113,12 +113,13 @@ function deriveStatus(
   show: {
     revealedAt: Date | null;
     finalRehearsalWeekStart: Date | null;
+    finalRehearsalWeekEnd: Date | null;
   },
   range: DateRange,
 ): { status: OnboardingSummary["status"]; label: string } {
   const now = new Date();
   const start = range.start ?? show.revealedAt ?? null;
-  const end = range.end ?? show.finalRehearsalWeekStart ?? null;
+  const end = range.end ?? show.finalRehearsalWeekEnd ?? show.finalRehearsalWeekStart ?? null;
 
   if (!show.revealedAt || isAfter(now, show.revealedAt) === false) {
     return { status: "draft", label: "In Vorbereitung" };
@@ -355,6 +356,7 @@ async function computeOnboardingDashboardData(
       dates: true,
       revealedAt: true,
       finalRehearsalWeekStart: true,
+      finalRehearsalWeekEnd: true,
       meta: true,
       onboardingProfiles: {
         select: {

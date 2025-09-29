@@ -103,12 +103,15 @@ type MealPlanDay = {
 
 type BuildMealPlanArgs = {
   startDate: Date | null;
+  endDate: Date | null;
   styleSummaries: StyleSummary[];
   criticalAllergens: Set<string>;
   dishes: PlannerRecipe[];
 };
 
 export const DISH_LIBRARY: PlannerRecipe[] = [];
+
+const DAY_IN_MS = 86_400_000;
 
 
 function pickDishForStyle(
@@ -156,7 +159,7 @@ function pickDishForStyle(
   return dishes[0];
 }
 
-function buildMealPlan({ startDate, styleSummaries, criticalAllergens, dishes }: BuildMealPlanArgs): MealPlanDay[] {
+function buildMealPlan({ startDate, endDate, styleSummaries, criticalAllergens, dishes }: BuildMealPlanArgs): MealPlanDay[] {
   const focusList = styleSummaries.length
     ? styleSummaries
     : [
@@ -173,12 +176,19 @@ function buildMealPlan({ startDate, styleSummaries, criticalAllergens, dishes }:
         },
       ];
 
-  const dayCount = 5;
   const formatter = new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" });
+  const effectiveEnd = startDate
+    ? endDate && endDate.getTime() >= startDate.getTime()
+      ? endDate
+      : new Date(startDate.getTime() + 4 * DAY_IN_MS)
+    : null;
+  const dayCount = startDate && effectiveEnd
+    ? Math.min(14, Math.floor((effectiveEnd.getTime() - startDate.getTime()) / DAY_IN_MS) + 1)
+    : 5;
 
   if (dishes.length === 0) {
     return Array.from({ length: dayCount }, (_, dayIndex) => {
-      const date = startDate ? new Date(startDate.getTime() + dayIndex * 86_400_000) : null;
+      const date = startDate ? new Date(startDate.getTime() + dayIndex * DAY_IN_MS) : null;
       const label = date ? formatter.format(date) : `Tag ${dayIndex + 1}`;
 
       return {
@@ -193,7 +203,7 @@ function buildMealPlan({ startDate, styleSummaries, criticalAllergens, dishes }:
   const used = new Set<string>();
 
   return Array.from({ length: dayCount }, (_, dayIndex) => {
-    const date = startDate ? new Date(startDate.getTime() + dayIndex * 86_400_000) : null;
+    const date = startDate ? new Date(startDate.getTime() + dayIndex * DAY_IN_MS) : null;
     const label = date ? formatter.format(date) : `Tag ${dayIndex + 1}`;
     const entries = MEAL_SLOTS.map((slot, slotIndex) => {
       const focus = focusList[(dayIndex + slotIndex) % focusList.length];
@@ -219,7 +229,13 @@ function buildMealPlan({ startDate, styleSummaries, criticalAllergens, dishes }:
 
 
 export type MealPlanningContext = {
-  show: { id: string; title: string | null; year: number; finalRehearsalWeekStart: Date | null } | null;
+  show: {
+    id: string;
+    title: string | null;
+    year: number;
+    finalRehearsalWeekStart: Date | null;
+    finalRehearsalWeekEnd: Date | null;
+  } | null;
   participants: ParticipantDietProfile[];
   totalParticipants: number;
   strictParticipants: number;
@@ -249,7 +265,13 @@ export async function loadMealPlanningContext(userId?: string | null): Promise<M
     activeProductionId
       ? prisma.show.findUnique({
           where: { id: activeProductionId },
-          select: { id: true, title: true, year: true, finalRehearsalWeekStart: true },
+          select: {
+            id: true,
+            title: true,
+            year: true,
+            finalRehearsalWeekStart: true,
+            finalRehearsalWeekEnd: true,
+          },
         })
       : Promise.resolve(null),
     prisma.memberOnboardingProfile.findMany({
@@ -284,11 +306,23 @@ export async function loadMealPlanningContext(userId?: string | null): Promise<M
       (await prisma.show.findFirst({
         where: { finalRehearsalWeekStart: { not: null } },
         orderBy: { finalRehearsalWeekStart: "desc" },
-        select: { id: true, title: true, year: true, finalRehearsalWeekStart: true },
+        select: {
+          id: true,
+          title: true,
+          year: true,
+          finalRehearsalWeekStart: true,
+          finalRehearsalWeekEnd: true,
+        },
       })) ??
       (await prisma.show.findFirst({
         orderBy: { year: "desc" },
-        select: { id: true, title: true, year: true, finalRehearsalWeekStart: true },
+        select: {
+          id: true,
+          title: true,
+          year: true,
+          finalRehearsalWeekStart: true,
+          finalRehearsalWeekEnd: true,
+        },
       }));
   }
 
@@ -471,6 +505,7 @@ export async function loadMealPlanningContext(userId?: string | null): Promise<M
 
   const mealPlan = buildMealPlan({
     startDate: show?.finalRehearsalWeekStart ?? null,
+    endDate: show?.finalRehearsalWeekEnd ?? null,
     styleSummaries,
     criticalAllergens: criticalAllergensSet,
     dishes: DISH_LIBRARY,

@@ -41,6 +41,8 @@ const ALLERGY_LEVEL_LABELS: Record<AllergyLevel, string> = {
 
 export const dynamic = "force-dynamic";
 
+const DAY_IN_MS = 86_400_000;
+
 export default async function MenueplanPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.essenplanung");
@@ -62,7 +64,8 @@ export default async function MenueplanPage() {
   } = await loadMealPlanningContext(session.user?.id);
 
   const finalWeekStart = show?.finalRehearsalWeekStart ?? null;
-  const finalWeekEnd = finalWeekStart ? new Date(finalWeekStart.getTime() + 6 * 86_400_000) : null;
+  const finalWeekEnd =
+    show?.finalRehearsalWeekEnd ?? (finalWeekStart ? new Date(finalWeekStart.getTime() + 6 * DAY_IN_MS) : null);
   const finalWeekRangeLabel = finalWeekStart && finalWeekEnd
     ? `${new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(finalWeekStart)} – ${new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(finalWeekEnd)}`
     : null;

@@ -33,6 +33,8 @@ const selectClassName =
 const collapsibleClassName =
   "group rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm transition [&_summary::-webkit-details-marker]:hidden";
 
+const DAY_IN_MS = 86_400_000;
+
 const dutyInclude = {
   assignee: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
   createdBy: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
@@ -75,10 +77,24 @@ function toDateIso(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function createWeekDays(start: Date): WeekDay[] {
+function createWeekDays(start: Date, end?: Date | null): WeekDay[] {
+  const normalizedStart = normalizeDateOnly(start);
+  const normalizedEnd = end
+    ? normalizeDateOnly(end)
+    : new Date(normalizedStart.getTime() + 6 * DAY_IN_MS);
+  const effectiveEnd = normalizedEnd.getTime() >= normalizedStart.getTime()
+    ? normalizedEnd
+    : normalizedStart;
+
+  const maxDays = 31;
+  const totalDays = Math.min(
+    maxDays,
+    Math.floor((effectiveEnd.getTime() - normalizedStart.getTime()) / DAY_IN_MS) + 1,
+  );
+
   const days: WeekDay[] = [];
-  for (let index = 0; index < 7; index += 1) {
-    const date = new Date(start.getTime() + index * 86_400_000);
+  for (let index = 0; index < totalDays; index += 1) {
+    const date = new Date(normalizedStart.getTime() + index * DAY_IN_MS);
     days.push({ iso: toDateIso(date), date, label: dayLabelFormatter.format(date) });
   }
   return days;
@@ -239,17 +255,35 @@ export default async function FinalRehearsalDutyPlanPage() {
     activeProductionId
       ? prisma.show.findUnique({
           where: { id: activeProductionId },
-          select: { id: true, title: true, year: true, finalRehearsalWeekStart: true },
+          select: {
+            id: true,
+            title: true,
+            year: true,
+            finalRehearsalWeekStart: true,
+            finalRehearsalWeekEnd: true,
+          },
         })
       : Promise.resolve(null),
     prisma.show.findFirst({
       where: { finalRehearsalWeekStart: { not: null } },
       orderBy: { finalRehearsalWeekStart: "desc" },
-      select: { id: true, title: true, year: true, finalRehearsalWeekStart: true },
+      select: {
+        id: true,
+        title: true,
+        year: true,
+        finalRehearsalWeekStart: true,
+        finalRehearsalWeekEnd: true,
+      },
     }),
     prisma.show.findFirst({
       orderBy: { year: "desc" },
-      select: { id: true, title: true, year: true, finalRehearsalWeekStart: true },
+      select: {
+        id: true,
+        title: true,
+        year: true,
+        finalRehearsalWeekStart: true,
+        finalRehearsalWeekEnd: true,
+      },
     }),
   ]);
 
@@ -309,7 +343,10 @@ export default async function FinalRehearsalDutyPlanPage() {
   const finalWeekStart = show?.finalRehearsalWeekStart
     ? normalizeDateOnly(new Date(show.finalRehearsalWeekStart))
     : null;
-  const weekDays = finalWeekStart ? createWeekDays(finalWeekStart) : [];
+  const finalWeekEnd = show?.finalRehearsalWeekEnd
+    ? normalizeDateOnly(new Date(show.finalRehearsalWeekEnd))
+    : null;
+  const weekDays = finalWeekStart ? createWeekDays(finalWeekStart, finalWeekEnd) : [];
   const weekIsoSet = new Set(weekDays.map((day) => day.iso));
 
   const dutiesByDay = new Map<string, DutyWithRelations[]>();
@@ -331,10 +368,13 @@ export default async function FinalRehearsalDutyPlanPage() {
       : `Produktion ${show.year}`
     : null;
   const startLabel = finalWeekStart ? dateLabelFormatter.format(finalWeekStart) : null;
-  const rangeLabel = finalWeekStart
-    ? `${rangeLabelFormatter.format(finalWeekStart)} – ${rangeLabelFormatter.format(
-        new Date(finalWeekStart.getTime() + 6 * 86_400_000),
-      )}`
+  const effectiveRangeEnd = finalWeekStart
+    ? finalWeekEnd && finalWeekEnd.getTime() >= finalWeekStart.getTime()
+      ? finalWeekEnd
+      : new Date(finalWeekStart.getTime() + 6 * DAY_IN_MS)
+    : null;
+  const rangeLabel = finalWeekStart && effectiveRangeEnd
+    ? `${rangeLabelFormatter.format(finalWeekStart)} – ${rangeLabelFormatter.format(effectiveRangeEnd)}`
     : null;
   const breadcrumbs = [
     membersNavigationBreadcrumb("/mitglieder/endproben-woche/dienstplan"),
@@ -355,7 +395,7 @@ export default async function FinalRehearsalDutyPlanPage() {
           <CardContent className="space-y-4 text-sm text-muted-foreground">
             <p>
               Aktuell ist keine Produktion verfügbar. Lege in der Produktionsplanung eine Produktion an und
-              hinterlege den Start der Endprobenwoche, um den Dienstplan zu aktivieren.
+              hinterlege den Zeitraum der Endprobenwoche, um den Dienstplan zu aktivieren.
             </p>
             {canManage ? (
               <Button asChild>
@@ -383,13 +423,17 @@ export default async function FinalRehearsalDutyPlanPage() {
               <ClipboardList className="h-5 w-5 text-primary" />
               Überblick Endprobenwoche
             </CardTitle>
-            {startLabel ? (
+            {rangeLabel ? (
+              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                Zeitraum {rangeLabel}
+              </Badge>
+            ) : startLabel ? (
               <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
                 Start {startLabel}
               </Badge>
             ) : (
               <Badge variant="outline" className="border-warning/60 bg-warning/10 text-warning">
-                Startdatum fehlt
+                Zeitraum fehlt
               </Badge>
             )}
           </div>
@@ -435,7 +479,7 @@ export default async function FinalRehearsalDutyPlanPage() {
             <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
-                Hinterlege bei der Produktionserstellung im Bereich „Produktionen“ den Start der Endprobenwoche, um den
+                Hinterlege bei der Produktion im Bereich „Produktionen“ den Zeitraum der Endprobenwoche, um den
                 Dienstplan zeitlich einzuordnen.
               </div>
             </div>
@@ -566,17 +610,17 @@ export default async function FinalRehearsalDutyPlanPage() {
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-warning">
               <AlertTriangle className="h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">Start der Endprobenwoche fehlt</CardTitle>
+              <CardTitle className="text-lg font-semibold">Zeitraum der Endprobenwoche fehlt</CardTitle>
             </div>
             {canManage ? (
               <Button asChild variant="outline" size="sm">
-                <Link href="/mitglieder/produktionen">Startdatum festlegen</Link>
+                <Link href="/mitglieder/produktionen">Zeitraum festlegen</Link>
               </Button>
             ) : null}
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <p>
-              Hinterlege bei der Produktionserstellung im Bereich „Produktionen“ den Beginn der Endprobenwoche. Danach
+              Hinterlege bei der Produktion im Bereich „Produktionen“ den Beginn und das Ende der Endprobenwoche. Danach
               kannst du die Dienste pro Tag strukturieren und Verantwortliche zuweisen.
             </p>
           </CardContent>

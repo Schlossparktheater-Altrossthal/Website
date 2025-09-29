@@ -38,6 +38,8 @@ const ALLERGY_LEVEL_LABELS: Record<AllergyLevel, string> = {
   LETHAL: "Kritisch",
 };
 
+const DAY_IN_MS = 86_400_000;
+
 type Metric = {
   label: string;
   value: string;
@@ -77,9 +79,10 @@ export default async function EssensplanungPage() {
     ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(finalWeekStart)
     : null;
   const finalWeekCountdown = finalWeekStart
-    ? Math.max(0, Math.ceil((finalWeekStart.getTime() - Date.now()) / 86_400_000))
+    ? Math.max(0, Math.ceil((finalWeekStart.getTime() - Date.now()) / DAY_IN_MS))
     : null;
-  const finalWeekEnd = finalWeekStart ? new Date(finalWeekStart.getTime() + 6 * 86_400_000) : null;
+  const finalWeekEnd =
+    show?.finalRehearsalWeekEnd ?? (finalWeekStart ? new Date(finalWeekStart.getTime() + 6 * DAY_IN_MS) : null);
   const finalWeekRangeLabel = finalWeekStart && finalWeekEnd
     ? `${new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(finalWeekStart)} – ${new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(finalWeekEnd)}`
     : null;

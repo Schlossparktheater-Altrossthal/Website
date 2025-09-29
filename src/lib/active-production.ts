@@ -14,6 +14,7 @@ type ActiveMembership = {
     title: string | null;
     year: number;
     finalRehearsalWeekStart: Date | null;
+    finalRehearsalWeekEnd: Date | null;
   };
 };
 
@@ -52,6 +53,7 @@ async function resolveFallbackActiveProductionId(userId: string | null | undefin
           title: true,
           year: true,
           finalRehearsalWeekStart: true,
+          finalRehearsalWeekEnd: true,
         },
       },
     },
