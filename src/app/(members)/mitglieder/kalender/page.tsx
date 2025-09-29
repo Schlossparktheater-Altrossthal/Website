@@ -266,7 +266,7 @@ export default async function MitgliederKalenderPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mein Kalender"
+        title="Kalender"
         description="Plane deinen Vereinsalltag wie im Google Kalender: persönliche Proben, Gewerke-Termine und Sperrungen auf einen Blick."
         breadcrumbs={breadcrumbs}
       />

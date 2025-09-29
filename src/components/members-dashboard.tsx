@@ -145,7 +145,7 @@ const QUICK_ACTION_LINKS = [
   },
   {
     href: "/mitglieder/kalender",
-    label: "Mein Kalender",
+    label: "Kalender",
     icon: CalendarRange,
     permissionKey: "mitglieder.meine-proben",
   },
