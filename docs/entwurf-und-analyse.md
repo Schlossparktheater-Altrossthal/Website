@@ -368,6 +368,9 @@ der Belastung.
 - Pro Szene: summierte Probenminuten, letzte Probe, Abdeckung pro Figur.
 
 - Pro Person: summierte Probenminuten/Frequenz im Zeitfenster.
+- Datenbasis: Alle Kennzahlen speisen sich aus den tatsächlich
+  protokollierten Nachbereitungsdaten. Statische Mockups oder
+  Platzhalterwerte sind nicht zulässig.
 
 - Exhaustion-Metrik:
 
@@ -375,8 +378,10 @@ der Belastung.
   oft/zu lange eingeplant ist.
 
 Akzeptanzkriterien: - Statistik aktualisiert sich nach Nachbereitung;
-Dashboard/Tooltip zeigt Kennzahlen. - Planungsansicht warnt bei
-Überschreitung definierter Richtwerte (konfigurierbar).
+Dashboard/Tooltip zeigt Kennzahlen aus persistierten Rehearsal-Logs. -
+Planungsansicht warnt bei Überschreitung definierter Richtwerte
+(konfigurierbar). - Mockup-Darstellungen gelten nur als Übergang, solange
+keine Datenbank angebunden ist, und müssen nach Go-Live entfernt werden.
 
 ## 6. Nicht-funktionale Anforderungen
 
@@ -1282,8 +1287,10 @@ korrekt - \[ \] Mehrfachbesetzungen/Understudy werden berücksichtigt
 - [ ] Reports: Minuten je Szene/Person, letzte Probe
 
 Akzeptanzkriterien - \[ \] Statistik aktualisiert sich nach
-Nachbereitung - \[ \] Planungssicht zeigt kumulierte Minuten und letzte
-Probe je Szene/Person
+Nachbereitung mit echten Persistenzdaten - \[ \] Planungssicht zeigt
+kumulierte Minuten und letzte Probe je Szene/Person - \[ \]
+Mockup-Daten werden höchstens für leere Zustände genutzt und verschwinden,
+sobald reale Statistiken verfügbar sind
 
 ### 11.5. Sprint 5 – Exhaustion & Planungswarnungen
 
