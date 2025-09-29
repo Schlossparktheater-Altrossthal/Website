@@ -147,7 +147,7 @@ export default async function EssensplanungPage() {
   );
 
   return (
-    <div className="space-y-8 xl:space-y-10">
+    <div className="space-y-8 lg:space-y-10">
       <PageHeader
         title="Essensplanung"
         description="Plane die Verpflegung der Endprobenwoche abgestimmt auf Ernährungsstile, Allergien und Portionen – inklusive eigener Rezeptideen."
@@ -155,9 +155,9 @@ export default async function EssensplanungPage() {
         quickActions={quickActions}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.68fr)_minmax(0,0.32fr)] xl:items-start">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.68fr)_minmax(0,0.32fr)] lg:items-start 2xl:gap-8">
         <div className="space-y-6">
-          <Card className="relative overflow-hidden border border-primary/30 bg-background/95 shadow-[0_30px_80px_rgba(59,130,246,0.15)]">
+          <Card className="relative overflow-hidden rounded-3xl border border-primary/30 bg-background/95 shadow-[0_30px_80px_rgba(59,130,246,0.15)]">
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute -left-20 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-primary/20 blur-3xl" />
               <div className="absolute -right-12 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
@@ -195,7 +195,7 @@ export default async function EssensplanungPage() {
               </div>
             </CardHeader>
             <CardContent className="relative space-y-5">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {metrics.map((metric) => {
                   const Icon = metric.icon;
                   return (
@@ -260,7 +260,7 @@ export default async function EssensplanungPage() {
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden border border-border/70 bg-background/90 shadow-sm">
+          <Card className="relative overflow-hidden rounded-3xl border border-border/70 bg-background/90 shadow-sm">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
             <CardHeader className="relative space-y-3">
               <div className="flex items-center gap-2 text-primary">
@@ -308,8 +308,8 @@ export default async function EssensplanungPage() {
           </section>
         </div>
 
-        <div className="space-y-6">
-          <Card className="border border-border/70 bg-background/90 shadow-sm">
+        <div className="space-y-6 lg:sticky lg:top-24">
+          <Card className="rounded-3xl border border-border/70 bg-background/90 shadow-sm">
             <CardHeader className="space-y-3 pb-0">
               <div className="flex items-center gap-2 text-primary">
                 <Palette className="h-5 w-5" />
@@ -366,7 +366,7 @@ export default async function EssensplanungPage() {
             </CardContent>
           </Card>
 
-          <Card className="border border-border/70 bg-background/90 shadow-sm">
+          <Card className="rounded-3xl border border-border/70 bg-background/90 shadow-sm">
             <CardHeader className="space-y-3 pb-0">
               <div className="flex items-center gap-2 text-destructive">
                 <ShieldAlert className="h-5 w-5" />
@@ -427,7 +427,7 @@ export default async function EssensplanungPage() {
             </CardContent>
           </Card>
 
-          <Card className="border border-border/70 bg-background/90 shadow-sm">
+          <Card className="rounded-3xl border border-border/70 bg-background/90 shadow-sm">
             <CardHeader className="space-y-3 pb-0">
               <div className="flex items-center gap-2 text-primary">
                 <UserCheck className="h-5 w-5" />

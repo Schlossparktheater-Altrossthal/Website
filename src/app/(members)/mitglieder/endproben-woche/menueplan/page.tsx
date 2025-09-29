@@ -81,7 +81,7 @@ export default async function MenueplanPage() {
   const topAllergens = allergenSummaries.slice(0, 5);
 
   return (
-    <div className="space-y-8 xl:space-y-10">
+    <div className="space-y-8 lg:space-y-10">
       <PageHeader
         title="Menüplan"
         description="Frühstück, Mittag und Abendbrot der Endprobenwoche im Überblick – inklusive Fokus-Stilen, Highlights und kritischen Hinweisen."
@@ -107,9 +107,9 @@ export default async function MenueplanPage() {
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.68fr)_minmax(0,0.32fr)] xl:items-start">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.68fr)_minmax(0,0.32fr)] lg:items-start 2xl:gap-8">
         <div className="space-y-6">
-          <Card className="border border-border/70 bg-background/90 shadow-sm">
+          <Card className="rounded-3xl border border-border/70 bg-background/90 shadow-sm">
             <CardHeader className="space-y-3">
               <div className="flex items-center gap-2 text-primary">
                 <Sparkles className="h-5 w-5" />
@@ -149,7 +149,7 @@ export default async function MenueplanPage() {
           {mealPlan.map((day) => (
             <Card
               key={day.key}
-              className="relative overflow-hidden border border-border/70 bg-background/95 shadow-[0_18px_45px_rgba(15,23,42,0.18)]"
+              className="relative overflow-hidden rounded-3xl border border-border/70 bg-background/95 shadow-[0_18px_45px_rgba(15,23,42,0.18)]"
             >
               <div className="pointer-events-none absolute inset-0">
                 <div className="absolute -left-16 top-12 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />
@@ -246,8 +246,8 @@ export default async function MenueplanPage() {
           ))}
         </div>
 
-        <div className="space-y-6">
-          <Card className="border border-border/70 bg-background/90 shadow-sm">
+        <div className="space-y-6 lg:sticky lg:top-24">
+          <Card className="rounded-3xl border border-border/70 bg-background/90 shadow-sm">
             <CardHeader className="space-y-3 pb-0">
               <div className="flex items-center gap-2 text-primary">
                 <ChefHat className="h-5 w-5" />
@@ -304,7 +304,7 @@ export default async function MenueplanPage() {
             </CardContent>
           </Card>
 
-          <Card className="border border-border/70 bg-background/90 shadow-sm">
+          <Card className="rounded-3xl border border-border/70 bg-background/90 shadow-sm">
             <CardHeader className="space-y-3 pb-0">
               <div className="flex items-center gap-2 text-destructive">
                 <ShieldAlert className="h-5 w-5" />
