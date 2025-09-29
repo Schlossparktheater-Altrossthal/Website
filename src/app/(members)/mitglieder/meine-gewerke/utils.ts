@@ -151,13 +151,17 @@ export type DepartmentMembershipWithDepartment = Prisma.DepartmentMembershipGetP
         };
         tasks: {
           include: {
-            assignee: {
-              select: {
-                id: true;
-                name: true;
-                email: true;
-                firstName: true;
-                lastName: true;
+            assignments: {
+              include: {
+                user: {
+                  select: {
+                    id: true;
+                    name: true;
+                    email: true;
+                    firstName: true;
+                    lastName: true;
+                  };
+                };
               };
             };
           };
@@ -178,10 +182,26 @@ export type DepartmentMembershipWithDepartment = Prisma.DepartmentMembershipGetP
             start: "asc";
           };
         };
+        documents: {
+          include: {
+            uploadedBy: {
+              select: {
+                id: true;
+                name: true;
+                email: true;
+                firstName: true;
+                lastName: true;
+              };
+            };
+          };
+          orderBy: {
+            createdAt: "desc";
+          };
+        };
       };
     };
   };
-}>; 
+}>;
 
 export type DepartmentMemberUser = DepartmentMembershipWithDepartment["department"]["memberships"][number]["user"];
 

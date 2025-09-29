@@ -77,13 +77,17 @@ export default async function MeineGewerkePage() {
           },
           tasks: {
             include: {
-              assignee: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  firstName: true,
-                  lastName: true,
+              assignments: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      firstName: true,
+                      lastName: true,
+                    },
+                  },
                 },
               },
             },
@@ -102,6 +106,20 @@ export default async function MeineGewerkePage() {
               },
             },
             orderBy: { start: "asc" },
+          },
+          documents: {
+            include: {
+              uploadedBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
           },
         },
       },
@@ -473,6 +491,7 @@ export default async function MeineGewerkePage() {
               teamLinkHref={teamLinkHref}
               teamLinkLabel={teamLinkLabel}
               measurementsByUser={costumeMeasurementsByUser}
+              refreshPath="/mitglieder/meine-gewerke"
             />
           );
         })}

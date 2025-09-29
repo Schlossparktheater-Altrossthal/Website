@@ -71,13 +71,17 @@ export default async function DepartmentTodosPage() {
           },
           tasks: {
             include: {
-              assignee: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  firstName: true,
-                  lastName: true,
+              assignments: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      firstName: true,
+                      lastName: true,
+                    },
+                  },
                 },
               },
             },
@@ -119,7 +123,8 @@ export default async function DepartmentTodosPage() {
   for (const membership of memberships) {
     for (const task of membership.department.tasks) {
       totalStatusCounts[task.status] += 1;
-      if (task.assigneeId === userId) {
+      const isAssignedToMe = task.assignments.some((assignment) => assignment.userId === userId);
+      if (isAssignedToMe) {
         if (task.status === "done") {
           myCompletedAssignments.push({ task, department: membership.department });
         } else {
@@ -383,7 +388,9 @@ export default async function DepartmentTodosPage() {
           const leadership = membership.department.memberships.filter((entry) =>
             entry.role === "lead" || entry.role === "deputy",
           );
-          const myTasks = membership.department.tasks.filter((task) => task.assigneeId === userId);
+          const myTasks = membership.department.tasks.filter((task) =>
+            task.assignments.some((assignment) => assignment.userId === userId),
+          );
           const myOpenTasks = myTasks.filter((task) => task.status !== "done");
           const myDoneTasks = myTasks.filter((task) => task.status === "done");
           const openCount = membership.department.tasks.filter((task) => task.status !== "done").length;

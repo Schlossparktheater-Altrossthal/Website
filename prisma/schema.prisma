@@ -300,10 +300,11 @@ model User {
   rehearsalInvites       RehearsalInvitee[]
   photoConsent           PhotoConsent?
   approvedPhotoConsents  PhotoConsent[] @relation("PhotoConsentApprover")
-  departmentMemberships  DepartmentMembership[]
-  departmentTasksAssigned DepartmentTask[] @relation("DepartmentTaskAssignee")
-  departmentTasksCreated  DepartmentTask[] @relation("DepartmentTaskCreator")
-  departmentEventsCreated DepartmentEvent[]
+  departmentMemberships        DepartmentMembership[]
+  departmentTaskAssignments    DepartmentTaskAssignment[]
+  departmentTasksCreated       DepartmentTask[] @relation("DepartmentTaskCreator")
+  departmentEventsCreated      DepartmentEvent[]
+  departmentDocumentsUploaded  DepartmentDocument[]
   characterCastings      CharacterCasting[]
   breakdownAssignments   SceneBreakdownItem[] @relation("BreakdownAssignee")
   inviteLinksCreated     MemberInvite[]       @relation("MemberInvitesCreated")
@@ -429,6 +430,7 @@ model Department {
   tasks        DepartmentTask[]
   permissions  DepartmentPermission[]
   events       DepartmentEvent[]
+  documents    DepartmentDocument[]
 }
 
 model DepartmentMembership {
@@ -453,17 +455,27 @@ model DepartmentTask {
   description   String?
   status        TaskStatus @default(todo)
   dueAt         DateTime?
-  assigneeId    String?
   createdById   String
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  assignee      User?      @relation("DepartmentTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   creator       User       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignments   DepartmentTaskAssignment[]
 
   @@index([departmentId, status])
-  @@index([assigneeId])
   @@index([createdAt])
+}
+
+model DepartmentTaskAssignment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+  task      DepartmentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([userId])
 }
 
 model DepartmentPermission {
@@ -491,6 +503,21 @@ model DepartmentEvent {
   createdBy     User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([departmentId, start])
+}
+
+model DepartmentDocument {
+  id            String     @id @default(cuid())
+  departmentId  String
+  fileName      String
+  mimeType      String
+  fileSize      Int
+  data          Bytes
+  uploadedById  String?
+  createdAt     DateTime   @default(now())
+  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  uploadedBy    User?      @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, createdAt])
 }
 
 model Character {

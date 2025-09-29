@@ -32,6 +32,7 @@ import {
   isCastDepartmentUser,
 } from "./utils";
 import { CreateDepartmentEventButton } from "./department-event-create-button";
+import { DepartmentDocumentsSection } from "./department-documents-section";
 
 export type DepartmentMeasurementEntry = {
   id: string;
@@ -56,6 +57,7 @@ type DepartmentCardProps = {
   teamLinkHref?: string;
   teamLinkLabel?: string;
   measurementsByUser?: DepartmentMeasurementsByUser;
+  refreshPath: string;
 };
 
 export function DepartmentCard({
@@ -70,6 +72,7 @@ export function DepartmentCard({
   teamLinkHref,
   teamLinkLabel = "Team öffnen",
   measurementsByUser,
+  refreshPath,
 }: DepartmentCardProps) {
   const { department } = membership;
   const isEnsembleDepartment = department.slug?.toLowerCase() === "ensemble";
@@ -106,6 +109,9 @@ export function DepartmentCard({
   );
   const blockedDatesCount = countBlockedDays(memberIdsForDepartment, blockedByUser);
   const canManageEvents = membership.role === "lead" && Boolean(department.slug);
+  const canManageDocuments = membership.role === "lead" || membership.role === "deputy";
+  const canSeePlanning = membership.role === "lead";
+  const documents = department.documents ?? [];
 
   const blockedMembersDetailed = sortedMembers
     .map((member) => {
@@ -245,109 +251,126 @@ export function DepartmentCard({
             </ul>
           </section>
 
-          <section className="space-y-4 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Terminvorschläge</h3>
-              <div className="flex items-center gap-2">
-                <Badge variant="muted" size="sm">
-                  {blockedDatesCount} blockierte Tage
-                </Badge>
-                {canManageEvents ? (
-                  <CreateDepartmentEventButton
-                    departmentId={department.id}
-                    departmentSlug={department.slug!}
-                    triggerProps={{
-                      size: "xs",
-                      className:
-                        "px-3 text-xs shadow-[0_12px_30px_-32px_rgba(99,102,241,0.7)] hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
-                    }}
-                  />
-                ) : null}
-              </div>
-            </div>
-            {meetingSuggestions.length ? (
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {meetingSuggestions.map((suggestion) => (
-                  <li
-                    key={suggestion.key}
-                    className="group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/90 p-3 transition hover:border-primary/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <CalendarDays aria-hidden className="h-5 w-5" />
-                      </span>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-foreground">{suggestion.label}</p>
-                        <p className="text-xs text-muted-foreground">Frei für alle Mitglieder</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge variant="outline" size="sm" className="rounded-full border-primary/40 text-primary">
-                        {suggestion.shortLabel}
+          <div className="space-y-4">
+            <section className="space-y-4 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
+              {canSeePlanning ? (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-foreground">Terminvorschläge</h3>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="muted" size="sm">
+                        {blockedDatesCount} blockierte Tage
                       </Badge>
                       {canManageEvents ? (
                         <CreateDepartmentEventButton
                           departmentId={department.id}
                           departmentSlug={department.slug!}
-                          defaultValues={{
-                            date: suggestion.key,
-                            title: `${department.name} · Treffen`,
-                          }}
-                          dialogDescription={`Übernimm ${suggestion.label} als Startpunkt und passe Zeiten oder Details nach Bedarf an.`}
                           triggerProps={{
-                            label: "Übernehmen",
                             size: "xs",
                             className:
-                              "px-3 text-xs shadow-[0_10px_26px_-34px_rgba(99,102,241,0.65)] hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
+                              "px-3 text-xs shadow-[0_12px_30px_-32px_rgba(99,102,241,0.7)] hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
                           }}
                         />
                       ) : null}
                     </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Aktuell gibt es keinen Termin ohne Sperrlisten-Konflikte. Prüfe deine Sperrtage und die deines Teams.
-              </p>
-            )}
-            {blockedMembersDetailed.length ? (
-              <div className="space-y-2 rounded-xl border border-dashed border-amber-400/40 bg-amber-500/5 p-3 text-xs">
-                <div className="flex items-center gap-2 text-foreground">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-                    <BellRing aria-hidden className="h-4 w-4" />
-                  </span>
-                  <p className="text-sm font-semibold">Abmeldungen im Planungsfenster</p>
-                </div>
-                <ul className="space-y-1">
-                  {blockedMembersDetailed.map((entry) => (
-                    <li key={entry.id} className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-foreground">{entry.name}</span>
-                      <span className="text-muted-foreground">
-                        {entry.formattedDates.join(", ")}
-                        {entry.remaining > 0 ? ` (+${entry.remaining} weitere)` : ""}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[11px] text-muted-foreground/80">
-                  Grundlage: Aktualisierte Sperrlisten seit dem Freeze bis {planningWindowLabel}.
+                  </div>
+                  {meetingSuggestions.length ? (
+                    <ul className="grid gap-3 sm:grid-cols-2">
+                      {meetingSuggestions.map((suggestion) => (
+                        <li
+                          key={suggestion.key}
+                          className="group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/90 p-3 transition hover:border-primary/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                              <CalendarDays aria-hidden className="h-5 w-5" />
+                            </span>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-foreground">{suggestion.label}</p>
+                              <p className="text-xs text-muted-foreground">Frei für alle Mitglieder</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant="outline" size="sm" className="rounded-full border-primary/40 text-primary">
+                              {suggestion.shortLabel}
+                            </Badge>
+                            {canManageEvents ? (
+                              <CreateDepartmentEventButton
+                                departmentId={department.id}
+                                departmentSlug={department.slug!}
+                                defaultValues={{
+                                  date: suggestion.key,
+                                  title: `${department.name} · Treffen`,
+                                }}
+                                dialogDescription={`Übernimm ${suggestion.label} als Startpunkt und passe Zeiten oder Details nach Bedarf an.`}
+                                triggerProps={{
+                                  label: "Übernehmen",
+                                  size: "xs",
+                                  className:
+                                    "px-3 text-xs shadow-[0_10px_26px_-34px_rgba(99,102,241,0.65)] hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
+                                }}
+                              />
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Aktuell gibt es keinen Termin ohne Sperrlisten-Konflikte. Prüfe deine Sperrtage und die deines Teams.
+                    </p>
+                  )}
+                  {blockedMembersDetailed.length ? (
+                    <div className="space-y-2 rounded-xl border border-dashed border-amber-400/40 bg-amber-500/5 p-3 text-xs">
+                      <div className="flex items-center gap-2 text-foreground">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                          <BellRing aria-hidden className="h-4 w-4" />
+                        </span>
+                        <p className="text-sm font-semibold">Abmeldungen im Planungsfenster</p>
+                      </div>
+                      <ul className="space-y-1">
+                        {blockedMembersDetailed.map((entry) => (
+                          <li key={entry.id} className="flex items-center justify-between gap-2">
+                            <span className="font-medium text-foreground">{entry.name}</span>
+                            <span className="text-muted-foreground">
+                              {entry.formattedDates.join(", ")}
+                              {entry.remaining > 0 ? ` (+${entry.remaining} weitere)` : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-[11px] text-muted-foreground/80">
+                        Grundlage: Aktualisierte Sperrlisten seit dem Freeze bis {planningWindowLabel}.
+                      </p>
+                    </div>
+                  ) : null}
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Fenster: {freezeUntilLabel} – {planningWindowLabel}
+                    </span>
+                    <Link
+                      href="/mitglieder/sperrliste"
+                      className="inline-flex items-center gap-1 font-semibold text-primary transition hover:text-primary/80"
+                    >
+                      <CalendarDays aria-hidden className="h-4 w-4" />
+                      Sperrliste öffnen
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Terminvorschläge stehen ausschließlich der Leitung zur Verfügung.
                 </p>
-              </div>
-            ) : null}
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>
-                Fenster: {freezeUntilLabel} – {planningWindowLabel}
-              </span>
-              <Link
-                href="/mitglieder/sperrliste"
-                className="inline-flex items-center gap-1 font-semibold text-primary transition hover:text-primary/80"
-              >
-                <CalendarDays aria-hidden className="h-4 w-4" />
-                Sperrliste öffnen
-              </Link>
-            </div>
-          </section>
+              )}
+            </section>
+            <DepartmentDocumentsSection
+              documents={documents}
+              departmentId={department.id}
+              canManage={canManageDocuments}
+              userId={userId}
+              refreshPath={refreshPath}
+            />
+          </div>
         </div>
 
         {isCostumeDepartment && measurementsForDepartment ? (
@@ -444,7 +467,9 @@ export function DepartmentCard({
             <ul className="mt-4 grid gap-3 md:grid-cols-2">
               {activeTasks.map((task) => {
                 const dueMeta = task.dueAt ? getDueMeta(task.dueAt, now) : null;
-                const assigneeName = task.assignee ? formatUserName(task.assignee) : null;
+                const assigneeNames = task.assignments
+                  .map((assignment) => formatUserName(assignment.user))
+                  .filter(Boolean);
                 return (
                   <li
                     key={task.id}
@@ -454,7 +479,7 @@ export function DepartmentCard({
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2.5 py-0.5">
-                            Zuständig: {assigneeName ?? "Noch keine Zuordnung"}
+                            Zuständig: {assigneeNames.length ? assigneeNames.join(", ") : "Noch keine Zuordnung"}
                           </span>
                           {dueMeta ? (
                             <span
@@ -507,14 +532,16 @@ export function DepartmentCard({
               <ul className="mt-4 space-y-3 text-sm">
                 {completedTasks.map((task) => {
                   const dueMeta = task.dueAt ? getDueMeta(task.dueAt, now) : null;
-                  const assigneeName = task.assignee ? formatUserName(task.assignee) : null;
+                  const assigneeNames = task.assignments
+                    .map((assignment) => formatUserName(assignment.user))
+                    .filter(Boolean);
                   return (
                     <li key={task.id} className="rounded-xl border border-border/60 bg-background/90 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <p className="font-medium text-foreground">{task.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            Zuständig: {assigneeName ?? "Noch offen"}
+                            Zuständig: {assigneeNames.length ? assigneeNames.join(", ") : "Noch offen"}
                           </p>
                           {dueMeta ? (
                             <p className="text-xs text-muted-foreground">Fällig war {dueMeta.absolute}</p>

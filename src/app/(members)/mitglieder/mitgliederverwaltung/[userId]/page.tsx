@@ -470,7 +470,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
       },
     }),
     prisma.departmentTask.findMany({
-      where: { assigneeId: decodedId },
+      where: { assignments: { some: { userId: decodedId } } },
       select: {
         id: true,
         title: true,

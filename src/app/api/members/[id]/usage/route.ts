@@ -91,7 +91,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.characterCasting.count({ where: { userId: id } }),
     prisma.sceneBreakdownItem.count({ where: { assignedToId: id } }),
     prisma.task.count({ where: { assigneeId: id } }),
-    prisma.departmentTask.count({ where: { assigneeId: id } }),
+    prisma.departmentTaskAssignment.count({ where: { userId: id } }),
     prisma.departmentTask.count({ where: { createdById: id } }),
     prisma.rehearsalInvitee.count({ where: { userId: id } }),
     prisma.rehearsalAttendance.count({ where: { userId: id } }),
