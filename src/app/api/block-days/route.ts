@@ -5,6 +5,11 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 import {
+  DEFAULT_FREEZE_DAYS,
+  readSperrlisteSettings,
+  resolveSperrlisteSettings,
+} from "@/lib/sperrliste-settings";
+import {
   isoDate,
   normaliseReason,
   toDateOnly,
@@ -42,6 +47,32 @@ export async function GET() {
   return NextResponse.json(entries.map(toResponse));
 }
 
+async function resolveFreezeDays() {
+  try {
+    const record = await readSperrlisteSettings();
+    const resolved = resolveSperrlisteSettings(record);
+    return Number.isFinite(resolved.freezeDays)
+      ? Math.max(0, Math.floor(resolved.freezeDays))
+      : DEFAULT_FREEZE_DAYS;
+  } catch (error) {
+    console.error("[block-days:freeze]", error);
+    return DEFAULT_FREEZE_DAYS;
+  }
+}
+
+function formatFreezeDate(date: Date) {
+  try {
+    return new Intl.DateTimeFormat("de-DE", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
 export async function POST(request: Request) {
   const session = await requireAuth();
   const userId = (session.user as SessionUser)?.id;
@@ -75,19 +106,25 @@ export async function POST(request: Request) {
 
   const kind = payload.kind ?? BlockedDayKind.BLOCKED;
 
-  // Planning window: no blocks within next 7 days including today
   if (kind === BlockedDayKind.BLOCKED) {
     try {
-      const todayKey = new Date().toISOString().slice(0, 10);
-      const today = toDateOnly(todayKey);
-      const cutoff = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-      if (blockDate.getTime() < cutoff.getTime()) {
-        return NextResponse.json(
-          { error: "Aus Planungsgründen können Sperrtermine erst ab einer Woche im Voraus eingetragen werden." },
-          { status: 400 }
-        );
+      const freezeDays = await resolveFreezeDays();
+      if (freezeDays > 0) {
+        const todayKey = new Date().toISOString().slice(0, 10);
+        const today = toDateOnly(todayKey);
+        const cutoff = new Date(today.getTime() + freezeDays * 24 * 60 * 60 * 1000);
+        if (blockDate.getTime() < cutoff.getTime()) {
+          return NextResponse.json(
+            {
+              error: `Aus Planungsgründen können Sperrtermine erst ab ${formatFreezeDate(cutoff)} eingetragen werden.`,
+            },
+            { status: 400 }
+          );
+        }
       }
-    } catch {}
+    } catch (error) {
+      console.error("[block-days:freeze-check]", error);
+    }
   }
 
   try {
