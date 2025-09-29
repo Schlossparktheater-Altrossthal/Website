@@ -11,6 +11,7 @@ import { ROLES, type Role } from "@/lib/roles";
 import {
   FileLibraryAccessTargetType,
   FileLibraryAccessType,
+  type Prisma,
 } from "@prisma/client";
 
 const folderSchema = z.object({
@@ -47,6 +48,37 @@ async function filterValidAppRoleIds(ids: string[]) {
   });
   const allowed = new Set(rows.map((row) => row.id));
   return ids.filter((id) => allowed.has(id));
+}
+
+async function collectFolderHierarchyIds(
+  client: Prisma.TransactionClient,
+  rootFolderId: string,
+) {
+  const collected = new Set<string>([rootFolderId]);
+  let currentLevel: string[] = [rootFolderId];
+
+  while (currentLevel.length) {
+    const children = await client.fileLibraryFolder.findMany({
+      where: { parentId: { in: currentLevel } },
+      select: { id: true },
+    });
+
+    if (!children.length) {
+      break;
+    }
+
+    const nextLevel: string[] = [];
+    for (const child of children) {
+      if (!collected.has(child.id)) {
+        collected.add(child.id);
+        nextLevel.push(child.id);
+      }
+    }
+
+    currentLevel = nextLevel;
+  }
+
+  return Array.from(collected);
 }
 
 export async function createFileLibraryFolder(formData: FormData) {
@@ -227,10 +259,35 @@ export async function deleteFileLibraryFolder(formData: FormData) {
     throw new Error("Ordner nicht gefunden");
   }
 
-  await prisma.fileLibraryFolder.delete({ where: { id: folderId } });
+  let removedFolderIds: string[] = [];
+  try {
+    removedFolderIds = await prisma.$transaction(async (tx) => {
+      const ids = await collectFolderHierarchyIds(tx, folderId);
+
+      await tx.fileLibraryItem.deleteMany({ where: { folderId: { in: ids } } });
+      await tx.fileLibraryFolderAccess.deleteMany({ where: { folderId: { in: ids } } });
+      const deletedFolders = await tx.fileLibraryFolder.deleteMany({ where: { id: { in: ids } } });
+
+      if (deletedFolders.count === 0) {
+        throw new Error("FOLDER_NOT_FOUND");
+      }
+
+      return ids;
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "FOLDER_NOT_FOUND") {
+      throw new Error("Ordner wurde bereits entfernt.");
+    }
+    console.error("[file-library] delete-folder", error);
+    throw new Error("Ordner konnte nicht gelöscht werden. Bitte versuche es erneut.");
+  }
 
   const basePath = "/mitglieder/dateisystem";
   revalidatePath(basePath);
+  for (const id of removedFolderIds) {
+    revalidatePath(`${basePath}/${id}`);
+  }
+
   if (folder.parentId) {
     revalidatePath(`${basePath}/${folder.parentId}`);
     redirect(`${basePath}/${folder.parentId}`);
