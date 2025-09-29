@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { DepartmentDocumentsSection } from "@/app/(members)/mitglieder/meine-gewerke/department-documents-section";
 
 import {
   DATE_KEY_FORMAT,
@@ -66,10 +67,22 @@ async function loadDepartmentWithRelations(id: string) {
       },
       tasks: {
         include: {
-          assignee: { select: { id: true, name: true, email: true } },
+          assignments: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
           creator: { select: { id: true, name: true, email: true } },
         },
         orderBy: { createdAt: "asc" },
+      },
+      documents: {
+        include: {
+          uploadedBy: {
+            select: { id: true, name: true, email: true, firstName: true, lastName: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
       },
     },
   });
@@ -132,6 +145,14 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
   const meetingSuggestions = findMeetingSuggestions(memberIds, planningStart, planningEnd, blockedByUser);
   const blockedDatesCount = countBlockedDays(memberIds, blockedByUser);
   const hasMembers = memberIds.length > 0;
+  const documents = department.documents ?? [];
+  const viewerId = session.user?.id;
+  const viewerMembership = viewerId
+    ? department.memberships.find((membership) => membership.userId === viewerId)
+    : undefined;
+  const canSeePlanning = viewerMembership?.role === "lead";
+  const canManageDocuments =
+    viewerMembership?.role === "lead" || viewerMembership?.role === "deputy" || allowed;
 
   const sortedMembers = [...department.memberships].sort((a, b) =>
     formatUserName(a.user).localeCompare(formatUserName(b.user), "de", { sensitivity: "base" }),
@@ -281,7 +302,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
             {activeTasks.length ? (
               <ul className="space-y-3">
                 {activeTasks.map((task) => {
-                  const assigneeName = task.assignee ? formatUserName(task.assignee) : null;
+                  const assigneeNames = task.assignments
+                    .map((assignment) => formatUserName(assignment.user))
+                    .filter(Boolean);
                   const creatorName = task.creator ? formatUserName(task.creator) : "System";
                   const dueMeta = task.dueAt ? getDueMeta(task.dueAt, now) : null;
                   const dueDateValue = task.dueAt ? format(task.dueAt, DATE_KEY_FORMAT) : "";
@@ -309,7 +332,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                               </span>
                             ) : null}
                             <span className="inline-flex items-center gap-1 rounded-full border border-border/50 px-2 py-0.5">
-                              {assigneeName ? `Zuständig: ${assigneeName}` : "Noch keine Zuordnung"}
+                              {assigneeNames.length
+                                ? `Zuständig: ${assigneeNames.join(", ")}`
+                                : "Noch keine Zuordnung"}
                             </span>
                           </div>
                           <p className="text-base font-medium leading-snug text-foreground">{task.title}</p>
@@ -360,16 +385,23 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                           </div>
                           <div className="space-y-1">
                             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              Zuständiges Mitglied
+                              Zuständige Mitglieder
                             </label>
-                            <select name="assigneeId" defaultValue={task.assignee?.id ?? ""} className={selectClassName}>
-                              <option value="">Noch offen</option>
+                            <select
+                              name="assigneeIds"
+                              multiple
+                              defaultValue={task.assignments.map((assignment) => assignment.userId)}
+                              className={cn(selectClassName, "min-h-[140px]")}
+                            >
                               {department.memberships.map((membership) => (
                                 <option key={membership.user.id} value={membership.user.id}>
                                   {formatUserName(membership.user)}
                                 </option>
                               ))}
                             </select>
+                            <p className="text-[11px] text-muted-foreground">
+                              Halte Strg (Windows) oder ⌘ (Mac), um mehrere Personen auszuwählen.
+                            </p>
                           </div>
                           <div className="md:col-span-2 flex justify-end">
                             <Button type="submit" variant="outline" size="sm">
@@ -457,15 +489,24 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                   <Input type="date" name="dueAt" />
                 </div>
                 <div className="space-y-1 md:col-span-2">
-                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Zuständiges Mitglied</label>
-                  <select name="assigneeId" className={selectClassName} defaultValue="">
-                    <option value="">Noch offen</option>
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Zuständige Mitglieder
+                  </label>
+                  <select
+                    name="assigneeIds"
+                    multiple
+                    className={cn(selectClassName, "min-h-[140px]")}
+                    defaultValue={[]}
+                  >
                     {department.memberships.map((membership) => (
                       <option key={membership.user.id} value={membership.user.id}>
                         {formatUserName(membership.user)}
                       </option>
                     ))}
                   </select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Halte Strg (Windows) oder ⌘ (Mac), um mehrere Personen auszuwählen.
+                  </p>
                 </div>
                 <div className="md:col-span-2 flex justify-end">
                   <Button type="submit" size="sm">
@@ -488,7 +529,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                 </p>
               </div>
               <Badge variant="outline" size="sm" className="rounded-full border-primary/40 text-primary">
-                {meetingSuggestions.length} Vorschläge
+                {canSeePlanning ? `${meetingSuggestions.length} Vorschläge` : "Nur Leitung"}
               </Badge>
             </div>
           </CardHeader>
@@ -497,7 +538,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
               <p className="text-sm text-muted-foreground">
                 Füge Teammitglieder hinzu, um gemeinsame Termine zu planen.
               </p>
-            ) : (
+            ) : canSeePlanning ? (
               <>
                 <div className={`${subtleSurfaceClassName} flex items-center justify-between gap-3 border-border/50 bg-background/85 px-4 py-3`}>
                   <div>
@@ -517,11 +558,22 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                   </Button>
                 </div>
                 {renderSuggestions(meetingSuggestions, department.memberships.length)}
+                <p className="text-xs text-muted-foreground">
+                  Fenster: {freezeUntilLabel} – {planningWindowLabel}
+                </p>
               </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Terminvorschläge stehen ausschließlich der Leitung zur Verfügung.
+              </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              Fenster: {freezeUntilLabel} – {planningWindowLabel}
-            </p>
+            <DepartmentDocumentsSection
+              documents={documents}
+              departmentId={department.id}
+              canManage={canManageDocuments}
+              userId={session.user?.id ?? ""}
+              refreshPath={detailPath}
+            />
           </CardContent>
         </Card>
       </div>

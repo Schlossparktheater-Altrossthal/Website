@@ -844,32 +844,46 @@ export async function createDepartmentTaskAction(formData: FormData): Promise<vo
     const status =
       parseEnumValue(TaskStatus, formData.get("status"), "Status", { optional: true }) ??
       TaskStatus.todo;
-    const assigneeId = readOptionalString(formData, "assigneeId", {
-      label: "Zuständiges Mitglied",
-      maxLength: 200,
-    });
+    const assigneeIds = Array.from(
+      new Set(
+        formData
+          .getAll("assigneeIds")
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0),
+      ),
+    );
     const dueAt = parseOptionalDate(formData, "dueAt", "Fällig bis");
 
-    if (assigneeId) {
-      const membership = await prisma.departmentMembership.findFirst({
-        where: { departmentId, userId: assigneeId },
-        select: { id: true },
+    if (assigneeIds.length) {
+      const validAssignments = await prisma.departmentMembership.count({
+        where: { departmentId, userId: { in: assigneeIds } },
       });
-      if (!membership) {
-        throw new Error("Das gewählte Mitglied gehört nicht zu diesem Gewerk.");
+      if (validAssignments !== assigneeIds.length) {
+        throw new Error("Mindestens eine ausgewählte Person gehört nicht zu diesem Gewerk.");
       }
     }
 
-    await prisma.departmentTask.create({
-      data: {
-        departmentId,
-        title,
-        description: description ?? null,
-        status,
-        dueAt: dueAt ?? null,
-        assigneeId: assigneeId ?? null,
-        createdById: userId,
-      },
+    await prisma.$transaction(async (tx) => {
+      const created = await tx.departmentTask.create({
+        data: {
+          departmentId,
+          title,
+          description: description ?? null,
+          status,
+          dueAt: dueAt ?? null,
+          createdById: userId,
+        },
+      });
+
+      if (assigneeIds.length) {
+        await tx.departmentTaskAssignment.createMany({
+          data: assigneeIds.map((assignmentId) => ({
+            taskId: created.id,
+            userId: assignmentId,
+          })),
+        });
+      }
     });
 
     revalidateDepartments(redirectPath);
@@ -902,31 +916,44 @@ export async function updateDepartmentTaskAction(formData: FormData): Promise<vo
     const status =
       parseEnumValue(TaskStatus, formData.get("status"), "Status", { optional: true }) ??
       task.status;
-    const assigneeId = readOptionalString(formData, "assigneeId", {
-      label: "Zuständiges Mitglied",
-      maxLength: 200,
-    });
+    const assigneeIds = Array.from(
+      new Set(
+        formData
+          .getAll("assigneeIds")
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0),
+      ),
+    );
     const dueAt = parseOptionalDate(formData, "dueAt", "Fällig bis");
 
-    if (assigneeId) {
-      const membership = await prisma.departmentMembership.findFirst({
-        where: { departmentId: task.departmentId, userId: assigneeId },
-        select: { id: true },
+    if (assigneeIds.length) {
+      const validAssignments = await prisma.departmentMembership.count({
+        where: { departmentId: task.departmentId, userId: { in: assigneeIds } },
       });
-      if (!membership) {
-        throw new Error("Das gewählte Mitglied gehört nicht zu diesem Gewerk.");
+      if (validAssignments !== assigneeIds.length) {
+        throw new Error("Mindestens eine ausgewählte Person gehört nicht zu diesem Gewerk.");
       }
     }
 
-    await prisma.departmentTask.update({
-      where: { id: taskId },
-      data: {
-        title,
-        description: description ?? null,
-        status,
-        dueAt: dueAt ?? null,
-        assigneeId: assigneeId ?? null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.departmentTask.update({
+        where: { id: taskId },
+        data: {
+          title,
+          description: description ?? null,
+          status,
+          dueAt: dueAt ?? null,
+        },
+      });
+
+      await tx.departmentTaskAssignment.deleteMany({ where: { taskId } });
+
+      if (assigneeIds.length) {
+        await tx.departmentTaskAssignment.createMany({
+          data: assigneeIds.map((assignmentId) => ({ taskId, userId: assignmentId })),
+        });
+      }
     });
 
     revalidateDepartments(redirectPath);

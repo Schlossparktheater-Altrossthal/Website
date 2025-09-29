@@ -74,13 +74,17 @@ export default async function GewerkDetailPage({ params }: PageProps) {
           },
           tasks: {
             include: {
-              assignee: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  firstName: true,
-                  lastName: true,
+              assignments: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      firstName: true,
+                      lastName: true,
+                    },
+                  },
                 },
               },
             },
@@ -99,6 +103,20 @@ export default async function GewerkDetailPage({ params }: PageProps) {
               },
             },
             orderBy: { start: "asc" },
+          },
+          documents: {
+            include: {
+              uploadedBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
           },
         },
       },
@@ -251,6 +269,10 @@ export default async function GewerkDetailPage({ params }: PageProps) {
     membership.department.description ??
     "Alle Aufgaben, Termine und Teamkontakte dieses Gewerks im Fokus.";
 
+  const refreshPath = membership.department.slug
+    ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
+    : "/mitglieder/meine-gewerke";
+
   const hero = (
     <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/70 p-6 shadow-[0_28px_90px_-50px_rgba(99,102,241,0.8)] sm:p-10">
       <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -348,6 +370,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
         planningWindowLabel={planningWindowLabel}
         now={now}
         measurementsByUser={departmentMeasurementsByUser}
+        refreshPath={refreshPath}
       />
     </div>
   );
