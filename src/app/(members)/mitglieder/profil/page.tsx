@@ -234,7 +234,7 @@ export default async function ProfilePage() {
       }
     : null;
 
-  const headerDescription = "Pflege deine Stammdaten, Ernährungspräferenzen und Freigaben für unser Ensemble.";
+  const headerDescription = "Pflege deine Stammdaten, Zahlungsdaten, Ernährungspräferenzen und Freigaben für unser Ensemble.";
 
   return (
     <div className="space-y-8">

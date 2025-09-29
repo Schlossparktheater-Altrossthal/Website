@@ -75,6 +75,7 @@ import {
   saveOnboardingAction,
   updateProfileBasicsAction,
   upsertAllergyAction,
+  type UpdateProfileBasicsResult,
 } from "./actions";
 import { ProfileCompletionProvider, useProfileCompletion } from "./profile-completion-context";
 
@@ -178,6 +179,41 @@ type Measurement = Omit<ProfileClientProps["measurements"][number], "type" | "un
 };
 type OnboardingProfile = NonNullable<ProfileClientProps["onboarding"]>;
 
+function mapUpdatedUserFromPayload(
+  previous: ProfileUser,
+  payload: UpdateProfileBasicsResult["user"],
+): ProfileUser {
+  const displayName =
+    payload.name && payload.name.trim().length > 0
+      ? payload.name
+      : getUserDisplayName(
+          {
+            firstName: payload.firstName ?? undefined,
+            lastName: payload.lastName ?? undefined,
+            name: payload.name ?? undefined,
+            email: payload.email,
+          },
+          payload.email,
+        );
+
+  return {
+    ...previous,
+    firstName: payload.firstName ?? "",
+    lastName: payload.lastName ?? "",
+    displayName,
+    email: payload.email,
+    dateOfBirth: payload.dateOfBirth,
+    avatarSource: payload.avatarSource,
+    avatarUpdatedAt: payload.avatarUpdatedAt,
+    payoutMethod: payload.payoutMethod,
+    payoutAccountHolder: payload.payoutAccountHolder,
+    payoutIban: payload.payoutIban,
+    payoutBankName: payload.payoutBankName,
+    payoutPaypalHandle: payload.payoutPaypalHandle,
+    payoutNote: payload.payoutNote,
+  };
+}
+
 type BasicsFormState = {
   firstName: string;
   lastName: string;
@@ -188,6 +224,9 @@ type BasicsFormState = {
   confirmPassword: string;
   avatarSource: "GRAVATAR" | "UPLOAD" | "INITIALS";
   removeAvatar: boolean;
+};
+
+type PaymentFormState = {
   payoutMethod: PayoutMethod;
   payoutAccountHolder: string;
   payoutIban: string;
@@ -242,6 +281,89 @@ type HighlightTileConfig = {
   action?: ReactNode;
 };
 
+const payoutDetailsSchemaBase = z.object({
+  payoutMethod: z.enum(["BANK_TRANSFER", "PAYPAL", "OTHER"]),
+  payoutAccountHolder: z
+    .string()
+    .transform((value) => value.trim())
+    .refine((value) => value.length <= 160, {
+      message: "Kontoinhaber darf maximal 160 Zeichen haben.",
+    }),
+  payoutIban: z
+    .string()
+    .transform((value) => value.replace(/\s+/g, "").toUpperCase())
+    .refine((value) => value.length === 0 || IBAN_REGEX.test(value), {
+      message: "Ungültige IBAN.",
+    }),
+  payoutBankName: z
+    .string()
+    .transform((value) => value.trim())
+    .refine((value) => value.length <= 160, {
+      message: "Bankname darf maximal 160 Zeichen haben.",
+    }),
+  payoutPaypalHandle: z
+    .string()
+    .transform((value) => value.trim())
+    .refine((value) => value.length === 0 || value.length <= 160, {
+      message: "PayPal-Angabe darf maximal 160 Zeichen haben.",
+    })
+    .refine((value) => value.length === 0 || PAYPAL_HANDLE_REGEX.test(value), {
+      message: "Bitte gib deine PayPal-E-Mail-Adresse oder einen PayPal.me-Link an.",
+    }),
+  payoutNote: z
+    .string()
+    .transform((value) => value.trim())
+    .refine((value) => value.length <= 500, {
+      message: "Notiz darf maximal 500 Zeichen enthalten.",
+    }),
+});
+
+type PayoutDetailsData = z.infer<typeof payoutDetailsSchemaBase>;
+
+function validatePayoutDetails(data: PayoutDetailsData, ctx: z.RefinementCtx) {
+  if (data.payoutMethod === "BANK_TRANSFER") {
+    if (!data.payoutAccountHolder) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bitte gib den Kontoinhaber an.",
+        path: ["payoutAccountHolder"],
+      });
+    }
+    if (!data.payoutIban) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bitte gib eine gültige IBAN an.",
+        path: ["payoutIban"],
+      });
+    }
+    if (!data.payoutBankName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bitte gib den Namen deiner Bank an.",
+        path: ["payoutBankName"],
+      });
+    }
+  } else if (data.payoutMethod === "PAYPAL") {
+    if (!data.payoutPaypalHandle) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bitte hinterlege deine PayPal-Adresse oder deinen PayPal.me-Link.",
+        path: ["payoutPaypalHandle"],
+      });
+    }
+  } else if (data.payoutMethod === "OTHER") {
+    if (!data.payoutNote) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bitte beschreibe kurz deine bevorzugte Auszahlung.",
+        path: ["payoutNote"],
+      });
+    }
+  }
+}
+
+const payoutDetailsSchema = payoutDetailsSchemaBase.superRefine(validatePayoutDetails);
+
 const basicsSchema = z
   .object({
     firstName: z.string().trim().min(1, "Vorname darf nicht leer sein").max(80),
@@ -265,40 +387,6 @@ const basicsSchema = z
     confirmPassword: z.string(),
     avatarSource: z.enum(["GRAVATAR", "UPLOAD", "INITIALS"]),
     removeAvatar: z.boolean(),
-    payoutMethod: z.enum(["BANK_TRANSFER", "PAYPAL", "OTHER"]),
-    payoutAccountHolder: z
-      .string()
-      .transform((value) => value.trim())
-      .refine((value) => value.length <= 160, {
-        message: "Kontoinhaber darf maximal 160 Zeichen haben.",
-      }),
-    payoutIban: z
-      .string()
-      .transform((value) => value.replace(/\s+/g, "").toUpperCase())
-      .refine((value) => value.length === 0 || IBAN_REGEX.test(value), {
-        message: "Ungültige IBAN.",
-      }),
-    payoutBankName: z
-      .string()
-      .transform((value) => value.trim())
-      .refine((value) => value.length <= 160, {
-        message: "Bankname darf maximal 160 Zeichen haben.",
-      }),
-    payoutPaypalHandle: z
-      .string()
-      .transform((value) => value.trim())
-      .refine((value) => value.length === 0 || value.length <= 160, {
-        message: "PayPal-Angabe darf maximal 160 Zeichen haben.",
-      })
-      .refine((value) => value.length === 0 || PAYPAL_HANDLE_REGEX.test(value), {
-        message: "Bitte gib deine PayPal-E-Mail-Adresse oder einen PayPal.me-Link an.",
-      }),
-    payoutNote: z
-      .string()
-      .transform((value) => value.trim())
-      .refine((value) => value.length <= 500, {
-        message: "Notiz darf maximal 500 Zeichen enthalten.",
-      }),
   })
   .superRefine((data, ctx) => {
     if (data.password && data.password.length > 0 && data.password.length < 6) {
@@ -306,45 +394,6 @@ const basicsSchema = z
     }
     if (data.password && data.password !== data.confirmPassword) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Passwörter stimmen nicht überein", path: ["confirmPassword"] });
-    }
-    if (data.payoutMethod === "BANK_TRANSFER") {
-      if (!data.payoutAccountHolder) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Bitte gib den Kontoinhaber an.",
-          path: ["payoutAccountHolder"],
-        });
-      }
-      if (!data.payoutIban) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Bitte gib eine gültige IBAN an.",
-          path: ["payoutIban"],
-        });
-      }
-      if (!data.payoutBankName) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Bitte gib den Namen deiner Bank an.",
-          path: ["payoutBankName"],
-        });
-      }
-    } else if (data.payoutMethod === "PAYPAL") {
-      if (!data.payoutPaypalHandle) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Bitte hinterlege deine PayPal-Adresse oder deinen PayPal.me-Link.",
-          path: ["payoutPaypalHandle"],
-        });
-      }
-    } else if (data.payoutMethod === "OTHER") {
-      if (!data.payoutNote) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Bitte beschreibe kurz deine bevorzugte Auszahlung.",
-          path: ["payoutNote"],
-        });
-      }
     }
   });
 
@@ -793,6 +842,9 @@ function ProfileClientInner({
           <TabsTrigger value="stammdaten" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
             Stammdaten
           </TabsTrigger>
+          <TabsTrigger value="zahlungen" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            Zahlungsdaten
+          </TabsTrigger>
           <TabsTrigger value="ernaehrung" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
             Ernährung &amp; Allergien
           </TabsTrigger>
@@ -814,6 +866,10 @@ function ProfileClientInner({
 
         <TabsContent value="stammdaten" className="space-y-6">
           <BasicsSection user={user} onUserUpdated={handleUserUpdated} />
+        </TabsContent>
+
+        <TabsContent value="zahlungen" className="space-y-6">
+          <PaymentSection user={user} onUserUpdated={handleUserUpdated} />
         </TabsContent>
 
         <TabsContent value="ernaehrung" className="space-y-6">
@@ -1131,12 +1187,6 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
         ? (user.avatarSource as BasicsFormState["avatarSource"])
         : "INITIALS",
     removeAvatar: false,
-    payoutMethod: user.payoutMethod,
-    payoutAccountHolder: user.payoutAccountHolder ?? "",
-    payoutIban: user.payoutIban ?? "",
-    payoutBankName: user.payoutBankName ?? "",
-    payoutPaypalHandle: user.payoutPaypalHandle ?? "",
-    payoutNote: user.payoutNote ?? "",
   }));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
@@ -1156,12 +1206,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
         user.avatarSource === "GRAVATAR" || user.avatarSource === "UPLOAD" || user.avatarSource === "INITIALS"
           ? (user.avatarSource as BasicsFormState["avatarSource"])
           : prev.avatarSource,
-      payoutMethod: user.payoutMethod,
-      payoutAccountHolder: user.payoutAccountHolder ?? "",
-      payoutIban: user.payoutIban ?? "",
-      payoutBankName: user.payoutBankName ?? "",
-      payoutPaypalHandle: user.payoutPaypalHandle ?? "",
-      payoutNote: user.payoutNote ?? "",
+      removeAvatar: false,
     }));
   }, [
     user.firstName,
@@ -1170,12 +1215,6 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     user.email,
     user.dateOfBirth,
     user.avatarSource,
-    user.payoutMethod,
-    user.payoutAccountHolder,
-    user.payoutIban,
-    user.payoutBankName,
-    user.payoutPaypalHandle,
-    user.payoutNote,
   ]);
 
   useEffect(() => {
@@ -1190,16 +1229,11 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
-    const nextValue = name === "payoutIban" ? value.replace(/\s+/g, "").toUpperCase() : value;
-    setFormState((prev) => ({ ...prev, [name]: nextValue }));
+    setFormState((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAvatarSourceChange = (value: BasicsFormState["avatarSource"]) => {
     setFormState((prev) => ({ ...prev, avatarSource: value, removeAvatar: false }));
-  };
-
-  const handlePayoutMethodChange = (value: PayoutMethod) => {
-    setFormState((prev) => ({ ...prev, payoutMethod: value }));
   };
 
   const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1271,12 +1305,6 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     if (avatarFile) {
       formData.append("avatarFile", avatarFile);
     }
-    formData.append("payoutMethod", data.payoutMethod);
-    formData.append("payoutAccountHolder", data.payoutAccountHolder);
-    formData.append("payoutIban", data.payoutIban);
-    formData.append("payoutBankName", data.payoutBankName);
-    formData.append("payoutPaypalHandle", data.payoutPaypalHandle);
-    formData.append("payoutNote", data.payoutNote);
 
     setSubmitting(true);
     try {
@@ -1288,47 +1316,11 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
       }
 
       const payload = result.data.user;
-      const nextUser: ProfileUser = {
-        ...user,
-        firstName: payload.firstName ?? "",
-        lastName: payload.lastName ?? "",
-        displayName:
-          payload.name && payload.name.trim().length > 0
-            ? payload.name
-            : getUserDisplayName(
-                {
-                  firstName: payload.firstName,
-                  lastName: payload.lastName,
-                  name: payload.name,
-                  email: payload.email,
-                },
-                payload.email,
-              ),
-        email: payload.email,
-        dateOfBirth: payload.dateOfBirth,
-        avatarSource: payload.avatarSource,
-        avatarUpdatedAt: payload.avatarUpdatedAt,
-        payoutMethod: payload.payoutMethod,
-        payoutAccountHolder: payload.payoutAccountHolder,
-        payoutIban: payload.payoutIban,
-        payoutBankName: payload.payoutBankName,
-        payoutPaypalHandle: payload.payoutPaypalHandle,
-        payoutNote: payload.payoutNote,
-      };
-
+      const nextUser = mapUpdatedUserFromPayload(user, payload);
       await onUserUpdated(nextUser);
       resetPasswordFields();
       setAvatarFile(null);
-      setFormState((prev) => ({
-        ...prev,
-        payoutMethod: payload.payoutMethod,
-        payoutAccountHolder: payload.payoutAccountHolder ?? "",
-        payoutIban: payload.payoutIban ?? "",
-        payoutBankName: payload.payoutBankName ?? "",
-        payoutPaypalHandle: payload.payoutPaypalHandle ?? "",
-        payoutNote: payload.payoutNote ?? "",
-        removeAvatar: false,
-      }));
+      setFormState((prev) => ({ ...prev, removeAvatar: false }));
       toast.success("Stammdaten aktualisiert");
     } finally {
       setSubmitting(false);
@@ -1437,6 +1429,165 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
           </div>
 
           <div className="space-y-2">
+            <Label>Passwort zurücksetzen</Label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input
+                name="password"
+                type="password"
+                value={formState.password}
+                onChange={handleInputChange}
+                placeholder="Neues Passwort"
+                autoComplete="new-password"
+              />
+              <Input
+                name="confirmPassword"
+                type="password"
+                value={formState.confirmPassword}
+                onChange={handleInputChange}
+                placeholder="Bestätigung"
+                autoComplete="new-password"
+              />
+            </div>
+            {(fieldErrors.password || fieldErrors.confirmPassword) && (
+              <p className="text-sm text-destructive">{fieldErrors.password ?? fieldErrors.confirmPassword}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Lasse die Felder leer, wenn das Passwort unverändert bleiben soll.
+            </p>
+          </div>
+
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+          <div className="flex items-center justify-end gap-3">
+            <Button type="submit" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Speichern…
+                </>
+              ) : (
+                "Änderungen speichern"
+              )}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+type PaymentSectionProps = {
+  user: ProfileUser;
+  onUserUpdated: (nextUser: ProfileUser) => Promise<void> | void;
+};
+
+function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
+  const [formState, setFormState] = useState<PaymentFormState>(() => ({
+    payoutMethod: user.payoutMethod,
+    payoutAccountHolder: user.payoutAccountHolder ?? "",
+    payoutIban: user.payoutIban ?? "",
+    payoutBankName: user.payoutBankName ?? "",
+    payoutPaypalHandle: user.payoutPaypalHandle ?? "",
+    payoutNote: user.payoutNote ?? "",
+  }));
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setFormState({
+      payoutMethod: user.payoutMethod,
+      payoutAccountHolder: user.payoutAccountHolder ?? "",
+      payoutIban: user.payoutIban ?? "",
+      payoutBankName: user.payoutBankName ?? "",
+      payoutPaypalHandle: user.payoutPaypalHandle ?? "",
+      payoutNote: user.payoutNote ?? "",
+    });
+  }, [
+    user.payoutMethod,
+    user.payoutAccountHolder,
+    user.payoutIban,
+    user.payoutBankName,
+    user.payoutPaypalHandle,
+    user.payoutNote,
+  ]);
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = event.target;
+    const nextValue = name === "payoutIban" ? value.replace(/\s+/g, "").toUpperCase() : value;
+    setFormState((prev) => ({ ...prev, [name]: nextValue }));
+  };
+
+  const handlePayoutMethodChange = (value: PayoutMethod) => {
+    setFormState((prev) => ({ ...prev, payoutMethod: value }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setFieldErrors({});
+
+    const parseResult = payoutDetailsSchema.safeParse(formState);
+    if (!parseResult.success) {
+      const issues = parseResult.error.flatten();
+      const fieldIssueEntries = Object.entries(issues.fieldErrors).filter(([, messages]) => messages && messages.length > 0);
+      if (fieldIssueEntries.length > 0) {
+        setFieldErrors(Object.fromEntries(fieldIssueEntries.map(([key, messages]) => [key, messages![0]])));
+      }
+      if (issues.formErrors.length) {
+        setError(issues.formErrors[0]);
+      }
+      return;
+    }
+
+    const data = parseResult.data;
+    setFormState(data);
+
+    const formData = new FormData();
+    formData.append("payoutMethod", data.payoutMethod);
+    formData.append("payoutAccountHolder", data.payoutAccountHolder);
+    formData.append("payoutIban", data.payoutIban);
+    formData.append("payoutBankName", data.payoutBankName);
+    formData.append("payoutPaypalHandle", data.payoutPaypalHandle);
+    formData.append("payoutNote", data.payoutNote);
+
+    setSubmitting(true);
+    try {
+      const result = await updateProfileBasicsAction(formData);
+      if (!result.ok) {
+        setError(result.error);
+        toast.error(result.error);
+        return;
+      }
+
+      const payload = result.data.user;
+      const nextUser = mapUpdatedUserFromPayload(user, payload);
+      await onUserUpdated(nextUser);
+      setFormState({
+        payoutMethod: payload.payoutMethod,
+        payoutAccountHolder: payload.payoutAccountHolder ?? "",
+        payoutIban: payload.payoutIban ?? "",
+        payoutBankName: payload.payoutBankName ?? "",
+        payoutPaypalHandle: payload.payoutPaypalHandle ?? "",
+        payoutNote: payload.payoutNote ?? "",
+      });
+      toast.success("Zahlungsdaten aktualisiert");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="border border-border/60">
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">Zahlungsdaten</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Hinterlege hier, wie wir Auslagen erstatten oder Gagen auszahlen sollen.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-2">
             <Label htmlFor="payoutMethod">Bevorzugte Auszahlung</Label>
             <Select value={formState.payoutMethod} onValueChange={(value) => handlePayoutMethodChange(value as PayoutMethod)}>
               <SelectTrigger id="payoutMethod">
@@ -1535,34 +1686,6 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
             </div>
           ) : null}
 
-          <div className="space-y-2">
-            <Label>Passwort zurücksetzen</Label>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input
-                name="password"
-                type="password"
-                value={formState.password}
-                onChange={handleInputChange}
-                placeholder="Neues Passwort"
-                autoComplete="new-password"
-              />
-              <Input
-                name="confirmPassword"
-                type="password"
-                value={formState.confirmPassword}
-                onChange={handleInputChange}
-                placeholder="Bestätigung"
-                autoComplete="new-password"
-              />
-            </div>
-            {(fieldErrors.password || fieldErrors.confirmPassword) && (
-              <p className="text-sm text-destructive">{fieldErrors.password ?? fieldErrors.confirmPassword}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Lasse die Felder leer, wenn das Passwort unverändert bleiben soll.
-            </p>
-          </div>
-
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
           <div className="flex items-center justify-end gap-3">
@@ -1573,7 +1696,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                   Speichern…
                 </>
               ) : (
-                "Änderungen speichern"
+                "Zahlungsdaten speichern"
               )}
             </Button>
           </div>
