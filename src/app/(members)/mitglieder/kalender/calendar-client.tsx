@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDays,
   addMonths,
@@ -47,6 +47,8 @@ interface CalendarClientProps {
 }
 
 type CalendarView = "day" | "week" | "month" | "agenda";
+
+type DeviceKind = "mobile" | "tablet" | "desktop";
 
 type CalendarEventWithDates = MemberCalendarEvent & {
   startDate: Date;
@@ -139,12 +141,28 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
   const [currentDate, setCurrentDate] = useState<Date>(parsedInitialDate);
   const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(parsedInitialDate));
   const [view, setView] = useState<CalendarView>("week");
+  const [hasUserCustomizedView, setHasUserCustomizedView] = useState(false);
   const [activeCalendarIds, setActiveCalendarIds] = useState<string[]>(() =>
     calendars.map((item) => item.id),
   );
 
   const isTablet = useMediaQuery("(min-width: 768px)");
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const deviceKind: DeviceKind = isDesktop ? "desktop" : isTablet ? "tablet" : "mobile";
+  const previousDeviceRef = useRef<DeviceKind | null>(null);
+
+  useEffect(() => {
+    if (previousDeviceRef.current && previousDeviceRef.current !== deviceKind) {
+      setHasUserCustomizedView(false);
+    }
+    previousDeviceRef.current = deviceKind;
+  }, [deviceKind]);
+
+  const preferredView = useMemo<CalendarView>(() => {
+    if (deviceKind === "desktop") return "week";
+    if (deviceKind === "tablet") return "month";
+    return "agenda";
+  }, [deviceKind]);
 
   useEffect(() => {
     if (!isTablet) {
@@ -157,6 +175,22 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
       setView((previous) => (previous === "agenda" ? "week" : previous));
     }
   }, [isDesktop]);
+
+  useEffect(() => {
+    if (hasUserCustomizedView) return;
+    setView((previous) => {
+      if (previous === preferredView) return previous;
+      if (preferredView === "month") {
+        setCurrentMonth(startOfMonth(currentDate));
+      }
+      return preferredView;
+    });
+  }, [preferredView, hasUserCustomizedView, currentDate]);
+
+  const setViewFromUser = (nextView: CalendarView) => {
+    setHasUserCustomizedView(true);
+    setView(nextView);
+  };
 
   const calendarMap = useMemo(() => {
     const map = new Map<string, MemberCalendarSource>();
@@ -274,7 +308,7 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
   };
 
   const handleViewChange = (nextView: CalendarView) => {
-    setView(nextView);
+    setViewFromUser(nextView);
     if (nextView === "month") {
       setCurrentMonth(startOfMonth(currentDate));
     }
@@ -294,7 +328,7 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
         setCurrentDate(day.date);
         setCurrentMonth(startOfMonth(day.date));
         if (!isTablet) {
-          setView("day");
+          setViewFromUser("day");
         }
       },
       className: cn(
