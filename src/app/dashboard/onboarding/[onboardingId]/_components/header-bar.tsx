@@ -125,8 +125,8 @@ export function HeaderBar({
       {onRefresh ? (
         <Button
           type="button"
-          variant="ghost"
-          className="self-end text-sm text-muted-foreground hover:text-foreground"
+          variant="secondary"
+          className="self-end w-full border border-primary text-secondary-foreground hover:border-primary hover:text-secondary-foreground sm:w-auto"
           onClick={onRefresh}
           disabled={isRefreshing}
         >
