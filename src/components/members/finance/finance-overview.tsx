@@ -219,6 +219,87 @@ export function FinanceOverview({
   const recentEntries = useMemo(() => entries.slice(0, 5), [entries]);
   const net = summary.totalIncome - summary.totalExpense;
   const budgetOptions = budgets;
+  const categoryBreakdown = useMemo(() => {
+    const aggregated = new Map<
+      string,
+      { income: number; expense: number; count: number; currency: string }
+    >();
+
+    for (const entry of entries) {
+      const key = entry.category?.trim() || entry.budget?.category || "Allgemein";
+      const existing =
+        aggregated.get(key) ?? {
+          income: 0,
+          expense: 0,
+          count: 0,
+          currency: entry.currency,
+        };
+
+      if (entry.type === "income") {
+        existing.income += entry.amount;
+      } else {
+        existing.expense += entry.amount;
+      }
+
+      existing.count += 1;
+      existing.currency = entry.currency;
+      aggregated.set(key, existing);
+    }
+
+    return Array.from(aggregated.entries())
+      .map(([category, stats]) => ({
+        category,
+        income: stats.income,
+        expense: stats.expense,
+        net: stats.income - stats.expense,
+        count: stats.count,
+        currency: stats.currency,
+      }))
+      .sort((a, b) => {
+        const aMagnitude = Math.max(Math.abs(a.income), Math.abs(a.expense));
+        const bMagnitude = Math.max(Math.abs(b.income), Math.abs(b.expense));
+        if (aMagnitude === bMagnitude) {
+          return b.net - a.net;
+        }
+        return bMagnitude - aMagnitude;
+      });
+  }, [entries]);
+
+  const budgetStatus = useMemo(() => {
+    return budgets
+      .map((budget) => {
+        const difference = budget.plannedAmount - budget.actualAmount;
+        return {
+          id: budget.id,
+          category: budget.category,
+          planned: budget.plannedAmount,
+          actual: budget.actualAmount,
+          difference,
+          currency: budget.currency,
+        };
+      })
+      .sort((a, b) => {
+        const aOver = a.difference < 0;
+        const bOver = b.difference < 0;
+        if (aOver !== bOver) {
+          return Number(bOver) - Number(aOver);
+        }
+        if (aOver) {
+          return Math.abs(b.difference) - Math.abs(a.difference);
+        }
+        return b.difference - a.difference;
+      });
+  }, [budgets]);
+
+  const overspentBudgets = useMemo(
+    () => budgetStatus.filter((item) => item.difference < 0).slice(0, 5),
+    [budgetStatus],
+  );
+
+  const remainingBudgets = useMemo(
+    () => budgetStatus.filter((item) => item.difference >= 0).slice(0, 5),
+    [budgetStatus],
+  );
   const currentShow = useMemo(() => {
     return showOptions.find((show) => show.id === currentShowId) ?? activeShow ?? null;
   }, [activeShow, currentShowId, showOptions]);
@@ -314,7 +395,121 @@ export function FinanceOverview({
               )}
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Budgetstatus</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              {budgetStatus.length === 0 ? (
+                <p className="text-muted-foreground">Noch keine Budgets hinterlegt.</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Überzogene Budgets
+                    </p>
+                    {overspentBudgets.length === 0 ? (
+                      <p className="text-muted-foreground">Keine überzogenen Budgets.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {overspentBudgets.map((item) => (
+                          <li key={item.id} className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <div className="font-medium text-foreground">{item.category}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  Plan {formatCurrency(item.planned, item.currency)} · Ist {formatCurrency(item.actual, item.currency)}
+                                </div>
+                              </div>
+                              <span className="text-sm font-semibold text-destructive">
+                                {formatCurrency(Math.abs(item.difference), item.currency)}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Restbudget
+                    </p>
+                    {remainingBudgets.length === 0 ? (
+                      <p className="text-muted-foreground">Keine Budgets mit Puffer vorhanden.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {remainingBudgets.map((item) => (
+                          <li key={item.id} className="rounded-md border border-border/40 bg-muted/10 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <div className="font-medium text-foreground">{item.category}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  Plan {formatCurrency(item.planned, item.currency)} · Ist {formatCurrency(item.actual, item.currency)}
+                                </div>
+                              </div>
+                              <span className="text-sm font-semibold text-success">
+                                {formatCurrency(item.difference, item.currency)}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Kategorienüberblick</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {categoryBreakdown.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Es sind noch keine Buchungen vorhanden, um eine Aufschlüsselung zu erstellen.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <th className="px-3 py-2 font-medium">Kategorie</th>
+                      <th className="px-3 py-2 font-medium">Buchungen</th>
+                      <th className="px-3 py-2 font-medium">Einnahmen</th>
+                      <th className="px-3 py-2 font-medium">Ausgaben</th>
+                      <th className="px-3 py-2 font-medium">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categoryBreakdown.slice(0, 8).map((category) => (
+                      <tr key={category.category} className="border-b last:border-none">
+                        <td className="px-3 py-2 font-medium text-foreground">{category.category}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{category.count}</td>
+                        <td className="px-3 py-2 text-success">
+                          {formatCurrency(category.income, category.currency)}
+                        </td>
+                        <td className="px-3 py-2 text-destructive">
+                          {formatCurrency(category.expense, category.currency)}
+                        </td>
+                        <td
+                          className={cn(
+                            "px-3 py-2 font-semibold",
+                            category.net >= 0 ? "text-success" : "text-destructive",
+                          )}
+                        >
+                          {formatCurrency(category.net, category.currency)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
