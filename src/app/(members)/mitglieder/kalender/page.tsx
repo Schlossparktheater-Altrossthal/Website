@@ -42,7 +42,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MitgliederKalenderPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.meine-proben");
+  const allowed = await hasPermission(session.user, "mitglieder.kalender");
   if (!allowed) {
     return (
       <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
