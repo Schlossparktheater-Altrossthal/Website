@@ -14,6 +14,15 @@ CREATE TABLE "analytics_settings" (
     CONSTRAINT "analytics_settings_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateFunction
+CREATE OR REPLACE FUNCTION "public"."set_current_timestamp_updated_at"()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW."updated_at" = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- CreateTrigger
 CREATE TRIGGER "analytics_settings_set_updated_at"
 BEFORE UPDATE ON "analytics_settings"
