@@ -53,10 +53,11 @@ import {
   type DietaryStrictnessOption,
   type DietaryStyleOption,
 } from "@/data/dietary-preferences";
-import { BACKGROUND_TAGS, findMatchingBackgroundTag, normalizeBackgroundLabel } from "@/data/onboarding-backgrounds";
+import { BACKGROUND_TAGS, normalizeBackgroundLabel } from "@/data/onboarding-backgrounds";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
 import { UserAvatar } from "@/components/user-avatar";
+import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
 import {
   buildProfileChecklist,
   type ProfileChecklistTarget,
@@ -97,6 +98,8 @@ const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
   tech: "Gewerke",
   both: "Schauspiel & Gewerke",
 };
+
+const PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS = ["Schule", "Ausbildung", "Beruf"] as const;
 
 const PAYOUT_METHOD_OPTIONS: Array<{ value: PayoutMethod; label: string }> = [
   { value: "BANK_TRANSFER", label: "Banküberweisung" },
@@ -2422,8 +2425,10 @@ export function OnboardingSection({
   const [formState, setFormState] = useState<OnboardingFormState>(initialForm);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(() => ["Schule", "Ausbildung", "Beruf"]);
-  const [classSuggestions, setClassSuggestions] = useState<string[]>([]);
+  const { backgroundSuggestions, classSuggestions, activeTag, requiresClass } =
+    useOnboardingBackgroundData(formState.background, {
+      initialSuggestions: PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
+    });
   const [whatsappSubmitting, setWhatsappSubmitting] = useState(false);
   const whatsappVisitedLabel = useMemo(() => formatDate(whatsappVisitedAt), [whatsappVisitedAt]);
 
@@ -2431,75 +2436,6 @@ export function OnboardingSection({
     setFormState(initialForm);
   }, [initialForm]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadBackgrounds = async () => {
-      try {
-        const response = await fetch("/api/onboarding/backgrounds", { cache: "no-store" });
-        const data = await response.json().catch(() => null);
-        if (cancelled || !Array.isArray(data?.backgrounds)) return;
-        setBackgroundSuggestions((prev) => {
-          const seen = new Set(prev.map((entry) => entry.toLowerCase()));
-          const merged = [...prev];
-          for (const raw of data.backgrounds as unknown[]) {
-            let label: string | null = null;
-            if (typeof raw === "string") label = raw;
-            else if (raw && typeof raw === "object" && typeof (raw as { name?: unknown }).name === "string") {
-              label = (raw as { name: string }).name;
-            }
-            if (!label) continue;
-            const trimmed = label.trim();
-            if (!trimmed) continue;
-            const key = trimmed.toLowerCase();
-            if (seen.has(key)) continue;
-            seen.add(key);
-            merged.push(trimmed);
-          }
-          return merged;
-        });
-      } catch {
-        // ignore optional suggestions errors
-      }
-    };
-    void loadBackgrounds();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const activeTag = useMemo(() => findMatchingBackgroundTag(formState.background), [formState.background]);
-  const requiresClass = activeTag?.requiresClass ?? false;
-
-  useEffect(() => {
-    if (!requiresClass) {
-      setClassSuggestions([]);
-      return;
-    }
-    let cancelled = false;
-    const loadClasses = async () => {
-      try {
-        const response = await fetch("/api/onboarding/background-classes", { cache: "no-store" });
-        const data = await response.json().catch(() => null);
-        if (cancelled || !Array.isArray(data?.classes)) return;
-        const entries = (data.classes as unknown[])
-          .map<string | null>((entry: unknown) => {
-            if (typeof entry === "string") return entry.trim();
-            if (entry && typeof entry === "object" && typeof (entry as { name?: unknown }).name === "string") {
-              return (entry as { name: string }).name.trim();
-            }
-            return null;
-          })
-          .filter((value): value is string => Boolean(value));
-        setClassSuggestions(Array.from(new Set(entries)));
-      } catch {
-        setClassSuggestions([]);
-      }
-    };
-    void loadClasses();
-    return () => {
-      cancelled = true;
-    };
-  }, [requiresClass]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

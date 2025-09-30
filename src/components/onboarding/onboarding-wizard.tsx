@@ -33,11 +33,8 @@ import {
   type DietaryStyleOption,
 } from "@/data/dietary-preferences";
 import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
-import {
-  BACKGROUND_TAGS,
-  findMatchingBackgroundTag,
-  normalizeBackgroundLabel,
-} from "@/data/onboarding-backgrounds";
+import { BACKGROUND_TAGS, normalizeBackgroundLabel } from "@/data/onboarding-backgrounds";
+import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
 
 const allergyLevelLabels: Record<AllergyLevel, string> = {
   MILD: "Leicht (Unbehagen)",
@@ -316,15 +313,18 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [availableInterests, setAvailableInterests] = useState<InterestSuggestion[]>([]);
   const [interestsLoading, setInterestsLoading] = useState(false);
-  const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(
-    () => [...BASE_BACKGROUND_SUGGESTIONS],
-  );
-  const [backgroundClassSuggestions, setBackgroundClassSuggestions] = useState<string[]>([]);
+  const [form, setForm] = useState(() => createInitialFormState(variant));
+  const {
+    backgroundSuggestions,
+    classSuggestions: backgroundClassSuggestions,
+    activeTag: activeBackgroundTag,
+    requiresClass: requiresBackgroundClass,
+  } = useOnboardingBackgroundData(form.background, {
+    initialSuggestions: BASE_BACKGROUND_SUGGESTIONS,
+  });
   const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
-
-  const [form, setForm] = useState(() => createInitialFormState(variant));
 
   useEffect(() => {
     if (!isRegieVariant) {
@@ -387,51 +387,8 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadBackgrounds = async () => {
-      try {
-        const response = await fetch("/api/onboarding/backgrounds", { cache: "no-store" });
-        const data = await response.json().catch(() => null);
-        if (cancelled || !Array.isArray(data?.backgrounds)) return;
-        setBackgroundSuggestions((prev) => {
-          const seen = new Set(prev.map((entry) => entry.toLowerCase()));
-          const merged = [...prev];
-          for (const rawEntry of data.backgrounds as unknown[]) {
-            let label: string | null = null;
-            if (typeof rawEntry === "string") {
-              label = rawEntry;
-            } else if (rawEntry && typeof rawEntry === "object") {
-              const record = rawEntry as { name?: unknown };
-              label = typeof record.name === "string" ? record.name : null;
-            }
-            if (!label) continue;
-            const trimmed = label.trim();
-            if (!trimmed) continue;
-            const key = trimmed.toLowerCase();
-            if (seen.has(key)) continue;
-            seen.add(key);
-            merged.push(trimmed);
-          }
-          return merged;
-        });
-      } catch {
-        // ignore optional background suggestions errors
-      }
-    };
-    void loadBackgrounds();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
   const isMinor = age !== null && age < 18;
-  const activeBackgroundTag = useMemo(
-    () => findMatchingBackgroundTag(form.background),
-    [form.background],
-  );
-  const requiresBackgroundClass = activeBackgroundTag?.requiresClass ?? false;
   const backgroundTagValueKeys = useMemo(
     () => new Set(BACKGROUND_TAGS.map((tag) => normalizeBackgroundLabel(tag.value))),
     [],
@@ -458,46 +415,6 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       return { ...prev, backgroundClass: "" };
     });
   }, [form.backgroundClass, requiresBackgroundClass]);
-
-  useEffect(() => {
-    if (!requiresBackgroundClass) {
-      setBackgroundClassSuggestions([]);
-      return;
-    }
-    let cancelled = false;
-    const loadBackgroundClasses = async () => {
-      try {
-        const response = await fetch("/api/onboarding/background-classes", { cache: "no-store" });
-        const data = await response.json().catch(() => null);
-        if (cancelled || !Array.isArray(data?.classes)) return;
-        const entries = data.classes
-          .map((entry: unknown): string | null => {
-            if (typeof entry === "string") {
-              return entry.trim();
-            }
-            if (entry && typeof entry === "object") {
-              const record = entry as { name?: unknown };
-              if (typeof record.name === "string") {
-                return record.name.trim();
-              }
-            }
-            return null;
-          })
-          .filter((value: string | null): value is string => Boolean(value && value.length > 0));
-        const unique = Array.from(new Set<string>(entries));
-        if (cancelled) return;
-        setBackgroundClassSuggestions(unique);
-      } catch {
-        if (!cancelled) {
-          setBackgroundClassSuggestions([]);
-        }
-      }
-    };
-    void loadBackgroundClasses();
-    return () => {
-      cancelled = true;
-    };
-  }, [requiresBackgroundClass]);
 
   const genderLabel = useMemo(() => {
     if (form.genderOption === "custom") {
