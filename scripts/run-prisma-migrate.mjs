@@ -9,6 +9,98 @@ import { PrismaClient } from "@prisma/client";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const schemaPath = join(__dirname, "..", "prisma", "schema.prisma");
+
+function toUtf8(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (value instanceof Buffer) return value.toString("utf8");
+  return String(value);
+}
+
+function collectErrorOutput(error) {
+  return [error?.stdout, error?.stderr, error?.message].map(toUtf8).filter(Boolean).join("\n");
+}
+
+function includesFailedMigrationHint(error) {
+  if (!error) return false;
+  const output = collectErrorOutput(error);
+  if (!output) return false;
+  return /P3009/.test(output) || /failed migrations?/i.test(output);
+}
+
+function parseFailedMigrations(output) {
+  if (!output) return [];
+  const lines = output.split(/\r?\n/);
+  const result = [];
+  let capture = false;
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    if (!capture && /have failed/i.test(line)) {
+      capture = true;
+      continue;
+    }
+    if (!capture) continue;
+    const match = line.match(/^\s*-\s+(.+?)\s*$/);
+    if (match) {
+      result.push(match[1].trim());
+      continue;
+    }
+    if (line.trim() === "" && result.length > 0) {
+      break;
+    }
+  }
+  return result;
+}
+
+function resolveFailedMigrations(prismaExecutable) {
+  let statusOutput = "";
+  try {
+    statusOutput = execFileSync(
+      prismaExecutable,
+      ["migrate", "status", "--schema", schemaPath],
+      { env: process.env, encoding: "utf8" },
+    );
+  } catch (error) {
+    const combined = collectErrorOutput(error);
+    if (combined) {
+      statusOutput = combined;
+    } else {
+      throw error;
+    }
+  }
+
+  const failedMigrations = parseFailedMigrations(statusOutput);
+  if (failedMigrations.length === 0) {
+    console.warn("[prisma-migrate] prisma migrate status reported no failed migrations to resolve.");
+    return [];
+  }
+
+  const resolved = [];
+  for (const migrationName of failedMigrations) {
+    console.warn(
+      `[prisma-migrate] Detected failed migration \"${migrationName}\". Marking as rolled back before retrying...`,
+    );
+    execFileSync(
+      prismaExecutable,
+      ["migrate", "resolve", "--rolled-back", migrationName, "--schema", schemaPath],
+      {
+        stdio: "inherit",
+        env: process.env,
+      },
+    );
+    resolved.push(migrationName);
+  }
+
+  return resolved;
+}
+
+function runMigrateDeploy(prismaExecutable) {
+  execFileSync(prismaExecutable, ["migrate", "deploy"], {
+    stdio: "inherit",
+    env: process.env,
+  });
+}
 
 function shouldSkip() {
   const flag = process.env.SKIP_PRISMA_MIGRATE;
@@ -102,12 +194,33 @@ async function main() {
 
   try {
     console.log("[prisma-migrate] Ensuring database schema is up to date (prisma migrate deploy)...");
-    execFileSync(prismaExecutable, ["migrate", "deploy"], {
-      stdio: "inherit",
-      env: process.env,
-    });
+    runMigrateDeploy(prismaExecutable);
     console.log("[prisma-migrate] Prisma migrations applied successfully.");
   } catch (error) {
+    if (includesFailedMigrationHint(error)) {
+      console.warn(
+        "[prisma-migrate] Detected failed migrations in the target database. Attempting automatic recovery...",
+      );
+      try {
+        const resolved = resolveFailedMigrations(prismaExecutable);
+        if (resolved.length > 0) {
+          console.log(
+            `[prisma-migrate] Resolved ${resolved.length} failed migration(s). Retrying prisma migrate deploy...`,
+          );
+          runMigrateDeploy(prismaExecutable);
+          console.log("[prisma-migrate] Prisma migrations applied successfully after automatic recovery.");
+          await announceOwnerSetupLink();
+          return;
+        }
+      } catch (innerError) {
+        console.error("[prisma-migrate] Automatic migration recovery failed.");
+        if (innerError instanceof Error && innerError.message) {
+          console.error(innerError.message);
+        }
+        process.exit(typeof innerError?.status === "number" ? innerError.status : 1);
+      }
+    }
+
     console.error("[prisma-migrate] Failed to apply Prisma migrations.");
     if (error instanceof Error && error.message) {
       console.error(error.message);
