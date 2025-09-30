@@ -266,7 +266,11 @@ function MembersTopbarContent({
     </div>
   ) : null;
 
-  const mobileQuickActions = hasQuickActions ? content.quickActions : null;
+  const mobileQuickActions = hasQuickActions ? (
+    <div className="flex basis-full flex-wrap justify-end gap-2 gap-y-2 sm:basis-auto">
+      {content.quickActions}
+    </div>
+  ) : null;
 
   const homeLink = (
     <Button
@@ -319,7 +323,7 @@ function MembersTopbarContent({
             {homeLink}
           </div>
         ) : (
-          <div className="flex flex-shrink-0 items-center gap-2">
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-2 gap-y-2">
             {mobileQuickActions}
             {homeLink}
           </div>
