@@ -7,11 +7,12 @@ import {
   useMemo,
   useRef,
   useState,
+  useId,
 } from "react";
 import { addDays, format, parseISO, startOfMonth, isValid } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { toast } from "sonner";
-import { CalendarDays, CircleX, Clock, Star } from "lucide-react";
+import { CalendarDays, ChevronDown, CircleX, Clock, Star } from "lucide-react";
 
 import {
   MonthCalendar,
@@ -147,6 +148,8 @@ export function BlockCalendar({
   const [recentlyRemoved, setRecentlyRemoved] = useState<Set<string>>(new Set());
   const [enterDir, setEnterDir] = useState<"left" | "right">("right");
   const [showHolidays, setShowHolidays] = useState(true);
+  const [holidayPanelOpen, setHolidayPanelOpen] = useState(false);
+  const holidayPanelId = useId();
 
   const dragIntentRef = useRef<SelectionIntent | null>(null);
   const draggingRef = useRef(false);
@@ -956,54 +959,85 @@ export function BlockCalendar({
     </p>
   );
 
-  const holidayPanel = !showHolidays
-    ? null
-    : upcomingHolidays.length
-      ? (
-          <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-sky-500/40 dark:bg-sky-500/10">
-            <div className="flex items-center gap-2 text-sky-800 dark:text-sky-100">
-              <CalendarDays className="h-4 w-4" aria-hidden />
-              <span className="font-semibold">Schulferien in Sachsen</span>
-            </div>
-            <ul className="space-y-2 text-sky-900/90 dark:text-sky-100/90">
-              {upcomingHolidays.map((holiday) => {
-                const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
-                const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
+  const holidayPanelContent = upcomingHolidays.length
+    ? (
+        <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-sky-500/40 dark:bg-sky-500/10">
+          <div className="flex items-center gap-2 text-sky-800 dark:text-sky-100">
+            <CalendarDays className="h-4 w-4" aria-hidden />
+            <span className="font-semibold">Schulferien in Sachsen</span>
+          </div>
+          <ul className="space-y-2 text-sky-900/90 dark:text-sky-100/90">
+            {upcomingHolidays.map((holiday) => {
+              const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
+              const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
 
-                return (
-                  <li
-                    key={holiday.id}
-                    className="space-y-1 rounded-md bg-white/60 p-2 shadow-sm ring-1 ring-sky-200/60 dark:bg-slate-950/40 dark:ring-sky-500/40"
+              return (
+                <li
+                  key={holiday.id}
+                  className="space-y-1 rounded-md bg-white/60 p-2 shadow-sm ring-1 ring-sky-200/60 dark:bg-slate-950/40 dark:ring-sky-500/40"
+                >
+                  <div
+                    className={cn(
+                      "font-medium",
+                      isActive
+                        ? "text-sky-900 dark:text-sky-50"
+                        : "text-sky-900/90 dark:text-sky-100/90",
+                    )}
                   >
-                    <div
-                      className={cn(
-                        "font-medium",
-                        isActive
-                          ? "text-sky-900 dark:text-sky-50"
-                          : "text-sky-900/90 dark:text-sky-100/90",
-                      )}
-                    >
-                      {holiday.title}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-sky-900/80 dark:text-sky-100/80">
-                      <span>{rangeLabel}</span>
-                      {isActive ? (
-                        <span className="inline-flex items-center rounded-full bg-sky-200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-sky-900 dark:bg-sky-500/30 dark:text-sky-50">
-                          Aktuell
-                        </span>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )
-      : (
-          <div className="rounded-lg border border-muted/40 bg-muted/30 p-4 text-xs text-muted-foreground">
-            Die Ferienübersicht wird eingeblendet, sobald der abonnierte Kalender Termine liefert.
-          </div>
-        );
+                    {holiday.title}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-sky-900/80 dark:text-sky-100/80">
+                    <span>{rangeLabel}</span>
+                    {isActive ? (
+                      <span className="inline-flex items-center rounded-full bg-sky-200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-sky-900 dark:bg-sky-500/30 dark:text-sky-50">
+                        Aktuell
+                      </span>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )
+    : (
+        <div className="rounded-lg border border-muted/40 bg-muted/30 p-4 text-xs text-muted-foreground">
+          Die Ferienübersicht wird eingeblendet, sobald der abonnierte Kalender Termine liefert.
+        </div>
+      );
+
+  const holidayPanel = (
+    <section className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setHolidayPanelOpen((prev) => !prev)}
+        className={cn(
+          "flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition",
+          holidayPanelOpen
+            ? "border-sky-300 bg-sky-50 text-sky-900 shadow-sm hover:bg-sky-100 dark:border-sky-500/60 dark:bg-sky-500/20 dark:text-sky-50 dark:hover:bg-sky-500/30"
+            : "border-border/60 bg-background/80 text-muted-foreground hover:border-sky-200 hover:text-foreground dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-slate-900/60",
+        )}
+        aria-expanded={holidayPanelOpen}
+        aria-controls={holidayPanelId}
+      >
+        <span className="flex items-center gap-1.5">
+          <CalendarDays className="h-4 w-4" aria-hidden />
+          <span>Ferientermine</span>
+        </span>
+        <ChevronDown
+          className={cn("h-4 w-4 transition-transform", holidayPanelOpen ? "rotate-180" : "rotate-0")}
+          aria-hidden
+        />
+      </button>
+      <div
+        id={holidayPanelId}
+        className={cn(holidayPanelOpen ? "block" : "hidden")}
+        aria-hidden={!holidayPanelOpen}
+      >
+        {holidayPanelContent}
+      </div>
+    </section>
+  );
 
   const preferredSummary = useMemo(
     () => formatWeekdayList(preferredWeekdays, { fallback: "keine bevorzugten Tage" }),
