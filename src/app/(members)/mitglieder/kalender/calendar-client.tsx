@@ -517,13 +517,23 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
             </div>
 
             <Tabs value={view} onValueChange={(value) => handleViewChange(value as CalendarView)} className="w-full md:w-auto">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="day">Tag</TabsTrigger>
-                <TabsTrigger value="week">Woche</TabsTrigger>
-                <TabsTrigger value="month" disabled={!isTablet}>
+              <TabsList className="w-full justify-start sm:grid sm:grid-cols-4">
+                <TabsTrigger value="day" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
+                  Tag
+                </TabsTrigger>
+                <TabsTrigger value="week" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
+                  Woche
+                </TabsTrigger>
+                <TabsTrigger
+                  value="month"
+                  disabled={!isTablet}
+                  className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4"
+                >
                   Monat
                 </TabsTrigger>
-                <TabsTrigger value="agenda">Agenda</TabsTrigger>
+                <TabsTrigger value="agenda" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
+                  Agenda
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
