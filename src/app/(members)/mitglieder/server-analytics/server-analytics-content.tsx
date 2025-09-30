@@ -892,7 +892,56 @@ export function ServerAnalyticsContent({
           </p>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="space-y-3 md:hidden">
+            {displayAnalytics.publicPages.map((entry) => (
+              <div
+                key={entry.path}
+                className="space-y-3 rounded-md border border-border/60 bg-background/60 p-3"
+              >
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">{entry.title}</p>
+                  <p className="text-xs text-muted-foreground">{entry.path}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Scrolltiefe {percentPreciseFormat.format(entry.avgScrollDepth)}
+                  </p>
+                </div>
+                <dl className="grid gap-3 text-sm">
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">Aufrufe</dt>
+                    <dd className="font-semibold text-foreground">{numberFormat.format(entry.views)}</dd>
+                    <dd className="text-xs text-muted-foreground">
+                      {numberFormat.format(entry.uniqueVisitors)} eindeutige Besucher
+                    </dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                      Ø Zeit auf Seite
+                    </dt>
+                    <dd className="text-foreground">{formatDuration(entry.avgTimeOnPageSeconds)}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">Performance</dt>
+                    <dd className="text-foreground">Ø Ladezeit {formatMs(entry.loadTimeMs)}</dd>
+                    <dd className="text-xs text-muted-foreground">LCP {formatMs(entry.lcpMs)}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">Absprung</dt>
+                    <dd className="text-foreground">{percentPreciseFormat.format(entry.bounceRate)}</dd>
+                    <dd className="text-xs text-muted-foreground">
+                      Exit-Rate {percentPreciseFormat.format(entry.exitRate)}
+                    </dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">Zielerfüllung</dt>
+                    <dd className="font-semibold text-foreground">
+                      {percentPreciseFormat.format(entry.goalCompletionRate)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full divide-y divide-border text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -950,7 +999,56 @@ export function ServerAnalyticsContent({
           </p>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="space-y-3 md:hidden">
+            {displayAnalytics.memberPages.map((entry) => (
+              <div
+                key={entry.path}
+                className="space-y-3 rounded-md border border-border/60 bg-background/60 p-3"
+              >
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">{entry.title}</p>
+                  <p className="text-xs text-muted-foreground">{entry.path}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Scrolltiefe {percentPreciseFormat.format(entry.avgScrollDepth)}
+                  </p>
+                </div>
+                <dl className="grid gap-3 text-sm">
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">Aufrufe</dt>
+                    <dd className="font-semibold text-foreground">{numberFormat.format(entry.views)}</dd>
+                    <dd className="text-xs text-muted-foreground">
+                      {numberFormat.format(entry.uniqueVisitors)} eindeutige Mitglieder
+                    </dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                      Ø Zeit auf Seite
+                    </dt>
+                    <dd className="text-foreground">{formatDuration(entry.avgTimeOnPageSeconds)}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">Performance</dt>
+                    <dd className="text-foreground">Ø Ladezeit {formatMs(entry.loadTimeMs)}</dd>
+                    <dd className="text-xs text-muted-foreground">LCP {formatMs(entry.lcpMs)}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">Absprung</dt>
+                    <dd className="text-foreground">{percentPreciseFormat.format(entry.bounceRate)}</dd>
+                    <dd className="text-xs text-muted-foreground">
+                      Exit-Rate {percentPreciseFormat.format(entry.exitRate)}
+                    </dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">Zielerfüllung</dt>
+                    <dd className="font-semibold text-foreground">
+                      {percentPreciseFormat.format(entry.goalCompletionRate)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full divide-y divide-border text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -1009,7 +1107,42 @@ export function ServerAnalyticsContent({
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 md:hidden">
+              {displayAnalytics.trafficSources.map((source) => (
+                <div
+                  key={source.channel}
+                  className="space-y-3 rounded-md border border-border/60 bg-background/60 p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">{source.channel}</p>
+                    <span className={cn("text-xs font-medium", changeTextClass(source.changePercent, true))}>
+                      {formatChange(source.changePercent)} vs. Vorwoche
+                    </span>
+                  </div>
+                  <dl className="grid gap-3 text-sm">
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">Sessions</dt>
+                      <dd className="text-foreground">{numberFormat.format(source.sessions)}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                        Ø Sitzungsdauer
+                      </dt>
+                      <dd className="text-foreground">
+                        {formatDuration(source.avgSessionDurationSeconds)}
+                      </dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">Konversion</dt>
+                      <dd className="font-semibold text-foreground">
+                        {percentPreciseFormat.format(source.conversionRate)}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -1050,7 +1183,31 @@ export function ServerAnalyticsContent({
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 md:hidden">
+              {displayAnalytics.deviceBreakdown.map((device) => (
+                <div
+                  key={device.device}
+                  className="space-y-3 rounded-md border border-border/60 bg-background/60 p-3"
+                >
+                  <p className="text-sm font-semibold text-foreground">{device.device}</p>
+                  <dl className="grid gap-3 text-sm">
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">Sessions</dt>
+                      <dd className="text-foreground">{numberFormat.format(device.sessions)}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">Anteil</dt>
+                      <dd className="text-foreground">{percentPreciseFormat.format(device.share)}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">Ø Ladezeit</dt>
+                      <dd className="text-foreground">{formatMs(device.avgPageLoadMs)}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -1088,7 +1245,39 @@ export function ServerAnalyticsContent({
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 md:hidden">
+              {displayAnalytics.sessionInsights.map((segment) => (
+                <div
+                  key={segment.segment}
+                  className="space-y-3 rounded-md border border-border/60 bg-background/60 p-3"
+                >
+                  <p className="text-sm font-semibold text-foreground">{segment.segment}</p>
+                  <dl className="grid gap-3 text-sm">
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">Ø Dauer</dt>
+                      <dd className="text-foreground">
+                        {formatDuration(segment.avgSessionDurationSeconds)}
+                      </dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                        Seiten / Sitzung
+                      </dt>
+                      <dd className="text-foreground">{decimalFormat.format(segment.pagesPerSession)}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">Retention</dt>
+                      <dd className="text-foreground">{percentPreciseFormat.format(segment.retentionRate)}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-xs font-semibold uppercase text-muted-foreground">Anteil</dt>
+                      <dd className="text-foreground">{percentPreciseFormat.format(segment.share)}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
