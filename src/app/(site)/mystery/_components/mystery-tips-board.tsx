@@ -158,7 +158,7 @@ export function MysteryTipsBoard({ initialTips = [], clueOptions, defaultClueId 
   return (
     <section className="space-y-6">
       <Heading level="h2">Rätsel mit und gib uns deinen Tipp!</Heading>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="split-responsive">
         <Card>
           <CardHeader>
             <CardTitle>Dein Tipp</CardTitle>
@@ -251,7 +251,7 @@ export function MysteryTipsBoard({ initialTips = [], clueOptions, defaultClueId 
               <ul className="space-y-3">
                 {tips.map((tip) => (
                   <li key={tip.id} className="rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="stack-responsive stack-responsive--between">
                       <Text className="text-left">{tip.text}</Text>
                       <Badge variant="secondary">×{tip.count}</Badge>
                     </div>

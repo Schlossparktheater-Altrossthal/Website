@@ -93,7 +93,7 @@ export default async function Home() {
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--primary)_35%,transparent),_transparent_60%),radial-gradient(circle_at_bottom,_color-mix(in_oklab,var(--info)_25%,transparent),_transparent_55%)]"
               aria-hidden="true"
             />
-            <div className="relative mx-auto max-w-4xl space-y-8 px-8 py-14 sm:px-12">
+            <div className="relative mx-auto max-w-4xl space-y-8 px-responsive-lg py-14">
               <div className="space-y-4 text-center">
                 <Badge
                   variant="outline"
