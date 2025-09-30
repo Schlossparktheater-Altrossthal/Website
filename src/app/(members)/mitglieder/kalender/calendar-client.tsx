@@ -149,6 +149,7 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
   const isTablet = useMediaQuery("(min-width: 768px)");
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const isCompactWeekBreakpoint = useMediaQuery("(max-width: 1023px)");
+  const isMobileTimeBreakpoint = useMediaQuery("(max-width: 639px)");
   const deviceKind: DeviceKind = isDesktop ? "desktop" : isTablet ? "tablet" : "mobile";
   const previousDeviceRef = useRef<DeviceKind | null>(null);
 
@@ -559,7 +560,16 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
               ) : null}
 
               {view === "week" || view === "day" ? (
-                isCompactWeekBreakpoint ? (
+                isMobileTimeBreakpoint ? (
+                  <div className="p-3 sm:p-4">
+                    <WeekGrid
+                      buckets={bucketsForWeek}
+                      calendarMap={calendarMap}
+                      view={view}
+                      isCompact
+                    />
+                  </div>
+                ) : isCompactWeekBreakpoint ? (
                   <div className="p-4">
                     <WeekGrid
                       buckets={bucketsForWeek}
