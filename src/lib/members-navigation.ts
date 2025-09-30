@@ -120,7 +120,9 @@ export function resolveAssignmentsGroupLabel(
 
   const permissionSet =
     permissions instanceof Set ? permissions : new Set(permissions ?? []);
-  const canSeeRehearsals = permissionSet.has("mitglieder.meine-proben");
+  const canSeeRehearsals =
+    permissionSet.has("mitglieder.meine-proben") ||
+    permissionSet.has("mitglieder.kalender");
   const canSeeDepartments = permissionSet.has("mitglieder.meine-gewerke");
 
   if (canSeeRehearsals && canSeeDepartments) return "Proben & Gewerke";

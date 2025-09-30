@@ -445,7 +445,7 @@ export const membersNavigation = [
       {
         href: "/mitglieder/kalender",
         label: "Kalender",
-        permissionKey: "mitglieder.meine-proben",
+        permissionKey: "mitglieder.kalender",
         icon: PersonalCalendarIcon,
       },
       {

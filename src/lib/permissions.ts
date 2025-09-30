@@ -130,6 +130,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "communication",
   },
   {
+    key: "mitglieder.kalender",
+    label: "Kalender öffnen",
+    description:
+      "Persönliche Kalenderansicht mit Proben, Gewerke-Terminen und Sperrungen anzeigen.",
+    category: "self",
+  },
+  {
     key: "mitglieder.meine-proben",
     label: "Eigene Probentermine einsehen",
     description: 'Zugang zum Bereich "Meine Proben" mit persönlichen Terminen und Fristen.',
