@@ -10,12 +10,14 @@ import type { ServerAnalytics } from "@/lib/server-analytics";
 
 import { ServerAnalyticsContent } from "../server-analytics-content";
 
-const { updateStatusMock } = vi.hoisted(() => ({
+const { updateStatusMock, updateSettingsMock } = vi.hoisted(() => ({
   updateStatusMock: vi.fn(),
+  updateSettingsMock: vi.fn(),
 }));
 
 vi.mock("../actions", () => ({
   updateServerLogStatusAction: updateStatusMock,
+  updateServerAnalyticsSettingsAction: updateSettingsMock,
 }));
 
 vi.mock("@/hooks/useRealtime", () => ({
@@ -31,6 +33,15 @@ function createAnalytics(overrides: Partial<ServerAnalytics> = {}): ServerAnalyt
   const analytics: ServerAnalytics = {
     generatedAt: now,
     isDemoData: false,
+    settings: {
+      httpWindowMinutes: 1440,
+      httpBucketMinutes: 60,
+      sessionWindowDays: 30,
+      sessionRetentionDays: 180,
+      realtimeWindowHours: 24,
+      pageWindowDays: 14,
+      pageRetentionDays: 60,
+    },
     summary: {
       uptimePercentage: 99.9,
       requestsLast24h: 1_200,
@@ -110,6 +121,7 @@ describe("ServerAnalyticsContent", () => {
   beforeEach(() => {
     (globalThis as typeof globalThis & { React?: typeof React }).React = React;
     vi.clearAllMocks();
+    updateSettingsMock.mockReset();
   });
 
   it("updates server log status via server action", async () => {
@@ -162,5 +174,48 @@ describe("ServerAnalyticsContent", () => {
     expect(screen.getByText("Nutzertypen & Traffic")).toBeInTheDocument();
     expect(screen.getByText("Nicht eingeloggt")).toBeInTheDocument();
     expect(screen.getByText("Bots & Crawler")).toBeInTheDocument();
+  });
+
+  it("updates analytics settings via server action", async () => {
+    const analytics = createAnalytics();
+    const user = userEvent.setup();
+    const updatedSettings = {
+      ...analytics.settings,
+      httpWindowMinutes: 720,
+    };
+    const updatedAnalytics = createAnalytics({
+      settings: updatedSettings,
+      generatedAt: new Date("2024-02-01T12:00:00.000Z").toISOString(),
+    });
+
+    updateSettingsMock.mockResolvedValueOnce({
+      success: true,
+      settings: updatedSettings,
+      analytics: updatedAnalytics,
+    });
+
+    render(<ServerAnalyticsContent initialAnalytics={analytics} canManageSettings />);
+
+    const settingsTab = await screen.findByRole("tab", { name: "Einstellungen" });
+    await user.click(settingsTab);
+
+    const httpInput = await screen.findByLabelText("Auswertungszeitraum (Minuten)");
+    await user.clear(httpInput);
+    await user.type(httpInput, "720");
+
+    const submitButton = await screen.findByRole("button", { name: "Einstellungen speichern" });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(updateSettingsMock).toHaveBeenCalledWith({
+        httpWindowMinutes: 720,
+        httpBucketMinutes: analytics.settings.httpBucketMinutes,
+        sessionWindowDays: analytics.settings.sessionWindowDays,
+        sessionRetentionDays: analytics.settings.sessionRetentionDays,
+        realtimeWindowHours: analytics.settings.realtimeWindowHours,
+        pageWindowDays: analytics.settings.pageWindowDays,
+        pageRetentionDays: analytics.settings.pageRetentionDays,
+      });
+    });
   });
 });

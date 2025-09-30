@@ -16,6 +16,11 @@ import type { LoadedServerLog } from "@/lib/analytics/load-server-logs";
 import { loadLatestCriticalServerLogs } from "@/lib/analytics/load-server-logs";
 import { loadDeviceBreakdownFromDatabase, loadPagePerformanceMetrics } from "@/lib/server-analytics-data";
 import type { PagePerformanceMetricOverride } from "@/lib/server-analytics-data";
+import {
+  DEFAULT_SERVER_ANALYTICS_SETTINGS,
+  loadServerAnalyticsSettings,
+  type ServerAnalyticsSettings,
+} from "@/lib/server-analytics-settings";
 import { prisma } from "@/lib/prisma";
 
 export type OptimizationImpact = "Hoch" | "Mittel" | "Niedrig";
@@ -134,6 +139,7 @@ export type OptimizationInsight = {
 export type ServerAnalytics = {
   generatedAt: string;
   isDemoData: boolean;
+  settings: ServerAnalyticsSettings;
   summary: ServerSummary;
   resourceUsage: ServerResourceUsage[];
   requestBreakdown: RequestBreakdown;
@@ -210,6 +216,7 @@ const DEFAULT_VISITOR_DISTRIBUTION: VisitorDistributionSegment[] = [
 ];
 
 const DEFAULT_ANALYTICS: StaticAnalyticsData = {
+  settings: DEFAULT_SERVER_ANALYTICS_SETTINGS,
   summary: DEFAULT_SUMMARY,
   resourceUsage: [],
   requestBreakdown: DEFAULT_REQUEST_BREAKDOWN,
@@ -762,6 +769,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   let deviceBreakdown = cloneDeviceStats(DEFAULT_ANALYTICS.deviceBreakdown);
   let publicPages = clonePageEntries(DEFAULT_ANALYTICS.publicPages);
   let memberPages = clonePageEntries(DEFAULT_ANALYTICS.memberPages);
+  let settings: ServerAnalyticsSettings = { ...DEFAULT_ANALYTICS.settings };
   let serverLogs: LoadedServerLog[] = (DEFAULT_ANALYTICS.serverLogs ?? []).map((entry) => ({
     ...entry,
     tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
@@ -832,6 +840,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
       trafficSourceRows,
       realtimeSummaryRow,
       criticalLogs,
+      analyticsSettings,
     ] = await Promise.all([
       loadHttpAggregationsFromDatabase().catch((error) => {
         console.error("[server-analytics] Failed to load HTTP analytics summary", error);
@@ -875,6 +884,10 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         }),
       loadLatestCriticalServerLogs({ limit: 25 }).catch((error) => {
         console.error("[server-analytics] Failed to load critical server logs", error);
+        return null;
+      }),
+      loadServerAnalyticsSettings(prisma).catch((error) => {
+        console.error("[server-analytics] Failed to load analytics settings", error);
         return null;
       }),
     ]);
@@ -955,6 +968,10 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
         tags: Array.isArray(entry.tags) ? [...entry.tags] : [],
       }));
     }
+
+    if (analyticsSettings) {
+      settings = analyticsSettings;
+    }
   } else {
     deviceBreakdown = cloneDeviceStats(deviceBreakdown);
     publicPages = clonePageEntries(publicPages);
@@ -981,6 +998,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
     generatedAt: new Date().toISOString(),
     isDemoData: !hasDatabaseData,
     ...DEFAULT_ANALYTICS,
+    settings,
     summary,
     requestBreakdown,
     visitorDistribution,

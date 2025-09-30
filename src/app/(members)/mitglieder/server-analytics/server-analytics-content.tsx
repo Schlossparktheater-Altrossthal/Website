@@ -1,12 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type FormEvent,
+} from "react";
 
 import { Activity, AlertTriangle, HardDrive, Radio, ShieldCheck, Timer, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogClose,
@@ -29,8 +39,14 @@ import type { ServerAnalyticsRealtimeEvent } from "@/lib/realtime/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-import { resetServerAnalyticsAction, updateServerLogStatusAction } from "./actions";
+import {
+  resetServerAnalyticsAction,
+  updateServerAnalyticsSettingsAction,
+  updateServerLogStatusAction,
+  type UpdateServerAnalyticsSettingsInput,
+} from "./actions";
 import { OverviewMetrics, type OverviewMetricDefinition } from "./overview-metrics";
+import { SERVER_ANALYTICS_SETTINGS_LIMITS } from "@/lib/server-analytics-settings";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const decimalFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -290,12 +306,62 @@ const statusActionLabelMap: Record<ServerLogEvent["status"], string> = {
 
 const statusUpdateOrder: ServerLogEvent["status"][] = ["open", "monitoring", "resolved"];
 
+type SettingsFormState = {
+  httpWindowMinutes: string;
+  httpBucketMinutes: string;
+  sessionWindowDays: string;
+  sessionRetentionDays: string;
+  realtimeWindowHours: string;
+  pageWindowDays: string;
+  pageRetentionDays: string;
+};
+
+type SettingsFieldErrors = Partial<Record<keyof SettingsFormState, string[]>>;
+
+function toSettingsFormState(settings: ServerAnalytics["settings"]): SettingsFormState {
+  return {
+    httpWindowMinutes: String(settings.httpWindowMinutes ?? ""),
+    httpBucketMinutes: String(settings.httpBucketMinutes ?? ""),
+    sessionWindowDays: String(settings.sessionWindowDays ?? ""),
+    sessionRetentionDays: String(settings.sessionRetentionDays ?? ""),
+    realtimeWindowHours: String(settings.realtimeWindowHours ?? ""),
+    pageWindowDays: String(settings.pageWindowDays ?? ""),
+    pageRetentionDays: String(settings.pageRetentionDays ?? ""),
+  };
+}
+
+function parseSettingsFormState(form: SettingsFormState): UpdateServerAnalyticsSettingsInput {
+  const parse = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return Number.NaN;
+    }
+    const numeric = Number(trimmed);
+    return Number.isFinite(numeric) ? numeric : Number.NaN;
+  };
+
+  return {
+    httpWindowMinutes: parse(form.httpWindowMinutes),
+    httpBucketMinutes: parse(form.httpBucketMinutes),
+    sessionWindowDays: parse(form.sessionWindowDays),
+    sessionRetentionDays: parse(form.sessionRetentionDays),
+    realtimeWindowHours: parse(form.realtimeWindowHours),
+    pageWindowDays: parse(form.pageWindowDays),
+    pageRetentionDays: parse(form.pageRetentionDays),
+  };
+}
+
 type ServerAnalyticsContentProps = {
   initialAnalytics: ServerAnalytics;
   canReset?: boolean;
+  canManageSettings?: boolean;
 };
 
-export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: ServerAnalyticsContentProps) {
+export function ServerAnalyticsContent({
+  initialAnalytics,
+  canReset = false,
+  canManageSettings = false,
+}: ServerAnalyticsContentProps) {
   const { socket, isConnected, connectionStatus } = useRealtime();
   const [analytics, setAnalytics] = useState<ServerAnalytics>(initialAnalytics);
   const [generatedAt, setGeneratedAt] = useState<Date>(() => parseGeneratedAt(initialAnalytics.generatedAt));
@@ -303,15 +369,29 @@ export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: S
   const [pendingLogId, setPendingLogId] = useState<string | null>(null);
   const [isStatusUpdating, startStatusUpdate] = useTransition();
   const [isResetting, startResetTransition] = useTransition();
+  const [isSavingSettings, startSettingsSave] = useTransition();
   const [isResetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [settingsForm, setSettingsForm] = useState<SettingsFormState>(() =>
+    toSettingsFormState(initialAnalytics.settings),
+  );
+  const [settingsFieldErrors, setSettingsFieldErrors] = useState<SettingsFieldErrors>({});
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const displayAnalytics = useAnimatedAnalytics(analytics);
+  const settingsLimits = SERVER_ANALYTICS_SETTINGS_LIMITS;
 
   useEffect(() => {
     setAnalytics(initialAnalytics);
     setGeneratedAt(parseGeneratedAt(initialAnalytics.generatedAt));
     setHasLiveUpdate(false);
+    setSettingsForm(toSettingsFormState(initialAnalytics.settings));
+    setSettingsFieldErrors({});
+    setSettingsError(null);
   }, [initialAnalytics]);
+
+  useEffect(() => {
+    setSettingsForm(toSettingsFormState(analytics.settings));
+  }, [analytics.settings]);
 
   useEffect(() => {
     if (!socket) return;
@@ -341,6 +421,55 @@ export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: S
       socket.emit("get_server_analytics");
     }
   }, [socket, isConnected]);
+
+  const handleSettingsChange = useCallback((field: keyof SettingsFormState, value: string) => {
+    setSettingsForm((previous) => ({ ...previous, [field]: value }));
+    setSettingsFieldErrors((previous) => {
+      if (!previous[field]?.length) {
+        return previous;
+      }
+      const next = { ...previous };
+      delete next[field];
+      return next;
+    });
+  }, []);
+
+  const handleSettingsSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setSettingsError(null);
+      setSettingsFieldErrors({});
+      const payload = parseSettingsFormState(settingsForm);
+
+      startSettingsSave(async () => {
+        const result = await updateServerAnalyticsSettingsAction(payload);
+        if (result.success) {
+          setAnalytics(result.analytics);
+          setGeneratedAt(parseGeneratedAt(result.analytics.generatedAt));
+          setSettingsForm(toSettingsFormState(result.settings));
+          setSettingsFieldErrors({});
+          setSettingsError(null);
+          toast.success("Analytics-Einstellungen gespeichert.");
+        } else if (result.error === "validation_failed" && result.fieldErrors) {
+          setSettingsFieldErrors(result.fieldErrors as SettingsFieldErrors);
+          toast.error("Bitte prüfe die markierten Felder.");
+        } else if (result.error === "no_database") {
+          const message = "Ohne Datenbankverbindung können die Einstellungen nicht gespeichert werden.";
+          setSettingsError(message);
+          toast.error(message);
+        } else if (result.error === "not_authorized") {
+          const message = "Du darfst diese Einstellungen nicht ändern.";
+          setSettingsError(message);
+          toast.error(message);
+        } else {
+          const message = "Einstellungen konnten nicht gespeichert werden. Bitte später erneut versuchen.";
+          setSettingsError(message);
+          toast.error(message);
+        }
+      });
+    },
+    [settingsForm, startSettingsSave],
+  );
 
   const lastUpdatedLabel = useMemo(() => dateTimeFormat.format(generatedAt), [generatedAt]);
 
@@ -621,6 +750,9 @@ export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: S
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Kennzahlen</TabsTrigger>
+            {canManageSettings ? (
+              <TabsTrigger value="settings">Einstellungen</TabsTrigger>
+            ) : null}
             <TabsTrigger value="logs">Serverlogs</TabsTrigger>
           </TabsList>
           <div className="text-xs text-muted-foreground sm:text-right">
@@ -1013,6 +1145,209 @@ export function ServerAnalyticsContent({ initialAnalytics, canReset = false }: S
         </Card>
       </div>
         </TabsContent>
+
+        {canManageSettings ? (
+          <TabsContent value="settings" className="space-y-6">
+            <Card className="border border-border/70">
+              <CardHeader>
+                <CardTitle>Einstellungen für Messfenster &amp; Retention</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Steuere, wie lange Requests, Sessions und Seitenaufrufe ausgewertet werden. Änderungen wirken sich auf die
+                  nächste Aggregation aus.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <form className="space-y-6" onSubmit={handleSettingsSubmit}>
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <fieldset className="space-y-4">
+                      <legend className="text-sm font-semibold text-foreground">HTTP-Requests</legend>
+                      <div className="space-y-2">
+                        <Label htmlFor="httpWindowMinutes">Auswertungszeitraum (Minuten)</Label>
+                        <Input
+                          id="httpWindowMinutes"
+                          name="httpWindowMinutes"
+                          type="number"
+                          min={settingsLimits.httpWindowMinutes.min}
+                          max={settingsLimits.httpWindowMinutes.max}
+                          value={settingsForm.httpWindowMinutes}
+                          onChange={(event) => handleSettingsChange("httpWindowMinutes", event.target.value)}
+                          disabled={isSavingSettings}
+                          inputMode="numeric"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Zeitraum, über den Requests für die Kennzahlen berücksichtigt werden.
+                        </p>
+                        {settingsFieldErrors.httpWindowMinutes ? (
+                          <p className="text-xs text-destructive">
+                            {settingsFieldErrors.httpWindowMinutes.join(" ")}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="httpBucketMinutes">Bucket-Größe (Minuten)</Label>
+                        <Input
+                          id="httpBucketMinutes"
+                          name="httpBucketMinutes"
+                          type="number"
+                          min={settingsLimits.httpBucketMinutes.min}
+                          max={settingsLimits.httpBucketMinutes.max}
+                          value={settingsForm.httpBucketMinutes}
+                          onChange={(event) => handleSettingsChange("httpBucketMinutes", event.target.value)}
+                          disabled={isSavingSettings}
+                          inputMode="numeric"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Aggregationsintervall zur Ermittlung von Peak-Hours und Antwortzeiten.
+                        </p>
+                        {settingsFieldErrors.httpBucketMinutes ? (
+                          <p className="text-xs text-destructive">
+                            {settingsFieldErrors.httpBucketMinutes.join(" ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="space-y-4">
+                      <legend className="text-sm font-semibold text-foreground">Sessions &amp; Realtime</legend>
+                      <div className="space-y-2">
+                        <Label htmlFor="sessionWindowDays">Auswertungszeitraum Sessions (Tage)</Label>
+                        <Input
+                          id="sessionWindowDays"
+                          name="sessionWindowDays"
+                          type="number"
+                          min={settingsLimits.sessionWindowDays.min}
+                          max={settingsLimits.sessionWindowDays.max}
+                          value={settingsForm.sessionWindowDays}
+                          onChange={(event) => handleSettingsChange("sessionWindowDays", event.target.value)}
+                          disabled={isSavingSettings}
+                          inputMode="numeric"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Gibt an, wie viele Tage für die Session-Analyse herangezogen werden.
+                        </p>
+                        {settingsFieldErrors.sessionWindowDays ? (
+                          <p className="text-xs text-destructive">
+                            {settingsFieldErrors.sessionWindowDays.join(" ")}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="sessionRetentionDays">Retention Sessions (Tage)</Label>
+                        <Input
+                          id="sessionRetentionDays"
+                          name="sessionRetentionDays"
+                          type="number"
+                          min={settingsLimits.sessionRetentionDays.min}
+                          max={settingsLimits.sessionRetentionDays.max}
+                          value={settingsForm.sessionRetentionDays}
+                          onChange={(event) => handleSettingsChange("sessionRetentionDays", event.target.value)}
+                          disabled={isSavingSettings}
+                          inputMode="numeric"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Ab wann alte Sessions, Traffic-Attributions und Realtime-Events gelöscht werden.
+                        </p>
+                        {settingsFieldErrors.sessionRetentionDays ? (
+                          <p className="text-xs text-destructive">
+                            {settingsFieldErrors.sessionRetentionDays.join(" ")}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="realtimeWindowHours">Realtime-Zeitraum (Stunden)</Label>
+                        <Input
+                          id="realtimeWindowHours"
+                          name="realtimeWindowHours"
+                          type="number"
+                          min={settingsLimits.realtimeWindowHours.min}
+                          max={settingsLimits.realtimeWindowHours.max}
+                          value={settingsForm.realtimeWindowHours}
+                          onChange={(event) => handleSettingsChange("realtimeWindowHours", event.target.value)}
+                          disabled={isSavingSettings}
+                          inputMode="numeric"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Zeitraum für Live-Events wie Websocket-Pings und Hintergrundjobs.
+                        </p>
+                        {settingsFieldErrors.realtimeWindowHours ? (
+                          <p className="text-xs text-destructive">
+                            {settingsFieldErrors.realtimeWindowHours.join(" ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="space-y-4 lg:col-span-2">
+                      <legend className="text-sm font-semibold text-foreground">Seiten-Performance</legend>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="pageWindowDays">Auswertungszeitraum Seiten (Tage)</Label>
+                          <Input
+                            id="pageWindowDays"
+                            name="pageWindowDays"
+                            type="number"
+                            min={settingsLimits.pageWindowDays.min}
+                            max={settingsLimits.pageWindowDays.max}
+                            value={settingsForm.pageWindowDays}
+                            onChange={(event) => handleSettingsChange("pageWindowDays", event.target.value)}
+                            disabled={isSavingSettings}
+                            inputMode="numeric"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Wie viele Tage Pageviews und Gerätewerte zur Analyse beitragen.
+                          </p>
+                          {settingsFieldErrors.pageWindowDays ? (
+                            <p className="text-xs text-destructive">
+                              {settingsFieldErrors.pageWindowDays.join(" ")}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="pageRetentionDays">Retention Seiten (Tage)</Label>
+                          <Input
+                            id="pageRetentionDays"
+                            name="pageRetentionDays"
+                            type="number"
+                            min={settingsLimits.pageRetentionDays.min}
+                            max={settingsLimits.pageRetentionDays.max}
+                            value={settingsForm.pageRetentionDays}
+                            onChange={(event) => handleSettingsChange("pageRetentionDays", event.target.value)}
+                            disabled={isSavingSettings}
+                            inputMode="numeric"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Nach wie vielen Tagen Pageviews und Geräteschnappschüsse bereinigt werden.
+                          </p>
+                          {settingsFieldErrors.pageRetentionDays ? (
+                            <p className="text-xs text-destructive">
+                              {settingsFieldErrors.pageRetentionDays.join(" ")}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </fieldset>
+                  </div>
+
+                  {settingsError ? (
+                    <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                      {settingsError}
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center justify-end">
+                    <Button
+                      type="submit"
+                      disabled={isSavingSettings}
+                      data-state={isSavingSettings ? "loading" : undefined}
+                    >
+                      Einstellungen speichern
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="logs" className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
