@@ -152,9 +152,9 @@ export default function SchulkatzePage() {
         />
       </div>
 
-      <section className="layout-container pb-12 pt-16 sm:pt-24">
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-10">
-          <figure className="relative order-first mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg lg:order-2">
+      <section className="layout-container pb-12 pt-responsive-hero">
+        <div className="feature-grid">
+          <figure className="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg feature-grid__media">
             <SchulkatzeImageRotator
               images={schulkatzeImages}
               alt="Schulkatze Dennis Dieter von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
@@ -164,7 +164,7 @@ export default function SchulkatzePage() {
             </figcaption>
           </figure>
 
-          <div className="max-w-3xl space-y-6 lg:order-1">
+          <div className="max-w-3xl space-y-6 feature-grid__content">
             <Text variant="eyebrow" uppercase tone="primary">
               Schulkultur
             </Text>
@@ -188,7 +188,7 @@ export default function SchulkatzePage() {
       </section>
 
       <section className="layout-container pb-16">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid-responsive grid-responsive--cols-3">
           {highlights.map((item) => (
             <Card key={item.title} className="h-full">
               <div className="flex items-start gap-3">
@@ -196,7 +196,7 @@ export default function SchulkatzePage() {
                   <item.icon className="h-5 w-5" aria-hidden />
                 </div>
                 <div className="space-y-2">
-                  <Text weight="semibold" className="text-base sm:text-lg">
+                  <Text weight="semibold" className="text-responsive-lg">
                     {item.title}
                   </Text>
                   <Text variant="small" tone="muted" className="leading-relaxed">
@@ -210,13 +210,13 @@ export default function SchulkatzePage() {
       </section>
 
       <section className="layout-container pb-16">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="split-responsive split-responsive--at-medium split-responsive--wide-focus">
           <Card className="h-full space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
                 <PawPrint className="h-5 w-5" aria-hidden />
               </div>
-              <Text weight="semibold" className="text-base sm:text-lg">
+              <Text weight="semibold" className="text-responsive-lg">
                 Erinnerungen an Dennis Dieter
               </Text>
             </div>
@@ -242,7 +242,7 @@ export default function SchulkatzePage() {
               <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
                 <Heart className="h-5 w-5" aria-hidden />
               </div>
-              <Text weight="semibold" className="text-base sm:text-lg">
+              <Text weight="semibold" className="text-responsive-lg">
                 Wer sich kümmert
               </Text>
             </div>
@@ -271,7 +271,7 @@ export default function SchulkatzePage() {
             <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
               <ShieldCheck className="h-5 w-5" aria-hidden />
             </div>
-            <Text weight="semibold" className="text-base sm:text-lg">
+            <Text weight="semibold" className="text-responsive-lg">
               Was wir aus Dennis Dieters Zeit mitnehmen
             </Text>
           </div>
