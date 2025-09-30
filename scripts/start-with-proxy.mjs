@@ -1,7 +1,7 @@
 import http from 'node:http';
+import https from 'node:https';
 import process from 'node:process';
 import { spawn } from 'node:child_process';
-import httpProxy from 'http-proxy';
 
 function normalizeAbsolutePath(value, fallback) {
   const raw = (value ?? fallback ?? '').trim();
@@ -150,36 +150,6 @@ async function main() {
     );
   }
 
-  const proxy = httpProxy.createProxyServer({
-    target: targetUrl,
-    ws: true,
-    xfwd: true,
-  });
-
-  proxy.on('error', (error, req, res) => {
-    if (shuttingDown) return;
-    console.error('[Proxy] Error while proxying request', error);
-
-    if (res instanceof http.ServerResponse) {
-      if (!res.headersSent) {
-        res.writeHead(502, { 'Content-Type': 'text/plain' });
-      }
-      if (!res.writableEnded) {
-        res.end('Bad Gateway');
-      }
-      return;
-    }
-
-    if (res && typeof res.destroy === 'function') {
-      res.destroy();
-      return;
-    }
-
-    if (req && typeof req.destroy === 'function') {
-      req.destroy();
-    }
-  });
-
   const server = http.createServer((req, res) => {
     let target = targetUrl;
     if (deployProxyConfig) {
@@ -193,11 +163,41 @@ async function main() {
       }
     }
 
-    proxy.web(req, res, { target });
+    forwardHttpRequest(req, res, target, {
+      proxyPort,
+      shuttingDown: () => shuttingDown,
+    });
+  });
+
+  const managedConnections = new Set();
+  const managedUpstreamSockets = new Set();
+
+  server.on('connection', (socket) => {
+    managedConnections.add(socket);
+    socket.on('close', () => {
+      managedConnections.delete(socket);
+    });
   });
 
   server.on('upgrade', (req, socket, head) => {
-    proxy.ws(req, socket, head, { target: targetUrl });
+    managedConnections.add(socket);
+    socket.on('close', () => {
+      managedConnections.delete(socket);
+    });
+
+    forwardWebSocket(req, socket, head, targetUrl, {
+      proxyPort,
+      registerUpstream(socket) {
+        managedUpstreamSockets.add(socket);
+        socket.on('close', () => {
+          managedUpstreamSockets.delete(socket);
+        });
+      },
+      onProxyError(error) {
+        if (shuttingDown) return;
+        console.error('[Proxy] WebSocket proxy error', error);
+      },
+    });
   });
 
   server.on('error', (error) => {
@@ -226,8 +226,13 @@ async function main() {
     shuttingDown = true;
     plannedExitCode = exitCode;
     console.log(`[Proxy] Received ${signal}, shutting down`);
-    proxy.close();
     server.close(markServerClosed);
+    for (const socket of managedConnections) {
+      socket.destroy();
+    }
+    for (const socket of managedUpstreamSockets) {
+      socket.destroy();
+    }
     if (!child.killed) {
       child.kill(signal);
     }
@@ -246,8 +251,13 @@ async function main() {
         console.error(`[Proxy] Combined server exited unexpectedly with code ${plannedExitCode}`);
       }
       shuttingDown = true;
-      proxy.close();
       server.close(markServerClosed);
+      for (const socket of managedConnections) {
+        socket.destroy();
+      }
+      for (const socket of managedUpstreamSockets) {
+        socket.destroy();
+      }
     } else {
       plannedExitCode = code ?? plannedExitCode;
     }
@@ -259,3 +269,191 @@ main().catch((error) => {
   console.error('[Proxy] Fatal error starting reverse proxy', error);
   process.exit(1);
 });
+
+function forwardHttpRequest(req, res, baseTarget, options) {
+  const upstreamUrl = resolveTargetUrl(baseTarget, req.url ?? '/');
+  const transport = selectTransport(upstreamUrl.protocol);
+  const requestOptions = {
+    hostname: upstreamUrl.hostname,
+    port: upstreamUrl.port,
+    method: req.method,
+    path: upstreamUrl.pathname + upstreamUrl.search,
+    headers: createProxyHeaders(req, upstreamUrl, {
+      proxyPort: options.proxyPort,
+      keepConnectionHeader: false,
+    }),
+  };
+
+  const proxyReq = transport.request(requestOptions, (proxyRes) => {
+    if (!res.headersSent) {
+      res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+    }
+    proxyRes.pipe(res);
+  });
+
+  proxyReq.on('error', (error) => {
+    if (options.shuttingDown()) {
+      return;
+    }
+    console.error('[Proxy] Error while proxying request', error);
+    if (!res.headersSent) {
+      res.writeHead(502, { 'Content-Type': 'text/plain' });
+    }
+    if (!res.writableEnded) {
+      res.end('Bad Gateway');
+    }
+    req.destroy();
+  });
+
+  req.on('aborted', () => {
+    proxyReq.destroy();
+  });
+
+  proxyReq.on('response', () => {
+    // Ensure the response stream closes alongside the proxy request.
+    res.on('close', () => {
+      proxyReq.destroy();
+    });
+  });
+
+  req.pipe(proxyReq);
+}
+
+function forwardWebSocket(req, socket, head, baseTarget, options) {
+  const upstreamUrl = resolveTargetUrl(baseTarget, req.url ?? '/');
+  const transport = selectTransport(upstreamUrl.protocol);
+  const requestOptions = {
+    hostname: upstreamUrl.hostname,
+    port: upstreamUrl.port,
+    method: req.method,
+    path: upstreamUrl.pathname + upstreamUrl.search,
+    headers: createProxyHeaders(req, upstreamUrl, {
+      proxyPort: options.proxyPort,
+      keepConnectionHeader: true,
+    }),
+  };
+
+  if (!/upgrade/i.test(requestOptions.headers.connection ?? '')) {
+    requestOptions.headers.connection = 'Upgrade';
+  }
+  if (!requestOptions.headers.upgrade && req.headers.upgrade) {
+    requestOptions.headers.upgrade = req.headers.upgrade;
+  }
+
+  const proxyReq = transport.request(requestOptions);
+
+  proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
+    options.registerUpstream?.(proxySocket);
+
+    proxySocket.on('error', (error) => {
+      if (options.onProxyError && !socket.destroyed) {
+        options.onProxyError(error);
+      }
+      socket.destroy();
+    });
+
+    socket.on('error', (error) => {
+      proxySocket.destroy(error);
+    });
+
+    socket.write(formatUpgradeResponse(proxyRes));
+
+    if (proxyHead && proxyHead.length) {
+      socket.write(proxyHead);
+    }
+    if (head && head.length) {
+      proxySocket.write(head);
+    }
+
+    proxySocket.pipe(socket).pipe(proxySocket);
+  });
+
+  proxyReq.on('response', (proxyRes) => {
+    // The upstream declined to upgrade the connection; forward the response.
+    socket.write(formatUpgradeResponse(proxyRes));
+    proxyRes.on('end', () => {
+      socket.end();
+    });
+    proxyRes.pipe(socket, { end: false });
+  });
+
+  proxyReq.on('error', (error) => {
+    if (!socket.destroyed) {
+      options.onProxyError?.(error);
+      socket.destroy();
+    }
+  });
+
+  proxyReq.end();
+}
+
+function resolveTargetUrl(baseTarget, requestUrl) {
+  const resolved = new URL(requestUrl, baseTarget);
+  if (!resolved.port) {
+    resolved.port = resolved.protocol === 'https:' ? '443' : '80';
+  }
+  return resolved;
+}
+
+function selectTransport(protocol) {
+  return protocol === 'https:' ? https : http;
+}
+
+function createProxyHeaders(req, upstreamUrl, { proxyPort, keepConnectionHeader }) {
+  const headers = { ...req.headers };
+
+  if (!keepConnectionHeader) {
+    delete headers.connection;
+    delete headers['proxy-connection'];
+  }
+
+  headers.host = upstreamUrl.host;
+
+  const forwardedFor = getRemoteAddress(req.socket);
+  if (forwardedFor) {
+    headers['x-forwarded-for'] = headers['x-forwarded-for']
+      ? `${headers['x-forwarded-for']}, ${forwardedFor}`
+      : forwardedFor;
+  }
+
+  const originalHost = req.headers.host;
+  if (originalHost) {
+    headers['x-forwarded-host'] = originalHost;
+  } else if (!headers['x-forwarded-host']) {
+    headers['x-forwarded-host'] = upstreamUrl.host;
+  }
+
+  const forwardedProto = req.headers['x-forwarded-proto'] ?? 'http';
+  headers['x-forwarded-proto'] = forwardedProto;
+
+  const forwardedPort = req.headers['x-forwarded-port'] ?? (proxyPort ? String(proxyPort) : undefined);
+  if (forwardedPort) {
+    headers['x-forwarded-port'] = forwardedPort;
+  }
+
+  return headers;
+}
+
+function getRemoteAddress(socket) {
+  const address = socket.remoteAddress;
+  if (!address) return null;
+  if (address.startsWith('::ffff:')) {
+    return address.slice(7);
+  }
+  return address;
+}
+
+function formatUpgradeResponse(proxyRes) {
+  const statusLine = `HTTP/${proxyRes.httpVersion} ${proxyRes.statusCode ?? 500} ${proxyRes.statusMessage ?? ''}`.trimEnd();
+  let headerLines = '';
+  for (const [name, value] of Object.entries(proxyRes.headers)) {
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        headerLines += `${name}: ${entry}\r\n`;
+      }
+    } else if (typeof value !== 'undefined') {
+      headerLines += `${name}: ${value}\r\n`;
+    }
+  }
+  return `${statusLine}\r\n${headerLines}\r\n`;
+}
