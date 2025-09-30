@@ -1403,6 +1403,21 @@ enum AnalyticsServerLogStatus {
   resolved
 }
 
+model AnalyticsSettings {
+  id                   String   @id @default("default")
+  httpWindowMinutes    Int      @default(1440)
+  httpBucketMinutes    Int      @default(60)
+  sessionWindowDays    Int      @default(30)
+  sessionRetentionDays Int      @default(180)
+  realtimeWindowHours  Int      @default(24)
+  pageWindowDays       Int      @default(14)
+  pageRetentionDays    Int      @default(60)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("analytics_settings")
+}
+
 model AnalyticsHttpRequest {
   id           String                @id @default(cuid())
   timestamp    DateTime              @default(now())

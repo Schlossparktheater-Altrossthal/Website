@@ -1,6 +1,10 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import { setTimeout as wait } from 'node:timers/promises';
+import {
+  getDefaultServerAnalyticsSettings,
+  loadServerAnalyticsSettings,
+} from '../../src/lib/server-analytics-settings.js';
 const BASELINE_ANALYTICS = Object.freeze({
   summary: {
     uptimePercentage: 0,
@@ -67,6 +71,7 @@ const BASELINE_ANALYTICS = Object.freeze({
   sessionInsights: [],
   optimizationInsights: [],
   serverLogs: [],
+  settings: getDefaultServerAnalyticsSettings(),
 });
 
 const fallbackAnalyticsModule = {
@@ -424,6 +429,7 @@ export function createAnalyticsManager({
   async function collectAnalyticsSnapshot() {
     const base = baselineLoader();
     let resourceUsage = base.resourceUsage;
+    let settings = base.settings ?? getDefaultServerAnalyticsSettings();
     try {
       resourceUsage = await resourceUsageCollector({
         previousResourceUsage: state.previousResourceUsage,
@@ -432,6 +438,14 @@ export function createAnalyticsManager({
       });
     } catch (error) {
       logError('[Realtime] Verwende statische Ressourcenwerte für Server-Analytics', error);
+    }
+
+    if (getDatabaseUrl()) {
+      try {
+        settings = await loadServerAnalyticsSettings();
+      } catch (error) {
+        logError('[Realtime] Failed to load analytics settings', error);
+      }
     }
 
     const baseSummary = mergeOnlineStatsIntoSummary(
@@ -497,6 +511,7 @@ export function createAnalyticsManager({
       deviceBreakdown,
       publicPages,
       memberPages,
+      settings,
     };
   }
 

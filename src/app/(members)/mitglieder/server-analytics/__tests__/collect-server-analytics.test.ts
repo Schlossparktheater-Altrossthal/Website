@@ -4,7 +4,7 @@ import type { AnalyticsHttpSummary, AnalyticsRealtimeSummary, AnalyticsSessionSu
 
 import { collectServerAnalytics } from "@/lib/server-analytics";
 
-const { prismaMock } = vi.hoisted(() => ({
+const { prismaMock, loadSettingsMock } = vi.hoisted(() => ({
   prismaMock: {
     analyticsHttpSummary: { findFirst: vi.fn() },
     analyticsHttpPeakHour: { findMany: vi.fn() },
@@ -13,6 +13,7 @@ const { prismaMock } = vi.hoisted(() => ({
     analyticsTrafficSource: { findMany: vi.fn() },
     analyticsRealtimeSummary: { findFirst: vi.fn() },
   },
+  loadSettingsMock: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -28,6 +29,16 @@ vi.mock("@/lib/server-analytics-data", () => ({
   loadPagePerformanceMetrics: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock("@/lib/server-analytics-settings", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/server-analytics-settings")>(
+    "@/lib/server-analytics-settings",
+  );
+  return {
+    ...actual,
+    loadServerAnalyticsSettings: loadSettingsMock,
+  };
+});
+
 describe("collectServerAnalytics", () => {
   beforeEach(() => {
     prismaMock.analyticsHttpSummary.findFirst.mockReset();
@@ -36,10 +47,29 @@ describe("collectServerAnalytics", () => {
     prismaMock.analyticsSessionInsight.findMany.mockReset();
     prismaMock.analyticsTrafficSource.findMany.mockReset();
     prismaMock.analyticsRealtimeSummary.findFirst.mockReset();
+    loadSettingsMock.mockReset();
+    loadSettingsMock.mockResolvedValue({
+      httpWindowMinutes: 1440,
+      httpBucketMinutes: 60,
+      sessionWindowDays: 30,
+      sessionRetentionDays: 180,
+      realtimeWindowHours: 24,
+      pageWindowDays: 14,
+      pageRetentionDays: 60,
+    });
     process.env.DATABASE_URL = "postgres://test";
   });
 
   it("overrides static metrics with aggregated database values", async () => {
+    loadSettingsMock.mockResolvedValue({
+      httpWindowMinutes: 900,
+      httpBucketMinutes: 45,
+      sessionWindowDays: 21,
+      sessionRetentionDays: 120,
+      realtimeWindowHours: 18,
+      pageWindowDays: 10,
+      pageRetentionDays: 50,
+    });
     const httpSummary = {
       windowStart: new Date("2024-01-01T10:00:00.000Z"),
       windowEnd: new Date("2024-01-01T11:00:00.000Z"),
@@ -116,6 +146,15 @@ describe("collectServerAnalytics", () => {
     expect(botSegment?.avgResponseTimeMs).toBe(180);
     expect(botSegment?.blockedRequests).toBe(4);
     expect(analytics.isDemoData).toBe(false);
+    expect(analytics.settings).toEqual({
+      httpWindowMinutes: 900,
+      httpBucketMinutes: 45,
+      sessionWindowDays: 21,
+      sessionRetentionDays: 120,
+      realtimeWindowHours: 18,
+      pageWindowDays: 10,
+      pageRetentionDays: 50,
+    });
   });
 
   it("keeps the demo flag when no database connection is available", async () => {
@@ -127,5 +166,6 @@ describe("collectServerAnalytics", () => {
     expect(prismaMock.analyticsSessionSummary.findFirst).not.toHaveBeenCalled();
     expect(prismaMock.analyticsRealtimeSummary.findFirst).not.toHaveBeenCalled();
     expect(analytics.isDemoData).toBe(true);
+    expect(loadSettingsMock).not.toHaveBeenCalled();
   });
 });

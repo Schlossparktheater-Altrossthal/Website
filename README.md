@@ -56,6 +56,30 @@ on [http://localhost:3000](http://localhost:3000).
 - `pnpm start:proxy` – emulate the Docker proxy setup locally.
 - `pnpm swatches:gen` / `pnpm design-system:tokens` – update color palettes and
   design tokens.
+- `pnpm ts-node scripts/cron/aggregate-http-metrics.ts` – aggregate raw HTTP
+  analytics into the summary tables.
+- `pnpm ts-node scripts/cron/aggregate-session-metrics.ts` – derive session,
+  traffic and realtime insights.
+- `pnpm ts-node scripts/cron/aggregate-page-metrics.ts` – compute page and device
+  performance metrics.
+
+### Server analytics aggregation
+
+The server analytics dashboard pulls its metrics from the aggregated tables in
+Postgres. A dedicated cron endpoint at `/api/cron/server-analytics` executes the
+entire pipeline (HTTP, session and page analytics). Protect the route by passing
+the `x-cron-secret` header with the value from `CRON_SECRET`. When the header is
+missing or invalid the request is rejected with `401`.
+
+Aggregation windows and retention policies are configurable via the environment
+variables `ANALYTICS_HTTP_WINDOW_MINUTES`, `ANALYTICS_HTTP_BUCKET_MINUTES`,
+`ANALYTICS_SESSION_WINDOW_DAYS`, `ANALYTICS_SESSION_RETENTION_DAYS`,
+`ANALYTICS_PAGE_WINDOW_DAYS` and `ANALYTICS_PAGE_RETENTION_DAYS`. These values
+act as initial defaults and can later be adjusted directly from the
+“Einstellungen” tab on the server analytics page. All scripts under
+`scripts/cron/*` use the shared pipeline logic, so the same configuration
+applies whether the job is triggered via the API route or a standalone task
+runner.
 
 ### Quality checks
 

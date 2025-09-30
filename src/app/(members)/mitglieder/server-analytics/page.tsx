@@ -4,6 +4,30 @@ import { requireAuth } from "@/lib/rbac";
 
 import { ServerAnalyticsContent } from "./server-analytics-content";
 
+function userHasOwnerRole(user: { role?: string | null; roles?: unknown } | null | undefined): boolean {
+  if (!user) {
+    return false;
+  }
+
+  if (user.role === "owner") {
+    return true;
+  }
+
+  if (Array.isArray(user.roles)) {
+    return user.roles.some((role) => {
+      if (typeof role === "string") {
+        return role === "owner";
+      }
+      if (role && typeof role === "object" && "role" in role) {
+        return (role as { role?: string | null }).role === "owner";
+      }
+      return false;
+    });
+  }
+
+  return false;
+}
+
 export default async function ServerAnalyticsPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.server.analytics");
@@ -12,9 +36,14 @@ export default async function ServerAnalyticsPage() {
   }
 
   const user = session.user!;
-  const roles = Array.isArray(user.roles) ? user.roles : [];
-  const isOwner = user.role === "owner" || roles.includes("owner");
+  const isOwner = userHasOwnerRole(user);
   const analytics = await collectServerAnalytics();
 
-  return <ServerAnalyticsContent initialAnalytics={analytics} canReset={isOwner} />;
+  return (
+    <ServerAnalyticsContent
+      initialAnalytics={analytics}
+      canReset={isOwner}
+      canManageSettings={isOwner}
+    />
+  );
 }
