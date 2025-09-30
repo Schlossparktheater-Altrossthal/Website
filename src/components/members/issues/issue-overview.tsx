@@ -233,7 +233,7 @@ export function IssueOverview({ initialIssues, initialCounts }: IssueOverviewPro
             ))}
           </div>
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-end">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start">
             <div className="md:w-64">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Kategorie
@@ -265,10 +265,10 @@ export function IssueOverview({ initialIssues, initialCounts }: IssueOverviewPro
                 />
               </div>
               <div className="flex gap-2">
-                <Button type="submit" variant="secondary">
+                <Button type="submit" variant="secondary" size="sm">
                   Anwenden
                 </Button>
-                <Button type="button" variant="ghost" onClick={handleClearFilters}>
+                <Button type="button" variant="ghost" size="sm" onClick={handleClearFilters}>
                   Zurücksetzen
                 </Button>
               </div>
