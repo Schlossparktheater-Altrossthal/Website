@@ -27,4 +27,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER "analytics_settings_set_updated_at"
 BEFORE UPDATE ON "analytics_settings"
 FOR EACH ROW
-EXECUTE FUNCTION "set_current_timestamp_updated_at"();
+EXECUTE FUNCTION "public"."set_current_timestamp_updated_at"();

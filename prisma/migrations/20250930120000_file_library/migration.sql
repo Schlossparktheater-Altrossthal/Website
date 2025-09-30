@@ -72,7 +72,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'FileLibraryFolder_parentId_fkey'
-          AND conrelid = 'public.FileLibraryFolder'::regclass
+          AND conrelid = to_regclass('public."FileLibraryFolder"')
     ) THEN
         ALTER TABLE "public"."FileLibraryFolder"
             ADD CONSTRAINT "FileLibraryFolder_parentId_fkey"
@@ -85,7 +85,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'FileLibraryFolder_createdById_fkey'
-          AND conrelid = 'public.FileLibraryFolder'::regclass
+          AND conrelid = to_regclass('public."FileLibraryFolder"')
     ) THEN
         ALTER TABLE "public"."FileLibraryFolder"
             ADD CONSTRAINT "FileLibraryFolder_createdById_fkey"
@@ -98,7 +98,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'FileLibraryItem_folderId_fkey'
-          AND conrelid = 'public.FileLibraryItem'::regclass
+          AND conrelid = to_regclass('public."FileLibraryItem"')
     ) THEN
         ALTER TABLE "public"."FileLibraryItem"
             ADD CONSTRAINT "FileLibraryItem_folderId_fkey"
@@ -111,7 +111,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'FileLibraryItem_uploadedById_fkey'
-          AND conrelid = 'public.FileLibraryItem'::regclass
+          AND conrelid = to_regclass('public."FileLibraryItem"')
     ) THEN
         ALTER TABLE "public"."FileLibraryItem"
             ADD CONSTRAINT "FileLibraryItem_uploadedById_fkey"
@@ -124,7 +124,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'FileLibraryFolderAccess_folderId_fkey'
-          AND conrelid = 'public.FileLibraryFolderAccess'::regclass
+          AND conrelid = to_regclass('public."FileLibraryFolderAccess"')
     ) THEN
         ALTER TABLE "public"."FileLibraryFolderAccess"
             ADD CONSTRAINT "FileLibraryFolderAccess_folderId_fkey"
@@ -137,7 +137,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'FileLibraryFolderAccess_appRoleId_fkey'
-          AND conrelid = 'public.FileLibraryFolderAccess'::regclass
+          AND conrelid = to_regclass('public."FileLibraryFolderAccess"')
     ) THEN
         ALTER TABLE "public"."FileLibraryFolderAccess"
             ADD CONSTRAINT "FileLibraryFolderAccess_appRoleId_fkey"
