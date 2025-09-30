@@ -83,9 +83,6 @@ importers:
       geist:
         specifier: ^1.5.1
         version: 1.5.1(next@15.5.3(@playwright/test@1.55.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))
-      http-proxy:
-        specifier: ^1.18.1
-        version: 1.18.1
       idb-keyval:
         specifier: ^6.2.1
         version: 6.2.2
@@ -2749,10 +2746,6 @@ packages:
   http-proxy-agent@7.0.2:
     resolution: {integrity: sha512-T1gkAiYYDWYx3V5Bmyu7HcfcvL7mUrTWiM6yOfa3PIphViJ/gFPbvidQ+veqSOHci/PxBcDabeUNCzpOODJZig==}
     engines: {node: '>= 14'}
-
-  http-proxy@1.18.1:
-    resolution: {integrity: sha512-7mz/721AbnJwIVbnaSv1Cz3Am0ZLT/UBwkC92VlxhXv/k/BBQfM2fXElQNC27BVGr0uwUpplYPQM9LnaBMR5NQ==}
-    engines: {node: '>=8.0.0'}
 
   https-proxy-agent@7.0.6:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
@@ -6861,14 +6854,6 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
-
-  http-proxy@1.18.1:
-    dependencies:
-      eventemitter3: 4.0.7
-      follow-redirects: 1.15.11
-      requires-port: 1.0.0
-    transitivePeerDependencies:
-      - debug
 
   https-proxy-agent@7.0.6:
     dependencies:
