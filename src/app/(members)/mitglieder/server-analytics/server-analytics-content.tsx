@@ -892,7 +892,65 @@ export function ServerAnalyticsContent({
           </p>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="space-y-3 md:hidden">
+            {displayAnalytics.publicPages.map((entry) => (
+              <div
+                key={entry.path}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/60 p-4 shadow-sm"
+              >
+                <div>
+                  <p className="font-semibold text-foreground">{entry.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {entry.path} · Scrolltiefe {percentPreciseFormat.format(entry.avgScrollDepth)}
+                  </p>
+                </div>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Aufrufe</dt>
+                    <dd className="text-right">
+                      <span className="block font-semibold text-foreground">
+                        {numberFormat.format(entry.views)}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {numberFormat.format(entry.uniqueVisitors)} eindeutige Besucher
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Ø Zeit auf Seite</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {formatDuration(entry.avgTimeOnPageSeconds)}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Performance</dt>
+                    <dd className="text-right text-foreground">
+                      <span className="block font-medium">Ø Ladezeit {formatMs(entry.loadTimeMs)}</span>
+                      <span className="block text-xs text-muted-foreground">LCP {formatMs(entry.lcpMs)}</span>
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Absprung</dt>
+                    <dd className="text-right text-foreground">
+                      <span className="block font-medium">
+                        {percentPreciseFormat.format(entry.bounceRate)}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        Exit-Rate {percentPreciseFormat.format(entry.exitRate)}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Zielerfüllung</dt>
+                    <dd className="text-right font-semibold text-foreground">
+                      {percentPreciseFormat.format(entry.goalCompletionRate)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full divide-y divide-border text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -950,7 +1008,65 @@ export function ServerAnalyticsContent({
           </p>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="space-y-3 md:hidden">
+            {displayAnalytics.memberPages.map((entry) => (
+              <div
+                key={entry.path}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/60 p-4 shadow-sm"
+              >
+                <div>
+                  <p className="font-semibold text-foreground">{entry.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {entry.path} · Scrolltiefe {percentPreciseFormat.format(entry.avgScrollDepth)}
+                  </p>
+                </div>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Aufrufe</dt>
+                    <dd className="text-right">
+                      <span className="block font-semibold text-foreground">
+                        {numberFormat.format(entry.views)}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {numberFormat.format(entry.uniqueVisitors)} eindeutige Mitglieder
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Ø Zeit auf Seite</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {formatDuration(entry.avgTimeOnPageSeconds)}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Performance</dt>
+                    <dd className="text-right text-foreground">
+                      <span className="block font-medium">Ø Ladezeit {formatMs(entry.loadTimeMs)}</span>
+                      <span className="block text-xs text-muted-foreground">LCP {formatMs(entry.lcpMs)}</span>
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Absprung</dt>
+                    <dd className="text-right text-foreground">
+                      <span className="block font-medium">
+                        {percentPreciseFormat.format(entry.bounceRate)}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        Exit-Rate {percentPreciseFormat.format(entry.exitRate)}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-muted-foreground">Zielerfüllung</dt>
+                    <dd className="text-right font-semibold text-foreground">
+                      {percentPreciseFormat.format(entry.goalCompletionRate)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full divide-y divide-border text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -1009,7 +1125,46 @@ export function ServerAnalyticsContent({
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 md:hidden">
+              {displayAnalytics.trafficSources.map((source) => (
+                <div
+                  key={source.channel}
+                  className="space-y-3 rounded-lg border border-border/70 bg-background/60 p-4 shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-foreground">{source.channel}</p>
+                    <span className="text-xs font-medium text-muted-foreground">Trend</span>
+                  </div>
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Sessions</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {numberFormat.format(source.sessions)}
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Ø Sitzungsdauer</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {formatDuration(source.avgSessionDurationSeconds)}
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Konversion</dt>
+                      <dd className="text-right font-semibold text-foreground">
+                        {percentPreciseFormat.format(source.conversionRate)}
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Trend</dt>
+                      <dd className={cn("text-right text-xs font-medium", changeTextClass(source.changePercent, true))}>
+                        {formatChange(source.changePercent)} vs. Vorwoche
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -1050,7 +1205,37 @@ export function ServerAnalyticsContent({
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 md:hidden">
+              {displayAnalytics.deviceBreakdown.map((device) => (
+                <div
+                  key={device.device}
+                  className="space-y-3 rounded-lg border border-border/70 bg-background/60 p-4 shadow-sm"
+                >
+                  <p className="font-semibold text-foreground">{device.device}</p>
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Sessions</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {numberFormat.format(device.sessions)}
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Anteil</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {percentPreciseFormat.format(device.share)}
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Ø Ladezeit</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {formatMs(device.avgPageLoadMs)}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -1088,7 +1273,43 @@ export function ServerAnalyticsContent({
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 md:hidden">
+              {displayAnalytics.sessionInsights.map((segment) => (
+                <div
+                  key={segment.segment}
+                  className="space-y-3 rounded-lg border border-border/70 bg-background/60 p-4 shadow-sm"
+                >
+                  <p className="font-semibold text-foreground">{segment.segment}</p>
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Ø Dauer</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {formatDuration(segment.avgSessionDurationSeconds)}
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Seiten / Sitzung</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {decimalFormat.format(segment.pagesPerSession)}
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Retention</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {percentPreciseFormat.format(segment.retentionRate)}
+                      </dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className="text-muted-foreground">Anteil</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        {percentPreciseFormat.format(segment.share)}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
