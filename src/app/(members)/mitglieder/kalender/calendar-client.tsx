@@ -549,8 +549,13 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
 
               {view === "week" || view === "day" ? (
                 <div className="overflow-x-auto">
-                  <div className="min-w-[720px]">
-                    <WeekGrid buckets={bucketsForWeek} calendarMap={calendarMap} view={view} />
+                  <div className="min-w-full sm:min-w-[720px]">
+                    <WeekGrid
+                      buckets={bucketsForWeek}
+                      calendarMap={calendarMap}
+                      view={view}
+                      isCompact={deviceKind === "mobile"}
+                    />
                   </div>
                 </div>
               ) : null}
@@ -624,14 +629,92 @@ interface WeekGridProps {
   buckets: DayBucket[];
   calendarMap: Map<string, MemberCalendarSource>;
   view: CalendarView;
+  isCompact?: boolean;
 }
 
-function WeekGrid({ buckets, calendarMap, view }: WeekGridProps) {
+function WeekGrid({ buckets, calendarMap, view, isCompact = false }: WeekGridProps) {
   if (!buckets.length) {
     return <p className="p-6 text-sm text-muted-foreground">Keine Termine in diesem Zeitraum.</p>;
   }
 
   const showWeekdays = view === "week";
+
+  if (isCompact) {
+    return (
+      <div className="flex flex-col gap-4 sm:gap-6">
+        {buckets.map((bucket, index) => {
+          const bucketId = formatISO(bucket.date, { representation: "date" });
+          const dayStart = startOfDay(bucket.date);
+          const dayEnd = endOfDay(bucket.date);
+
+          const timedEvents = bucket.events
+            .map((event) => {
+              const clippedStart = isBefore(event.startDate, dayStart) ? dayStart : event.startDate;
+              const clippedEnd = isAfter(event.endDate, dayEnd) ? dayEnd : event.endDate;
+              return { event, clippedStart, clippedEnd };
+            })
+            .filter(({ clippedStart, clippedEnd }) => clippedEnd > dayStart && clippedStart < dayEnd)
+            .sort((a, b) => a.clippedStart.getTime() - b.clippedStart.getTime());
+
+          return (
+            <section
+              key={bucketId}
+              className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-muted/15 p-4"
+            >
+              <header className="flex items-baseline justify-between gap-3">
+                <div className="flex flex-col">
+                  {showWeekdays ? (
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {WEEKDAY_LABELS[index] ?? format(bucket.date, "EEEE", { locale: de })}
+                    </span>
+                  ) : null}
+                  <span className="text-lg font-semibold text-foreground">
+                    {format(bucket.date, "d.")}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      {format(bucket.date, "MMM", { locale: de })}
+                    </span>
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {bucket.allDay.length + timedEvents.length} Termine
+                </span>
+              </header>
+
+              <div className="flex flex-col gap-2">
+                {bucket.allDay.length ? (
+                  bucket.allDay.map((event) => (
+                    <InlineEvent
+                      key={`all-day-${bucketId}-${event.id}`}
+                      event={event}
+                      source={calendarMap.get(event.calendarId)}
+                    />
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">Keine Ganztagesereignisse</p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {timedEvents.length ? (
+                  timedEvents.map(({ event, clippedStart, clippedEnd }) => (
+                    <CompactTimedEvent
+                      key={`${event.id}-${bucketId}`}
+                      event={event}
+                      start={clippedStart}
+                      end={clippedEnd}
+                      source={calendarMap.get(event.calendarId)}
+                    />
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">Keine Termine mit Uhrzeit</p>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="grid" style={{ gridTemplateColumns: `64px repeat(${buckets.length}, minmax(0, 1fr))` }}>
@@ -758,6 +841,44 @@ function TimedEvent({ event, dayStart, calendarMap }: TimedEventProps) {
       </p>
       {event.location ? (
         <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+          <MapPin className="h-3 w-3" /> {event.location}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+interface CompactTimedEventProps {
+  event: PositionedCalendarEvent;
+  start: Date;
+  end: Date;
+  source?: MemberCalendarSource;
+}
+
+function CompactTimedEvent({ event, start, end, source }: CompactTimedEventProps) {
+  const accentColor = source?.color ?? undefined;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-background/85 p-3">
+      <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <span>
+          {format(start, "HH:mm", { locale: de })} – {format(end, "HH:mm", { locale: de })}
+        </span>
+        {source ? (
+          <Badge
+            variant="outline"
+            className="h-5 rounded-full border-border/60 px-2 py-0 text-[10px] font-semibold"
+            style={accentColor ? { borderColor: accentColor, color: accentColor } : undefined}
+          >
+            {source.label}
+          </Badge>
+        ) : null}
+      </div>
+      <p className="text-sm font-semibold" style={accentColor ? { color: accentColor } : undefined}>
+        {event.title}
+      </p>
+      {event.location ? (
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="h-3 w-3" /> {event.location}
         </p>
       ) : null}
