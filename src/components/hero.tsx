@@ -51,8 +51,8 @@ export function Hero({ images }: { images: string[] }) {
         className="absolute inset-0 z-10 opacity-[0.38] mix-blend-soft-light [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.12),rgba(255,255,255,0)_68%)]"
       />
 
-      <div className="hero-content relative z-20 flex h-full items-center justify-center px-6 pt-20 pb-14 sm:px-8 md:pb-24">
-        <div className="layout-container">
+      <div className="hero-content relative z-20 flex h-full items-center justify-center">
+        <div className="layout-container flex h-full items-center justify-center pt-20 pb-14 md:pb-24">
           <div
             className="mx-auto max-w-5xl text-center"
             style={{

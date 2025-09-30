@@ -83,6 +83,10 @@ Weitere Layout-Konstanten:
 - `--layout-gutter`: responsive Außenabstände (mobile 1rem → Desktop 3–4rem)
 - `--header-height`: 4rem (mobile) / 5rem (≥768px)
 
+### Layout-Container
+
+- `.layout-container` steuert ausschließlich Breite und horizontale Außenabstände. Vertikale Polster fügst du je nach Kontext mit Tailwind-Utilities (`pt`, `pb`, `py`, `space-y` etc.) hinzu.
+
 ## Komponentenrichtlinien
 
 ### Mitgliederbereich: App Shell & Seitenaufbau
