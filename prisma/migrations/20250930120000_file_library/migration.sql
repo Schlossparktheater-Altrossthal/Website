@@ -1,9 +1,30 @@
--- CreateEnum
-CREATE TYPE "FileLibraryAccessType" AS ENUM ('VIEW', 'DOWNLOAD', 'UPLOAD');
-CREATE TYPE "FileLibraryAccessTargetType" AS ENUM ('SYSTEM_ROLE', 'APP_ROLE');
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public'
+          AND t.typname = 'FileLibraryAccessType'
+    ) THEN
+        CREATE TYPE "public"."FileLibraryAccessType" AS ENUM ('VIEW', 'DOWNLOAD', 'UPLOAD');
+    END IF;
+END $$;
 
--- CreateTable
-CREATE TABLE "FileLibraryFolder" (
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_type t
+        JOIN pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'public'
+          AND t.typname = 'FileLibraryAccessTargetType'
+    ) THEN
+        CREATE TYPE "public"."FileLibraryAccessTargetType" AS ENUM ('SYSTEM_ROLE', 'APP_ROLE');
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS "public"."FileLibraryFolder" (
     "id" TEXT NOT NULL,
     "parentId" TEXT,
     "name" TEXT NOT NULL,
@@ -17,7 +38,7 @@ CREATE TABLE "FileLibraryFolder" (
     CONSTRAINT "FileLibraryFolder_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "FileLibraryItem" (
+CREATE TABLE IF NOT EXISTS "public"."FileLibraryItem" (
     "id" TEXT NOT NULL,
     "folderId" TEXT NOT NULL,
     "fileName" TEXT NOT NULL,
@@ -31,26 +52,95 @@ CREATE TABLE "FileLibraryItem" (
     CONSTRAINT "FileLibraryItem_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "FileLibraryFolderAccess" (
+CREATE TABLE IF NOT EXISTS "public"."FileLibraryFolderAccess" (
     "id" TEXT NOT NULL,
     "folderId" TEXT NOT NULL,
-    "accessType" "FileLibraryAccessType" NOT NULL,
-    "targetType" "FileLibraryAccessTargetType" NOT NULL,
-    "systemRole" "Role",
+    "accessType" "public"."FileLibraryAccessType" NOT NULL,
+    "targetType" "public"."FileLibraryAccessTargetType" NOT NULL,
+    "systemRole" "public"."Role",
     "appRoleId" TEXT,
     CONSTRAINT "FileLibraryFolderAccess_pkey" PRIMARY KEY ("id")
 );
 
--- Indexes
-CREATE INDEX "FileLibraryFolder_parentId_idx" ON "FileLibraryFolder"("parentId");
-CREATE INDEX "FileLibraryItem_folderId_createdAt_idx" ON "FileLibraryItem"("folderId", "createdAt");
-CREATE INDEX "FileLibraryFolderAccess_folderId_accessType_idx" ON "FileLibraryFolderAccess"("folderId", "accessType");
-CREATE UNIQUE INDEX "FileLibraryFolderAccess_folderId_accessType_systemRole_appRoleId_key" ON "FileLibraryFolderAccess"("folderId", "accessType", "systemRole", "appRoleId");
+CREATE INDEX IF NOT EXISTS "FileLibraryFolder_parentId_idx" ON "public"."FileLibraryFolder"("parentId");
+CREATE INDEX IF NOT EXISTS "FileLibraryItem_folderId_createdAt_idx" ON "public"."FileLibraryItem"("folderId", "createdAt");
+CREATE INDEX IF NOT EXISTS "FileLibraryFolderAccess_folderId_accessType_idx" ON "public"."FileLibraryFolderAccess"("folderId", "accessType");
+CREATE UNIQUE INDEX IF NOT EXISTS "FileLibraryFolderAccess_folderId_accessType_systemRole_appRoleId_key" ON "public"."FileLibraryFolderAccess"("folderId", "accessType", "systemRole", "appRoleId");
 
--- Foreign keys
-ALTER TABLE "FileLibraryFolder" ADD CONSTRAINT "FileLibraryFolder_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "FileLibraryFolder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "FileLibraryFolder" ADD CONSTRAINT "FileLibraryFolder_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "FileLibraryItem" ADD CONSTRAINT "FileLibraryItem_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "FileLibraryFolder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "FileLibraryItem" ADD CONSTRAINT "FileLibraryItem_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "FileLibraryFolderAccess" ADD CONSTRAINT "FileLibraryFolderAccess_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "FileLibraryFolder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "FileLibraryFolderAccess" ADD CONSTRAINT "FileLibraryFolderAccess_appRoleId_fkey" FOREIGN KEY ("appRoleId") REFERENCES "AppRole"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'FileLibraryFolder_parentId_fkey'
+          AND conrelid = 'public.FileLibraryFolder'::regclass
+    ) THEN
+        ALTER TABLE "public"."FileLibraryFolder"
+            ADD CONSTRAINT "FileLibraryFolder_parentId_fkey"
+            FOREIGN KEY ("parentId") REFERENCES "public"."FileLibraryFolder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'FileLibraryFolder_createdById_fkey'
+          AND conrelid = 'public.FileLibraryFolder'::regclass
+    ) THEN
+        ALTER TABLE "public"."FileLibraryFolder"
+            ADD CONSTRAINT "FileLibraryFolder_createdById_fkey"
+            FOREIGN KEY ("createdById") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'FileLibraryItem_folderId_fkey'
+          AND conrelid = 'public.FileLibraryItem'::regclass
+    ) THEN
+        ALTER TABLE "public"."FileLibraryItem"
+            ADD CONSTRAINT "FileLibraryItem_folderId_fkey"
+            FOREIGN KEY ("folderId") REFERENCES "public"."FileLibraryFolder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'FileLibraryItem_uploadedById_fkey'
+          AND conrelid = 'public.FileLibraryItem'::regclass
+    ) THEN
+        ALTER TABLE "public"."FileLibraryItem"
+            ADD CONSTRAINT "FileLibraryItem_uploadedById_fkey"
+            FOREIGN KEY ("uploadedById") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'FileLibraryFolderAccess_folderId_fkey'
+          AND conrelid = 'public.FileLibraryFolderAccess'::regclass
+    ) THEN
+        ALTER TABLE "public"."FileLibraryFolderAccess"
+            ADD CONSTRAINT "FileLibraryFolderAccess_folderId_fkey"
+            FOREIGN KEY ("folderId") REFERENCES "public"."FileLibraryFolder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'FileLibraryFolderAccess_appRoleId_fkey'
+          AND conrelid = 'public.FileLibraryFolderAccess'::regclass
+    ) THEN
+        ALTER TABLE "public"."FileLibraryFolderAccess"
+            ADD CONSTRAINT "FileLibraryFolderAccess_appRoleId_fkey"
+            FOREIGN KEY ("appRoleId") REFERENCES "public"."AppRole"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
