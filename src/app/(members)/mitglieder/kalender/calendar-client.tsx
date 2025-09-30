@@ -146,6 +146,7 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
     calendars.map((item) => item.id),
   );
 
+  const isSmallScreen = useMediaQuery("(max-width: 767px)");
   const isTablet = useMediaQuery("(min-width: 768px)");
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const deviceKind: DeviceKind = isDesktop ? "desktop" : isTablet ? "tablet" : "mobile";
@@ -163,6 +164,8 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
     if (deviceKind === "tablet") return "month";
     return "agenda";
   }, [deviceKind]);
+
+  const shouldUseCompactWeekGrid = isSmallScreen || deviceKind === "mobile";
 
   useEffect(() => {
     if (!isTablet) {
@@ -558,16 +561,27 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
               ) : null}
 
               {view === "week" || view === "day" ? (
-                <div className="overflow-x-auto">
-                  <div className="min-w-full sm:min-w-[720px]">
+                shouldUseCompactWeekGrid ? (
+                  <div className="p-4 sm:p-6">
                     <WeekGrid
                       buckets={bucketsForWeek}
                       calendarMap={calendarMap}
                       view={view}
-                      isCompact={deviceKind === "mobile"}
+                      isCompact
                     />
                   </div>
-                </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <div className="min-w-full sm:min-w-[720px]">
+                      <WeekGrid
+                        buckets={bucketsForWeek}
+                        calendarMap={calendarMap}
+                        view={view}
+                        isCompact={false}
+                      />
+                    </div>
+                  </div>
+                )
               ) : null}
 
               {view === "agenda" ? (
