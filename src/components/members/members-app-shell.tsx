@@ -34,28 +34,31 @@ const membersContentSectionVariants = cva("py-6 sm:py-8", {
   },
 });
 
-const membersContentContainerVariants = cva("mx-auto w-full px-4 sm:px-6 lg:px-8", {
-  variants: {
-    width: {
-      sm: "max-w-screen-sm",
-      md: "max-w-screen-md",
-      lg: "max-w-screen-lg",
-      xl: "max-w-screen-xl",
-      "2xl": "max-w-screen-2xl",
-      full: "max-w-none",
+const membersContentContainerVariants = cva(
+  "members-container members-container--padding-default",
+  {
+    variants: {
+      width: {
+        sm: "members-container--width-sm",
+        md: "members-container--width-md",
+        lg: "members-container--width-lg",
+        xl: "members-container--width-xl",
+        "2xl": "members-container--width-2xl",
+        full: "members-container--width-full",
+      },
+      padding: {
+        none: "members-container--padding-none",
+        compact: "members-container--padding-compact",
+        default: "members-container--padding-default",
+        relaxed: "members-container--padding-relaxed",
+      },
     },
-    padding: {
-      none: "px-0",
-      compact: "px-3 sm:px-4 lg:px-6",
-      default: "px-4 sm:px-6 lg:px-8",
-      relaxed: "px-6 sm:px-8 lg:px-12",
+    defaultVariants: {
+      width: "2xl",
+      padding: "default",
     },
   },
-  defaultVariants: {
-    width: "2xl",
-    padding: "default",
-  },
-});
+);
 
 const membersContentStackVariants = cva("space-y-8", {
   variants: {

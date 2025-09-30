@@ -156,6 +156,75 @@
     container-name: layout;
   }
 
+  .members-container {
+    width: 100%;
+    margin-inline: auto;
+    --members-max-width: calc(var(--layout-max-width) + 2 * var(--layout-gutter));
+    --members-container-padding-inline: var(--layout-gutter);
+    max-width: var(--members-max-width);
+    padding-inline: var(--members-container-padding-inline);
+  }
+
+  .members-container--width-sm {
+    --members-max-width: 40rem;
+  }
+
+  .members-container--width-md {
+    --members-max-width: 48rem;
+  }
+
+  .members-container--width-lg {
+    --members-max-width: 64rem;
+  }
+
+  .members-container--width-xl {
+    --members-max-width: 80rem;
+  }
+
+  .members-container--width-2xl {
+    --members-max-width: 96rem;
+  }
+
+  .members-container--width-full {
+    --members-max-width: none;
+  }
+
+  .members-container--padding-default {
+    --members-container-padding-inline: var(--layout-gutter);
+  }
+
+  .members-container--padding-compact {
+    --members-container-padding-inline: 0.75rem;
+  }
+
+  .members-container--padding-relaxed {
+    --members-container-padding-inline: 1.5rem;
+  }
+
+  .members-container--padding-none {
+    --members-container-padding-inline: 0;
+  }
+
+  @media (min-width: 640px) {
+    .members-container--padding-compact {
+      --members-container-padding-inline: 1rem;
+    }
+
+    .members-container--padding-relaxed {
+      --members-container-padding-inline: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .members-container--padding-compact {
+      --members-container-padding-inline: 1.5rem;
+    }
+
+    .members-container--padding-relaxed {
+      --members-container-padding-inline: 3rem;
+    }
+  }
+
   .site-main {
     position: relative;
     z-index: 10;
