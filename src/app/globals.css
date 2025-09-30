@@ -108,10 +108,22 @@
 
   body {
     @apply bg-background text-foreground;
-    min-height: 100dvh;
+    min-height: 100vh;
     font-feature-settings: "kern" 1, "liga" 1;
     font-family: var(--font-body);
     letter-spacing: var(--tracking-normal);
+  }
+
+  @supports (min-height: 100svh) {
+    body {
+      min-height: 100svh;
+    }
+  }
+
+  @supports (min-height: 100dvh) {
+    body {
+      min-height: 100dvh;
+    }
   }
 }
 
@@ -119,9 +131,21 @@
   .app-shell {
     position: relative;
     isolation: isolate;
-    min-height: 100dvh;
+    min-height: 100vh;
     display: grid;
     grid-template-rows: auto 1fr auto;
+  }
+
+  @supports (min-height: 100svh) {
+    .app-shell {
+      min-height: 100svh;
+    }
+  }
+
+  @supports (min-height: 100dvh) {
+    .app-shell {
+      min-height: 100dvh;
+    }
   }
 
   .layout-container {

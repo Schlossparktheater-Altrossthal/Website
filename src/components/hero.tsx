@@ -19,7 +19,9 @@ export function Hero({ images }: { images: string[] }) {
   const rotateImages = images.length > 0 ? images.slice(0, 5) : ["https://picsum.photos/id/1069/1600/900"];
 
   return (
-    <section className="hero-section relative h-screen min-h-[100dvh] w-full overflow-hidden sm:min-h-[90vh] lg:min-h-[100vh]">
+    <section
+      className="hero-section relative min-h-[100vh] supports-[min-height:100svh]:min-h-[100svh] supports-[min-height:100dvh]:min-h-[100dvh] w-full overflow-hidden sm:min-h-[90vh] sm:supports-[min-height:100svh]:min-h-[90svh] sm:supports-[min-height:100dvh]:min-h-[90dvh] lg:min-h-[100vh] lg:supports-[min-height:100svh]:min-h-[100svh] lg:supports-[min-height:100dvh]:min-h-[100dvh]"
+    >
       <div
         className="absolute inset-0 z-0 h-full w-full overflow-hidden"
         style={{
