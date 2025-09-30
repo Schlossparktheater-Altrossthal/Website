@@ -278,9 +278,9 @@ type HighlightTileConfig = {
   id: string;
   icon: ReactNode;
   title: string;
-  description: string;
+  value: string;
   hint?: string | null;
-  tone?: "default" | "info" | "success" | "warning";
+  tone?: "neutral" | "accent" | "positive" | "warning" | "destructive";
   action?: ReactNode;
 };
 
@@ -736,19 +736,23 @@ function ProfileClientInner({
     const items: HighlightTileConfig[] = [
       {
         id: "membership",
-        icon: <CalendarDays className="h-5 w-5" aria-hidden />,
+        icon: <CalendarDays className="h-4 w-4" aria-hidden />,
         title: "Mitgliedschaft",
-        description: memberSinceLabel ?? "Trage dein Eintrittsjahr im Onboarding ein.",
-        hint: createdAtLabel ? `Profil erstellt am ${createdAtLabel}.` : null,
-        tone: memberSinceLabel ? "default" : "warning",
+        value: memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "Eintritt offen"),
+        hint: memberSinceLabel
+          ? createdAtLabel
+            ? `Profil seit ${createdAtLabel}.`
+            : null
+          : "Trage dein Eintrittsjahr im Onboarding ein.",
+        tone: memberSinceLabel ? "positive" : "warning",
       },
       {
         id: "onboarding-focus",
-        icon: <Sparkles className="h-5 w-5" aria-hidden />,
+        icon: <Sparkles className="h-4 w-4" aria-hidden />,
         title: "Onboarding-Schwerpunkt",
-        description: onboardingFocusLabel ?? "Kein Schwerpunkt hinterlegt.",
-        hint: onboardingBackground ?? onboardingNotes,
-        tone: onboardingFocusLabel ? "info" : "warning",
+        value: onboardingFocusLabel ?? "Kein Schwerpunkt",
+        hint: onboardingBackground ?? onboardingNotes ?? "Lege deinen Schwerpunkt fest, damit wir dich gezielt einsetzen.",
+        tone: onboardingFocusLabel ? "accent" : "warning",
       },
     ];
 
@@ -760,30 +764,30 @@ function ProfileClientInner({
         ]
           .filter(Boolean)
           .join(" ")
-      : "Noch kein Ernährungsprofil hinterlegt.";
+      : "Kein Ernährungsprofil";
     const allergiesLabel = allergies.length
       ? `${allergies.length} Allergie${allergies.length === 1 ? "" : "n"} hinterlegt.`
       : "Trage Allergien ein, damit das Küchenteam planen kann.";
 
     items.push({
       id: "dietary",
-      icon: <Utensils className="h-5 w-5" aria-hidden />,
+      icon: <Utensils className="h-4 w-4" aria-hidden />,
       title: "Ernährung",
-      description: dietaryDescription,
+      value: dietaryDescription,
       hint: allergiesLabel,
-      tone: hasDietaryPreference ? "default" : "info",
+      tone: hasDietaryPreference ? "positive" : "accent",
     });
 
     if (whatsappLink) {
       items.push({
         id: "whatsapp",
-        icon: <MessageCircle className="h-5 w-5" aria-hidden />,
+        icon: <MessageCircle className="h-4 w-4" aria-hidden />,
         title: "Team-Chat",
-        description: whatsappVisitedAtLabel
-          ? `Bereits geöffnet am ${whatsappVisitedAtLabel}.`
+        value: whatsappVisitedAt ? "Geöffnet" : "Noch nicht besucht",
+        hint: whatsappVisitedAtLabel
+          ? `Zuletzt geöffnet am ${whatsappVisitedAtLabel}.`
           : "Öffne den WhatsApp-Infokanal für aktuelle Updates.",
-        hint: whatsappVisitedAtLabel ? null : "Der Link öffnet sich in einem neuen Tab.",
-        tone: whatsappVisitedAt ? "success" : "info",
+        tone: whatsappVisitedAt ? "positive" : "accent",
         action: (
           <Button
             type="button"
@@ -842,27 +846,48 @@ function ProfileClientInner({
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex w-full flex-wrap gap-2 rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
-          <TabsTrigger value="stammdaten" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="stammdaten"
+            className="px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] whitespace-nowrap sm:text-xs"
+          >
             Stammdaten
           </TabsTrigger>
-          <TabsTrigger value="zahlungen" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="zahlungen"
+            className="px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] whitespace-nowrap sm:text-xs"
+          >
             Zahlungsdaten
           </TabsTrigger>
-          <TabsTrigger value="ernaehrung" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="ernaehrung"
+            className="px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] whitespace-nowrap sm:text-xs"
+          >
             Ernährung &amp; Allergien
           </TabsTrigger>
           {canManageMeasurements ? (
-            <TabsTrigger value="masse" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            <TabsTrigger
+              value="masse"
+              className="px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] whitespace-nowrap sm:text-xs"
+            >
               Maße
             </TabsTrigger>
           ) : null}
-          <TabsTrigger value="interessen" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="interessen"
+            className="px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] whitespace-nowrap sm:text-xs"
+          >
             Interessen
           </TabsTrigger>
-          <TabsTrigger value="freigaben" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="freigaben"
+            className="px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] whitespace-nowrap sm:text-xs"
+          >
             Freigaben
           </TabsTrigger>
-          <TabsTrigger value="onboarding" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="onboarding"
+            className="px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] whitespace-nowrap sm:text-xs"
+          >
             Onboarding
           </TabsTrigger>
         </TabsList>
@@ -1129,8 +1154,8 @@ function ProfileOverviewCard({
         ) : null}
       </CardContent>
       {highlights.length ? (
-        <CardContent className="space-y-3 border-t border-border/50 bg-background/60">
-          <div className="space-y-3">
+        <CardContent className="border-t border-border/50 bg-background/60">
+          <div className="grid gap-3 sm:grid-cols-2">
             {highlights.map((tile) => (
               <ProfileHighlightTile key={tile.id} {...tile} />
             ))}
@@ -1143,30 +1168,42 @@ function ProfileOverviewCard({
 
 type ProfileHighlightTileProps = Omit<HighlightTileConfig, "id">;
 
-function ProfileHighlightTile({
-  icon,
-  title,
-  description,
-  hint,
-  tone = "default",
-  action,
-}: ProfileHighlightTileProps) {
+function ProfileHighlightTile({ icon, title, value, hint, tone = "neutral", action }: ProfileHighlightTileProps) {
   const toneClasses: Record<NonNullable<ProfileHighlightTileProps["tone"]>, string> = {
-    default: "border-border/60 bg-background/70",
-    info: "border-primary/30 bg-primary/10",
-    success: "border-success/40 bg-success/10",
-    warning: "border-warning/45 bg-warning/10",
+    neutral:
+      "border-border/60 bg-gradient-to-br from-background via-background/95 to-background text-foreground shadow-sm",
+    accent:
+      "border-primary/45 bg-gradient-to-br from-primary/12 via-background/95 to-background text-primary shadow-md",
+    positive:
+      "border-success/45 bg-gradient-to-br from-success/12 via-background/95 to-background text-success shadow-md",
+    warning:
+      "border-warning/45 bg-gradient-to-br from-warning/12 via-background/95 to-background text-warning shadow-md",
+    destructive:
+      "border-destructive/45 bg-gradient-to-br from-destructive/12 via-background/95 to-background text-destructive shadow-md",
   };
 
+  const iconToneClasses: Record<NonNullable<ProfileHighlightTileProps["tone"]>, string> = {
+    neutral: "border-border/50 bg-background/80 text-muted-foreground",
+    accent: "border-primary/40 bg-primary/15 text-primary",
+    positive: "border-success/40 bg-success/15 text-success",
+    warning: "border-warning/40 bg-warning/15 text-warning",
+    destructive: "border-destructive/40 bg-destructive/15 text-destructive",
+  };
+
+  const toneClass = toneClasses[tone] ?? toneClasses.neutral;
+  const iconClass = iconToneClasses[tone] ?? iconToneClasses.neutral;
+
   return (
-    <div className={cn("flex h-full flex-col gap-3 rounded-lg border p-4 shadow-sm", toneClasses[tone])}>
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <span className="text-muted-foreground/80">{icon}</span>
-        <span>{title}</span>
+    <div className={cn("flex h-full flex-col gap-4 rounded-2xl border p-5 backdrop-blur", toneClass)}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground/90">{title}</p>
+          <p className="text-xl font-semibold leading-tight tracking-tight">{value}</p>
+        </div>
+        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl border", iconClass)}>{icon}</div>
       </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-      {hint ? <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground/70">{hint}</p> : null}
-      {action ? <div className="mt-auto">{action}</div> : null}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {action ? <div className="pt-1">{action}</div> : null}
     </div>
   );
 }
