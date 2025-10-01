@@ -7,8 +7,17 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import type { AssignmentFocus } from "@/components/members-nav";
 import { MembersPermissionsProvider } from "@/components/members/permissions-context";
-import { MembersAppShell } from "@/components/members/members-app-shell";
-import { SidebarProvider, SIDEBAR_COOKIE_NAME } from "@/components/ui/sidebar";
+import {
+  MembersAppShell,
+  MEMBERS_BOTTOM_NAV_COOKIE_NAME,
+  type MembersBottomNavTabId,
+} from "@/components/members/members-app-shell";
+import {
+  SidebarProvider,
+  SIDEBAR_DESKTOP_COOKIE_NAME,
+  SIDEBAR_MOBILE_COOKIE_NAME,
+} from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 import { getActiveProduction } from "@/lib/active-production";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissionKeys } from "@/lib/permissions";
@@ -78,9 +87,28 @@ const isDevBuild = process.env.NODE_ENV === "development";
 
 export default async function MembersLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
-  const sidebarState = cookieStore.get(SIDEBAR_COOKIE_NAME)?.value;
+  const sidebarDesktopCookie =
+    cookieStore.get(SIDEBAR_DESKTOP_COOKIE_NAME)?.value;
+  const sidebarMobileCookie = cookieStore.get(SIDEBAR_MOBILE_COOKIE_NAME)?.value;
   const defaultSidebarOpen =
-    typeof sidebarState === "undefined" ? true : sidebarState === "true";
+    typeof sidebarDesktopCookie === "undefined"
+      ? true
+      : sidebarDesktopCookie === "true";
+  const defaultSidebarMobileOpen =
+    typeof sidebarMobileCookie === "undefined"
+      ? false
+      : sidebarMobileCookie === "true";
+
+  const bottomNavCookie = cookieStore.get(MEMBERS_BOTTOM_NAV_COOKIE_NAME)?.value;
+  const allowedBottomNavTabs: MembersBottomNavTabId[] = [
+    "home",
+    "assignments",
+    "production",
+    "profile",
+  ];
+  const defaultBottomNavTab = allowedBottomNavTabs.find(
+    (tab) => tab === bottomNavCookie,
+  );
 
   const session = await requireAuth();
   const permissions = await getUserPermissionKeys(session.user);
@@ -129,6 +157,15 @@ export default async function MembersLayout({ children }: { children: React.Reac
     ["--members-topbar-offset" as const]: "var(--header-height)",
   } as React.CSSProperties;
 
+  const appBarStatus = activeProduction
+    ? (
+        <Badge variant="outline" className="gap-1 font-medium">
+          <span className="text-muted-foreground">Saison</span>
+          <span className="text-foreground">{activeProduction.year}</span>
+        </Badge>
+      )
+    : null;
+
   return (
     <div className="app-shell bg-background">
       <MysticBackground />
@@ -136,6 +173,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
       <main className="relative z-10 flex min-h-0 flex-col pt-[var(--header-height)]">
         <SidebarProvider
           defaultOpen={defaultSidebarOpen}
+          defaultOpenMobile={defaultSidebarMobileOpen}
           className="flex-1 min-h-0 bg-background"
           style={layoutStyle}
         >
@@ -146,6 +184,8 @@ export default async function MembersLayout({ children }: { children: React.Reac
               assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
               impersonation={session.impersonation ?? null}
+              defaultBottomNavTab={defaultBottomNavTab}
+              appBarSlots={{ status: appBarStatus }}
               globalFooter={
                 <SiteFooter
                   buildInfo={buildInfo}

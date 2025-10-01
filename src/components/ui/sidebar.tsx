@@ -25,7 +25,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export const SIDEBAR_COOKIE_NAME = "sidebar_state";
+export const SIDEBAR_DESKTOP_COOKIE_NAME = "sidebar_desktop_state";
+export const SIDEBAR_MOBILE_COOKIE_NAME = "sidebar_mobile_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH_MIN_REM = 14;
 const SIDEBAR_WIDTH_MAX_REM = 20;
@@ -44,6 +45,7 @@ type SidebarContextProps = {
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
+  isDesktop: boolean;
   toggleSidebar: () => void;
 };
 
@@ -76,6 +78,9 @@ const SidebarProvider = React.forwardRef<
     defaultOpen?: boolean;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
+    defaultOpenMobile?: boolean;
+    openMobile?: boolean;
+    onOpenMobileChange?: (open: boolean) => void;
   }
 >(
   (
@@ -83,6 +88,9 @@ const SidebarProvider = React.forwardRef<
       defaultOpen = true,
       open: openProp,
       onOpenChange: setOpenProp,
+      defaultOpenMobile = false,
+      openMobile: openMobileProp,
+      onOpenMobileChange: setOpenMobileProp,
       className,
       style,
       children,
@@ -91,7 +99,9 @@ const SidebarProvider = React.forwardRef<
     ref,
   ) => {
     const isMobile = useMediaQuery(SIDEBAR_MOBILE_BREAKPOINT);
-    const [openMobile, setOpenMobile] = React.useState(false);
+    const [openMobileState, _setOpenMobileState] = React.useState(
+      defaultOpenMobile,
+    );
 
     const [_open, _setOpen] = React.useState(defaultOpen);
     const open = openProp ?? _open;
@@ -105,10 +115,29 @@ const SidebarProvider = React.forwardRef<
         }
 
         if (typeof document !== "undefined") {
-          document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+          document.cookie = `${SIDEBAR_DESKTOP_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
         }
       },
       [setOpenProp, open],
+    );
+
+    const openMobile = openMobileProp ?? openMobileState;
+
+    const setOpenMobile = React.useCallback(
+      (value: boolean | ((value: boolean) => boolean)) => {
+        const nextValue =
+          typeof value === "function" ? value(openMobile) : value;
+        if (setOpenMobileProp) {
+          setOpenMobileProp(nextValue);
+        } else {
+          _setOpenMobileState(nextValue);
+        }
+
+        if (typeof document !== "undefined") {
+          document.cookie = `${SIDEBAR_MOBILE_COOKIE_NAME}=${nextValue}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+        }
+      },
+      [setOpenMobileProp, openMobile],
     );
 
     const toggleSidebar = React.useCallback(() => {
@@ -137,6 +166,7 @@ const SidebarProvider = React.forwardRef<
       return () => window.removeEventListener("keydown", handleKeyDown);
     }, [toggleSidebar]);
 
+    const isDesktop = !isMobile;
     const state = open ? "expanded" : "collapsed";
 
     const contextValue = React.useMemo<SidebarContextProps>(
@@ -145,11 +175,21 @@ const SidebarProvider = React.forwardRef<
         open,
         setOpen,
         isMobile,
+        isDesktop,
         openMobile,
         setOpenMobile,
         toggleSidebar,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+      [
+        state,
+        open,
+        setOpen,
+        isMobile,
+        isDesktop,
+        openMobile,
+        setOpenMobile,
+        toggleSidebar,
+      ],
     );
 
     return (
