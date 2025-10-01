@@ -30,10 +30,18 @@ const BASE_PERMISSIONS = [
   "mitglieder.produktionen",
 ];
 
+function collectGroups(
+  selection: ReturnType<typeof selectMembersNavigation>,
+) {
+  return [...selection.primaryTabs, ...selection.secondaryMenu];
+}
+
 describe("selectMembersNavigation", () => {
   it("injects department todo item when memberships are present", () => {
-    const groups = selectMembersNavigation({ hasDepartmentMemberships: true });
-    const assignments = groups.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
+    const selection = selectMembersNavigation({ hasDepartmentMemberships: true });
+    const assignments = collectGroups(selection).find(
+      (group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
+    );
 
     expect(assignments).toBeDefined();
     const todoIndex = assignments!.items.findIndex(
@@ -48,8 +56,10 @@ describe("selectMembersNavigation", () => {
   });
 
   it("omits the department todo item without memberships", () => {
-    const groups = selectMembersNavigation({ hasDepartmentMemberships: false });
-    const assignments = groups.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
+    const selection = selectMembersNavigation({ hasDepartmentMemberships: false });
+    const assignments = collectGroups(selection).find(
+      (group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
+    );
 
     expect(assignments).toBeDefined();
     const todoIndex = assignments!.items.findIndex(
@@ -66,8 +76,10 @@ describe("selectMembersNavigation", () => {
       year: 2025,
     };
 
-    const groups = selectMembersNavigation({ activeProduction });
-    const production = groups.find((group) => group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID);
+    const selection = selectMembersNavigation({ activeProduction });
+    const production = collectGroups(selection).find(
+      (group) => group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID,
+    );
 
     expect(production).toBeDefined();
     const item = production!.items.find(
@@ -82,17 +94,20 @@ describe("selectMembersNavigation", () => {
 
 describe("filterMembersNavigationByPermissions", () => {
   it("hides finance navigation for members without finance permissions", () => {
-    const groups = selectMembersNavigation();
-    const { groups: filtered } = filterMembersNavigationByPermissions(groups, BASE_PERMISSIONS);
+    const selection = selectMembersNavigation();
+    const filtered = filterMembersNavigationByPermissions(selection, BASE_PERMISSIONS);
+    const groups = collectGroups(filtered);
 
-    expect(filtered.some((group) => group.id === "finance")).toBe(false);
+    expect(groups.some((group) => group.id === "finance")).toBe(false);
   });
 
   it("keeps only department related assignments for department-focused members", () => {
-    const groups = selectMembersNavigation({ hasDepartmentMemberships: true });
+    const selection = selectMembersNavigation({ hasDepartmentMemberships: true });
     const permissions = ["mitglieder.meine-gewerke"] as const;
-    const { groups: filtered } = filterMembersNavigationByPermissions(groups, permissions);
-    const assignments = filtered.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
+    const filtered = filterMembersNavigationByPermissions(selection, permissions);
+    const assignments = collectGroups(filtered).find(
+      (group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
+    );
 
     expect(assignments).toBeDefined();
     const hrefs = assignments!.items.map((item) => item.href);

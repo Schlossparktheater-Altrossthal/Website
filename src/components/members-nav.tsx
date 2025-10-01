@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
+import type { MembersNavGroup, MembersNavItem } from "@/config/members-navigation";
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   defaultMembersNavIcon,
@@ -34,7 +35,8 @@ import {
   type AssignmentFocus,
 } from "@/lib/members-navigation";
 import { cn } from "@/lib/utils";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Search } from "lucide-react";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 
 export type { AssignmentFocus } from "@/lib/members-navigation";
 
@@ -224,16 +226,402 @@ function MembersNavProductionSwitcher({
   );
 }
 
+function MembersNavigationGroups({
+  groups,
+  pathname,
+  isCollapsed,
+  onNavigate,
+}: {
+  groups: readonly MembersNavGroup[];
+  pathname: string;
+  isCollapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  return groups.map((group) => (
+    <SidebarGroup key={group.id}>
+      <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {group.items.map((item) => {
+            const active = isActive(pathname, item.href);
+            const Icon = item.icon ?? defaultMembersNavIcon;
+            const badgeContent = item.badge;
+            const hasBadgeValue =
+              badgeContent !== undefined &&
+              badgeContent !== null &&
+              badgeContent !== false;
+            const showBadge = !isCollapsed && hasBadgeValue;
+            const isPrimitiveBadge =
+              typeof badgeContent === "string" ||
+              typeof badgeContent === "number";
+            const reserveBadgeSpace = showBadge && isPrimitiveBadge;
+
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active}
+                  tooltip={item.label}
+                  className={cn(
+                    "gap-[var(--space-2xs)]",
+                    isCollapsed && "justify-center",
+                  )}
+                >
+                  <Link
+                    href={item.href}
+                    aria-label={item.ariaLabel ?? item.label}
+                    aria-current={active ? "page" : undefined}
+                    onClick={onNavigate}
+                  >
+                    <Icon
+                      className={cn(
+                        "h-4 w-4 shrink-0 transition-opacity",
+                        active ? "opacity-100" : "opacity-70",
+                        !isCollapsed && "mt-0.5",
+                      )}
+                    />
+                    {!isCollapsed ? (
+                      <div
+                        className={cn(
+                          "flex min-w-0 flex-1 flex-col",
+                          reserveBadgeSpace && "pr-8",
+                        )}
+                      >
+                        <span className="break-words text-sidebar-foreground leading-5">
+                          {item.label}
+                        </span>
+                      </div>
+                    ) : null}
+                    {showBadge ? (
+                      isPrimitiveBadge ? (
+                        <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">
+                          {badgeContent}
+                        </SidebarMenuBadge>
+                      ) : (
+                        <span className="ml-auto flex shrink-0 items-center">{badgeContent}</span>
+                      )
+                    ) : null}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  ));
+}
+
+function MembersPrimaryRailItem({
+  tab,
+  pathname,
+  onNavigate,
+}: {
+  tab: MembersNavGroup;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  const router = useRouter();
+  const [primaryItem, ...overflowItems] = tab.items;
+  if (!primaryItem) {
+    return null;
+  }
+
+  const Icon = primaryItem.icon ?? defaultMembersNavIcon;
+  const tabIsActive = tab.items.some((item) => isActive(pathname, item.href));
+
+  return (
+    <SidebarMenuItem>
+      <div className="flex w-full items-center justify-center gap-1">
+        <SidebarMenuButton
+          asChild
+          isActive={tabIsActive}
+          tooltip={tab.label}
+          className="h-9 w-9 justify-center"
+        >
+          <Link
+            href={primaryItem.href}
+            aria-label={primaryItem.ariaLabel ?? tab.label}
+            aria-current={tabIsActive ? "page" : undefined}
+            onClick={onNavigate}
+          >
+            <Icon
+              className={cn(
+                "h-4 w-4",
+                tabIsActive ? "opacity-100" : "opacity-70",
+              )}
+            />
+          </Link>
+        </SidebarMenuButton>
+        {overflowItems.length > 0 ? (
+          <DropdownMenu
+            className="shrink-0"
+            align="left"
+            items={overflowItems.map((item) => {
+              const ItemIcon = item.icon ?? defaultMembersNavIcon;
+              return {
+                label: item.label,
+                icon: <ItemIcon className="h-4 w-4" aria-hidden="true" />,
+                onClick: () => {
+                  router.push(item.href);
+                  onNavigate?.();
+                },
+              };
+            })}
+          />
+        ) : null}
+      </div>
+    </SidebarMenuItem>
+  );
+}
+
+function MembersPrimaryTabs({
+  tabs,
+  pathname,
+  isCollapsed,
+  isMobile,
+  onNavigate,
+}: {
+  tabs: readonly MembersNavGroup[];
+  pathname: string;
+  isCollapsed: boolean;
+  isMobile: boolean;
+  onNavigate?: () => void;
+}) {
+  if (tabs.length === 0) {
+    return null;
+  }
+
+  const showRail = isCollapsed && !isMobile;
+
+  if (showRail) {
+    return (
+      <nav aria-label="Primäre Bereiche" className="mt-[var(--space-sm)]">
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu className="flex flex-col gap-[var(--space-3xs)]">
+              {tabs.map((tab) => (
+                <MembersPrimaryRailItem
+                  key={tab.id}
+                  tab={tab}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </nav>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-[var(--space-sm)]">
+      <MembersNavigationGroups
+        groups={tabs}
+        pathname={pathname}
+        isCollapsed={isCollapsed}
+        onNavigate={onNavigate}
+      />
+    </div>
+  );
+}
+
+function MembersSecondaryDrawer({
+  groups,
+  pathname,
+  isCollapsed,
+  onNavigate,
+}: {
+  groups: readonly MembersNavGroup[];
+  pathname: string;
+  isCollapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (groups.length === 0) {
+    return null;
+  }
+
+  if (isCollapsed) {
+    return (
+      <div className="mt-[var(--space-sm)]">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="w-full rounded-md border border-sidebar-border/60 bg-sidebar/60 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/70 transition hover:bg-sidebar/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-expanded={open}
+        >
+          Weitere Bereiche
+        </button>
+        {open ? (
+          <div className="mt-[var(--space-xs)] space-y-[var(--space-sm)] rounded-lg border border-sidebar-border/60 bg-sidebar/80 p-[var(--space-sm)] shadow-lg">
+            <MembersNavigationGroups
+              groups={groups}
+              pathname={pathname}
+              isCollapsed={false}
+              onNavigate={() => {
+                setOpen(false);
+                onNavigate?.();
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-[var(--space-sm)] flex flex-col gap-[var(--space-sm)]">
+      <MembersNavigationGroups
+        groups={groups}
+        pathname={pathname}
+        isCollapsed={isCollapsed}
+        onNavigate={onNavigate}
+      />
+    </div>
+  );
+}
+
+function MembersContextActions({
+  quickActions,
+  pathname,
+  isCollapsed,
+  onNavigate,
+  onOpenCommandPalette,
+  showCommandAction = true,
+}: {
+  quickActions: readonly MembersNavItem[];
+  pathname: string;
+  isCollapsed: boolean;
+  onNavigate?: () => void;
+  onOpenCommandPalette?: () => void;
+  showCommandAction?: boolean;
+}) {
+  const hasQuickActions = quickActions.length > 0;
+  const showSearchAction = Boolean(onOpenCommandPalette) && showCommandAction;
+
+  if (!hasQuickActions && !showSearchAction) {
+    return null;
+  }
+
+  if (isCollapsed) {
+    return (
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu className="flex flex-col gap-[var(--space-3xs)]">
+            {quickActions.map((action) => {
+              const Icon = action.icon ?? defaultMembersNavIcon;
+              const active = isActive(pathname, action.href);
+              return (
+                <SidebarMenuItem key={action.href}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={action.label}
+                    isActive={active}
+                    className="h-9 w-9 justify-center"
+                  >
+                    <Link
+                      href={action.href}
+                      aria-label={action.ariaLabel ?? action.label}
+                      aria-current={active ? "page" : undefined}
+                      onClick={onNavigate}
+                    >
+                      <Icon
+                        className={cn(
+                          "h-4 w-4",
+                          active ? "opacity-100" : "opacity-70",
+                        )}
+                      />
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+            {showSearchAction ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => {
+                    onOpenCommandPalette?.();
+                    onNavigate?.();
+                  }}
+                  tooltip="Navigation durchsuchen"
+                  className="h-9 w-9 justify-center"
+                >
+                  <Search className="h-4 w-4" aria-hidden="true" />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  }
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>Schnellzugriffe</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {quickActions.map((action) => {
+            const Icon = action.icon ?? defaultMembersNavIcon;
+            const active = isActive(pathname, action.href);
+            return (
+              <SidebarMenuItem key={action.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active}
+                  className="gap-[var(--space-2xs)]"
+                >
+                  <Link
+                    href={action.href}
+                    aria-label={action.ariaLabel ?? action.label}
+                    aria-current={active ? "page" : undefined}
+                    onClick={onNavigate}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    <span className="truncate text-sm leading-5">{action.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+          {showSearchAction ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                type="button"
+                onClick={() => {
+                  onOpenCommandPalette?.();
+                  onNavigate?.();
+                }}
+                className="gap-[var(--space-2xs)]"
+              >
+                <Search className="h-4 w-4" aria-hidden="true" />
+                <span className="truncate text-sm leading-5">
+                  Navigation durchsuchen
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : null}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
+
 export function MembersNav({
   permissions,
   activeProduction,
   assignmentFocus = "none",
   hasDepartmentMemberships = false,
+  onOpenCommandPalette,
 }: {
   permissions?: readonly string[];
   activeProduction?: ActiveProductionNavInfo;
   assignmentFocus?: AssignmentFocus;
   hasDepartmentMemberships?: boolean;
+  onOpenCommandPalette?: () => void;
 }) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
@@ -241,7 +629,7 @@ export function MembersNav({
   const normalizedQuery = query.trim().toLowerCase();
   const isFiltering = normalizedQuery.length > 0;
   const searchInputId = useId();
-  const { state, isMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = !isMobile && state === "collapsed";
 
   const assignmentLabel = useMemo(
@@ -249,49 +637,71 @@ export function MembersNav({
     [assignmentFocus, permissions],
   );
 
-  const baseGroups = useMemo(
+  const baseSelection = useMemo(
     () =>
       selectMembersNavigation({
-        groups: membersNavigation,
+        structure: membersNavigation,
         hasDepartmentMemberships,
         activeProduction: activeProduction ?? null,
       }),
     [activeProduction, hasDepartmentMemberships],
   );
 
-  const labelledGroups = useMemo(
-    () =>
-      baseGroups.map((group) =>
-        group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID
-          ? { ...group, label: assignmentLabel }
-          : group,
-      ),
-    [assignmentLabel, baseGroups],
+  const labelledSelection = useMemo(() => {
+    const updateGroupLabel = (group: MembersNavGroup) =>
+      group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID
+        ? { ...group, label: assignmentLabel }
+        : group;
+
+    return {
+      primaryTabs: baseSelection.primaryTabs.map(updateGroupLabel),
+      secondaryMenu: baseSelection.secondaryMenu.map(updateGroupLabel),
+      quickActions: baseSelection.quickActions.map((item) => ({ ...item })),
+    };
+  }, [assignmentLabel, baseSelection]);
+
+  const permittedSelection = useMemo(
+    () => filterMembersNavigationByPermissions(labelledSelection, permissions),
+    [labelledSelection, permissions],
   );
 
-  const { groups: permittedGroups, flat: permittedFlat } = useMemo(
-    () => filterMembersNavigationByPermissions(labelledGroups, permissions),
-    [labelledGroups, permissions],
-  );
-
-  const { groups, flat } = useMemo(() => {
+  const filteredSelection = useMemo(() => {
     if (!isFiltering) {
-      return { groups: permittedGroups, flat: permittedFlat };
+      return permittedSelection;
     }
 
-    return filterMembersNavigationByQuery(permittedGroups, normalizedQuery);
-  }, [permittedFlat, permittedGroups, isFiltering, normalizedQuery]);
+    return filterMembersNavigationByQuery(permittedSelection, normalizedQuery);
+  }, [permittedSelection, isFiltering, normalizedQuery]);
 
   const emptyStateMessage = isFiltering
     ? "Keine Bereiche gefunden. Passe die Suche an."
     : "Keine Bereiche verfügbar.";
-  const firstMatch = flat[0];
+
+  const firstMatch = useMemo(() => {
+    const flatItems = filteredSelection.flat;
+    if (flatItems.length > 0) {
+      return flatItems[0];
+    }
+    const quick = filteredSelection.quickActions;
+    return quick.length > 0 ? quick[0] : null;
+  }, [filteredSelection]);
 
   const activeProductionTitle = activeProduction
     ? activeProduction.title && activeProduction.title.trim()
       ? activeProduction.title
       : `Produktion ${activeProduction.year}`
     : null;
+
+  const handleNavigate = useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
+
+  const combinedGroups = useMemo(
+    () => [...filteredSelection.primaryTabs, ...filteredSelection.secondaryMenu],
+    [filteredSelection.primaryTabs, filteredSelection.secondaryMenu],
+  );
 
   return (
     <>
@@ -318,6 +728,7 @@ export function MembersNav({
                   event.preventDefault();
                   if (firstMatch.href && firstMatch.href !== pathname) {
                     router.push(firstMatch.href);
+                    handleNavigate();
                   }
                 }
               }}
@@ -341,85 +752,47 @@ export function MembersNav({
           currentPath={pathname}
         />
 
-        {groups.length === 0 ? (
+        <MembersContextActions
+          quickActions={filteredSelection.quickActions}
+          pathname={pathname}
+          isCollapsed={isCollapsed}
+          onNavigate={handleNavigate}
+          onOpenCommandPalette={onOpenCommandPalette}
+          showCommandAction={!isFiltering}
+        />
+
+        {combinedGroups.length === 0 ? (
           <div className="mx-[var(--space-xs)] rounded-lg border border-dashed border-sidebar-border/60 bg-sidebar/40 p-[var(--space-xs)] text-sidebar-foreground/70">
             <Text variant="small" className="text-sidebar-foreground/70">
               {emptyStateMessage}
             </Text>
           </div>
+        ) : isFiltering ? (
+          <MembersNavigationGroups
+            groups={combinedGroups}
+            pathname={pathname}
+            isCollapsed={isCollapsed}
+            onNavigate={() => {
+              handleNavigate();
+              setQuery("");
+            }}
+          />
         ) : (
-          groups.map((group) => (
-            <SidebarGroup key={group.id}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const active = isActive(pathname, item.href);
-                    const Icon = item.icon ?? defaultMembersNavIcon;
-                    const badgeContent = item.badge;
-                    const hasBadgeValue =
-                      badgeContent !== undefined &&
-                      badgeContent !== null &&
-                      badgeContent !== false;
-                    const showBadge = !isCollapsed && hasBadgeValue;
-                    const isPrimitiveBadge =
-                      typeof badgeContent === "string" ||
-                      typeof badgeContent === "number";
-                    const reserveBadgeSpace = showBadge && isPrimitiveBadge;
-
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          tooltip={item.label}
-                          className={cn(
-                            "gap-[var(--space-2xs)]",
-                            isCollapsed && "justify-center",
-                          )}
-                        >
-                          <Link
-                            href={item.href}
-                            aria-label={item.ariaLabel ?? item.label}
-                            aria-current={active ? "page" : undefined}
-                          >
-                            <Icon
-                              className={cn(
-                                "h-4 w-4 shrink-0 transition-opacity",
-                                active ? "opacity-100" : "opacity-70",
-                                !isCollapsed && "mt-0.5",
-                              )}
-                            />
-                            {!isCollapsed ? (
-                              <div
-                                className={cn(
-                                  "flex min-w-0 flex-1 flex-col",
-                                  reserveBadgeSpace && "pr-8",
-                                )}
-                              >
-                                <span className="break-words text-sidebar-foreground leading-5">
-                                  {item.label}
-                                </span>
-                              </div>
-                            ) : null}
-                            {showBadge ? (
-                              isPrimitiveBadge ? (
-                                <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">
-                                  {badgeContent}
-                                </SidebarMenuBadge>
-                              ) : (
-                                <span className="ml-auto flex shrink-0 items-center">{badgeContent}</span>
-                              )
-                            ) : null}
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))
+          <>
+            <MembersPrimaryTabs
+              tabs={filteredSelection.primaryTabs}
+              pathname={pathname}
+              isCollapsed={isCollapsed}
+              isMobile={isMobile}
+              onNavigate={handleNavigate}
+            />
+            <MembersSecondaryDrawer
+              groups={filteredSelection.secondaryMenu}
+              pathname={pathname}
+              isCollapsed={isCollapsed}
+              onNavigate={handleNavigate}
+            />
+          </>
         )}
       </SidebarContent>
     </>

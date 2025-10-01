@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cva, type VariantProps } from "class-variance-authority";
 import { ArrowLeft } from "lucide-react";
 
@@ -23,6 +23,25 @@ import {
   MembersBottomNav,
   type MembersBottomNavTabId,
 } from "@/components/members/members-bottom-nav";
+import {
+  selectMembersNavigation,
+  filterMembersNavigationByPermissions,
+  filterMembersNavigationByQuery,
+  collectMembersNavigationItems,
+} from "@/lib/members-navigation";
+import {
+  defaultMembersNavIcon,
+  membersNavigation,
+  type MembersNavItem,
+} from "@/config/members-navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export { MEMBERS_BOTTOM_NAV_COOKIE_NAME } from "@/components/members/members-bottom-nav";
 export type { MembersBottomNavTabId } from "@/components/members/members-bottom-nav";
@@ -253,7 +272,7 @@ function useMembersAppShellContext() {
 }
 
 function SidebarMobileAutoClose() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const sidebar = useSidebar();
   const { isMobile, setOpenMobile } = sidebar;
 
@@ -384,7 +403,66 @@ export function MembersAppShell({
   appBarSlots,
   layoutVariant = "default",
 }: MembersAppShellProps) {
+  const router = useRouter();
+  const pathname = usePathname() ?? "";
   const isBottomNavLayout = layoutVariant === "bottom-nav";
+  const [commandPaletteOpen, setCommandPaletteOpen] = React.useState(false);
+  const [commandQuery, setCommandQuery] = React.useState("");
+  const normalizedCommandQuery = commandQuery.trim().toLowerCase();
+  const commandSelection = React.useMemo(
+    () =>
+      selectMembersNavigation({
+        structure: membersNavigation,
+        hasDepartmentMemberships,
+        activeProduction: activeProduction ?? null,
+      }),
+    [hasDepartmentMemberships, activeProduction],
+  );
+  const permittedCommandSelection = React.useMemo(
+    () => filterMembersNavigationByPermissions(commandSelection, permissions),
+    [commandSelection, permissions],
+  );
+  const searchCommandSelection = React.useMemo(
+    () =>
+      normalizedCommandQuery
+        ? filterMembersNavigationByQuery(
+            permittedCommandSelection,
+            normalizedCommandQuery,
+          )
+        : permittedCommandSelection,
+    [permittedCommandSelection, normalizedCommandQuery],
+  );
+  const commandItems = React.useMemo(() => {
+    const unique = new Map<string, MembersNavItem>();
+    for (const item of collectMembersNavigationItems(searchCommandSelection)) {
+      if (!unique.has(item.href)) {
+        unique.set(item.href, item);
+      }
+    }
+    return Array.from(unique.values());
+  }, [searchCommandSelection]);
+
+  const handleCommandSelect = React.useCallback(
+    (href: string) => {
+      setCommandPaletteOpen(false);
+      setCommandQuery("");
+      router.push(href);
+    },
+    [router],
+  );
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const initialTopbar = React.useMemo<MembersTopbarSlots>(
     () => ({ ...INITIAL_TOPBAR, ...appBarSlots }),
     [appBarSlots],
@@ -489,6 +567,7 @@ export function MembersAppShell({
           activeProduction={activeProduction}
           assignmentFocus={assignmentFocus}
           hasDepartmentMemberships={hasDepartmentMemberships}
+          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
         />
         <SidebarRail className={cn(isBottomNavLayout && "hidden lg:flex")} />
       </Sidebar>
@@ -554,7 +633,121 @@ export function MembersAppShell({
           ) : null}
         </SidebarInset>
       </MembersAppShellContext.Provider>
+      <MembersCommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        query={commandQuery}
+        onQueryChange={setCommandQuery}
+        results={commandItems}
+        onSelect={handleCommandSelect}
+        activePath={pathname}
+      />
     </>
+  );
+}
+
+function getCommandBadgeText(value: MembersNavItem["badge"]) {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  return null;
+}
+
+interface MembersCommandPaletteProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  query: string;
+  onQueryChange: (value: string) => void;
+  results: MembersNavItem[];
+  onSelect: (href: string) => void;
+  activePath: string;
+}
+
+function MembersCommandPalette({
+  open,
+  onOpenChange,
+  query,
+  onQueryChange,
+  results,
+  onSelect,
+  activePath,
+}: MembersCommandPaletteProps) {
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) {
+          onQueryChange("");
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Navigation durchsuchen</DialogTitle>
+          <DialogDescription>
+            Schnellzugriff auf Mitgliederbereiche und Werkzeuge.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-4 space-y-4">
+          <Input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Bereiche oder Aktionen suchen…"
+            autoFocus
+          />
+          <div className="max-h-80 overflow-y-auto rounded-md border border-border/60 bg-background/80">
+            {results.length > 0 ? (
+              <ul className="divide-y divide-border/60">
+                {results.map((item) => {
+                  const Icon = item.icon ?? defaultMembersNavIcon;
+                  const badgeText = getCommandBadgeText(item.badge);
+                  const isActive =
+                    activePath === item.href ||
+                    activePath.startsWith(`${item.href}/`);
+
+                  return (
+                    <li key={`${item.href}-${item.label}`}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          isActive
+                            ? "bg-muted text-foreground"
+                            : "hover:bg-muted/70",
+                        )}
+                        onClick={() => onSelect(item.href)}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {badgeText ? (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            {badgeText}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="px-4 py-6 text-sm text-muted-foreground">
+                Keine Treffer gefunden. Passe deine Suche an.
+              </div>
+            )}
+          </div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Shortcut: <kbd className="rounded border border-border px-1 py-0.5">⌘</kbd>
+            <kbd className="rounded border border-border px-1 py-0.5">K</kbd> oder
+            <span className="ml-1 inline-flex items-center gap-1">
+              <kbd className="rounded border border-border px-1 py-0.5">Ctrl</kbd>
+              <kbd className="rounded border border-border px-1 py-0.5">K</kbd>
+            </span>
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
