@@ -14,6 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  FilterChips,
+  FilterChip,
+  SwipeActionsList,
+  SwipeActionsItem,
+} from "@/components/members/templates";
 import { cn } from "@/lib/utils";
 
 function formatCurrency(amount: number, currency: string) {
@@ -137,199 +143,165 @@ export function FinanceEntryTable({
   const dominantCurrency = filteredEntries[0]?.currency ?? "EUR";
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Status</SelectItem>
-              {FINANCE_ENTRY_STATUS_VALUES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {FINANCE_ENTRY_STATUS_LABELS[status]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={kindFilter} onValueChange={setKindFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Typ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Typen</SelectItem>
-              {Object.entries(FINANCE_ENTRY_KIND_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Art" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Einnahmen & Ausgaben</SelectItem>
-              {(["expense", "income"] as const).map((option) => (
-                <SelectItem key={option} value={option}>
-                  {FINANCE_TYPE_LABELS[option]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-3">
+          <FilterChips label="Status">
+            <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>Alle</FilterChip>
+            {FINANCE_ENTRY_STATUS_VALUES.map((status) => (
+              <FilterChip key={status} active={statusFilter === status} onClick={() => setStatusFilter(status)}>
+                {FINANCE_ENTRY_STATUS_LABELS[status]}
+              </FilterChip>
+            ))}
+          </FilterChips>
+          <FilterChips label="Art">
+            <FilterChip active={typeFilter === "all"} onClick={() => setTypeFilter("all")}>Alle</FilterChip>
+            {(
+              [
+                { value: "income", label: FINANCE_TYPE_LABELS.income },
+                { value: "expense", label: FINANCE_TYPE_LABELS.expense },
+              ] as const
+            ).map((option) => (
+              <FilterChip
+                key={option.value}
+                active={typeFilter === option.value}
+                onClick={() => setTypeFilter(option.value)}
+              >
+                {option.label}
+              </FilterChip>
+            ))}
+          </FilterChips>
+          <FilterChips label="Kategorie">
+            <FilterChip active={kindFilter === "all"} onClick={() => setKindFilter("all")}>Alle</FilterChip>
+            {Object.entries(FINANCE_ENTRY_KIND_LABELS).map(([value, label]) => (
+              <FilterChip key={value} active={kindFilter === value} onClick={() => setKindFilter(value)}>
+                {label}
+              </FilterChip>
+            ))}
+          </FilterChips>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <Input
-            placeholder="Suche nach Titel, Lieferant oder Spender"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="w-full min-w-[220px] md:w-64"
+            placeholder="Suche nach Titel, Lieferant oder Person"
+            className="w-full sm:max-w-xs"
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-muted-foreground">
-            {filteredEntries.length} von {entries.length} Buchungen · Ausgaben {formatCurrency(totalExpenses, dominantCurrency)} · Einnahmen {formatCurrency(totalIncome, dominantCurrency)}
-          </div>
-          <Button type="button" variant="secondary" size="sm" onClick={onRefresh} disabled={refreshing}>
-            {refreshing ? "Aktualisiere…" : "Aktualisieren"}
+          <Button variant="outline" onClick={() => onRefresh()} disabled={refreshing} className="sm:w-auto">
+            Aktualisieren
           </Button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[960px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-2 font-medium">Titel</th>
-              <th className="px-3 py-2 font-medium">Betrag</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Produktion</th>
-              <th className="px-3 py-2 font-medium">Budget</th>
-              <th className="px-3 py-2 font-medium">Buchungsdatum</th>
-              <th className="px-3 py-2 font-medium">Fälligkeit</th>
-              <th className="px-3 py-2 font-medium">Mitglied</th>
-              <th className="px-3 py-2 font-medium">Anhänge</th>
-              {canManage ? <th className="px-3 py-2 font-medium text-right">Aktionen</th> : null}
-            </tr>
-          </thead>
-          <tbody>
+      {filteredEntries.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground">
+          Keine Buchungen gefunden. Passe die Filter an oder lege eine neue Buchung an.
+        </div>
+      ) : (
+        <>
+          <SwipeActionsList>
             {filteredEntries.map((entry) => {
-              const amountLabel = formatCurrency(entry.amount, entry.currency);
-              const attachments = entry.attachments;
+              const statusTone = FINANCE_ENTRY_STATUS_TONES[entry.status];
               return (
-                <tr key={entry.id} className="border-b last:border-none hover:bg-accent/10">
-                  <td className="max-w-[240px] px-3 py-2 align-top">
-                    <div className="font-medium text-foreground">{entry.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {FINANCE_ENTRY_KIND_LABELS[entry.kind]} · {FINANCE_TYPE_LABELS[entry.type]}
-                    </div>
-                    {entry.description ? (
-                      <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{entry.description}</div>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2 align-top">
-                    <div className={cn("font-semibold", entry.type === "expense" ? "text-destructive" : "text-success")}>{amountLabel}</div>
-                  </td>
-                  <td className="px-3 py-2 align-top">
-                    <Badge variant={FINANCE_ENTRY_STATUS_TONES[entry.status]} className="text-xs">
-                      {FINANCE_ENTRY_STATUS_LABELS[entry.status]}
-                    </Badge>
-                    {canManage ? (
-                      <div className="mt-1">
-                        <Select
-                          value={entry.status}
-                          onValueChange={(value) => handleStatusChange(entry, value as FinanceEntryDTO["status"])}
-                          disabled={updatingId === entry.id || (!canApprove && (entry.status === "approved" || entry.status === "paid"))}
+                <SwipeActionsItem
+                  key={entry.id}
+                  actions={[
+                    canManage
+                      ? {
+                          id: `delete-${entry.id}`,
+                          label: "Löschen",
+                          onSelect: () => handleDelete(entry),
+                          tone: "destructive",
+                          disabled: deletingId === entry.id,
+                        }
+                      : null,
+                    {
+                      id: `refresh-${entry.id}`,
+                      label: "Aktualisieren",
+                      onSelect: () => onRefresh(),
+                    },
+                  ]}
+                >
+                  <article className="space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-1.5">
+                        <h3 className="text-lg font-semibold leading-tight text-foreground">{entry.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {entry.vendor ?? entry.donationSource ?? entry.show?.title ?? "Allgemein"}
+                          {entry.invoiceNumber ? ` · Beleg ${entry.invoiceNumber}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 text-right">
+                        <span
+                          className={cn(
+                            "text-base font-semibold",
+                            entry.type === "expense" ? "text-destructive" : "text-success",
+                          )}
                         >
-                          <SelectTrigger className="h-8 w-full text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FINANCE_ENTRY_STATUS_VALUES.map((status) => (
-                              <SelectItem key={status} value={status} disabled={!canApprove && (status === "approved" || status === "paid")}> 
-                                {FINANCE_ENTRY_STATUS_LABELS[status]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          {formatCurrency(entry.amount, entry.currency)}
+                        </span>
+                        <Badge variant={statusTone}>{FINANCE_ENTRY_STATUS_LABELS[entry.status]}</Badge>
                       </div>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2 align-top">
-                    {entry.show ? (
-                      <div>
-                        <div className="font-medium">{entry.show.title ?? "—"}</div>
-                        <div className="text-xs text-muted-foreground">{entry.show.year ?? ""}</div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span className="rounded-full bg-muted/40 px-3 py-1">
+                        {FINANCE_TYPE_LABELS[entry.type]}
+                      </span>
+                      <span className="rounded-full bg-muted/40 px-3 py-1">
+                        {FINANCE_ENTRY_KIND_LABELS[entry.kind]}
+                      </span>
+                      <span className="rounded-full bg-muted/40 px-3 py-1">
+                        Buchungsdatum {formatDate(entry.bookingDate)}
+                      </span>
+                      <span className="rounded-full bg-muted/40 px-3 py-1">Zuständig: {getMemberDisplay(entry)}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        {entry.description ? entry.description : "Keine zusätzliche Beschreibung vorhanden."}
                       </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 align-top">
-                    {entry.budget ? (
-                      <div>
-                        <div className="font-medium">{entry.budget.category}</div>
-                        {entry.budget.show.title ? (
-                          <div className="text-xs text-muted-foreground">{entry.budget.show.title}</div>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 align-top text-muted-foreground">{formatDate(entry.bookingDate)}</td>
-                  <td className="px-3 py-2 align-top text-muted-foreground">{formatDate(entry.dueDate)}</td>
-                  <td className="px-3 py-2 align-top">{getMemberDisplay(entry)}</td>
-                  <td className="px-3 py-2 align-top">
-                    {attachments.length ? (
-                      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                        {attachments.map((attachment) => (
-                          <span key={attachment.id} className="truncate">
-                            {attachment.url ? (
-                              <a
-                                href={attachment.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-primary underline-offset-2 hover:underline"
-                              >
-                                {attachment.filename}
-                              </a>
-                            ) : (
-                              attachment.filename
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  {canManage ? (
-                    <td className="px-3 py-2 align-top text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(entry)}
-                        disabled={deletingId === entry.id}
+                      <Select
+                        value={entry.status}
+                        onValueChange={(value) => handleStatusChange(entry, value as FinanceEntryDTO["status"])}
+                        disabled={updatingId === entry.id || (!canApprove && entry.status === "approved")}
                       >
-                        Löschen
-                      </Button>
-                    </td>
-                  ) : null}
-                </tr>
+                        <SelectTrigger className="sm:w-[200px]">
+                          <SelectValue placeholder="Status ändern" />
+                        </SelectTrigger>
+                        <SelectContent align="end">
+                          {FINANCE_ENTRY_STATUS_VALUES.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {FINANCE_ENTRY_STATUS_LABELS[status]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </article>
+                </SwipeActionsItem>
               );
             })}
-            {filteredEntries.length === 0 ? (
-              <tr>
-                <td className="px-3 py-6 text-center text-sm text-muted-foreground" colSpan={canManage ? 10 : 9}>
-                  Keine Buchungen gefunden.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+          </SwipeActionsList>
+
+          <div className="rounded-2xl border border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-4">
+              <span>
+                <strong className="font-semibold text-foreground">Einnahmen:&nbsp;</strong>
+                {formatCurrency(totalIncome, dominantCurrency)}
+              </span>
+              <span>
+                <strong className="font-semibold text-foreground">Ausgaben:&nbsp;</strong>
+                {formatCurrency(totalExpenses, dominantCurrency)}
+              </span>
+              <span>
+                <strong className="font-semibold text-foreground">Saldo:&nbsp;</strong>
+                {formatCurrency(totalIncome - totalExpenses, dominantCurrency)}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -4,6 +4,13 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { FinanceBudgetDTO } from "@/app/api/finance/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  FilterChips,
+  FilterChip,
+  SwipeActionsList,
+  SwipeActionsItem,
+} from "@/components/members/templates";
 import { cn } from "@/lib/utils";
 
 function formatCurrency(amount: number, currency: string) {
@@ -23,9 +30,27 @@ type FinanceBudgetTableProps = {
 
 export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, canManage }: FinanceBudgetTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showFilter, setShowFilter] = useState<string>("all");
+
+  const shows = useMemo(() => {
+    const unique = new Map<string, { id: string; label: string }>();
+    for (const budget of budgets) {
+      const showId = budget.show.id ?? "__global";
+      const label = budget.show.id
+        ? `${budget.show.year ?? "—"} · ${budget.show.title ?? "Unbenannt"}`
+        : "Ohne Produktion";
+      unique.set(showId, { id: showId, label });
+    }
+    return Array.from(unique.values());
+  }, [budgets]);
+
+  const filteredBudgets = useMemo(() => {
+    if (showFilter === "all") return budgets;
+    return budgets.filter((budget) => (budget.show.id ?? "__global") === showFilter);
+  }, [budgets, showFilter]);
 
   const totals = useMemo(() => {
-    return budgets.reduce(
+    return filteredBudgets.reduce(
       (acc, budget) => {
         acc.planned += budget.plannedAmount;
         acc.actual += budget.actualAmount;
@@ -33,7 +58,7 @@ export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, ca
       },
       { planned: 0, actual: 0 },
     );
-  }, [budgets]);
+  }, [filteredBudgets]);
 
   async function handleDelete(budget: FinanceBudgetDTO) {
     if (!canManage) return;
@@ -59,86 +84,107 @@ export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, ca
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] border-collapse text-sm">
-        <thead>
-          <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="px-3 py-2 font-medium">Kategorie</th>
-            <th className="px-3 py-2 font-medium">Produktion</th>
-            <th className="px-3 py-2 font-medium">Plan</th>
-            <th className="px-3 py-2 font-medium">Ist</th>
-            <th className="px-3 py-2 font-medium">Differenz</th>
-            <th className="px-3 py-2 font-medium">Buchungen</th>
-            <th className="px-3 py-2 font-medium">Notizen</th>
-            {canManage ? <th className="px-3 py-2 font-medium text-right">Aktionen</th> : null}
-          </tr>
-        </thead>
-        <tbody>
-          {budgets.map((budget) => {
-            const plannedLabel = formatCurrency(budget.plannedAmount, budget.currency);
-            const actualLabel = formatCurrency(budget.actualAmount, budget.currency);
-            const difference = budget.plannedAmount - budget.actualAmount;
-            const diffLabel = formatCurrency(difference, budget.currency);
-            const diffClass = difference >= 0 ? "text-success" : "text-destructive";
-            return (
-              <tr key={budget.id} className="border-b last:border-none hover:bg-accent/10">
-                <td className="px-3 py-2 align-top">
-                  <div className="font-medium text-foreground">{budget.category}</div>
-                  <div className="text-xs text-muted-foreground">{budget.currency}</div>
-                </td>
-                <td className="px-3 py-2 align-top">
-                  {budget.show.title ? (
-                    <div>
-                      <div className="font-medium">{budget.show.title}</div>
-                      <div className="text-xs text-muted-foreground">{budget.show.year ?? ""}</div>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 align-top text-muted-foreground">{plannedLabel}</td>
-                <td className="px-3 py-2 align-top text-muted-foreground">{actualLabel}</td>
-                <td className={cn("px-3 py-2 align-top font-medium", diffClass)}>{diffLabel}</td>
-                <td className="px-3 py-2 align-top text-muted-foreground">{budget.entryCount}</td>
-                <td className="px-3 py-2 align-top text-muted-foreground whitespace-pre-line">{budget.notes ?? "—"}</td>
-                {canManage ? (
-                  <td className="px-3 py-2 align-top text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => onRequestEdit(budget)}>
-                        Bearbeiten
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(budget)}
-                        disabled={deletingId === budget.id}
-                      >
-                        Löschen
-                      </Button>
-                    </div>
-                  </td>
-                ) : null}
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="border-t bg-muted/30 text-sm font-medium">
-            <td className="px-3 py-2">Summe</td>
-            <td className="px-3 py-2" />
-            <td className="px-3 py-2 text-muted-foreground">{formatCurrency(totals.planned, budgets[0]?.currency ?? "EUR")}</td>
-            <td className="px-3 py-2 text-muted-foreground">{formatCurrency(totals.actual, budgets[0]?.currency ?? "EUR")}</td>
-            <td className={cn("px-3 py-2", totals.planned - totals.actual >= 0 ? "text-success" : "text-destructive")}
+    <div className="space-y-5">
+      <FilterChips label="Produktion">
+        <FilterChip active={showFilter === "all"} onClick={() => setShowFilter("all")}>
+          Alle Produktionen
+        </FilterChip>
+        {shows.map((show) => (
+          <FilterChip key={show.id} active={showFilter === show.id} onClick={() => setShowFilter(show.id)}>
+            {show.label}
+          </FilterChip>
+        ))}
+      </FilterChips>
+
+      <SwipeActionsList>
+        {filteredBudgets.map((budget) => {
+          const plannedLabel = formatCurrency(budget.plannedAmount, budget.currency);
+          const actualLabel = formatCurrency(budget.actualAmount, budget.currency);
+          const difference = budget.plannedAmount - budget.actualAmount;
+          const diffLabel = formatCurrency(difference, budget.currency);
+          const diffClass = difference >= 0 ? "text-success" : "text-destructive";
+
+          return (
+            <SwipeActionsItem
+              key={budget.id}
+              actions={[
+                canManage
+                  ? {
+                      id: `edit-${budget.id}`,
+                      label: "Bearbeiten",
+                      onSelect: () => onRequestEdit(budget),
+                      tone: "primary",
+                    }
+                  : null,
+                canManage
+                  ? {
+                      id: `delete-${budget.id}`,
+                      label: "Löschen",
+                      onSelect: () => handleDelete(budget),
+                      tone: "destructive",
+                      disabled: deletingId === budget.id,
+                    }
+                  : null,
+              ]}
             >
-              {formatCurrency(totals.planned - totals.actual, budgets[0]?.currency ?? "EUR")}
-            </td>
-            <td className="px-3 py-2" />
-            <td className="px-3 py-2" />
-            {canManage ? <td className="px-3 py-2" /> : null}
-          </tr>
-        </tfoot>
-      </table>
+              <article className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-semibold text-foreground">{budget.category}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {budget.show.title ?? "Unbenannte Produktion"} · {budget.show.year ?? "—"}
+                    </p>
+                  </div>
+                  <div className="text-right text-sm">
+                    <div className="font-semibold text-muted-foreground">Plan: {plannedLabel}</div>
+                    <div className="font-semibold text-muted-foreground">Ist: {actualLabel}</div>
+                    <div className={cn("font-semibold", diffClass)}>{diffLabel}</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline">{budget.currency}</Badge>
+                  <span className="rounded-full bg-muted/40 px-3 py-1">{budget.entryCount} Buchungen</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {budget.notes ? budget.notes : "Keine Notizen hinterlegt."}
+                </div>
+                {canManage ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => onRequestEdit(budget)}>
+                      Bearbeiten
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(budget)}
+                      disabled={deletingId === budget.id}
+                    >
+                      Löschen
+                    </Button>
+                  </div>
+                ) : null}
+              </article>
+            </SwipeActionsItem>
+          );
+        })}
+      </SwipeActionsList>
+
+      <div className="rounded-2xl border border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-4">
+          <span>
+            <strong className="font-semibold text-foreground">Gesamtplan:&nbsp;</strong>
+            {formatCurrency(totals.planned, filteredBudgets[0]?.currency ?? "EUR")}
+          </span>
+          <span>
+            <strong className="font-semibold text-foreground">Gesamtist:&nbsp;</strong>
+            {formatCurrency(totals.actual, filteredBudgets[0]?.currency ?? "EUR")}
+          </span>
+          <span>
+            <strong className="font-semibold text-foreground">Differenz:&nbsp;</strong>
+            {formatCurrency(totals.planned - totals.actual, filteredBudgets[0]?.currency ?? "EUR")}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, formatDistanceToNow, differenceInHours } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { PageHeader } from "@/components/members/page-header";
+import { MembersListPage, FilterChips, FilterChip, SwipeActionsList, SwipeActionsItem } from "@/components/members/templates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,13 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
+
 type AttendanceStatus = "yes" | "no" | "emergency" | "maybe";
 const STATUS_KEYS = ["yes", "no", "emergency", "maybe"] as const satisfies readonly AttendanceStatus[];
 type KnownStatus = (typeof STATUS_KEYS)[number];
 type StatusKey = KnownStatus | "open";
+
+type StatusFilter = StatusKey | "all";
 
 const STATUS_LABELS: Record<StatusKey, string> = {
   yes: "Zusage",
@@ -53,6 +56,14 @@ function formatDateTime(date: Date) {
   return format(date, "EEEE, dd.MM.yyyy '·' HH:mm 'Uhr'", { locale: de });
 }
 
+function parseStatusFilter(value: string | string[] | undefined): StatusFilter {
+  if (!value) return "all";
+  const normalized = Array.isArray(value) ? value[0] : value;
+  if (!normalized) return "all";
+  if (normalized === "all") return "all";
+  return toStatusKey(normalized);
+}
+
 type UpcomingWithStats = {
   id: string;
   title: string;
@@ -75,7 +86,11 @@ type AttendanceHistoryEntry = {
   };
 };
 
-export default async function MeineProbenPage() {
+interface PageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function MeineProbenPage({ searchParams }: PageProps) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-proben");
   const hasMeasurementPermission = await hasPermission(
@@ -87,6 +102,9 @@ export default async function MeineProbenPage() {
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Probenübersicht.</div>;
   }
+
+  const resolvedSearch = searchParams ? (await searchParams) ?? {} : {};
+  const statusFilter = parseStatusFilter(resolvedSearch.status);
 
   const userId = session.user?.id;
   if (!userId) {
@@ -166,6 +184,13 @@ export default async function MeineProbenPage() {
       },
     }));
 
+  const filteredUpcoming = statusFilter === "all"
+    ? upcoming
+    : upcoming.filter((item) => {
+        const key = toStatusKey(item.myStatus);
+        return key === statusFilter;
+      });
+
   const nextRehearsal = upcoming[0] ?? null;
   const nextStatusKey: StatusKey = nextRehearsal ? toStatusKey(nextRehearsal.myStatus) : "open";
 
@@ -210,16 +235,68 @@ export default async function MeineProbenPage() {
     .filter((item) => !item.myStatus && item.registrationDeadline && item.registrationDeadline > now)
     .sort((a, b) => a.registrationDeadline!.getTime() - b.registrationDeadline!.getTime());
   const nextPendingDeadline = pendingDeadlines[0] ?? null;
-  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/meine-proben")];
+  const breadcrumbs = [
+    membersNavigationBreadcrumb("/mitglieder"),
+    membersNavigationBreadcrumb("/mitglieder/meine-proben"),
+  ];
+
+  const statusFilterHref = (value: StatusFilter) => {
+    const params = new URLSearchParams();
+    for (const [key, rawValue] of Object.entries(resolvedSearch)) {
+      if (key === "status") continue;
+      const entryValue = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+      if (entryValue) {
+        params.set(key, entryValue);
+      }
+    }
+    if (value !== "all") {
+      params.set("status", value);
+    }
+    const query = params.toString();
+    return query.length ? `?${query}` : "";
+  };
+
+  const stickyCta = nextRehearsal ? (
+    <Button asChild className="w-full">
+      <Link href={`/mitglieder/proben/${nextRehearsal.id}`}>
+        Zu &ldquo;{nextRehearsal.title}&rdquo; wechseln
+      </Link>
+    </Button>
+  ) : undefined;
+
+  const headerActions = canManageMeasurements ? (
+    <div className="flex flex-wrap gap-2">
+      <Button asChild variant="secondary">
+        <Link href="/mitglieder/koerpermasse">Maße aktualisieren</Link>
+      </Button>
+    </div>
+  ) : undefined;
+
+  const statusFilters = (
+    <FilterChips label="Status">
+      <FilterChip href={statusFilterHref("all")} active={statusFilter === "all"}>
+        Alle
+      </FilterChip>
+      <FilterChip href={statusFilterHref("open")} active={statusFilter === "open"}>
+        Offen
+      </FilterChip>
+      {STATUS_KEYS.map((key) => (
+        <FilterChip key={key} href={statusFilterHref(key)} active={statusFilter === key}>
+          {STATUS_LABELS[key]}
+        </FilterChip>
+      ))}
+    </FilterChips>
+  );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Meine Proben"
-        description="Persönliche Übersicht über deine nächsten Probentermine, Fristen und Rückmeldungen."
-        breadcrumbs={breadcrumbs}
-      />
-
+    <MembersListPage
+      title="Meine Proben"
+      description="Persönliche Übersicht über deine nächsten Probentermine, Fristen und Rückmeldungen."
+      breadcrumbs={breadcrumbs}
+      actions={headerActions}
+      filters={statusFilters}
+      stickyCta={stickyCta}
+    >
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.68fr)_minmax(0,0.32fr)] xl:gap-8">
         <div className="space-y-6">
           <Card>
@@ -314,112 +391,68 @@ export default async function MeineProbenPage() {
               </p>
             </CardHeader>
             <CardContent>
-              {upcoming.length ? (
-                <ul className="space-y-3">
-                  {upcoming.map((item) => {
+              {filteredUpcoming.length ? (
+                <SwipeActionsList>
+                  {filteredUpcoming.map((item) => {
                     const statusKey = toStatusKey(item.myStatus);
-                    const deadline = item.registrationDeadline;
-                    const deadlineClass = deadline
-                      ? cn(
-                          "mt-2 text-xs",
-                          !item.myStatus && deadline <= now
-                            ? "text-rose-600"
-                            : !item.myStatus && differenceInHours(deadline, now) <= 72
-                              ? "text-amber-700"
-                              : "text-muted-foreground",
-                        )
-                      : "mt-2 text-xs text-muted-foreground";
-
                     return (
-                      <li key={item.id} className="rounded-lg border border-border/60 bg-background/60 p-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <Link
-                              href={`/mitglieder/proben/${item.id}`}
-                              className="text-sm font-semibold text-primary hover:underline"
+                      <SwipeActionsItem
+                        key={item.id}
+                        actions={[
+                          {
+                            id: `open-${item.id}`,
+                            label: "Details",
+                            href: `/mitglieder/proben/${item.id}`,
+                            tone: "primary",
+                          },
+                        ]}
+                      >
+                        <article className="space-y-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <Link
+                                href={`/mitglieder/proben/${item.id}`}
+                                className="font-semibold text-foreground hover:underline"
+                              >
+                                {item.title}
+                              </Link>
+                              <p className="text-sm text-muted-foreground">{formatDateTime(item.start)}</p>
+                              <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={cn("self-start", STATUS_BADGE_CLASSES[statusKey])}
                             >
-                              {item.title}
-                            </Link>
-                            <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
-                            <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
+                              {STATUS_LABELS[statusKey]}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className={cn("self-start text-xs", STATUS_BADGE_CLASSES[statusKey])}>
-                            {STATUS_LABELS[statusKey]}
-                          </Badge>
-                        </div>
-                        {deadline ? (
-                          <p className={deadlineClass}>
-                            Rückmeldefrist: {format(deadline, "dd.MM.yyyy HH:mm 'Uhr'", { locale: de })}
-                            {" "}({formatDistanceToNow(deadline, { locale: de, addSuffix: true })})
-                          </p>
-                        ) : (
-                          <p className="mt-2 text-xs text-muted-foreground">Keine Rückmeldefrist hinterlegt.</p>
-                        )}
-                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] sm:text-xs">
-                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-500/10 px-2 py-0.5 text-emerald-700">
-                            ✔ {item.counts.yes} Zusagen
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-500/10 px-2 py-0.5 text-rose-700">
-                            ✖ {item.counts.no} Absagen
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-500/10 px-2 py-0.5 text-amber-700">
-                            ⚠ {item.counts.emergency} Notfälle
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-500/10 px-2 py-0.5 text-sky-700">
-                            ? {item.counts.maybe} Unentschieden
-                          </span>
-                        </div>
-                        <p className="mt-2 text-[11px] text-muted-foreground">
-                          Rückmeldungen insgesamt: {item.responseCount}
-                        </p>
-                      </li>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span className="rounded-full bg-muted/40 px-2 py-1">
+                              Zusagen: {item.counts.yes}
+                            </span>
+                            <span className="rounded-full bg-muted/40 px-2 py-1">
+                              Absagen: {item.counts.no}
+                            </span>
+                            <span className="rounded-full bg-muted/40 px-2 py-1">
+                              Notfälle: {item.counts.emergency}
+                            </span>
+                            <span className="rounded-full bg-muted/40 px-2 py-1">
+                              Unentschieden: {item.counts.maybe}
+                            </span>
+                          </div>
+                          {item.registrationDeadline ? (
+                            <p className="text-xs text-muted-foreground">
+                              Frist: {format(item.registrationDeadline, "dd.MM.yyyy '·' HH:mm 'Uhr'", { locale: de })}
+                            </p>
+                          ) : null}
+                        </article>
+                      </SwipeActionsItem>
                     );
                   })}
-                </ul>
+                </SwipeActionsList>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Sobald Proben geplant sind, erscheinen sie hier mit allen Details.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Vergangene Teilnahme</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Kurzer Rückblick auf deine letzten Rückmeldungen für bereits stattgefundene Proben.
-              </p>
-            </CardHeader>
-            <CardContent>
-              {history.length ? (
-                <ul className="space-y-3">
-                  {history.map((entry) => (
-                    <li key={entry.id} className="rounded-lg border border-border/60 bg-background/60 p-3">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <Link
-                            href={`/mitglieder/proben/${entry.rehearsal.id}`}
-                            className="text-sm font-medium text-primary hover:underline"
-                          >
-                            {entry.rehearsal.title}
-                          </Link>
-                          <p className="text-xs text-muted-foreground">{formatDateTime(entry.rehearsal.start)}</p>
-                          {entry.rehearsal.location ? (
-                            <p className="text-xs text-muted-foreground/80">Ort: {entry.rehearsal.location}</p>
-                          ) : null}
-                        </div>
-                        <Badge variant="outline" className={cn("self-start text-xs", STATUS_BADGE_CLASSES[entry.status])}>
-                          {STATUS_LABELS[entry.status]}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-xs text-muted-foreground">{STATUS_DESCRIPTIONS[entry.status]}</p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Es liegen noch keine Rückmeldungen vor. Sobald du Zusagen oder Absagen erfasst, erscheint hier eine kurze Historie.
+                  Für den gewählten Filter liegen keine Termine vor.
                 </p>
               )}
             </CardContent>
@@ -427,98 +460,74 @@ export default async function MeineProbenPage() {
         </div>
 
         <div className="space-y-6">
-          {canManageMeasurements ? (
-            <Card className="border-border/60">
-              <CardHeader>
-                <CardTitle>Körpermaße für Anproben</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Pflege deine Maße zentral, damit das Kostüm-Team dich bei Anproben optimal einplanen kann.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <Button asChild size="sm">
-                  <Link href="/mitglieder/koerpermasse">Körpermaße verwalten</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : null}
-
           <Card>
             <CardHeader>
-              <CardTitle>Rückmeldungsstatus</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Wie viele Termine du bereits beantwortet hast und wo noch Handlungsbedarf besteht.
-              </p>
+              <CardTitle>Deine Rückmeldungen</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {[{ key: "open", label: "Offen", value: summary.open, className: "border-slate-200 bg-muted/50 text-foreground" },
-                  { key: "yes", label: "Zugesagt", value: summary.yes, className: "border-emerald-200 bg-emerald-500/10 text-emerald-700" },
-                  { key: "no", label: "Abgesagt", value: summary.no, className: "border-rose-200 bg-rose-500/10 text-rose-700" },
-                  { key: "maybe", label: "Unentschieden", value: summary.maybe, className: "border-sky-200 bg-sky-500/10 text-sky-700" },
-                  { key: "emergency", label: "Notfall gemeldet", value: summary.emergency, className: "border-amber-200 bg-amber-500/10 text-amber-700" }].map((item) => (
-                  <div key={item.key} className={cn("rounded-lg border p-3 shadow-sm", item.className)}>
-                    <div className="text-xs uppercase tracking-wide text-foreground/70">{item.label}</div>
-                    <div className="text-2xl font-semibold">{item.value}</div>
-                  </div>
-                ))}
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-emerald-200/70 bg-emerald-500/5 p-3 text-emerald-700">
+                  <p className="text-xs uppercase tracking-wide">Zugesagt</p>
+                  <p className="text-xl font-semibold">{summary.yes}</p>
+                </div>
+                <div className="rounded-lg border border-sky-200/70 bg-sky-500/5 p-3 text-sky-700">
+                  <p className="text-xs uppercase tracking-wide">Unentschieden</p>
+                  <p className="text-xl font-semibold">{summary.maybe}</p>
+                </div>
+                <div className="rounded-lg border border-rose-200/70 bg-rose-500/5 p-3 text-rose-700">
+                  <p className="text-xs uppercase tracking-wide">Abgesagt</p>
+                  <p className="text-xl font-semibold">{summary.no}</p>
+                </div>
+                <div className="rounded-lg border border-amber-200/70 bg-amber-500/5 p-3 text-amber-700">
+                  <p className="text-xs uppercase tracking-wide">Offen</p>
+                  <p className="text-xl font-semibold">{summary.open}</p>
+                </div>
               </div>
-
-              {upcoming.length ? (
-                summary.open ? (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-                    Du hast noch {summary.open} offene Rückmeld{summary.open === 1 ? "ung" : "ungen"}.
-                    {summary.overdue
-                      ? ` ${summary.overdue === 1 ? "Eine Frist ist" : `${summary.overdue} Fristen sind`} bereits verstrichen.`
-                      : ""}
-                    {summary.dueSoon
-                      ? ` ${summary.dueSoon === 1 ? "Eine" : `${summary.dueSoon}`} weitere läuft innerhalb der nächsten 72 Stunden ab.`
-                      : ""}
-                  </div>
-                ) : (
-                  <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-                    Alle kommenden Proben sind beantwortet. Vielen Dank für deine schnelle Rückmeldung!
-                  </div>
-                )
-              ) : (
-                <div className="rounded-md border border-border/50 bg-muted/40 p-3 text-sm text-muted-foreground">
-                  Derzeit liegen keine kommenden Termine vor.
-                </div>
-              )}
-
-              {nextPendingDeadline ? (
-                <div className="rounded-md border border-border/60 bg-background/60 p-3 text-xs text-muted-foreground">
-                  Nächste offene Frist:&nbsp;
-                  <span className="font-medium text-foreground">
-                    {format(nextPendingDeadline.registrationDeadline!, "dd.MM.yyyy HH:mm 'Uhr'", { locale: de })}
-                  </span>
-                  {" "}({formatDistanceToNow(nextPendingDeadline.registrationDeadline!, { locale: de, addSuffix: true })}) für
-                  {" "}
-                  <span className="font-medium text-foreground">{nextPendingDeadline.title}</span>.
-                </div>
-              ) : null}
+              <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <p>Fällige Rückmeldungen in den nächsten 72 Stunden: {summary.dueSoon}</p>
+                <p>Überfällige Rückmeldungen: {summary.overdue}</p>
+                {nextPendingDeadline ? (
+                  <p>
+                    Nächste Frist: {format(nextPendingDeadline.registrationDeadline!, "dd.MM.yyyy HH:mm", { locale: de })}
+                  </p>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>So meldest du dich schnell zurück</CardTitle>
+              <CardTitle>Rückblick</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Die letzten fünf Rückmeldungen inklusive Statuswechsel.
+              </p>
             </CardHeader>
             <CardContent>
-              <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                <li>Nutze die Glocke oben rechts: Dort findest du jede Proben-Benachrichtigung und kannst mit einem Klick zusagen oder absagen.</li>
-                <li>Du findest die Nachricht nicht? Schau in deinem E-Mail-Postfach nach oder bitte die Regie um eine erneute Einladung.</li>
-                <li>Bei kurzfristigen Änderungen (&lt;24 Stunden) informiere die Regie zusätzlich telefonisch oder per Chat, damit Ersatz organisiert werden kann.</li>
-                <li>Trage Termine direkt nach der Zusage in deinen Kalender ein, um Doppelbuchungen zu vermeiden.</li>
-              </ul>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Tipp: Wenn du im Voraus weißt, dass du länger ausfällst, blocke die Zeiträume in der Sperrliste. So wird die Planung automatisch informiert.
-              </p>
+              {history.length ? (
+                <div className="space-y-3">
+                  {history.map((entry) => (
+                    <details key={entry.id} className="rounded-lg border border-border/60 bg-background/60 p-3">
+                      <summary className="flex items-center justify-between gap-2 text-sm font-medium text-foreground">
+                        <span>{entry.rehearsal.title}</span>
+                        <Badge variant="outline" className={STATUS_BADGE_CLASSES[entry.status]}>
+                          {STATUS_LABELS[entry.status]}
+                        </Badge>
+                      </summary>
+                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        <p>{formatDateTime(entry.rehearsal.start)}</p>
+                        <p>Ort: {entry.rehearsal.location}</p>
+                        <p>{STATUS_DESCRIPTIONS[entry.status]}</p>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Noch keine Rückmeldungen vorhanden.</p>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
+    </MembersListPage>
   );
 }
-
