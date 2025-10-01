@@ -1,8 +1,12 @@
 {
   "primary-500": { "fill": "#DC7300", "stroke": "#DC7300" },
   "primary-300": { "fill": "#EEC9A9", "stroke": "#EEC9A9" },
+  "primary-90": { "fill": "#EADDFF", "stroke": "#EADDFF" },
+  "primary-40": { "fill": "#6750A4", "stroke": "#6750A4" },
   "secondary-500": { "fill": "#F3CDA3", "stroke": "#F3CDA3" },
   "secondary-200": { "fill": "#FFEBD2", "stroke": "#FFEBD2" },
+  "secondary-90": { "fill": "#E8DEF8", "stroke": "#E8DEF8" },
+  "secondary-40": { "fill": "#625B71", "stroke": "#625B71" },
   "accent-500": { "fill": "#87D6E2", "stroke": "#87D6E2" },
   "accent-200": { "fill": "#C7EDF3", "stroke": "#C7EDF3" },
   "success-500": { "fill": "#00C66D", "stroke": "#00C66D" },
@@ -12,5 +16,7 @@
   "neutral-900": { "fill": "#020713", "stroke": "#020713" },
   "neutral-700": { "fill": "#1F2732", "stroke": "#1F2732" },
   "neutral-200": { "fill": "#D3DCE7", "stroke": "#D3DCE7" },
-  "neutral-100": { "fill": "#F7FCFF", "stroke": "#F7FCFF" }
+  "neutral-100": { "fill": "#F7FCFF", "stroke": "#F7FCFF" },
+  "surface-container": { "fill": "#F5EFF7", "stroke": "#F5EFF7" },
+  "surface-container-high": { "fill": "#ECE6F0", "stroke": "#ECE6F0" }
 }
