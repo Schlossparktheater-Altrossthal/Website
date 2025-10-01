@@ -129,7 +129,7 @@ function MembersNavProductionSwitcher({
     }
 
     items.push({
-      href: "/mitglieder/produktionen#produktion-anlegen",
+      href: "/mitglieder/produktionen#produktionen",
       label: "Neue Produktion anlegen",
       description: "Starte eine neue Saison und strukturiere Teams, Szenen und Zuständigkeiten.",
     });
