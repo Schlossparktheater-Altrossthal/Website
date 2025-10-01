@@ -14,8 +14,8 @@ import {
 } from "@/components/members/members-app-shell";
 import {
   SidebarProvider,
-  SIDEBAR_DESKTOP_COOKIE_NAME,
-  SIDEBAR_MOBILE_COOKIE_NAME,
+  SIDEBAR_BOTTOM_NAV_COOKIE_NAME,
+  SIDEBAR_RAIL_COOKIE_NAME,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { getActiveProduction } from "@/lib/active-production";
@@ -88,8 +88,9 @@ const isDevBuild = process.env.NODE_ENV === "development";
 export default async function MembersLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const sidebarDesktopCookie =
-    cookieStore.get(SIDEBAR_DESKTOP_COOKIE_NAME)?.value;
-  const sidebarMobileCookie = cookieStore.get(SIDEBAR_MOBILE_COOKIE_NAME)?.value;
+    cookieStore.get(SIDEBAR_RAIL_COOKIE_NAME)?.value;
+  const sidebarMobileCookie =
+    cookieStore.get(SIDEBAR_BOTTOM_NAV_COOKIE_NAME)?.value;
   const defaultSidebarOpen =
     typeof sidebarDesktopCookie === "undefined"
       ? true
@@ -186,6 +187,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               impersonation={session.impersonation ?? null}
               defaultBottomNavTab={defaultBottomNavTab}
               appBarSlots={{ status: appBarStatus }}
+              layoutVariant="bottom-nav"
               globalFooter={
                 <SiteFooter
                   buildInfo={buildInfo}
