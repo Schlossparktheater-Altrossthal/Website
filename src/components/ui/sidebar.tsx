@@ -25,8 +25,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export const SIDEBAR_DESKTOP_COOKIE_NAME = "sidebar_desktop_state";
-export const SIDEBAR_MOBILE_COOKIE_NAME = "sidebar_mobile_state";
+export const SIDEBAR_RAIL_COOKIE_NAME = "sidebar_rail_state";
+export const SIDEBAR_BOTTOM_NAV_COOKIE_NAME = "sidebar_bottom_nav_state";
+export const SIDEBAR_DESKTOP_COOKIE_NAME = SIDEBAR_RAIL_COOKIE_NAME;
+export const SIDEBAR_MOBILE_COOKIE_NAME = SIDEBAR_BOTTOM_NAV_COOKIE_NAME;
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH_MIN_REM = 14;
 const SIDEBAR_WIDTH_MAX_REM = 20;
@@ -38,12 +40,20 @@ const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_MOBILE_BREAKPOINT = "(max-width: 1023px)";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+type SidebarStateUpdater = (
+  open: boolean | ((open: boolean) => boolean),
+) => void;
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
   open: boolean;
-  setOpen: (open: boolean) => void;
+  setOpen: SidebarStateUpdater;
+  openRail: boolean;
+  setOpenRail: SidebarStateUpdater;
   openMobile: boolean;
-  setOpenMobile: (open: boolean) => void;
+  setOpenMobile: SidebarStateUpdater;
+  openBottomNav: boolean;
+  setOpenBottomNav: SidebarStateUpdater;
   isMobile: boolean;
   isDesktop: boolean;
   toggleSidebar: () => void;
@@ -115,7 +125,7 @@ const SidebarProvider = React.forwardRef<
         }
 
         if (typeof document !== "undefined") {
-          document.cookie = `${SIDEBAR_DESKTOP_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+          document.cookie = `${SIDEBAR_RAIL_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
         }
       },
       [setOpenProp, open],
@@ -134,7 +144,7 @@ const SidebarProvider = React.forwardRef<
         }
 
         if (typeof document !== "undefined") {
-          document.cookie = `${SIDEBAR_MOBILE_COOKIE_NAME}=${nextValue}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+          document.cookie = `${SIDEBAR_BOTTOM_NAV_COOKIE_NAME}=${nextValue}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
         }
       },
       [setOpenMobileProp, openMobile],
@@ -174,10 +184,14 @@ const SidebarProvider = React.forwardRef<
         state,
         open,
         setOpen,
+        openRail: open,
+        setOpenRail: setOpen,
         isMobile,
         isDesktop,
         openMobile,
         setOpenMobile,
+        openBottomNav: openMobile,
+        setOpenBottomNav: setOpenMobile,
         toggleSidebar,
       }),
       [
