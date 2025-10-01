@@ -14,6 +14,25 @@ Dieser Leitfaden bündelt die aktualisierten Design Tokens, Typografie- und Spac
 
 Die Farbwerte liegen vollständig in OKLCH vor und werden parametriert aus Farbfamilien (Basis-Hue, Chroma, Lightness) generiert. Für helle und dunkle Modi sorgen dynamische Delta-Regeln für konsistente Kontrastabstände. Die Hex-Werte dienen zur schnellen visuellen Referenz (Swatches unter `docs/swatches`).
 
+### Material-3-inspirierte Tonal Paletten
+
+Ergänzend zu den bestehenden Familien stehen nun zwei vollständige Tonal-Paletten nach Flutter/Material 3 zur Verfügung. Die Stufen orientieren sich an den offiziellen Spezifikationen (`0` → `100`) und bilden die Basis für Container-, Surface- und State-Tokens.
+
+| Palette | Tonstufe | Hex | Verwendung |
+| --- | --- | --- | --- |
+| Primary | `primary-10` | `#21005D` | `--primary-darkest`, Fokus-Indikatoren |
+| Primary | `primary-40` | `#6750A4` | `--primary` (Light), prominente Aktionen |
+| Primary | `primary-80` | `#D0BCFF` | Soft-Flächen, getönte Badges |
+| Primary | `primary-90` | `#EADDFF` | `--primary-container` (Light) |
+| Primary | `primary-95` | `#F6EDFF` | High-Contrast-Flächen, Hover-Staaten |
+| Secondary | `secondary-10` | `#1D192B` | `--secondary-darkest`, Kontraste im Dark Mode |
+| Secondary | `secondary-40` | `#625B71` | `--secondary` (Light), ergänzende Aktionen |
+| Secondary | `secondary-80` | `#CCC2DC` | Sekundäre Container |
+| Secondary | `secondary-90` | `#E8DEF8` | `--secondary-container` (Light) |
+| Secondary | `secondary-95` | `#F6EDFF` | Tonale Hintergründe |
+
+> **Hinweis:** Die Paletten-Werte stehen als SVG-Swatches (`docs/swatches/primary-*.svg`, `secondary-*.svg`) und JSON (`docs/swatches/palette.sample.json`) bereit und speisen `--primary-container`, `--secondary-container`, `--surface-tint` sowie die erweiterten Surface-Token.
+
 ## Parametrisches Farbsystem
 
 Die Token-Konfiguration besteht aus zwei Ebenen:
@@ -26,8 +45,10 @@ Der Build-Script schreibt daraus die finalen `modes` (Light/Dark) zurück ins JS
 | Rolle | Token | Vorschau |
 | --- | --- | --- |
 | Primär-CTA, Fokus | `--primary` / `--primary-foreground` | <img src="swatches/primary-500.svg" width="14" height="14" /> |
+| Primär-Container | `--primary-container` / `--on-primary-container` | <img src="swatches/primary-90.svg" width="14" height="14" /> |
 | Primär-Soft | `primary` Soft (`Badge`, Sekundäraktionen) | <img src="swatches/primary-300.svg" width="14" height="14" /> |
 | Sekundär-CTA | `--secondary` / `--secondary-foreground` | <img src="swatches/secondary-500.svg" width="14" height="14" /> |
+| Sekundär-Container | `--secondary-container` / `--on-secondary-container` | <img src="swatches/secondary-90.svg" width="14" height="14" /> |
 | Sekundär-Soft | `secondary` Soft-Flächen, Highlights | <img src="swatches/secondary-200.svg" width="14" height="14" /> |
 | Akzent/Interaktion | `--accent` / `--accent-foreground` | <img src="swatches/accent-500.svg" width="14" height="14" /> |
 | Akzent-Soft | `accent` Soft States, Pills | <img src="swatches/accent-200.svg" width="14" height="14" /> |
@@ -35,10 +56,10 @@ Der Build-Script schreibt daraus die finalen `modes` (Light/Dark) zurück ins JS
 | Warnung | `--warning` / `--warning-foreground` | <img src="swatches/warning-500.svg" width="14" height="14" /> |
 | Info | `--info` / `--info-foreground` | <img src="swatches/info-500.svg" width="14" height="14" /> |
 | Destruktiv | `--destructive` / `--destructive-foreground` | <img src="swatches/destructive-500.svg" width="14" height="14" /> |
-| Hintergrund dunkel | `--background` (Dark) | <img src="swatches/neutral-900.svg" width="14" height="14" /> |
-| Sekundärflächen dunkel | `--muted` (Dark) | <img src="swatches/neutral-700.svg" width="14" height="14" /> |
-| Hintergrund hell | `--background` (Light) | <img src="swatches/neutral-100.svg" width="14" height="14" /> |
-| Rahmen/Flächen hell | `--border` & `--muted` (Light) | <img src="swatches/neutral-200.svg" width="14" height="14" /> |
+| Hintergrund dunkel | `--surface` (Dark) | <img src="swatches/neutral-900.svg" width="14" height="14" /> |
+| Container dunkel | `--surface-container-high` (Dark) | <img src="swatches/neutral-700.svg" width="14" height="14" /> |
+| Hintergrund hell | `--surface` (Light) | <img src="swatches/neutral-100.svg" width="14" height="14" /> |
+| Container hell | `--surface-container` (Light) | <img src="swatches/neutral-200.svg" width="14" height="14" /> |
 
 > **Kontrastprüfung:** Alle Primärfarben erfüllen ≥ 4.5:1 auf ihren Gegenstücken. Die `ring`- und `focus-visible`-Farben greifen auf `--primary` zurück.
 
@@ -77,6 +98,46 @@ Die Layout-Variablen folgen einem 8pt-System, ergänzt um halbe Schritte:
 - `--space-xl`: 3rem (48px)
 - `--space-2xl`: 4rem (64px)
 - `--space-3xl`: 6rem (96px)
+
+### Corner-Radii (Material 3)
+
+Die Corner-Radii lehnen sich an die Flutter/Material-3-Defaults an und stehen als CSS-Custom-Properties bereit:
+
+- `--corner-xs`: 0.25rem (4px) – kompakte Chips, Dividers
+- `--corner-sm`: 0.5rem (8px) – Inputs, Segmented Controls
+- `--corner-md`: 0.75rem (12px) – Buttons, Avatare mit Bildanteil
+- `--corner-lg`: 1rem (16px) – Karten, modale Container
+- `--corner-xl`: 1.75rem (28px) – „Surface“ Elemente, Bottom Sheets
+- `--corner-full`: 62.5rem – Pill-/Circular-Shapes
+
+Tailwind nutzt diese Werte über `rounded-{xs|sm|…}` automatisch; `--radius` zeigt auf `--corner-lg` für Rückwärtskompatibilität.
+
+### Elevation & Shadow-Level
+
+Material-3-Elevationsstufen stehen als Token (`--shadow-level-{1…5}`) bereit und entsprechen Flutter`s `Elevation`-Mapping:
+
+| Level | Token | Einsatz |
+| --- | --- | --- |
+| 1 | `--shadow-level-1` | Karten, kleinere Hover-Flächen |
+| 2 | `--shadow-level-2` | Primäre Filled Buttons |
+| 3 | `--shadow-level-3` | Dialoge, ausgeprägte Cards |
+| 4 | `--shadow-level-4` | Modal-Sheets, Overlays |
+| 5 | `--shadow-level-5` | Persistente Navigation, High-Contrast-Highlights |
+
+Tailwind stellt die Klassen `shadow-level-{n}` bereit. Zusätzlich existiert `.surface-tinted` als Utility, um `surface` + `surface-tint` kombiniert auf Karten anzuwenden.
+
+### Motion Tokens
+
+Die neuen Motion-Variablen folgen dem Material-3-Standard:
+
+- `--motion-duration-short`: 150 ms (Click/Toggle)
+- `--motion-duration-medium`: 250 ms (Modal, Slide)
+- `--motion-duration-long`: 400 ms (Large Surfaces)
+- `--motion-ease-standard`: `cubic-bezier(0.2, 0, 0, 1)` (Allround)
+- `--motion-ease-decelerate`: `cubic-bezier(0.05, 0.7, 0.1, 1)` (Easing-Out)
+- `--motion-ease-emphasized`: `cubic-bezier(0.2, 0, 0, 1)` kombiniert mit `--motion-duration-long` für aufmerksamkeitsstarke Übergänge
+
+Utilities `.motion-slide` und `.motion-scale` kapseln diese Parameter für Slideover-/Sheet-Animationen und skalierende Hover-States.
 
 Weitere Layout-Konstanten:
 - `--layout-max-width`: 90rem (1440px Bühne)
@@ -134,6 +195,7 @@ Weitere Layout-Konstanten:
 - **States:** Hover reduziert Deckkraft bzw. hebt Konturen hervor; `focus-visible` nutzt `ring` + Offset, `disabled` setzt `opacity-60` und deaktiviert Pointer Events.
 - **Sizes:** `xs`–`xl` plus `icon`, alle auf das 8pt-Raster abgestimmt.
 - **Icons:** Buttons besitzen standardmäßig `inline-flex` + `gap-2`. Platziere führende oder nachgestellte Icons direkt in der Button-Children-Hierarchie (z. B. `<Sparkles className="h-4 w-4" aria-hidden />`). Auf XS-Screens dürfen Labels zugunsten eines Icons mit `sr-only sm:not-sr-only` ausgeblendet werden, solange ein `title` oder das Screenreader-Label erhalten bleibt.
+- **Utilities:** `.btn-filled` und `.btn-outlined` bündeln Motion (`--motion-duration-*`) und Elevation (`shadow-level-2/3`). Farbvarianten setzen via `.btn-tone-*` (`primary`, `secondary`, `accent`, `success`, `info`, `destructive`) ihre Tokens und ermöglichen konsistente Container-/Label-Kontraste.
 
 ### Symbolsprache & Icon-Buttons
 
@@ -171,6 +233,8 @@ Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch di
 - `.text-display`, `.text-h1` … `.text-eyebrow`
 - `.text-body`, `.text-body-lg`, `.text-body-sm`, `.text-caption`
 - `--font-body`, `--font-heading`, `--font-display` für zukünftige Schriftwechsel
+- `.btn-filled`, `.btn-outlined`, `.btn-tone-*`
+- `.surface-tinted`, `.motion-slide`, `.motion-scale`
 
 ## Pflege & Workflow
 

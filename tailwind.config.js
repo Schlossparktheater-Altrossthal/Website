@@ -42,10 +42,14 @@ module.exports = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          container: "var(--primary-container)",
+          "container-foreground": "var(--on-primary-container)",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
+          container: "var(--secondary-container)",
+          "container-foreground": "var(--on-secondary-container)",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -79,11 +83,32 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        surface: {
+          DEFAULT: "var(--surface)",
+          foreground: "var(--on-surface)",
+          container: "var(--surface-container)",
+          "container-low": "var(--surface-container-low)",
+          "container-high": "var(--surface-container-high)",
+          tint: "var(--surface-tint)",
+        },
+        outline: "var(--outline)",
+        "outline-variant": "var(--outline-variant)",
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        none: "0",
+        xs: "var(--corner-xs)",
+        sm: "var(--corner-sm)",
+        md: "var(--corner-md)",
+        lg: "var(--corner-lg)",
+        xl: "var(--corner-xl)",
+        full: "var(--corner-full)",
+      },
+      boxShadow: {
+        "level-1": "var(--shadow-level-1)",
+        "level-2": "var(--shadow-level-2)",
+        "level-3": "var(--shadow-level-3)",
+        "level-4": "var(--shadow-level-4)",
+        "level-5": "var(--shadow-level-5)",
       },
       keyframes: {
         "accordion-down": {
@@ -103,6 +128,16 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         carousel: "carousel var(--carousel-duration, 60s) linear infinite",
+      },
+      transitionDuration: {
+        "motion-short": "var(--motion-duration-short)",
+        "motion-medium": "var(--motion-duration-medium)",
+        "motion-long": "var(--motion-duration-long)",
+      },
+      transitionTimingFunction: {
+        "motion-standard": "var(--motion-ease-standard)",
+        "motion-decelerate": "var(--motion-ease-decelerate)",
+        "motion-emphasized": "var(--motion-ease-emphasized)",
       },
     },
   },
