@@ -23,13 +23,24 @@ import {
   startOfWeek,
 } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 
-import { MonthCalendar, type CalendarDay } from "@/components/calendar/month-calendar";
+import {
+  MonthCalendar,
+  type CalendarDay,
+  type MonthCalendarProps,
+} from "@/components/calendar/month-calendar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
@@ -145,6 +156,7 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
   const [activeCalendarIds, setActiveCalendarIds] = useState<string[]>(() =>
     calendars.map((item) => item.id),
   );
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const isTablet = useMediaQuery("(min-width: 768px)");
   const isDesktop = useMediaQuery("(min-width: 1024px)");
@@ -309,6 +321,11 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
     });
   };
 
+  const handleMonthChange = (next: Date) => {
+    setCurrentMonth(next);
+    setCurrentDate(next);
+  };
+
   const handleViewChange = (nextView: CalendarView) => {
     setViewFromUser(nextView);
     if (nextView === "month") {
@@ -419,82 +436,90 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
     });
   }, [currentDate, eventsByDay, view]);
 
+  const sidebarModules = (
+    <>
+      <SidebarMonthOverview
+        month={currentMonth}
+        onMonthChange={handleMonthChange}
+        renderDay={renderDayCell}
+      />
+      <SidebarCalendarFilters
+        calendars={calendars}
+        activeCalendarIds={activeCalendarIds}
+        onToggleCalendar={toggleCalendar}
+      />
+    </>
+  );
+
+  const secondaryPanels = (
+    <>
+      <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Bevorstehende Termine</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Die nächsten persönlichen Ereignisse aus allen aktiven Kalendern.
+          </p>
+        </CardHeader>
+        <CardContent className="divide-y divide-border/60">
+          {upcomingEvents.length ? (
+            upcomingEvents.map((event) => (
+              <AgendaRow key={`upcoming-${event.id}`} event={event} source={calendarMap.get(event.calendarId)} />
+            ))
+          ) : (
+            <p className="py-6 text-sm text-muted-foreground">Keine anstehenden Termine gefunden.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Kalenderstatistiken</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Überblick über deine Aktivitäten in den letzten Monaten.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {summary.length ? (
+            summary.map((item) => (
+              <div key={item.id} className="rounded-2xl border border-border/60 bg-background/70 px-3 py-2">
+                <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                <p className="text-lg font-bold text-primary">{item.value}</p>
+                {item.hint ? <p className="text-xs text-muted-foreground">{item.hint}</p> : null}
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">Keine Statistiken verfügbar.</p>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+
   return (
     <section className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="hidden flex-col gap-6 lg:flex">
-          <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold">Monatsübersicht</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Tippe auf ein Datum, um in die Tages- oder Wochenansicht zu wechseln.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <MonthCalendar
-                month={currentMonth}
-                onMonthChange={(next) => {
-                  setCurrentMonth(next);
-                  setCurrentDate(next);
-                }}
-                renderDay={renderDayCell}
-                showWeekNumbers={false}
-                weekStartsOn={1}
-                className="rounded-2xl border border-border/60"
-                contentClassName="p-2"
-              />
-            </CardContent>
-          </Card>
+      <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+        <SheetContent
+          side="bottom"
+          className="max-h-[85vh] overflow-y-auto rounded-t-[2rem] border-border/80 bg-background/95 backdrop-blur"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle>Kalenderoptionen</SheetTitle>
+            <SheetDescription>
+              Wähle einen Tag aus oder passe die angezeigten Kalender an.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 space-y-6">{sidebarModules}</div>
+        </SheetContent>
+      </Sheet>
 
-          <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Meine Kalender</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Blende einzelne Quellen aus, um dich auf bestimmte Termine zu konzentrieren.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {calendars.map((calendar) => {
-                const isActive = activeCalendarIds.includes(calendar.id);
-                return (
-                  <button
-                    key={calendar.id}
-                    type="button"
-                    onClick={() => toggleCalendar(calendar.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left text-sm transition",
-                      isActive
-                        ? "border-transparent bg-primary/10 text-foreground"
-                        : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <span
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: calendar.color }}
-                      aria-hidden
-                    />
-                    <span className="flex-1">
-                      <span className="block font-medium">{calendar.label}</span>
-                      {calendar.secondaryLabel ? (
-                        <span className="text-xs text-muted-foreground/80">{calendar.secondaryLabel}</span>
-                      ) : null}
-                    </span>
-                    <Badge variant={isActive ? "default" : "outline"} className="rounded-full px-2 py-0 text-[10px]">
-                      {isActive ? "Aktiv" : "Aus"}
-                    </Badge>
-                  </button>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)_320px]">
+        <aside className="hidden min-h-full flex-col gap-6 md:flex">{sidebarModules}</aside>
 
         <div className="space-y-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={() => handleNavigate("previous")}
-                  aria-label="Zurück">
+                <Button variant="outline" size="icon" onClick={() => handleNavigate("previous")} aria-label="Zurück">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" onClick={handleToday} className="px-4">
@@ -518,26 +543,41 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
               </div>
             </div>
 
-            <Tabs value={view} onValueChange={(value) => handleViewChange(value as CalendarView)} className="w-full md:w-auto">
-              <TabsList className="w-full justify-start sm:grid sm:grid-cols-4">
-                <TabsTrigger value="day" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
-                  Tag
-                </TabsTrigger>
-                <TabsTrigger value="week" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
-                  Woche
-                </TabsTrigger>
-                <TabsTrigger
-                  value="month"
-                  disabled={!isTablet}
-                  className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4"
-                >
-                  Monat
-                </TabsTrigger>
-                <TabsTrigger value="agenda" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
-                  Agenda
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex w-full flex-col items-stretch gap-2 md:w-auto md:flex-row md:items-center md:justify-start">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 md:hidden"
+                onClick={() => setMobileSidebarOpen(true)}
+              >
+                <CalendarRange className="mr-2 h-4 w-4" />
+                Anzeigen
+              </Button>
+              <Tabs
+                value={view}
+                onValueChange={(value) => handleViewChange(value as CalendarView)}
+                className="w-full md:w-auto"
+              >
+                <TabsList className="w-full justify-start sm:grid sm:grid-cols-4">
+                  <TabsTrigger value="day" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
+                    Tag
+                  </TabsTrigger>
+                  <TabsTrigger value="week" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
+                    Woche
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="month"
+                    disabled={!isTablet}
+                    className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4"
+                  >
+                    Monat
+                  </TabsTrigger>
+                  <TabsTrigger value="agenda" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
+                    Agenda
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
 
           <Card className="rounded-3xl border border-border/60 bg-card/80 shadow-sm">
@@ -546,10 +586,7 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
                 <div className="p-4">
                   <MonthCalendar
                     month={currentMonth}
-                    onMonthChange={(next) => {
-                      setCurrentMonth(next);
-                      setCurrentDate(next);
-                    }}
+                    onMonthChange={handleMonthChange}
                     renderDay={renderDayCell}
                     showWeekNumbers
                     weekStartsOn={1}
@@ -603,52 +640,101 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
             </CardContent>
           </Card>
         </div>
+
+        <div className="hidden gap-6 lg:flex lg:flex-col">
+          {secondaryPanels}
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Bevorstehende Termine</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Die nächsten persönlichen Ereignisse aus allen aktiven Kalendern.
-            </p>
-          </CardHeader>
-          <CardContent className="divide-y divide-border/60">
-            {upcomingEvents.length ? (
-              upcomingEvents.map((event) => (
-                <AgendaRow key={`upcoming-${event.id}`} event={event} source={calendarMap.get(event.calendarId)} />
-              ))
-            ) : (
-              <p className="py-6 text-sm text-muted-foreground">Keine anstehenden Termine gefunden.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Kalenderstatistiken</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Überblick über deine Aktivitäten in den letzten Monaten.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {summary.length ? (
-              summary.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-border/60 bg-background/70 px-3 py-2">
-                  <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                  <p className="text-lg font-bold text-primary">{item.value}</p>
-                  {item.hint ? (
-                    <p className="text-xs text-muted-foreground">{item.hint}</p>
-                  ) : null}
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">Keine Statistiken verfügbar.</p>
-            )}
-          </CardContent>
-        </Card>
+      <div className="space-y-6 lg:hidden">
+        {secondaryPanels}
       </div>
     </section>
+  );
+}
+
+interface SidebarMonthOverviewProps {
+  month: Date;
+  onMonthChange: (next: Date) => void;
+  renderDay: NonNullable<MonthCalendarProps["renderDay"]>;
+  className?: string;
+}
+
+function SidebarMonthOverview({ month, onMonthChange, renderDay, className }: SidebarMonthOverviewProps) {
+  return (
+    <Card className={cn("rounded-3xl border border-border/60 bg-card/70 shadow-sm", className)}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold">Monatsübersicht</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Tippe auf ein Datum, um in die Tages- oder Wochenansicht zu wechseln.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <MonthCalendar
+          month={month}
+          onMonthChange={onMonthChange}
+          renderDay={renderDay}
+          showWeekNumbers={false}
+          weekStartsOn={1}
+          className="rounded-2xl border border-border/60"
+          contentClassName="p-2"
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+interface SidebarCalendarFiltersProps {
+  calendars: MemberCalendarSource[];
+  activeCalendarIds: string[];
+  onToggleCalendar: (calendarId: string) => void;
+  className?: string;
+}
+
+function SidebarCalendarFilters({
+  calendars,
+  activeCalendarIds,
+  onToggleCalendar,
+  className,
+}: SidebarCalendarFiltersProps) {
+  return (
+    <Card className={cn("rounded-3xl border border-border/60 bg-card/70 shadow-sm", className)}>
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">Meine Kalender</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Blende einzelne Quellen aus, um dich auf bestimmte Termine zu konzentrieren.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {calendars.map((calendar) => {
+          const isActive = activeCalendarIds.includes(calendar.id);
+          return (
+            <button
+              key={calendar.id}
+              type="button"
+              onClick={() => onToggleCalendar(calendar.id)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left text-sm transition",
+                isActive
+                  ? "border-transparent bg-primary/10 text-foreground"
+                  : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: calendar.color }} aria-hidden />
+              <span className="flex-1">
+                <span className="block font-medium">{calendar.label}</span>
+                {calendar.secondaryLabel ? (
+                  <span className="text-xs text-muted-foreground/80">{calendar.secondaryLabel}</span>
+                ) : null}
+              </span>
+              <Badge variant={isActive ? "default" : "outline"} className="rounded-full px-2 py-0 text-[10px]">
+                {isActive ? "Aktiv" : "Aus"}
+              </Badge>
+            </button>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 
