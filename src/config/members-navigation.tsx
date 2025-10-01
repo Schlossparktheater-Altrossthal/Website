@@ -33,6 +33,12 @@ export interface MembersNavGroup {
   items: readonly MembersNavItem[];
 }
 
+export interface MembersNavigationStructure {
+  primaryTabs: readonly MembersNavGroup[];
+  secondaryMenu: readonly MembersNavGroup[];
+  quickActions: readonly MembersNavItem[];
+}
+
 function createMembersNavIcon(children: ReactNode): MembersNavIcon {
   const Icon: MembersNavIcon = ({ className }) => (
     <svg
@@ -365,247 +371,292 @@ export const membersAssignmentsTodoItem: MembersNavItem = {
   icon: DepartmentTodosIcon,
 };
 
-export const membersNavigation = [
+const generalNavigationGroup: MembersNavGroup = {
+  id: "general",
+  label: "Allgemein",
+  items: [
+    {
+      href: "/mitglieder",
+      label: "Dashboard",
+      permissionKey: "mitglieder.dashboard",
+      icon: DashboardIcon,
+    },
+    {
+      href: "/mitglieder/profil",
+      label: "Profil",
+      permissionKey: "mitglieder.profil",
+      icon: ProfileIcon,
+    },
+    {
+      href: "/mitglieder/archiv-und-bilder",
+      label: "Archiv und Bilder",
+      permissionKey: "mitglieder.galerie",
+      icon: ArchiveIcon,
+    },
+    {
+      href: "/mitglieder/dateisystem",
+      label: "Dateisystem",
+      permissionKey: "mitglieder.dateisystem",
+      icon: FileLibraryIcon,
+    },
+    {
+      href: "/mitglieder/sperrliste",
+      label: "Sperrliste",
+      permissionKey: "mitglieder.sperrliste",
+      icon: BlacklistIcon,
+    },
+    {
+      href: "/mitglieder/scan",
+      label: "Scanner",
+      permissionKey: "mitglieder.scan",
+      icon: ScannerIcon,
+    },
+    {
+      href: "/mitglieder/inventar-aufkleber",
+      label: "Inventaraufkleber",
+      permissionKey: "mitglieder.inventaraufkleber",
+      icon: InventoryStickersIcon,
+    },
+    {
+      href: "/mitglieder/issues",
+      label: "Feedback & Support",
+      permissionKey: "mitglieder.issues",
+      icon: IssuesIcon,
+    },
+  ],
+};
+
+const assignmentsNavigationGroup: MembersNavGroup = {
+  id: "assignments",
+  label: "Proben & Gewerke",
+  items: [
+    {
+      href: "/mitglieder/kalender",
+      label: "Kalender",
+      permissionKey: "mitglieder.kalender",
+      icon: PersonalCalendarIcon,
+    },
+    {
+      href: "/mitglieder/meine-proben",
+      label: "Meine Proben",
+      permissionKey: "mitglieder.meine-proben",
+      icon: RehearsalsIcon,
+    },
+    {
+      href: "/mitglieder/meine-gewerke",
+      label: "Meine Gewerke",
+      permissionKey: "mitglieder.meine-gewerke",
+      icon: DepartmentsIcon,
+    },
+    {
+      href: "/mitglieder/koerpermasse",
+      label: "Körpermaße",
+      permissionKey: "mitglieder.koerpermasse",
+      icon: BodyMeasurementsIcon,
+    },
+    {
+      href: "/mitglieder/probenplanung",
+      label: "Probenplanung",
+      permissionKey: "mitglieder.probenplanung",
+      icon: RehearsalPlanningIcon,
+    },
+  ],
+};
+
+const finalWeekNavigationGroup: MembersNavGroup = {
+  id: "final-week",
+  label: "Endproben Woche",
+  items: [
+    {
+      href: "/mitglieder/endproben-woche/dienstplan",
+      label: "Dienstplan",
+      permissionKey: "mitglieder.endprobenwoche",
+      icon: DutyRosterIcon,
+    },
+    {
+      href: "/mitglieder/endproben-woche/essenplanung",
+      label: "Essensplanung",
+      permissionKey: "mitglieder.essenplanung",
+      icon: CateringIcon,
+    },
+    {
+      href: "/mitglieder/endproben-woche/menueplan",
+      label: "Menüplan",
+      permissionKey: "mitglieder.essenplanung",
+      icon: MealPlanIcon,
+    },
+    {
+      href: "/mitglieder/endproben-woche/einkaufsliste",
+      label: "Einkaufsliste",
+      permissionKey: "mitglieder.essenplanung",
+      icon: ShoppingListIcon,
+    },
+  ],
+};
+
+const inventoryNavigationGroup: MembersNavGroup = {
+  id: "inventory",
+  label: "Lagerverwaltung",
+  items: [
+    {
+      href: "/mitglieder/lagerverwaltung/technik",
+      label: "Technik-Lager",
+      permissionKey: "mitglieder.lager.technik",
+      icon: TechInventoryIcon,
+    },
+    {
+      href: "/mitglieder/lagerverwaltung/kostueme",
+      label: "Kostüm-Lager",
+      permissionKey: "mitglieder.lager.kostueme",
+      icon: CostumeInventoryIcon,
+    },
+  ],
+};
+
+const productionNavigationGroup: MembersNavGroup = {
+  id: "production",
+  label: "Produktion",
+  items: [
+    {
+      href: "/mitglieder/produktionen",
+      label: "Übersicht",
+      permissionKey: "mitglieder.produktionen",
+      icon: ProductionIcon,
+    },
+    {
+      href: "/mitglieder/produktionen/gewerke",
+      label: "Gewerke & Teams",
+      permissionKey: "mitglieder.produktionen",
+      icon: DepartmentsOverviewIcon,
+    },
+    {
+      href: "/mitglieder/produktionen/besetzung",
+      label: "Rollen & Besetzung",
+      permissionKey: "mitglieder.produktionen",
+      icon: CastIcon,
+    },
+    {
+      href: "/mitglieder/produktionen/szenen",
+      label: "Szenen & Breakdowns",
+      permissionKey: "mitglieder.produktionen",
+      icon: ScenesIcon,
+    },
+  ],
+};
+
+const financeNavigationGroup: MembersNavGroup = {
+  id: "finance",
+  label: "Finanzen",
+  items: [
+    {
+      href: "/mitglieder/finanzen",
+      label: "Finanz-Dashboard",
+      permissionKey: "mitglieder.finanzen",
+      icon: FinanceDashboardIcon,
+    },
+    {
+      href: "/mitglieder/finanzen/buchungen",
+      label: "Buchungen",
+      permissionKey: "mitglieder.finanzen",
+      icon: FinanceBookingsIcon,
+    },
+    {
+      href: "/mitglieder/finanzen/budgets",
+      label: "Budgets",
+      permissionKey: "mitglieder.finanzen",
+      icon: FinanceBudgetsIcon,
+    },
+    {
+      href: "/mitglieder/finanzen/export",
+      label: "Exporte",
+      permissionKey: "mitglieder.finanzen.export",
+      icon: FinanceExportIcon,
+    },
+  ],
+};
+
+const adminNavigationGroup: MembersNavGroup = {
+  id: "admin",
+  label: "Verwaltung",
+  items: [
+    {
+      href: "/mitglieder/mitgliederverwaltung",
+      label: "Mitgliederverwaltung",
+      permissionKey: "mitglieder.rollenverwaltung",
+      icon: MembersAdminIcon,
+    },
+    {
+      href: "/mitglieder/server-analytics",
+      label: "Server-Statistiken",
+      permissionKey: "mitglieder.server.analytics",
+      icon: ServerAnalyticsIcon,
+    },
+    {
+      href: "/mitglieder/onboarding",
+      label: "Onboarding-Statistiken",
+      permissionKey: "mitglieder.onboarding.analytics",
+      icon: DashboardIcon,
+    },
+    {
+      href: "/mitglieder/rechte",
+      label: "Rechteverwaltung",
+      permissionKey: "mitglieder.rechte",
+      icon: PermissionsIcon,
+    },
+    {
+      href: "/mitglieder/fotoerlaubnisse",
+      label: "Fotoerlaubnisse",
+      permissionKey: "mitglieder.fotoerlaubnisse",
+      icon: PhotoConsentIcon,
+    },
+    {
+      href: "/mitglieder/website",
+      label: "Website & Theme",
+      permissionKey: "mitglieder.website.settings",
+      icon: WebsiteIcon,
+    },
+  ],
+};
+
+export const membersPrimaryTabs = [
+  generalNavigationGroup,
+  assignmentsNavigationGroup,
+  productionNavigationGroup,
+  financeNavigationGroup,
+  adminNavigationGroup,
+] as const;
+
+export const membersSecondaryMenu = [
+  inventoryNavigationGroup,
+  finalWeekNavigationGroup,
+] as const;
+
+export const membersQuickActions = [
+  membersAssignmentsTodoItem,
   {
-    id: "general",
-    label: "Allgemein",
-    items: [
-      {
-        href: "/mitglieder",
-        label: "Dashboard",
-        permissionKey: "mitglieder.dashboard",
-        icon: DashboardIcon,
-      },
-      {
-        href: "/mitglieder/profil",
-        label: "Profil",
-        permissionKey: "mitglieder.profil",
-        icon: ProfileIcon,
-      },
-      {
-        href: "/mitglieder/archiv-und-bilder",
-        label: "Archiv und Bilder",
-        permissionKey: "mitglieder.galerie",
-        icon: ArchiveIcon,
-      },
-      {
-        href: "/mitglieder/dateisystem",
-        label: "Dateisystem",
-        permissionKey: "mitglieder.dateisystem",
-        icon: FileLibraryIcon,
-      },
-      {
-        href: "/mitglieder/sperrliste",
-        label: "Sperrliste",
-        permissionKey: "mitglieder.sperrliste",
-        icon: BlacklistIcon,
-      },
-      {
-        href: "/mitglieder/scan",
-        label: "Scanner",
-        permissionKey: "mitglieder.scan",
-        icon: ScannerIcon,
-      },
-      {
-        href: "/mitglieder/inventar-aufkleber",
-        label: "Inventaraufkleber",
-        permissionKey: "mitglieder.inventaraufkleber",
-        icon: InventoryStickersIcon,
-      },
-      {
-        href: "/mitglieder/issues",
-        label: "Feedback & Support",
-        permissionKey: "mitglieder.issues",
-        icon: IssuesIcon,
-      },
-    ],
+    href: "/mitglieder/scan",
+    label: "Scanner öffnen",
+    permissionKey: "mitglieder.scan",
+    icon: ScannerIcon,
   },
   {
-    id: "inventory",
-    label: "Lagerverwaltung",
-    items: [
-      {
-        href: "/mitglieder/lagerverwaltung/technik",
-        label: "Technik-Lager",
-        permissionKey: "mitglieder.lager.technik",
-        icon: TechInventoryIcon,
-      },
-      {
-        href: "/mitglieder/lagerverwaltung/kostueme",
-        label: "Kostüm-Lager",
-        permissionKey: "mitglieder.lager.kostueme",
-        icon: CostumeInventoryIcon,
-      },
-    ],
+    href: "/mitglieder/inventar-aufkleber",
+    label: "Inventaraufkleber",
+    permissionKey: "mitglieder.inventaraufkleber",
+    icon: InventoryStickersIcon,
   },
   {
-    id: "assignments",
-    label: "Proben & Gewerke",
-    items: [
-      {
-        href: "/mitglieder/kalender",
-        label: "Kalender",
-        permissionKey: "mitglieder.kalender",
-        icon: PersonalCalendarIcon,
-      },
-      {
-        href: "/mitglieder/meine-proben",
-        label: "Meine Proben",
-        permissionKey: "mitglieder.meine-proben",
-        icon: RehearsalsIcon,
-      },
-      {
-        href: "/mitglieder/meine-gewerke",
-        label: "Meine Gewerke",
-        permissionKey: "mitglieder.meine-gewerke",
-        icon: DepartmentsIcon,
-      },
-      {
-        href: "/mitglieder/koerpermasse",
-        label: "Körpermaße",
-        permissionKey: "mitglieder.koerpermasse",
-        icon: BodyMeasurementsIcon,
-      },
-      {
-        href: "/mitglieder/probenplanung",
-        label: "Probenplanung",
-        permissionKey: "mitglieder.probenplanung",
-        icon: RehearsalPlanningIcon,
-      },
-    ],
+    href: "/mitglieder/issues",
+    label: "Feedback & Support",
+    permissionKey: "mitglieder.issues",
+    icon: IssuesIcon,
   },
-  {
-    id: "final-week",
-    label: "Endproben Woche",
-    items: [
-      {
-        href: "/mitglieder/endproben-woche/dienstplan",
-        label: "Dienstplan",
-        permissionKey: "mitglieder.endprobenwoche",
-        icon: DutyRosterIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/essenplanung",
-        label: "Essensplanung",
-        permissionKey: "mitglieder.essenplanung",
-        icon: CateringIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/menueplan",
-        label: "Menüplan",
-        permissionKey: "mitglieder.essenplanung",
-        icon: MealPlanIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/einkaufsliste",
-        label: "Einkaufsliste",
-        permissionKey: "mitglieder.essenplanung",
-        icon: ShoppingListIcon,
-      },
-    ],
-  },
-  {
-    id: "production",
-    label: "Produktion",
-    items: [
-      {
-        href: "/mitglieder/produktionen",
-        label: "Übersicht",
-        permissionKey: "mitglieder.produktionen",
-        icon: ProductionIcon,
-      },
-      {
-        href: "/mitglieder/produktionen/gewerke",
-        label: "Gewerke & Teams",
-        permissionKey: "mitglieder.produktionen",
-        icon: DepartmentsOverviewIcon,
-      },
-      {
-        href: "/mitglieder/produktionen/besetzung",
-        label: "Rollen & Besetzung",
-        permissionKey: "mitglieder.produktionen",
-        icon: CastIcon,
-      },
-      {
-        href: "/mitglieder/produktionen/szenen",
-        label: "Szenen & Breakdowns",
-        permissionKey: "mitglieder.produktionen",
-        icon: ScenesIcon,
-      },
-    ],
-  },
-  {
-    id: "finance",
-    label: "Finanzen",
-    items: [
-      {
-        href: "/mitglieder/finanzen",
-        label: "Finanz-Dashboard",
-        permissionKey: "mitglieder.finanzen",
-        icon: FinanceDashboardIcon,
-      },
-      {
-        href: "/mitglieder/finanzen/buchungen",
-        label: "Buchungen",
-        permissionKey: "mitglieder.finanzen",
-        icon: FinanceBookingsIcon,
-      },
-      {
-        href: "/mitglieder/finanzen/budgets",
-        label: "Budgets",
-        permissionKey: "mitglieder.finanzen",
-        icon: FinanceBudgetsIcon,
-      },
-      {
-        href: "/mitglieder/finanzen/export",
-        label: "Exporte",
-        permissionKey: "mitglieder.finanzen.export",
-        icon: FinanceExportIcon,
-      },
-    ],
-  },
-  {
-    id: "admin",
-    label: "Verwaltung",
-    items: [
-      {
-        href: "/mitglieder/mitgliederverwaltung",
-        label: "Mitgliederverwaltung",
-        permissionKey: "mitglieder.rollenverwaltung",
-        icon: MembersAdminIcon,
-      },
-      {
-        href: "/mitglieder/server-analytics",
-        label: "Server-Statistiken",
-        permissionKey: "mitglieder.server.analytics",
-        icon: ServerAnalyticsIcon,
-      },
-      {
-        href: "/mitglieder/onboarding",
-        label: "Onboarding-Statistiken",
-        permissionKey: "mitglieder.onboarding.analytics",
-        icon: DashboardIcon,
-      },
-      {
-        href: "/mitglieder/rechte",
-        label: "Rechteverwaltung",
-        permissionKey: "mitglieder.rechte",
-        icon: PermissionsIcon,
-      },
-      {
-        href: "/mitglieder/fotoerlaubnisse",
-        label: "Fotoerlaubnisse",
-        permissionKey: "mitglieder.fotoerlaubnisse",
-        icon: PhotoConsentIcon,
-      },
-      {
-        href: "/mitglieder/website",
-        label: "Website & Theme",
-        permissionKey: "mitglieder.website.settings",
-        icon: WebsiteIcon,
-      },
-    ],
-  },
-] satisfies readonly MembersNavGroup[];
+] as const;
+
+export const membersNavigation: MembersNavigationStructure = {
+  primaryTabs: membersPrimaryTabs,
+  secondaryMenu: membersSecondaryMenu,
+  quickActions: membersQuickActions,
+};
 
 export const defaultMembersNavIcon = DefaultIcon;

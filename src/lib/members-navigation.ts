@@ -1,4 +1,8 @@
-import type { MembersNavGroup, MembersNavItem } from "@/config/members-navigation";
+import type {
+  MembersNavGroup,
+  MembersNavItem,
+  MembersNavigationStructure,
+} from "@/config/members-navigation";
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
@@ -15,18 +19,36 @@ export interface ActiveProductionNavInfo {
   year: number;
 }
 
+export interface MembersNavigationSelection {
+  primaryTabs: MembersNavGroup[];
+  secondaryMenu: MembersNavGroup[];
+  quickActions: MembersNavItem[];
+}
+
 export interface MembersNavigationSelectorOptions {
-  groups?: readonly MembersNavGroup[];
+  structure?: MembersNavigationStructure;
   hasDepartmentMemberships?: boolean;
   activeProduction?: ActiveProductionNavInfo | null;
 }
 
-export interface MembersNavigationFilterResult {
-  groups: MembersNavGroup[];
+export interface MembersNavigationFilterResult
+  extends MembersNavigationSelection {
   flat: MembersNavItem[];
 }
 
 function cloneGroupItems(items: readonly MembersNavItem[]) {
+  return items.map((item) => ({ ...item }));
+}
+
+function cloneGroup(group: MembersNavGroup): MembersNavGroup {
+  return { ...group, items: cloneGroupItems(group.items) };
+}
+
+function cloneGroups(groups: readonly MembersNavGroup[]) {
+  return groups.map((group) => cloneGroup(group));
+}
+
+function cloneItems(items: readonly MembersNavItem[]) {
   return items.map((item) => ({ ...item }));
 }
 
@@ -57,11 +79,11 @@ function removeTodoItem(items: MembersNavItem[]) {
 }
 
 export function selectMembersNavigation({
-  groups = membersNavigation,
+  structure = membersNavigation,
   hasDepartmentMemberships = false,
   activeProduction = null,
-}: MembersNavigationSelectorOptions = {}): MembersNavGroup[] {
-  return groups.map((group) => {
+}: MembersNavigationSelectorOptions = {}): MembersNavigationSelection {
+  const applyGroupTransforms = (group: MembersNavGroup): MembersNavGroup => {
     if (group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID) {
       const items = cloneGroupItems(group.items);
       if (hasDepartmentMemberships) {
@@ -106,8 +128,27 @@ export function selectMembersNavigation({
       return { ...group, items };
     }
 
-    return { ...group, items: cloneGroupItems(group.items) };
-  });
+    return cloneGroup(group);
+  };
+
+  const primaryTabs = structure.primaryTabs.map(applyGroupTransforms);
+  const secondaryMenu = structure.secondaryMenu.map(applyGroupTransforms);
+
+  let quickActions = cloneItems(structure.quickActions);
+  if (!hasDepartmentMemberships) {
+    quickActions = quickActions.filter(
+      (item) => item.href !== membersAssignmentsTodoItem.href,
+    );
+  } else {
+    const todoIncluded = quickActions.some(
+      (item) => item.href === membersAssignmentsTodoItem.href,
+    );
+    if (!todoIncluded) {
+      quickActions.unshift({ ...membersAssignmentsTodoItem });
+    }
+  }
+
+  return { primaryTabs, secondaryMenu, quickActions };
 }
 
 export function resolveAssignmentsGroupLabel(
@@ -130,47 +171,90 @@ export function resolveAssignmentsGroupLabel(
   return "Proben";
 }
 
-export function filterMembersNavigationByPermissions(
+function filterGroupByPermissions(
+  group: MembersNavGroup,
+  permissionSet: Set<string> | null,
+): MembersNavGroup {
+  const items = group.items.filter((item) => {
+    if (!item.permissionKey || !permissionSet) return true;
+    return permissionSet.has(item.permissionKey);
+  });
+  return { ...group, items };
+}
+
+function filterQuickActionsByPermissions(
+  actions: readonly MembersNavItem[],
+  permissionSet: Set<string> | null,
+): MembersNavItem[] {
+  return actions
+    .filter((item) => {
+      if (!item.permissionKey || !permissionSet) return true;
+      return permissionSet.has(item.permissionKey);
+    })
+    .map((item) => ({ ...item }));
+}
+
+function filterNavigationGroups(
   groups: readonly MembersNavGroup[],
+  permissionSet: Set<string> | null,
+): MembersNavGroup[] {
+  return groups
+    .map((group) => filterGroupByPermissions(group, permissionSet))
+    .filter((group) => group.items.length > 0);
+}
+
+export function filterMembersNavigationByPermissions(
+  selection: MembersNavigationSelection,
   permissions: readonly string[] | undefined,
 ): MembersNavigationFilterResult {
   const permissionSet = permissions ? new Set(permissions) : null;
 
-  const filteredGroups = groups
-    .map((group) => {
-      const items = group.items.filter((item) => {
-        if (!item.permissionKey || !permissionSet) return true;
-        return permissionSet.has(item.permissionKey);
-      });
-      return { ...group, items };
-    })
-    .filter((group) => group.items.length > 0);
+  const primaryTabs = filterNavigationGroups(selection.primaryTabs, permissionSet);
+  const secondaryMenu = filterNavigationGroups(selection.secondaryMenu, permissionSet);
+  const quickActions = filterQuickActionsByPermissions(
+    selection.quickActions,
+    permissionSet,
+  );
 
-  const flat = filteredGroups.flatMap((group) => group.items);
-  return { groups: filteredGroups, flat };
+  const flat = [...primaryTabs, ...secondaryMenu].flatMap((group) => group.items);
+  return { primaryTabs, secondaryMenu, quickActions, flat };
 }
 
 export function filterMembersNavigationByQuery(
-  groups: readonly MembersNavGroup[],
+  selection: MembersNavigationSelection,
   normalizedQuery: string,
 ): MembersNavigationFilterResult {
   if (!normalizedQuery) {
-    const clonedGroups = groups.map((group) => ({ ...group, items: cloneGroupItems(group.items) }));
-    const flat = clonedGroups.flatMap((group) => group.items);
-    return { groups: clonedGroups, flat };
+    const primaryTabs = cloneGroups(selection.primaryTabs);
+    const secondaryMenu = cloneGroups(selection.secondaryMenu);
+    const quickActions = cloneItems(selection.quickActions);
+    const flat = [...primaryTabs, ...secondaryMenu].flatMap((group) => group.items);
+    return { primaryTabs, secondaryMenu, quickActions, flat };
   }
 
-  const filteredGroups = groups
+  const includesQuery = (item: MembersNavItem) =>
+    item.label.toLowerCase().includes(normalizedQuery);
+
+  const primaryTabs = selection.primaryTabs
     .map((group) => {
-      const items = group.items.filter((item) =>
-        item.label.toLowerCase().includes(normalizedQuery),
-      );
+      const items = group.items.filter(includesQuery);
       return { ...group, items };
     })
     .filter((group) => group.items.length > 0);
 
-  const flat = filteredGroups.flatMap((group) => group.items);
-  return { groups: filteredGroups, flat };
+  const secondaryMenu = selection.secondaryMenu
+    .map((group) => {
+      const items = group.items.filter(includesQuery);
+      return { ...group, items };
+    })
+    .filter((group) => group.items.length > 0);
+
+  const quickActions = selection.quickActions
+    .filter(includesQuery)
+    .map((item) => ({ ...item }));
+
+  const flat = [...primaryTabs, ...secondaryMenu].flatMap((group) => group.items);
+  return { primaryTabs, secondaryMenu, quickActions, flat };
 }
 
 export interface MembersNavigationItemMatch {
@@ -180,9 +264,10 @@ export interface MembersNavigationItemMatch {
 
 export function findMembersNavigationItem(
   href: string,
-  options: { groups?: readonly MembersNavGroup[] } = {},
+  options: { structure?: MembersNavigationStructure } = {},
 ): MembersNavigationItemMatch | null {
-  const groupsToSearch = options.groups ?? membersNavigation;
+  const structure = options.structure ?? membersNavigation;
+  const groupsToSearch = [...structure.primaryTabs, ...structure.secondaryMenu];
 
   for (const group of groupsToSearch) {
     const item = group.items.find((candidate) => candidate.href === href);
@@ -192,4 +277,14 @@ export function findMembersNavigationItem(
   }
 
   return null;
+}
+
+export function collectMembersNavigationItems(
+  selection: MembersNavigationSelection | MembersNavigationFilterResult,
+): MembersNavItem[] {
+  return [
+    ...selection.primaryTabs.flatMap((group) => group.items.map((item) => ({ ...item }))),
+    ...selection.secondaryMenu.flatMap((group) => group.items.map((item) => ({ ...item }))),
+    ...selection.quickActions.map((item) => ({ ...item })),
+  ];
 }
