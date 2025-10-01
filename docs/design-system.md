@@ -178,3 +178,100 @@ Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch di
 2. Farbänderungen in `docs/swatches/palette.sample.json` pflegen und per `pnpm swatches:gen` aktualisieren.
 3. Typografie/Spacing-Anpassungen in `src/app/globals.css` dokumentieren und in diesem Leitfaden vermerken.
 4. Für UI-Komponenten Beispiele in Storybook/Playground ergänzen (falls vorhanden) und die Varianten in Commit-Messages erwähnen.
+
+## Mitglieder-App UX
+
+### Heuristik- & Geräteanalyse
+
+- **Layout-Konsistenz über Varianten:** `MembersAppShell` bündelt Containerbreite, Innenabstände und vertikale Rhythmik über `membersContent*`-Varianten. Die gleiche Konfiguration speist `header`, `section` und `footer`, wodurch Seiten unabhängig von Content-Overrides gleichmäßig bleiben.【F:src/components/members/members-app-shell.tsx†L23-L175】【F:src/components/members/members-app-shell.tsx†L462-L488】
+- **Kontext für Seitenslots:** Die Shell stellt dedizierte Setter für Topbar, Content-Header/-Footer und Layout-Overrides bereit. Kinder-Komponenten registrieren ihre Slots darüber, ohne die Shell mehrfach zu rendern – das reduziert visuelle Sprünge beim Navigieren.【F:src/components/members/members-app-shell.tsx†L207-L555】
+- **Device-adaptive Topbar:** Quick Actions, Status und Heim-Link reagieren auf `useSidebar().isMobile`: Desktop bündelt alles rechts, Mobile wickelt Aktionen um und zeigt Status separat, um Touch-Ziele zu entflechten.【F:src/components/members/members-app-shell.tsx†L248-L345】
+- **Globale Container-Utilities:** `globals.css` definiert `members-container`-Breiten und Padding-Stufen mit CSS-Custom-Properties. Breakpoints bei `640px` und `1024px` erhöhen die Innenabstände graduell, wodurch Content auf großen Flächen luftiger wirkt.【F:src/app/globals.css†L151-L226】
+- **Viewport-Schutzschichten:** Die Shell setzt konsequent auf `min-height: svh/dvh`, sodass auch iOS-Browser mit dynamischen Toolbars ganzseitige Layouts ohne Scroll-Jumps liefern.【F:src/app/globals.css†L130-L149】
+
+### Pain Points nach Endgerät
+
+| Endgerät | Pain Points | Heuristik | Wirkung | Empfehlung |
+| --- | --- | --- | --- | --- |
+| Desktop ≥1440px | `members-container--width-2xl` deckelt den Content auf 96rem, während `--layout-gutter` ab 1440px auf bis zu 4rem steigt. Extrem breite Tabellen laufen so in sehr langen Zeilen, was die Scanbarkeit mindert.【F:src/app/globals.css†L151-L206】 | Wahrnehmbarkeit & Lesbarkeit | Nutzer scrollen horizontal in Data-Grids oder exportieren Daten, statt sie vor Ort auszuwerten. | Zusätzliche `--width-xl`-Variante mit härterem Cap (z. B. 80rem) für Tabellen-Layouts und alternative Split-Views evaluieren. |
+| Tablet quer | Die Topbar reduziert ihre Höhe bei eingeklappter Sidebar auf 48px (`group-has-data`-Klasse), Breadcrumbs behalten aber 12px Uppercase-Typo. Bei mittlerer Icon-Dichte kollidieren Icons/Texte und die berührbare Fläche sinkt.【F:src/components/members/members-app-shell.tsx†L297-L334】 | Konsistentes Mapping zwischen System und Realität | Bedienfehler durch eng stehende Aktionen; Quick Actions werden weniger genutzt. | Breakpoint-spezifisch größere `gap`-Werte setzen und Breadcrumbs auf Satzschrift (Text-xs normal) umstellen. |
+| Smartphone <768px | Der Heim-Button erzwingt `whitespace-nowrap` und bleibt immer sichtbar. Bei mehr als zwei Quick Actions entsteht ein zweizeiliges Cluster, das wichtige Status-Badges unter den Fold schiebt.【F:src/components/members/members-app-shell.tsx†L272-L344】 | Sichtbarkeit von Systemstatus | Nutzer übersehen Statusmeldungen (z. B. Sperrlisten-Hinweise) und benötigen zusätzliche Klicks. | Home-Link ab Sticky-Scroll in das Overflow-Menü verschieben und Status-Badges im ersten Flex-Item priorisieren. |
+| Smartphone Navigation | `SidebarMobileAutoClose` schließt das Sheet nach jedem Navigationswechsel. Multi-Step-Aufgaben (z. B. mehrere Mitgliederprofile öffnen) benötigen dadurch wiederholtes Öffnen.【F:src/components/members/members-app-shell.tsx†L231-L243】 | Nutzerkontrolle & Freiheit | Flow wird fragmentiert, besonders bei Inventar- oder Rollenpflege. | Persistente „Zuletzt besucht“-Sektion oder optionales „Dock offen lassen“-Toggle ergänzen. |
+
+### Informationsarchitektur & Sitemap
+
+Die priorisierte Sitemap liegt als FigJam-Board **„Mitglieder IA v0.3“** vor (Team-Workspace Figma). Die folgende Übersicht spiegelt die Inhalte der Mappe inklusive Business-Zielen und Nutzungshäufigkeit wider.【3f783d†L1-L44】
+
+#### P0 – Tägliche Journeys
+
+| Route | Beschreibung | Business-Ziel | Nutzung |
+| --- | --- | --- | --- |
+| `/mitglieder` | Einstieg in das Dashboard (Alias zum gleichen Content wie `/mitglieder/dashboard`). | Lagebild & Aufgabenfokus bereitstellen, um Koordination zu beschleunigen. | Täglich |
+| `/mitglieder/dashboard` | KPI- und Aufgaben-Hub des Mitgliederbereichs. | Performance- und Aufgabenmonitoring zentralisieren. | Täglich |
+| `/mitglieder/meine-gewerke` | Persönliche Gewerke-Übersicht inkl. Verantwortlichkeiten. | Verantwortung klären, Ownership stärken. | Täglich |
+| `/mitglieder/meine-gewerke/todos` | Verdichtete To-Do-Liste je Gewerk. | Aufgabenabarbeitung beschleunigen. | Täglich |
+| `/mitglieder/meine-gewerke/[slug]` | Detail-Stack für ein spezifisches Gewerk. | Tiefere Kontextdaten zur Verfügung stellen. | Täglich |
+| `/mitglieder/meine-proben` | Eigener Probenkalender inkl. Feedback-Status. | Teilnahmequoten sichern, Verfügbarkeiten pflegen. | Täglich |
+| `/mitglieder/proben/[rehearsalId]` | Detailansicht einer Probe mit Rollen & Aufgaben. | Vorbereitung verbessern, No-Shows reduzieren. | Täglich |
+| `/mitglieder/probenplanung` | Zentrale Planung laufender Proben. | Ressourcen- & Raumplanung koordinieren. | Täglich |
+| `/mitglieder/probenplanung/proben/[rehearsalId]` | Planungs-Stack einer konkreten Probe. | Änderungen schnell kommunizieren. | Täglich |
+| `/mitglieder/kalender` | Monats-/Wochenkalender aller Produktionen. | Terminkonflikte transparent machen. | Täglich |
+| `/mitglieder/produktionen` | Listenansicht aktiver Produktionen. | Fortschritt der Spielzeit steuern. | Täglich |
+| `/mitglieder/produktionen/besetzung` | Casting/Ensemble-Matrix pro Produktion. | Rollenbesetzungen abstimmen. | Täglich |
+| `/mitglieder/produktionen/gewerke` | Cross-Gewerk-Status der laufenden Shows. | Schnittstellen synchronisieren. | Täglich |
+| `/mitglieder/produktionen/gewerke/[departmentId]` | Detailstack eines Gewerks innerhalb einer Produktion. | Risiken früh erkennen und mitigieren. | Täglich |
+| `/mitglieder/produktionen/szenen` | Szenenlisten & Ablaufplanung pro Show. | Probenabläufe choreografieren. | Täglich |
+| `/mitglieder/produktionen/[showId]` | Produktions-Hauptseite mit Kennzahlen. | Gesamtstatus und KPIs bündeln. | Täglich |
+
+#### P1 – Wöchentliche Journeys
+
+| Route | Beschreibung | Business-Ziel | Nutzung |
+| --- | --- | --- | --- |
+| `/mitglieder/endproben-woche` | Drehkreuz für Endprobenphase. | Finale Woche reibungslos orchestrieren. | Wöchentlich |
+| `/mitglieder/endproben-woche/menueplan` | Menüplanung für die Crew. | Versorgungssicherheit schaffen. | Wöchentlich |
+| `/mitglieder/endproben-woche/essenplanung` | Ernährungs- und Allergiemanagement. | Gesundheit der Crew schützen. | Wöchentlich |
+| `/mitglieder/endproben-woche/einkaufsliste` | Einkaufslisten für das Versorgungsteam. | Beschaffung bündeln. | Wöchentlich |
+| `/mitglieder/endproben-woche/dienstplan` | Dienst- und Helferpläne. | Schichten koordinieren. | Wöchentlich |
+| `/mitglieder/dateisystem` | Filesystem-Root mit Produktionsdokumenten. | Wissensspeicher konsolidieren. | Wöchentlich |
+| `/mitglieder/dateisystem/[folderId]` | Unterordner-Ansicht inkl. Freigaben. | Gezielt Assets finden. | Wöchentlich |
+| `/mitglieder/inventar-aufkleber` | Generierung/Verwaltung von Inventarlabels. | Inventarisierung beschleunigen. | Wöchentlich |
+| `/mitglieder/inventar/[code]` | Einzelnes Inventargut via Code. | Geräteverfolgung absichern. | Wöchentlich |
+| `/mitglieder/lagerverwaltung/kostueme` | Kostüm-Lagerflächen & Ausgaben. | Kostümturnover kontrollieren. | Wöchentlich |
+| `/mitglieder/lagerverwaltung/technik` | Techniklager-Übersicht. | Verfügbarkeiten transparent machen. | Wöchentlich |
+| `/mitglieder/fotoerlaubnisse` | Verwaltung unterschriebener Foto-Freigaben. | Rechtssicherheit gewährleisten. | Wöchentlich |
+| `/mitglieder/sperrliste` | Verwaltung von Sperrzeiten & Blockern. | Ressourcenplanung stabil halten. | Wöchentlich |
+| `/mitglieder/finanzen/[[...section]]` | Finanzübersichten (Budget, Ausgaben, Forecast). | Budgettreue überwachen. | Wöchentlich |
+| `/mitglieder/rollenverwaltung` | Rollen- und Zugriffsmanagement. | Berechtigungen aktuell halten. | Wöchentlich |
+| `/mitglieder/rechte` | Überblick über Berechtigungs-Policies. | Compliance dokumentieren. | Wöchentlich |
+| `/mitglieder/essenplanung` | Generelle Essenskoordination (außerhalb Endproben). | Versorgung sicherstellen. | Wöchentlich |
+
+#### P2 – Monatliche oder Ad-hoc Journeys
+
+| Route | Beschreibung | Business-Ziel | Nutzung |
+| --- | --- | --- | --- |
+| `/mitglieder/onboarding` | Leitfaden & Tasks für neue Mitglieder. | Ramp-up-Zeit senken. | Ad-hoc |
+| `/mitglieder/profil` | Persönliche Daten & Einstellungen. | Stammdaten aktuell halten. | Monatlich |
+| `/mitglieder/mitgliederverwaltung` | Übersicht aller Mitglieder. | Personalplanung koordinieren. | Monatlich |
+| `/mitglieder/mitgliederverwaltung/[userId]` | Detailpflege eines Mitglieds. | Datenqualität sichern. | Monatlich |
+| `/mitglieder/koerpermasse` | Körpermaß-Archiv für Kostüme. | Passformen optimieren. | Monatlich |
+| `/mitglieder/issues` | Bug-/Task-Tracker intern. | Transparente Fehlerkultur fördern. | Ad-hoc |
+| `/mitglieder/issues/[issueId]` | Detail eines Tickets. | Problembehebung dokumentieren. | Ad-hoc |
+| `/mitglieder/archiv-und-bilder` | Medienarchiv Übersicht. | Wissensmanagement pflegen. | Monatlich |
+| `/mitglieder/archiv-und-bilder/[year]` | Jahresarchiv. | Historie auffindbar halten. | Monatlich |
+| `/mitglieder/mystery/tipps` | Gamification-/Rätselhilfe. | Engagement erhöhen. | Ad-hoc |
+| `/mitglieder/server-analytics` | Monitoring der Infrastruktur. | Verfügbarkeit sichern. | Monatlich |
+| `/mitglieder/website` | Verwaltung der öffentlichen Website-Inhalte. | Außenkommunikation steuern. | Monatlich |
+| `/mitglieder/scan` | QR-/Barcode-Scan-Utility. | Medienbrüche reduzieren. | Ad-hoc |
+
+### Navigations- & Zustandsregeln (Flutter-inspiriertes Modell)
+
+Wir orientieren die Informationsarchitektur am Flutter-Paradigma „Home + Tabs/Stacks“:
+
+1. **Home-Stack:** `/mitglieder` fungiert als Root-Stack, der das Dashboard rendert. Navigationszustand bleibt bestehen, solange der Nutzer innerhalb des Home-Tabs bleibt (kein Hard-Refresh nötig).【F:src/components/members/members-app-shell.tsx†L438-L493】
+2. **Tab-Leisten = Sidebar-Gruppen:** Jede Hauptsektion (z. B. Produktionen, Meine Aufgaben, Ressourcen, Verwaltung) entspricht einem Tab. Der Sidebar-State ersetzt den Flutter-`BottomNavigationBar` und bleibt zwischen Tabs persistent, solange `Sidebar` nicht kollabiert.【F:src/components/members/members-app-shell.tsx†L440-L449】
+3. **Stacks pro Tab:** Detailseiten (z. B. `/mitglieder/proben/[rehearsalId]`, `/mitglieder/produktionen/[showId]`) werden als neue Ebenen im jeweiligen Tab-Stack betrachtet. Zurücknavigation erfolgt über die Topbar oder Browser-Historie, ohne den Tab zu wechseln.【F:src/components/members/members-app-shell.tsx†L248-L345】
+4. **Cross-Stack Deep Links:** Querlinks zwischen Tabs pushen neue Stacks, behalten aber den Ursprungstab im Sidebar-State, um mentale Modelle nicht zu brechen. Der Shell-Kontext sorgt dafür, dass Topbar/Breadcrumbs sofort aktualisieren.【F:src/components/members/members-app-shell.tsx†L207-L555】
+5. **State Persistence:** Layout-Overrides (`MembersContentLayout`) und Slot-Inhalte werden beim Unmount bereinigt. Tabs sollten daher ihre Einstellungen beim Mount erneut registrieren – analog zu Flutter, wo jedes Tab einen eigenen Navigator besitzt.【F:src/components/members/members-app-shell.tsx†L366-L488】
+6. **Responsive Behavior:** Auf Mobilgeräten wird der Sidebar-Tab-Selector als modales Sheet gehandhabt; Closing-on-Navigation spiegelt Flutter’s default `Navigator.pop()` nach Push wider, benötigt aber optional eine Setting, um Multi-Step-Flows zu unterstützen.【F:src/components/members/members-app-shell.tsx†L231-L344】
+
+Diese Regeln bilden die Grundlage für komponentenseitige Navigation-Guards, Breadcrumb-Generierung und Priorisierung innerhalb des FigJam-Sitemaps.
