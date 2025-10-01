@@ -6,7 +6,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import type { VisibilityScope } from "@prisma/client";
 import type { FinanceBudgetDTO, FinanceEntryDTO, FinanceSummaryDTO } from "@/app/api/finance/utils";
-import { PageHeader } from "@/components/members/page-header";
+import {
+  MembersListPage,
+  FilterChips,
+  FilterChip,
+} from "@/components/members/templates";
 import { KeyMetricCard, KeyMetricGrid } from "@/design-system/patterns";
 import { FinanceEntryForm } from "./finance-entry-form";
 import { FinanceEntryTable } from "./finance-entry-table";
@@ -17,17 +21,35 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  FINANCE_ENTRY_STATUS_LABELS,
+  FINANCE_ENTRY_STATUS_TONES,
+} from "@/lib/finance";
+import { cn } from "@/lib/utils";
+import type { MembersContentLayoutConfig } from "@/components/members/members-app-shell";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  FINANCE_ENTRY_STATUS_LABELS,
-  FINANCE_ENTRY_STATUS_TONES,
-} from "@/lib/finance";
-import { cn } from "@/lib/utils";
+
+type FinanceOverviewProps = {
+  initialEntries: FinanceEntryDTO[];
+  initialSummary: FinanceSummaryDTO;
+  initialBudgets: FinanceBudgetDTO[];
+  showOptions: { id: string; title: string | null; year: number }[];
+  memberOptions: { id: string; name: string | null; email: string | null }[];
+  canManage: boolean;
+  canApprove: boolean;
+  canExport: boolean;
+  allowedScopes: VisibilityScope[];
+  activeSection: "dashboard" | "buchungen" | "budgets" | "export";
+  selectedShowId: string;
+  activeShow: { id: string; title: string | null; year: number } | null;
+  contentLayout?: MembersContentLayoutConfig;
+};
 
 function formatCurrency(amount: number, currency = "EUR") {
   try {
@@ -53,21 +75,6 @@ function sortBudgets(list: FinanceBudgetDTO[]) {
   });
 }
 
-type FinanceOverviewProps = {
-  initialEntries: FinanceEntryDTO[];
-  initialSummary: FinanceSummaryDTO;
-  initialBudgets: FinanceBudgetDTO[];
-  showOptions: { id: string; title: string | null; year: number }[];
-  memberOptions: { id: string; name: string | null; email: string | null }[];
-  canManage: boolean;
-  canApprove: boolean;
-  canExport: boolean;
-  allowedScopes: VisibilityScope[];
-  activeSection: "dashboard" | "buchungen" | "budgets" | "export";
-  selectedShowId: string;
-  activeShow: { id: string; title: string | null; year: number } | null;
-};
-
 export function FinanceOverview({
   initialEntries,
   initialSummary,
@@ -81,6 +88,7 @@ export function FinanceOverview({
   activeSection,
   selectedShowId,
   activeShow,
+  contentLayout,
 }: FinanceOverviewProps) {
   const [entries, setEntries] = useState<FinanceEntryDTO[]>(initialEntries);
   const [summary, setSummary] = useState<FinanceSummaryDTO>(initialSummary);
@@ -124,7 +132,7 @@ export function FinanceOverview({
       setCurrentShowId(value);
       const params = new URLSearchParams(searchParams?.toString() ?? "");
       params.set("showId", value);
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+      router.push(`${pathname?.split("?")[0]}?${params.toString()}`, { scroll: false });
     },
     [pathname, router, searchParams],
   );
@@ -310,7 +318,7 @@ export function FinanceOverview({
 
   const showSwitcher = (
     <Select value={currentShowId} onValueChange={handleShowChange}>
-      <SelectTrigger className="w-[220px]">
+      <SelectTrigger className="w-full min-w-[200px] sm:w-[220px]">
         <SelectValue placeholder="Produktion wählen">{formattedActiveShow}</SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -323,31 +331,99 @@ export function FinanceOverview({
     </Select>
   );
 
+  const basePath = "/mitglieder/finanzen";
+  const sectionFilters = (
+    <FilterChips label="Bereich">
+      <FilterChip active={activeSection === "dashboard"} onClick={() => router.push(`${basePath}${showQuery}`)}>
+        Dashboard
+      </FilterChip>
+      <FilterChip
+        active={activeSection === "buchungen"}
+        onClick={() => router.push(`${basePath}/buchungen${showQuery}`)}
+      >
+        Buchungen
+      </FilterChip>
+      <FilterChip
+        active={activeSection === "budgets"}
+        onClick={() => router.push(`${basePath}/budgets${showQuery}`)}
+      >
+        Budgets
+      </FilterChip>
+      <FilterChip
+        active={activeSection === "export"}
+        onClick={() => router.push(`${basePath}/export${showQuery}`)}
+      >
+        Exporte
+      </FilterChip>
+    </FilterChips>
+  );
+
+  const headerActions = (
+    <div className="flex w-full flex-wrap items-center gap-2">
+      <div className="w-full sm:w-auto">{showSwitcher}</div>
+      <div className="hidden flex-wrap items-center gap-2 lg:flex">
+        {activeSection === "dashboard" && canManage ? (
+          <>
+            <Button asChild variant="secondary">
+              <Link href="/mitglieder/finanzen/buchungen">Neue Buchung</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/mitglieder/finanzen/budgets">Budgets verwalten</Link>
+            </Button>
+          </>
+        ) : null}
+        {activeSection === "buchungen" && canManage ? (
+          <Button onClick={() => setShowEntryForm((prev) => !prev)}>
+            {showEntryForm ? "Formular ausblenden" : "Neue Buchung"}
+          </Button>
+        ) : null}
+        {activeSection === "budgets" && canManage ? (
+          <Button variant="secondary" onClick={() => setEditingBudget(null)}>
+            Neues Budget
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+
+  let stickyCta: React.ReactNode | undefined;
+  if (canManage) {
+    if (activeSection === "dashboard") {
+      stickyCta = (
+        <div className="flex w-full flex-col gap-2">
+          <Button asChild className="w-full">
+            <Link href="/mitglieder/finanzen/buchungen">Neue Buchung</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/mitglieder/finanzen/budgets">Budgets verwalten</Link>
+          </Button>
+        </div>
+      );
+    } else if (activeSection === "buchungen") {
+      stickyCta = (
+        <Button className="w-full" onClick={() => setShowEntryForm((prev) => !prev)}>
+          {showEntryForm ? "Formular ausblenden" : "Neue Buchung"}
+        </Button>
+      );
+    } else if (activeSection === "budgets") {
+      stickyCta = (
+        <Button className="w-full" onClick={() => setEditingBudget(null)}>
+          Neues Budget anlegen
+        </Button>
+      );
+    }
+  }
+
   function renderDashboard() {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Finanzen"
-          description="Einnahmen, Ausgaben und offene Rechnungen auf einen Blick."
-          actions={
-            <div className="flex flex-wrap items-center gap-2">
-              {showSwitcher}
-              {canManage ? (
-                <Button asChild variant="secondary">
-                  <Link href="/mitglieder/finanzen/buchungen">Neue Buchung</Link>
-                </Button>
-              ) : null}
-              {canManage ? (
-                <Button asChild variant="secondary">
-                  <Link href="/mitglieder/finanzen/budgets">Budgets verwalten</Link>
-                </Button>
-              ) : null}
-            </div>
-          }
-        />
-
         <KeyMetricGrid>
-          <KeyMetricCard label="Einnahmen" value={formatCurrency(summary.totalIncome)} tone="positive" hint={loadingSummary ? "Aktualisiere…" : undefined} />
+          <KeyMetricCard
+            label="Einnahmen"
+            value={formatCurrency(summary.totalIncome)}
+            tone="positive"
+            hint={loadingSummary ? "Aktualisiere…" : undefined}
+          />
           <KeyMetricCard label="Ausgaben" value={formatCurrency(summary.totalExpense)} tone="destructive" />
           <KeyMetricCard
             label="Saldo"
@@ -383,10 +459,7 @@ export function FinanceOverview({
                     </div>
                     <div className="text-right">
                       <div className={cn("text-sm font-semibold", entry.type === "expense" ? "text-destructive" : "text-success")}>{formatCurrency(entry.amount, entry.currency)}</div>
-                      <Badge
-                        variant={FINANCE_ENTRY_STATUS_TONES[entry.status]}
-                        className="mt-1 text-xs"
-                      >
+                      <Badge variant={FINANCE_ENTRY_STATUS_TONES[entry.status]} className="mt-1 text-xs">
                         {FINANCE_ENTRY_STATUS_LABELS[entry.status]}
                       </Badge>
                     </div>
@@ -472,40 +545,27 @@ export function FinanceOverview({
                 Es sind noch keine Buchungen vorhanden, um eine Aufschlüsselung zu erstellen.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      <th className="px-3 py-2 font-medium">Kategorie</th>
-                      <th className="px-3 py-2 font-medium">Buchungen</th>
-                      <th className="px-3 py-2 font-medium">Einnahmen</th>
-                      <th className="px-3 py-2 font-medium">Ausgaben</th>
-                      <th className="px-3 py-2 font-medium">Saldo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categoryBreakdown.slice(0, 8).map((category) => (
-                      <tr key={category.category} className="border-b last:border-none">
-                        <td className="px-3 py-2 font-medium text-foreground">{category.category}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{category.count}</td>
-                        <td className="px-3 py-2 text-success">
-                          {formatCurrency(category.income, category.currency)}
-                        </td>
-                        <td className="px-3 py-2 text-destructive">
-                          {formatCurrency(category.expense, category.currency)}
-                        </td>
-                        <td
-                          className={cn(
-                            "px-3 py-2 font-semibold",
-                            category.net >= 0 ? "text-success" : "text-destructive",
-                          )}
-                        >
-                          {formatCurrency(category.net, category.currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-3">
+                {categoryBreakdown.slice(0, 8).map((category) => (
+                  <details key={category.category} className="group rounded-xl border border-border/60 bg-background/60 p-4">
+                    <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-foreground">
+                      <span>{category.category}</span>
+                      <span
+                        className={cn(
+                          "text-sm",
+                          category.net >= 0 ? "text-success" : "text-destructive",
+                        )}
+                      >
+                        {formatCurrency(category.net, category.currency)}
+                      </span>
+                    </summary>
+                    <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                      <div>Einnahmen: {formatCurrency(category.income, category.currency)}</div>
+                      <div>Ausgaben: {formatCurrency(category.expense, category.currency)}</div>
+                      <div>Buchungen: {category.count}</div>
+                    </div>
+                  </details>
+                ))}
               </div>
             )}
           </CardContent>
@@ -517,21 +577,6 @@ export function FinanceOverview({
   function renderEntries() {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Finanzbuchungen"
-          description="Erfasse Rechnungen, Spenden und sonstige Buchungen."
-          actions={
-            <div className="flex flex-wrap items-center gap-2">
-              {showSwitcher}
-              {canManage ? (
-                <Button type="button" onClick={() => setShowEntryForm((prev) => !prev)}>
-                  {showEntryForm ? "Formular ausblenden" : "Neue Buchung"}
-                </Button>
-              ) : null}
-            </div>
-          }
-        />
-
         {canManage ? (
           <Card>
             <CardHeader>
@@ -574,12 +619,6 @@ export function FinanceOverview({
   function renderBudgets() {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Budgets"
-          description="Plane Budgetrahmen pro Produktion und vergleiche sie mit den Ist-Ausgaben."
-          actions={<div className="flex flex-wrap items-center gap-2">{showSwitcher}</div>}
-        />
-
         {canManage ? (
           <Card>
             <CardHeader>
@@ -616,11 +655,6 @@ export function FinanceOverview({
   function renderExport() {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Exporte"
-          description="Erzeuge CSV-Dateien für Buchungslisten oder weiterführende Auswertungen."
-          actions={<div className="flex flex-wrap items-center gap-2">{showSwitcher}</div>}
-        />
         {canExport ? (
           <FinanceExportSection showId={currentShowId} />
         ) : (
@@ -630,15 +664,38 @@ export function FinanceOverview({
     );
   }
 
+  let content: React.ReactNode;
   switch (activeSection) {
     case "buchungen":
-      return renderEntries();
+      content = renderEntries();
+      break;
     case "budgets":
-      return renderBudgets();
+      content = renderBudgets();
+      break;
     case "export":
-      return renderExport();
+      content = renderExport();
+      break;
     case "dashboard":
     default:
-      return renderDashboard();
+      content = renderDashboard();
+      break;
   }
+
+  return (
+    <MembersListPage
+      title="Finanzen"
+      description="Einnahmen, Ausgaben und offene Rechnungen auf einen Blick."
+      breadcrumbs={[
+        membersNavigationBreadcrumb("/mitglieder"),
+        membersNavigationBreadcrumb("/mitglieder/finanzen"),
+      ]}
+      actions={headerActions}
+      filters={sectionFilters}
+      stickyCta={stickyCta}
+      layout={contentLayout}
+    >
+      {content}
+    </MembersListPage>
+  );
 }
+

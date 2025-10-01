@@ -4,7 +4,6 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { FinanceOverview } from "@/components/members/finance/finance-overview";
-import { MembersContentLayout } from "@/components/members/members-app-shell";
 import { FINANCE_CONTENT_LAYOUT } from "../content-layout";
 import {
   createEmptyFinanceSummary,
@@ -229,22 +228,20 @@ export default async function FinancePage({ params, searchParams }: PageProps) {
   const activeShow = showOptions.find((show) => show.id === selectedShowId) ?? null;
 
   return (
-    <>
-      <MembersContentLayout {...FINANCE_CONTENT_LAYOUT} />
-      <FinanceOverview
-        initialEntries={entries}
-        initialSummary={summary}
-        initialBudgets={budgetDtos}
-        showOptions={showOptions}
-        memberOptions={memberOptions}
-        canManage={canManage}
-        canApprove={canApprove}
-        canExport={canExport}
-        allowedScopes={allowedScopes}
-        activeSection={activeSection}
-        selectedShowId={selectedShowId}
-        activeShow={activeShow}
-      />
-    </>
+    <FinanceOverview
+      initialEntries={entries}
+      initialSummary={summary}
+      initialBudgets={budgetDtos}
+      showOptions={showOptions}
+      memberOptions={memberOptions}
+      canManage={canManage}
+      canApprove={canApprove}
+      canExport={canExport}
+      allowedScopes={allowedScopes}
+      activeSection={activeSection}
+      selectedShowId={selectedShowId}
+      activeShow={activeShow}
+      contentLayout={FINANCE_CONTENT_LAYOUT}
+    />
   );
 }
