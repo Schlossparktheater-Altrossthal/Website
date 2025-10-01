@@ -13,6 +13,7 @@ import {
 } from "@/components/members/templates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 type StoryMeta = {
   title: string;
@@ -36,13 +37,15 @@ export default meta;
 function TemplatePreviewShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
-      <MembersAppShell
-        permissions={[]}
-        assignmentFocus="none"
-        hasDepartmentMemberships={false}
-      >
-        {children}
-      </MembersAppShell>
+      <SidebarProvider defaultOpen defaultOpenMobile={false}>
+        <MembersAppShell
+          permissions={[]}
+          assignmentFocus="none"
+          hasDepartmentMemberships={false}
+        >
+          {children}
+        </MembersAppShell>
+      </SidebarProvider>
     </div>
   );
 }
