@@ -6,7 +6,7 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { getUserDisplayName } from "@/lib/names";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { prisma } from "@/lib/prisma";
-import { buildProfileChecklist } from "@/lib/profile-completion";
+import { buildProfileChecklist, isPayoutDetailsComplete } from "@/lib/profile-completion";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { sortRoles, type Role } from "@/lib/roles";
@@ -205,10 +205,20 @@ export default async function ProfilePage() {
     ? getOnboardingWhatsAppLink(onboardingProfile.show.meta)
     : null;
 
+  const hasPayoutDetails = isPayoutDetailsComplete({
+    method: user.payoutMethod,
+    accountHolder: user.payoutAccountHolder,
+    iban: user.payoutIban,
+    bankName: user.payoutBankName,
+    paypalHandle: user.payoutPaypalHandle,
+    note: user.payoutNote,
+  });
+
   const checklist = buildProfileChecklist({
     hasBasicData,
     hasBirthdate,
     hasDietaryPreference,
+    hasPayoutDetails,
     hasMeasurements,
     photoConsent: { consentGiven: photoConsentSummary.status === "approved" },
     hasWhatsappVisit: whatsappLink ? Boolean(onboardingProfile?.whatsappLinkVisitedAt) : undefined,
