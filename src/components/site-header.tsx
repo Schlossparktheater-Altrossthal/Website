@@ -11,10 +11,13 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 
+import { useSession } from "next-auth/react";
+
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
 import { ctaNavigation, primaryNavigation } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -37,7 +40,7 @@ const HEADER_SPACING = {
   desktopLinksGap: "var(--space-md)",
   actions: {
     gap: {
-      base: "var(--space-2xs)",
+      base: "var(--space-3xs)",
       sm: "var(--space-xs)",
     },
   },
@@ -110,6 +113,8 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const isHomePage = pathname === "/";
+  const { data: session, status: sessionStatus } = useSession();
+  const isAuthenticated = Boolean(session?.user);
 
   const navigationItems = useMemo(() => primaryNavigation, []);
 
@@ -250,10 +255,10 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
 
           <div
             style={actionsSpacingStyles}
-            className="ml-auto flex flex-shrink-0 items-center gap-[var(--header-actions-gap)] sm:[--header-actions-gap:var(--space-xs)]"
+            className="ml-auto flex flex-wrap items-center justify-end gap-[var(--header-actions-gap)] [--header-actions-gap:var(--space-3xs)] sm:flex-nowrap sm:[--header-actions-gap:var(--space-xs)]"
           >
-            <NotificationBell className="flex-shrink-0" />
-            <UserNav className="flex-shrink-0" />
+            <NotificationBell className="hidden sm:flex" />
+            <UserNav className="hidden sm:flex" />
 
             {/* Mobile menu button */}
             <SheetTrigger asChild>
@@ -292,6 +297,32 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
         style={drawerPanelStyles}
         className="flex h-screen flex-col gap-[var(--drawer-gap)] border-l border-border/60 bg-card/95 p-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl backdrop-blur-md md:hidden"
       >
+        {sessionStatus === "loading" ? (
+          <div className="h-11 rounded-md bg-foreground/10" aria-hidden />
+        ) : isAuthenticated ? (
+          <div className="space-y-2 rounded-lg border border-border/60 bg-card/80 p-3 text-sm text-foreground/90">
+            <span className="text-xs uppercase tracking-[0.12em] text-foreground/70">
+              Angemeldet als
+            </span>
+            <span className="block truncate font-medium">
+              {session?.user?.firstName ?? session?.user?.name ?? session?.user?.email}
+            </span>
+            <Link
+              href="/mitglieder"
+              className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-border/60 bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onClick={() => setOpen(false)}
+            >
+              Mitgliederbereich öffnen
+            </Link>
+          </div>
+        ) : (
+          <Button asChild size="sm" className="w-full justify-center">
+            <Link href="/login" onClick={() => setOpen(false)}>
+              Login
+            </Link>
+          </Button>
+        )}
+
         <div
           style={drawerLinkGroupStyles}
           className="flex flex-col gap-[var(--drawer-link-gap)]"
