@@ -11,6 +11,7 @@ import {
 } from "@/lib/members-navigation";
 import {
   defaultMembersNavIcon,
+  membersNavigation,
   type MembersNavItem,
 } from "@/config/members-navigation";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -76,11 +77,12 @@ function useMembersNavigationSections({
   activeProduction?: { id: string; title: string | null; year: number };
 }) {
   return React.useMemo(() => {
-    const groups = selectMembersNavigation({
+    const selection = selectMembersNavigation({
+      structure: membersNavigation,
       hasDepartmentMemberships,
       activeProduction: activeProduction ?? null,
     });
-    return filterMembersNavigationByPermissions(groups, permissions);
+    return filterMembersNavigationByPermissions(selection, permissions);
   }, [permissions, hasDepartmentMemberships, activeProduction]);
 }
 
@@ -109,7 +111,11 @@ export function MembersBottomNav({
     activeProduction,
   });
 
-  const { groups: navGroups, flat } = navigation;
+  const { flat } = navigation;
+  const navGroups = React.useMemo(
+    () => [...navigation.primaryTabs, ...navigation.secondaryMenu],
+    [navigation.primaryTabs, navigation.secondaryMenu],
+  );
 
   const itemsByHref = React.useMemo(() => {
     const map = new Map<string, MembersNavItem>();
