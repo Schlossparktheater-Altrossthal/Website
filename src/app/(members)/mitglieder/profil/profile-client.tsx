@@ -60,6 +60,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
 import {
   buildProfileChecklist,
+  isPayoutDetailsComplete,
   type ProfileChecklistTarget,
   type ProfileCompletionSummary,
 } from "@/lib/profile-completion";
@@ -86,6 +87,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "stammdaten",
+  "zahlungen",
   "ernaehrung",
   "masse",
   "interessen",
@@ -269,6 +271,7 @@ type ChecklistState = {
   hasBasicData: boolean;
   hasBirthdate: boolean;
   hasDietaryPreference: boolean;
+  hasPayoutDetails?: boolean;
   hasMeasurements?: boolean;
   photoConsentGiven?: boolean;
   hasWhatsappVisit?: boolean;
@@ -515,6 +518,14 @@ function ProfileClientInner({
     hasBasicData: Boolean(initialUser.firstName?.trim() && initialUser.email?.trim()),
     hasBirthdate: Boolean(initialUser.dateOfBirth),
     hasDietaryPreference: Boolean(initialOnboarding?.dietaryPreference?.trim()),
+    hasPayoutDetails: isPayoutDetailsComplete({
+      method: initialUser.payoutMethod,
+      accountHolder: initialUser.payoutAccountHolder,
+      iban: initialUser.payoutIban,
+      bankName: initialUser.payoutBankName,
+      paypalHandle: initialUser.payoutPaypalHandle,
+      note: initialUser.payoutNote,
+    }),
     hasMeasurements: canManageMeasurements ? initialMeasurements.length > 0 : undefined,
     photoConsentGiven: summary.items.find((item) => item.id === "photo-consent")?.complete ?? undefined,
     hasWhatsappVisit: whatsappLink ? Boolean(initialOnboarding?.whatsappLinkVisitedAt) : undefined,
@@ -526,6 +537,7 @@ function ProfileClientInner({
         hasBasicData: state.hasBasicData,
         hasBirthdate: state.hasBirthdate,
         hasDietaryPreference: state.hasDietaryPreference,
+        hasPayoutDetails: state.hasPayoutDetails,
         hasMeasurements: canManageMeasurements ? Boolean(state.hasMeasurements) : undefined,
         photoConsent:
           state.photoConsentGiven === undefined
@@ -605,6 +617,14 @@ function ProfileClientInner({
       updateChecklist({
         hasBasicData: basicsComplete,
         hasBirthdate: Boolean(nextUser.dateOfBirth),
+        hasPayoutDetails: isPayoutDetailsComplete({
+          method: nextUser.payoutMethod,
+          accountHolder: nextUser.payoutAccountHolder,
+          iban: nextUser.payoutIban,
+          bankName: nextUser.payoutBankName,
+          paypalHandle: nextUser.payoutPaypalHandle,
+          note: nextUser.payoutNote,
+        }),
       });
       try {
         await refreshSession?.();
@@ -836,8 +856,6 @@ function ProfileClientInner({
         sortedRoles={sortedRoles}
         summary={summary}
         onboarding={onboarding}
-        createdAtLabel={createdAtLabel}
-        memberSinceLabel={memberSinceLabel}
         percentComplete={percentComplete}
         highlights={highlightTiles}
         activeChecklistTarget={activeChecklistTarget}
@@ -951,8 +969,6 @@ type ProfileOverviewCardProps = {
   sortedRoles: Role[];
   summary: ProfileCompletionSummary;
   onboarding: ProfileClientProps["onboarding"];
-  createdAtLabel: string | null;
-  memberSinceLabel: string | null;
   percentComplete: number;
   highlights: HighlightTileConfig[];
   activeChecklistTarget?: ProfileChecklistTarget;
@@ -965,8 +981,6 @@ function ProfileOverviewCard({
   sortedRoles,
   summary,
   onboarding,
-  createdAtLabel,
-  memberSinceLabel,
   percentComplete,
   highlights,
   activeChecklistTarget,
@@ -1030,12 +1044,6 @@ function ProfileOverviewCard({
                     Keine E-Mail hinterlegt
                   </span>
                 )}
-                {memberSinceLabel || createdAtLabel ? (
-                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                    <CalendarDays className="h-4 w-4" aria-hidden />
-                    {memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}
-                  </span>
-                ) : null}
               </div>
             </div>
           </div>

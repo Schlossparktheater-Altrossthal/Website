@@ -6,7 +6,7 @@ import { hasRole, requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
-import { buildProfileChecklist } from "@/lib/profile-completion";
+import { buildProfileChecklist, isPayoutDetailsComplete } from "@/lib/profile-completion";
 
 type MembershipSummary = {
   showId: string;
@@ -149,6 +149,12 @@ export async function GET() {
           lastName: true,
           email: true,
           dateOfBirth: true,
+          payoutMethod: true,
+          payoutAccountHolder: true,
+          payoutIban: true,
+          payoutBankName: true,
+          payoutPaypalHandle: true,
+          payoutNote: true,
         },
       }),
       prisma.productionMembership.findMany({
@@ -199,6 +205,15 @@ export async function GET() {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 10);
 
+    const hasPayoutDetails = isPayoutDetailsComplete({
+      method: userRecord?.payoutMethod,
+      accountHolder: userRecord?.payoutAccountHolder,
+      iban: userRecord?.payoutIban,
+      bankName: userRecord?.payoutBankName,
+      paypalHandle: userRecord?.payoutPaypalHandle,
+      note: userRecord?.payoutNote,
+    });
+
     const profileChecklist = buildProfileChecklist({
       hasBasicData: Boolean(
         userRecord?.firstName && userRecord?.lastName && userRecord?.email,
@@ -207,6 +222,7 @@ export async function GET() {
       hasDietaryPreference: Boolean(
         onboardingProfile?.dietaryPreference?.trim(),
       ),
+      hasPayoutDetails,
       hasMeasurements: canManageMeasurements ? measurementCount > 0 : undefined,
       photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
     });
