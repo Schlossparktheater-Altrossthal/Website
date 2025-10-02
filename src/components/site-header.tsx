@@ -12,7 +12,9 @@ import {
 import { usePathname } from "next/navigation";
 
 import { useSession } from "next-auth/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Menu, Search } from "lucide-react";
+import { FocusScope } from "@radix-ui/react-focus-scope";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
@@ -31,6 +33,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/user-avatar";
+import { getUserDisplayName } from "@/lib/names";
 
 const HEADER_SPACING = {
   gradientHeight: "var(--header-gradient-height)",
@@ -95,11 +99,6 @@ const drawerLinkPaddingStyles = {
 
 const drawerLinkDescriptionStyles = {
   marginTop: HEADER_SPACING.mobile.linkDescriptionMarginTop,
-} satisfies CSSProperties;
-
-const drawerCtaPaddingStyles = {
-  paddingInline: HEADER_SPACING.mobile.ctaPaddingInline,
-  paddingBlock: HEADER_SPACING.mobile.ctaPaddingBlock,
 } satisfies CSSProperties;
 
 const heroGradientStyles = {
@@ -219,7 +218,24 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const pathname = usePathname();
   const isHomePage = pathname === "/";
   const { data: session, status: sessionStatus } = useSession();
-  const isAuthenticated = Boolean(session?.user);
+  const user = session?.user ?? null;
+  const isAuthenticated = Boolean(user);
+  const userDisplayName = useMemo(() => {
+    if (!user) {
+      return null;
+    }
+
+    return getUserDisplayName(
+      {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: user.name,
+        email: user.email,
+      },
+      user.email ?? "",
+    );
+  }, [user]);
+  const userEmail = user?.email?.trim() || null;
 
   const navigationItems = useMemo(() => primaryNavigation, []);
 
@@ -398,16 +414,20 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
                   <UserNav className="hidden sm:flex" />
 
                   <SheetTrigger asChild>
-                    <button
+                    <motion.button
                       type="button"
                       aria-label="Navigationsmenü öffnen"
                       className={cn(
                         iconButtonClasses,
                         "md:hidden border border-border/60 bg-background/80 text-foreground/80 shadow-sm",
                       )}
+                      animate={{ rotate: open ? 90 : 0, scale: open ? 0.92 : 1 }}
+                      whileTap={{ scale: 0.9 }}
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ type: "spring", stiffness: 320, damping: 22 }}
                     >
                       <Menu aria-hidden className="h-5 w-5" />
-                    </button>
+                    </motion.button>
                   </SheetTrigger>
                 </div>
               </div>
@@ -461,111 +481,175 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
 
       <SheetContent
         id="mobile-menu"
-        side="right"
+        side="left"
+        forceMount
         style={drawerPanelStyles}
-        className="flex h-screen flex-col gap-[var(--drawer-gap)] border-l border-border/60 bg-card/95 p-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl backdrop-blur-md md:hidden"
+        className="flex h-[100svh] flex-col gap-[var(--drawer-gap)] border-r border-border/60 bg-background/95 p-[var(--drawer-padding)] pb-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl ring-1 ring-inset ring-primary/10 backdrop-blur-md supports-[height:100dvh]:h-[100dvh] md:hidden"
       >
-        {sessionStatus === "loading" ? (
-          <div className="h-11 rounded-md bg-foreground/10" aria-hidden />
-        ) : isAuthenticated ? (
-          <div className="space-y-2 rounded-lg border border-border/60 bg-card/80 p-3 text-sm text-foreground/90">
-            <span className="text-xs uppercase tracking-[0.12em] text-foreground/70">
-              Angemeldet als
-            </span>
-            <span className="block truncate font-medium">
-              {session?.user?.firstName ?? session?.user?.name ?? session?.user?.email}
-            </span>
-            <Link
-              href="/mitglieder"
-              className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-border/60 bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              onClick={() => setOpen(false)}
+        <AnimatePresence initial={false} mode="wait">
+          {open ? (
+            <motion.div
+              key="drawer-content"
+              initial={{ x: -36, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -28, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 320, damping: 32 }}
+              className="flex h-full flex-col gap-[var(--drawer-gap)]"
             >
-              Mitgliederbereich öffnen
-            </Link>
-          </div>
-        ) : (
-          <Button asChild size="sm" className="w-full justify-center">
-            <Link href="/login" onClick={() => setOpen(false)}>
-              Login
-            </Link>
-          </Button>
-        )}
+              <FocusScope loop trapped>
+                <div className="flex flex-col gap-[var(--drawer-gap)]">
+                  {sessionStatus === "loading" ? (
+                    <div
+                      className="h-20 animate-pulse rounded-3xl bg-primary/10 ring-1 ring-inset ring-primary/20"
+                      aria-hidden
+                    />
+                  ) : isAuthenticated && user ? (
+                    <div className="flex items-center gap-3 rounded-3xl bg-primary/10 p-4 ring-1 ring-inset ring-primary/25 shadow-sm">
+                      <UserAvatar
+                        userId={user.id}
+                        email={user.email ?? undefined}
+                        firstName={user.firstName ?? undefined}
+                        lastName={user.lastName ?? undefined}
+                        name={user.name ?? undefined}
+                        avatarSource={user.avatarSource}
+                        avatarUpdatedAt={user.avatarUpdatedAt}
+                        size={48}
+                        className="h-12 w-12 select-none ring-2 ring-primary/30"
+                        loading="eager"
+                      />
+                      <div className="min-w-0 flex-1">
+                        {userDisplayName ? (
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {userDisplayName}
+                          </p>
+                        ) : null}
+                        {userEmail ? (
+                          <p className="truncate text-sm text-foreground/70">{userEmail}</p>
+                        ) : null}
+                      </div>
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="ghost"
+                        className="h-9 rounded-xl bg-primary/20 px-3 text-sm font-semibold text-primary shadow-none ring-1 ring-inset ring-primary/30 transition hover:bg-primary/25 hover:text-primary focus-visible:ring-primary"
+                      >
+                        <Link href="/mitglieder" onClick={() => setOpen(false)}>
+                          Konto
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3 rounded-3xl bg-primary/10 p-4 ring-1 ring-inset ring-primary/20">
+                      <span className="text-sm font-medium text-primary">
+                        Willkommen! Melde dich an, um alle Bereiche zu sehen.
+                      </span>
+                      <Button
+                        asChild
+                        size="sm"
+                        className="h-10 rounded-xl bg-primary text-primary-foreground shadow-md"
+                      >
+                        <Link href="/login" onClick={() => setOpen(false)}>
+                          Login
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
 
-        <div
-          style={drawerLinkGroupStyles}
-          className="flex flex-col gap-[var(--drawer-link-gap)]"
-        >
-          {navigationItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              Boolean(pathname?.startsWith(`${item.href}/`));
+                  <motion.ul
+                    style={drawerLinkGroupStyles}
+                    className="flex flex-col gap-[var(--drawer-link-gap)]"
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={{
+                      hidden: { opacity: 0, x: -16 },
+                      visible: {
+                        opacity: 1,
+                        x: 0,
+                        transition: { staggerChildren: 0.05, delayChildren: 0.05 },
+                      },
+                    }}
+                  >
+                    {navigationItems.map((item) => {
+                      const isActive =
+                        pathname === item.href ||
+                        Boolean(pathname?.startsWith(`${item.href}/`));
 
-            const tone = item.tone ?? "default";
-            const iconElement = getNavigationIcon(item, {
-              isActive,
-              className:
-                "transition-transform duration-300 group-data-[active=true]:scale-105",
-            });
-            const badgeElement = getNavigationBadge(item, {
-              className: "text-[0.65rem]",
-            });
+                      const tone = item.tone ?? "default";
+                      const iconElement = getNavigationIcon(item, {
+                        isActive,
+                        className:
+                          "transition-transform duration-300 group-data-[active=true]:scale-105",
+                      });
+                      const badgeElement = getNavigationBadge(item, {
+                        className: "ml-auto shrink-0 text-[0.65rem]", 
+                      });
 
-            return (
-              <Link
-                key={item.href}
-                onClick={() => setOpen(false)}
-                style={{
-                  ...drawerLinkPaddingStyles,
-                  ...navigationToneVariables[tone],
-                }}
-                className={cn(
-                  "group relative flex items-start gap-3 rounded-2xl border border-transparent text-[color:var(--nav-tonal-label)] transition-colors duration-200 hover:bg-[color:var(--nav-tonal-hover)] hover:text-[var(--nav-tonal-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  "data-[active=true]:border-[color:var(--nav-tonal-ring)] data-[active=true]:bg-[color:var(--nav-tonal-container)] data-[active=true]:text-[var(--nav-tonal-color)] data-[active=true]:shadow-[0_10px_24px_-14px_color-mix(in_srgb,var(--nav-tonal-color)_70%,transparent)]",
-                )}
-                href={item.href}
-                aria-current={isActive ? "page" : undefined}
-                data-active={isActive ? "true" : undefined}
-              >
-                {iconElement ? (
-                  <span className="mt-0.5 flex h-5 w-5 items-center justify-center">
-                    {iconElement}
+                      return (
+                        <motion.li
+                          key={item.href}
+                          variants={{ hidden: { opacity: 0, x: -14 }, visible: { opacity: 1, x: 0 } }}
+                        >
+                          <Link
+                            onClick={() => setOpen(false)}
+                            style={{
+                              ...drawerLinkPaddingStyles,
+                              ...navigationToneVariables[tone],
+                            }}
+                            className={cn(
+                              "group relative flex items-center gap-3 rounded-2xl text-[color:var(--nav-tonal-label)] ring-1 ring-transparent transition-colors duration-200",
+                              "hover:bg-[color:var(--nav-tonal-hover)] hover:text-[var(--nav-tonal-color)] hover:ring-[color:color-mix(in_srgb,var(--nav-tonal-color)_32%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                              "data-[active=true]:bg-[color:var(--nav-tonal-container)] data-[active=true]:text-[var(--nav-tonal-color)] data-[active=true]:ring-[color:var(--nav-tonal-ring)] data-[active=true]:shadow-[0_16px_40px_-22px_color-mix(in_srgb,var(--nav-tonal-color)_70%,transparent)]",
+                            )}
+                            href={item.href}
+                            aria-current={isActive ? "page" : undefined}
+                            data-active={isActive ? "true" : undefined}
+                          >
+                            {iconElement ? (
+                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_14%,transparent)] text-[color:var(--nav-tonal-color)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--nav-tonal-color)_30%,transparent)] transition group-hover:bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_20%,transparent)] group-data-[active=true]:bg-[color:var(--nav-tonal-color)] group-data-[active=true]:text-[color:var(--background)] group-data-[active=true]:ring-[color:color-mix(in_srgb,var(--nav-tonal-color)_45%,transparent)]">
+                                {iconElement}
+                              </span>
+                            ) : null}
+                            <span className="flex flex-1 flex-col">
+                              <span className="flex items-center gap-2 text-sm font-medium">
+                                <span className="truncate">{item.label}</span>
+                                {badgeElement}
+                              </span>
+                              {item.description ? (
+                                <span
+                                  style={drawerLinkDescriptionStyles}
+                                  className="text-sm text-muted-foreground"
+                                >
+                                  {item.description}
+                                </span>
+                              ) : null}
+                            </span>
+                          </Link>
+                        </motion.li>
+                      );
+                    })}
+                  </motion.ul>
+                </div>
+
+                <div
+                  style={drawerFooterStyles}
+                  className="mt-auto space-y-[var(--drawer-footer-space)] border-t border-border/60 pt-[var(--drawer-footer-padding-top)] text-sm text-muted-foreground"
+                >
+                  <span className="block text-xs uppercase tracking-[0.12em] text-foreground/70">
+                    Bleib verbunden
                   </span>
-                ) : null}
-                <span className="flex flex-1 flex-col">
-                  <span className="flex items-center gap-2 font-medium">
-                    <span>{item.label}</span>
-                    {badgeElement}
-                  </span>
-                  {item.description ? (
-                    <span
-                      style={drawerLinkDescriptionStyles}
-                      className="mt-1 text-sm text-muted-foreground"
-                    >
-                      {item.description}
-                    </span>
-                  ) : null}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-
-        <div
-          style={drawerFooterStyles}
-          className="mt-auto space-y-[var(--drawer-footer-space)] border-t border-border/60 pt-[var(--drawer-footer-padding-top)] text-sm text-muted-foreground"
-        >
-          <span className="block text-xs uppercase tracking-[0.12em] text-foreground/70">
-            Bleib verbunden
-          </span>
-          <Link
-            href={ctaNavigation.href}
-            style={drawerCtaPaddingStyles}
-            className="block rounded-lg border border-dashed border-primary/50 bg-primary/10 text-foreground transition-colors hover:border-primary hover:bg-primary/20"
-            onClick={() => setOpen(false)}
-          >
-            {ctaNavigation.label}
-          </Link>
-        </div>
+                  <Link
+                    href={ctaNavigation.href}
+                    onClick={() => setOpen(false)}
+                    className="btn-base h-auto w-full justify-center rounded-2xl bg-primary/15 px-4 py-3 text-base font-semibold text-primary shadow-none ring-1 ring-inset ring-primary/40 transition hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    {ctaNavigation.label}
+                  </Link>
+                </div>
+              </FocusScope>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </SheetContent>
     </Sheet>
   );
