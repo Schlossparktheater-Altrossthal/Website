@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/rbac";
 import { ensurePermissionDefinitions, ensureSystemRoles, hasPermission } from "@/lib/permissions";
-import { PermissionMatrix } from "@/components/members/permission-matrix";
+import { PermissionWorkbench } from "@/components/members/permissions/permission-workbench";
 
 export default async function RechteVerwaltungPage() {
   const session = await requireAuth();
@@ -16,7 +16,7 @@ export default async function RechteVerwaltungPage() {
         <h1 className="text-2xl font-semibold">Rechteverwaltung</h1>
         <p className="text-sm text-foreground/70">Lege Rollen an und weise ihnen Rechte zu. Owner/Admin haben automatisch Vollzugriff.</p>
       </div>
-      <PermissionMatrix />
+      <PermissionWorkbench />
     </div>
   );
 }
