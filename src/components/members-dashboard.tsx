@@ -743,14 +743,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         icon: <Calendar className="h-4 w-4" />,
         tone: "accent",
       },
-      {
-        key: "notifications",
-        label: "Ungelesene Benachrichtigungen",
-        value: numberFormatter.format(stats.unreadNotifications),
-        hint: "Wer zuerst liest, ist informiert",
-        icon: <Bell className="h-4 w-4" />,
-        tone: stats.unreadNotifications > 0 ? "warning" : "neutral",
-      },
     ];
 
     if (finalRehearsalMetric) {
@@ -784,7 +776,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     stats.rehearsalsThisWeek,
     stats.totalMembers,
     stats.totalOnline,
-    stats.unreadNotifications,
   ]);
 
   const profileReminder = useMemo(() => {
