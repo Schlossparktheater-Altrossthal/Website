@@ -15,7 +15,13 @@ import { useSession } from "next-auth/react";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
-import { ctaNavigation, primaryNavigation } from "@/config/navigation";
+import {
+  type NavigationBadgeVariant,
+  type NavigationItem,
+  type NavigationItemTone,
+  ctaNavigation,
+  primaryNavigation,
+} from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +29,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 
 const HEADER_SPACING = {
   gradientHeight: "var(--header-gradient-height)",
@@ -106,6 +113,71 @@ const drawerCtaPaddingStyles = {
 const heroGradientStyles = {
   height: HEADER_SPACING.gradientHeight,
 } satisfies CSSProperties;
+
+const navigationIconToneClasses: Record<NavigationItemTone, string> = {
+  default: "text-foreground/70",
+  muted: "text-muted-foreground",
+  primary: "text-[var(--primary)]",
+  success: "text-success",
+  info: "text-info",
+  warning: "text-warning",
+  destructive: "text-destructive",
+};
+
+const badgeToneFallback: Partial<
+  Record<NavigationItemTone, NavigationBadgeVariant>
+> = {
+  muted: "muted",
+  primary: "default",
+  success: "success",
+  info: "info",
+  warning: "warning",
+  destructive: "destructive",
+};
+
+function getNavigationIcon(
+  item: NavigationItem,
+  { isActive }: { isActive: boolean },
+) {
+  const IconComponent =
+    (isActive ? item.activeIcon ?? item.icon : item.icon) ?? item.activeIcon;
+
+  if (!IconComponent) {
+    return null;
+  }
+
+  const tone = item.tone ?? "default";
+  const toneClass = navigationIconToneClasses[tone];
+
+  return (
+    <IconComponent
+      aria-hidden
+      className={cn(
+        "h-4 w-4 shrink-0 transition-colors duration-300",
+        isActive ? "text-[var(--primary)]" : toneClass,
+      )}
+    />
+  );
+}
+
+function getNavigationBadge(item: NavigationItem) {
+  if (!item.badge) {
+    return null;
+  }
+
+  const tone = item.tone ?? "default";
+  const variant = item.badge.variant ?? badgeToneFallback[tone] ?? "accent";
+
+  return (
+    <Badge
+      variant={variant}
+      size={item.badge.size ?? "sm"}
+      className="whitespace-nowrap"
+    >
+      {item.badge.label}
+    </Badge>
+  );
+}
 
 export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const headerRef = useRef<HTMLElement | null>(null);
@@ -229,7 +301,11 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
           <div className="hidden items-center gap-[var(--space-md)] md:flex">
             {navigationItems.map((item) => {
               const isActive =
-                pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                pathname === item.href ||
+                Boolean(pathname?.startsWith(`${item.href}/`));
+
+              const iconElement = getNavigationIcon(item, { isActive });
+              const badgeElement = getNavigationBadge(item);
 
               return (
                 <Link
@@ -241,13 +317,16 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
                     "data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:after:scale-x-100",
                     scrolled || !isHomePage
                       ? "text-foreground/90"
-                      : "text-foreground/90 drop-shadow-lg"
+                      : "text-foreground/90 drop-shadow-lg",
+                    iconElement || badgeElement ? "gap-2" : undefined,
                   )}
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   data-active={isActive ? "true" : undefined}
                 >
-                  {item.label}
+                  {iconElement}
+                  <span>{item.label}</span>
+                  {badgeElement}
                 </Link>
               );
             })}
@@ -329,7 +408,11 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
         >
           {navigationItems.map((item) => {
             const isActive =
-              pathname === item.href || pathname?.startsWith(`${item.href}/`);
+              pathname === item.href ||
+              Boolean(pathname?.startsWith(`${item.href}/`));
+
+            const iconElement = getNavigationIcon(item, { isActive });
+            const badgeElement = getNavigationBadge(item);
 
             return (
               <Link
@@ -337,22 +420,32 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
                 onClick={() => setOpen(false)}
                 style={drawerLinkPaddingStyles}
                 className={cn(
-                  "block rounded-lg text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  "flex items-start gap-3 rounded-lg text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   "data-[active=true]:bg-accent/20 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:ring-1 data-[active=true]:ring-inset data-[active=true]:ring-[var(--primary)]"
                 )}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
                 data-active={isActive ? "true" : undefined}
               >
-                <span className="block font-medium">{item.label}</span>
-                {item.description ? (
-                  <span
-                    style={drawerLinkDescriptionStyles}
-                    className="block text-sm text-muted-foreground"
-                  >
-                    {item.description}
+                {iconElement ? (
+                  <span className="mt-0.5 flex h-5 w-5 items-center justify-center">
+                    {iconElement}
                   </span>
                 ) : null}
+                <span className="flex flex-1 flex-col">
+                  <span className="flex items-center gap-2 font-medium">
+                    <span>{item.label}</span>
+                    {badgeElement}
+                  </span>
+                  {item.description ? (
+                    <span
+                      style={drawerLinkDescriptionStyles}
+                      className="mt-1 text-sm text-muted-foreground"
+                    >
+                      {item.description}
+                    </span>
+                  ) : null}
+                </span>
               </Link>
             );
           })}
