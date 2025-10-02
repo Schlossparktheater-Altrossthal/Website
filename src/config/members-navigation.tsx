@@ -377,6 +377,18 @@ export const membersNavigation = [
         icon: DashboardIcon,
       },
       {
+        href: "/mitglieder/kalender",
+        label: "Kalender",
+        permissionKey: "mitglieder.kalender",
+        icon: PersonalCalendarIcon,
+      },
+      {
+        href: "/mitglieder/sperrliste",
+        label: "Sperrliste",
+        permissionKey: "mitglieder.sperrliste",
+        icon: BlacklistIcon,
+      },
+      {
         href: "/mitglieder/profil",
         label: "Profil",
         permissionKey: "mitglieder.profil",
@@ -436,18 +448,6 @@ export const membersNavigation = [
     id: "assignments",
     label: "Proben & Gewerke",
     items: [
-      {
-        href: "/mitglieder/kalender",
-        label: "Kalender",
-        permissionKey: "mitglieder.kalender",
-        icon: PersonalCalendarIcon,
-      },
-      {
-        href: "/mitglieder/sperrliste",
-        label: "Sperrliste",
-        permissionKey: "mitglieder.sperrliste",
-        icon: BlacklistIcon,
-      },
       {
         href: "/mitglieder/meine-proben",
         label: "Meine Proben",
