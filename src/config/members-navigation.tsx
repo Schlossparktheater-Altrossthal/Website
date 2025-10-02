@@ -8,11 +8,12 @@ export type MembersNavIcon = ComponentType<MembersNavIconProps>;
 
 export type MembersNavGroupId =
   | "general"
+  | "media"
   | "assignments"
   | "final-week"
   | "production"
-  | "finance"
   | "inventory"
+  | "finance"
   | "admin";
 
 export const MEMBERS_NAV_ASSIGNMENTS_GROUP_ID: MembersNavGroupId = "assignments";
@@ -391,8 +392,8 @@ export const membersNavigation = [
     ],
   },
   {
-    id: "inventory",
-    label: "Dateien & Material",
+    id: "media",
+    label: "Dateien & Medien",
     items: [
       {
         href: "/mitglieder/archiv-und-bilder",
@@ -405,30 +406,6 @@ export const membersNavigation = [
         label: "Dateisystem",
         permissionKey: "mitglieder.dateisystem",
         icon: FileLibraryIcon,
-      },
-      {
-        href: "/mitglieder/scan",
-        label: "Scanner",
-        permissionKey: "mitglieder.scan",
-        icon: ScannerIcon,
-      },
-      {
-        href: "/mitglieder/inventar-aufkleber",
-        label: "Inventaraufkleber",
-        permissionKey: "mitglieder.inventaraufkleber",
-        icon: InventoryStickersIcon,
-      },
-      {
-        href: "/mitglieder/lagerverwaltung/technik",
-        label: "Technik-Lager",
-        permissionKey: "mitglieder.lager.technik",
-        icon: TechInventoryIcon,
-      },
-      {
-        href: "/mitglieder/lagerverwaltung/kostueme",
-        label: "Kostüm-Lager",
-        permissionKey: "mitglieder.lager.kostueme",
-        icon: CostumeInventoryIcon,
       },
     ],
   },
@@ -476,7 +453,7 @@ export const membersNavigation = [
   },
   {
     id: "final-week",
-    label: "Endprobenwoche",
+    label: "Endproben-Woche",
     items: [
       {
         href: "/mitglieder/endproben-woche/dienstplan",
@@ -531,6 +508,36 @@ export const membersNavigation = [
         label: "Szenen & Breakdowns",
         permissionKey: "mitglieder.produktionen",
         icon: ScenesIcon,
+      },
+    ],
+  },
+  {
+    id: "inventory",
+    label: "Lager & Inventar",
+    items: [
+      {
+        href: "/mitglieder/lagerverwaltung/technik",
+        label: "Technik-Lager",
+        permissionKey: "mitglieder.lager.technik",
+        icon: TechInventoryIcon,
+      },
+      {
+        href: "/mitglieder/lagerverwaltung/kostueme",
+        label: "Kostüm-Lager",
+        permissionKey: "mitglieder.lager.kostueme",
+        icon: CostumeInventoryIcon,
+      },
+      {
+        href: "/mitglieder/inventar-aufkleber",
+        label: "Inventaraufkleber",
+        permissionKey: "mitglieder.inventaraufkleber",
+        icon: InventoryStickersIcon,
+      },
+      {
+        href: "/mitglieder/scan",
+        label: "Scanner",
+        permissionKey: "mitglieder.scan",
+        icon: ScannerIcon,
       },
     ],
   },
