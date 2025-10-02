@@ -12,12 +12,14 @@ import type { ClientSperrlisteSettings } from "@/lib/sperrliste-settings";
 interface SperrlisteSettingsDialogProps {
   settings: ClientSperrlisteSettings;
   defaultHolidaySourceUrl: string;
+  defaultPublicHolidaySourceUrl: string;
   onSettingsChange?: (payload: SperrlisteSettingsChangePayload) => void;
 }
 
 export function SperrlisteSettingsDialog({
   settings,
   defaultHolidaySourceUrl,
+  defaultPublicHolidaySourceUrl,
   onSettingsChange,
 }: SperrlisteSettingsDialogProps) {
   const [open, setOpen] = useState(false);
@@ -35,6 +37,7 @@ export function SperrlisteSettingsDialog({
           <SperrlisteSettingsManager
             settings={settings}
             defaultHolidaySourceUrl={defaultHolidaySourceUrl}
+            defaultPublicHolidaySourceUrl={defaultPublicHolidaySourceUrl}
             onSettingsChange={(payload) => {
               onSettingsChange?.(payload);
             }}

@@ -25,12 +25,13 @@ const FREEZE_DAY_PRESETS = [0, 3, 5, 7, 10, 14, 21, 28, 30] as const;
 export type SperrlisteSettingsChangePayload = {
   settings: ClientSperrlisteSettings;
   holidays?: HolidayRange[];
-  defaults?: { holidaySourceUrl: string };
+  defaults?: { holidaySourceUrl: string; publicHolidaySourceUrl: string };
 };
 
 interface SperrlisteSettingsManagerProps {
   settings: ClientSperrlisteSettings;
   defaultHolidaySourceUrl: string;
+  defaultPublicHolidaySourceUrl: string;
   onSettingsChange?: (payload: SperrlisteSettingsChangePayload) => void;
 }
 
@@ -136,42 +137,60 @@ function buildFreezeOptions(current: number | null) {
 export function SperrlisteSettingsManager({
   settings,
   defaultHolidaySourceUrl,
+  defaultPublicHolidaySourceUrl,
   onSettingsChange,
 }: SperrlisteSettingsManagerProps) {
   const contentId = useId();
   const [freezeDaysValue, setFreezeDaysValue] = useState(String(settings.freezeDays));
   const [holidayModeState, setHolidayModeState] = useState<HolidaySourceMode>(settings.holidaySource.mode);
   const [holidayUrlState, setHolidayUrlState] = useState(settings.holidaySource.url ?? "");
+  const [publicHolidayModeState, setPublicHolidayModeState] = useState<HolidaySourceMode>(
+    settings.publicHolidaySource.mode,
+  );
+  const [publicHolidayUrlState, setPublicHolidayUrlState] = useState(
+    settings.publicHolidaySource.url ?? "",
+  );
   const [preferredDays, setPreferredDays] = useState(() => new Set(settings.preferredWeekdays));
   const [exceptionDays, setExceptionDays] = useState(() => new Set(settings.exceptionWeekdays));
   const [status, setStatus] = useState(settings.holidayStatus);
+  const [publicStatus, setPublicStatus] = useState(settings.publicHolidayStatus);
   const [saving, setSaving] = useState(false);
-  const [checking, setChecking] = useState(false);
+  const [checkingSource, setCheckingSource] = useState<"holiday" | "publicHoliday" | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [defaults, setDefaults] = useState({ holidaySourceUrl: defaultHolidaySourceUrl });
+  const [defaults, setDefaults] = useState({
+    holidaySourceUrl: defaultHolidaySourceUrl,
+    publicHolidaySourceUrl: defaultPublicHolidaySourceUrl,
+  });
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setFreezeDaysValue(String(settings.freezeDays));
     setHolidayModeState(settings.holidaySource.mode);
     setHolidayUrlState(settings.holidaySource.url ?? "");
+    setPublicHolidayModeState(settings.publicHolidaySource.mode);
+    setPublicHolidayUrlState(settings.publicHolidaySource.url ?? "");
     setPreferredDays(new Set(settings.preferredWeekdays));
     setExceptionDays(new Set(settings.exceptionWeekdays));
     setStatus(settings.holidayStatus);
+    setPublicStatus(settings.publicHolidayStatus);
   }, [settings]);
 
   useEffect(() => {
-    setDefaults({ holidaySourceUrl: defaultHolidaySourceUrl });
-  }, [defaultHolidaySourceUrl]);
+    setDefaults({
+      holidaySourceUrl: defaultHolidaySourceUrl,
+      publicHolidaySourceUrl: defaultPublicHolidaySourceUrl,
+    });
+  }, [defaultHolidaySourceUrl, defaultPublicHolidaySourceUrl]);
 
   const resetFeedback = () => {
     setError(null);
     setSuccess(null);
   };
 
-  const markStatusPending = () => {
-    setStatus((prev) => {
+  const markStatusPending = (target: "holiday" | "publicHoliday") => {
+    const setter = target === "holiday" ? setStatus : setPublicStatus;
+    setter((prev) => {
       if (prev.status === "unknown" && !prev.checkedAt) {
         return prev;
       }
@@ -189,7 +208,7 @@ export function SperrlisteSettingsManager({
     }
     setHolidayModeState(value);
     resetFeedback();
-    markStatusPending();
+    markStatusPending("holiday");
   };
 
   const handleHolidayUrlInput = (value: string) => {
@@ -198,11 +217,34 @@ export function SperrlisteSettingsManager({
     }
     setHolidayUrlState(value);
     resetFeedback();
-    markStatusPending();
+    markStatusPending("holiday");
+  };
+
+  const handlePublicHolidayModeChange = (value: HolidaySourceMode) => {
+    if (value === publicHolidayModeState) {
+      return;
+    }
+    setPublicHolidayModeState(value);
+    resetFeedback();
+    markStatusPending("publicHoliday");
+  };
+
+  const handlePublicHolidayUrlInput = (value: string) => {
+    if (value === publicHolidayUrlState) {
+      return;
+    }
+    setPublicHolidayUrlState(value);
+    resetFeedback();
+    markStatusPending("publicHoliday");
   };
 
   const holidayMode = holidayModeState;
   const holidayUrl = holidayUrlState;
+  const publicHolidayMode = publicHolidayModeState;
+  const publicHolidayUrl = publicHolidayUrlState;
+  const isCheckingHoliday = checkingSource === "holiday";
+  const isCheckingPublicHoliday = checkingSource === "publicHoliday";
+  const isCheckingAnything = checkingSource !== null;
 
   const preferredList = useMemo(
     () => formatWeekdayList(preferredDays, { fallback: "keine bevorzugten Tage" }),
@@ -220,6 +262,14 @@ export function SperrlisteSettingsManager({
     if (Number.isNaN(parsed.getTime())) return null;
     return CHECKED_AT_FORMATTER.format(parsed);
   }, [status.checkedAt]);
+
+  const publicStatusMeta = useMemo(() => getStatusMeta(publicStatus.status), [publicStatus.status]);
+  const publicFormattedCheckedAt = useMemo(() => {
+    if (!publicStatus.checkedAt) return null;
+    const parsed = new Date(publicStatus.checkedAt);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return CHECKED_AT_FORMATTER.format(parsed);
+  }, [publicStatus.checkedAt]);
 
   const holidayModeSummary = useMemo(() => {
     switch (holidayMode) {
@@ -277,6 +327,64 @@ export function SperrlisteSettingsManager({
     }
   }, [defaults.holidaySourceUrl, holidayMode, holidayUrl]);
 
+  const publicHolidayModeSummary = useMemo(() => {
+    switch (publicHolidayMode) {
+      case "default":
+        return "Standardfeed (Feiertage Sachsen)";
+      case "custom": {
+        const trimmed = publicHolidayUrl.trim();
+        if (!trimmed) return "Eigene URL (noch nicht gesetzt)";
+        try {
+          const parsed = new URL(trimmed);
+          return `Eigene URL (${parsed.hostname})`;
+        } catch {
+          return `Eigene URL (${trimmed})`;
+        }
+      }
+      case "disabled":
+      default:
+        return "Keine Feiertagsquelle";
+    }
+  }, [publicHolidayMode, publicHolidayUrl]);
+
+  const publicHolidaySourceDetails = useMemo(() => {
+    if (publicHolidayMode === "disabled") {
+      return null;
+    }
+
+    const rawUrl =
+      publicHolidayMode === "custom"
+        ? publicHolidayUrl
+        : defaults.publicHolidaySourceUrl ?? "";
+    const trimmed = rawUrl.trim();
+
+    if (!trimmed) {
+      return null;
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+      const label = `${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`.replace(/\/$/, "");
+
+      return {
+        href: parsed.toString(),
+        label: label || parsed.hostname,
+      };
+    } catch {
+      if (/^https?:\/\//i.test(trimmed)) {
+        return {
+          href: trimmed,
+          label: trimmed,
+        };
+      }
+
+      return {
+        href: null,
+        label: trimmed,
+      };
+    }
+  }, [defaults.publicHolidaySourceUrl, publicHolidayMode, publicHolidayUrl]);
+
   const freezeDaysNumber = useMemo(() => {
     const parsed = Number.parseInt(freezeDaysValue, 10);
     return Number.isFinite(parsed) ? parsed : null;
@@ -321,6 +429,14 @@ export function SperrlisteSettingsManager({
     if ((trimmedUrl ?? null) !== (initialUrl ?? null)) {
       return true;
     }
+    if (publicHolidayMode !== settings.publicHolidaySource.mode) {
+      return true;
+    }
+    const trimmedPublicUrl = publicHolidayMode === "custom" ? publicHolidayUrl.trim() : null;
+    const initialPublicUrl = settings.publicHolidaySource.url ?? null;
+    if ((trimmedPublicUrl ?? null) !== (initialPublicUrl ?? null)) {
+      return true;
+    }
     return false;
   }, [
     freezeDaysNumber,
@@ -330,9 +446,13 @@ export function SperrlisteSettingsManager({
     initialExceptionWeekdays,
     holidayMode,
     holidayUrl,
+    publicHolidayMode,
+    publicHolidayUrl,
     settings.freezeDays,
     settings.holidaySource.mode,
     settings.holidaySource.url,
+    settings.publicHolidaySource.mode,
+    settings.publicHolidaySource.url,
   ]);
 
   const togglePreferred = (weekday: number) => {
@@ -373,7 +493,7 @@ export function SperrlisteSettingsManager({
     resetFeedback();
   };
 
-  const handleResetToDefault = () => {
+  const handleResetHolidayToDefault = () => {
     const targetUrl = defaults.holidaySourceUrl ?? "";
     const shouldUpdateStatus =
       holidayModeState !== "default" || holidayUrlState.trim() !== targetUrl.trim();
@@ -386,7 +506,26 @@ export function SperrlisteSettingsManager({
     }
 
     if (shouldUpdateStatus) {
-      markStatusPending();
+      markStatusPending("holiday");
+    }
+    resetFeedback();
+  };
+
+  const handleResetPublicToDefault = () => {
+    const targetUrl = defaults.publicHolidaySourceUrl ?? "";
+    const shouldUpdateStatus =
+      publicHolidayModeState !== "default" ||
+      publicHolidayUrlState.trim() !== targetUrl.trim();
+
+    if (publicHolidayModeState !== "default") {
+      setPublicHolidayModeState("default");
+    }
+    if (publicHolidayUrlState !== targetUrl) {
+      setPublicHolidayUrlState(targetUrl);
+    }
+
+    if (shouldUpdateStatus) {
+      markStatusPending("publicHoliday");
     }
     resetFeedback();
   };
@@ -396,47 +535,61 @@ export function SperrlisteSettingsManager({
     setFreezeDaysValue(String(settings.freezeDays));
     setHolidayModeState(settings.holidaySource.mode);
     setHolidayUrlState(settings.holidaySource.url ?? "");
+    setPublicHolidayModeState(settings.publicHolidaySource.mode);
+    setPublicHolidayUrlState(settings.publicHolidaySource.url ?? "");
     setPreferredDays(new Set(settings.preferredWeekdays));
     setExceptionDays(new Set(settings.exceptionWeekdays));
     setStatus(settings.holidayStatus);
+    setPublicStatus(settings.publicHolidayStatus);
   };
 
-  const handleCheckHolidaySource = async () => {
+  const handleCheckSource = async (target: "holiday" | "publicHoliday") => {
     resetFeedback();
 
-    if (holidayMode === "custom" && !holidayUrl.trim()) {
-      setError({ message: "Bitte gib eine gültige URL für die Ferienquelle an." });
+    const mode = target === "holiday" ? holidayMode : publicHolidayMode;
+    const url = target === "holiday" ? holidayUrl : publicHolidayUrl;
+    const label = target === "holiday" ? "Ferienquelle" : "Feiertagsquelle";
+
+    if (mode === "custom" && !url.trim()) {
+      setError({ message: `Bitte gib eine gültige URL für die ${label.toLowerCase()} an.` });
       return;
     }
 
-    setChecking(true);
+    setCheckingSource(target);
     try {
       const response = await fetch("/api/sperrliste/settings/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: holidayMode,
-          url: holidayMode === "custom" ? holidayUrl.trim() : null,
+          source: target,
+          mode,
+          url: mode === "custom" ? url.trim() : null,
         }),
       });
 
       const data = (await response.json().catch(() => ({}))) as {
         holidayStatus?: ClientSperrlisteSettings["holidayStatus"];
+        publicHolidayStatus?: ClientSperrlisteSettings["holidayStatus"];
         error?: string;
       };
 
-      if (!response.ok || !data?.holidayStatus) {
-        throw new Error(data?.error || "Ferienquelle konnte nicht geprüft werden.");
+      if (!response.ok) {
+        throw new Error(data?.error || `${label} konnte nicht geprüft werden.`);
       }
 
-      setStatus(data.holidayStatus);
+      if (data.holidayStatus) {
+        setStatus(data.holidayStatus);
+      }
+      if (data.publicHolidayStatus) {
+        setPublicStatus(data.publicHolidayStatus);
+      }
     } catch (err) {
       setError({
-        message: "Ferienquelle konnte nicht geprüft werden.",
+        message: `${label} konnte nicht geprüft werden.`,
         details: err instanceof Error ? err.message : undefined,
       });
     } finally {
-      setChecking(false);
+      setCheckingSource(null);
     }
   };
 
@@ -445,6 +598,7 @@ export function SperrlisteSettingsManager({
     resetFeedback();
 
     const trimmedUrl = holidayMode === "custom" ? holidayUrl.trim() : null;
+    const trimmedPublicUrl = publicHolidayMode === "custom" ? publicHolidayUrl.trim() : null;
     const parsedFreezeDays = Number.parseInt(freezeDaysValue, 10);
 
     if (!Number.isFinite(parsedFreezeDays) || parsedFreezeDays < 0) {
@@ -457,12 +611,19 @@ export function SperrlisteSettingsManager({
       return;
     }
 
+    if (publicHolidayMode === "custom" && !trimmedPublicUrl) {
+      setError({ message: "Bitte gib eine gültige URL für die Feiertagsquelle an." });
+      return;
+    }
+
     const payload = {
       freezeDays: parsedFreezeDays,
       preferredWeekdays: currentPreferredWeekdays,
       exceptionWeekdays: currentExceptionWeekdays,
       holidaySourceMode: holidayMode,
       holidaySourceUrl: trimmedUrl,
+      publicHolidaySourceMode: publicHolidayMode,
+      publicHolidaySourceUrl: trimmedPublicUrl,
     } as const;
 
     setSaving(true);
@@ -476,7 +637,7 @@ export function SperrlisteSettingsManager({
       const data = (await response.json().catch(() => ({}))) as {
         settings?: ClientSperrlisteSettings;
         holidays?: HolidayRange[];
-        defaults?: { holidaySourceUrl: string };
+        defaults?: { holidaySourceUrl: string; publicHolidaySourceUrl: string };
         error?: string;
       };
 
@@ -485,7 +646,12 @@ export function SperrlisteSettingsManager({
       }
 
       setStatus(data.settings.holidayStatus);
-      setDefaults({ holidaySourceUrl: data.defaults?.holidaySourceUrl ?? defaultHolidaySourceUrl });
+      setPublicStatus(data.settings.publicHolidayStatus);
+      setDefaults({
+        holidaySourceUrl: data.defaults?.holidaySourceUrl ?? defaultHolidaySourceUrl,
+        publicHolidaySourceUrl:
+          data.defaults?.publicHolidaySourceUrl ?? defaultPublicHolidaySourceUrl,
+      });
       setSuccess("Sperrlisten-Einstellungen gespeichert.");
 
       onSettingsChange?.({
@@ -557,6 +723,35 @@ export function SperrlisteSettingsManager({
         </div>
         <div className="space-y-2">
           <Text asChild variant="caption" uppercase className="text-muted-foreground">
+            <dt>Feiertagsquelle</dt>
+          </Text>
+          <dd className="space-y-2 leading-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span>{publicHolidayModeSummary}</span>
+              <Badge variant={STATUS_BADGE_VARIANTS[publicStatusMeta.tone]}>
+                {publicStatusMeta.label}
+              </Badge>
+            </div>
+            {publicHolidaySourceDetails ? (
+              publicHolidaySourceDetails.href ? (
+                <a
+                  href={publicHolidaySourceDetails.href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="block break-words text-xs text-muted-foreground underline-offset-2 hover:underline sm:text-sm"
+                >
+                  {publicHolidaySourceDetails.label}
+                </a>
+              ) : (
+                <span className="block break-words text-xs text-muted-foreground sm:text-sm">
+                  {publicHolidaySourceDetails.label}
+                </span>
+              )
+            ) : null}
+          </dd>
+        </div>
+        <div className="space-y-2">
+          <Text asChild variant="caption" uppercase className="text-muted-foreground">
             <dt>Sperrfrist</dt>
           </Text>
           <dd className="leading-5">{freezeDaysSummary}</dd>
@@ -599,7 +794,8 @@ export function SperrlisteSettingsManager({
     );
   };
 
-  const StatusIcon = STATUS_ICONS[statusMeta.tone];
+  const HolidayStatusIcon = STATUS_ICONS[statusMeta.tone];
+  const PublicStatusIcon = STATUS_ICONS[publicStatusMeta.tone];
 
   return (
     <Card data-state={expanded ? "expanded" : "collapsed"}>
@@ -611,7 +807,7 @@ export function SperrlisteSettingsManager({
               Sperrlisten-Einstellungen
             </CardTitle>
             <Text variant="small" tone="muted">
-              Verwalte Ferienquelle, Probenplanung und Sperrfrist in einem kompakten Ablauf.
+              Verwalte Ferien- und Feiertagsquellen, Probenplanung und Sperrfrist in einem kompakten Ablauf.
             </Text>
           </div>
           <button
@@ -692,10 +888,10 @@ export function SperrlisteSettingsManager({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleCheckHolidaySource}
-                    disabled={checking || saving}
+                    onClick={() => handleCheckSource("holiday")}
+                    disabled={isCheckingHoliday || saving}
                   >
-                    {checking ? (
+                    {isCheckingHoliday ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                         Quelle prüfen
@@ -707,8 +903,8 @@ export function SperrlisteSettingsManager({
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={handleResetToDefault}
-                    disabled={checking || saving}
+                    onClick={handleResetHolidayToDefault}
+                    disabled={isCheckingHoliday || saving}
                   >
                     Auf Standard zurücksetzen
                   </Button>
@@ -719,10 +915,10 @@ export function SperrlisteSettingsManager({
                     STATUS_LINE_CLASSES[statusMeta.tone],
                   )}
                 >
-                  <StatusIcon
+                  <HolidayStatusIcon
                     className={cn(
                       "mt-0.5 h-4 w-4 shrink-0",
-                      statusMeta.tone === "unknown" && checking ? "animate-spin" : undefined,
+                      statusMeta.tone === "unknown" && isCheckingHoliday ? "animate-spin" : undefined,
                     )}
                     aria-hidden
                   />
@@ -731,6 +927,98 @@ export function SperrlisteSettingsManager({
                     <p className="text-xs leading-5 opacity-80">
                       {status.message ?? statusMeta.description}
                       {formattedCheckedAt ? ` – geprüft am ${formattedCheckedAt}` : ""}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-lg border border-border/60 bg-card/40 p-4">
+                <header className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold leading-5">Feiertagsquelle</p>
+                    <p className="text-sm text-muted-foreground">
+                      Steuere, ob gesetzliche Feiertage automatisch eingefärbt werden.
+                    </p>
+                  </div>
+                  <Badge variant={STATUS_BADGE_VARIANTS[publicStatusMeta.tone]}>
+                    {publicStatusMeta.label}
+                  </Badge>
+                </header>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="public-holiday-mode">Quelle</Label>
+                    <Select
+                      value={publicHolidayMode}
+                      onValueChange={(value) => handlePublicHolidayModeChange(value as HolidaySourceMode)}
+                      disabled={saving}
+                    >
+                      <SelectTrigger id="public-holiday-mode">
+                        <SelectValue placeholder="Modus wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Standardfeed (Feiertage Sachsen)</SelectItem>
+                        <SelectItem value="custom">Eigene URL</SelectItem>
+                        <SelectItem value="disabled">Keine Feiertagsquelle</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="public-holiday-url">Eigene URL</Label>
+                    <Input
+                      id="public-holiday-url"
+                      type="url"
+                      value={publicHolidayUrl}
+                      onChange={(event) => handlePublicHolidayUrlInput(event.target.value)}
+                      placeholder={defaults.publicHolidaySourceUrl}
+                      disabled={publicHolidayMode !== "custom" || saving}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleCheckSource("publicHoliday")}
+                    disabled={isCheckingPublicHoliday || saving}
+                  >
+                    {isCheckingPublicHoliday ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        Quelle prüfen
+                      </span>
+                    ) : (
+                      "Quelle prüfen"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleResetPublicToDefault}
+                    disabled={isCheckingPublicHoliday || saving}
+                  >
+                    Auf Standard zurücksetzen
+                  </Button>
+                </div>
+                <div
+                  className={cn(
+                    "flex items-start gap-3 rounded-md border px-3 py-2 text-sm",
+                    STATUS_LINE_CLASSES[publicStatusMeta.tone],
+                  )}
+                >
+                  <PublicStatusIcon
+                    className={cn(
+                      "mt-0.5 h-4 w-4 shrink-0",
+                      publicStatusMeta.tone === "unknown" && isCheckingPublicHoliday
+                        ? "animate-spin"
+                        : undefined,
+                    )}
+                    aria-hidden
+                  />
+                  <div className="space-y-1">
+                    <p className="font-medium leading-5">{publicStatusMeta.label}</p>
+                    <p className="text-xs leading-5 opacity-80">
+                      {publicStatus.message ?? publicStatusMeta.description}
+                      {publicFormattedCheckedAt ? ` – geprüft am ${publicFormattedCheckedAt}` : ""}
                     </p>
                   </div>
                 </div>
@@ -844,7 +1132,7 @@ export function SperrlisteSettingsManager({
                   type="button"
                   variant="ghost"
                   onClick={handleDiscardChanges}
-                  disabled={saving || checking}
+                  disabled={saving || isCheckingAnything}
                 >
                   Verwerfen
                 </Button>

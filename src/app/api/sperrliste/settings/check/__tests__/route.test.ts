@@ -31,13 +31,24 @@ const {
         url: null,
         effectiveUrl: url,
       },
+      publicHolidaySource: {
+        mode: "default" as const,
+        url: null,
+        effectiveUrl: publicUrl,
+      },
       holidayStatus: {
         status: "unknown" as const,
         message: null,
         checkedAt: null,
       },
+      publicHolidayStatus: {
+        status: "unknown" as const,
+        message: null,
+        checkedAt: null,
+      },
       updatedAt: null,
-      cacheKey: "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics",
+      cacheKey:
+        "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics|default|https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics",
     },
     defaultHolidayUrl: url,
     defaultPublicHolidayUrl: publicUrl,
@@ -91,12 +102,13 @@ describe("sperrliste settings check route", () => {
     const checkedAt = new Date("2025-01-02T15:30:00Z");
     fetchHolidayRangesForSettingsMock.mockResolvedValue({
       ranges: [],
-      status: { status: "ok", message: "OK", checkedAt },
+      holidayStatus: { status: "ok", message: "OK", checkedAt },
       publicHolidayStatus: { status: "ok", message: "OK", checkedAt },
     });
 
     const response = await POST(
       createRequest({
+        source: "holiday",
         mode: "default",
         url: "",
       }),
@@ -109,12 +121,19 @@ describe("sperrliste settings check route", () => {
         message: "OK",
         checkedAt: checkedAt.toISOString(),
       },
+      publicHolidayStatus: {
+        status: "ok",
+        message: "OK",
+        checkedAt: checkedAt.toISOString(),
+      },
     });
 
     expect(fetchHolidayRangesForSettingsMock).toHaveBeenCalledTimes(1);
     const candidate = fetchHolidayRangesForSettingsMock.mock.calls[0][0];
     expect(candidate.holidaySource.mode).toBe("default");
     expect(candidate.holidaySource.effectiveUrl).toBe(defaultHolidayUrl);
+    expect(candidate.publicHolidaySource.mode).toBe("default");
+    expect(candidate.publicHolidaySource.effectiveUrl).toBe(defaultPublicHolidayUrl);
   });
 
   it("rejects custom URLs outside the allowlist", async () => {
@@ -122,6 +141,7 @@ describe("sperrliste settings check route", () => {
 
     const response = await POST(
       createRequest({
+        source: "holiday",
         mode: "custom",
         url: "https://untrusted.example.com/ferien.ics",
       }),
@@ -129,7 +149,7 @@ describe("sperrliste settings check route", () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: "Diese Ferienquelle ist nicht erlaubt.",
+      error: "Diese Quelle ist nicht erlaubt.",
     });
 
     expect(fetchHolidayRangesForSettingsMock).not.toHaveBeenCalled();

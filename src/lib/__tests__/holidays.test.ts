@@ -21,13 +21,24 @@ const { defaultHolidayUrl, defaultPublicHolidayUrl, resolvedSettings } = vi.hois
         url: null,
         effectiveUrl: url,
       },
+      publicHolidaySource: {
+        mode: "default" as const,
+        url: null,
+        effectiveUrl: publicUrl,
+      },
       holidayStatus: {
         status: "unknown" as const,
         message: null,
         checkedAt: null,
       },
+      publicHolidayStatus: {
+        status: "unknown" as const,
+        message: null,
+        checkedAt: null,
+      },
       updatedAt: null,
-      cacheKey: "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics",
+      cacheKey:
+        "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics|default|https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics",
     },
   } as const;
 });
@@ -40,8 +51,10 @@ vi.mock("@/lib/sperrliste-settings", () => ({
       ...resolvedSettings,
       holidaySource: { ...resolvedSettings.holidaySource },
       holidayStatus: { ...resolvedSettings.holidayStatus },
+      publicHolidaySource: { ...resolvedSettings.publicHolidaySource },
+      publicHolidayStatus: { ...resolvedSettings.publicHolidayStatus },
     })),
-  applyHolidaySourceStatus: vi.fn().mockResolvedValue(undefined),
+  applyHolidaySourceStatuses: vi.fn().mockResolvedValue(undefined),
   getDefaultHolidaySourceUrl: vi.fn(() => defaultHolidayUrl),
   getDefaultPublicHolidaySourceUrl: vi.fn(() => defaultPublicHolidayUrl),
 }));
