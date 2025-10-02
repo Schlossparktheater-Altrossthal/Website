@@ -29,6 +29,8 @@ function createProps(overrides: Partial<OnboardingSectionProps> = {}): Onboardin
   return {
     onboarding: null,
     onOnboardingChange: vi.fn(),
+    rolePreferences: [],
+    onRolePreferencesChange: vi.fn(),
     whatsappLink: "https://example.com",
     whatsappVisitedAt: null,
     onWhatsAppVisit: defaultOnWhatsAppVisit,

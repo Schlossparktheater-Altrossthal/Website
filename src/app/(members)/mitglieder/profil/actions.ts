@@ -357,6 +357,16 @@ export type SaveOnboardingResult = {
   };
 };
 
+export type SaveRolePreferencesInput = {
+  code: string;
+  domain: "acting" | "crew";
+  weight: number;
+};
+
+export type SaveRolePreferencesResult = {
+  preferences: SaveRolePreferencesInput[];
+};
+
 export async function saveOnboardingAction(
   input: SaveOnboardingInput,
 ): Promise<ActionResult<SaveOnboardingResult>> {
@@ -398,5 +408,71 @@ export async function saveOnboardingAction(
   } catch (error) {
     console.error("[profile][onboarding]", error);
     return { ok: false, error: "Netzwerkfehler: Onboarding-Angaben konnten nicht gespeichert werden." };
+  }
+}
+
+export async function saveRolePreferencesAction(
+  preferences: SaveRolePreferencesInput[],
+): Promise<ActionResult<SaveRolePreferencesResult>> {
+  try {
+    const payload = {
+      preferences: preferences.map((pref) => ({
+        code: pref.code,
+        domain: pref.domain,
+        weight: pref.weight,
+      })),
+    };
+
+    const response = await authorizedFetch("/api/profile/onboarding/preferences", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      const error = typeof data?.error === "string" ? data.error : "Präferenzen konnten nicht gespeichert werden.";
+      return { ok: false, error };
+    }
+
+    const rawPreferences = Array.isArray(data?.preferences) ? (data.preferences as unknown[]) : [];
+    const normalized = rawPreferences
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") {
+          return null;
+        }
+
+        const candidate = entry as {
+          code?: unknown;
+          domain?: unknown;
+          weight?: unknown;
+        };
+
+        const code = typeof candidate.code === "string" ? candidate.code.trim() : "";
+        if (!code) {
+          return null;
+        }
+
+        const domain = candidate.domain;
+        if (domain !== "acting" && domain !== "crew") {
+          return null;
+        }
+
+        const numericWeight =
+          typeof candidate.weight === "number" && Number.isFinite(candidate.weight) ? candidate.weight : 0;
+
+        const normalizedEntry: SaveRolePreferencesInput = {
+          code,
+          domain,
+          weight: numericWeight,
+        };
+
+        return normalizedEntry;
+      })
+      .filter((entry): entry is SaveRolePreferencesInput => Boolean(entry));
+
+    return { ok: true, data: { preferences: normalized } };
+  } catch (error) {
+    console.error("[profile][onboarding.preferences]", error);
+    return { ok: false, error: "Netzwerkfehler: Präferenzen konnten nicht gespeichert werden." };
   }
 }

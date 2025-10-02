@@ -48,6 +48,7 @@ export default async function ProfilePage() {
       avatarImageUpdatedAt: true,
       role: true,
       roles: { select: { role: true } },
+      rolePreferences: { select: { code: true, domain: true, weight: true } },
       appRoles: {
         select: {
           role: { select: { id: true, name: true, systemRole: true, isSystem: true } },
@@ -144,6 +145,12 @@ export default async function ProfilePage() {
     ...user.roles.map((entry) => entry.role as Role),
   ]);
 
+  const preferenceSummaries = user.rolePreferences.map((preference) => ({
+    code: preference.code,
+    domain: preference.domain,
+    weight: preference.weight,
+  }));
+
   const customRoles = user.appRoles
     .map((entry) => entry.role)
     .filter((role): role is { id: string; name: string; systemRole: Role | null; isSystem: boolean } => Boolean(role))
@@ -225,6 +232,7 @@ export default async function ProfilePage() {
         dietaryPreferenceStrictness: onboardingProfile.dietaryPreferenceStrictness ?? null,
         whatsappLinkVisitedAt: onboardingProfile.whatsappLinkVisitedAt?.toISOString() ?? null,
         updatedAt: onboardingProfile.updatedAt?.toISOString() ?? null,
+        preferences: preferenceSummaries,
         show: onboardingProfile.show
           ? {
               title: onboardingProfile.show.title ?? null,
@@ -260,6 +268,7 @@ export default async function ProfilePage() {
           payoutNote: user.payoutNote ?? null,
         }}
         onboarding={onboarding}
+        rolePreferences={preferenceSummaries}
         interests={interestNames}
         allergies={allergies}
         measurements={measurementSummaries}
