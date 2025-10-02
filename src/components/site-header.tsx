@@ -13,12 +13,11 @@ import { usePathname } from "next/navigation";
 
 import { useSession } from "next-auth/react";
 import {
-  AnimatePresence,
   motion,
   useMotionValueEvent,
   useScroll,
-  useTransform,
   useSpring,
+  useTransform,
 } from "framer-motion";
 import { Menu, Search } from "lucide-react";
 import { FocusScope } from "@radix-ui/react-focus-scope";
@@ -31,118 +30,33 @@ import {
   type NavigationItemTone,
   ctaNavigation,
   primaryNavigation,
+  secondaryNavigation,
 } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { getUserDisplayName } from "@/lib/names";
 
-const HEADER_SPACING = {
-  rhythm: {
-    compact: "var(--header-space-compact)",
-    expanded: "var(--header-space-expanded)",
-  },
-  nav: {
-    gap: {
-      base: "var(--header-space-compact)",
-      md: "var(--header-space-expanded)",
-    },
-    paddingY: {
-      base: "var(--header-space-compact)",
-      md: "var(--header-space-expanded)",
-    },
-  },
-  desktopLinksGap: "var(--header-space-expanded)",
-  actions: {
-    gap: {
-      base: "calc(var(--header-space-compact) / 2)",
-      sm: "calc(var(--header-space-compact) * 0.75)",
-    },
-  },
-  mobile: {
-    triggerSize: "var(--header-mobile-trigger-size)",
-    iconSize: "var(--header-mobile-icon-size)",
-    panelWidth: "var(--header-drawer-width)",
-    panelMaxWidth: "var(--header-drawer-width)",
-    panelGap: "var(--header-space-compact)",
-    panelPadding: "var(--header-space-expanded)",
-    panelPaddingTop: "var(--header-drawer-padding-top)",
-    linkGroupGap: "calc(var(--header-space-compact) * 0.75)",
-    linkPaddingInline: "var(--header-space-expanded)",
-    linkPaddingBlock: "calc(var(--header-space-compact) * 0.75)",
-    linkDescriptionMarginTop: "calc(var(--header-space-compact) / 2)",
-    footerSpace: "calc(var(--header-space-compact) * 0.75)",
-    footerPaddingTop: "var(--header-space-expanded)",
-    ctaPaddingInline: "var(--header-space-expanded)",
-    ctaPaddingBlock: "var(--header-space-compact)",
-  },
-} as const;
-
 const COLLAPSE_DISTANCE = 160;
 const ELEVATION_THRESHOLD = 0.25;
 
-const drawerPanelStyles = {
-  "--drawer-gap": HEADER_SPACING.mobile.panelGap,
-  "--drawer-padding": HEADER_SPACING.mobile.panelPadding,
-  "--drawer-padding-top": HEADER_SPACING.mobile.panelPaddingTop,
-  width: HEADER_SPACING.mobile.panelWidth,
-  maxWidth: HEADER_SPACING.mobile.panelMaxWidth,
-} as CSSProperties;
-
-const drawerLinkGroupStyles = {
-  "--drawer-link-gap": HEADER_SPACING.mobile.linkGroupGap,
-} as CSSProperties;
-
-const drawerFooterStyles = {
-  "--drawer-footer-space": HEADER_SPACING.mobile.footerSpace,
-  "--drawer-footer-padding-top": HEADER_SPACING.mobile.footerPaddingTop,
-} as CSSProperties;
-
-const drawerLinkPaddingStyles = {
-  paddingInline: HEADER_SPACING.mobile.linkPaddingInline,
-  paddingBlock: HEADER_SPACING.mobile.linkPaddingBlock,
+const drawerContentStyles = {
+  width: "min(calc(100vw - 1.5rem), 24rem)",
 } satisfies CSSProperties;
 
-const drawerLinkDescriptionStyles = {
-  marginTop: HEADER_SPACING.mobile.linkDescriptionMarginTop,
-} satisfies CSSProperties;
+const desktopNavLinkClasses =
+  "group relative inline-flex items-center gap-2 rounded-full border border-transparent px-4 py-2 text-sm font-semibold text-[color:var(--nav-tonal-label)] transition-colors duration-200 hover:bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_16%,transparent)] hover:text-[var(--nav-tonal-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[active=true]:border-[color:var(--nav-tonal-ring)] data-[active=true]:bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_16%,transparent)] data-[active=true]:text-[var(--nav-tonal-color)]";
 
-function createToneVars(color: string): CSSProperties {
-  return {
-    "--nav-tonal-color": color,
-    "--nav-tonal-label": `color-mix(in srgb, ${color} 65%, transparent)`,
-    "--nav-tonal-hover": `color-mix(in srgb, ${color} 12%, transparent)`,
-    "--nav-tonal-container": `color-mix(in srgb, ${color} 20%, transparent)`,
-    "--nav-tonal-ripple": `color-mix(in srgb, ${color} 18%, transparent)`,
-    "--nav-tonal-ring": `color-mix(in srgb, ${color} 45%, transparent)`,
-    "--nav-tonal-indicator": `color-mix(in srgb, ${color} 80%, transparent)`,
-  } as CSSProperties;
-}
+const mobileNavLinkClasses =
+  "group relative flex items-start gap-3 rounded-2xl border border-transparent px-4 py-3 text-base font-semibold text-[color:var(--nav-tonal-label)] transition-colors duration-200 hover:bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_16%,transparent)] hover:text-[var(--nav-tonal-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[active=true]:border-[color:var(--nav-tonal-ring)] data-[active=true]:bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_16%,transparent)] data-[active=true]:text-[var(--nav-tonal-color)]";
 
-const navigationToneVariables: Record<NavigationItemTone, CSSProperties> = {
-  default: createToneVars("var(--foreground)"),
-  muted: createToneVars("var(--muted-foreground)"),
-  primary: createToneVars("var(--primary)"),
-  success: createToneVars("var(--success)"),
-  info: createToneVars("var(--info)"),
-  warning: createToneVars("var(--warning)"),
-  destructive: createToneVars("var(--destructive)"),
-};
-
-const navigationBarBaseClasses =
-  "group relative flex flex-1 min-w-[5.5rem] flex-col items-center justify-center gap-1 overflow-hidden rounded-[1.75rem] px-3 py-2 text-[0.7rem] font-semibold tracking-[0.04em] text-[color:var(--nav-tonal-label)] transition-all duration-300 ease-out ring-1 ring-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-[var(--nav-tonal-color)] hover:bg-[color:var(--nav-tonal-hover)] focus-visible:bg-[color:var(--nav-tonal-hover)] data-[active=true]:text-[var(--nav-tonal-color)] data-[active=true]:bg-[color:var(--nav-tonal-container)] data-[active=true]:ring-[color:var(--nav-tonal-ring)] data-[active=true]:shadow-[0_14px_30px_-16px_color-mix(in_srgb,var(--nav-tonal-color)_75%,transparent)] before:pointer-events-none before:absolute before:inset-0 before:scale-75 before:rounded-[1.75rem] before:bg-[color:var(--nav-tonal-ripple)] before:opacity-0 before:transition before:duration-300 before:ease-out hover:before:scale-100 hover:before:opacity-100 focus-visible:before:scale-105 focus-visible:before:opacity-100 after:pointer-events-none after:absolute after:bottom-1 after:h-0.5 after:w-2/3 after:origin-center after:scale-x-0 after:rounded-full after:bg-[var(--nav-tonal-indicator)] after:opacity-0 after:transition after:duration-300 after:ease-out data-[active=true]:after:scale-x-100 data-[active=true]:after:opacity-100";
-
-const navigationRailBaseClasses =
-  "group relative flex h-16 w-16 flex-col items-center justify-center gap-1 overflow-hidden rounded-[1.5rem] text-[0.7rem] font-semibold text-[color:var(--nav-tonal-label)] transition-all duration-300 ease-out ring-1 ring-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-[var(--nav-tonal-color)] hover:bg-[color:var(--nav-tonal-hover)] focus-visible:bg-[color:var(--nav-tonal-hover)] data-[active=true]:text-[var(--nav-tonal-color)] data-[active=true]:bg-[color:var(--nav-tonal-container)] data-[active=true]:ring-[color:var(--nav-tonal-ring)] data-[active=true]:shadow-[0_16px_35px_-18px_color-mix(in_srgb,var(--nav-tonal-color)_80%,transparent)] before:pointer-events-none before:absolute before:inset-0 before:scale-75 before:rounded-[1.5rem] before:bg-[color:var(--nav-tonal-ripple)] before:opacity-0 before:transition before:duration-300 before:ease-out hover:before:scale-100 hover:before:opacity-100 focus-visible:before:scale-105 focus-visible:before:opacity-100 after:pointer-events-none after:absolute after:left-1.5 after:top-1/2 after:h-2/3 after:w-[3px] after:-translate-y-1/2 after:scale-y-0 after:rounded-full after:bg-[var(--nav-tonal-indicator)] after:opacity-0 after:transition after:duration-300 after:ease-out data-[active=true]:after:scale-y-100 data-[active=true]:after:opacity-100";
+const mobileSectionLabelClasses =
+  "text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground";
 
 const iconButtonClasses =
-  "relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-foreground/70 transition-colors duration-200 ease-out hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background before:pointer-events-none before:absolute before:inset-0 before:scale-75 before:rounded-full before:bg-[color:color-mix(in_srgb,var(--primary)_18%,transparent)] before:opacity-0 before:transition before:duration-300 hover:before:scale-100 hover:before:opacity-100 focus-visible:before:scale-105 focus-visible:before:opacity-100";
+  "inline-flex h-10 w-10 items-center justify-center rounded-full border border-outline/20 bg-surface/80 text-foreground/80 transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 const badgeToneFallback: Partial<
   Record<NavigationItemTone, NavigationBadgeVariant>
@@ -186,7 +100,7 @@ function getNavigationIcon(
     <IconComponent
       aria-hidden
       className={cn(
-        "h-5 w-5 shrink-0 transition-all duration-300",
+        "h-5 w-5 shrink-0 transition-colors duration-200",
         isActive
           ? "text-[var(--nav-tonal-color)] drop-shadow-[0_0_6px_color-mix(in_srgb,var(--nav-tonal-color)_45%,transparent)]"
           : "text-[color:var(--nav-tonal-label)]",
@@ -246,6 +160,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const userEmail = user?.email?.trim() || null;
 
   const navigationItems = useMemo(() => primaryNavigation, []);
+  const secondaryNavItems = useMemo(() => secondaryNavigation, []);
 
   const { scrollY } = useScroll();
   const collapseProgress = useTransform(
@@ -267,9 +182,9 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
     "blur(12px)",
     "blur(18px)",
   ]);
-  const titleScale = useTransform(collapseSpring, [0, 1], [1, 0.9]);
-  const titleOpacity = useTransform(collapseSpring, [0, 1], [1, 0.75]);
-  const titleOffset = useTransform(collapseSpring, [0, 1], [0, -8]);
+  const titleScale = useTransform(collapseSpring, [0, 1], [1, 0.92]);
+  const titleOpacity = useTransform(collapseSpring, [0, 1], [1, 0.78]);
+  const titleOffset = useTransform(collapseSpring, [0, 1], [0, -6]);
 
   useMotionValueEvent(collapseSpring, "change", (value) => {
     setScrolled((previous) => {
@@ -357,6 +272,16 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
 
   const isElevated = scrolled || !isHomePage;
 
+  const handleSearchToggle = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent("global-search:toggle", { bubbles: true }));
+  };
+
+  const closeDrawer = () => setOpen(false);
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <motion.header
@@ -371,342 +296,329 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
         className={cn(
           "fixed top-0 z-50 w-full border-b transition-[background-color,box-shadow,border-color] duration-300",
           "supports-[backdrop-filter]:bg-transparent",
-          isElevated ? "bg-surface border-outline/30 shadow-lg" : "bg-surface-variant border-outline/15 shadow-sm",
+          isElevated
+            ? "bg-surface border-outline/30 shadow-lg"
+            : "bg-surface-variant/95 border-outline/15 shadow-sm",
         )}
       >
-        <nav
-          aria-label="Hauptnavigation"
-          className={cn(
-            "layout-container",
-            "py-[var(--header-space-compact)]",
-            "sm:py-[var(--header-space-expanded)]",
-          )}
-        >
-          <div className="relative flex w-full flex-col gap-[var(--header-space-compact)] lg:grid lg:grid-cols-[auto,1fr] lg:items-start lg:gap-[var(--header-space-expanded)]">
-            <aside className="hidden lg:flex" aria-label="NavigationRail">
-              <div className="flex flex-col items-center gap-[calc(var(--header-space-compact)*0.75)] rounded-[2rem] bg-surface/95 p-[var(--header-space-compact)] shadow-sm ring-1 ring-outline/15 backdrop-blur supports-[backdrop-filter]:bg-surface/80 transition-colors duration-300">
-                {navigationItems.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    Boolean(pathname?.startsWith(`${item.href}/`));
-                  const tone = item.tone ?? "default";
-                  const iconElement = getNavigationIcon(item, {
-                    isActive,
-                    className:
-                      "transition-transform duration-300 group-data-[active=true]:scale-110",
-                  });
-                  const badgeElement = getNavigationBadge(item, {
-                    className:
-                      "pointer-events-none absolute right-2 top-2 scale-90 text-[0.6rem]",
-                  });
-
-                  return (
-                    <Link
-                      key={`${item.href}-rail`}
-                      href={item.href}
-                      aria-current={isActive ? "page" : undefined}
-                      data-active={isActive ? "true" : undefined}
-                      style={navigationToneVariables[tone]}
-                      className={cn(
-                        navigationRailBaseClasses,
-                        "px-2 py-2",
-                        "transition-transform will-change-transform hover:-translate-y-0.5 data-[active=true]:-translate-y-1",
-                      )}
-                    >
-                      {badgeElement}
-                      <span className="relative flex h-10 w-10 items-center justify-center">
-                        {iconElement}
-                      </span>
-                      <span className="text-[0.68rem] font-medium leading-tight text-center">
-                        {item.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </aside>
-
-            <div className="flex flex-col gap-[var(--header-space-compact)]">
-              <div
-                className={cn(
-                  "flex items-center rounded-full bg-surface px-[var(--header-space-compact)] py-[calc(var(--header-space-compact)*0.75)] shadow-sm ring-1 ring-outline/15 backdrop-blur supports-[backdrop-filter]:bg-surface/80 transition-all duration-300",
-                  isElevated ? "text-foreground" : "text-foreground drop-shadow-lg",
-                )}
+        <div className="layout-container">
+          <div className="flex h-16 items-center justify-between gap-3 sm:h-20 sm:gap-4">
+            <div className="flex flex-1 items-center gap-3 sm:gap-4">
+              <Link
+                className="min-w-0 font-serif text-lg leading-none transition-colors duration-200 sm:text-2xl"
+                href="/"
+                title={siteTitle}
               >
-                <Link
-                  className="flex-1 min-w-0 font-serif text-lg leading-tight transition-colors duration-300 sm:text-xl"
-                  href="/"
-                  title={siteTitle}
+                <motion.span
+                  data-testid="site-header-title"
+                  className="inline-block truncate"
+                  style={{ scale: titleScale, opacity: titleOpacity, y: titleOffset }}
                 >
-                  <motion.span
-                    data-testid="site-header-title"
-                    className="inline-block w-full truncate origin-left"
-                    style={{ scale: titleScale, opacity: titleOpacity, y: titleOffset }}
-                  >
-                    {siteTitle}
-                  </motion.span>
-                </Link>
+                  {siteTitle}
+                </motion.span>
+              </Link>
 
-                <div className="flex items-center gap-[calc(var(--header-space-compact)/2)] sm:gap-[calc(var(--header-space-compact)*0.75)]">
-                  <button
-                    type="button"
-                    aria-label="Suche öffnen"
-                    title="Suche"
-                    className={cn(iconButtonClasses, "hidden sm:inline-flex")}
-                    onClick={() => {
-                      if (typeof window === "undefined") {
-                        return;
-                      }
+              <nav aria-label="Hauptnavigation" className="hidden lg:block">
+                <ul className="flex items-center gap-2">
+                  {navigationItems.map((item) => {
+                    const isActive =
+                      pathname === item.href ||
+                      Boolean(pathname?.startsWith(`${item.href}/`));
+                    const tone = item.tone ?? "default";
+                    const iconElement = getNavigationIcon(item, {
+                      isActive,
+                    });
+                    const badgeElement = getNavigationBadge(item, {
+                      className: "text-xs",
+                    });
 
-                      window.dispatchEvent(
-                        new CustomEvent("global-search:toggle", { bubbles: true }),
-                      );
-                    }}
-                  >
-                    <Search aria-hidden className="h-5 w-5" />
-                  </button>
-                  <NotificationBell className="hidden sm:flex" />
-                  <UserNav className="hidden sm:flex" />
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          aria-current={isActive ? "page" : undefined}
+                          data-active={isActive ? "true" : undefined}
+                          style={navigationToneVariables[tone]}
+                          className={desktopNavLinkClasses}
+                        >
+                          {iconElement}
+                          <span className="flex items-center gap-2">
+                            <span>{item.label}</span>
+                            {badgeElement}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            </div>
 
-                  <SheetTrigger asChild>
-                    <motion.button
-                      type="button"
-                      aria-label="Navigationsmenü öffnen"
-                      className={cn(
-                        iconButtonClasses,
-                        "md:hidden border border-outline/20 bg-surface/90 text-foreground/80 shadow-sm",
-                      )}
-                      animate={{ rotate: open ? 90 : 0, scale: open ? 0.92 : 1 }}
-                      whileTap={{ scale: 0.9 }}
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 320, damping: 22 }}
-                    >
-                      <Menu aria-hidden className="h-5 w-5" />
-                    </motion.button>
-                  </SheetTrigger>
-                </div>
-              </div>
-
-              <div
-                className="flex items-stretch gap-[calc(var(--header-space-compact)/1.5)] overflow-x-auto rounded-[2rem] bg-surface/90 px-[calc(var(--header-space-compact)/2)] py-[calc(var(--header-space-compact)/2)] shadow-sm ring-1 ring-outline/15 backdrop-blur supports-[backdrop-filter]:bg-surface/80 transition-all duration-300 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                aria-label="Suche öffnen"
+                title="Suche"
+                className={cn(iconButtonClasses, "hidden md:inline-flex")}
+                onClick={handleSearchToggle}
               >
-                {navigationItems.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    Boolean(pathname?.startsWith(`${item.href}/`));
-                  const tone = item.tone ?? "default";
-                  const iconElement = getNavigationIcon(item, {
-                    isActive,
-                    className:
-                      "transition-transform duration-300 group-data-[active=true]:scale-110",
-                  });
-                  const badgeElement = getNavigationBadge(item, {
-                    className:
-                      "pointer-events-none absolute right-2 top-2 translate-y-0 text-[0.6rem]",
-                  });
+                <Search aria-hidden className="h-5 w-5" />
+              </button>
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={isActive ? "page" : undefined}
-                      data-active={isActive ? "true" : undefined}
-                      style={navigationToneVariables[tone]}
-                      className={cn(
-                        navigationBarBaseClasses,
-                        "snap-center",
-                        "transition-transform will-change-transform hover:-translate-y-0.5 data-[active=true]:-translate-y-1",
-                      )}
-                    >
-                      {badgeElement}
-                      <span className="relative flex h-10 w-10 items-center justify-center">
-                        {iconElement}
-                      </span>
-                      <span className="text-[0.72rem] font-semibold leading-tight text-center">
-                        {item.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
+              {isAuthenticated ? (
+                <NotificationBell className="hidden lg:flex" />
+              ) : null}
+
+              {isAuthenticated ? (
+                <UserNav className="hidden md:flex" />
+              ) : sessionStatus !== "loading" ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="hidden md:inline-flex"
+                >
+                  <Link href="/login">Login</Link>
+                </Button>
+              ) : null}
+
+              <Button
+                asChild
+                variant="secondary"
+                size="sm"
+                className="hidden lg:inline-flex"
+              >
+                <Link href={ctaNavigation.href}>{ctaNavigation.label}</Link>
+              </Button>
+
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Navigationsmenü öffnen"
+                  className={cn(iconButtonClasses, "md:hidden")}
+                >
+                  <Menu aria-hidden className="h-5 w-5" />
+                </button>
+              </SheetTrigger>
             </div>
           </div>
-        </nav>
+        </div>
       </motion.header>
 
       <SheetContent
-        id="mobile-menu"
         side="left"
-        forceMount
-        style={drawerPanelStyles}
-        className="flex h-[100svh] flex-col gap-[var(--drawer-gap)] border-r border-outline/20 bg-surface p-[var(--drawer-padding)] pb-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl ring-1 ring-inset ring-primary/10 backdrop-blur supports-[height:100dvh]:h-[100dvh] md:hidden"
+        style={drawerContentStyles}
+        className="gap-8 overflow-y-auto border-outline/15 bg-surface px-6 py-8 text-foreground shadow-xl sm:px-8"
       >
-        <AnimatePresence initial={false} mode="wait">
-          {open ? (
-            <motion.div
-              key="drawer-content"
-              initial={{ x: -36, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -28, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 320, damping: 32 }}
-              className="flex h-full flex-col gap-[var(--drawer-gap)]"
+        <FocusScope loop>
+          <div className="flex flex-1 flex-col gap-8">
+            {isAuthenticated ? (
+              <div className="flex items-center gap-4 rounded-2xl bg-surface-container p-4 shadow-sm ring-1 ring-outline/10">
+                <UserAvatar
+                  user={user}
+                  className="h-12 w-12 border border-outline/20"
+                />
+                <div className="min-w-0 space-y-1">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {userDisplayName ?? "Angemeldeter Nutzer"}
+                  </p>
+                  {userEmail ? (
+                    <p className="truncate text-sm text-muted-foreground">
+                      {userEmail}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 rounded-2xl bg-surface-container p-4 shadow-sm ring-1 ring-outline/10">
+                <p className="text-sm text-muted-foreground">
+                  Melde dich an, um exklusive Inhalte und interne Bereiche zu nutzen.
+                </p>
+                <Button asChild className="w-full" onClick={closeDrawer}>
+                  <Link href="/login">Login</Link>
+                </Button>
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={() => {
+                handleSearchToggle();
+                closeDrawer();
+              }}
             >
-              <FocusScope loop trapped>
-                <div className="flex flex-col gap-[var(--drawer-gap)]">
-                  {sessionStatus === "loading" ? (
-                    <div
-                      className="h-20 animate-pulse rounded-3xl bg-primary/10 ring-1 ring-inset ring-primary/20"
-                      aria-hidden
-                    />
-                  ) : isAuthenticated && user ? (
-                    <div className="flex items-center gap-3 rounded-3xl bg-primary/10 p-4 ring-1 ring-inset ring-primary/25 shadow-sm">
-                      <UserAvatar
-                        userId={user.id}
-                        email={user.email ?? undefined}
-                        firstName={user.firstName ?? undefined}
-                        lastName={user.lastName ?? undefined}
-                        name={user.name ?? undefined}
-                        avatarSource={user.avatarSource}
-                        avatarUpdatedAt={user.avatarUpdatedAt}
-                        size={48}
-                        className="h-12 w-12 select-none ring-2 ring-primary/30"
-                        loading="eager"
-                      />
-                      <div className="min-w-0 flex-1">
-                        {userDisplayName ? (
-                          <p className="truncate text-sm font-semibold text-foreground">
-                            {userDisplayName}
-                          </p>
-                        ) : null}
-                        {userEmail ? (
-                          <p className="truncate text-sm text-foreground/70">{userEmail}</p>
-                        ) : null}
-                      </div>
-                      <Button
-                        asChild
-                        size="sm"
-                        variant="ghost"
-                        className="h-9 rounded-xl bg-primary/20 px-3 text-sm font-semibold text-primary shadow-none ring-1 ring-inset ring-primary/30 transition hover:bg-primary/25 hover:text-primary focus-visible:ring-primary"
+              <Search aria-hidden className="h-4 w-4" />
+              Suche öffnen
+            </Button>
+
+            <nav aria-label="Hauptnavigation" className="space-y-3">
+              <p className={mobileSectionLabelClasses}>Hauptbereiche</p>
+              <ul className="flex flex-col gap-2">
+                {navigationItems.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    Boolean(pathname?.startsWith(`${item.href}/`));
+                  const tone = item.tone ?? "default";
+                  const iconElement = getNavigationIcon(item, {
+                    isActive,
+                    className: "h-5 w-5",
+                  });
+                  const badgeElement = getNavigationBadge(item, {
+                    className: "ml-auto shrink-0 text-xs",
+                  });
+
+                  return (
+                    <li key={`${item.href}-mobile`}>
+                      <Link
+                        href={item.href}
+                        onClick={closeDrawer}
+                        aria-current={isActive ? "page" : undefined}
+                        data-active={isActive ? "true" : undefined}
+                        style={navigationToneVariables[tone]}
+                        className={mobileNavLinkClasses}
                       >
-                        <Link href="/mitglieder" onClick={() => setOpen(false)}>
-                          Konto
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3 rounded-3xl bg-primary/10 p-4 ring-1 ring-inset ring-primary/20">
-                      <span className="text-sm font-medium text-primary">
-                        Willkommen! Melde dich an, um alle Bereiche zu sehen.
-                      </span>
-                      <Button
-                        asChild
-                        size="sm"
-                        className="h-10 rounded-xl bg-primary text-primary-foreground shadow-md"
-                      >
-                        <Link href="/login" onClick={() => setOpen(false)}>
-                          Login
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-
-                  <motion.ul
-                    style={drawerLinkGroupStyles}
-                    className="flex flex-col gap-[var(--drawer-link-gap)]"
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    variants={{
-                      hidden: { opacity: 0, x: -16 },
-                      visible: {
-                        opacity: 1,
-                        x: 0,
-                        transition: { staggerChildren: 0.05, delayChildren: 0.05 },
-                      },
-                    }}
-                  >
-                    {navigationItems.map((item) => {
-                      const isActive =
-                        pathname === item.href ||
-                        Boolean(pathname?.startsWith(`${item.href}/`));
-
-                      const tone = item.tone ?? "default";
-                      const iconElement = getNavigationIcon(item, {
-                        isActive,
-                        className:
-                          "transition-transform duration-300 group-data-[active=true]:scale-105",
-                      });
-                      const badgeElement = getNavigationBadge(item, {
-                        className: "ml-auto shrink-0 text-[0.65rem]", 
-                      });
-
-                      return (
-                        <motion.li
-                          key={item.href}
-                          variants={{ hidden: { opacity: 0, x: -14 }, visible: { opacity: 1, x: 0 } }}
-                        >
-                          <Link
-                            onClick={() => setOpen(false)}
-                            style={{
-                              ...drawerLinkPaddingStyles,
-                              ...navigationToneVariables[tone],
-                            }}
-                            className={cn(
-                              "group relative flex items-center gap-3 rounded-2xl text-[color:var(--nav-tonal-label)] ring-1 ring-transparent transition-colors duration-200",
-                              "hover:bg-[color:var(--nav-tonal-hover)] hover:text-[var(--nav-tonal-color)] hover:ring-[color:color-mix(in_srgb,var(--nav-tonal-color)_32%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                              "data-[active=true]:bg-[color:var(--nav-tonal-container)] data-[active=true]:text-[var(--nav-tonal-color)] data-[active=true]:ring-[color:var(--nav-tonal-ring)] data-[active=true]:shadow-[0_16px_40px_-22px_color-mix(in_srgb,var(--nav-tonal-color)_70%,transparent)]",
-                            )}
-                            href={item.href}
-                            aria-current={isActive ? "page" : undefined}
-                            data-active={isActive ? "true" : undefined}
-                          >
-                            {iconElement ? (
-                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_14%,transparent)] text-[color:var(--nav-tonal-color)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--nav-tonal-color)_30%,transparent)] transition group-hover:bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_20%,transparent)] group-data-[active=true]:bg-[color:var(--nav-tonal-color)] group-data-[active=true]:text-[color:var(--background)] group-data-[active=true]:ring-[color:color-mix(in_srgb,var(--nav-tonal-color)_45%,transparent)]">
-                                {iconElement}
-                              </span>
-                            ) : null}
-                            <span className="flex flex-1 flex-col">
-                              <span className="flex items-center gap-2 text-sm font-medium">
-                                <span className="truncate">{item.label}</span>
-                                {badgeElement}
-                              </span>
-                              {item.description ? (
-                                <span
-                                  style={drawerLinkDescriptionStyles}
-                                  className="text-sm text-muted-foreground"
-                                >
-                                  {item.description}
-                                </span>
-                              ) : null}
+                        {iconElement ? (
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_12%,transparent)] text-[color:var(--nav-tonal-color)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--nav-tonal-color)_35%,transparent)] transition group-data-[active=true]:bg-[color:var(--nav-tonal-color)] group-data-[active=true]:text-[color:var(--background)]">
+                            {iconElement}
+                          </span>
+                        ) : null}
+                        <span className="flex-1 space-y-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-base font-semibold">
+                              {item.label}
                             </span>
-                          </Link>
-                        </motion.li>
-                      );
-                    })}
-                  </motion.ul>
-                </div>
+                            {badgeElement}
+                          </span>
+                          {item.description ? (
+                            <span className="block text-sm text-muted-foreground">
+                              {item.description}
+                            </span>
+                          ) : null}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
 
-                <div
-                  style={drawerFooterStyles}
-                  className="mt-auto space-y-[var(--drawer-footer-space)] border-t border-outline/20 pt-[var(--drawer-footer-padding-top)] text-sm text-muted-foreground"
-                >
-                  <span className="block text-xs uppercase tracking-[0.12em] text-foreground/70">
-                    Bleib verbunden
-                  </span>
-                  <Link
-                    href={ctaNavigation.href}
-                    onClick={() => setOpen(false)}
-                    className="btn-base h-auto w-full justify-center rounded-2xl bg-primary/15 px-4 py-3 text-base font-semibold text-primary shadow-none ring-1 ring-inset ring-primary/40 transition hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    {ctaNavigation.label}
-                  </Link>
-                </div>
-              </FocusScope>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+            <nav aria-label="Weitere Links" className="space-y-3">
+              <p className={mobileSectionLabelClasses}>Mehr entdecken</p>
+              <ul className="flex flex-col gap-2">
+                {secondaryNavItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  const tone = item.tone ?? "default";
+                  const iconElement = getNavigationIcon(item, {
+                    isActive,
+                    className: "h-5 w-5",
+                  });
+                  const badgeElement = getNavigationBadge(item, {
+                    className: "ml-auto shrink-0 text-xs",
+                  });
+
+                  return (
+                    <li key={`${item.href}-secondary`}>
+                      <Link
+                        href={item.href}
+                        onClick={closeDrawer}
+                        aria-current={isActive ? "page" : undefined}
+                        data-active={isActive ? "true" : undefined}
+                        style={navigationToneVariables[tone]}
+                        className={mobileNavLinkClasses}
+                      >
+                        {iconElement ? (
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[color:color-mix(in_srgb,var(--nav-tonal-color)_12%,transparent)] text-[color:var(--nav-tonal-color)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--nav-tonal-color)_35%,transparent)] transition group-data-[active=true]:bg-[color:var(--nav-tonal-color)] group-data-[active=true]:text-[color:var(--background)]">
+                            {iconElement}
+                          </span>
+                        ) : null}
+                        <span className="flex-1 space-y-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-base font-semibold">
+                              {item.label}
+                            </span>
+                            {badgeElement}
+                          </span>
+                          {item.description ? (
+                            <span className="block text-sm text-muted-foreground">
+                              {item.description}
+                            </span>
+                          ) : null}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            <div className="mt-auto space-y-4">
+              <Button
+                asChild
+                variant="secondary"
+                size="md"
+                className="w-full justify-center"
+                onClick={closeDrawer}
+              >
+                <Link href={ctaNavigation.href}>{ctaNavigation.label}</Link>
+              </Button>
+            </div>
+          </div>
+        </FocusScope>
       </SheetContent>
     </Sheet>
   );
 }
 
+const navigationToneVariables: Record<NavigationItemTone, CSSProperties> = {
+  default: {
+    "--nav-tonal-color": "var(--foreground)",
+    "--nav-tonal-label": "color-mix(in srgb, var(--foreground) 70%, transparent)",
+    "--nav-tonal-hover": "color-mix(in srgb, var(--foreground) 12%, transparent)",
+    "--nav-tonal-container": "color-mix(in srgb, var(--foreground) 18%, transparent)",
+    "--nav-tonal-ring": "color-mix(in srgb, var(--foreground) 38%, transparent)",
+  },
+  muted: {
+    "--nav-tonal-color": "var(--muted-foreground)",
+    "--nav-tonal-label": "color-mix(in srgb, var(--muted-foreground) 70%, transparent)",
+    "--nav-tonal-hover": "color-mix(in srgb, var(--muted-foreground) 12%, transparent)",
+    "--nav-tonal-container": "color-mix(in srgb, var(--muted-foreground) 18%, transparent)",
+    "--nav-tonal-ring": "color-mix(in srgb, var(--muted-foreground) 38%, transparent)",
+  },
+  primary: {
+    "--nav-tonal-color": "var(--primary)",
+    "--nav-tonal-label": "color-mix(in srgb, var(--primary) 70%, transparent)",
+    "--nav-tonal-hover": "color-mix(in srgb, var(--primary) 12%, transparent)",
+    "--nav-tonal-container": "color-mix(in srgb, var(--primary) 18%, transparent)",
+    "--nav-tonal-ring": "color-mix(in srgb, var(--primary) 38%, transparent)",
+  },
+  success: {
+    "--nav-tonal-color": "var(--success)",
+    "--nav-tonal-label": "color-mix(in srgb, var(--success) 70%, transparent)",
+    "--nav-tonal-hover": "color-mix(in srgb, var(--success) 12%, transparent)",
+    "--nav-tonal-container": "color-mix(in srgb, var(--success) 18%, transparent)",
+    "--nav-tonal-ring": "color-mix(in srgb, var(--success) 38%, transparent)",
+  },
+  info: {
+    "--nav-tonal-color": "var(--info)",
+    "--nav-tonal-label": "color-mix(in srgb, var(--info) 70%, transparent)",
+    "--nav-tonal-hover": "color-mix(in srgb, var(--info) 12%, transparent)",
+    "--nav-tonal-container": "color-mix(in srgb, var(--info) 18%, transparent)",
+    "--nav-tonal-ring": "color-mix(in srgb, var(--info) 38%, transparent)",
+  },
+  warning: {
+    "--nav-tonal-color": "var(--warning)",
+    "--nav-tonal-label": "color-mix(in srgb, var(--warning) 70%, transparent)",
+    "--nav-tonal-hover": "color-mix(in srgb, var(--warning) 12%, transparent)",
+    "--nav-tonal-container": "color-mix(in srgb, var(--warning) 18%, transparent)",
+    "--nav-tonal-ring": "color-mix(in srgb, var(--warning) 38%, transparent)",
+  },
+  destructive: {
+    "--nav-tonal-color": "var(--destructive)",
+    "--nav-tonal-label": "color-mix(in srgb, var(--destructive) 70%, transparent)",
+    "--nav-tonal-hover": "color-mix(in srgb, var(--destructive) 12%, transparent)",
+    "--nav-tonal-container": "color-mix(in srgb, var(--destructive) 18%, transparent)",
+    "--nav-tonal-ring": "color-mix(in srgb, var(--destructive) 38%, transparent)",
+  },
+};
