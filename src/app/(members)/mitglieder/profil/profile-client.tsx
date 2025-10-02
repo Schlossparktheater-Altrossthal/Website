@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import { MeasurementForm } from "@/components/forms/measurement-form";
 import type { MeasurementFormData } from "@/data/measurements";
@@ -59,6 +60,15 @@ import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
 import { UserAvatar } from "@/components/user-avatar";
 import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
 import {
+  getRolePreferenceDescription,
+  getRolePreferenceTitle,
+  listRolePreferenceDefinitions,
+} from "@/lib/onboarding/role-preferences";
+import {
+  getRolePreferenceWeightLabel,
+  normalizeRolePreferenceWeight,
+} from "@/lib/onboarding/role-preference-utils";
+import {
   buildProfileChecklist,
   type ProfileChecklistTarget,
   type ProfileCompletionSummary,
@@ -74,9 +84,11 @@ import {
   saveInterestsAction,
   saveMeasurementAction,
   saveOnboardingAction,
+  saveRolePreferencesAction,
   updateProfileBasicsAction,
   upsertAllergyAction,
   type UpdateProfileBasicsResult,
+  type SaveRolePreferencesInput,
 } from "./actions";
 import { ProfileCompletionProvider, useProfileCompletion } from "./profile-completion-context";
 
@@ -100,6 +112,90 @@ const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
 };
 
 const PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS = ["Schule", "Ausbildung", "Beruf"] as const;
+
+const ROLE_PREFERENCE_DEFINITIONS = {
+  acting: listRolePreferenceDefinitions("acting"),
+  crew: listRolePreferenceDefinitions("crew"),
+} as const;
+
+const DEFAULT_ROLE_PREFERENCE_WEIGHT = 60;
+
+type RolePreferenceFormEntry = {
+  code: string;
+  title: string;
+  description: string | null;
+  domain: "acting" | "crew";
+  weight: number;
+  enabled: boolean;
+  isCustom: boolean;
+};
+
+type RolePreferenceFormState = {
+  acting: RolePreferenceFormEntry[];
+  crew: RolePreferenceFormEntry[];
+};
+
+function buildPreferenceFormState(
+  preferences: ProfileClientProps["rolePreferences"],
+): RolePreferenceFormState {
+  const remaining = new Map(preferences.map((pref) => [pref.code, pref]));
+
+  const acting: RolePreferenceFormEntry[] = ROLE_PREFERENCE_DEFINITIONS.acting.map((definition) => {
+    const existing = remaining.get(definition.code);
+    if (existing) {
+      remaining.delete(definition.code);
+    }
+    const weight = existing ? normalizeRolePreferenceWeight(existing.weight) : DEFAULT_ROLE_PREFERENCE_WEIGHT;
+    return {
+      code: definition.code,
+      title: definition.title,
+      description: definition.description,
+      domain: "acting" as const,
+      weight,
+      enabled: existing ? existing.weight > 0 : false,
+      isCustom: false,
+    } satisfies RolePreferenceFormEntry;
+  });
+
+  const crew: RolePreferenceFormEntry[] = ROLE_PREFERENCE_DEFINITIONS.crew.map((definition) => {
+    const existing = remaining.get(definition.code);
+    if (existing) {
+      remaining.delete(definition.code);
+    }
+    const weight = existing ? normalizeRolePreferenceWeight(existing.weight) : DEFAULT_ROLE_PREFERENCE_WEIGHT;
+    return {
+      code: definition.code,
+      title: definition.title,
+      description: definition.description,
+      domain: "crew" as const,
+      weight,
+      enabled: existing ? existing.weight > 0 : false,
+      isCustom: false,
+    } satisfies RolePreferenceFormEntry;
+  });
+
+  for (const pref of remaining.values()) {
+    const domain = pref.domain === "acting" ? "acting" : "crew";
+    const title = getRolePreferenceTitle(pref.code);
+    const description = getRolePreferenceDescription(pref.code);
+    const entry: RolePreferenceFormEntry = {
+      code: pref.code,
+      title,
+      description,
+      domain,
+      weight: normalizeRolePreferenceWeight(pref.weight),
+      enabled: pref.weight > 0,
+      isCustom: true,
+    };
+    if (domain === "acting") {
+      acting.push(entry);
+    } else {
+      crew.push(entry);
+    }
+  }
+
+  return { acting, crew };
+}
 
 const PAYOUT_METHOD_OPTIONS: Array<{ value: PayoutMethod; label: string }> = [
   { value: "BANK_TRANSFER", label: "Banküberweisung" },
@@ -139,6 +235,11 @@ type ProfileClientProps = {
     payoutPaypalHandle: string | null;
     payoutNote: string | null;
   };
+  rolePreferences: Array<{
+    code: string;
+    domain: "acting" | "crew";
+    weight: number;
+  }>;
   onboarding: {
     focus: string;
     background: string | null;
@@ -149,6 +250,11 @@ type ProfileClientProps = {
     dietaryPreferenceStrictness: string | null;
     whatsappLinkVisitedAt: string | null;
     updatedAt: string | null;
+    preferences: Array<{
+      code: string;
+      domain: "acting" | "crew";
+      weight: number;
+    }>;
     show: { title: string | null; year: number } | null;
   } | null;
   interests: string[];
@@ -447,6 +553,7 @@ function formatDate(value: string | null | undefined) {
 
 export function ProfileClient({
   user,
+  rolePreferences,
   onboarding,
   interests,
   allergies,
@@ -459,6 +566,7 @@ export function ProfileClient({
     <ProfileCompletionProvider initialSummary={checklist}>
       <ProfileClientInner
         initialUser={user}
+        initialRolePreferences={rolePreferences}
         initialOnboarding={onboarding}
         initialInterests={interests}
         initialAllergies={allergies}
@@ -472,6 +580,7 @@ export function ProfileClient({
 
 type ProfileClientInnerProps = {
   initialUser: ProfileUser;
+  initialRolePreferences: ProfileClientProps["rolePreferences"];
   initialOnboarding: ProfileClientProps["onboarding"];
   initialInterests: string[];
   initialAllergies: ProfileClientProps["allergies"];
@@ -482,6 +591,7 @@ type ProfileClientInnerProps = {
 
 function ProfileClientInner({
   initialUser,
+  initialRolePreferences,
   initialOnboarding,
   initialInterests,
   initialAllergies,
@@ -494,6 +604,9 @@ function ProfileClientInner({
 
   const [user, setUser] = useState<ProfileUser>(initialUser);
   const [onboarding, setOnboarding] = useState<ProfileClientProps["onboarding"]>(initialOnboarding);
+  const [rolePreferences, setRolePreferences] = useState<ProfileClientProps["rolePreferences"]>(
+    initialRolePreferences,
+  );
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
   const [measurements, setMeasurements] = useState<Measurement[]>(() =>
@@ -629,6 +742,7 @@ function ProfileClientInner({
             dietaryPreferenceStrictness: preference.strictnessLabel,
             whatsappLinkVisitedAt: null,
             updatedAt: null,
+            preferences: [],
             show: null,
           } satisfies OnboardingProfile;
         }
@@ -706,6 +820,7 @@ function ProfileClientInner({
             dietaryPreferenceStrictness: null,
             whatsappLinkVisitedAt: visitedAt,
             updatedAt: null,
+            preferences: [],
             show: null,
           } satisfies OnboardingProfile;
         }
@@ -909,6 +1024,8 @@ function ProfileClientInner({
           <OnboardingSection
             onboarding={onboarding}
             onOnboardingChange={setOnboarding}
+            rolePreferences={rolePreferences}
+            onRolePreferencesChange={setRolePreferences}
             whatsappLink={whatsappLink}
             whatsappVisitedAt={whatsappVisitedAt}
             onWhatsAppVisit={handleWhatsAppVisit}
@@ -1486,6 +1603,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
             </Button>
           </div>
         </form>
+
       </CardContent>
     </Card>
   );
@@ -1716,6 +1834,7 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
             </Button>
           </div>
         </form>
+
       </CardContent>
     </Card>
   );
@@ -2412,6 +2531,8 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
 export type OnboardingSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
   onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
+  rolePreferences: ProfileClientProps["rolePreferences"];
+  onRolePreferencesChange: (next: ProfileClientProps["rolePreferences"]) => void;
   whatsappLink: string | null;
   whatsappVisitedAt: string | null;
   onWhatsAppVisit?: () => Promise<{ visitedAt: string | null; alreadyVisited: boolean }>;
@@ -2421,6 +2542,8 @@ export type OnboardingSectionProps = {
 export function OnboardingSection({
   onboarding,
   onOnboardingChange,
+  rolePreferences,
+  onRolePreferencesChange,
   whatsappLink,
   whatsappVisitedAt,
   onWhatsAppVisit,
@@ -2437,6 +2560,10 @@ export function OnboardingSection({
   const [formState, setFormState] = useState<OnboardingFormState>(initialForm);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const initialPreferences = useMemo(() => buildPreferenceFormState(rolePreferences), [rolePreferences]);
+  const [preferenceForm, setPreferenceForm] = useState<RolePreferenceFormState>(initialPreferences);
+  const [preferenceError, setPreferenceError] = useState<string | null>(null);
+  const [preferenceSubmitting, setPreferenceSubmitting] = useState(false);
   const { backgroundSuggestions, classSuggestions, activeTag, requiresClass } =
     useOnboardingBackgroundData(formState.background, {
       initialSuggestions: PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
@@ -2447,6 +2574,51 @@ export function OnboardingSection({
   useEffect(() => {
     setFormState(initialForm);
   }, [initialForm]);
+
+  useEffect(() => {
+    setPreferenceForm(initialPreferences);
+  }, [initialPreferences]);
+
+  const includesActing = formState.focus === "acting" || formState.focus === "both";
+  const includesCrew = formState.focus === "tech" || formState.focus === "both";
+
+  const toggleRolePreference = useCallback((domain: "acting" | "crew", code: string) => {
+    setPreferenceForm((prev) => {
+      const entries = domain === "acting" ? prev.acting : prev.crew;
+      const nextEntries = entries.map((entry) => {
+        if (entry.code !== code) {
+          return entry;
+        }
+        const nextEnabled = !entry.enabled;
+        const nextWeight = nextEnabled
+          ? entry.weight > 0
+            ? entry.weight
+            : DEFAULT_ROLE_PREFERENCE_WEIGHT
+          : entry.weight;
+        return {
+          ...entry,
+          enabled: nextEnabled,
+          weight: normalizeRolePreferenceWeight(nextWeight),
+        } satisfies RolePreferenceFormEntry;
+      });
+      return domain === "acting"
+        ? { ...prev, acting: nextEntries }
+        : { ...prev, crew: nextEntries };
+    });
+  }, []);
+
+  const changePreferenceWeight = useCallback((domain: "acting" | "crew", code: string, weight: number) => {
+    const normalized = normalizeRolePreferenceWeight(weight);
+    setPreferenceForm((prev) => {
+      const entries = domain === "acting" ? prev.acting : prev.crew;
+      const nextEntries = entries.map((entry) =>
+        entry.code === code ? { ...entry, weight: normalized } : entry,
+      );
+      return domain === "acting"
+        ? { ...prev, acting: nextEntries }
+        : { ...prev, crew: nextEntries };
+    });
+  }, []);
 
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -2490,6 +2662,7 @@ export function OnboardingSection({
         dietaryPreference: onboarding?.dietaryPreference ?? null,
         dietaryPreferenceStrictness: onboarding?.dietaryPreferenceStrictness ?? null,
         whatsappLinkVisitedAt: onboarding?.whatsappLinkVisitedAt ?? null,
+        preferences: onboarding?.preferences ?? rolePreferences,
         show: onboarding?.show ?? null,
       };
       onOnboardingChange(next);
@@ -2505,6 +2678,53 @@ export function OnboardingSection({
       setSubmitting(false);
     }
   };
+
+  const handlePreferenceSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPreferenceError(null);
+    if (preferenceSubmitting) {
+      return;
+    }
+
+    const payload: SaveRolePreferencesInput[] = [
+      ...preferenceForm.acting
+        .filter((pref) => pref.enabled && pref.weight > 0)
+        .map((pref) => ({ code: pref.code, domain: "acting" as const, weight: pref.weight })),
+      ...preferenceForm.crew
+        .filter((pref) => pref.enabled && pref.weight > 0)
+        .map((pref) => ({ code: pref.code, domain: "crew" as const, weight: pref.weight })),
+    ];
+
+    if (!payload.length) {
+      setPreferenceError("Bitte wähle mindestens eine Präferenz aus.");
+      return;
+    }
+
+    setPreferenceSubmitting(true);
+    try {
+      const result = await saveRolePreferencesAction(payload);
+      if (!result.ok) {
+        setPreferenceError(result.error);
+        toast.error(result.error);
+        return;
+      }
+
+      const saved = result.data.preferences;
+      onRolePreferencesChange(saved);
+      if (onboarding) {
+        onOnboardingChange({ ...onboarding, preferences: saved });
+      }
+      setPreferenceForm(buildPreferenceFormState(saved));
+      toast.success("Präferenzen gespeichert");
+    } finally {
+      setPreferenceSubmitting(false);
+    }
+  };
+
+  const actingPreferences = preferenceForm.acting;
+  const crewPreferences = preferenceForm.crew;
+  const actingDisabled = !includesActing;
+  const crewDisabled = !includesCrew;
 
   const handleWhatsAppClick = async () => {
     if (!whatsappLink) {
@@ -2739,6 +2959,172 @@ export function OnboardingSection({
                 </>
               ) : (
                 "Onboarding speichern"
+              )}
+            </Button>
+          </div>
+        </form>
+
+        <Separator />
+
+        <form className="space-y-6" onSubmit={handlePreferenceSubmit}>
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Rollenpräferenzen</h3>
+            <p className="text-xs text-muted-foreground">
+              Markiere, in welchen Bereichen du aktiv sein möchtest und wie intensiv du dich einbringen willst.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Schauspiel</h4>
+                {!includesActing ? (
+                  <span className="text-xs text-muted-foreground">
+                    Fokus auf Schauspiel aktivieren, um diese Auswahl zu bearbeiten.
+                  </span>
+                ) : null}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {actingPreferences.map((pref) => {
+                  const weightLabel = getRolePreferenceWeightLabel(pref.weight);
+                  return (
+                    <div
+                      key={pref.code}
+                      className={cn(
+                        "flex flex-col gap-3 rounded-lg border p-4 transition",
+                        pref.enabled ? "border-primary bg-primary/5" : "border-border bg-background",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h5 className="text-sm font-medium">{pref.title}</h5>
+                            {pref.isCustom ? (
+                              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                                Individuell
+                              </Badge>
+                            ) : null}
+                          </div>
+                          {pref.description ? (
+                            <p className="text-xs text-muted-foreground">{pref.description}</p>
+                          ) : null}
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={pref.enabled ? "default" : "outline"}
+                          onClick={() => toggleRolePreference("acting", pref.code)}
+                          disabled={actingDisabled}
+                        >
+                          {pref.enabled ? "Ausgewählt" : "Wählen"}
+                        </Button>
+                      </div>
+                      {pref.enabled ? (
+                        <div className="space-y-2">
+                          <input
+                            type="range"
+                            min={10}
+                            max={100}
+                            step={10}
+                            value={pref.weight}
+                            onChange={(event) =>
+                              changePreferenceWeight("acting", pref.code, event.currentTarget.valueAsNumber)
+                            }
+                            className="w-full accent-primary"
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Intensität</span>
+                            <span>{weightLabel}</span>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Gewerke</h4>
+                {!includesCrew ? (
+                  <span className="text-xs text-muted-foreground">
+                    Fokus auf Gewerke aktivieren, um diese Auswahl zu bearbeiten.
+                  </span>
+                ) : null}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {crewPreferences.map((pref) => {
+                  const weightLabel = getRolePreferenceWeightLabel(pref.weight);
+                  return (
+                    <div
+                      key={pref.code}
+                      className={cn(
+                        "flex flex-col gap-3 rounded-lg border p-4 transition",
+                        pref.enabled ? "border-primary/70 bg-primary/5" : "border-border bg-background",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h5 className="text-sm font-medium">{pref.title}</h5>
+                            {pref.isCustom ? (
+                              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                                Individuell
+                              </Badge>
+                            ) : null}
+                          </div>
+                          {pref.description ? (
+                            <p className="text-xs text-muted-foreground">{pref.description}</p>
+                          ) : null}
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={pref.enabled ? "default" : "outline"}
+                          onClick={() => toggleRolePreference("crew", pref.code)}
+                          disabled={crewDisabled}
+                        >
+                          {pref.enabled ? "Ausgewählt" : "Wählen"}
+                        </Button>
+                      </div>
+                      {pref.enabled ? (
+                        <div className="space-y-2">
+                          <input
+                            type="range"
+                            min={10}
+                            max={100}
+                            step={10}
+                            value={pref.weight}
+                            onChange={(event) =>
+                              changePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
+                            }
+                            className="w-full accent-primary"
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Intensität</span>
+                            <span>{weightLabel}</span>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+
+          {preferenceError ? <p className="text-sm text-destructive">{preferenceError}</p> : null}
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={preferenceSubmitting}>
+              {preferenceSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Speichern…
+                </>
+              ) : (
+                "Präferenzen speichern"
               )}
             </Button>
           </div>

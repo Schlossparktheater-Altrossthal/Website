@@ -24,6 +24,11 @@ import {
 import { cn } from "@/lib/utils";
 import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 import {
+  createCustomRolePreferenceCode,
+  getRolePreferenceWeightLabel,
+  normalizeRolePreferenceWeight,
+} from "@/lib/onboarding/role-preference-utils";
+import {
   DIETARY_STYLE_OPTIONS,
   DIETARY_STRICTNESS_OPTIONS,
   DEFAULT_STRICTNESS_FOR_NONE,
@@ -61,14 +66,6 @@ const CURRENT_YEAR = new Date().getFullYear();
 const BASE_BACKGROUND_SUGGESTIONS = ["Schule", "Berufsschule", "Universität", "Ausbildung", "Beruf"] as const;
 
 const allergyLevelStyles = ALLERGY_LEVEL_STYLES;
-
-const weightLabels: { threshold: number; label: string }[] = [
-  { threshold: 0, label: "Nur mal reinschauen" },
-  { threshold: 25, label: "Locker interessiert" },
-  { threshold: 50, label: "Motiviert" },
-  { threshold: 75, label: "Sehr engagiert" },
-  { threshold: 90, label: "Herzensprojekt" },
-];
 
 const focusLabels: Record<"acting" | "tech" | "both", string> = {
   acting: "Schauspiel",
@@ -282,13 +279,6 @@ function createDietaryId() {
     return crypto.randomUUID();
   }
   return Math.random().toString(36).slice(2, 10);
-}
-
-function createPreferenceCode() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return `custom-${crypto.randomUUID()}`;
-  }
-  return `custom-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function formatProductionLabel(production: InviteMeta["production"]) {
@@ -545,7 +535,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
     if (!Number.isFinite(weight)) {
       return;
     }
-    const normalizedWeight = Math.min(100, Math.max(0, Math.round(weight)));
+    const normalizedWeight = normalizeRolePreferenceWeight(weight);
     setForm((prev) => {
       const key = domain === "acting" ? "actingPreferences" : "crewPreferences";
       const updated = prev[key].map((pref) =>
@@ -578,7 +568,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
         crewPreferences: [
           ...prev.crewPreferences,
           {
-            code: createPreferenceCode(),
+            code: createCustomRolePreferenceCode(),
             title,
             description: description || "Individuelle Aufgabe im Team",
             weight: 60,
@@ -602,10 +592,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   }, []);
 
   const preferenceSummary = useMemo(() => {
-    const buildLabel = (entry: PreferenceEntry) => {
-      const match = [...weightLabels].reverse().find((label) => entry.weight >= label.threshold);
-      return match?.label ?? "Interesse";
-    };
+    const buildLabel = (entry: PreferenceEntry) => getRolePreferenceWeightLabel(entry.weight);
     const mapEntry = (entry: PreferenceEntry, domain: "acting" | "crew"): PreferenceSummaryEntry => ({
       code: entry.code,
       title: entry.title,
@@ -1501,7 +1488,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 <div className="grid gap-4 md:grid-cols-2">
                   {form.actingPreferences.map((pref) => {
                     const active = pref.enabled;
-                    const weightLabel = [...weightLabels].reverse().find((label) => pref.weight >= label.threshold)?.label ?? "";
+                    const weightLabel = getRolePreferenceWeightLabel(pref.weight);
                     return (
                       <div
                         key={pref.code}
@@ -1561,7 +1548,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 <div className="grid gap-4 md:grid-cols-2">
                   {form.crewPreferences.map((pref) => {
                     const active = pref.enabled;
-                    const weightLabel = [...weightLabels].reverse().find((label) => pref.weight >= label.threshold)?.label ?? "";
+                    const weightLabel = getRolePreferenceWeightLabel(pref.weight);
                     return (
                       <div
                         key={pref.code}

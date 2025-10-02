@@ -3,6 +3,11 @@ import { OnboardingSection } from "../profile-client";
 
 const title = "Members/Profile/OnboardingSection";
 
+const defaultPreferences: OnboardingSectionProps["rolePreferences"] = [
+  { code: "acting_lead", domain: "acting", weight: 80 },
+  { code: "crew_stage", domain: "crew", weight: 60 },
+];
+
 const createOnboarding = (
   overrides: Partial<NonNullable<OnboardingSectionProps["onboarding"]>> = {},
 ): NonNullable<OnboardingSectionProps["onboarding"]> => ({
@@ -15,6 +20,7 @@ const createOnboarding = (
   dietaryPreferenceStrictness: "Flexibel",
   whatsappLinkVisitedAt: null,
   updatedAt: new Date().toISOString(),
+  preferences: defaultPreferences,
   show: { title: "Sommerproduktion", year: 2025 },
   ...overrides,
 });
@@ -22,6 +28,8 @@ const createOnboarding = (
 const baseProps: OnboardingSectionProps = {
   onboarding: createOnboarding(),
   onOnboardingChange: () => undefined,
+  rolePreferences: defaultPreferences,
+  onRolePreferencesChange: () => undefined,
   whatsappLink: "https://example.com/whatsapp",
   whatsappVisitedAt: null,
   onWhatsAppVisit: async () => ({ visitedAt: new Date().toISOString(), alreadyVisited: false }),
