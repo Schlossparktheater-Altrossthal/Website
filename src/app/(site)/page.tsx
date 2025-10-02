@@ -1,4 +1,4 @@
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Hero } from "@/components/hero";
 import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
@@ -66,27 +66,52 @@ export default async function Home() {
       <div className="layout-container">
         <div className="space-y-12 py-16">
           <section className="flex flex-col items-center gap-6 text-center">
-            <Text variant="eyebrow" uppercase tone="primary">
+            <Text
+              variant="eyebrow"
+              uppercase
+              tone="primary"
+              className="tracking-[0.18em] sm:tracking-[0.22em]"
+            >
               Sommertheater Altrossthal
             </Text>
-          <HomepageCountdown
-            initialCountdownTarget={initialCountdownTargetIso}
-            effectiveCountdownTarget={effectiveCountdownTargetIso}
-            defaultCountdownTarget={DEFAULT_HOMEPAGE_COUNTDOWN_ISO}
-            updatedAt={updatedAtIso}
-            hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
-            disabled={resolvedCountdown.disabled}
-            initialNow={countdownInitialNow}
-          />
-            <Text variant="bodyLg" align="center" tone="muted">
+            <div className="w-full max-w-3xl">
+              <HomepageCountdown
+                initialCountdownTarget={initialCountdownTargetIso}
+                effectiveCountdownTarget={effectiveCountdownTargetIso}
+                defaultCountdownTarget={DEFAULT_HOMEPAGE_COUNTDOWN_ISO}
+                updatedAt={updatedAtIso}
+                hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
+                disabled={resolvedCountdown.disabled}
+                initialNow={countdownInitialNow}
+              />
+            </div>
+            <Text
+              variant="bodyLg"
+              align="center"
+              tone="muted"
+              className="max-w-xl text-balance"
+            >
               Ein einziges Wochenende. Ein Sommer. Ein Stück.
             </Text>
           </section>
-          <Card>
-            <CardTitle className="px-6 pt-6 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Teaser-Hinweis
-            </CardTitle>
-            <CardContent className="pb-6 text-muted-foreground">Folge den Spuren im Nebel…</CardContent>
+          <Card className="border-border/60 bg-card/70 p-0 shadow-md backdrop-blur">
+            <div className="space-y-3 px-5 py-6 text-center sm:px-6 sm:text-left">
+              <Text
+                variant="eyebrow"
+                uppercase
+                tone="muted"
+                className="text-[0.65rem] tracking-[0.2em] text-muted-foreground sm:text-[0.7rem] sm:tracking-[0.24em]"
+              >
+                Teaser-Hinweis
+              </Text>
+              <Text
+                variant="bodyLg"
+                align="center"
+                className="text-balance text-muted-foreground sm:text-left"
+              >
+                Folge den Spuren im Nebel…
+              </Text>
+            </div>
           </Card>
           <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
