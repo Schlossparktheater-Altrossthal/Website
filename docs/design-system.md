@@ -60,6 +60,7 @@ Der Build-Script schreibt daraus die finalen `modes` (Light/Dark) zurück ins JS
 | Container dunkel | `--surface-container-high` (Dark) | <img src="swatches/neutral-700.svg" width="14" height="14" /> |
 | Hintergrund hell | `--surface` (Light) | <img src="swatches/neutral-100.svg" width="14" height="14" /> |
 | Container hell | `--surface-container` (Light) | <img src="swatches/neutral-200.svg" width="14" height="14" /> |
+| Tonale Surface | `--surface-variant` | Tonal gemischte Zwischenfläche (`bg-surface-variant`) |
 
 > **Kontrastprüfung:** Alle Primärfarben erfüllen ≥ 4.5:1 auf ihren Gegenstücken. Die `ring`- und `focus-visible`-Farben greifen auf `--primary` zurück.
 
@@ -98,6 +99,7 @@ Die Layout-Variablen folgen einem 8pt-System, ergänzt um halbe Schritte:
 - `--space-xl`: 3rem (48px)
 - `--space-2xl`: 4rem (64px)
 - `--space-3xl`: 6rem (96px)
+- Header-spezifisch: `--header-space-compact` (16px), `--header-space-expanded` (24px) und `--header-touch-target` (48px) für App-Bar, Trigger und Drawer.
 
 ### Corner-Radii (Material 3)
 
@@ -147,6 +149,23 @@ Weitere Layout-Konstanten:
 ### Layout-Container
 
 - `.layout-container` steuert ausschließlich Breite und horizontale Außenabstände. Vertikale Polster fügst du je nach Kontext mit Tailwind-Utilities (`pt`, `pb`, `py`, `space-y` etc.) hinzu.
+
+### Site Header & Sliver-AppBar
+
+- Die Top-Navigation nutzt jetzt tonale Flächen: `bg-surface-variant` für den ruhenden Zustand und `bg-surface` für erhöhte States. Die Elevation wechselt zwischen `shadow-sm` und `shadow-lg` und animiert via Framer Motion auf Basis des Scroll-Fortschritts.
+- Titel skalieren und verblassen während des Scrollens (`SliverAppBar`-Verhalten). Das Motion-Setup exponiert `data-testid="site-header-title"` für gezielte Tests.
+- `--header-space-compact` und `--header-space-expanded` definieren den vertikalen Rhythmus (16/24 px). Mobile Drawer und Action-Gruppen greifen direkt auf diese Tokens zu, um konsistenten Abstand zu halten.
+- Nutze die Tailwind-Farben `bg-surface`, `bg-surface-variant`, `ring-outline/…` und `text-surface-foreground` anstelle von Gradients oder halbtransparenten Hintergrundfarben.
+
+### Visuelle Regression
+
+- Der Playwright-Test `e2e/site-header.spec.ts` prüft Tonalität, Elevation und Scroll-Animation des Site Headers. Ein serverloser Lauf funktioniert via
+
+  ```bash
+  SCAN_E2E_START_COMMAND="pnpm dev --turbopack" pnpm test:e2e e2e/site-header.spec.ts
+  ```
+
+- Die Testausgabe enthält sowohl den Wechsel des `data-elevated`-Attributes als auch Transformationswerte des Titels. Damit lassen sich Material-konforme Header-Regressionen in CI oder lokalen Reviews automatisieren.
 
 ## Komponentenrichtlinien
 

@@ -41,6 +41,7 @@
   --color-card: var(--card);
   --color-surface: var(--surface);
   --color-surface-foreground: var(--on-surface);
+  --color-surface-variant: var(--surface-variant);
   --color-surface-container: var(--surface-container);
   --color-surface-container-low: var(--surface-container-low);
   --color-surface-container-high: var(--surface-container-high);
@@ -76,13 +77,14 @@
     --layout-max-width: 90rem;
     --layout-gutter: clamp(1rem, 4vw, 3rem);
     --header-height: 4rem;
-    --header-gradient-height: calc(var(--space-3xl) + var(--space-lg));
-    --header-mobile-trigger-size: calc(var(--space-lg) + var(--space-3xs));
-    --header-mobile-icon-size: calc(var(--space-sm) + var(--space-3xs));
-    --header-drawer-width: calc(
-      var(--space-3xl) + var(--space-2xl) + var(--space-xl) + var(--space-lg) + var(--space-sm)
-    );
-    --header-drawer-padding-top: calc(var(--space-xl) + var(--space-lg));
+    --header-space-compact: 1rem;
+    --header-space-expanded: 1.5rem;
+    --header-touch-target: 3rem;
+    --header-mobile-trigger-size: var(--header-touch-target);
+    --header-mobile-icon-size: calc(var(--header-touch-target) - 0.75rem);
+    --header-drawer-width: min(22rem, calc(100vw - 2 * var(--layout-gutter)));
+    --header-drawer-padding-top: calc(var(--header-space-expanded) + var(--header-space-compact));
+    --surface-variant: color-mix(in srgb, var(--surface) 88%, var(--surface-tint) 12%);
     --font-body: var(--font-sans);
     --font-heading: var(--font-sans);
     --font-display: var(--font-sans);
@@ -121,9 +123,13 @@
     }
   }
 
+  .dark {
+    --surface-variant: color-mix(in srgb, var(--surface) 92%, var(--surface-tint) 8%);
+  }
+
   @media (min-width: 1440px) {
     :root {
-      --layout-gutter: clamp(2rem, 4vw, 4rem);
+    --layout-gutter: clamp(2rem, 4vw, 4rem);
     }
   }
 

@@ -12,7 +12,14 @@ import {
 import { usePathname } from "next/navigation";
 
 import { useSession } from "next-auth/react";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValueEvent,
+  useScroll,
+  useTransform,
+  useSpring,
+} from "framer-motion";
 import { Menu, Search } from "lucide-react";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 
@@ -37,43 +44,48 @@ import { UserAvatar } from "@/components/user-avatar";
 import { getUserDisplayName } from "@/lib/names";
 
 const HEADER_SPACING = {
-  gradientHeight: "var(--header-gradient-height)",
+  rhythm: {
+    compact: "var(--header-space-compact)",
+    expanded: "var(--header-space-expanded)",
+  },
   nav: {
     gap: {
-      base: "var(--space-xs)",
-      sm: "var(--space-sm)",
-      md: "var(--space-md)",
+      base: "var(--header-space-compact)",
+      md: "var(--header-space-expanded)",
     },
     paddingY: {
-      base: "var(--space-xs)",
-      md: "var(--space-sm)",
+      base: "var(--header-space-compact)",
+      md: "var(--header-space-expanded)",
     },
   },
-  desktopLinksGap: "var(--space-md)",
+  desktopLinksGap: "var(--header-space-expanded)",
   actions: {
     gap: {
-      base: "var(--space-3xs)",
-      sm: "var(--space-xs)",
+      base: "calc(var(--header-space-compact) / 2)",
+      sm: "calc(var(--header-space-compact) * 0.75)",
     },
   },
   mobile: {
     triggerSize: "var(--header-mobile-trigger-size)",
     iconSize: "var(--header-mobile-icon-size)",
     panelWidth: "var(--header-drawer-width)",
-    panelMaxWidth: "calc(100vw - 2 * var(--layout-gutter))",
-    panelGap: "var(--space-sm)",
-    panelPadding: "var(--space-md)",
+    panelMaxWidth: "var(--header-drawer-width)",
+    panelGap: "var(--header-space-compact)",
+    panelPadding: "var(--header-space-expanded)",
     panelPaddingTop: "var(--header-drawer-padding-top)",
-    linkGroupGap: "var(--space-2xs)",
-    linkPaddingInline: "var(--space-sm)",
-    linkPaddingBlock: "var(--space-xs)",
-    linkDescriptionMarginTop: "var(--space-3xs)",
-    footerSpace: "var(--space-xs)",
-    footerPaddingTop: "var(--space-sm)",
-    ctaPaddingInline: "var(--space-sm)",
-    ctaPaddingBlock: "var(--space-xs)",
+    linkGroupGap: "calc(var(--header-space-compact) * 0.75)",
+    linkPaddingInline: "var(--header-space-expanded)",
+    linkPaddingBlock: "calc(var(--header-space-compact) * 0.75)",
+    linkDescriptionMarginTop: "calc(var(--header-space-compact) / 2)",
+    footerSpace: "calc(var(--header-space-compact) * 0.75)",
+    footerPaddingTop: "var(--header-space-expanded)",
+    ctaPaddingInline: "var(--header-space-expanded)",
+    ctaPaddingBlock: "var(--header-space-compact)",
   },
 } as const;
+
+const COLLAPSE_DISTANCE = 160;
+const ELEVATION_THRESHOLD = 0.25;
 
 const drawerPanelStyles = {
   "--drawer-gap": HEADER_SPACING.mobile.panelGap,
@@ -99,10 +111,6 @@ const drawerLinkPaddingStyles = {
 
 const drawerLinkDescriptionStyles = {
   marginTop: HEADER_SPACING.mobile.linkDescriptionMarginTop,
-} satisfies CSSProperties;
-
-const heroGradientStyles = {
-  height: HEADER_SPACING.gradientHeight,
 } satisfies CSSProperties;
 
 function createToneVars(color: string): CSSProperties {
@@ -239,6 +247,50 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
 
   const navigationItems = useMemo(() => primaryNavigation, []);
 
+  const { scrollY } = useScroll();
+  const collapseProgress = useTransform(
+    scrollY,
+    [0, COLLAPSE_DISTANCE],
+    [0, 1],
+    { clamp: true },
+  );
+  const collapseSpring = useSpring(collapseProgress, {
+    stiffness: 260,
+    damping: 32,
+    mass: 0.6,
+  });
+  const headerSurface = useTransform(collapseSpring, [0, 1], [
+    "var(--surface-variant)",
+    "var(--surface)",
+  ]);
+  const headerBackdrop = useTransform(collapseSpring, [0, 1], [
+    "blur(12px)",
+    "blur(18px)",
+  ]);
+  const titleScale = useTransform(collapseSpring, [0, 1], [1, 0.9]);
+  const titleOpacity = useTransform(collapseSpring, [0, 1], [1, 0.75]);
+  const titleOffset = useTransform(collapseSpring, [0, 1], [0, -8]);
+
+  useMotionValueEvent(collapseSpring, "change", (value) => {
+    setScrolled((previous) => {
+      const next = value > ELEVATION_THRESHOLD;
+
+      if (next === previous) {
+        return previous;
+      }
+
+      return next;
+    });
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    setScrolled(scrollY.get() > COLLAPSE_DISTANCE * ELEVATION_THRESHOLD);
+  }, [scrollY]);
+
   useLayoutEffect(() => {
     if (typeof document === "undefined") {
       return;
@@ -303,37 +355,36 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
     };
   }, []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 100);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const isElevated = scrolled || !isHomePage;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <header
+      <motion.header
         ref={headerRef}
-        className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-          scrolled || !isHomePage
-            ? "border-b border-border/50 bg-background/95 backdrop-blur-md shadow-lg"
-            : "bg-gradient-to-b from-black/40 via-black/25 via-black/12 to-transparent backdrop-blur-[1px]"
-        }`}
+        data-testid="site-header"
+        data-elevated={isElevated ? "true" : "false"}
+        style={{
+          backgroundColor: headerSurface,
+          backdropFilter: headerBackdrop,
+          WebkitBackdropFilter: headerBackdrop,
+        }}
+        className={cn(
+          "fixed top-0 z-50 w-full border-b transition-[background-color,box-shadow,border-color] duration-300",
+          "supports-[backdrop-filter]:bg-transparent",
+          isElevated ? "bg-surface border-outline/30 shadow-lg" : "bg-surface-variant border-outline/15 shadow-sm",
+        )}
       >
-        <div
-          style={!scrolled && isHomePage ? heroGradientStyles : undefined}
-          className={`${
-            !scrolled && isHomePage
-              ? "absolute inset-x-0 top-full bg-gradient-to-b from-transparent via-transparent to-transparent"
-              : ""
-          }`}
-        />
-        <nav aria-label="Hauptnavigation" className="layout-container py-3 sm:py-4">
-          <div className="relative flex w-full flex-col gap-3 lg:grid lg:grid-cols-[auto,1fr] lg:items-start lg:gap-6">
+        <nav
+          aria-label="Hauptnavigation"
+          className={cn(
+            "layout-container",
+            "py-[var(--header-space-compact)]",
+            "sm:py-[var(--header-space-expanded)]",
+          )}
+        >
+          <div className="relative flex w-full flex-col gap-[var(--header-space-compact)] lg:grid lg:grid-cols-[auto,1fr] lg:items-start lg:gap-[var(--header-space-expanded)]">
             <aside className="hidden lg:flex" aria-label="NavigationRail">
-              <div className="flex flex-col items-center gap-3 rounded-[2rem] bg-background/95 p-3 shadow-md ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <div className="flex flex-col items-center gap-[calc(var(--header-space-compact)*0.75)] rounded-[2rem] bg-surface/95 p-[var(--header-space-compact)] shadow-sm ring-1 ring-outline/15 backdrop-blur supports-[backdrop-filter]:bg-surface/80 transition-colors duration-300">
                 {navigationItems.map((item) => {
                   const isActive =
                     pathname === item.href ||
@@ -375,24 +426,28 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
               </div>
             </aside>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-[var(--header-space-compact)]">
               <div
                 className={cn(
-                  "flex items-center gap-3 rounded-full bg-background/95 px-3 py-2 shadow-md ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-background/80 transition-colors duration-300",
-                  scrolled || !isHomePage
-                    ? "text-foreground"
-                    : "text-foreground drop-shadow-lg",
+                  "flex items-center rounded-full bg-surface px-[var(--header-space-compact)] py-[calc(var(--header-space-compact)*0.75)] shadow-sm ring-1 ring-outline/15 backdrop-blur supports-[backdrop-filter]:bg-surface/80 transition-all duration-300",
+                  isElevated ? "text-foreground" : "text-foreground drop-shadow-lg",
                 )}
               >
                 <Link
-                  className="flex-1 min-w-0 truncate font-serif text-lg leading-tight transition-colors duration-300 sm:text-xl"
+                  className="flex-1 min-w-0 font-serif text-lg leading-tight transition-colors duration-300 sm:text-xl"
                   href="/"
                   title={siteTitle}
                 >
-                  {siteTitle}
+                  <motion.span
+                    data-testid="site-header-title"
+                    className="inline-block w-full truncate origin-left"
+                    style={{ scale: titleScale, opacity: titleOpacity, y: titleOffset }}
+                  >
+                    {siteTitle}
+                  </motion.span>
                 </Link>
 
-                <div className="flex items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-[calc(var(--header-space-compact)/2)] sm:gap-[calc(var(--header-space-compact)*0.75)]">
                   <button
                     type="button"
                     aria-label="Suche öffnen"
@@ -419,7 +474,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
                       aria-label="Navigationsmenü öffnen"
                       className={cn(
                         iconButtonClasses,
-                        "md:hidden border border-border/60 bg-background/80 text-foreground/80 shadow-sm",
+                        "md:hidden border border-outline/20 bg-surface/90 text-foreground/80 shadow-sm",
                       )}
                       animate={{ rotate: open ? 90 : 0, scale: open ? 0.92 : 1 }}
                       whileTap={{ scale: 0.9 }}
@@ -433,7 +488,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
               </div>
 
               <div
-                className="flex items-stretch gap-2 overflow-x-auto rounded-[2rem] bg-background/90 px-2 py-2 shadow-md ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-background/75 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex items-stretch gap-[calc(var(--header-space-compact)/1.5)] overflow-x-auto rounded-[2rem] bg-surface/90 px-[calc(var(--header-space-compact)/2)] py-[calc(var(--header-space-compact)/2)] shadow-sm ring-1 ring-outline/15 backdrop-blur supports-[backdrop-filter]:bg-surface/80 transition-all duration-300 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
                 {navigationItems.map((item) => {
                   const isActive =
@@ -477,14 +532,14 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
             </div>
           </div>
         </nav>
-      </header>
+      </motion.header>
 
       <SheetContent
         id="mobile-menu"
         side="left"
         forceMount
         style={drawerPanelStyles}
-        className="flex h-[100svh] flex-col gap-[var(--drawer-gap)] border-r border-border/60 bg-background/95 p-[var(--drawer-padding)] pb-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl ring-1 ring-inset ring-primary/10 backdrop-blur-md supports-[height:100dvh]:h-[100dvh] md:hidden"
+        className="flex h-[100svh] flex-col gap-[var(--drawer-gap)] border-r border-outline/20 bg-surface p-[var(--drawer-padding)] pb-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl ring-1 ring-inset ring-primary/10 backdrop-blur supports-[height:100dvh]:h-[100dvh] md:hidden"
       >
         <AnimatePresence initial={false} mode="wait">
           {open ? (
@@ -633,7 +688,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
 
                 <div
                   style={drawerFooterStyles}
-                  className="mt-auto space-y-[var(--drawer-footer-space)] border-t border-border/60 pt-[var(--drawer-footer-padding-top)] text-sm text-muted-foreground"
+                  className="mt-auto space-y-[var(--drawer-footer-space)] border-t border-outline/20 pt-[var(--drawer-footer-padding-top)] text-sm text-muted-foreground"
                 >
                   <span className="block text-xs uppercase tracking-[0.12em] text-foreground/70">
                     Bleib verbunden
