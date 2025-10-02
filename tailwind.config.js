@@ -86,6 +86,7 @@ module.exports = {
         surface: {
           DEFAULT: "var(--surface)",
           foreground: "var(--on-surface)",
+          variant: "var(--surface-variant)",
           container: "var(--surface-container)",
           "container-low": "var(--surface-container-low)",
           "container-high": "var(--surface-container-high)",
