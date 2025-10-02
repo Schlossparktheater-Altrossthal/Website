@@ -12,6 +12,7 @@ import {
 import { usePathname } from "next/navigation";
 
 import { useSession } from "next-auth/react";
+import { Menu, Search } from "lucide-react";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
@@ -70,15 +71,6 @@ const HEADER_SPACING = {
   },
 } as const;
 
-const navSpacingStyles = {
-  "--nav-gap": HEADER_SPACING.nav.gap.base,
-  "--nav-padding-y": HEADER_SPACING.nav.paddingY.base,
-} as CSSProperties;
-
-const actionsSpacingStyles = {
-  "--header-actions-gap": HEADER_SPACING.actions.gap.base,
-} as CSSProperties;
-
 const drawerPanelStyles = {
   "--drawer-gap": HEADER_SPACING.mobile.panelGap,
   "--drawer-padding": HEADER_SPACING.mobile.panelPadding,
@@ -114,15 +106,36 @@ const heroGradientStyles = {
   height: HEADER_SPACING.gradientHeight,
 } satisfies CSSProperties;
 
-const navigationIconToneClasses: Record<NavigationItemTone, string> = {
-  default: "text-foreground/70",
-  muted: "text-muted-foreground",
-  primary: "text-[var(--primary)]",
-  success: "text-success",
-  info: "text-info",
-  warning: "text-warning",
-  destructive: "text-destructive",
+function createToneVars(color: string): CSSProperties {
+  return {
+    "--nav-tonal-color": color,
+    "--nav-tonal-label": `color-mix(in srgb, ${color} 65%, transparent)`,
+    "--nav-tonal-hover": `color-mix(in srgb, ${color} 12%, transparent)`,
+    "--nav-tonal-container": `color-mix(in srgb, ${color} 20%, transparent)`,
+    "--nav-tonal-ripple": `color-mix(in srgb, ${color} 18%, transparent)`,
+    "--nav-tonal-ring": `color-mix(in srgb, ${color} 45%, transparent)`,
+    "--nav-tonal-indicator": `color-mix(in srgb, ${color} 80%, transparent)`,
+  } as CSSProperties;
+}
+
+const navigationToneVariables: Record<NavigationItemTone, CSSProperties> = {
+  default: createToneVars("var(--foreground)"),
+  muted: createToneVars("var(--muted-foreground)"),
+  primary: createToneVars("var(--primary)"),
+  success: createToneVars("var(--success)"),
+  info: createToneVars("var(--info)"),
+  warning: createToneVars("var(--warning)"),
+  destructive: createToneVars("var(--destructive)"),
 };
+
+const navigationBarBaseClasses =
+  "group relative flex flex-1 min-w-[5.5rem] flex-col items-center justify-center gap-1 overflow-hidden rounded-[1.75rem] px-3 py-2 text-[0.7rem] font-semibold tracking-[0.04em] text-[color:var(--nav-tonal-label)] transition-all duration-300 ease-out ring-1 ring-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-[var(--nav-tonal-color)] hover:bg-[color:var(--nav-tonal-hover)] focus-visible:bg-[color:var(--nav-tonal-hover)] data-[active=true]:text-[var(--nav-tonal-color)] data-[active=true]:bg-[color:var(--nav-tonal-container)] data-[active=true]:ring-[color:var(--nav-tonal-ring)] data-[active=true]:shadow-[0_14px_30px_-16px_color-mix(in_srgb,var(--nav-tonal-color)_75%,transparent)] before:pointer-events-none before:absolute before:inset-0 before:scale-75 before:rounded-[1.75rem] before:bg-[color:var(--nav-tonal-ripple)] before:opacity-0 before:transition before:duration-300 before:ease-out hover:before:scale-100 hover:before:opacity-100 focus-visible:before:scale-105 focus-visible:before:opacity-100 after:pointer-events-none after:absolute after:bottom-1 after:h-0.5 after:w-2/3 after:origin-center after:scale-x-0 after:rounded-full after:bg-[var(--nav-tonal-indicator)] after:opacity-0 after:transition after:duration-300 after:ease-out data-[active=true]:after:scale-x-100 data-[active=true]:after:opacity-100";
+
+const navigationRailBaseClasses =
+  "group relative flex h-16 w-16 flex-col items-center justify-center gap-1 overflow-hidden rounded-[1.5rem] text-[0.7rem] font-semibold text-[color:var(--nav-tonal-label)] transition-all duration-300 ease-out ring-1 ring-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background hover:text-[var(--nav-tonal-color)] hover:bg-[color:var(--nav-tonal-hover)] focus-visible:bg-[color:var(--nav-tonal-hover)] data-[active=true]:text-[var(--nav-tonal-color)] data-[active=true]:bg-[color:var(--nav-tonal-container)] data-[active=true]:ring-[color:var(--nav-tonal-ring)] data-[active=true]:shadow-[0_16px_35px_-18px_color-mix(in_srgb,var(--nav-tonal-color)_80%,transparent)] before:pointer-events-none before:absolute before:inset-0 before:scale-75 before:rounded-[1.5rem] before:bg-[color:var(--nav-tonal-ripple)] before:opacity-0 before:transition before:duration-300 before:ease-out hover:before:scale-100 hover:before:opacity-100 focus-visible:before:scale-105 focus-visible:before:opacity-100 after:pointer-events-none after:absolute after:left-1.5 after:top-1/2 after:h-2/3 after:w-[3px] after:-translate-y-1/2 after:scale-y-0 after:rounded-full after:bg-[var(--nav-tonal-indicator)] after:opacity-0 after:transition after:duration-300 after:ease-out data-[active=true]:after:scale-y-100 data-[active=true]:after:opacity-100";
+
+const iconButtonClasses =
+  "relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-foreground/70 transition-colors duration-200 ease-out hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background before:pointer-events-none before:absolute before:inset-0 before:scale-75 before:rounded-full before:bg-[color:color-mix(in_srgb,var(--primary)_18%,transparent)] before:opacity-0 before:transition before:duration-300 hover:before:scale-100 hover:before:opacity-100 focus-visible:before:scale-105 focus-visible:before:opacity-100";
 
 const badgeToneFallback: Partial<
   Record<NavigationItemTone, NavigationBadgeVariant>
@@ -135,9 +148,22 @@ const badgeToneFallback: Partial<
   destructive: "destructive",
 };
 
+const iconToneFallbackClasses: Record<
+  NavigationItemTone,
+  { idle: string; active: string }
+> = {
+  default: { idle: "text-foreground opacity-70", active: "text-foreground" },
+  muted: { idle: "text-muted-foreground", active: "text-foreground" },
+  primary: { idle: "text-primary opacity-80", active: "text-primary" },
+  success: { idle: "text-success opacity-80", active: "text-success" },
+  info: { idle: "text-info opacity-80", active: "text-info" },
+  warning: { idle: "text-warning opacity-80", active: "text-warning" },
+  destructive: { idle: "text-destructive opacity-80", active: "text-destructive" },
+};
+
 function getNavigationIcon(
   item: NavigationItem,
-  { isActive }: { isActive: boolean },
+  { isActive, className }: { isActive: boolean; className?: string },
 ) {
   const IconComponent =
     (isActive ? item.activeIcon ?? item.icon : item.icon) ?? item.activeIcon;
@@ -147,20 +173,27 @@ function getNavigationIcon(
   }
 
   const tone = item.tone ?? "default";
-  const toneClass = navigationIconToneClasses[tone];
+  const fallback = iconToneFallbackClasses[tone];
 
   return (
     <IconComponent
       aria-hidden
       className={cn(
-        "h-4 w-4 shrink-0 transition-colors duration-300",
-        isActive ? "text-[var(--primary)]" : toneClass,
+        "h-5 w-5 shrink-0 transition-all duration-300",
+        isActive
+          ? "text-[var(--nav-tonal-color)] drop-shadow-[0_0_6px_color-mix(in_srgb,var(--nav-tonal-color)_45%,transparent)]"
+          : "text-[color:var(--nav-tonal-label)]",
+        isActive ? fallback.active : fallback.idle,
+        className,
       )}
     />
   );
 }
 
-function getNavigationBadge(item: NavigationItem) {
+function getNavigationBadge(
+  item: NavigationItem,
+  options?: { className?: string },
+) {
   if (!item.badge) {
     return null;
   }
@@ -172,7 +205,7 @@ function getNavigationBadge(item: NavigationItem) {
     <Badge
       variant={variant}
       size={item.badge.size ?? "sm"}
-      className="whitespace-nowrap"
+      className={cn("whitespace-nowrap", options?.className)}
     >
       {item.badge.label}
     </Badge>
@@ -281,91 +314,147 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
               : ""
           }`}
         />
-        <nav
-          aria-label="Hauptnavigation"
-          style={navSpacingStyles}
-          className="layout-container flex flex-nowrap items-center gap-[var(--nav-gap)] py-[var(--nav-padding-y)] sm:[--nav-gap:var(--space-sm)] md:[--nav-gap:var(--space-md)] md:[--nav-padding-y:var(--space-sm)]"
-        >
-          <Link
-            className={`flex-1 min-w-0 truncate font-serif text-lg transition-all duration-300 sm:text-xl ${
-              scrolled || !isHomePage
-                ? "text-primary hover:opacity-90"
-                : "text-foreground drop-shadow-lg hover:text-primary/90"
-            }`}
-            href="/"
-            title={siteTitle}
-          >
-            {siteTitle}
-          </Link>
+        <nav aria-label="Hauptnavigation" className="layout-container py-3 sm:py-4">
+          <div className="relative flex w-full flex-col gap-3 lg:grid lg:grid-cols-[auto,1fr] lg:items-start lg:gap-6">
+            <aside className="hidden lg:flex" aria-label="NavigationRail">
+              <div className="flex flex-col items-center gap-3 rounded-[2rem] bg-background/95 p-3 shadow-md ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                {navigationItems.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    Boolean(pathname?.startsWith(`${item.href}/`));
+                  const tone = item.tone ?? "default";
+                  const iconElement = getNavigationIcon(item, {
+                    isActive,
+                    className:
+                      "transition-transform duration-300 group-data-[active=true]:scale-110",
+                  });
+                  const badgeElement = getNavigationBadge(item, {
+                    className:
+                      "pointer-events-none absolute right-2 top-2 scale-90 text-[0.6rem]",
+                  });
 
-          <div className="hidden items-center gap-[var(--space-md)] md:flex">
-            {navigationItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                Boolean(pathname?.startsWith(`${item.href}/`));
+                  return (
+                    <Link
+                      key={`${item.href}-rail`}
+                      href={item.href}
+                      aria-current={isActive ? "page" : undefined}
+                      data-active={isActive ? "true" : undefined}
+                      style={navigationToneVariables[tone]}
+                      className={cn(
+                        navigationRailBaseClasses,
+                        "px-2 py-2",
+                        "transition-transform will-change-transform hover:-translate-y-0.5 data-[active=true]:-translate-y-1",
+                      )}
+                    >
+                      {badgeElement}
+                      <span className="relative flex h-10 w-10 items-center justify-center">
+                        {iconElement}
+                      </span>
+                      <span className="text-[0.68rem] font-medium leading-tight text-center">
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </aside>
 
-              const iconElement = getNavigationIcon(item, { isActive });
-              const badgeElement = getNavigationBadge(item);
-
-              return (
-                <Link
-                  key={item.href}
-                  className={cn(
-                    "relative inline-flex items-center font-medium transition-all duration-300",
-                    "after:absolute after:-bottom-[var(--space-3xs)] after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-[var(--primary)] after:opacity-95 after:transition-transform after:duration-300 after:content-[''] after:transform",
-                    "hover:text-[var(--primary)] hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-[var(--primary)] focus-visible:after:scale-x-100",
-                    "data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:after:scale-x-100",
-                    scrolled || !isHomePage
-                      ? "text-foreground/90"
-                      : "text-foreground/90 drop-shadow-lg",
-                    iconElement || badgeElement ? "gap-2" : undefined,
-                  )}
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  data-active={isActive ? "true" : undefined}
-                >
-                  {iconElement}
-                  <span>{item.label}</span>
-                  {badgeElement}
-                </Link>
-              );
-            })}
-          </div>
-
-          <div
-            style={actionsSpacingStyles}
-            className="ml-auto flex flex-wrap items-center justify-end gap-[var(--header-actions-gap)] [--header-actions-gap:var(--space-3xs)] sm:flex-nowrap sm:[--header-actions-gap:var(--space-xs)]"
-          >
-            <NotificationBell className="hidden sm:flex" />
-            <UserNav className="hidden sm:flex" />
-
-            {/* Mobile menu button */}
-            <SheetTrigger asChild>
-              <button
-                type="button"
-                aria-label="Menü öffnen"
-                className={`inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] flex-shrink-0 items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring md:hidden ${
+            <div className="flex flex-col gap-3">
+              <div
+                className={cn(
+                  "flex items-center gap-3 rounded-full bg-background/95 px-3 py-2 shadow-md ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-background/80 transition-colors duration-300",
                   scrolled || !isHomePage
-                    ? "border border-border/60 text-foreground hover:bg-accent/30"
-                    : "border border-border/60 text-foreground drop-shadow-lg hover:bg-accent/20"
-                }`}
+                    ? "text-foreground"
+                    : "text-foreground drop-shadow-lg",
+                )}
               >
-                <span className="sr-only">Menü</span>
-                <svg
-                  className="h-[var(--header-mobile-icon-size)] w-[var(--header-mobile-icon-size)]"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                <Link
+                  className="flex-1 min-w-0 truncate font-serif text-lg leading-tight transition-colors duration-300 sm:text-xl"
+                  href="/"
+                  title={siteTitle}
                 >
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
-              </button>
-            </SheetTrigger>
+                  {siteTitle}
+                </Link>
+
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <button
+                    type="button"
+                    aria-label="Suche öffnen"
+                    title="Suche"
+                    className={cn(iconButtonClasses, "hidden sm:inline-flex")}
+                    onClick={() => {
+                      if (typeof window === "undefined") {
+                        return;
+                      }
+
+                      window.dispatchEvent(
+                        new CustomEvent("global-search:toggle", { bubbles: true }),
+                      );
+                    }}
+                  >
+                    <Search aria-hidden className="h-5 w-5" />
+                  </button>
+                  <NotificationBell className="hidden sm:flex" />
+                  <UserNav className="hidden sm:flex" />
+
+                  <SheetTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Navigationsmenü öffnen"
+                      className={cn(
+                        iconButtonClasses,
+                        "md:hidden border border-border/60 bg-background/80 text-foreground/80 shadow-sm",
+                      )}
+                    >
+                      <Menu aria-hidden className="h-5 w-5" />
+                    </button>
+                  </SheetTrigger>
+                </div>
+              </div>
+
+              <div
+                className="flex items-stretch gap-2 overflow-x-auto rounded-[2rem] bg-background/90 px-2 py-2 shadow-md ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-background/75 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {navigationItems.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    Boolean(pathname?.startsWith(`${item.href}/`));
+                  const tone = item.tone ?? "default";
+                  const iconElement = getNavigationIcon(item, {
+                    isActive,
+                    className:
+                      "transition-transform duration-300 group-data-[active=true]:scale-110",
+                  });
+                  const badgeElement = getNavigationBadge(item, {
+                    className:
+                      "pointer-events-none absolute right-2 top-2 translate-y-0 text-[0.6rem]",
+                  });
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={isActive ? "page" : undefined}
+                      data-active={isActive ? "true" : undefined}
+                      style={navigationToneVariables[tone]}
+                      className={cn(
+                        navigationBarBaseClasses,
+                        "snap-center",
+                        "transition-transform will-change-transform hover:-translate-y-0.5 data-[active=true]:-translate-y-1",
+                      )}
+                    >
+                      {badgeElement}
+                      <span className="relative flex h-10 w-10 items-center justify-center">
+                        {iconElement}
+                      </span>
+                      <span className="text-[0.72rem] font-semibold leading-tight text-center">
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </nav>
       </header>
@@ -411,17 +500,27 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
               pathname === item.href ||
               Boolean(pathname?.startsWith(`${item.href}/`));
 
-            const iconElement = getNavigationIcon(item, { isActive });
-            const badgeElement = getNavigationBadge(item);
+            const tone = item.tone ?? "default";
+            const iconElement = getNavigationIcon(item, {
+              isActive,
+              className:
+                "transition-transform duration-300 group-data-[active=true]:scale-105",
+            });
+            const badgeElement = getNavigationBadge(item, {
+              className: "text-[0.65rem]",
+            });
 
             return (
               <Link
                 key={item.href}
                 onClick={() => setOpen(false)}
-                style={drawerLinkPaddingStyles}
+                style={{
+                  ...drawerLinkPaddingStyles,
+                  ...navigationToneVariables[tone],
+                }}
                 className={cn(
-                  "flex items-start gap-3 rounded-lg text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  "data-[active=true]:bg-accent/20 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:ring-1 data-[active=true]:ring-inset data-[active=true]:ring-[var(--primary)]"
+                  "group relative flex items-start gap-3 rounded-2xl border border-transparent text-[color:var(--nav-tonal-label)] transition-colors duration-200 hover:bg-[color:var(--nav-tonal-hover)] hover:text-[var(--nav-tonal-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--nav-tonal-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  "data-[active=true]:border-[color:var(--nav-tonal-ring)] data-[active=true]:bg-[color:var(--nav-tonal-container)] data-[active=true]:text-[var(--nav-tonal-color)] data-[active=true]:shadow-[0_10px_24px_-14px_color-mix(in_srgb,var(--nav-tonal-color)_70%,transparent)]",
                 )}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
