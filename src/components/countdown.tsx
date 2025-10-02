@@ -106,12 +106,14 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
   ];
 
   const containerClassName = cn("grid w-full grid-cols-2 gap-3 sm:grid-cols-4", className);
+  const baseCellClassName =
+    "flex flex-col items-center justify-center gap-1 rounded-lg px-4 py-3 text-center shadow-sm";
   const cellClassName =
     variant === "highlight"
-      ? "rounded-lg border border-primary/50 bg-primary/10 px-4 py-3 text-center shadow-sm text-primary"
-      : "rounded-lg border border-border bg-card px-4 py-3 text-center shadow-sm";
+      ? cn(baseCellClassName, "border border-primary/50 bg-primary/10 text-primary")
+      : cn(baseCellClassName, "border border-border bg-card");
   const numberClassName = cn(
-    "text-3xl font-semibold tabular-nums sm:text-4xl",
+    "text-center text-3xl font-semibold tabular-nums sm:text-4xl",
     variant === "highlight" ? "text-primary" : undefined,
   );
   const labelTone = variant === "highlight" ? "primary" : "muted";
