@@ -735,14 +735,6 @@ function ProfileClientInner({
   const highlightTiles = useMemo<HighlightTileConfig[]>(() => {
     const items: HighlightTileConfig[] = [
       {
-        id: "membership",
-        icon: <CalendarDays className="h-5 w-5" aria-hidden />,
-        title: "Mitgliedschaft",
-        description: memberSinceLabel ?? "Trage dein Eintrittsjahr im Onboarding ein.",
-        hint: createdAtLabel ? `Profil erstellt am ${createdAtLabel}.` : null,
-        tone: memberSinceLabel ? "default" : "warning",
-      },
-      {
         id: "onboarding-focus",
         icon: <Sparkles className="h-5 w-5" aria-hidden />,
         title: "Onboarding-Schwerpunkt",
@@ -810,8 +802,6 @@ function ProfileClientInner({
 
     return items;
   }, [
-    createdAtLabel,
-    memberSinceLabel,
     onboardingBackground,
     onboardingFocusLabel,
     onboardingNotes,
@@ -961,7 +951,7 @@ function ProfileOverviewCard({
     <Card className="border border-border/70 bg-gradient-to-br from-background/85 via-background/70 to-background/80 shadow-sm">
       <CardHeader className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <UserAvatar
               userId={user.id}
               email={user.email}
@@ -973,7 +963,7 @@ function ProfileOverviewCard({
               avatarSource={user.avatarSource}
               avatarUpdatedAt={user.avatarUpdatedAt}
             />
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="text-xl font-semibold leading-tight text-foreground">{displayName}</CardTitle>
                 {checklistBadgeLabel ? (
@@ -1006,17 +996,17 @@ function ProfileOverviewCard({
                   </span>
                 )}
                 {memberSinceLabel || createdAtLabel ? (
-                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                     <CalendarDays className="h-4 w-4" aria-hidden />
                     {memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}
-                  </span>
+                  </div>
                 ) : null}
               </div>
             </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5 pt-2">
         <div className="flex flex-wrap gap-2">
           {sortedRoles.map((role) => (
             <Badge
@@ -1038,86 +1028,14 @@ function ProfileOverviewCard({
           ))}
         </div>
         {summary.total ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>Profilstatus</span>
-              <span>{checklistCountLabel}</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full border border-border/60 bg-muted/50">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  summary.complete
-                    ? "bg-gradient-to-r from-success/80 via-success/70 to-success/90"
-                    : "bg-gradient-to-r from-primary/80 via-primary/70 to-primary/90",
-                )}
-                style={{ width: `${Math.min(100, Math.max(0, percentComplete))}%` }}
-              />
-            </div>
-          </div>
-        ) : null}
-        {hasChecklistItems ? (
-          <div className="space-y-1">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Checkliste</span>
-            <ul className="space-y-1">
-              {summary.items.map((item) => {
-                const target = item.targetSection ?? null;
-                const isActive = target ? activeChecklistTarget === target : false;
-                const isComplete = item.complete;
-
-                const content = (
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "flex h-4 w-4 items-center justify-center rounded border text-[0.65rem]",
-                        isComplete
-                          ? "border-success/60 bg-success/10 text-success"
-                          : "border-border/60 bg-background text-muted-foreground/30",
-                        isActive ? "ring-1 ring-primary/40" : "",
-                      )}
-                      aria-hidden
-                    >
-                      {isComplete ? <Check className="h-3 w-3" aria-hidden /> : null}
-                    </span>
-                    <span
-                      className={cn(
-                        "truncate text-xs",
-                        isComplete ? "text-muted-foreground/80 line-through" : "text-foreground",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
-                );
-
-                if (target) {
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => onChecklistNavigate?.(target)}
-                        className={cn(
-                          "flex w-full items-center rounded-md px-2 py-1 text-left transition",
-                          isActive
-                            ? "bg-primary/10 text-foreground ring-1 ring-primary/30"
-                            : "hover:bg-muted/50 text-foreground/90",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                        )}
-                      >
-                        {content}
-                      </button>
-                    </li>
-                  );
-                }
-
-                return (
-                  <li key={item.id} className="rounded-md px-2 py-1">
-                    {content}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          <ProfileChecklistBox
+            summary={summary}
+            percentComplete={percentComplete}
+            checklistCountLabel={checklistCountLabel}
+            hasChecklistItems={hasChecklistItems}
+            activeChecklistTarget={activeChecklistTarget}
+            onChecklistNavigate={onChecklistNavigate}
+          />
         ) : null}
         {show ? (
           <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
@@ -1130,7 +1048,7 @@ function ProfileOverviewCard({
       </CardContent>
       {highlights.length ? (
         <CardContent className="border-t border-border/50 bg-background/60">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {highlights.map((tile) => (
               <ProfileHighlightTile key={tile.id} {...tile} />
             ))}
@@ -1138,6 +1056,108 @@ function ProfileOverviewCard({
         </CardContent>
       ) : null}
     </Card>
+  );
+}
+
+type ProfileChecklistBoxProps = {
+  summary: ProfileCompletionSummary;
+  percentComplete: number;
+  checklistCountLabel: string | null;
+  hasChecklistItems: boolean;
+  activeChecklistTarget?: ProfileChecklistTarget;
+  onChecklistNavigate?: (target: ProfileChecklistTarget) => void;
+};
+
+function ProfileChecklistBox({
+  summary,
+  percentComplete,
+  checklistCountLabel,
+  hasChecklistItems,
+  activeChecklistTarget,
+  onChecklistNavigate,
+}: ProfileChecklistBoxProps) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-background/80 p-5 shadow-inner shadow-primary/5">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+        <span>Checkliste</span>
+        {checklistCountLabel ? (
+          <span className="rounded-full border border-border/40 bg-muted/60 px-2 py-0.5 text-[0.65rem] text-muted-foreground">
+            {checklistCountLabel}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 h-2 w-full overflow-hidden rounded-full border border-border/60 bg-muted/50">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all",
+            summary.complete
+              ? "bg-gradient-to-r from-success/80 via-success/70 to-success/90"
+              : "bg-gradient-to-r from-primary/80 via-primary/70 to-primary/90",
+          )}
+          style={{ width: `${Math.min(100, Math.max(0, percentComplete))}%` }}
+        />
+      </div>
+      {hasChecklistItems ? (
+        <ul className="mt-4 space-y-1">
+          {summary.items.map((item) => {
+            const target = item.targetSection ?? null;
+            const isActive = target ? activeChecklistTarget === target : false;
+            const isComplete = item.complete;
+
+            const content = (
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "flex h-4 w-4 items-center justify-center rounded border text-[0.65rem]",
+                    isComplete
+                      ? "border-success/60 bg-success/10 text-success"
+                      : "border-border/60 bg-background text-muted-foreground/30",
+                    isActive ? "ring-1 ring-primary/40" : "",
+                  )}
+                  aria-hidden
+                >
+                  {isComplete ? <Check className="h-3 w-3" aria-hidden /> : null}
+                </span>
+                <span
+                  className={cn(
+                    "truncate text-xs",
+                    isComplete ? "text-muted-foreground/80 line-through" : "text-foreground",
+                  )}
+                >
+                  {item.label}
+                </span>
+              </div>
+            );
+
+            if (target) {
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => onChecklistNavigate?.(target)}
+                    className={cn(
+                      "flex w-full items-center rounded-md px-2 py-1 text-left transition",
+                      isActive
+                        ? "bg-primary/10 text-foreground ring-1 ring-primary/30"
+                        : "hover:bg-muted/50 text-foreground/90",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                    )}
+                  >
+                    {content}
+                  </button>
+                </li>
+              );
+            }
+
+            return (
+              <li key={item.id} className="rounded-md px-2 py-1">
+                {content}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
