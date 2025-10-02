@@ -2,10 +2,15 @@ import Link from "next/link";
 
 import { BuildInfoTimestamp } from "@/components/build-info-timestamp";
 import {
+  type NavigationBadgeVariant,
+  type NavigationItem,
+  type NavigationItemTone,
   ctaNavigation,
   primaryNavigation,
   secondaryNavigation,
 } from "@/config/navigation";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type CommitInfo = {
   short: string;
@@ -23,6 +28,61 @@ type SiteFooterProps = {
   isDevBuild: boolean;
   siteTitle: string;
 };
+
+const footerIconToneClasses: Record<NavigationItemTone, string> = {
+  default: "text-muted-foreground",
+  muted: "text-muted-foreground",
+  primary: "text-primary",
+  success: "text-success",
+  info: "text-info",
+  warning: "text-warning",
+  destructive: "text-destructive",
+};
+
+const footerBadgeToneFallback: Partial<
+  Record<NavigationItemTone, NavigationBadgeVariant>
+> = {
+  muted: "muted",
+  primary: "default",
+  success: "success",
+  info: "info",
+  warning: "warning",
+  destructive: "destructive",
+};
+
+function renderFooterNavigationIcon(item: NavigationItem) {
+  const IconComponent = item.icon ?? item.activeIcon;
+  if (!IconComponent) {
+    return null;
+  }
+
+  const tone = item.tone ?? "default";
+  return (
+    <IconComponent
+      aria-hidden
+      className={cn("h-4 w-4 shrink-0", footerIconToneClasses[tone])}
+    />
+  );
+}
+
+function renderFooterNavigationBadge(item: NavigationItem) {
+  if (!item.badge) {
+    return null;
+  }
+
+  const tone = item.tone ?? "default";
+  const variant = item.badge.variant ?? footerBadgeToneFallback[tone] ?? "accent";
+
+  return (
+    <Badge
+      variant={variant}
+      size={item.badge.size ?? "sm"}
+      className="whitespace-nowrap"
+    >
+      {item.badge.label}
+    </Badge>
+  );
+}
 
 export function SiteFooter({ buildInfo, isDevBuild, siteTitle }: SiteFooterProps) {
   const currentYear = new Date().getFullYear();
@@ -79,8 +139,16 @@ export function SiteFooter({ buildInfo, isDevBuild, siteTitle }: SiteFooterProps
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 {primaryNavigation.map((item) => (
                   <li key={item.href}>
-                    <Link className="transition-colors hover:text-primary" href={item.href}>
-                      {item.label}
+                    <Link
+                      className={cn(
+                        "flex items-center gap-2 transition-colors hover:text-primary",
+                        item.badge ? "flex-wrap" : undefined,
+                      )}
+                      href={item.href}
+                    >
+                      {renderFooterNavigationIcon(item)}
+                      <span>{item.label}</span>
+                      {renderFooterNavigationBadge(item)}
                     </Link>
                   </li>
                 ))}
@@ -94,8 +162,16 @@ export function SiteFooter({ buildInfo, isDevBuild, siteTitle }: SiteFooterProps
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 {secondaryNavigation.map((item) => (
                   <li key={item.href}>
-                    <Link className="transition-colors hover:text-primary" href={item.href}>
-                      {item.label}
+                    <Link
+                      className={cn(
+                        "flex items-center gap-2 transition-colors hover:text-primary",
+                        item.badge ? "flex-wrap" : undefined,
+                      )}
+                      href={item.href}
+                    >
+                      {renderFooterNavigationIcon(item)}
+                      <span>{item.label}</span>
+                      {renderFooterNavigationBadge(item)}
                     </Link>
                   </li>
                 ))}
