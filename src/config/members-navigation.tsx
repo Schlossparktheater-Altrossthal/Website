@@ -368,7 +368,7 @@ export const membersAssignmentsTodoItem: MembersNavItem = {
 export const membersNavigation = [
   {
     id: "general",
-    label: "Allgemein",
+    label: "Start & Service",
     items: [
       {
         href: "/mitglieder",
@@ -383,6 +383,18 @@ export const membersNavigation = [
         icon: ProfileIcon,
       },
       {
+        href: "/mitglieder/issues",
+        label: "Feedback & Support",
+        permissionKey: "mitglieder.issues",
+        icon: IssuesIcon,
+      },
+    ],
+  },
+  {
+    id: "inventory",
+    label: "Dateien & Material",
+    items: [
+      {
         href: "/mitglieder/archiv-und-bilder",
         label: "Archiv und Bilder",
         permissionKey: "mitglieder.galerie",
@@ -393,12 +405,6 @@ export const membersNavigation = [
         label: "Dateisystem",
         permissionKey: "mitglieder.dateisystem",
         icon: FileLibraryIcon,
-      },
-      {
-        href: "/mitglieder/sperrliste",
-        label: "Sperrliste",
-        permissionKey: "mitglieder.sperrliste",
-        icon: BlacklistIcon,
       },
       {
         href: "/mitglieder/scan",
@@ -412,18 +418,6 @@ export const membersNavigation = [
         permissionKey: "mitglieder.inventaraufkleber",
         icon: InventoryStickersIcon,
       },
-      {
-        href: "/mitglieder/issues",
-        label: "Feedback & Support",
-        permissionKey: "mitglieder.issues",
-        icon: IssuesIcon,
-      },
-    ],
-  },
-  {
-    id: "inventory",
-    label: "Lagerverwaltung",
-    items: [
       {
         href: "/mitglieder/lagerverwaltung/technik",
         label: "Technik-Lager",
@@ -447,6 +441,12 @@ export const membersNavigation = [
         label: "Kalender",
         permissionKey: "mitglieder.kalender",
         icon: PersonalCalendarIcon,
+      },
+      {
+        href: "/mitglieder/sperrliste",
+        label: "Sperrliste",
+        permissionKey: "mitglieder.sperrliste",
+        icon: BlacklistIcon,
       },
       {
         href: "/mitglieder/meine-proben",
@@ -476,7 +476,7 @@ export const membersNavigation = [
   },
   {
     id: "final-week",
-    label: "Endproben Woche",
+    label: "Endprobenwoche",
     items: [
       {
         href: "/mitglieder/endproben-woche/dienstplan",
@@ -485,16 +485,16 @@ export const membersNavigation = [
         icon: DutyRosterIcon,
       },
       {
-        href: "/mitglieder/endproben-woche/essenplanung",
-        label: "Essensplanung",
-        permissionKey: "mitglieder.essenplanung",
-        icon: CateringIcon,
-      },
-      {
         href: "/mitglieder/endproben-woche/menueplan",
         label: "Menüplan",
         permissionKey: "mitglieder.essenplanung",
         icon: MealPlanIcon,
+      },
+      {
+        href: "/mitglieder/endproben-woche/essenplanung",
+        label: "Essensplanung",
+        permissionKey: "mitglieder.essenplanung",
+        icon: CateringIcon,
       },
       {
         href: "/mitglieder/endproben-woche/einkaufsliste",
@@ -506,7 +506,7 @@ export const membersNavigation = [
   },
   {
     id: "production",
-    label: "Produktion",
+    label: "Produktionen & Teams",
     items: [
       {
         href: "/mitglieder/produktionen",
@@ -566,25 +566,13 @@ export const membersNavigation = [
   },
   {
     id: "admin",
-    label: "Verwaltung",
+    label: "Verwaltung & Rechte",
     items: [
       {
         href: "/mitglieder/mitgliederverwaltung",
         label: "Mitgliederverwaltung",
         permissionKey: "mitglieder.rollenverwaltung",
         icon: MembersAdminIcon,
-      },
-      {
-        href: "/mitglieder/server-analytics",
-        label: "Server-Statistiken",
-        permissionKey: "mitglieder.server.analytics",
-        icon: ServerAnalyticsIcon,
-      },
-      {
-        href: "/mitglieder/onboarding",
-        label: "Onboarding-Statistiken",
-        permissionKey: "mitglieder.onboarding.analytics",
-        icon: DashboardIcon,
       },
       {
         href: "/mitglieder/rechte",
@@ -603,6 +591,18 @@ export const membersNavigation = [
         label: "Website & Theme",
         permissionKey: "mitglieder.website.settings",
         icon: WebsiteIcon,
+      },
+      {
+        href: "/mitglieder/server-analytics",
+        label: "Server-Statistiken",
+        permissionKey: "mitglieder.server.analytics",
+        icon: ServerAnalyticsIcon,
+      },
+      {
+        href: "/mitglieder/onboarding",
+        label: "Onboarding-Statistiken",
+        permissionKey: "mitglieder.onboarding.analytics",
+        icon: DashboardIcon,
       },
     ],
   },
