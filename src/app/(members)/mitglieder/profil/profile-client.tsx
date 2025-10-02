@@ -850,14 +850,6 @@ function ProfileClientInner({
   const highlightTiles = useMemo<HighlightTileConfig[]>(() => {
     const items: HighlightTileConfig[] = [
       {
-        id: "membership",
-        icon: <CalendarDays className="h-5 w-5" aria-hidden />,
-        title: "Mitgliedschaft",
-        description: memberSinceLabel ?? "Trage dein Eintrittsjahr im Onboarding ein.",
-        hint: createdAtLabel ? `Profil erstellt am ${createdAtLabel}.` : null,
-        tone: memberSinceLabel ? "default" : "warning",
-      },
-      {
         id: "onboarding-focus",
         icon: <Sparkles className="h-5 w-5" aria-hidden />,
         title: "Onboarding-Schwerpunkt",
@@ -925,8 +917,6 @@ function ProfileClientInner({
 
     return items;
   }, [
-    createdAtLabel,
-    memberSinceLabel,
     onboardingBackground,
     onboardingFocusLabel,
     onboardingNotes,
@@ -1107,23 +1097,23 @@ function ProfileOverviewCard({
                   </Badge>
                 ) : null}
               </div>
-              <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                 {email ? (
                   <a
                     href={`mailto:${email}`}
-                    className="inline-flex items-center gap-2 font-medium text-foreground transition hover:text-primary"
+                    className="flex items-center gap-2 font-medium text-foreground transition hover:text-primary"
                   >
                     <Mail className="h-4 w-4" aria-hidden />
                     {email}
                   </a>
                 ) : (
-                  <span className="inline-flex items-center gap-2 text-muted-foreground/80">
+                  <span className="flex items-center gap-2 text-muted-foreground/80">
                     <Mail className="h-4 w-4" aria-hidden />
                     Keine E-Mail hinterlegt
                   </span>
                 )}
                 {memberSinceLabel || createdAtLabel ? (
-                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <span className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                     <CalendarDays className="h-4 w-4" aria-hidden />
                     {memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}
                   </span>
