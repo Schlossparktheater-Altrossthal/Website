@@ -25,8 +25,8 @@ export const timelineLegendItems: readonly TimelineLegendItem[] = [
   {
     id: "holiday",
     tone: "holiday",
-    label: "Ferien",
-    description: "Automatische Kalenderdaten",
+    label: "Ferien & Feiertage",
+    description: "Automatisch importierte Kalenderdaten",
   },
   {
     id: "free",

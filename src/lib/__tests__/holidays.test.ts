@@ -5,10 +5,12 @@ vi.mock("next/cache", () => ({
   unstable_cache: <T extends (...args: unknown[]) => unknown>(fn: T) => fn,
 }));
 
-const { defaultHolidayUrl, resolvedSettings } = vi.hoisted(() => {
+const { defaultHolidayUrl, defaultPublicHolidayUrl, resolvedSettings } = vi.hoisted(() => {
   const url = "https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics";
+  const publicUrl = "https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics";
   return {
     defaultHolidayUrl: url,
+    defaultPublicHolidayUrl: publicUrl,
     resolvedSettings: {
       id: "default",
       freezeDays: 7,
@@ -41,8 +43,10 @@ vi.mock("@/lib/sperrliste-settings", () => ({
     })),
   applyHolidaySourceStatus: vi.fn().mockResolvedValue(undefined),
   getDefaultHolidaySourceUrl: vi.fn(() => defaultHolidayUrl),
+  getDefaultPublicHolidaySourceUrl: vi.fn(() => defaultPublicHolidayUrl),
 }));
 
+import { SAXONY_PUBLIC_HOLIDAYS } from "@/data/saxony-public-holidays";
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
 import { getSaxonySchoolHolidayRanges, isHolidaySourceUrlAllowed } from "@/lib/holidays";
 
@@ -82,11 +86,21 @@ describe("getSaxonySchoolHolidayRanges", () => {
 
     const thresholdStart = format(addDays(new Date(), -365), "yyyy-MM-dd");
     const thresholdEnd = format(addDays(new Date(), 365 * 3), "yyyy-MM-dd");
-    const expected = SAXONY_SCHOOL_HOLIDAYS.filter(
-      (range) => range.endDate >= thresholdStart && range.startDate <= thresholdEnd,
-    );
+    const expected = [...SAXONY_SCHOOL_HOLIDAYS, ...SAXONY_PUBLIC_HOLIDAYS]
+      .filter((range) => range.endDate >= thresholdStart && range.startDate <= thresholdEnd)
+      .sort((a, b) => {
+        const byStart = a.startDate.localeCompare(b.startDate);
+        if (byStart !== 0) return byStart;
+        const byEnd = a.endDate.localeCompare(b.endDate);
+        if (byEnd !== 0) return byEnd;
+        const byCategory = a.category.localeCompare(b.category);
+        if (byCategory !== 0) return byCategory;
+        const byTitle = a.title.localeCompare(b.title, "de-DE");
+        if (byTitle !== 0) return byTitle;
+        return a.id.localeCompare(b.id);
+      });
 
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
     expect(ranges).toEqual(expected);
   });
 });

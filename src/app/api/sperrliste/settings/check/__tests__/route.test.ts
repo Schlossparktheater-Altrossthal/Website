@@ -11,8 +11,10 @@ const {
   fetchHolidayRangesForSettingsMock,
   baseSettings,
   defaultHolidayUrl,
+  defaultPublicHolidayUrl,
 } = vi.hoisted(() => {
   const url = "https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics";
+  const publicUrl = "https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics";
   return {
     requireAuthMock: vi.fn(),
     hasPermissionMock: vi.fn(),
@@ -38,6 +40,7 @@ const {
       cacheKey: "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics",
     },
     defaultHolidayUrl: url,
+    defaultPublicHolidayUrl: publicUrl,
   } as const;
 });
 
@@ -46,6 +49,7 @@ vi.mock("@/lib/permissions", () => ({ hasPermission: hasPermissionMock }));
 vi.mock("@/lib/sperrliste-settings", () => ({
   HOLIDAY_SOURCE_MODES: ["default", "custom", "disabled"] as const,
   getDefaultHolidaySourceUrl: vi.fn(() => defaultHolidayUrl),
+  getDefaultPublicHolidaySourceUrl: vi.fn(() => defaultPublicHolidayUrl),
   readSperrlisteSettings: readSperrlisteSettingsMock,
   resolveSperrlisteSettings: resolveSperrlisteSettingsMock,
 }));
@@ -88,6 +92,7 @@ describe("sperrliste settings check route", () => {
     fetchHolidayRangesForSettingsMock.mockResolvedValue({
       ranges: [],
       status: { status: "ok", message: "OK", checkedAt },
+      publicHolidayStatus: { status: "ok", message: "OK", checkedAt },
     });
 
     const response = await POST(

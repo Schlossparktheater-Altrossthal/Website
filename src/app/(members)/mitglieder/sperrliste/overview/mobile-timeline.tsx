@@ -206,6 +206,12 @@ export function MobileTimeline({
                     const trimmedReason = entry?.reason?.trim();
                     const hasReason = Boolean(trimmedReason);
                     const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
+                    const holidaySummary = holidayEntries
+                      .map((holiday) =>
+                        `${holiday.category === 'publicHoliday' ? 'Feiertag' : 'Ferien'}: ${holiday.title}`,
+                      )
+                      .join(', ');
+
                     const label = [
                       format(day, 'EEEE, d. MMMM yyyy', { locale: de }),
                       entry
@@ -215,9 +221,7 @@ export function MobileTimeline({
                             ? trimmedReason ?? 'eingeschränkt'
                             : trimmedReason ?? 'gesperrt'
                         : isHoliday
-                          ? `Ferien: ${holidayEntries
-                              .map((h) => h.title)
-                              .join(', ')}`
+                          ? holidaySummary || 'Ferien & Feiertage'
                           : 'frei',
                     ];
 
