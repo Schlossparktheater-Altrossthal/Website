@@ -1129,8 +1129,8 @@ function ProfileOverviewCard({
         ) : null}
       </CardContent>
       {highlights.length ? (
-        <CardContent className="space-y-3 border-t border-border/50 bg-background/60">
-          <div className="space-y-3">
+        <CardContent className="border-t border-border/50 bg-background/60">
+          <div className="grid gap-3 sm:grid-cols-2">
             {highlights.map((tile) => (
               <ProfileHighlightTile key={tile.id} {...tile} />
             ))}
@@ -1152,21 +1152,33 @@ function ProfileHighlightTile({
   action,
 }: ProfileHighlightTileProps) {
   const toneClasses: Record<NonNullable<ProfileHighlightTileProps["tone"]>, string> = {
-    default: "border-border/60 bg-background/70",
-    info: "border-primary/30 bg-primary/10",
-    success: "border-success/40 bg-success/10",
-    warning: "border-warning/45 bg-warning/10",
+    default:
+      "border-border/60 bg-gradient-to-br from-background via-background/95 to-background shadow-lg shadow-primary/5 backdrop-blur",
+    info: "border-primary/50 bg-gradient-to-br from-primary/18 via-primary/10 to-background shadow-xl shadow-primary/10 text-primary",
+    success: "border-success/50 bg-gradient-to-br from-success/18 via-success/10 to-background shadow-xl text-success",
+    warning: "border-warning/50 bg-gradient-to-br from-warning/18 via-warning/10 to-background shadow-xl text-warning",
+  };
+
+  const iconClasses: Record<NonNullable<ProfileHighlightTileProps["tone"]>, string> = {
+    default: "border-border/50 bg-background/80 text-muted-foreground",
+    info: "border-primary/40 bg-primary/15 text-primary",
+    success: "border-success/45 bg-success/15 text-success",
+    warning: "border-warning/45 bg-warning/15 text-warning",
   };
 
   return (
-    <div className={cn("flex h-full flex-col gap-3 rounded-lg border p-4 shadow-sm", toneClasses[tone])}>
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <span className="text-muted-foreground/80">{icon}</span>
-        <span>{title}</span>
+    <div className={cn("flex h-full flex-col gap-3 rounded-2xl border p-5", toneClasses[tone])}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/90">{title}</p>
+          <p className="text-sm font-semibold leading-5 text-foreground">{description}</p>
+        </div>
+        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl border text-sm", iconClasses[tone])}>
+          {icon}
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-      {hint ? <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground/70">{hint}</p> : null}
-      {action ? <div className="mt-auto">{action}</div> : null}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {action ? <div className="mt-auto pt-2">{action}</div> : null}
     </div>
   );
 }
