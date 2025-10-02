@@ -7,6 +7,7 @@ import type { BlockedDay as BlockedDayDTO } from "./block-calendar";
 import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import {
   getDefaultHolidaySourceUrl,
+  getDefaultPublicHolidaySourceUrl,
   readSperrlisteSettings,
   resolveSperrlisteSettings,
   toClientSperrlisteSettings,
@@ -68,6 +69,7 @@ export default async function SperrlistePage() {
   const resolvedSettings = resolveSperrlisteSettings(refreshedSettingsRecord);
   const clientSettings = toClientSperrlisteSettings(resolvedSettings);
   const defaultHolidaySourceUrl = getDefaultHolidaySourceUrl();
+  const defaultPublicHolidaySourceUrl = getDefaultPublicHolidaySourceUrl();
 
   const initialBlockedDays: BlockedDayDTO[] = personalBlockedDays.map((entry) => ({
     id: entry.id,
@@ -112,6 +114,7 @@ export default async function SperrlistePage() {
         initialSettings={clientSettings}
         canManageSettings={canManageSettings}
         defaultHolidaySourceUrl={defaultHolidaySourceUrl}
+        defaultPublicHolidaySourceUrl={defaultPublicHolidaySourceUrl}
       />
     </div>
   );

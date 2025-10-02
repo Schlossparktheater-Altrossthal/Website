@@ -671,6 +671,11 @@ model SperrlisteSettings {
   holidaySourceStatus    String   @default("unknown")
   holidaySourceMessage   String?
   holidaySourceCheckedAt DateTime?
+  publicHolidaySourceMode      String   @default("default")
+  publicHolidaySourceUrl       String?
+  publicHolidaySourceStatus    String   @default("unknown")
+  publicHolidaySourceMessage   String?
+  publicHolidaySourceCheckedAt DateTime?
   freezeDays             Int      @default(7)
   preferredWeekdays      Json?
   exceptionWeekdays      Json?

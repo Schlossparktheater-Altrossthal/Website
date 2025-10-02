@@ -5,7 +5,7 @@ import { addDays, format, isValid, parseISO } from "date-fns";
 import { SAXONY_PUBLIC_HOLIDAYS } from "@/data/saxony-public-holidays";
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
 import {
-  applyHolidaySourceStatus,
+  applyHolidaySourceStatuses,
   getDefaultHolidaySourceUrl,
   getDefaultPublicHolidaySourceUrl,
   readSperrlisteSettings,
@@ -190,7 +190,7 @@ type HolidayFetchStatus = {
 
 export type HolidayFetchResult = {
   ranges: HolidayRange[];
-  status: HolidayFetchStatus;
+  holidayStatus: HolidayFetchStatus;
   publicHolidayStatus: HolidayFetchStatus;
 };
 
@@ -492,14 +492,14 @@ function sortHolidayRanges(ranges: HolidayRange[]) {
 
 async function fetchSchoolHolidayRangesForSettings(
   settings: ResolvedSperrlisteSettings,
-): Promise<{ ranges: HolidayRange[]; status: HolidayFetchStatus }> {
+): Promise<{ ranges: HolidayRange[]; holidayStatus: HolidayFetchStatus }> {
   const checkedAt = new Date();
 
   if (settings.holidaySource.mode === "disabled") {
     const ranges = filterRelevantRanges(getStaticSchoolHolidayRanges());
     return {
       ranges,
-      status: {
+      holidayStatus: {
         status: "disabled",
         message: "Ferienquelle ist deaktiviert. Es werden nur statische Termine verwendet.",
         checkedAt,
@@ -511,7 +511,7 @@ async function fetchSchoolHolidayRangesForSettings(
     const ranges = filterRelevantRanges(getStaticSchoolHolidayRanges());
     return {
       ranges,
-      status: createStaticFallbackStatus(
+      holidayStatus: createStaticFallbackStatus(
         "Externe Abrufe sind deaktiviert (OUTBOUND_HTTP_DISABLED). Es wird die statische Ferienliste genutzt.",
         checkedAt,
       ),
@@ -531,7 +531,7 @@ async function fetchSchoolHolidayRangesForSettings(
       const filtered = filterRelevantRanges(primaryRanges);
       return {
         ranges: filtered,
-        status: {
+        holidayStatus: {
           status: "ok",
           message: `Ferienquelle ${primaryUrl} lieferte ${formatRangeCount(filtered.length)}.`,
           checkedAt,
@@ -551,7 +551,7 @@ async function fetchSchoolHolidayRangesForSettings(
       const filtered = filterRelevantRanges(fallbackRanges);
       return {
         ranges: filtered,
-        status: {
+        holidayStatus: {
           status: primaryError ? "error" : "ok",
           message: primaryError
             ? `Primärer Feed (${primaryUrl ?? getDefaultHolidaySourceUrl()}) schlug fehl: ${primaryError.message}. Fallback (${FALLBACK_SAXONY_HOLIDAY_FEED}) lieferte ${formatRangeCount(
@@ -571,18 +571,29 @@ async function fetchSchoolHolidayRangesForSettings(
 
   return {
     ranges: staticRanges,
-    status: createStaticFallbackStatus(
+    holidayStatus: createStaticFallbackStatus(
       `${fallbackMessage} Verwendet werden ${formatRangeCount(staticRanges.length)}.`,
       checkedAt,
     ),
   };
 }
 
-async function fetchPublicHolidayRanges(): Promise<{
-  ranges: HolidayRange[];
-  status: HolidayFetchStatus;
-}> {
+async function fetchPublicHolidayRangesForSettings(
+  settings: ResolvedSperrlisteSettings,
+): Promise<{ ranges: HolidayRange[]; status: HolidayFetchStatus }> {
   const checkedAt = new Date();
+
+  if (settings.publicHolidaySource.mode === "disabled") {
+    const ranges = filterRelevantRanges(getStaticPublicHolidayRanges());
+    return {
+      ranges,
+      status: {
+        status: "disabled",
+        message: "Feiertagsquelle ist deaktiviert. Es werden nur statische Termine verwendet.",
+        checkedAt,
+      },
+    };
+  }
 
   if (isOutboundHttpDisabled()) {
     const ranges = filterRelevantRanges(getStaticPublicHolidayRanges());
@@ -595,7 +606,10 @@ async function fetchPublicHolidayRanges(): Promise<{
     };
   }
 
-  const publicUrl = getDefaultPublicHolidaySourceUrl();
+  const publicUrl =
+    settings.publicHolidaySource.mode === "custom"
+      ? settings.publicHolidaySource.url
+      : settings.publicHolidaySource.effectiveUrl ?? getDefaultPublicHolidaySourceUrl();
   let publicError: Error | null = null;
 
   if (publicUrl) {
@@ -614,6 +628,8 @@ async function fetchPublicHolidayRanges(): Promise<{
       publicError = error instanceof Error ? error : new Error("Feiertagsquelle konnte nicht geladen werden.");
       console.error("[holidays] public holiday feed fetch failed", publicError);
     }
+  } else {
+    publicError = new Error("Keine Feiertagsquelle konfiguriert.");
   }
 
   const staticRanges = filterRelevantRanges(getStaticPublicHolidayRanges());
@@ -635,14 +651,14 @@ export async function fetchHolidayRangesForSettings(
 ): Promise<HolidayFetchResult> {
   const [schoolResult, publicResult] = await Promise.all([
     fetchSchoolHolidayRangesForSettings(settings),
-    fetchPublicHolidayRanges(),
+    fetchPublicHolidayRangesForSettings(settings),
   ]);
 
   const combinedRanges = sortHolidayRanges([...schoolResult.ranges, ...publicResult.ranges]);
 
   return {
     ranges: combinedRanges,
-    status: schoolResult.status,
+    holidayStatus: schoolResult.holidayStatus,
     publicHolidayStatus: publicResult.status,
   };
 }
@@ -653,7 +669,10 @@ export const getSaxonySchoolHolidayRanges = unstable_cache(
     const record = await readSperrlisteSettings();
     const resolved = resolveSperrlisteSettings(record);
     const result = await fetchHolidayRangesForSettings(resolved);
-    await applyHolidaySourceStatus(result.status);
+    await applyHolidaySourceStatuses({
+      holiday: result.holidayStatus,
+      publicHoliday: result.publicHolidayStatus,
+    });
     return result.ranges;
   },
   ["saxony-school-holidays"],

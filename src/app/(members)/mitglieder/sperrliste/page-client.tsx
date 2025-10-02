@@ -17,6 +17,7 @@ interface SperrlistePageClientProps {
   initialSettings: ClientSperrlisteSettings;
   canManageSettings: boolean;
   defaultHolidaySourceUrl: string;
+  defaultPublicHolidaySourceUrl: string;
 }
 
 export function SperrlistePageClient({
@@ -26,10 +27,14 @@ export function SperrlistePageClient({
   initialSettings,
   canManageSettings,
   defaultHolidaySourceUrl,
+  defaultPublicHolidaySourceUrl,
 }: SperrlistePageClientProps) {
   const [settings, setSettings] = useState<ClientSperrlisteSettings>(initialSettings);
   const [holidays, setHolidays] = useState<HolidayRange[]>(initialHolidays);
   const [defaultHolidayUrl, setDefaultHolidayUrl] = useState(defaultHolidaySourceUrl);
+  const [defaultPublicHolidayUrl, setDefaultPublicHolidayUrl] = useState(
+    defaultPublicHolidaySourceUrl,
+  );
 
   return (
     <div className="space-y-6">
@@ -38,6 +43,7 @@ export function SperrlistePageClient({
           <SperrlisteSettingsDialog
             settings={settings}
             defaultHolidaySourceUrl={defaultHolidayUrl}
+            defaultPublicHolidaySourceUrl={defaultPublicHolidayUrl}
             onSettingsChange={(payload) => {
               setSettings(payload.settings);
               if (payload.holidays) {
@@ -45,6 +51,9 @@ export function SperrlistePageClient({
               }
               if (payload.defaults?.holidaySourceUrl) {
                 setDefaultHolidayUrl(payload.defaults.holidaySourceUrl);
+              }
+              if (payload.defaults?.publicHolidaySourceUrl) {
+                setDefaultPublicHolidayUrl(payload.defaults.publicHolidaySourceUrl);
               }
             }}
           />

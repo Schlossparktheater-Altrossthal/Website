@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
-  applyHolidaySourceStatus,
+  applyHolidaySourceStatuses,
   getDefaultHolidaySourceUrl,
+  getDefaultPublicHolidaySourceUrl,
   readSperrlisteSettings,
   resolveSperrlisteSettings,
   saveSperrlisteSettings,
@@ -26,6 +27,15 @@ const updateSchema = z.object({
     .transform((value) => value ?? []),
   holidaySourceMode: z.enum(["default", "custom", "disabled"]),
   holidaySourceUrl: z
+    .union([z.string().trim().url().max(500), z.literal(""), z.null()])
+    .transform((value) => {
+      if (value === null || value === "") {
+        return null;
+      }
+      return value;
+    }),
+  publicHolidaySourceMode: z.enum(["default", "custom", "disabled"]),
+  publicHolidaySourceUrl: z
     .union([z.string().trim().url().max(500), z.literal(""), z.null()])
     .transform((value) => {
       if (value === null || value === "") {
@@ -65,6 +75,7 @@ export async function GET() {
       settings: toClientSperrlisteSettings(resolved),
       defaults: {
         holidaySourceUrl: getDefaultHolidaySourceUrl(),
+        publicHolidaySourceUrl: getDefaultPublicHolidaySourceUrl(),
       },
     });
   } catch (error) {
@@ -104,10 +115,19 @@ export async function PUT(request: NextRequest) {
 
   const mode = parsed.data.holidaySourceMode;
   const url = mode === "custom" ? parsed.data.holidaySourceUrl : null;
+  const publicMode = parsed.data.publicHolidaySourceMode;
+  const publicUrl = publicMode === "custom" ? parsed.data.publicHolidaySourceUrl : null;
 
   if (mode === "custom" && !url) {
     return NextResponse.json(
       { error: "Bitte gib eine gültige URL für die Ferienquelle an." },
+      { status: 400 },
+    );
+  }
+
+  if (publicMode === "custom" && !publicUrl) {
+    return NextResponse.json(
+      { error: "Bitte gib eine gültige URL für die Feiertagsquelle an." },
       { status: 400 },
     );
   }
@@ -118,6 +138,9 @@ export async function PUT(request: NextRequest) {
 
     const modeChanged = resolvedBefore.holidaySource.mode !== mode;
     const urlChanged = (resolvedBefore.holidaySource.url ?? null) !== (url ?? null);
+    const publicModeChanged = resolvedBefore.publicHolidaySource.mode !== publicMode;
+    const publicUrlChanged =
+      (resolvedBefore.publicHolidaySource.url ?? null) !== (publicUrl ?? null);
 
     const savedRecord = await saveSperrlisteSettings(
       {
@@ -126,13 +149,21 @@ export async function PUT(request: NextRequest) {
         exceptionWeekdays,
         holidaySourceMode: mode,
         holidaySourceUrl: url,
+        publicHolidaySourceMode: publicMode,
+        publicHolidaySourceUrl: publicUrl,
       },
-      { resetStatus: modeChanged || urlChanged },
+      {
+        resetHolidayStatus: modeChanged || urlChanged,
+        resetPublicHolidayStatus: publicModeChanged || publicUrlChanged,
+      },
     );
 
     const resolvedAfterSave = resolveSperrlisteSettings(savedRecord);
     const result = await fetchHolidayRangesForSettings(resolvedAfterSave);
-    await applyHolidaySourceStatus(result.status);
+    await applyHolidaySourceStatuses({
+      holiday: result.holidayStatus,
+      publicHoliday: result.publicHolidayStatus,
+    });
 
     const refreshedRecord = await readSperrlisteSettings();
     const resolved = resolveSperrlisteSettings(refreshedRecord);
@@ -142,6 +173,7 @@ export async function PUT(request: NextRequest) {
       holidays: result.ranges,
       defaults: {
         holidaySourceUrl: getDefaultHolidaySourceUrl(),
+        publicHolidaySourceUrl: getDefaultPublicHolidaySourceUrl(),
       },
     });
   } catch (error) {

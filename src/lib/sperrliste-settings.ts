@@ -34,7 +34,17 @@ export type ResolvedSperrlisteSettings = {
     url: string | null;
     effectiveUrl: string | null;
   };
+  publicHolidaySource: {
+    mode: HolidaySourceMode;
+    url: string | null;
+    effectiveUrl: string | null;
+  };
   holidayStatus: {
+    status: HolidaySourceStatus;
+    message: string | null;
+    checkedAt: Date | null;
+  };
+  publicHolidayStatus: {
     status: HolidaySourceStatus;
     message: string | null;
     checkedAt: Date | null;
@@ -54,7 +64,17 @@ export type ClientSperrlisteSettings = {
     url: string | null;
     effectiveUrl: string | null;
   };
+  publicHolidaySource: {
+    mode: HolidaySourceMode;
+    url: string | null;
+    effectiveUrl: string | null;
+  };
   holidayStatus: {
+    status: HolidaySourceStatus;
+    message: string | null;
+    checkedAt: string | null;
+  };
+  publicHolidayStatus: {
     status: HolidaySourceStatus;
     message: string | null;
     checkedAt: string | null;
@@ -69,12 +89,19 @@ export type SperrlisteSettingsInput = {
   exceptionWeekdays: number[];
   holidaySourceMode: HolidaySourceMode;
   holidaySourceUrl: string | null;
+  publicHolidaySourceMode: HolidaySourceMode;
+  publicHolidaySourceUrl: string | null;
 };
 
 export type HolidayStatusUpdate = {
   status: HolidaySourceStatus;
   message: string | null;
   checkedAt: Date;
+};
+
+export type HolidayStatusUpdates = {
+  holiday: HolidayStatusUpdate;
+  publicHoliday: HolidayStatusUpdate;
 };
 
 const DEFAULT_RECORD_ID = "default" as const;
@@ -167,22 +194,46 @@ export function getDefaultPublicHolidaySourceUrl() {
 }
 
 export function resolveSperrlisteSettings(record: SperrlisteSettingsRecord): ResolvedSperrlisteSettings {
-  const mode = resolveMode(record?.holidaySourceMode);
-  const url = normaliseUrl(record?.holidaySourceUrl);
   const freezeDays = clampNumber(record?.freezeDays, 0, 365, DEFAULT_FREEZE_DAYS);
   const preferredWeekdays = sanitiseWeekdayJson(record?.preferredWeekdays ?? null, DEFAULT_PREFERRED_WEEKDAYS);
   const exceptionWeekdays = sanitiseWeekdayJson(record?.exceptionWeekdays ?? null, DEFAULT_EXCEPTION_WEEKDAYS);
-  const effectiveUrl = mode === "disabled" ? null : mode === "custom" ? url : resolveDefaultHolidayUrl();
 
-  const resolvedStatus = mode === "disabled" ? "disabled" : resolveStatus(record?.holidaySourceStatus);
+  const holidaySourceMode = resolveMode(record?.holidaySourceMode);
+  const holidaySourceUrl = normaliseUrl(record?.holidaySourceUrl);
+  const defaultHolidayUrl = resolveDefaultHolidayUrl();
+  const holidayEffectiveUrl =
+    holidaySourceMode === "disabled"
+      ? null
+      : holidaySourceMode === "custom"
+        ? holidaySourceUrl
+        : defaultHolidayUrl;
+
+  const publicHolidaySourceMode = resolveMode(record?.publicHolidaySourceMode);
+  const publicHolidaySourceUrl = normaliseUrl(record?.publicHolidaySourceUrl);
+  const defaultPublicUrl = resolveDefaultPublicHolidayUrl();
+  const publicHolidayEffectiveUrl =
+    publicHolidaySourceMode === "disabled"
+      ? null
+      : publicHolidaySourceMode === "custom"
+        ? publicHolidaySourceUrl
+        : defaultPublicUrl;
 
   const holidayStatus = {
-    status: resolvedStatus,
+    status: holidaySourceMode === "disabled" ? "disabled" : resolveStatus(record?.holidaySourceStatus),
     message: record?.holidaySourceMessage ?? null,
     checkedAt: record?.holidaySourceCheckedAt ?? null,
   } as const;
 
-  const cacheKey = `${mode}|${effectiveUrl ?? "none"}`;
+  const publicHolidayStatus = {
+    status: publicHolidaySourceMode === "disabled" ? "disabled" : resolveStatus(record?.publicHolidaySourceStatus),
+    message: record?.publicHolidaySourceMessage ?? null,
+    checkedAt: record?.publicHolidaySourceCheckedAt ?? null,
+  } as const;
+
+  const cacheKey = [
+    `${holidaySourceMode}|${holidayEffectiveUrl ?? "none"}`,
+    `${publicHolidaySourceMode}|${publicHolidayEffectiveUrl ?? "none"}`,
+  ].join("|");
 
   return {
     id: record?.id ?? DEFAULT_RECORD_ID,
@@ -190,11 +241,17 @@ export function resolveSperrlisteSettings(record: SperrlisteSettingsRecord): Res
     preferredWeekdays,
     exceptionWeekdays,
     holidaySource: {
-      mode,
-      url,
-      effectiveUrl,
+      mode: holidaySourceMode,
+      url: holidaySourceUrl,
+      effectiveUrl: holidayEffectiveUrl,
+    },
+    publicHolidaySource: {
+      mode: publicHolidaySourceMode,
+      url: publicHolidaySourceUrl,
+      effectiveUrl: publicHolidayEffectiveUrl,
     },
     holidayStatus,
+    publicHolidayStatus,
     updatedAt: record?.updatedAt ?? null,
     cacheKey,
   };
@@ -212,11 +269,23 @@ export function toClientSperrlisteSettings(
       url: resolved.holidaySource.url,
       effectiveUrl: resolved.holidaySource.effectiveUrl,
     },
+    publicHolidaySource: {
+      mode: resolved.publicHolidaySource.mode,
+      url: resolved.publicHolidaySource.url,
+      effectiveUrl: resolved.publicHolidaySource.effectiveUrl,
+    },
     holidayStatus: {
       status: resolved.holidayStatus.status,
       message: resolved.holidayStatus.message,
       checkedAt: resolved.holidayStatus.checkedAt
         ? resolved.holidayStatus.checkedAt.toISOString()
+        : null,
+    },
+    publicHolidayStatus: {
+      status: resolved.publicHolidayStatus.status,
+      message: resolved.publicHolidayStatus.message,
+      checkedAt: resolved.publicHolidayStatus.checkedAt
+        ? resolved.publicHolidayStatus.checkedAt.toISOString()
         : null,
     },
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
@@ -246,10 +315,11 @@ function toJsonArray(values: number[]) {
 
 export async function saveSperrlisteSettings(
   data: SperrlisteSettingsInput,
-  options: { resetStatus?: boolean } = {},
+  options: { resetHolidayStatus?: boolean; resetPublicHolidayStatus?: boolean } = {},
 ) {
   const id = DEFAULT_RECORD_ID;
-  const resetStatus = Boolean(options.resetStatus);
+  const resetHolidayStatus = Boolean(options.resetHolidayStatus);
+  const resetPublicHolidayStatus = Boolean(options.resetPublicHolidayStatus);
   const preferredWeekdays = toJsonArray(data.preferredWeekdays);
   const exceptionWeekdays = toJsonArray(data.exceptionWeekdays);
 
@@ -257,14 +327,22 @@ export async function saveSperrlisteSettings(
     freezeDays: clampNumber(data.freezeDays, 0, 365, DEFAULT_FREEZE_DAYS),
     holidaySourceMode: data.holidaySourceMode,
     holidaySourceUrl: normaliseUrl(data.holidaySourceUrl),
+    publicHolidaySourceMode: data.publicHolidaySourceMode,
+    publicHolidaySourceUrl: normaliseUrl(data.publicHolidaySourceUrl),
     preferredWeekdays,
     exceptionWeekdays,
   };
 
-  if (resetStatus) {
+  if (resetHolidayStatus) {
     update.holidaySourceStatus = "unknown";
     update.holidaySourceMessage = null;
     update.holidaySourceCheckedAt = null;
+  }
+
+  if (resetPublicHolidayStatus) {
+    update.publicHolidaySourceStatus = "unknown";
+    update.publicHolidaySourceMessage = null;
+    update.publicHolidaySourceCheckedAt = null;
   }
 
   return prisma.sperrlisteSettings.upsert({
@@ -275,29 +353,42 @@ export async function saveSperrlisteSettings(
       freezeDays: clampNumber(data.freezeDays, 0, 365, DEFAULT_FREEZE_DAYS),
       holidaySourceMode: data.holidaySourceMode,
       holidaySourceUrl: normaliseUrl(data.holidaySourceUrl),
+      publicHolidaySourceMode: data.publicHolidaySourceMode,
+      publicHolidaySourceUrl: normaliseUrl(data.publicHolidaySourceUrl),
       preferredWeekdays,
       exceptionWeekdays,
     },
   });
 }
 
-export async function applyHolidaySourceStatus(update: HolidayStatusUpdate) {
+export async function applyHolidaySourceStatuses(updates: HolidayStatusUpdates) {
   const id = DEFAULT_RECORD_ID;
-  const resolvedStatus = update.status === "disabled" ? "disabled" : update.status;
+  const resolvedHolidayStatus =
+    updates.holiday.status === "disabled" ? "disabled" : updates.holiday.status;
+  const resolvedPublicStatus =
+    updates.publicHoliday.status === "disabled" ? "disabled" : updates.publicHoliday.status;
   return prisma.sperrlisteSettings.upsert({
     where: { id },
     update: {
-      holidaySourceStatus: resolvedStatus,
-      holidaySourceMessage: update.message,
-      holidaySourceCheckedAt: update.checkedAt,
+      holidaySourceStatus: resolvedHolidayStatus,
+      holidaySourceMessage: updates.holiday.message,
+      holidaySourceCheckedAt: updates.holiday.checkedAt,
+      publicHolidaySourceStatus: resolvedPublicStatus,
+      publicHolidaySourceMessage: updates.publicHoliday.message,
+      publicHolidaySourceCheckedAt: updates.publicHoliday.checkedAt,
     },
     create: {
       id,
       holidaySourceMode: "default",
       holidaySourceUrl: null,
-      holidaySourceStatus: resolvedStatus,
-      holidaySourceMessage: update.message,
-      holidaySourceCheckedAt: update.checkedAt,
+      holidaySourceStatus: resolvedHolidayStatus,
+      holidaySourceMessage: updates.holiday.message,
+      holidaySourceCheckedAt: updates.holiday.checkedAt,
+      publicHolidaySourceMode: "default",
+      publicHolidaySourceUrl: null,
+      publicHolidaySourceStatus: resolvedPublicStatus,
+      publicHolidaySourceMessage: updates.publicHoliday.message,
+      publicHolidaySourceCheckedAt: updates.publicHoliday.checkedAt,
       freezeDays: DEFAULT_FREEZE_DAYS,
       preferredWeekdays: [...DEFAULT_PREFERRED_WEEKDAYS],
       exceptionWeekdays: [...DEFAULT_EXCEPTION_WEEKDAYS],
