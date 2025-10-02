@@ -63,6 +63,19 @@ const KIND_OPTIONS: { kind: BlockedDayKind; title: string; description: string }
   },
 ];
 
+const HOLIDAY_CATEGORY_META: Record<HolidayRange["category"], { label: string; badgeClass: string }> = {
+  schoolHoliday: {
+    label: "Schulferien",
+    badgeClass:
+      "bg-sky-200/90 text-sky-900 dark:bg-sky-500/40 dark:text-sky-50",
+  },
+  publicHoliday: {
+    label: "Feiertag",
+    badgeClass:
+      "bg-amber-200/90 text-amber-900 dark:bg-amber-500/30 dark:text-amber-100",
+  },
+};
+
 const getSingleActionLabel = (kind: BlockedDayKind) => {
   if (kind === "PREFERRED") return "Bevorzugten Tag speichern";
   if (kind === "LIMITED") return "Einschränkung speichern";
@@ -948,14 +961,14 @@ export function BlockCalendar({
       />
       <span className="flex items-center gap-1.5">
         <CalendarDays className="h-4 w-4" aria-hidden />
-        <span>Ferien anzeigen</span>
+        <span>Ferien &amp; Feiertage anzeigen</span>
       </span>
     </label>
   );
 
   const holidayDescription = (
     <p className="text-xs leading-5 text-muted-foreground">
-      Schulferien werden im Kalender hervorgehoben. Über das Kästchen oben kannst du sie bei Bedarf ausblenden.
+      Schulferien und gesetzliche Feiertage werden im Kalender hervorgehoben. Über das Kästchen oben kannst du sie bei Bedarf ausblenden.
     </p>
   );
 
@@ -964,12 +977,13 @@ export function BlockCalendar({
         <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-sky-500/40 dark:bg-sky-500/10">
           <div className="flex items-center gap-2 text-sky-800 dark:text-sky-100">
             <CalendarDays className="h-4 w-4" aria-hidden />
-            <span className="font-semibold">Schulferien in Sachsen</span>
+            <span className="font-semibold">Ferien &amp; Feiertage in Sachsen</span>
           </div>
           <ul className="space-y-2 text-sky-900/90 dark:text-sky-100/90">
             {upcomingHolidays.map((holiday) => {
               const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
               const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
+              const categoryMeta = HOLIDAY_CATEGORY_META[holiday.category];
 
               return (
                 <li
@@ -984,7 +998,17 @@ export function BlockCalendar({
                         : "text-sky-900/90 dark:text-sky-100/90",
                     )}
                   >
-                    {holiday.title}
+                    <span
+                      className={cn(
+                        "mr-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide align-middle",
+                        categoryMeta.badgeClass,
+                      )}
+                      aria-label={categoryMeta.label}
+                      title={categoryMeta.label}
+                    >
+                      {categoryMeta.label}
+                    </span>
+                    <span className="align-middle">{holiday.title}</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-sky-900/80 dark:text-sky-100/80">
                     <span>{rangeLabel}</span>
@@ -1002,7 +1026,7 @@ export function BlockCalendar({
       )
     : (
         <div className="rounded-lg border border-muted/40 bg-muted/30 p-4 text-xs text-muted-foreground">
-          Die Ferienübersicht wird eingeblendet, sobald der abonnierte Kalender Termine liefert.
+          Die Übersicht erscheint automatisch, sobald Ferien oder Feiertage aus der abonnierten Quelle bereitstehen.
         </div>
       );
 
@@ -1022,7 +1046,7 @@ export function BlockCalendar({
       >
         <span className="flex items-center gap-1.5">
           <CalendarDays className="h-4 w-4" aria-hidden />
-          <span>Ferientermine</span>
+          <span>Ferien &amp; Feiertage</span>
         </span>
         <ChevronDown
           className={cn("h-4 w-4 transition-transform", holidayPanelOpen ? "rotate-180" : "rotate-0")}

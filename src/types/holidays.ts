@@ -1,3 +1,5 @@
+export type HolidayCategory = "schoolHoliday" | "publicHoliday";
+
 export type HolidayRange = {
   /**
    * Stable identifier from the calendar feed. Defaults to a composite key when the feed does not provide a UID.
@@ -15,4 +17,8 @@ export type HolidayRange = {
    * Inclusive ISO date (yyyy-MM-dd) of the last day covered by the holiday.
    */
   endDate: string;
+  /**
+   * Categorisation of the holiday range so the UI can differentiate between Schulferien und gesetzliche Feiertage.
+   */
+  category: HolidayCategory;
 };

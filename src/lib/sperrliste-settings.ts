@@ -4,6 +4,9 @@ import type { Prisma, SperrlisteSettings } from "@prisma/client";
 export const DEFAULT_SAXONY_HOLIDAY_FEED =
   "https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics";
 
+export const DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED =
+  "https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics";
+
 export const DEFAULT_FREEZE_DAYS = 7;
 export const DEFAULT_PREFERRED_WEEKDAYS = [6, 0] as const;
 export const DEFAULT_EXCEPTION_WEEKDAYS = [5] as const;
@@ -152,6 +155,15 @@ function resolveDefaultHolidayUrl() {
 
 export function getDefaultHolidaySourceUrl() {
   return resolveDefaultHolidayUrl();
+}
+
+function resolveDefaultPublicHolidayUrl() {
+  const envValue = normaliseUrl(process.env.SAXONY_PUBLIC_HOLIDAYS_ICS_URL);
+  return envValue ?? DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED;
+}
+
+export function getDefaultPublicHolidaySourceUrl() {
+  return resolveDefaultPublicHolidayUrl();
 }
 
 export function resolveSperrlisteSettings(record: SperrlisteSettingsRecord): ResolvedSperrlisteSettings {

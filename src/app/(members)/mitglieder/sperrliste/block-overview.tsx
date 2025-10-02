@@ -144,12 +144,19 @@ export function BlockOverview({
               {selectedBlockedDay.holidayEntries.length ? (
                 <div className="space-y-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Ferien am Tag
+                    Ferien &amp; Feiertage am Tag
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {selectedBlockedDay.holidayEntries.map((holiday) => (
-                      <Badge key={holiday.id} variant="info">
-                        {holiday.title}
+                      <Badge
+                        key={holiday.id}
+                        variant={holiday.category === 'publicHoliday' ? 'warning' : 'info'}
+                        className="flex items-center gap-1"
+                      >
+                        <span className="text-[11px] uppercase tracking-wide">
+                          {holiday.category === 'publicHoliday' ? 'Feiertag' : 'Ferien'}
+                        </span>
+                        <span className="font-medium">{holiday.title}</span>
                       </Badge>
                     ))}
                   </div>

@@ -159,7 +159,7 @@ export function OverviewShell({
             </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">Ferien in der Ansicht</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">Ferien &amp; Feiertage in der Ansicht</div>
             <div className="mt-1 flex flex-col gap-1 text-lg font-semibold sm:text-xl">
               <span>{holidaysInRangeCount}</span>
               <span className="text-[11px] font-medium text-slate-300/80 line-clamp-2">
@@ -173,7 +173,7 @@ export function OverviewShell({
       <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-muted-foreground lg:max-w-xl">
-            Klicke oder tippe auf rot markierte Sperrtage, um Hintergründe und Ferieninfos zu lesen. Gesperrte Tage erscheinen kompakt in Rot, eingeschränkte Slots schimmern in bernsteinfarbenen Tönen, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription} {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
+            Klicke oder tippe auf rot markierte Sperrtage, um Hintergründe sowie Ferien- und Feiertagsinfos zu lesen. Gesperrte Tage erscheinen kompakt in Rot, eingeschränkte Slots schimmern in bernsteinfarbenen Tönen, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription} {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             {timelineLegendItems.map((item) => (

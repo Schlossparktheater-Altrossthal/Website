@@ -173,8 +173,8 @@ export function DesktopTimeline({
             {holidaySegments.map((segment) => {
               const summaryLabel =
                 segment.titles.length > 1
-                  ? `${segment.titles[0] ?? "Ferien"} +${segment.titles.length - 1}`
-                  : segment.titles[0] ?? "Ferien";
+                  ? `${segment.titles[0] ?? "Ferien & Feiertage"} +${segment.titles.length - 1}`
+                  : segment.titles[0] ?? "Ferien & Feiertage";
 
               return (
                 <th
@@ -193,7 +193,7 @@ export function DesktopTimeline({
                   {segment.isHoliday ? (
                     <span title={segment.titles.join(", ")}>{summaryLabel}</span>
                   ) : (
-                    <span className="sr-only">Keine Ferien</span>
+                    <span className="sr-only">Keine Ferien oder Feiertage</span>
                   )}
                 </th>
               );
@@ -269,7 +269,12 @@ export function DesktopTimeline({
                   ];
 
                   if (isHoliday) {
-                    label.push(`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`);
+                    const holidaySummary = holidayEntries
+                      .map((holiday) =>
+                        `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
+                      )
+                      .join(", ");
+                    label.push(holidaySummary || "Ferien & Feiertage");
                   }
 
                   if (createdAtLabel) {
@@ -337,7 +342,11 @@ export function DesktopTimeline({
                           </span>
                           {holidayId ? (
                             <span id={holidayId} className="sr-only">
-                              {`Ferien: ${holidayEntries.map((h) => h.title).join(", ")}`}
+                              {holidayEntries
+                                .map((holiday) =>
+                                  `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
+                                )
+                                .join(", ")}
                             </span>
                           ) : null}
                           {createdAtId ? (
@@ -378,7 +387,11 @@ export function DesktopTimeline({
                             </div>
                           ) : isHoliday ? (
                             <span className="sr-only" id={holidayId}>
-                              {holidayEntries[0]?.title ?? "Ferien"}
+                              {holidayEntries
+                                .map((holiday) =>
+                                  `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
+                                )
+                                .join(", ") || "Ferien & Feiertage"}
                             </span>
                           ) : isPreferredDay ? (
                             <span className="sr-only">Bevorzugter Probentag</span>
