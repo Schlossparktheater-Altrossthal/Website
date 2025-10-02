@@ -55,6 +55,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "mitglieder.profil", label: "Profilbereich aufrufen", category: "base" },
   { key: "mitglieder.scan", label: "Scanner & Check-in nutzen", category: "base" },
   {
+    key: "mitglieder.kalender",
+    label: "Kalender öffnen",
+    description:
+      "Persönliche Proben, Gewerke-Termine und Blocker im Mitgliederkalender betrachten.",
+    category: "self",
+  },
+  {
     key: "mitglieder.inventaraufkleber",
     label: "Inventaraufkleber erstellen",
     description: "Druckfertige Inventaraufkleber mit QR-Codes erstellen und exportieren.",
