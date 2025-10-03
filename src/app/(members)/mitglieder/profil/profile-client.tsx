@@ -888,6 +888,26 @@ function ProfileClientInner({
     ];
   }, [whatsappLink, whatsappVisitedAt, whatsappVisitedAtLabel, handleWhatsAppVisit]);
 
+  const tabOptions = useMemo(
+    () => {
+      const options: Array<{ value: string; label: string }> = [
+        { value: "stammdaten", label: "Stammdaten" },
+        { value: "zahlungen", label: "Zahlungsdaten" },
+        { value: "ernaehrung", label: "Ernährung & Allergien" },
+        { value: "interessen", label: "Interessen" },
+        { value: "freigaben", label: "Freigaben" },
+        { value: "onboarding", label: "Onboarding" },
+      ];
+
+      if (canManageMeasurements) {
+        options.splice(3, 0, { value: "masse", label: "Maße" });
+      }
+
+      return options;
+    },
+    [canManageMeasurements],
+  );
+
   return (
     <div className="space-y-8">
       <ProfileOverviewCard
@@ -905,31 +925,36 @@ function ProfileClientInner({
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="flex w-full flex-wrap gap-2 rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
-          <TabsTrigger value="stammdaten" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-            Stammdaten
-          </TabsTrigger>
-          <TabsTrigger value="zahlungen" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-            Zahlungsdaten
-          </TabsTrigger>
-          <TabsTrigger value="ernaehrung" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-            Ernährung &amp; Allergien
-          </TabsTrigger>
-          {canManageMeasurements ? (
-            <TabsTrigger value="masse" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-              Maße
-            </TabsTrigger>
-          ) : null}
-          <TabsTrigger value="interessen" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-            Interessen
-          </TabsTrigger>
-          <TabsTrigger value="freigaben" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-            Freigaben
-          </TabsTrigger>
-          <TabsTrigger value="onboarding" className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-            Onboarding
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col gap-3">
+          <div className="sm:hidden">
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger id="profile-tab-select" className="h-11 w-full justify-between rounded-full border-border/70 px-4 text-sm font-semibold">
+                <SelectValue placeholder="Bereich wählen">
+                  {tabOptions.find((option) => option.value === activeTab)?.label}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {tabOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <TabsList className="hidden w-full items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/70 bg-background/70 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10 backdrop-blur sm:flex">
+            {tabOptions.map((option) => (
+              <TabsTrigger
+                key={option.value}
+                value={option.value}
+                className="flex-1 basis-0 whitespace-nowrap px-4 py-2 text-xs font-semibold uppercase tracking-wide transition sm:px-5 sm:text-sm"
+              >
+                {option.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         <TabsContent value="stammdaten" className="space-y-6">
           <BasicsSection user={user} onUserUpdated={handleUserUpdated} />
