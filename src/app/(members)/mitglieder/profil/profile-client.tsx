@@ -901,11 +901,11 @@ function ProfileClientInner({
       const options: Array<{ value: string; label: string }> = [
         { value: "stammdaten", label: "Stammdaten" },
         { value: "zahlungen", label: "Zahlungsdaten" },
-        { value: "ernaehrung", label: "Ernährung & Allergien" },
+        { value: "ernaehrung", label: "Ernährung" },
         { value: "interessen", label: "Interessen" },
         { value: "freigaben", label: "Freigaben" },
         { value: "onboarding", label: "Onboarding" },
-        { value: "rollen", label: "Rollenpräferenzen" },
+        { value: "rollen", label: "Präferenzen" },
       ];
 
       if (canManageMeasurements) {
