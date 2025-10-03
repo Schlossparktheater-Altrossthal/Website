@@ -14,7 +14,7 @@ const {
   defaultPublicHolidayUrl,
 } = vi.hoisted(() => {
   const url = "https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics";
-  const publicUrl = "https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics";
+  const publicUrl = "static:saxony-public-holidays";
   return {
     requireAuthMock: vi.fn(),
     hasPermissionMock: vi.fn(),
@@ -48,7 +48,7 @@ const {
       },
       updatedAt: null,
       cacheKey:
-        "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics|default|https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics",
+        "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics|default|static:saxony-public-holidays",
     },
     defaultHolidayUrl: url,
     defaultPublicHolidayUrl: publicUrl,
@@ -59,6 +59,7 @@ vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: hasPermissionMock }));
 vi.mock("@/lib/sperrliste-settings", () => ({
   HOLIDAY_SOURCE_MODES: ["default", "custom", "disabled"] as const,
+  DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED: "static:saxony-public-holidays",
   getDefaultHolidaySourceUrl: vi.fn(() => defaultHolidayUrl),
   getDefaultPublicHolidaySourceUrl: vi.fn(() => defaultPublicHolidayUrl),
   readSperrlisteSettings: readSperrlisteSettingsMock,

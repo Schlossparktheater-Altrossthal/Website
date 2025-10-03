@@ -11,7 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import type { ClientSperrlisteSettings, HolidaySourceStatus, HolidaySourceMode } from "@/lib/sperrliste-settings";
+import {
+  DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED,
+  type ClientSperrlisteSettings,
+  type HolidaySourceStatus,
+  type HolidaySourceMode,
+} from "@/lib/sperrliste-settings";
 import { formatWeekdayList, WEEKDAY_OPTIONS, WEEKDAY_ORDER } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";
 
@@ -224,6 +229,9 @@ export function SperrlisteSettingsManager({
     if (value === publicHolidayModeState) {
       return;
     }
+    if (value === "custom" && publicHolidayUrlState === DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED) {
+      setPublicHolidayUrlState("");
+    }
     setPublicHolidayModeState(value);
     resetFeedback();
     markStatusPending("publicHoliday");
@@ -330,7 +338,7 @@ export function SperrlisteSettingsManager({
   const publicHolidayModeSummary = useMemo(() => {
     switch (publicHolidayMode) {
       case "default":
-        return "Standardfeed (Feiertage Sachsen)";
+        return "Standardfeed (Interne Feiertage Sachsen)";
       case "custom": {
         const trimmed = publicHolidayUrl.trim();
         if (!trimmed) return "Eigene URL (noch nicht gesetzt)";
@@ -350,6 +358,16 @@ export function SperrlisteSettingsManager({
   const publicHolidaySourceDetails = useMemo(() => {
     if (publicHolidayMode === "disabled") {
       return null;
+    }
+
+    if (
+      publicHolidayMode !== "custom" &&
+      defaults.publicHolidaySourceUrl === DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED
+    ) {
+      return {
+        href: null,
+        label: "Interne Standardliste",
+      } as const;
     }
 
     const rawUrl =
@@ -956,7 +974,7 @@ export function SperrlisteSettingsManager({
                         <SelectValue placeholder="Modus wählen" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="default">Standardfeed (Feiertage Sachsen)</SelectItem>
+                        <SelectItem value="default">Standardfeed (Interne Feiertage Sachsen)</SelectItem>
                         <SelectItem value="custom">Eigene URL</SelectItem>
                         <SelectItem value="disabled">Keine Feiertagsquelle</SelectItem>
                       </SelectContent>
@@ -969,7 +987,11 @@ export function SperrlisteSettingsManager({
                       type="url"
                       value={publicHolidayUrl}
                       onChange={(event) => handlePublicHolidayUrlInput(event.target.value)}
-                      placeholder={defaults.publicHolidaySourceUrl}
+                      placeholder={
+                        defaults.publicHolidaySourceUrl === DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED
+                          ? ""
+                          : defaults.publicHolidaySourceUrl
+                      }
                       disabled={publicHolidayMode !== "custom" || saving}
                     />
                   </div>
