@@ -4,7 +4,8 @@ import type { Prisma, SperrlisteSettings } from "@prisma/client";
 export const DEFAULT_SAXONY_HOLIDAY_FEED =
   "https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics";
 
-export const DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED = "static:saxony-public-holidays";
+export const DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED =
+  "https://www.officeholidays.com/ics/germany/saxony";
 
 export const DEFAULT_FREEZE_DAYS = 7;
 export const DEFAULT_PREFERRED_WEEKDAYS = [6, 0] as const;
