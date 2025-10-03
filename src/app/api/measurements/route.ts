@@ -56,7 +56,12 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
-    const payload = await request.json();
+    const rawPayload = await request.json();
+    const payload = {
+      ...rawPayload,
+      note: typeof rawPayload?.note === "string" ? rawPayload.note : undefined,
+    };
+
     const { userId: overrideUserId, ...data } = measurementRequestSchema.parse(payload);
 
     const targetUserId = overrideUserId ?? userId;

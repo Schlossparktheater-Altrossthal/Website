@@ -282,9 +282,19 @@ export async function saveMeasurementAction(
   input: SaveMeasurementInput,
 ): Promise<ActionResult<SaveMeasurementResult>> {
   try {
+    const payload: Record<string, unknown> = {
+      type: input.type,
+      value: input.value,
+      unit: input.unit,
+    };
+
+    if (typeof input.note === "string") {
+      payload.note = input.note;
+    }
+
     const response = await authorizedFetch("/api/measurements", {
       method: "POST",
-      body: JSON.stringify(input),
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json().catch(() => null);
