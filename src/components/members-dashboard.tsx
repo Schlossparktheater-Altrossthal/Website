@@ -531,25 +531,23 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     if (!profileCompletion.complete) {
       return (
         <div className="flex flex-col gap-4 rounded-2xl border border-warning/50 bg-gradient-to-br from-warning/20 via-warning/10 to-warning/5 p-4 text-sm text-warning">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-warning/50 bg-warning/20">
                 <CalendarRange className="h-4 w-4" />
               </div>
               <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  {profileCompletion.total ? (
-                    <Badge className="border-warning/60 bg-warning/15 text-xs font-semibold uppercase tracking-wide text-warning">
-                      {percentLabel}
-                    </Badge>
-                  ) : null}
-                  <p className="font-semibold">Profilangaben unvollständig</p>
-                </div>
+                <p className="font-semibold">Profilangaben unvollständig</p>
                 <p className="text-xs text-warning/90">
                   Aktualisiere die fehlenden Angaben, um dein Profil abzuschließen.
                 </p>
               </div>
             </div>
+            {profileCompletion.total ? (
+              <Badge className="inline-flex items-center justify-center gap-1.5 rounded-lg border-warning/70 bg-warning/25 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning shadow-[0_8px_24px_rgba(234,179,8,0.15)] ring-1 ring-inset ring-warning/50 backdrop-blur-sm">
+                {percentLabel}
+              </Badge>
+            ) : null}
           </div>
           <Button
             type="button"
