@@ -68,7 +68,6 @@ export function UserNav({ className }: { className?: string }) {
   const { firstName: derivedFirstName } = splitFullName(name);
   const firstNameDisplay =
     session.user.firstName?.trim() ?? derivedFirstName ?? name;
-  const role = session.user.role;
   async function onLogout() {
     try {
       await signOut({ callbackUrl: "/" });
@@ -115,12 +114,6 @@ export function UserNav({ className }: { className?: string }) {
           aria-label="Benutzermenü"
           className="absolute right-0 z-50 mt-2 w-56 rounded-md border border-border/60 bg-card/95 backdrop-blur shadow-md"
         >
-          <div className="px-3 py-2 text-xs text-foreground/70">
-            Angemeldet als
-            <div className="truncate text-foreground">{name}</div>
-            {role && <div className="truncate">Rolle: {role}</div>}
-          </div>
-          <div className="h-px bg-border/60" />
           <div className="py-1">
             <Link
               role="menuitem"
