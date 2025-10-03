@@ -534,18 +534,16 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
     if (!profileCompletion.complete) {
       return (
-        <div className="flex flex-col gap-4 rounded-2xl border border-warning/50 bg-gradient-to-br from-warning/20 via-warning/10 to-warning/5 p-4 text-sm text-warning">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-warning/50 bg-warning/20">
-                <CalendarRange className="h-4 w-4" />
+        <div className="flex flex-col gap-4 rounded-2xl border border-warning/60 bg-warning/20 p-4 text-sm text-warning shadow-[0_18px_48px_rgba(249,115,22,0.25)] backdrop-blur">
+          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-warning/60 bg-warning/25 text-warning">
+                <CalendarRange className="h-5 w-5" />
               </div>
-              <div className="space-y-1">
-                <p className="font-semibold">Profilangaben unvollständig</p>
-              </div>
+              <p className="text-center text-base font-semibold">Profilangaben unvollständig</p>
             </div>
             {profileCompletion.total ? (
-              <Badge className="inline-flex items-center justify-center gap-1.5 rounded-lg border-warning/70 bg-warning/25 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning-foreground shadow-[0_8px_24px_rgba(234,179,8,0.15)] ring-1 ring-inset ring-warning/50 backdrop-blur-sm">
+              <Badge className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-warning bg-warning/25 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning shadow-[0_10px_32px_rgba(249,115,22,0.25)] ring-1 ring-inset ring-warning/60 backdrop-blur-sm">
                 {percentLabel}
               </Badge>
             ) : null}
@@ -554,7 +552,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             type="button"
             variant="outline"
             size="sm"
-            className="border-warning/45 bg-gradient-to-r from-warning/20 via-warning/10 to-warning/5 text-warning transition hover:border-warning/60 hover:bg-warning/15"
+            className="border-warning/60 bg-warning/25 text-warning shadow-[0_12px_36px_rgba(249,115,22,0.25)] transition hover:border-warning/70 hover:bg-warning/30"
             asChild
           >
             <Link href="/mitglieder/profil">Profil aktualisieren</Link>
