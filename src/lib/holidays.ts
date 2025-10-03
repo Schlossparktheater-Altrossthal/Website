@@ -5,7 +5,6 @@ import { addDays, format, isValid, parseISO } from "date-fns";
 import { SAXONY_PUBLIC_HOLIDAYS } from "@/data/saxony-public-holidays";
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
 import {
-  DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED,
   applyHolidaySourceStatuses,
   getDefaultHolidaySourceUrl,
   getDefaultPublicHolidaySourceUrl,
@@ -601,18 +600,6 @@ async function fetchPublicHolidayRangesForSettings(
     settings.publicHolidaySource.mode === "custom"
       ? settings.publicHolidaySource.url
       : settings.publicHolidaySource.effectiveUrl ?? getDefaultPublicHolidaySourceUrl();
-
-  if (publicUrl === DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED) {
-    const ranges = filterRelevantRanges(getStaticPublicHolidayRanges());
-    return {
-      ranges,
-      status: {
-        status: "ok",
-        message: "Feiertagsquelle nutzt die interne Standardliste.",
-        checkedAt,
-      },
-    };
-  }
 
   if (isOutboundHttpDisabled()) {
     const ranges = filterRelevantRanges(getStaticPublicHolidayRanges());
