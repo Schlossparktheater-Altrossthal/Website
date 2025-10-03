@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type Dispatch, type SetStateAction, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,20 +8,27 @@ import { Button } from "@/components/ui/button";
 import type {
   DepartmentGrantState,
   PermissionWorkbenchDepartment,
+  PermissionWorkbenchPermission,
 } from "@/components/members/permissions/permission-workbench-client";
-import { Building2, FilterX, Shield } from "lucide-react";
+import { Building2, FilterX, Shield, Sparkle } from "lucide-react";
+import { DepartmentPermissionDrawer } from "@/components/members/permissions/department-permission-drawer";
 
 type DepartmentAdministrationPanelProps = {
+  permissions: PermissionWorkbenchPermission[];
   departments: PermissionWorkbenchDepartment[];
   departmentGrants: DepartmentGrantState;
+  setDepartmentGrants: Dispatch<SetStateAction<DepartmentGrantState>>;
 };
 
 export function DepartmentAdministrationPanel({
+  permissions,
   departments,
   departmentGrants,
+  setDepartmentGrants,
 }: DepartmentAdministrationPanelProps) {
   const [search, setSearch] = useState("");
   const [onlyApprovalRequired, setOnlyApprovalRequired] = useState(false);
+  const [activeDepartmentId, setActiveDepartmentId] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     const withAssignments = departments.filter((department) => (departmentGrants[department.id]?.size ?? 0) > 0).length;
@@ -39,6 +46,11 @@ export function DepartmentAdministrationPanel({
       );
     });
   }, [departments, search, onlyApprovalRequired]);
+
+  const activeDepartment = useMemo(
+    () => (activeDepartmentId ? departments.find((entry) => entry.id === activeDepartmentId) ?? null : null),
+    [activeDepartmentId, departments],
+  );
 
   return (
     <div className="space-y-6">
@@ -126,10 +138,24 @@ export function DepartmentAdministrationPanel({
                   <Badge variant={assignmentCount > 0 ? "secondary" : "muted"} size="sm">
                     {assignmentCount} Rechte
                   </Badge>
-                  <div className="text-xs text-muted-foreground">
-                    {assignmentCount > 0
-                      ? "Zuweisungen verwaltest du über den Rechte-Explorer."
-                      : "Noch keine Rechte zugewiesen."}
+                  <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+                    <div>
+                      {assignmentCount > 0
+                        ? "Direkt hier bearbeiten oder Details ansehen."
+                        : "Noch keine Rechte zugewiesen."}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        className="font-semibold"
+                        onClick={() => setActiveDepartmentId(department.id)}
+                      >
+                        <Sparkle className="mr-1 h-3.5 w-3.5" />
+                        Rechte bearbeiten
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -142,6 +168,17 @@ export function DepartmentAdministrationPanel({
           </Card>
         ) : null}
       </div>
+
+      <DepartmentPermissionDrawer
+        open={Boolean(activeDepartment)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setActiveDepartmentId(null);
+        }}
+        department={activeDepartment}
+        permissions={permissions}
+        departmentGrants={departmentGrants}
+        setDepartmentGrants={setDepartmentGrants}
+      />
     </div>
   );
 }
