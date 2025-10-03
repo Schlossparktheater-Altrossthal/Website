@@ -1113,7 +1113,7 @@ function ProfileOverviewCard({
                   </span>
                 )}
                 {memberSinceLabel || createdAtLabel ? (
-                  <div className="flex flex-col gap-1 text-xs uppercase tracking-wide text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                     <CalendarDays className="h-4 w-4" aria-hidden />
                     <span>{memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}</span>
                   </div>
