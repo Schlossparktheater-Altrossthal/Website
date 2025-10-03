@@ -957,7 +957,7 @@ function ProfileClientInner({
               <TabsTrigger
                 key={option.value}
                 value={option.value}
-                className="inline-flex flex-1 basis-0 items-center justify-center whitespace-nowrap px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-wide transition text-center leading-tight sm:px-4 sm:text-xs"
+                className="inline-flex min-w-0 flex-1 basis-0 items-center justify-center whitespace-nowrap px-2.5 py-2 text-[0.65rem] font-semibold uppercase tracking-wide transition text-center leading-tight sm:px-3.5 sm:text-[0.75rem]"
                 >
                   {option.label}
                 </TabsTrigger>
@@ -1145,7 +1145,7 @@ function ProfileOverviewCard({
             </Badge>
           ))}
         </div>
-        {summary.total ? (
+        {summary.total && !summary.complete ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <span>Profilstatus</span>
