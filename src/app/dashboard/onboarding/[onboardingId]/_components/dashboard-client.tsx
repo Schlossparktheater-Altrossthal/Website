@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OnboardingDashboardData, OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
@@ -45,6 +46,7 @@ export function DashboardClient({
   const [selectedOnboarding, setSelectedOnboarding] = useState(initialData.onboarding.id);
   const [tabValue, setTabValue] = useState<"global" | "allocation" | "history">("global");
   const [isPending, startTransition] = useTransition();
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
     setSelectedOnboarding(initialData.onboarding.id);
@@ -100,6 +102,55 @@ export function DashboardClient({
     });
   };
 
+  const handleExportPdf = useCallback(async () => {
+    if (!selectedOnboarding || isExportingPdf) {
+      return;
+    }
+    setIsExportingPdf(true);
+    try {
+      const response = await fetch(`/dashboard/onboarding/${selectedOnboarding}/statistics`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`);
+      }
+      const blob = await response.blob();
+      const fallbackName = `onboarding-statistik-${selectedOnboarding}.pdf`;
+      const disposition = response.headers.get("Content-Disposition");
+      let filename = fallbackName;
+      if (disposition) {
+        const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utfMatch?.[1]) {
+          try {
+            filename = decodeURIComponent(utfMatch[1]);
+          } catch {
+            filename = utfMatch[1];
+          }
+        } else {
+          const simpleMatch = disposition.match(/filename="?([^";]+)"?/i);
+          if (simpleMatch?.[1]) {
+            filename = simpleMatch[1];
+          }
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Onboarding-Statistik exportiert.");
+    } catch (error) {
+      console.error("Failed to export onboarding statistics", error);
+      toast.error("PDF konnte nicht erstellt werden.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [isExportingPdf, selectedOnboarding]);
+
   const historyAvailable = (currentData.history?.length ?? 0) > 0;
 
   return (
@@ -114,6 +165,8 @@ export function DashboardClient({
         isRefreshing={isFetching || isPending}
         onSelect={handleSelect}
         onRefresh={() => void refetch()}
+        onExportPdf={handleExportPdf}
+        isExportingPdf={isExportingPdf}
       />
       <Tabs
         value={tabValue}

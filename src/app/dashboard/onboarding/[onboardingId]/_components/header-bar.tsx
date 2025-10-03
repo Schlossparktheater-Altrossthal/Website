@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Share2 } from "lucide-react";
+import { Download, Loader2, Share2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ type HeaderBarProps = {
   isRefreshing: boolean;
   onSelect: (id: string) => void;
   onRefresh?: () => void;
+  onExportPdf?: () => void;
+  isExportingPdf?: boolean;
 };
 
 export function HeaderBar({
@@ -44,6 +46,8 @@ export function HeaderBar({
   isRefreshing,
   onSelect,
   onRefresh,
+  onExportPdf,
+  isExportingPdf = false,
 }: HeaderBarProps) {
   const [shareState, setShareState] = useState<"idle" | "success" | "error">("idle");
 
@@ -111,6 +115,22 @@ export function HeaderBar({
               ))}
             </SelectContent>
           </Select>
+          {onExportPdf ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={onExportPdf}
+              disabled={isExportingPdf}
+            >
+              {isExportingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isExportingPdf ? "Bereite PDF vor…" : "Statistik exportieren"}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="secondary"
