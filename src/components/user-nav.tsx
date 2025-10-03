@@ -150,7 +150,7 @@ export function UserNav({ className }: { className?: string }) {
             <div className="mx-3 my-1 h-px bg-border/60" />
             <button
               role="menuitem"
-              className="block w-full px-3 py-2 text-left text-sm hover:bg-accent/30 focus:bg-accent/30"
+              className="block w-full px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/15 focus:outline-none"
               onClick={() => {
                 setOpen(false);
                 onLogout();
