@@ -381,18 +381,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     };
   }, [connectionStatus]);
 
-  const connectionToneClasses: Record<"online" | "offline" | "warning" | "error", string> = {
-    online:
-      "border-success/50 bg-gradient-to-r from-success/20 via-success/10 to-success/5 text-success",
-    warning:
-      "border-warning/50 bg-gradient-to-r from-warning/18 via-warning/10 to-warning/5 text-warning",
-    error:
-      "border-destructive/50 bg-gradient-to-r from-destructive/15 via-destructive/10 to-destructive/5 text-destructive",
-    offline:
-      "border-border/60 bg-gradient-to-r from-muted/20 via-background/85 to-background text-muted-foreground",
-  };
-  const connectionBadgeClass = connectionToneClasses[connectionMeta.state];
-
   const finalRehearsalMetric = useMemo(() => {
     if (!finalRehearsalWeek) return null;
 
@@ -534,20 +522,33 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       return null;
     }
 
-    const remaining = Math.max(profileCompletion.total - profileCompletion.completed, 0);
+    const percentCompleteRaw = profileCompletion.total
+      ? Math.round((profileCompletion.completed / profileCompletion.total) * 100)
+      : 0;
+    const percentComplete = Math.min(100, Math.max(0, percentCompleteRaw));
+    const percentLabel = `Zu ${percentComplete}% erledigt`;
 
     if (!profileCompletion.complete) {
       return (
-        <div className="flex flex-col gap-3 rounded-2xl border border-warning/50 bg-gradient-to-br from-warning/20 via-warning/10 to-warning/5 p-4 text-sm text-warning">
-          <div className="flex items-start gap-2">
-            <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-warning/50 bg-warning/20">
-              <CalendarRange className="h-4 w-4" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-semibold">Profilangaben unvollständig</p>
-              <p className="text-xs text-warning/90">
-                {`Noch ${remaining} von ${profileCompletion.total} Aufgaben offen.`}
-              </p>
+        <div className="flex flex-col gap-4 rounded-2xl border border-warning/50 bg-gradient-to-br from-warning/20 via-warning/10 to-warning/5 p-4 text-sm text-warning">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-warning/50 bg-warning/20">
+                <CalendarRange className="h-4 w-4" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  {profileCompletion.total ? (
+                    <Badge className="border-warning/60 bg-warning/15 text-xs font-semibold uppercase tracking-wide text-warning">
+                      {percentLabel}
+                    </Badge>
+                  ) : null}
+                  <p className="font-semibold">Profilangaben unvollständig</p>
+                </div>
+                <p className="text-xs text-warning/90">
+                  Aktualisiere die fehlenden Angaben, um dein Profil abzuschließen.
+                </p>
+              </div>
             </div>
           </div>
           <Button
@@ -661,17 +662,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               <p className="max-w-2xl text-sm text-muted-foreground">
                 Halte Produktionen, Proben und Teamkommunikation im Blick. Nutze die Schnellaktionen für den direkten Einstieg.
               </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <div
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
-                    connectionBadgeClass,
-                  )}
-                >
-                  {connectionMeta.icon}
-                  <span>{connectionMeta.label}</span>
-                </div>
-              </div>
               {profileReminder ? <div>{profileReminder}</div> : null}
             </CardContent>
           </Card>
