@@ -7,7 +7,7 @@ vi.mock("next/cache", () => ({
 
 const { defaultHolidayUrl, defaultPublicHolidayUrl, resolvedSettings } = vi.hoisted(() => {
   const url = "https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics";
-  const publicUrl = "https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics";
+  const publicUrl = "static:saxony-public-holidays";
   return {
     defaultHolidayUrl: url,
     defaultPublicHolidayUrl: publicUrl,
@@ -38,12 +38,13 @@ const { defaultHolidayUrl, defaultPublicHolidayUrl, resolvedSettings } = vi.hois
       },
       updatedAt: null,
       cacheKey:
-        "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics|default|https://www.feiertage-deutschland.de/kalender-download/ics/feiertage-sachsen.ics",
+        "default|https://www.feiertage-deutschland.de/kalender-download/ics/schulferien-sachsen.ics|default|static:saxony-public-holidays",
     },
   } as const;
 });
 
 vi.mock("@/lib/sperrliste-settings", () => ({
+  DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED: "static:saxony-public-holidays",
   readSperrlisteSettings: vi.fn().mockResolvedValue(null),
   resolveSperrlisteSettings: vi
     .fn()
@@ -113,7 +114,7 @@ describe("getSaxonySchoolHolidayRanges", () => {
         return a.id.localeCompare(b.id);
       });
 
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(ranges).toEqual(expected);
   });
 });

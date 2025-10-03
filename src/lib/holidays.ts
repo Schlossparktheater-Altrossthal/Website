@@ -5,6 +5,7 @@ import { addDays, format, isValid, parseISO } from "date-fns";
 import { SAXONY_PUBLIC_HOLIDAYS } from "@/data/saxony-public-holidays";
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
 import {
+  DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED,
   applyHolidaySourceStatuses,
   getDefaultHolidaySourceUrl,
   getDefaultPublicHolidaySourceUrl,
@@ -26,6 +27,7 @@ const HOLIDAY_PROTOCOL_ALLOWLIST = new Set(["https:"]);
 
 const STATIC_ALLOWED_HOSTS = [
   "www.feiertage-deutschland.de",
+  "calendar.google.com",
   "ferien-api.de",
 ];
 
@@ -595,6 +597,23 @@ async function fetchPublicHolidayRangesForSettings(
     };
   }
 
+  const publicUrl =
+    settings.publicHolidaySource.mode === "custom"
+      ? settings.publicHolidaySource.url
+      : settings.publicHolidaySource.effectiveUrl ?? getDefaultPublicHolidaySourceUrl();
+
+  if (publicUrl === DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED) {
+    const ranges = filterRelevantRanges(getStaticPublicHolidayRanges());
+    return {
+      ranges,
+      status: {
+        status: "ok",
+        message: "Feiertagsquelle nutzt die interne Standardliste.",
+        checkedAt,
+      },
+    };
+  }
+
   if (isOutboundHttpDisabled()) {
     const ranges = filterRelevantRanges(getStaticPublicHolidayRanges());
     return {
@@ -606,10 +625,6 @@ async function fetchPublicHolidayRangesForSettings(
     };
   }
 
-  const publicUrl =
-    settings.publicHolidaySource.mode === "custom"
-      ? settings.publicHolidaySource.url
-      : settings.publicHolidaySource.effectiveUrl ?? getDefaultPublicHolidaySourceUrl();
   let publicError: Error | null = null;
 
   if (publicUrl) {
