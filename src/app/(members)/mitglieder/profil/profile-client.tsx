@@ -68,6 +68,7 @@ import {
 } from "@/lib/onboarding/role-preference-utils";
 import {
   buildProfileChecklist,
+  isPaymentDetailsComplete,
   type ProfileChecklistTarget,
   type ProfileCompletionSummary,
 } from "@/lib/profile-completion";
@@ -96,6 +97,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "stammdaten",
+  "zahlungen",
   "ernaehrung",
   "masse",
   "interessen",
@@ -280,6 +282,17 @@ type Measurement = Omit<ProfileClientProps["measurements"][number], "type" | "un
 };
 type OnboardingProfile = NonNullable<ProfileClientProps["onboarding"]>;
 
+function isProfilePaymentComplete(user: ProfileUser): boolean {
+  return isPaymentDetailsComplete({
+    payoutMethod: user.payoutMethod,
+    payoutAccountHolder: user.payoutAccountHolder,
+    payoutIban: user.payoutIban,
+    payoutBankName: user.payoutBankName,
+    payoutPaypalHandle: user.payoutPaypalHandle,
+    payoutNote: user.payoutNote,
+  });
+}
+
 function mapUpdatedUserFromPayload(
   previous: ProfileUser,
   payload: UpdateProfileBasicsResult["user"],
@@ -366,6 +379,7 @@ type OnboardingFormState = {
 type ChecklistState = {
   hasBasicData: boolean;
   hasBirthdate: boolean;
+  hasPaymentDetails: boolean;
   hasDietaryPreference: boolean;
   hasMeasurements?: boolean;
   photoConsentGiven?: boolean;
@@ -619,6 +633,7 @@ function ProfileClientInner({
   const [, setChecklistState] = useState<ChecklistState>(() => ({
     hasBasicData: Boolean(initialUser.firstName?.trim() && initialUser.email?.trim()),
     hasBirthdate: Boolean(initialUser.dateOfBirth),
+    hasPaymentDetails: isProfilePaymentComplete(initialUser),
     hasDietaryPreference: Boolean(initialOnboarding?.dietaryPreference?.trim()),
     hasMeasurements: canManageMeasurements ? initialMeasurements.length > 0 : undefined,
     photoConsentGiven: summary.items.find((item) => item.id === "photo-consent")?.complete ?? undefined,
@@ -630,6 +645,7 @@ function ProfileClientInner({
       buildProfileChecklist({
         hasBasicData: state.hasBasicData,
         hasBirthdate: state.hasBirthdate,
+        hasPaymentDetails: state.hasPaymentDetails,
         hasDietaryPreference: state.hasDietaryPreference,
         hasMeasurements: canManageMeasurements ? Boolean(state.hasMeasurements) : undefined,
         photoConsent:
@@ -702,6 +718,7 @@ function ProfileClientInner({
       updateChecklist({
         hasBasicData: basicsComplete,
         hasBirthdate: Boolean(nextUser.dateOfBirth),
+        hasPaymentDetails: isProfilePaymentComplete(nextUser),
       });
       try {
         await refreshSession?.();
@@ -998,13 +1015,10 @@ function ProfileOverviewCard({
 }: ProfileOverviewCardProps) {
   const email = user.email?.trim() ?? "";
   const show = onboarding?.show ?? null;
-  const checklistBadgeLabel = summary.total
-    ? summary.complete
-      ? "Profil vollständig"
-      : `${percentComplete}% vollständig`
-    : null;
+  const checklistBadgeLabel = summary.complete ? "Profil vollständig" : null;
   const checklistCountLabel = summary.total ? `${summary.completed}/${summary.total}` : null;
-  const hasChecklistItems = summary.items.length > 0;
+  const pendingChecklistItems = summary.items.filter((item) => !item.complete);
+  const hasChecklistItems = pendingChecklistItems.length > 0;
   const hasHighlights = highlights.length > 0;
 
   return (
@@ -1117,7 +1131,7 @@ function ProfileOverviewCard({
               <div className="rounded-xl border border-border/60 bg-background/80 p-4 shadow-inner shadow-primary/5">
                 <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Checkliste</div>
                 <ul className="mt-3 space-y-2">
-                  {summary.items.map((item) => {
+                  {pendingChecklistItems.map((item) => {
                     const target = item.targetSection ?? null;
                     const isActive = target ? activeChecklistTarget === target : false;
                     const isComplete = item.complete;

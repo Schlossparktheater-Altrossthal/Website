@@ -6,7 +6,7 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { getUserDisplayName } from "@/lib/names";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { prisma } from "@/lib/prisma";
-import { buildProfileChecklist } from "@/lib/profile-completion";
+import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { sortRoles, type Role } from "@/lib/roles";
@@ -206,6 +206,14 @@ export default async function ProfilePage() {
   const hasBasicData = Boolean(user.firstName?.trim() && user.email?.trim());
   const hasBirthdate = Boolean(user.dateOfBirth);
   const hasDietaryPreference = Boolean(user.onboardingProfile?.dietaryPreference?.trim());
+  const hasPaymentDetails = isPaymentDetailsComplete({
+    payoutMethod: user.payoutMethod,
+    payoutAccountHolder: user.payoutAccountHolder,
+    payoutIban: user.payoutIban,
+    payoutBankName: user.payoutBankName,
+    payoutPaypalHandle: user.payoutPaypalHandle,
+    payoutNote: user.payoutNote,
+  });
 
   const onboardingProfile = user.onboardingProfile;
   const whatsappLink = onboardingProfile?.show
@@ -215,6 +223,7 @@ export default async function ProfilePage() {
   const checklist = buildProfileChecklist({
     hasBasicData,
     hasBirthdate,
+    hasPaymentDetails,
     hasDietaryPreference,
     hasMeasurements,
     photoConsent: { consentGiven: photoConsentSummary.status === "approved" },
