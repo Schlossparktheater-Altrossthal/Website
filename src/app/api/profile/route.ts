@@ -338,32 +338,42 @@ export async function PUT(request: NextRequest) {
     : existingUser.payoutPaypalHandle;
   const effectivePayoutNote = payoutNoteProvided ? parsedPayoutNote : existingUser.payoutNote;
 
-  if (effectivePayoutMethod === "BANK_TRANSFER") {
-    if (!effectiveAccountHolder) {
-      return NextResponse.json({ error: "Bitte gib den Kontoinhaber an" }, { status: 400 });
-    }
-    if (!effectiveIban || !IBAN_REGEX.test(effectiveIban)) {
-      return NextResponse.json({ error: "Bitte gib eine gültige IBAN an" }, { status: 400 });
-    }
-    if (!effectiveBankName) {
-      return NextResponse.json({ error: "Bitte gib den Namen deiner Bank an" }, { status: 400 });
-    }
-  } else if (effectivePayoutMethod === "PAYPAL") {
-    if (!effectivePaypalHandle) {
-      return NextResponse.json(
-        { error: "Bitte hinterlege deine PayPal-Adresse oder deinen PayPal.me-Link" },
-        { status: 400 },
-      );
-    }
-    if (!PAYPAL_HANDLE_REGEX.test(effectivePaypalHandle)) {
-      return NextResponse.json(
-        { error: "Bitte gib eine gültige PayPal-Adresse oder einen PayPal.me-Link an" },
-        { status: 400 },
-      );
-    }
-  } else if (effectivePayoutMethod === "OTHER") {
-    if (!effectivePayoutNote) {
-      return NextResponse.json({ error: "Bitte beschreibe deine bevorzugte Auszahlung" }, { status: 400 });
+  const payoutDetailsTouched =
+    payoutMethodProvided ||
+    payoutAccountHolderProvided ||
+    payoutIbanProvided ||
+    payoutBankNameProvided ||
+    payoutPaypalHandleProvided ||
+    payoutNoteProvided;
+
+  if (payoutDetailsTouched) {
+    if (effectivePayoutMethod === "BANK_TRANSFER") {
+      if (!effectiveAccountHolder) {
+        return NextResponse.json({ error: "Bitte gib den Kontoinhaber an" }, { status: 400 });
+      }
+      if (!effectiveIban || !IBAN_REGEX.test(effectiveIban)) {
+        return NextResponse.json({ error: "Bitte gib eine gültige IBAN an" }, { status: 400 });
+      }
+      if (!effectiveBankName) {
+        return NextResponse.json({ error: "Bitte gib den Namen deiner Bank an" }, { status: 400 });
+      }
+    } else if (effectivePayoutMethod === "PAYPAL") {
+      if (!effectivePaypalHandle) {
+        return NextResponse.json(
+          { error: "Bitte hinterlege deine PayPal-Adresse oder deinen PayPal.me-Link" },
+          { status: 400 },
+        );
+      }
+      if (!PAYPAL_HANDLE_REGEX.test(effectivePaypalHandle)) {
+        return NextResponse.json(
+          { error: "Bitte gib eine gültige PayPal-Adresse oder einen PayPal.me-Link an" },
+          { status: 400 },
+        );
+      }
+    } else if (effectivePayoutMethod === "OTHER") {
+      if (!effectivePayoutNote) {
+        return NextResponse.json({ error: "Bitte beschreibe deine bevorzugte Auszahlung" }, { status: 400 });
+      }
     }
   }
 
