@@ -526,7 +526,11 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       ? Math.round((profileCompletion.completed / profileCompletion.total) * 100)
       : 0;
     const percentComplete = Math.min(100, Math.max(0, percentCompleteRaw));
-    const percentLabel = `Zu ${percentComplete}% erledigt`;
+    const percentLabel = (
+      <>
+        Zu <span className="font-semibold text-warning">{percentComplete}%</span> erledigt
+      </>
+    );
 
     if (!profileCompletion.complete) {
       return (
@@ -538,13 +542,10 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               </div>
               <div className="space-y-1">
                 <p className="font-semibold">Profilangaben unvollständig</p>
-                <p className="text-xs text-warning/90">
-                  Aktualisiere die fehlenden Angaben, um dein Profil abzuschließen.
-                </p>
               </div>
             </div>
             {profileCompletion.total ? (
-              <Badge className="inline-flex items-center justify-center gap-1.5 rounded-lg border-warning/70 bg-warning/25 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning shadow-[0_8px_24px_rgba(234,179,8,0.15)] ring-1 ring-inset ring-warning/50 backdrop-blur-sm">
+              <Badge className="inline-flex items-center justify-center gap-1.5 rounded-lg border-warning/70 bg-warning/25 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning-foreground shadow-[0_8px_24px_rgba(234,179,8,0.15)] ring-1 ring-inset ring-warning/50 backdrop-blur-sm">
                 {percentLabel}
               </Badge>
             ) : null}
