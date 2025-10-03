@@ -1503,6 +1503,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                             <p className="text-sm text-muted-foreground">{pref.description}</p>
                           </div>
                           <Button
+                            type="button"
                             size="sm"
                             variant={active ? "default" : "outline"}
                             onClick={() => togglePreference("acting", pref.code)}
@@ -1573,6 +1574,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                           </div>
                           <div className="flex flex-col items-end gap-2">
                             <Button
+                              type="button"
                               size="sm"
                               variant={active ? "default" : "outline"}
                               onClick={() => togglePreference("crew", pref.code)}
