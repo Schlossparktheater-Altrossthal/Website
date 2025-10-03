@@ -15,11 +15,9 @@ import {
   Pencil,
   Plus,
   MessageCircle,
-  Sparkles,
   ShieldCheck,
   Trash2,
   Users,
-  Utensils,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -104,12 +102,6 @@ const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "freigaben",
   "onboarding",
 ];
-
-const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
-  acting: "Schauspiel",
-  tech: "Gewerke",
-  both: "Schauspiel & Gewerke",
-};
 
 const PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS = ["Schule", "Ausbildung", "Beruf"] as const;
 
@@ -693,14 +685,6 @@ function ProfileClientInner({
     return null;
   }, [createdAtLabel, onboarding?.memberSinceYear]);
 
-  const onboardingFocusLabel = useMemo(() => {
-    if (!onboarding?.focus) return null;
-    return ONBOARDING_FOCUS_LABELS[onboarding.focus as OnboardingFocus] ?? null;
-  }, [onboarding?.focus]);
-
-  const onboardingBackground = onboarding?.background ?? null;
-  const onboardingNotes = onboarding?.notes ?? null;
-
   const whatsappVisitedAt = onboarding?.whatsappLinkVisitedAt ?? null;
   const whatsappVisitedAtLabel = useMemo(
     () => formatDateLabel(whatsappVisitedAt),
@@ -848,41 +832,12 @@ function ProfileClientInner({
   );
 
   const highlightTiles = useMemo<HighlightTileConfig[]>(() => {
-    const items: HighlightTileConfig[] = [
+    if (!whatsappLink) {
+      return [];
+    }
+
+    return [
       {
-        id: "onboarding-focus",
-        icon: <Sparkles className="h-5 w-5" aria-hidden />,
-        title: "Onboarding-Schwerpunkt",
-        description: onboardingFocusLabel ?? "Kein Schwerpunkt hinterlegt.",
-        hint: onboardingBackground ?? onboardingNotes,
-        tone: onboardingFocusLabel ? "info" : "warning",
-      },
-    ];
-
-    const hasDietaryPreference = Boolean(dietaryPreference.label);
-    const dietaryDescription = hasDietaryPreference
-      ? [
-          dietaryPreference.label,
-          dietaryPreference.strictnessLabel ? `(${dietaryPreference.strictnessLabel})` : null,
-        ]
-          .filter(Boolean)
-          .join(" ")
-      : "Noch kein Ernährungsprofil hinterlegt.";
-    const allergiesLabel = allergies.length
-      ? `${allergies.length} Allergie${allergies.length === 1 ? "" : "n"} hinterlegt.`
-      : "Trage Allergien ein, damit das Küchenteam planen kann.";
-
-    items.push({
-      id: "dietary",
-      icon: <Utensils className="h-5 w-5" aria-hidden />,
-      title: "Ernährung",
-      description: dietaryDescription,
-      hint: allergiesLabel,
-      tone: hasDietaryPreference ? "default" : "info",
-    });
-
-    if (whatsappLink) {
-      items.push({
         id: "whatsapp",
         icon: <MessageCircle className="h-5 w-5" aria-hidden />,
         title: "Team-Chat",
@@ -912,22 +867,9 @@ function ProfileClientInner({
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Button>
         ),
-      });
-    }
-
-    return items;
-  }, [
-    onboardingBackground,
-    onboardingFocusLabel,
-    onboardingNotes,
-    allergies.length,
-    dietaryPreference.label,
-    dietaryPreference.strictnessLabel,
-    handleWhatsAppVisit,
-    whatsappLink,
-    whatsappVisitedAt,
-    whatsappVisitedAtLabel,
-  ]);
+      },
+    ];
+  }, [whatsappLink, whatsappVisitedAt, whatsappVisitedAtLabel, handleWhatsAppVisit]);
 
   return (
     <div className="space-y-8">
@@ -1063,6 +1005,7 @@ function ProfileOverviewCard({
     : null;
   const checklistCountLabel = summary.total ? `${summary.completed}/${summary.total}` : null;
   const hasChecklistItems = summary.items.length > 0;
+  const hasHighlights = highlights.length > 0;
 
   return (
     <Card className="border border-border/70 bg-gradient-to-br from-background/85 via-background/70 to-background/80 shadow-sm">
@@ -1163,73 +1106,90 @@ function ProfileOverviewCard({
             </div>
           </div>
         ) : null}
-        {hasChecklistItems ? (
-          <div className="rounded-xl border border-border/60 bg-background/80 p-4 shadow-inner shadow-primary/5">
-            <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Checkliste</div>
-            <ul className="mt-3 space-y-2">
-              {summary.items.map((item) => {
-                const target = item.targetSection ?? null;
-                const isActive = target ? activeChecklistTarget === target : false;
-                const isComplete = item.complete;
+        {hasChecklistItems || hasHighlights ? (
+          <div
+            className={cn(
+              "grid gap-4",
+              hasChecklistItems && hasHighlights ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]" : "",
+            )}
+          >
+            {hasChecklistItems ? (
+              <div className="rounded-xl border border-border/60 bg-background/80 p-4 shadow-inner shadow-primary/5">
+                <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Checkliste</div>
+                <ul className="mt-3 space-y-2">
+                  {summary.items.map((item) => {
+                    const target = item.targetSection ?? null;
+                    const isActive = target ? activeChecklistTarget === target : false;
+                    const isComplete = item.complete;
 
-                const content = (
-                  <div className="flex w-full items-start gap-3">
-                    <span
-                      className={cn(
-                        "flex h-5 w-5 items-center justify-center rounded-full border text-[0.65rem] transition",
-                        isComplete
-                          ? "border-success/60 bg-success/10 text-success"
-                          : "border-border/60 bg-background text-muted-foreground/40",
-                        isActive ? "ring-2 ring-primary/30" : "",
-                      )}
-                      aria-hidden
-                    >
-                      {isComplete ? <Check className="h-3 w-3" aria-hidden /> : null}
-                    </span>
-                    <span
-                      className={cn(
-                        "flex-1 text-left text-xs leading-snug",
-                        isComplete ? "text-muted-foreground/80 line-through" : "text-foreground",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
-                );
+                    const content = (
+                      <div className="flex w-full items-start gap-3">
+                        <span
+                          className={cn(
+                            "flex h-5 w-5 items-center justify-center rounded-full border text-[0.65rem] transition",
+                            isComplete
+                              ? "border-success/60 bg-success/10 text-success"
+                              : "border-border/60 bg-background text-muted-foreground/40",
+                            isActive ? "ring-2 ring-primary/30" : "",
+                          )}
+                          aria-hidden
+                        >
+                          {isComplete ? <Check className="h-3 w-3" aria-hidden /> : null}
+                        </span>
+                        <span
+                          className={cn(
+                            "flex-1 text-left text-xs leading-snug",
+                            isComplete ? "text-muted-foreground/80 line-through" : "text-foreground",
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      </div>
+                    );
 
-                if (target) {
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => onChecklistNavigate?.(target)}
+                    if (target) {
+                      return (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            onClick={() => onChecklistNavigate?.(target)}
+                            className={cn(
+                              "flex w-full items-center rounded-lg border border-transparent bg-background/40 px-3 py-2 text-left transition",
+                              isActive
+                                ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
+                                : "hover:border-border/60 hover:bg-muted/40 text-foreground/90",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                            )}
+                          >
+                            {content}
+                          </button>
+                        </li>
+                      );
+                    }
+
+                    return (
+                      <li
+                        key={item.id}
                         className={cn(
-                          "flex w-full items-center rounded-lg border border-transparent bg-background/40 px-3 py-2 text-left transition",
-                          isActive
-                            ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
-                            : "hover:border-border/60 hover:bg-muted/40 text-foreground/90",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                          "flex items-center rounded-lg border px-3 py-2",
+                          isComplete ? "border-success/40 bg-success/10" : "border-border/50 bg-muted/30",
                         )}
                       >
                         {content}
-                      </button>
-                    </li>
-                  );
-                }
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
 
-                return (
-                  <li
-                    key={item.id}
-                    className={cn(
-                      "flex items-center rounded-lg border px-3 py-2",
-                      isComplete ? "border-success/40 bg-success/10" : "border-border/50 bg-muted/30",
-                    )}
-                  >
-                    {content}
-                  </li>
-                );
-              })}
-            </ul>
+            {hasHighlights ? (
+              <div className="flex flex-col gap-3">
+                {highlights.map((tile) => (
+                  <ProfileHighlightTile key={tile.id} {...tile} />
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
         {show ? (
@@ -1241,15 +1201,6 @@ function ProfileOverviewCard({
           </div>
         ) : null}
       </CardContent>
-      {highlights.length ? (
-        <CardContent className="border-t border-border/50 bg-background/60">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {highlights.map((tile) => (
-              <ProfileHighlightTile key={tile.id} {...tile} />
-            ))}
-          </div>
-        </CardContent>
-      ) : null}
     </Card>
   );
 }
