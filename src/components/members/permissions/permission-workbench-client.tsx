@@ -116,7 +116,12 @@ export function PermissionWorkbenchClient({
         />
       </TabsContent>
       <TabsContent value="departments">
-        <DepartmentAdministrationPanel departments={departments} departmentGrants={departmentGrants} />
+        <DepartmentAdministrationPanel
+          permissions={permissions}
+          departments={departments}
+          departmentGrants={departmentGrants}
+          setDepartmentGrants={setDepartmentGrants}
+        />
       </TabsContent>
     </Tabs>
   );
