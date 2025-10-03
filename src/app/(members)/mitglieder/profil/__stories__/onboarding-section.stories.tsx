@@ -29,11 +29,11 @@ const baseProps: OnboardingSectionProps = {
   onboarding: createOnboarding(),
   onOnboardingChange: () => undefined,
   rolePreferences: defaultPreferences,
-  onRolePreferencesChange: () => undefined,
   whatsappLink: "https://example.com/whatsapp",
   whatsappVisitedAt: null,
   onWhatsAppVisit: async () => ({ visitedAt: new Date().toISOString(), alreadyVisited: false }),
   dietaryPreference: { label: "Vegetarisch", strictnessLabel: "Flexibel" },
+  onFocusChange: () => undefined,
 };
 
 const meta = { title };

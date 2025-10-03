@@ -29,7 +29,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import { MeasurementForm } from "@/components/forms/measurement-form";
 import type { MeasurementFormData } from "@/data/measurements";
@@ -613,6 +612,9 @@ function ProfileClientInner({
   const [rolePreferences, setRolePreferences] = useState<ProfileClientProps["rolePreferences"]>(
     initialRolePreferences,
   );
+  const [onboardingFocus, setOnboardingFocus] = useState<OnboardingFocus>(
+    (initialOnboarding?.focus as OnboardingFocus) ?? "acting",
+  );
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
   const [measurements, setMeasurements] = useState<Measurement[]>(() =>
@@ -710,6 +712,12 @@ function ProfileClientInner({
   const percentComplete = summary.total
     ? Math.round((summary.completed / summary.total) * 100)
     : 0;
+
+  useEffect(() => {
+    if (onboarding?.focus) {
+      setOnboardingFocus(onboarding.focus as OnboardingFocus);
+    }
+  }, [onboarding?.focus]);
 
   const handleUserUpdated = useCallback(
     async (nextUser: ProfileUser) => {
@@ -897,6 +905,7 @@ function ProfileClientInner({
         { value: "interessen", label: "Interessen" },
         { value: "freigaben", label: "Freigaben" },
         { value: "onboarding", label: "Onboarding" },
+        { value: "rollen", label: "Rollenpräferenzen" },
       ];
 
       if (canManageMeasurements) {
@@ -999,11 +1008,21 @@ function ProfileClientInner({
             onboarding={onboarding}
             onOnboardingChange={setOnboarding}
             rolePreferences={rolePreferences}
-            onRolePreferencesChange={setRolePreferences}
             whatsappLink={whatsappLink}
             whatsappVisitedAt={whatsappVisitedAt}
             onWhatsAppVisit={handleWhatsAppVisit}
             dietaryPreference={dietaryPreference}
+            onFocusChange={setOnboardingFocus}
+          />
+        </TabsContent>
+
+        <TabsContent value="rollen" className="space-y-6">
+          <RolePreferencesSection
+            focus={onboardingFocus}
+            onboarding={onboarding}
+            rolePreferences={rolePreferences}
+            onRolePreferencesChange={setRolePreferences}
+            onOnboardingChange={setOnboarding}
           />
         </TabsContent>
       </Tabs>
@@ -2518,22 +2537,22 @@ export type OnboardingSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
   onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
   rolePreferences: ProfileClientProps["rolePreferences"];
-  onRolePreferencesChange: (next: ProfileClientProps["rolePreferences"]) => void;
   whatsappLink: string | null;
   whatsappVisitedAt: string | null;
   onWhatsAppVisit?: () => Promise<{ visitedAt: string | null; alreadyVisited: boolean }>;
   dietaryPreference: { label: string | null; strictnessLabel: string | null };
+  onFocusChange?: (focus: OnboardingFocus) => void;
 };
 
 export function OnboardingSection({
   onboarding,
   onOnboardingChange,
   rolePreferences,
-  onRolePreferencesChange,
   whatsappLink,
   whatsappVisitedAt,
   onWhatsAppVisit,
   dietaryPreference,
+  onFocusChange,
 }: OnboardingSectionProps) {
   const initialForm = useMemo<OnboardingFormState>(() => ({
     focus: (onboarding?.focus as OnboardingFocus) ?? "acting",
@@ -2546,10 +2565,6 @@ export function OnboardingSection({
   const [formState, setFormState] = useState<OnboardingFormState>(initialForm);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const initialPreferences = useMemo(() => buildPreferenceFormState(rolePreferences), [rolePreferences]);
-  const [preferenceForm, setPreferenceForm] = useState<RolePreferenceFormState>(initialPreferences);
-  const [preferenceError, setPreferenceError] = useState<string | null>(null);
-  const [preferenceSubmitting, setPreferenceSubmitting] = useState(false);
   const { backgroundSuggestions, classSuggestions, activeTag, requiresClass } =
     useOnboardingBackgroundData(formState.background, {
       initialSuggestions: PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
@@ -2562,49 +2577,8 @@ export function OnboardingSection({
   }, [initialForm]);
 
   useEffect(() => {
-    setPreferenceForm(initialPreferences);
-  }, [initialPreferences]);
-
-  const includesActing = formState.focus === "acting" || formState.focus === "both";
-  const includesCrew = formState.focus === "tech" || formState.focus === "both";
-
-  const toggleRolePreference = useCallback((domain: "acting" | "crew", code: string) => {
-    setPreferenceForm((prev) => {
-      const entries = domain === "acting" ? prev.acting : prev.crew;
-      const nextEntries = entries.map((entry) => {
-        if (entry.code !== code) {
-          return entry;
-        }
-        const nextEnabled = !entry.enabled;
-        const nextWeight = nextEnabled
-          ? entry.weight > 0
-            ? entry.weight
-            : DEFAULT_ROLE_PREFERENCE_WEIGHT
-          : entry.weight;
-        return {
-          ...entry,
-          enabled: nextEnabled,
-          weight: normalizeRolePreferenceWeight(nextWeight),
-        } satisfies RolePreferenceFormEntry;
-      });
-      return domain === "acting"
-        ? { ...prev, acting: nextEntries }
-        : { ...prev, crew: nextEntries };
-    });
-  }, []);
-
-  const changePreferenceWeight = useCallback((domain: "acting" | "crew", code: string, weight: number) => {
-    const normalized = normalizeRolePreferenceWeight(weight);
-    setPreferenceForm((prev) => {
-      const entries = domain === "acting" ? prev.acting : prev.crew;
-      const nextEntries = entries.map((entry) =>
-        entry.code === code ? { ...entry, weight: normalized } : entry,
-      );
-      return domain === "acting"
-        ? { ...prev, acting: nextEntries }
-        : { ...prev, crew: nextEntries };
-    });
-  }, []);
+    onFocusChange?.(formState.focus);
+  }, [formState.focus, onFocusChange]);
 
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -2664,53 +2638,6 @@ export function OnboardingSection({
       setSubmitting(false);
     }
   };
-
-  const handlePreferenceSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPreferenceError(null);
-    if (preferenceSubmitting) {
-      return;
-    }
-
-    const payload: SaveRolePreferencesInput[] = [
-      ...preferenceForm.acting
-        .filter((pref) => pref.enabled && pref.weight > 0)
-        .map((pref) => ({ code: pref.code, domain: "acting" as const, weight: pref.weight })),
-      ...preferenceForm.crew
-        .filter((pref) => pref.enabled && pref.weight > 0)
-        .map((pref) => ({ code: pref.code, domain: "crew" as const, weight: pref.weight })),
-    ];
-
-    if (!payload.length) {
-      setPreferenceError("Bitte wähle mindestens eine Präferenz aus.");
-      return;
-    }
-
-    setPreferenceSubmitting(true);
-    try {
-      const result = await saveRolePreferencesAction(payload);
-      if (!result.ok) {
-        setPreferenceError(result.error);
-        toast.error(result.error);
-        return;
-      }
-
-      const saved = result.data.preferences;
-      onRolePreferencesChange(saved);
-      if (onboarding) {
-        onOnboardingChange({ ...onboarding, preferences: saved });
-      }
-      setPreferenceForm(buildPreferenceFormState(saved));
-      toast.success("Präferenzen gespeichert");
-    } finally {
-      setPreferenceSubmitting(false);
-    }
-  };
-
-  const actingPreferences = preferenceForm.acting;
-  const crewPreferences = preferenceForm.crew;
-  const actingDisabled = !includesActing;
-  const crewDisabled = !includesCrew;
 
   const handleWhatsAppClick = async () => {
     if (!whatsappLink) {
@@ -2949,17 +2876,133 @@ export function OnboardingSection({
             </Button>
           </div>
         </form>
+      </CardContent>
+    </Card>
+  );
+}
 
-        <Separator />
+type RolePreferencesSectionProps = {
+  focus: OnboardingFocus;
+  onboarding: ProfileClientProps["onboarding"];
+  rolePreferences: ProfileClientProps["rolePreferences"];
+  onRolePreferencesChange: (next: ProfileClientProps["rolePreferences"]) => void;
+  onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
+};
 
+export function RolePreferencesSection({
+  focus,
+  onboarding,
+  rolePreferences,
+  onRolePreferencesChange,
+  onOnboardingChange,
+}: RolePreferencesSectionProps) {
+  const initialPreferences = useMemo(() => buildPreferenceFormState(rolePreferences), [rolePreferences]);
+  const [preferenceForm, setPreferenceForm] = useState<RolePreferenceFormState>(initialPreferences);
+  const [preferenceError, setPreferenceError] = useState<string | null>(null);
+  const [preferenceSubmitting, setPreferenceSubmitting] = useState(false);
+
+  useEffect(() => {
+    setPreferenceForm(initialPreferences);
+  }, [initialPreferences]);
+
+  const includesActing = focus === "acting" || focus === "both";
+  const includesCrew = focus === "tech" || focus === "both";
+
+  const toggleRolePreference = useCallback((domain: "acting" | "crew", code: string) => {
+    setPreferenceForm((prev) => {
+      const entries = domain === "acting" ? prev.acting : prev.crew;
+      const nextEntries = entries.map((entry) => {
+        if (entry.code !== code) {
+          return entry;
+        }
+        const nextEnabled = !entry.enabled;
+        const nextWeight = nextEnabled
+          ? entry.weight > 0
+            ? entry.weight
+            : DEFAULT_ROLE_PREFERENCE_WEIGHT
+          : entry.weight;
+        return {
+          ...entry,
+          enabled: nextEnabled,
+          weight: normalizeRolePreferenceWeight(nextWeight),
+        } satisfies RolePreferenceFormEntry;
+      });
+      return domain === "acting"
+        ? { ...prev, acting: nextEntries }
+        : { ...prev, crew: nextEntries };
+    });
+  }, []);
+
+  const changePreferenceWeight = useCallback((domain: "acting" | "crew", code: string, weight: number) => {
+    const normalized = normalizeRolePreferenceWeight(weight);
+    setPreferenceForm((prev) => {
+      const entries = domain === "acting" ? prev.acting : prev.crew;
+      const nextEntries = entries.map((entry) =>
+        entry.code === code ? { ...entry, weight: normalized } : entry,
+      );
+      return domain === "acting"
+        ? { ...prev, acting: nextEntries }
+        : { ...prev, crew: nextEntries };
+    });
+  }, []);
+
+  const handlePreferenceSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPreferenceError(null);
+    if (preferenceSubmitting) {
+      return;
+    }
+
+    const payload: SaveRolePreferencesInput[] = [
+      ...preferenceForm.acting
+        .filter((pref) => pref.enabled && pref.weight > 0)
+        .map((pref) => ({ code: pref.code, domain: "acting" as const, weight: pref.weight })),
+      ...preferenceForm.crew
+        .filter((pref) => pref.enabled && pref.weight > 0)
+        .map((pref) => ({ code: pref.code, domain: "crew" as const, weight: pref.weight })),
+    ];
+
+    if (!payload.length) {
+      setPreferenceError("Bitte wähle mindestens eine Präferenz aus.");
+      return;
+    }
+
+    setPreferenceSubmitting(true);
+    try {
+      const result = await saveRolePreferencesAction(payload);
+      if (!result.ok) {
+        setPreferenceError(result.error);
+        toast.error(result.error);
+        return;
+      }
+
+      const saved = result.data.preferences;
+      onRolePreferencesChange(saved);
+      if (onboarding) {
+        onOnboardingChange({ ...onboarding, preferences: saved });
+      }
+      setPreferenceForm(buildPreferenceFormState(saved));
+      toast.success("Präferenzen gespeichert");
+    } finally {
+      setPreferenceSubmitting(false);
+    }
+  };
+
+  const actingPreferences = preferenceForm.acting;
+  const crewPreferences = preferenceForm.crew;
+  const actingDisabled = !includesActing;
+  const crewDisabled = !includesCrew;
+
+  return (
+    <Card className="border border-border/60">
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">Rollenpräferenzen</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Markiere, in welchen Bereichen du aktiv sein möchtest und wie intensiv du dich einbringen willst.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
         <form className="space-y-6" onSubmit={handlePreferenceSubmit}>
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Rollenpräferenzen</h3>
-            <p className="text-xs text-muted-foreground">
-              Markiere, in welchen Bereichen du aktiv sein möchtest und wie intensiv du dich einbringen willst.
-            </p>
-          </div>
-
           <div className="space-y-6">
             <section className="space-y-3">
               <div className="flex items-center justify-between">
