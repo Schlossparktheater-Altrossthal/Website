@@ -284,6 +284,12 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "analytics",
   },
   {
+    key: "mitglieder.server.settings",
+    label: "Servereinstellungen verwalten",
+    description: "SMTP-Server und technische Basisdienste konfigurieren.",
+    category: "membership",
+  },
+  {
     key: "mitglieder.server.analytics",
     label: "Server-Statistiken einsehen",
     description: "Auslastung, Antwortzeiten und Nutzungsverhalten in der Server-Statistik abrufen.",

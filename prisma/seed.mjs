@@ -80,6 +80,12 @@ async function main() {
     },
   });
 
+  await prisma.serverSettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: { id: "default" },
+  });
+
   await prisma.homepageCountdown.upsert({
     where: { id: "public" },
     update: {

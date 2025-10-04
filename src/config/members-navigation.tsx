@@ -320,6 +320,21 @@ const ServerAnalyticsIcon = createMembersNavIcon(
   </>,
 );
 
+const ServerSettingsIcon = createMembersNavIcon(
+  <>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="M7 9h10" />
+    <path d="M12 5v4" />
+    <circle cx="12" cy="16" r="2" />
+    <path d="M12 12v1" />
+    <path d="M12 19v1" />
+    <path d="M15.3 14.7l.7.7" />
+    <path d="M8 20l.7-.7" />
+    <path d="M8.7 14.7l-.7.7" />
+    <path d="M16 20l-.7-.7" />
+  </>,
+);
+
 const FinanceDashboardIcon = createMembersNavIcon(
   <>
     <rect x="3" y="6" width="18" height="12" rx="2" />
@@ -598,6 +613,12 @@ export const membersNavigation = [
         label: "Website & Theme",
         permissionKey: "mitglieder.website.settings",
         icon: WebsiteIcon,
+      },
+      {
+        href: "/mitglieder/server-einstellungen",
+        label: "Servereinstellungen",
+        permissionKey: "mitglieder.server.settings",
+        icon: ServerSettingsIcon,
       },
       {
         href: "/mitglieder/server-analytics",
