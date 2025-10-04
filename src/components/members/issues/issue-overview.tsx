@@ -93,7 +93,7 @@ function normalizeCounts(counts?: Partial<IssueStatusCounts> | null): IssueStatu
 export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: IssueOverviewProps) {
   const [issues, setIssues] = useState<IssueSummary[]>(initialIssues);
   const [counts, setCounts] = useState<IssueStatusCounts>(normalizeCounts(initialCounts));
-  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("open");
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>("all");
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -159,7 +159,7 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
   };
 
   const handleClearFilters = () => {
-    setStatusFilter("open");
+    setStatusFilter("all");
     setCategoryFilter("all");
     setSearchInput("");
     setSearchTerm("");
