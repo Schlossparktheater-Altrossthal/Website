@@ -5,10 +5,14 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import type { IssueCategory, IssueStatus } from "@/lib/issues";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/members/page-header";
+import type { MembersBreadcrumbItem } from "@/lib/members-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Text } from "@/components/ui/typography";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -39,6 +43,7 @@ import { CircleDot, MessageSquare, CheckCircle2, Loader2, XCircle } from "lucide
 type IssueOverviewProps = {
   initialIssues: IssueSummary[];
   initialCounts: IssueStatusCounts;
+  breadcrumbs?: readonly (MembersBreadcrumbItem | null | undefined | false)[] | null;
 };
 
 type StatusFilterValue = "all" | IssueStatus;
@@ -70,7 +75,7 @@ function normalizeCounts(counts?: Partial<IssueStatusCounts> | null): IssueStatu
   };
 }
 
-export function IssueOverview({ initialIssues, initialCounts }: IssueOverviewProps) {
+export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: IssueOverviewProps) {
   const [issues, setIssues] = useState<IssueSummary[]>(initialIssues);
   const [counts, setCounts] = useState<IssueStatusCounts>(normalizeCounts(initialCounts));
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("open");
@@ -81,6 +86,14 @@ export function IssueOverview({ initialIssues, initialCounts }: IssueOverviewPro
   const [createOpen, setCreateOpen] = useState(false);
 
   const totalCount = counts.open + counts.in_progress + counts.resolved + counts.closed;
+  const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE"), []);
+  const formattedCounts = {
+    open: numberFormatter.format(counts.open),
+    in_progress: numberFormatter.format(counts.in_progress),
+    resolved: numberFormatter.format(counts.resolved),
+    closed: numberFormatter.format(counts.closed),
+    total: numberFormatter.format(totalCount),
+  } as const;
 
   const statusOptions = useMemo(
     () => [
@@ -154,93 +167,135 @@ export function IssueOverview({ initialIssues, initialCounts }: IssueOverviewPro
     void loadIssues();
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Offene Anliegen</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-foreground">{counts.open}</div>
-              <p className="text-xs text-muted-foreground">Neu oder noch unbearbeitet.</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-muted-foreground">In Bearbeitung</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-foreground">{counts.in_progress}</div>
-              <p className="text-xs text-muted-foreground">Aktiv in Umsetzung.</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Gelöst</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-foreground">{counts.resolved}</div>
-              <p className="text-xs text-muted-foreground">Erledigt, wartet auf Feedback.</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Geschlossen</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-foreground">{counts.closed}</div>
-              <p className="text-xs text-muted-foreground">Abgeschlossen und dokumentiert.</p>
-            </CardContent>
-          </Card>
-        </div>
+  const statusSummary = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Badge variant="outline" className="bg-background">
+        {formattedCounts.open} offen
+      </Badge>
+      <Badge variant="secondary" className="border border-border/60 bg-secondary/60 text-secondary-foreground">
+        {formattedCounts.total} gesamt
+      </Badge>
+    </div>
+  );
 
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>Neues Anliegen melden</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Neues Anliegen erfassen</DialogTitle>
-              <DialogDescription>
-                Beschreibe dein Problem, einen Bug oder Verbesserungsvorschlag für den Mitgliederbereich.
-              </DialogDescription>
-            </DialogHeader>
-            <IssueCreateForm onCreated={handleIssueCreated} onSuccess={() => setCreateOpen(false)} />
-          </DialogContent>
-        </Dialog>
-      </div>
+  const overviewItems = [
+    {
+      key: "open",
+      label: "Offene Anliegen",
+      value: formattedCounts.open,
+      description: "Neu oder noch unbearbeitet.",
+    },
+    {
+      key: "in_progress",
+      label: "In Bearbeitung",
+      value: formattedCounts.in_progress,
+      description: "Aktiv in Umsetzung.",
+    },
+    {
+      key: "resolved",
+      label: "Gelöst",
+      value: formattedCounts.resolved,
+      description: "Erledigt, wartet auf Feedback.",
+    },
+    {
+      key: "closed",
+      label: "Geschlossen",
+      value: formattedCounts.closed,
+      description: "Abgeschlossen und dokumentiert.",
+    },
+  ] as const;
+
+  return (
+    <div className="space-y-6 pb-16">
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <PageHeader
+          title="Feedback & Support"
+          description="Melde Probleme, Bugs oder Verbesserungsvorschläge und verfolge den Bearbeitungsstand im Mitglieder-Issue-Board."
+          breadcrumbs={breadcrumbs}
+          actions={
+            <DialogTrigger asChild>
+              <Button>Neues Anliegen melden</Button>
+            </DialogTrigger>
+          }
+          status={statusSummary}
+        />
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Neues Anliegen erfassen</DialogTitle>
+            <DialogDescription>
+              Beschreibe dein Problem, einen Bug oder einen Verbesserungsvorschlag für den Mitgliederbereich.
+            </DialogDescription>
+          </DialogHeader>
+          <IssueCreateForm onCreated={handleIssueCreated} onSuccess={() => setCreateOpen(false)} />
+        </DialogContent>
+      </Dialog>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Filter &amp; Suche</CardTitle>
+        <CardHeader className="space-y-1">
+          <CardTitle>Aktueller Überblick</CardTitle>
+          <Text variant="small" tone="muted">
+            Vier Kennzahlen zeigen dir den Status aller gemeldeten Anliegen.
+          </Text>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {statusOptions.map((option) => (
-              <Button
-                key={option.value}
-                variant={statusFilter === option.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter(option.value)}
+        <CardContent>
+          <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {overviewItems.map((item) => (
+              <div
+                key={item.key}
+                className="space-y-1.5 rounded-lg border border-border/60 bg-muted/20 p-4"
               >
-                {option.label}
-                <span className="ml-2 rounded-full bg-foreground/10 px-2 py-0.5 text-[11px] font-semibold text-foreground/70">
-                  {option.count}
-                </span>
-              </Button>
+                <dt className="text-sm font-medium text-muted-foreground">{item.label}</dt>
+                <dd className="text-2xl font-semibold text-foreground">{item.value}</dd>
+                <Text variant="caption" tone="muted">
+                  {item.description}
+                </Text>
+              </div>
             ))}
-          </div>
+          </dl>
+        </CardContent>
+      </Card>
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-end">
-            <div className="md:w-64">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <Card>
+        <CardHeader className="space-y-1">
+          <CardTitle>Anliegen filtern</CardTitle>
+          <Text variant="small" tone="muted">
+            Kombiniere Status, Kategorie und Stichworte, um schnell die richtigen Anliegen zu finden.
+          </Text>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <fieldset className="space-y-2">
+            <Text variant="caption" tone="muted" className="uppercase tracking-[0.12em]">
+              Status
+            </Text>
+            <div className="flex flex-wrap gap-2">
+              {statusOptions.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={statusFilter === option.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter(option.value)}
+                  aria-pressed={statusFilter === option.value}
+                >
+                  {option.label}
+                  <span className="ml-2 rounded-full bg-foreground/10 px-2 py-0.5 text-[11px] font-semibold text-foreground/70">
+                    {numberFormatter.format(option.count)}
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <div className="lg:w-64 space-y-2">
+              <Label htmlFor="issue-category" className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
                 Kategorie
-              </label>
-              <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilterValue)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Kategorie filtern" />
+              </Label>
+              <Select
+                value={categoryFilter}
+                onValueChange={(value) => setCategoryFilter(value as CategoryFilterValue)}
+              >
+                <SelectTrigger id="issue-category">
+                  <SelectValue placeholder="Kategorie auswählen" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle Kategorien</SelectItem>
@@ -253,12 +308,16 @@ export function IssueOverview({ initialIssues, initialCounts }: IssueOverviewPro
               </Select>
             </div>
 
-            <form onSubmit={handleSearchSubmit} className="flex flex-1 flex-col gap-2 md:flex-row md:items-center">
-              <div className="flex-1">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Suche
-                </label>
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center"
+            >
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="issue-search" className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                  Stichwortsuche
+                </Label>
                 <Input
+                  id="issue-search"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="Titel oder Beschreibung durchsuchen"
@@ -278,8 +337,11 @@ export function IssueOverview({ initialIssues, initialCounts }: IssueOverviewPro
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Anliegen</CardTitle>
+        <CardHeader className="space-y-1">
+          <CardTitle>Anliegen</CardTitle>
+          <Text variant="small" tone="muted">
+            Alle Treffer entsprechend deiner Filtereinstellungen.
+          </Text>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
