@@ -935,7 +935,7 @@ function ProfileClientInner({
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col gap-3">
-          <div className="sm:hidden">
+          <div className="lg:hidden">
             <Select value={activeTab} onValueChange={setActiveTab}>
               <SelectTrigger id="profile-tab-select" className="h-11 w-full justify-between rounded-full border-border/70 px-4 text-sm font-semibold">
                 <SelectValue placeholder="Bereich wählen">
@@ -952,12 +952,12 @@ function ProfileClientInner({
             </Select>
           </div>
 
-          <TabsList className="hidden w-full flex-nowrap items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/70 bg-background/70 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10 backdrop-blur sm:flex">
+          <TabsList className="hidden w-full flex-nowrap items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/70 bg-background/70 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10 backdrop-blur lg:flex">
             {tabOptions.map((option) => (
               <TabsTrigger
                 key={option.value}
                 value={option.value}
-                className="inline-flex min-w-0 flex-1 basis-0 items-center justify-center whitespace-nowrap px-2.5 py-2 text-[0.65rem] font-semibold uppercase tracking-wide transition text-center leading-tight sm:px-3.5 sm:text-[0.75rem]"
+                className="inline-flex min-w-0 flex-1 basis-0 items-center justify-center whitespace-nowrap px-2.5 py-2 text-[0.65rem] font-semibold uppercase tracking-wide transition text-center leading-tight lg:px-3.5 lg:text-[0.75rem]"
                 >
                   {option.label}
                 </TabsTrigger>
@@ -1068,7 +1068,7 @@ function ProfileOverviewCard({
   return (
     <Card className="border border-border/70 bg-gradient-to-br from-background/85 via-background/70 to-background/80 shadow-sm">
       <CardHeader className="space-y-4 pb-2">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <UserAvatar
               userId={user.id}
@@ -2320,7 +2320,7 @@ function MeasurementsSection({
 
   return (
     <Card className="border border-border/60">
-      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <CardTitle className="text-base font-semibold">Maße</CardTitle>
           <p className="text-sm text-muted-foreground">
