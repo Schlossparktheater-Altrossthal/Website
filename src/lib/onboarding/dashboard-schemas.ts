@@ -170,6 +170,41 @@ export const optimizerSummarySchema = z.object({
   fairnessBuckets: z.array(optimizerFairnessBucketSchema),
 });
 
+const rankingPreferenceSchema = z.object({
+  roleId: z.string(),
+  label: z.string(),
+  domain: z.enum(["acting", "crew"]),
+  normalizedShare: z.number(),
+  rank: z.number(),
+});
+
+const rankingCandidateSchema = z.object({
+  userId: z.string(),
+  name: z.string(),
+  focus: z.enum(["acting", "tech", "both"]).nullable(),
+  rank: z.number(),
+  normalizedShare: z.number(),
+  score: z.number(),
+  confidence: z.number(),
+  experienceYears: z.number().nullable(),
+  interests: z.array(z.string()).default([]),
+  background: z.string().nullable(),
+  notes: z.string().nullable(),
+  otherPreferences: z.array(rankingPreferenceSchema),
+});
+
+const rankingRoleSchema = z.object({
+  roleId: z.string(),
+  label: z.string(),
+  domain: z.enum(["acting", "crew"]),
+  demand: z.number(),
+  candidates: z.array(rankingCandidateSchema),
+});
+
+export const onboardingRankingSectionSchema = z.object({
+  roles: z.array(rankingRoleSchema),
+});
+
 export const historySnapshotSchema = z.object({
   onboardingId: z.string(),
   label: z.string(),
@@ -221,6 +256,7 @@ export const onboardingDashboardSchema = z.object({
   }),
   global: onboardingGlobalSectionSchema,
   allocation: onboardingAllocationSectionSchema,
+  ranking: onboardingRankingSectionSchema,
   history: z.array(historySnapshotSchema).optional(),
 });
 
@@ -229,3 +265,5 @@ export type OnboardingSummary = z.infer<typeof onboardingSummarySchema>;
 export type AllocationRole = z.infer<typeof allocationRoleSchema>;
 export type AllocationCandidate = z.infer<typeof allocationCandidateSchema>;
 export type AllocationSlot = z.infer<typeof allocationSlotSchema>;
+export type OnboardingRankingRole = z.infer<typeof rankingRoleSchema>;
+export type OnboardingRankingCandidate = z.infer<typeof rankingCandidateSchema>;
