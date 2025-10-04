@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/members/page-header";
 import { IssueOverview } from "@/components/members/issues/issue-overview";
 import type { IssueStatusCounts, IssueSummary } from "@/components/members/issues/types";
 import { prisma } from "@/lib/prisma";
@@ -70,16 +69,10 @@ export default async function IssuesPage() {
   const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/issues")];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Feedback & Support"
-        description="Melde Probleme, Bugs oder Verbesserungsvorschläge und verfolge den Bearbeitungsstand im Mitglieder-Issue-Board."
-        breadcrumbs={breadcrumbs}
-      />
-      <IssueOverview
-        initialIssues={initialIssues}
-        initialCounts={counts}
-      />
-    </div>
+    <IssueOverview
+      initialIssues={initialIssues}
+      initialCounts={counts}
+      breadcrumbs={breadcrumbs}
+    />
   );
 }
