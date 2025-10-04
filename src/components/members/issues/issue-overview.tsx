@@ -49,6 +49,12 @@ type IssueOverviewProps = {
 type StatusFilterValue = "all" | IssueStatus;
 type CategoryFilterValue = "all" | IssueCategory;
 
+const STATUS_ICON_FALLBACK = {
+  icon: CircleDot,
+  className: "text-muted-foreground",
+  label: "Status unbekannt",
+};
+
 const STATUS_ICON_MAP: Record<
   IssueStatus,
   { icon: LucideIcon; className: string; label: string }
@@ -59,8 +65,17 @@ const STATUS_ICON_MAP: Record<
   closed: { icon: XCircle, className: "text-rose-500", label: ISSUE_STATUS_LABELS.closed },
 };
 
-function IssueStatusIcon({ status }: { status: IssueStatus }) {
-  const config = STATUS_ICON_MAP[status];
+const STATUS_BADGE_FALLBACK_CLASS = "border-muted/50 bg-muted/40 text-muted-foreground";
+
+function getStatusPresentation(status: IssueStatus | string) {
+  if (status in STATUS_ICON_MAP) {
+    return STATUS_ICON_MAP[status as keyof typeof STATUS_ICON_MAP];
+  }
+  return STATUS_ICON_FALLBACK;
+}
+
+function IssueStatusIcon({ status }: { status: IssueStatus | string }) {
+  const config = getStatusPresentation(status);
   const Icon = config.icon;
   const className = cn("h-5 w-5", status === "in_progress" ? "animate-spin" : null, config.className);
   return <Icon aria-hidden className={className} />;
@@ -365,9 +380,14 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
               const shortId = issue.id.slice(0, 8);
               const lastActivity = formatRelativeFromNow(new Date(issue.lastActivityAt));
               const authorName = issue.createdBy?.name || issue.createdBy?.email || null;
+              const statusPresentation = getStatusPresentation(issue.status);
+              const statusLabel =
+                (ISSUE_STATUS_LABELS as Record<string, string>)[issue.status] ?? statusPresentation.label;
+              const statusBadgeClass =
+                (ISSUE_STATUS_BADGE_CLASSES as Record<string, string>)[issue.status] ?? STATUS_BADGE_FALLBACK_CLASS;
               const metaItems = [
                 `#${shortId}`,
-                STATUS_ICON_MAP[issue.status].label,
+                statusLabel,
                 `Aktualisiert ${lastActivity}`,
               ];
               if (authorName) {
@@ -404,8 +424,8 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
                         ))}
                       </div>
                       <div className="flex flex-wrap gap-2 pt-1 text-xs">
-                        <Badge className={cn("border", ISSUE_STATUS_BADGE_CLASSES[issue.status])}>
-                          {ISSUE_STATUS_LABELS[issue.status]}
+                        <Badge className={cn("border", statusBadgeClass)}>
+                          {statusLabel}
                         </Badge>
                         <Badge className={cn("border", ISSUE_PRIORITY_BADGE_CLASSES[issue.priority])}>
                           {ISSUE_PRIORITY_LABELS[issue.priority]}
