@@ -14,6 +14,7 @@ import { AllocationTab } from "./allocation-tab";
 import { GlobalOverviewTab } from "./global-tab";
 import { HeaderBar } from "./header-bar";
 import { HistoryTab } from "./history-tab";
+import { RankingTab } from "./ranking-tab";
 
 function dashboardQueryKey(onboardingId: string) {
   return ["onboarding-dashboard", onboardingId] as const;
@@ -44,7 +45,7 @@ export function DashboardClient({
   const queryClient = useQueryClient();
   const { socket, joinRoom, leaveRoom } = useRealtime();
   const [selectedOnboarding, setSelectedOnboarding] = useState(initialData.onboarding.id);
-  const [tabValue, setTabValue] = useState<"global" | "allocation" | "history">("global");
+  const [tabValue, setTabValue] = useState<"global" | "ranking" | "allocation" | "history">("global");
   const [isPending, startTransition] = useTransition();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
@@ -175,6 +176,7 @@ export function DashboardClient({
       >
         <TabsList>
           <TabsTrigger value="global">Global</TabsTrigger>
+          <TabsTrigger value="ranking">Ranking</TabsTrigger>
           <TabsTrigger value="allocation">Zuteilung</TabsTrigger>
           {historyAvailable ? <TabsTrigger value="history">Historie</TabsTrigger> : null}
         </TabsList>
@@ -188,6 +190,17 @@ export function DashboardClient({
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
               <GlobalOverviewTab data={currentData.global} participants={currentData.onboarding.participants} />
+            </motion.div>
+          </TabsContent>
+          <TabsContent key="ranking" value="ranking" className="space-y-6">
+            <motion.div
+              key={`${currentData.onboarding.id}-ranking`}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <RankingTab ranking={currentData.ranking} />
             </motion.div>
           </TabsContent>
           <TabsContent key="allocation" value="allocation" className="space-y-6">

@@ -228,6 +228,56 @@ function normalizeConfidence(score: number, maxScore: number): number {
   return Math.min(1, score / maxScore);
 }
 
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function buildPreferenceSummary(
+  shares: Map<string, number>,
+  domain: "acting" | "crew",
+  options: { exclude?: string; limit?: number } = {},
+) {
+  const ordered = Array.from(shares.entries())
+    .filter(([, value]) => value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([roleId, value], index) => ({
+      roleId,
+      label: getRolePreferenceTitle(roleId),
+      domain,
+      normalizedShare: roundTo(value, 3),
+      rank: index + 1,
+    }));
+  const filtered = options.exclude
+    ? ordered.filter((entry) => entry.roleId !== options.exclude)
+    : ordered;
+  return typeof options.limit === "number" ? filtered.slice(0, options.limit) : filtered;
+}
+
+function evaluateCandidateForRole(
+  candidate: CandidateInput,
+  roleId: string,
+  domain: "acting" | "crew",
+) {
+  const shares = domain === "acting" ? candidate.actingShares : candidate.crewShares;
+  const share = shares.get(roleId) ?? 0;
+  if (share <= 0) {
+    return null;
+  }
+  const focusAlignment =
+    domain === "acting"
+      ? candidate.focus === "acting" || candidate.focus === "both"
+      : candidate.focus === "tech" || candidate.focus === "both";
+  const quality = 1 + (candidate.experienceYears ?? 0) / 10 + (focusAlignment ? 0.2 : 0);
+  const score = share * quality;
+  const confidence = normalizeConfidence(score, 1.2);
+
+  return { share, focusAlignment, quality, score, confidence };
+}
+
 interface CandidateInput {
   userId: string;
   name: string;
@@ -236,6 +286,8 @@ interface CandidateInput {
   experienceYears: number | null;
   actingShares: Map<string, number>;
   crewShares: Map<string, number>;
+  background: string | null;
+  notes: string | null;
 }
 
 export interface DashboardComputationOptions {
@@ -386,6 +438,8 @@ async function computeOnboardingDashboardData(
           },
           gender: true,
           focus: true,
+          background: true,
+          notes: true,
           dietaryPreference: true,
           dietaryPreferenceStrictness: true,
           memberSinceYear: true,
@@ -696,6 +750,8 @@ async function computeOnboardingDashboardData(
       experienceYears,
       actingShares: actingSharesByUser.get(profile.user.id) ?? new Map<string, number>(),
       crewShares: crewSharesByUser.get(profile.user.id) ?? new Map<string, number>(),
+      background: normalizeOptionalText(profile.background),
+      notes: normalizeOptionalText(profile.notes),
     };
   });
 
@@ -705,26 +761,27 @@ async function computeOnboardingDashboardData(
   actingTotals.forEach((value, roleId) => {
     const candidates = candidateInputs
       .map((candidate) => {
-        const share = candidate.actingShares.get(roleId) ?? 0;
-        const focusAlignment = candidate.focus === "acting" || candidate.focus === "both";
-        const quality = 1 + (candidate.experienceYears ?? 0) / 10 + (focusAlignment ? 0.2 : 0);
-        const score = share * quality;
-        return {
+        const metrics = evaluateCandidateForRole(candidate, roleId, "acting");
+        if (!metrics) {
+          return null;
+        }
+        const allocationCandidate: AllocationCandidate = {
           userId: candidate.userId,
           name: candidate.name,
           focus: candidate.focus ?? undefined,
-          normalizedShare: share,
-          qualityFactor: quality,
-          score,
-          confidence: normalizeConfidence(score, 1.2),
-          justification: focusAlignment
+          normalizedShare: metrics.share,
+          qualityFactor: metrics.quality,
+          score: metrics.score,
+          confidence: metrics.confidence,
+          justification: metrics.focusAlignment
             ? "Hohe Acting-Präferenz"
             : "Acting als Zweitfokus",
           interests: candidate.interests,
           experienceYears: candidate.experienceYears ?? undefined,
-        } satisfies AllocationCandidate;
+        };
+        return allocationCandidate;
       })
-      .filter((candidate) => candidate.normalizedShare > 0)
+      .filter((candidate): candidate is AllocationCandidate => candidate !== null)
       .sort((a, b) => b.score - a.score)
       .slice(0, 12);
 
@@ -739,24 +796,25 @@ async function computeOnboardingDashboardData(
   crewTotals.forEach((value, roleId) => {
     const candidates = candidateInputs
       .map((candidate) => {
-        const share = candidate.crewShares.get(roleId) ?? 0;
-        const focusAlignment = candidate.focus === "tech" || candidate.focus === "both";
-        const quality = 1 + (candidate.experienceYears ?? 0) / 10 + (focusAlignment ? 0.2 : 0);
-        const score = share * quality;
-        return {
+        const metrics = evaluateCandidateForRole(candidate, roleId, "crew");
+        if (!metrics) {
+          return null;
+        }
+        const allocationCandidate: AllocationCandidate = {
           userId: candidate.userId,
           name: candidate.name,
           focus: candidate.focus ?? undefined,
-          normalizedShare: share,
-          qualityFactor: quality,
-          score,
-          confidence: normalizeConfidence(score, 1.2),
-          justification: focusAlignment ? "Technik-Fokus" : "Unterstützender Fokus",
+          normalizedShare: metrics.share,
+          qualityFactor: metrics.quality,
+          score: metrics.score,
+          confidence: metrics.confidence,
+          justification: metrics.focusAlignment ? "Technik-Fokus" : "Unterstützender Fokus",
           interests: candidate.interests,
           experienceYears: candidate.experienceYears ?? undefined,
-        } satisfies AllocationCandidate;
+        };
+        return allocationCandidate;
       })
-      .filter((candidate) => candidate.normalizedShare > 0)
+      .filter((candidate): candidate is AllocationCandidate => candidate !== null)
       .sort((a, b) => b.score - a.score)
       .slice(0, 12);
 
@@ -766,6 +824,56 @@ async function computeOnboardingDashboardData(
       domain: "crew",
       demand: value.userCount,
     });
+  });
+
+  const maxRankingEntries = 20;
+  const rankingRoles = Array.from(allRoles.entries()).map(([roleId, meta]) => {
+    const candidates = candidateInputs
+      .map((candidate) => {
+        const metrics = evaluateCandidateForRole(candidate, roleId, meta.domain);
+        if (!metrics) {
+          return null;
+        }
+        const otherPreferences = [
+          ...buildPreferenceSummary(candidate.actingShares, "acting", {
+            exclude: meta.domain === "acting" ? roleId : undefined,
+            limit: 3,
+          }),
+          ...buildPreferenceSummary(candidate.crewShares, "crew", {
+            exclude: meta.domain === "crew" ? roleId : undefined,
+            limit: 3,
+          }),
+        ];
+
+        return {
+          userId: candidate.userId,
+          name: candidate.name,
+          focus: candidate.focus,
+          normalizedShare: roundTo(metrics.share, 3),
+          score: roundTo(metrics.score, 3),
+          confidence: roundTo(metrics.confidence, 3),
+          experienceYears: candidate.experienceYears,
+          interests: candidate.interests.slice(0, 6),
+          background: candidate.background,
+          notes: candidate.notes,
+          otherPreferences,
+        };
+      })
+      .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, maxRankingEntries)
+      .map((candidate, index) => ({
+        ...candidate,
+        rank: index + 1,
+      }));
+
+    return {
+      roleId,
+      label: meta.label,
+      domain: meta.domain,
+      demand: meta.demand,
+      candidates,
+    };
   });
 
   const defaultCapacity = (demand: number): number => {
@@ -1006,6 +1114,9 @@ async function computeOnboardingDashboardData(
       ),
       conflicts: optimization.conflicts,
       optimizer: optimization.summary,
+    },
+    ranking: {
+      roles: rankingRoles,
     },
     history: historySnapshots,
   });
