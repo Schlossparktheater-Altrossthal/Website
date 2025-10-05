@@ -28,6 +28,12 @@ describe("datetime utilities", () => {
 
       expect(formatRelativeFromNow(past, { now: reference })).toBe("vor 2 Stunden");
     });
+
+    it("falls back gracefully for invalid dates", () => {
+      const invalid = new Date("invalid");
+
+      expect(formatRelativeFromNow(invalid)).toBe("jetzt");
+    });
   });
 
   describe("formatRelativeBetween", () => {
