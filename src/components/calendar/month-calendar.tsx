@@ -67,6 +67,7 @@ export interface MonthCalendarProps {
   subtitle?: ReactNode;
   headerActions?: ReactNode;
   headerActionsPlacement?: "left" | "right";
+  navigationPlacement?: "left" | "right";
   todayLabel?: string;
   showTodayButton?: boolean;
   showWeekNumbers?: boolean;
@@ -99,6 +100,7 @@ export function MonthCalendar({
   subtitle,
   headerActions,
   headerActionsPlacement = "right",
+  navigationPlacement = "right",
   todayLabel = "Heute",
   showTodayButton = true,
   showWeekNumbers = true,
@@ -224,52 +226,70 @@ export function MonthCalendar({
     ? "grid grid-cols-7 gap-1 sm:grid-cols-[64px_repeat(7,minmax(0,1fr))] sm:gap-1.5"
     : "grid grid-cols-7 gap-1 sm:gap-1.5";
 
+  const navigationControls = (
+    <div className="flex flex-wrap items-center gap-2">
+      {showTodayButton ? (
+        <Button type="button" variant="outline" size="sm" onClick={goToday}>
+          {todayLabel}
+        </Button>
+      ) : null}
+      <div className="flex items-center rounded-md border">
+        <button
+          type="button"
+          onClick={goPrevMonth}
+          className="p-2 text-sm text-muted-foreground transition hover:text-foreground"
+          aria-label="Vorheriger Monat"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={goNextMonth}
+          className="p-2 text-sm text-muted-foreground transition hover:text-foreground"
+          aria-label="Nächster Monat"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+
+  const hasRightActions = headerActionsPlacement === "right" && Boolean(headerActions);
+
   return (
     <div className={cn("w-full rounded-xl border bg-card shadow-sm", className)}>
       <div className="flex flex-wrap items-center gap-3 border-b bg-muted/40 px-4 py-3">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <div className="space-y-1">
-            {typeof headerTitle === "string" ? (
-              <h2 className="text-xl font-semibold">{headerTitle}</h2>
-            ) : (
-              headerTitle
+          <div
+            className={cn(
+              "flex min-w-0 flex-col gap-3",
+              navigationPlacement === "left"
+                ? "sm:flex-row sm:items-center sm:justify-between"
+                : undefined
             )}
-            {subtitle ? (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
-            ) : null}
+          >
+            <div className="min-w-0 space-y-1">
+              {typeof headerTitle === "string" ? (
+                <h2 className="text-xl font-semibold">{headerTitle}</h2>
+              ) : (
+                headerTitle
+              )}
+              {subtitle ? (
+                <p className="text-sm text-muted-foreground">{subtitle}</p>
+              ) : null}
+            </div>
+            {navigationPlacement === "left" ? navigationControls : null}
           </div>
           {headerActionsPlacement === "left" && headerActions ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {headerActions}
-            </div>
+            <div className="flex flex-wrap items-center gap-2">{headerActions}</div>
           ) : null}
         </div>
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          {showTodayButton ? (
-            <Button type="button" variant="outline" size="sm" onClick={goToday}>
-              {todayLabel}
-            </Button>
-          ) : null}
-          <div className="flex items-center rounded-md border">
-            <button
-              type="button"
-              onClick={goPrevMonth}
-              className="p-2 text-sm text-muted-foreground transition hover:text-foreground"
-              aria-label="Vorheriger Monat"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={goNextMonth}
-              className="p-2 text-sm text-muted-foreground transition hover:text-foreground"
-              aria-label="Nächster Monat"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+        {navigationPlacement === "right" || hasRightActions ? (
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {navigationPlacement === "right" ? navigationControls : null}
+            {hasRightActions ? headerActions : null}
           </div>
-          {headerActionsPlacement === "right" ? headerActions : null}
-        </div>
+        ) : null}
       </div>
       <div className="overflow-x-auto">
         <div

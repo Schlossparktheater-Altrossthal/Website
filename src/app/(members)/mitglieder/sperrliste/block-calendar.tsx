@@ -944,15 +944,23 @@ export function BlockCalendar({
     </div>
   ) : null;
 
+  const headerToggleBase =
+    "flex select-none items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-500 dark:focus-visible:ring-offset-slate-950";
+  const headerToggleInactive =
+    "border-border/60 bg-background/80 text-muted-foreground hover:border-sky-200 hover:text-foreground focus-visible:ring-offset-background dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-slate-900/60";
+  const holidayToggleActive =
+    "border-sky-300 bg-sky-50 text-sky-900 shadow-sm hover:bg-sky-100 focus-visible:ring-offset-background dark:border-sky-500/60 dark:bg-sky-500/20 dark:text-sky-50 dark:hover:bg-sky-500/30";
+  const selectionToggleActive =
+    "border-primary/50 bg-primary/10 text-primary shadow-sm hover:bg-primary/15 focus-visible:ring-primary focus-visible:ring-offset-background dark:border-primary/40 dark:bg-primary/15 dark:text-primary-foreground dark:hover:bg-primary/20 dark:focus-visible:ring-primary";
+
   const holidayHeaderToggle = (
     <button
       type="button"
       onClick={() => setShowHolidays((prev) => !prev)}
       className={cn(
-        "flex select-none items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950",
-        showHolidays
-          ? "border-sky-300 bg-sky-50 text-sky-900 shadow-sm hover:bg-sky-100 focus-visible:ring-offset-background dark:border-sky-500/60 dark:bg-sky-500/20 dark:text-sky-50 dark:hover:bg-sky-500/30"
-          : "border-border/60 bg-background/80 text-muted-foreground hover:border-sky-200 hover:text-foreground focus-visible:ring-offset-background dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-slate-900/60",
+        headerToggleBase,
+        "w-full justify-center sm:w-auto sm:justify-start",
+        showHolidays ? holidayToggleActive : headerToggleInactive,
       )}
       aria-pressed={showHolidays}
     >
@@ -960,6 +968,21 @@ export function BlockCalendar({
         <CalendarDays className="h-4 w-4" aria-hidden />
         <span>{showHolidays ? "Ferien & Feiertage eingeblendet" : "Ferien & Feiertage anzeigen"}</span>
       </span>
+    </button>
+  );
+
+  const selectionModeToggle = (
+    <button
+      type="button"
+      onClick={handleToggleSelectionMode}
+      className={cn(
+        headerToggleBase,
+        "w-full justify-center sm:w-auto sm:justify-start",
+        selectionMode ? selectionToggleActive : headerToggleInactive,
+      )}
+      aria-pressed={selectionMode}
+    >
+      {selectionMode ? "Auswahl beenden" : "Mehrfachauswahl"}
     </button>
   );
 
@@ -1200,19 +1223,12 @@ export function BlockCalendar({
         onMonthChange={handleMonthChange}
         transitionDirection={enterDir}
         subtitle="Tippe auf einen Tag, um ihn zu sperren, einzuschränken oder als bevorzugt zu markieren."
-        headerActionsPlacement="left"
+        headerActionsPlacement="right"
+        navigationPlacement="left"
         headerActions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {selectionModeToggle}
             {holidayHeaderToggle}
-            <Button
-              type="button"
-              variant={selectionMode ? "default" : "outline"}
-              size="sm"
-              onClick={handleToggleSelectionMode}
-              className="w-full sm:w-auto"
-            >
-              {selectionMode ? "Auswahl beenden" : "Mehrfachauswahl"}
-            </Button>
           </div>
         }
         renderDay={renderCalendarDay}
