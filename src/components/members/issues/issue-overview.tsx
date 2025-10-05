@@ -133,14 +133,29 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
       const query = params.toString();
       const response = await fetch(`/api/issues${query ? `?${query}` : ""}`, {
         cache: "no-store",
+        credentials: "include",
+        redirect: "follow",
       });
+      if (response.status === 401) {
+        throw new Error("Bitte melde dich erneut an, um den Feedback-Bereich zu nutzen.");
+      }
+      if (response.status === 403) {
+        throw new Error("Kein Zugriff auf den Feedback-Bereich.");
+      }
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Unerwartete Antwort vom Server erhalten.");
+      }
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         throw new Error(data?.error ?? "Anliegen konnten nicht geladen werden");
       }
-      const nextIssues = Array.isArray(data?.issues) ? (data.issues as IssueSummary[]) : [];
-      setIssues(nextIssues);
-      setCounts(normalizeCounts(data?.counts as IssueStatusCounts));
+      if (!data || typeof data !== "object" || !Array.isArray((data as { issues?: unknown }).issues)) {
+        throw new Error("Antwort des Servers konnte nicht verarbeitet werden.");
+      }
+      const payload = data as { issues: IssueSummary[]; counts?: Partial<IssueStatusCounts> };
+      setIssues(Array.isArray(payload.issues) ? payload.issues : []);
+      setCounts(normalizeCounts(payload.counts));
     } catch (err) {
       console.error("[IssueOverview] load", err);
       toast.error(err instanceof Error ? err.message : "Anliegen konnten nicht geladen werden");

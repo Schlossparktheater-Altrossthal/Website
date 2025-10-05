@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
+import { getSession } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { isIssueCategory, isIssuePriority, isIssueStatus, isIssueVisibility } from "@/lib/issues";
 import { mapIssueDetail } from "../utils";
@@ -10,7 +10,13 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ issueId: string }> },
 ) {
-  const session = await requireAuth();
+  const session = await getSession();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+  if (session.user.isDeactivated) {
+    return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
+  }
   const [canView, canManage] = await Promise.all([
     hasPermission(session.user, "mitglieder.issues"),
     hasPermission(session.user, "mitglieder.issues.manage"),
@@ -54,7 +60,13 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ issueId: string }> },
 ) {
-  const session = await requireAuth();
+  const session = await getSession();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+  if (session.user.isDeactivated) {
+    return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
+  }
   const [canView, canManage] = await Promise.all([
     hasPermission(session.user, "mitglieder.issues"),
     hasPermission(session.user, "mitglieder.issues.manage"),
