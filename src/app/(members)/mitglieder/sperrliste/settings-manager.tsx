@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type ComponentProps } from "react";
-import { AlertCircle, CheckCircle2, ChevronDown, Loader2, PlugZap, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { AlertCircle, CheckCircle2, Loader2, PlugZap, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -144,7 +144,6 @@ export function SperrlisteSettingsManager({
   defaultPublicHolidaySourceUrl,
   onSettingsChange,
 }: SperrlisteSettingsManagerProps) {
-  const contentId = useId();
   const [freezeDaysValue, setFreezeDaysValue] = useState(String(settings.freezeDays));
   const [holidayModeState, setHolidayModeState] = useState<HolidaySourceMode>(settings.holidaySource.mode);
   const [holidayUrlState, setHolidayUrlState] = useState(settings.holidaySource.url ?? "");
@@ -166,7 +165,6 @@ export function SperrlisteSettingsManager({
     holidaySourceUrl: defaultHolidaySourceUrl,
     publicHolidaySourceUrl: defaultPublicHolidaySourceUrl,
   });
-  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setFreezeDaysValue(String(settings.freezeDays));
@@ -813,51 +811,27 @@ export function SperrlisteSettingsManager({
   const PublicStatusIcon = STATUS_ICONS[publicStatusMeta.tone];
 
   return (
-    <Card data-state={expanded ? "expanded" : "collapsed"}>
+    <Card>
       <CardHeader className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-3">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Sparkles className="h-5 w-5 text-primary" aria-hidden />
-              Sperrlisten-Einstellungen
-            </CardTitle>
-            <Text variant="small" tone="muted">
-              Verwalte Ferien- und Feiertagsquellen, Probenplanung und Sperrfrist in einem kompakten Ablauf.
-            </Text>
-          </div>
-          <button
-            type="button"
-            onClick={() => setExpanded((prev) => !prev)}
-            aria-expanded={expanded}
-            aria-controls={contentId}
-            className={cn(
-              "group inline-flex items-center gap-2 self-start rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:self-auto",
-              expanded ? "bg-muted/60 text-primary" : undefined,
-            )}
-          >
-            <span>{expanded ? "Einstellungen ausblenden" : "Einstellungen anzeigen"}</span>
-            <ChevronDown
-              className={cn("h-4 w-4 transition-transform", expanded ? "rotate-180" : "rotate-0")}
-              aria-hidden
-            />
-          </button>
+        <div className="space-y-3">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Sparkles className="h-5 w-5 text-primary" aria-hidden />
+            Sperrlisten-Einstellungen
+          </CardTitle>
+          <Text variant="small" tone="muted">
+            Verwalte Ferien- und Feiertagsquellen, Probenplanung und Sperrfrist in einem kompakten Ablauf.
+          </Text>
         </div>
-        {!expanded ? (
-          <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 p-4">
-            <Text variant="caption" uppercase className="text-muted-foreground">
-              Kurzüberblick
-            </Text>
-            {renderSummaryList("compact", "mt-3")}
-          </div>
-        ) : null}
       </CardHeader>
-      <CardContent
-        id={contentId}
-        className={cn("space-y-6", !expanded && "hidden")}
-        aria-hidden={!expanded}
-      >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex flex-col gap-6 lg:flex-row">
+      <CardContent className="space-y-8">
+        <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 p-4 lg:hidden">
+          <Text variant="caption" uppercase className="text-muted-foreground">
+            Kurzüberblick
+          </Text>
+          {renderSummaryList("compact", "mt-3")}
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="flex flex-col gap-8 lg:flex-row">
             <div className="flex-1 space-y-6">
               <section className="space-y-4 rounded-lg border border-border/60 bg-card/40 p-4">
                 <header className="flex flex-wrap items-start justify-between gap-3">
@@ -1104,7 +1078,7 @@ export function SperrlisteSettingsManager({
               </section>
             </div>
 
-            <aside className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 lg:w-64 lg:flex-shrink-0">
+            <aside className="hidden rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 lg:block lg:w-72 lg:flex-shrink-0">
               <Text variant="caption" uppercase className="text-muted-foreground">
                 Kurzüberblick
               </Text>
