@@ -393,6 +393,12 @@ export const membersNavigation = [
         icon: DashboardIcon,
       },
       {
+        href: "/mitglieder/profil",
+        label: "Profil",
+        permissionKey: "mitglieder.profil",
+        icon: ProfileIcon,
+      },
+      {
         href: "/mitglieder/kalender",
         label: "Kalender",
         permissionKey: "mitglieder.kalender",
@@ -403,12 +409,6 @@ export const membersNavigation = [
         label: "Sperrliste",
         permissionKey: "mitglieder.sperrliste",
         icon: BlacklistIcon,
-      },
-      {
-        href: "/mitglieder/profil",
-        label: "Profil",
-        permissionKey: "mitglieder.profil",
-        icon: ProfileIcon,
       },
       {
         href: "/mitglieder/issues",
