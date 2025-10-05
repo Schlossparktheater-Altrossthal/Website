@@ -1,5 +1,13 @@
 import { notFound } from "next/navigation";
-import { addMonths, subMonths, startOfDay } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  differenceInYears,
+  formatDistanceToNowStrict,
+  startOfDay,
+  subMonths,
+} from "date-fns";
+import { de } from "date-fns/locale/de";
 
 import { PageHeader } from "@/components/members/page-header";
 import { prisma } from "@/lib/prisma";
@@ -16,6 +24,8 @@ import type {
 
 const DEFAULT_REHEARSAL_COLOR = "#6366F1";
 const DEFAULT_BLOCKED_COLOR = "#F97316";
+const TASK_DEADLINE_COLOR = "#EAB308";
+const BIRTHDAY_COLOR = "#EC4899";
 const FALLBACK_DEPARTMENT_COLORS = [
   "#0EA5E9",
   "#8B5CF6",
@@ -25,6 +35,7 @@ const FALLBACK_DEPARTMENT_COLORS = [
 ];
 const CALENDAR_LOOKBACK_MONTHS = 3;
 const CALENDAR_LOOKAHEAD_MONTHS = 6;
+const TASK_DUE_SOON_THRESHOLD_DAYS = 3;
 
 const ATTENDANCE_LABELS: Record<string, string> = {
   yes: "Zusage",
@@ -36,6 +47,37 @@ const ATTENDANCE_LABELS: Record<string, string> = {
 function formatAttendance(value: string | null | undefined) {
   if (!value) return null;
   return ATTENDANCE_LABELS[value] ?? value;
+}
+
+function formatMemberName(firstName: string | null | undefined, lastName: string | null | undefined) {
+  const parts = [firstName?.trim(), lastName?.trim()].filter((value) => Boolean(value)) as string[];
+  if (parts.length === 0) {
+    return "Mitglied";
+  }
+  return parts.join(" ");
+}
+
+function createBirthdayOccurrence(dateOfBirth: Date, year: number) {
+  const month = dateOfBirth.getMonth();
+  const occurrence = new Date(dateOfBirth);
+  occurrence.setFullYear(year, month, dateOfBirth.getDate());
+  occurrence.setHours(0, 0, 0, 0);
+
+  if (occurrence.getMonth() !== month) {
+    occurrence.setDate(occurrence.getDate() - 1);
+    occurrence.setHours(0, 0, 0, 0);
+  }
+
+  return occurrence;
+}
+
+function isAllDayDate(date: Date) {
+  return (
+    date.getHours() === 0 &&
+    date.getMinutes() === 0 &&
+    date.getSeconds() === 0 &&
+    date.getMilliseconds() === 0
+  );
 }
 
 export const dynamic = "force-dynamic";
@@ -82,7 +124,7 @@ export default async function MitgliederKalenderPage() {
       })
     : [];
 
-  const [rehearsals, blockedDays] = await Promise.all([
+  const [rehearsals, blockedDays, birthdayMembers, taskAssignments] = await Promise.all([
     prisma.rehearsal.findMany({
       where: {
         status: { not: "DRAFT" },
@@ -107,10 +149,51 @@ export default async function MitgliederKalenderPage() {
       },
       orderBy: { date: "asc" },
     }),
+    prisma.user.findMany({
+      where: {
+        dateOfBirth: { not: null },
+        deactivatedAt: null,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        dateOfBirth: true,
+      },
+    }),
+    prisma.departmentTaskAssignment.findMany({
+      where: {
+        userId,
+        task: {
+          status: { not: "done" },
+          dueAt: { not: null, gte: rangeStart, lte: rangeEnd },
+        },
+      },
+      include: {
+        task: {
+          include: {
+            department: { select: { id: true, name: true } },
+          },
+        },
+      },
+    }),
   ]);
 
   const calendarSources: MemberCalendarSource[] = [];
   const calendarEvents: MemberCalendarEvent[] = [];
+  const birthdayOccurrences: { id: string; date: Date; age: number; name: string }[] = [];
+
+  type AssignmentWithDueDate = (typeof taskAssignments)[number] & {
+    task: (typeof taskAssignments)[number]["task"] & { dueAt: Date };
+  };
+
+  const tasksWithDueDates: AssignmentWithDueDate[] = taskAssignments.filter(
+    (assignment): assignment is AssignmentWithDueDate => Boolean(assignment.task.dueAt),
+  );
+
+  const dueSoonThreshold = addDays(now, TASK_DUE_SOON_THRESHOLD_DAYS);
+  let overdueTaskCount = 0;
+  let dueSoonTaskCount = 0;
 
   calendarSources.push({
     id: "rehearsals",
@@ -194,6 +277,101 @@ export default async function MitgliederKalenderPage() {
     });
   }
 
+  for (const member of birthdayMembers) {
+    if (!member.dateOfBirth) continue;
+    const name = formatMemberName(member.firstName, member.lastName);
+    for (let year = rangeStart.getFullYear(); year <= rangeEnd.getFullYear(); year += 1) {
+      const occurrence = createBirthdayOccurrence(member.dateOfBirth, year);
+      if (occurrence < rangeStart || occurrence > rangeEnd) continue;
+      const age = differenceInYears(occurrence, member.dateOfBirth);
+      if (age < 1) continue;
+      birthdayOccurrences.push({
+        id: `birthday-${member.id}-${year}`,
+        date: occurrence,
+        age,
+        name,
+      });
+    }
+  }
+
+  if (birthdayOccurrences.length) {
+    calendarSources.push({
+      id: "birthdays",
+      label: "Geburtstage",
+      color: BIRTHDAY_COLOR,
+      type: "milestone",
+      secondaryLabel: "Geburtstage & Jubiläen",
+    });
+
+    for (const birthday of birthdayOccurrences) {
+      const milestoneBadge =
+        birthday.age % 10 === 0
+          ? { label: `${birthday.age} Jahre`, tone: "accent" as const }
+          : null;
+      calendarEvents.push({
+        id: birthday.id,
+        calendarId: "birthdays",
+        title: `Geburtstag: ${birthday.name}`,
+        start: birthday.date.toISOString(),
+        end: birthday.date.toISOString(),
+        allDay: true,
+        metadata: {
+          note: `Feiert den ${birthday.age}. Geburtstag.`,
+          badge: milestoneBadge,
+        },
+      });
+    }
+  }
+
+  if (tasksWithDueDates.length) {
+    calendarSources.push({
+      id: "tasks",
+      label: "Aufgaben & Deadlines",
+      color: TASK_DEADLINE_COLOR,
+      type: "task",
+      secondaryLabel: "Persönliche To-dos",
+    });
+
+    for (const assignment of tasksWithDueDates) {
+      const task = assignment.task;
+      const dueAt = task.dueAt;
+      const allDay = isAllDayDate(dueAt);
+      const eventEnd = allDay ? dueAt : new Date(dueAt.getTime() + 60 * 60 * 1000);
+      const isOverdue = dueAt < now;
+      if (isOverdue) {
+        overdueTaskCount += 1;
+      } else if (dueAt <= dueSoonThreshold) {
+        dueSoonTaskCount += 1;
+      }
+
+      const relative = formatDistanceToNowStrict(dueAt, { addSuffix: true, locale: de });
+      const overdueDuration = relative.replace(/^vor\s+/i, "");
+      const timingNote = isOverdue ? `Seit ${overdueDuration} überfällig` : `Fällig ${relative}`;
+      const departmentName = task.department?.name ?? null;
+      const noteParts = [departmentName ? `Gewerk ${departmentName}` : null, timingNote].filter(Boolean) as string[];
+      const badge = isOverdue
+        ? { label: "Überfällig", tone: "destructive" as const }
+        : dueAt <= dueSoonThreshold
+          ? { label: "Bald fällig", tone: "warning" as const }
+          : null;
+
+      calendarEvents.push({
+        id: `task-${task.id}`,
+        calendarId: "tasks",
+        title: task.title.trim() || "Aufgabe ohne Titel",
+        start: dueAt.toISOString(),
+        end: eventEnd.toISOString(),
+        allDay,
+        description: task.description ?? null,
+        metadata: {
+          note: noteParts.join(" • "),
+          badge,
+          departmentName,
+        },
+      });
+    }
+  }
+
   calendarSources.push({
     id: "blocked",
     label: "Meine Abwesenheiten",
@@ -239,13 +417,56 @@ export default async function MitgliederKalenderPage() {
           ? "1 aktives Gewerk"
           : `${departmentColorMap.size} aktive Gewerke`,
     },
-    {
-      id: "blocked-count",
-      label: "Abwesenheiten",
-      value: String(blockedDays.length),
-      hint: "Eingetragene Sperrungen im Zeitraum",
-    },
   ];
+
+  const taskHintParts: string[] = [];
+  if (overdueTaskCount) {
+    taskHintParts.push(
+      `${overdueTaskCount} überfällige Aufgabe${overdueTaskCount === 1 ? "" : "n"}`,
+    );
+  }
+  if (dueSoonTaskCount) {
+    taskHintParts.push(
+      `${dueSoonTaskCount} bald fällige Aufgabe${dueSoonTaskCount === 1 ? "" : "n"}`,
+    );
+  }
+
+  summary.push({
+    id: "task-deadlines",
+    label: "Aufgaben mit Deadline",
+    value: String(tasksWithDueDates.length),
+    hint:
+      tasksWithDueDates.length === 0
+        ? "Keine offenen Deadlines im Zeitraum"
+        : taskHintParts.length
+          ? taskHintParts.join(", ")
+          : "Alle Deadlines im Zeitplan",
+  });
+
+  const upcomingBirthdays = birthdayOccurrences
+    .filter((entry) => entry.date >= now)
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+  const nextBirthday = upcomingBirthdays.at(0) ?? null;
+  const mediumDateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+
+  summary.push({
+    id: "birthday-count",
+    label: "Geburtstage im Zeitraum",
+    value: String(birthdayOccurrences.length),
+    hint:
+      birthdayOccurrences.length === 0
+        ? "Keine Geburtstage im Zeitraum"
+        : nextBirthday
+          ? `${nextBirthday.name} (${nextBirthday.age}) am ${mediumDateFormatter.format(nextBirthday.date)}`
+          : "Nur vergangene Geburtstage im Zeitraum",
+  });
+
+  summary.push({
+    id: "blocked-count",
+    label: "Abwesenheiten",
+    value: String(blockedDays.length),
+    hint: "Eingetragene Sperrungen im Zeitraum",
+  });
 
   if (nextEvent) {
     const source = calendarSources.find((entry) => entry.id === nextEvent.calendarId);
@@ -267,7 +488,7 @@ export default async function MitgliederKalenderPage() {
     <div className="space-y-6">
       <PageHeader
         title="Kalender"
-        description="Plane deinen Vereinsalltag wie im Google Kalender: persönliche Proben, Gewerke-Termine und Sperrungen auf einen Blick."
+        description="Plane deinen Vereinsalltag wie im Google Kalender: Proben, Gewerke-Termine, Deadlines, Geburtstage und Sperrungen auf einen Blick."
         breadcrumbs={breadcrumbs}
       />
 
