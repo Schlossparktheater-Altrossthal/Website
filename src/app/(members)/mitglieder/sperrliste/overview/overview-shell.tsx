@@ -6,9 +6,21 @@ import {
   startOfToday,
 } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import {
+  BellRing,
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  Sun,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { HolidayRange } from "@/types/holidays";
 
 import type { BlockedDay } from '../block-calendar';
@@ -31,6 +43,13 @@ type LegendItemProps = {
   label: string;
   description: string;
   tone: TimelineTone;
+};
+
+type StatHighlight = {
+  label: string;
+  value: string;
+  sublabel?: string | null;
+  icon: LucideIcon;
 };
 
 type OverviewShellProps = {
@@ -69,7 +88,12 @@ function LegendItem({ label, description, tone }: LegendItemProps) {
   const styles = timelineToneStyles({ tone });
 
   return (
-    <div className={styles.legendContainer()}>
+    <div
+      className={cn(
+        styles.legendContainer(),
+        "w-full border-border/60 bg-background/80 text-foreground",
+      )}
+    >
       <span aria-hidden className={styles.legendSwatch()} />
       <div className="flex flex-col">
         <span className={styles.legendLabel()}>{label}</span>
@@ -275,193 +299,220 @@ export function OverviewShell({
     overviewNarrative.push("Im Fokuszeitraum liegen keine Ferien oder Feiertage.");
   }
 
+  const nextHolidayDescription =
+    nextHoliday && nextHolidayLabel
+      ? `${nextHoliday.title} ab ${nextHolidayLabel}${
+          holidayTimingLabel ? ` · ${holidayTimingLabel}` : ""
+        }`
+      : null;
+
+  const statHighlights: StatHighlight[] = [
+    {
+      label: "Teammitglieder",
+      value: membersCount.toString(),
+      sublabel:
+        membersWithBlocks > 0
+          ? `${membersWithBlocks} mit Sperrterminen`
+          : "Noch keine Sperren eingetragen",
+      icon: Users,
+    },
+    {
+      label: "Sperrtermine im Fokus",
+      value: totalBlockedDays.toString(),
+      sublabel:
+        upcomingBlockedDays > 0
+          ? `${upcomingBlockedDays} bevorstehend`
+          : "Keine kommenden Sperrtermine",
+      icon: CalendarClock,
+    },
+    {
+      label: "Mitglieder mit kommenden Sperren",
+      value: membersWithUpcoming.toString(),
+      sublabel:
+        membersWithUpcoming > 0
+          ? `Ø ${formattedAverageUpcoming} Sperren pro Mitglied`
+          : "Aktuell keine Meldungen",
+      icon: BellRing,
+    },
+    {
+      label: "Ferien & Feiertage",
+      value: holidaysInRangeCount.toString(),
+      sublabel:
+        nextHolidayDescription ??
+        (averageBlocksPerMember > 0
+          ? `Ø ${formattedAverageBlocks} Sperren gesamt`
+          : "Keine Quellen aktiv"),
+      icon: Sun,
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-6 text-slate-100 shadow-xl dark:border-primary/30">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.4em] text-primary/80">
-              <Sparkles className="h-4 w-4" aria-hidden />
-              Übersicht
-            </div>
-            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold leading-tight sm:text-3xl">{monthLabel}</h2>
-                <p className="mt-2 max-w-3xl text-sm text-slate-300">
+      <Card className="relative overflow-hidden border-border/70 bg-background/95 p-6 shadow-lg">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 -top-28 h-56 bg-gradient-to-b from-primary/25 via-primary/10 to-transparent opacity-70 blur-3xl"
+        />
+        <div className="relative flex flex-col gap-6">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="flex-1 space-y-3">
+              <Badge
+                variant="outline"
+                size="sm"
+                className="w-fit border-primary/40 bg-primary/10 text-primary"
+              >
+                <Sparkles className="mr-1 h-3.5 w-3.5" aria-hidden /> Übersicht
+              </Badge>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
+                  {monthLabel}
+                </h2>
+                <p className="max-w-3xl text-sm text-muted-foreground">
                   {overviewNarrative.join(" ")}
                 </p>
               </div>
-              <div className="flex items-center gap-2 self-start sm:self-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-10 w-10 rounded-full border-slate-600/50 bg-slate-900/60 text-slate-100 hover:border-primary/60 hover:text-primary"
-                  onClick={onPrev}
-                  aria-label="Vorheriger Monat"
-                >
-                  <ChevronLeft className="h-5 w-5" aria-hidden />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-10 w-10 rounded-full border-slate-600/50 bg-slate-900/60 text-slate-100 hover:border-primary/60 hover:text-primary"
-                  onClick={onNext}
-                  aria-label="Nächster Monat"
-                >
-                  <ChevronRight className="h-5 w-5" aria-hidden />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full bg-white/10 text-xs font-medium text-slate-200 hover:bg-white/20"
-                  onClick={onReset}
-                >
-                  Heute
-                </Button>
-              </div>
             </div>
+            <div className="flex items-center gap-2 self-start md:self-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10"
+                onClick={onPrev}
+                aria-label="Vorheriger Monat"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10"
+                onClick={onNext}
+                aria-label="Nächster Monat"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden />
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+                Heute
+              </Button>
+            </div>
+          </div>
 
-            <dl className="mt-5 grid gap-3 text-[13px] leading-5 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">
-                  Teammitglieder
-                </dt>
-                <dd className="mt-1 text-lg font-semibold sm:text-xl">{membersCount}</dd>
-                <dd className="text-[11px] font-medium text-slate-300/80 line-clamp-2">
-                  {membersWithBlocks} mit Sperrterminen
-                </dd>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">
-                  Sperrtermine im Fokus
-                </dt>
-                <dd className="mt-1 flex flex-col gap-1 text-lg font-semibold sm:text-xl">
-                  <span>{totalBlockedDays}</span>
-                  <span className="text-[11px] font-medium text-slate-300/80 line-clamp-1">
-                    {upcomingBlockedDays} bevorstehend
-                  </span>
-                </dd>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">
-                  Mitglieder mit kommenden Sperren
-                </dt>
-                <dd className="mt-1 flex flex-col gap-1 text-lg font-semibold sm:text-xl">
-                  <span>{membersWithUpcoming}</span>
-                  <span className="text-[11px] font-medium text-slate-300/80 line-clamp-1">
-                    Ø {formattedAverageUpcoming} Sperren pro Mitglied
-                  </span>
-                </dd>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">
-                  Ferien &amp; Feiertage
-                </dt>
-                <dd className="mt-1 flex flex-col gap-1 text-lg font-semibold sm:text-xl">
-                  <span>{holidaysInRangeCount}</span>
-                  <span className="text-[11px] font-medium text-slate-300/80 line-clamp-2">
-                    {nextHoliday && nextHolidayLabel
-                      ? `Nächste Phase: ${nextHoliday.title}`
-                      : averageBlocksPerMember > 0
-                        ? `Ø ${formattedAverageBlocks} Sperren gesamt`
-                        : "Keine Quellen aktiv"}
-                  </span>
-                </dd>
-              </div>
-            </dl>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {statHighlights.map((stat) => {
+              const Icon = stat.icon;
 
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-inner">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">
-                  Engpass-Analyse
-                </div>
-                {busiestDay ? (
-                  <div className="mt-3 space-y-2 text-slate-200">
-                    <p className="text-base font-semibold">
-                      {busiestDayIsUpcoming ? "Nächster Engpass" : "Größter Engpass"}
+              return (
+                <div
+                  key={stat.label}
+                  className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-4"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                      {stat.label}
                     </p>
-                    <p className="text-sm text-slate-300">
-                      {busiestDayLabel} · {busiestDaySummary}
-                    </p>
+                    <p className="text-lg font-semibold text-foreground sm:text-xl">{stat.value}</p>
+                    {stat.sublabel ? (
+                      <p className="text-xs text-muted-foreground/80">{stat.sublabel}</p>
+                    ) : null}
                   </div>
-                ) : (
-                  <p className="mt-3 text-sm text-slate-300">
-                    Bisher wurden keine Sperrtermine im Fokuszeitraum hinterlegt.
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                Engpass-Analyse
+              </p>
+              {busiestDay ? (
+                <div className="mt-3 space-y-1">
+                  <p className="text-base font-semibold text-foreground">
+                    {busiestDayIsUpcoming ? "Nächster Engpass" : "Größter Engpass"}
                   </p>
-                )}
-                {nextHoliday && nextHolidayLabel ? (
-                  <div className="mt-4 space-y-1 text-xs text-slate-300/90">
-                    <span className="font-semibold uppercase tracking-wide text-slate-200">
-                      Ferien &amp; Feiertage
-                    </span>
-                    <p>
-                      {nextHoliday.title} ab {nextHolidayLabel}
-                      {holidayTimingLabel ? ` · ${holidayTimingLabel}` : ""}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-inner">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-300/80">
-                  Top-betroffene Mitglieder
+                  <p className="text-sm text-muted-foreground">
+                    {busiestDayLabel} · {busiestDaySummary}
+                  </p>
                 </div>
-                {topUpcomingMembers.length ? (
-                  <ul className="mt-3 space-y-2">
-                    {topUpcomingMembers.map((item) => {
-                      const nextDate = item.nextUpcomingDate
-                        ? parseISO(item.nextUpcomingDate)
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Bisher wurden keine Sperrtermine im Fokuszeitraum hinterlegt.
+                </p>
+              )}
+              {nextHolidayDescription ? (
+                <div className="mt-4 space-y-1 text-xs text-muted-foreground">
+                  <span className="font-semibold uppercase tracking-wide text-foreground/80">
+                    Ferien &amp; Feiertage
+                  </span>
+                  <p>{nextHolidayDescription}</p>
+                </div>
+              ) : null}
+            </div>
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                Top-betroffene Mitglieder
+              </p>
+              {topUpcomingMembers.length ? (
+                <ul className="mt-3 space-y-2">
+                  {topUpcomingMembers.map((item) => {
+                    const nextDate = item.nextUpcomingDate
+                      ? parseISO(item.nextUpcomingDate)
+                      : null;
+                    const nextDateLabel =
+                      nextDate && Number.isFinite(nextDate.getTime())
+                        ? formatDate(nextDate, "d. MMM yyyy", { locale: de })
                         : null;
-                      const nextDateLabel =
-                        nextDate && Number.isFinite(nextDate.getTime())
-                          ? formatDate(nextDate, "d. MMM yyyy", { locale: de })
-                          : null;
 
-                      return (
-                        <li
-                          key={item.member.id}
-                          className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm leading-6 text-slate-200"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium">{item.member.displayName}</span>
-                            <span className="text-xs font-semibold uppercase tracking-wide text-primary/80">
-                              {item.stats.upcoming} bevorstehend
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-300">
-                            {nextDateLabel
-                              ? `Nächster Sperrtermin am ${nextDateLabel}`
-                              : "Keine konkreten Termine im Fokuszeitraum."}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="mt-3 text-sm text-slate-300">
-                    Es stehen aktuell keine kommenden Sperrtermine an.
-                  </p>
-                )}
-              </div>
+                    return (
+                      <li
+                        key={item.member.id}
+                        className="rounded-lg border border-border/60 bg-background/95 px-3 py-2 text-sm leading-6"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-foreground">{item.member.displayName}</span>
+                          <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+                            {item.stats.upcoming} bevorstehend
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {nextDateLabel
+                            ? `Nächster Sperrtermin am ${nextDateLabel}`
+                            : "Keine konkreten Termine im Fokuszeitraum."}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Es stehen aktuell keine kommenden Sperrtermine an.
+                </p>
+              )}
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
-      <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
+      <Card className="space-y-4 border-border/60 bg-background/95 p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-sm text-muted-foreground lg:max-w-xl">
-            Klicke oder tippe auf rot markierte Sperrtage, um Hintergründe sowie Ferien- und Feiertagsinfos zu lesen. Gesperrte Tage erscheinen kompakt in Rot, eingeschränkte Slots schimmern in bernsteinfarbenen Tönen, bevorzugte Slots erscheinen in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription} {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
+            Klicke oder tippe auf rot markierte Sperrtage, um Hintergründe sowie Ferien- und Feiertagsinfos zu lesen. Gesperrte
+            Tage erscheinen kompakt in Rot, eingeschränkte Slots schimmern in bernsteinfarbenen Tönen, bevorzugte Slots erscheinen
+            in frischem Grün, freie bleiben dezent – so erkennst du Engpässe auf einen Blick. {preferredDescription}{" "}
+            {exceptionDescription} Weitere Tage blenden wir nur ein, wenn Mitglieder sie ausdrücklich als bevorzugt markieren.
           </p>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[420px] lg:grid-cols-2 xl:grid-cols-4">
             {timelineLegendItems.map((item) => (
               <LegendItem key={item.id} {...item} />
             ))}
           </div>
         </div>
-      </div>
+      </Card>
 
       <div className="hidden sm:block">
         <DesktopTimeline
@@ -480,6 +531,7 @@ export function OverviewShell({
         />
       </div>
 
+      <div className="sm:hidden">
         <MobileTimeline
           preparedMembers={preparedMembers}
           visibleDayInfo={visibleDayInfo}
@@ -489,6 +541,7 @@ export function OverviewShell({
           onSelectBlockedDay={onSelectBlockedDay}
           formatCreatedAtLabel={formatCreatedAtLabel}
         />
+      </div>
     </div>
   );
 }
