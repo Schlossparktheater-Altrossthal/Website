@@ -14,6 +14,7 @@ import type { HolidayRange } from "@/types/holidays";
 import type { BlockedDay } from '../block-calendar';
 import {
   type BlockOverviewSummary,
+  type DaySummary,
   type HolidaySegment,
   type PreparedMember,
   type VisibleDayInfo,
@@ -33,7 +34,6 @@ type LegendItemProps = {
 };
 
 type OverviewShellProps = {
-  currentMonth: Date;
   monthLabel: string;
   membersCount: number;
   totalBlockedDays: number;
@@ -80,7 +80,6 @@ function LegendItem({ label, description, tone }: LegendItemProps) {
 }
 
 export function OverviewShell({
-  currentMonth,
   monthLabel,
   membersCount,
   totalBlockedDays,
@@ -146,11 +145,13 @@ export function OverviewShell({
     })
     .slice(0, 3);
 
+  const daySummaries = new Map<string, DaySummary>();
   let busiestDay: { key: string; date: Date; blocked: number; limited: number } | null = null;
 
   for (const dayInfo of visibleDayInfo) {
     let blockedCount = 0;
     let limitedCount = 0;
+    let preferredCount = 0;
 
     for (const member of preparedMembers) {
       const entry = member.blockedMap.get(dayInfo.key);
@@ -159,8 +160,19 @@ export function OverviewShell({
         blockedCount += 1;
       } else if (entry.kind === "LIMITED") {
         limitedCount += 1;
+      } else if (entry.kind === "PREFERRED") {
+        preferredCount += 1;
       }
     }
+
+    const summary: DaySummary = {
+      blocked: blockedCount,
+      limited: limitedCount,
+      preferred: preferredCount,
+      holidayCount: holidayMap.get(dayInfo.key)?.length ?? 0,
+    };
+
+    daySummaries.set(dayInfo.key, summary);
 
     if (blockedCount === 0 && limitedCount === 0) continue;
 
@@ -453,7 +465,6 @@ export function OverviewShell({
 
       <div className="hidden sm:block">
         <DesktopTimeline
-          currentMonth={currentMonth}
           preparedMembers={preparedMembers}
           visibleDayInfo={visibleDayInfo}
           holidaySegments={holidaySegments}
@@ -463,19 +474,21 @@ export function OverviewShell({
           sortedPreferredWeekdays={sortedPreferredWeekdays}
           preferredDayKeys={preferredDayKeys}
           holidayMap={holidayMap}
+          daySummaries={daySummaries}
           onSelectBlockedDay={onSelectBlockedDay}
           formatCreatedAtLabel={formatCreatedAtLabel}
         />
       </div>
 
-      <MobileTimeline
-        preparedMembers={preparedMembers}
-        visibleDayInfo={visibleDayInfo}
-        holidayMap={holidayMap}
-        summary={summary}
-        onSelectBlockedDay={onSelectBlockedDay}
-        formatCreatedAtLabel={formatCreatedAtLabel}
-      />
+        <MobileTimeline
+          preparedMembers={preparedMembers}
+          visibleDayInfo={visibleDayInfo}
+          holidayMap={holidayMap}
+          summary={summary}
+          daySummaries={daySummaries}
+          onSelectBlockedDay={onSelectBlockedDay}
+          formatCreatedAtLabel={formatCreatedAtLabel}
+        />
     </div>
   );
 }

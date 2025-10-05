@@ -1,7 +1,10 @@
-import { format, isSameMonth, isToday } from "date-fns";
+import type { ReactNode } from "react";
+
+import { format, isToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { tv } from "tailwind-variants";
 
+import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
 import type { HolidayRange } from "@/types/holidays";
@@ -9,6 +12,7 @@ import type { HolidayRange } from "@/types/holidays";
 import type { BlockedDay } from "../block-calendar";
 import {
   type BlockOverviewSummary,
+  type DaySummary,
   type HolidaySegment,
   type PreparedMember,
   type VisibleDayInfo,
@@ -73,7 +77,6 @@ const staticCellStyles = tv({
 });
 
 interface DesktopTimelineProps {
-  currentMonth: Date;
   preparedMembers: PreparedMember[];
   visibleDayInfo: VisibleDayInfo[];
   holidaySegments: HolidaySegment[];
@@ -83,6 +86,7 @@ interface DesktopTimelineProps {
   sortedPreferredWeekdays: number[];
   preferredDayKeys: Set<string>;
   holidayMap: Map<string, HolidayRange[]>;
+  daySummaries: Map<string, DaySummary>;
   onSelectBlockedDay: (selection: {
     member: PreparedMember;
     entry: BlockedDay;
@@ -93,7 +97,6 @@ interface DesktopTimelineProps {
 }
 
 export function DesktopTimeline({
-  currentMonth,
   preparedMembers,
   visibleDayInfo,
   holidaySegments,
@@ -103,6 +106,7 @@ export function DesktopTimeline({
   sortedPreferredWeekdays,
   preferredDayKeys,
   holidayMap,
+  daySummaries,
   onSelectBlockedDay,
   formatCreatedAtLabel,
 }: DesktopTimelineProps) {
@@ -118,8 +122,8 @@ export function DesktopTimeline({
             >
               Mitglied
             </th>
-            {visibleDayInfo.map(({ day, key }, index) => {
-              const weekday = day.getDay();
+            {visibleDayInfo.map((info, index) => {
+              const { day, key, weekday, isoWeek, isWeekend, isCurrentMonth } = info;
               const isPreferredDay = preferredWeekdaySet.has(weekday);
               const isExceptionDay = exceptionWeekdaySet.has(weekday);
               const isPreferredExtra = !isPreferredDay && !isExceptionDay;
@@ -128,6 +132,40 @@ export function DesktopTimeline({
                 weekday === sortedPreferredWeekdays[0] &&
                 index !== 0;
               const isFirstOfMonth = format(day, "d") === "1";
+              const columnSummary = daySummaries.get(key);
+              const summaryBadges: ReactNode[] = [];
+
+              if (columnSummary?.blocked) {
+                summaryBadges.push(
+                  <Badge key="blocked" variant="destructive" size="sm">
+                    {columnSummary.blocked} gesperrt
+                  </Badge>,
+                );
+              }
+
+              if (columnSummary?.limited) {
+                summaryBadges.push(
+                  <Badge key="limited" variant="warning" size="sm">
+                    {columnSummary.limited} eingeschränkt
+                  </Badge>,
+                );
+              }
+
+              if (columnSummary?.preferred) {
+                summaryBadges.push(
+                  <Badge key="preferred" variant="success" size="sm">
+                    {columnSummary.preferred} bevorzugt
+                  </Badge>,
+                );
+              }
+
+              if (columnSummary?.holidayCount) {
+                summaryBadges.push(
+                  <Badge key="holiday" variant="info" size="sm">
+                    {columnSummary.holidayCount} Ferien
+                  </Badge>,
+                );
+              }
 
               return (
                 <th
@@ -139,9 +177,16 @@ export function DesktopTimeline({
                     isPreferredDay && "text-foreground",
                     isExceptionDay && !isPreferredDay && "text-muted-foreground",
                     isPreferredExtra && preferredDayKeys.has(key) && "text-emerald-500",
+                    isWeekend && "bg-muted/60",
+                    !isCurrentMonth && "opacity-80",
                   )}
                 >
                   <div className="flex flex-col items-center gap-1">
+                    {weekday === 1 ? (
+                      <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+                        KW {isoWeek}
+                      </span>
+                    ) : null}
                     <span
                       className={cn(
                         "text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground/70",
@@ -164,6 +209,15 @@ export function DesktopTimeline({
                         {format(day, "MMM", { locale: de })}
                       </span>
                     ) : null}
+                    {summaryBadges.length ? (
+                      <div className="mt-2 flex flex-wrap justify-center gap-1">
+                        {summaryBadges}
+                      </div>
+                    ) : (
+                      <span className="mt-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/60">
+                        Frei
+                      </span>
+                    )}
                   </div>
                 </th>
               );
@@ -229,18 +283,31 @@ export function DesktopTimeline({
                           ? `${stats.total} Sperrtermin${stats.total === 1 ? "" : "e"}`
                           : "Keine Sperrtermine"}
                       </div>
-                      {stats?.upcoming ? (
-                        <div className="text-sm leading-5 text-primary">{stats.upcoming} bevorstehend</div>
-                      ) : null}
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <Badge
+                          variant={stats?.total ? "destructive" : "muted"}
+                          size="sm"
+                          className="uppercase tracking-[0.16em]"
+                        >
+                          {stats?.total ?? 0} gesamt
+                        </Badge>
+                        <Badge
+                          variant={stats?.upcoming ? "info" : "muted"}
+                          size="sm"
+                          className="uppercase tracking-[0.16em]"
+                        >
+                          {stats?.upcoming ? `${stats.upcoming} bevorstehend` : "Keine neuen"}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </th>
-                {visibleDayInfo.map(({ day, key }, index) => {
+                {visibleDayInfo.map((info, index) => {
+                  const { day, key, weekday, isWeekend, isCurrentMonth } = info;
                   const entry = member.blockedMap.get(key);
                   const trimmedReason = entry?.reason?.trim() || undefined;
                   const hasReason = Boolean(trimmedReason);
                   const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
-                  const weekday = day.getDay();
                   const showDivider =
                     sortedPreferredWeekdays.length > 0 &&
                     weekday === sortedPreferredWeekdays[0] &&
@@ -294,7 +361,7 @@ export function DesktopTimeline({
                     status = "exceptionPlaceholder";
                   }
 
-                  const outsideMonth = !isSameMonth(day, currentMonth);
+                  const outsideMonth = !isCurrentMonth;
 
                   return (
                     <td
@@ -302,6 +369,7 @@ export function DesktopTimeline({
                       className={cn(
                         "min-w-[72px] border-b border-border/60 px-1 py-1 align-top",
                         showDivider && "border-l border-border/60",
+                        isWeekend && "bg-muted/30",
                       )}
                     >
                       {isBlocked && entry ? (
