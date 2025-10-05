@@ -1,7 +1,30 @@
 export type MemberCalendarSourceType =
   | "rehearsal"
   | "department"
-  | "personal";
+  | "personal"
+  | "task"
+  | "milestone";
+
+export type MemberCalendarEventBadgeTone =
+  | "default"
+  | "secondary"
+  | "accent"
+  | "muted"
+  | "success"
+  | "warning"
+  | "info"
+  | "destructive";
+
+export interface MemberCalendarEventMetadata {
+  attendanceStatus?: string | null;
+  departmentName?: string | null;
+  sourceId?: string | null;
+  badge?: {
+    label: string;
+    tone?: MemberCalendarEventBadgeTone;
+  } | null;
+  note?: string | null;
+}
 
 export interface MemberCalendarSource {
   id: string;
@@ -21,11 +44,7 @@ export interface MemberCalendarEvent {
   allDay?: boolean;
   location?: string | null;
   description?: string | null;
-  metadata?: {
-    attendanceStatus?: string | null;
-    departmentName?: string | null;
-    sourceId?: string | null;
-  };
+  metadata?: MemberCalendarEventMetadata;
 }
 
 export interface MemberCalendarSummaryItem {
