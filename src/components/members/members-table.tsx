@@ -278,7 +278,9 @@ export function MembersTable({
                               }
                             }}
                           >
-                            <DialogContent className="sm:max-w-3xl overflow-visible">
+                            <DialogContent
+                              className="max-h-[calc(100vh-3rem)] max-w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-4xl"
+                            >
                               <DialogHeader>
                                 <DialogTitle>Benutzer bearbeiten</DialogTitle>
                                 <DialogDescription>Rollen und Daten bearbeiten</DialogDescription>

@@ -1,14 +1,15 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EditIcon } from "@/components/ui/icons";
-import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
-import { toast } from "sonner";
-import { UserEditModal } from "@/components/members/user-edit-modal";
+import { Input } from "@/components/ui/input";
 import { RolePicker } from "@/components/members/role-picker";
 import { UserAvatar } from "@/components/user-avatar";
 import { combineNameParts } from "@/lib/names";
+import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
+import { toast } from "sonner";
 
 export function RoleManager({
   userId,
@@ -45,13 +46,22 @@ export function RoleManager({
   const [saved, setSaved] = useState<Role[]>(initialSorted);
   const [selectedCustomIds, setSelectedCustomIds] = useState<string[]>([...initialCustomRoleIds]);
   const [savedCustomIds, setSavedCustomIds] = useState<string[]>([...initialCustomRoleIds]);
+
   const [currentEmail, setCurrentEmail] = useState(email ?? "");
   const [currentFirstName, setCurrentFirstName] = useState(firstName ?? "");
   const [currentLastName, setCurrentLastName] = useState(lastName ?? "");
   const [currentNameFallback, setCurrentNameFallback] = useState(name ?? "");
+
+  const [profileEmail, setProfileEmail] = useState(email ?? "");
+  const [profileFirstName, setProfileFirstName] = useState(firstName ?? "");
+  const [profileLastName, setProfileLastName] = useState(lastName ?? "");
+  const [profilePassword, setProfilePassword] = useState("");
+  const [profileConfirmPassword, setProfileConfirmPassword] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     const sorted = sortRoles(initialRoles);
@@ -65,27 +75,68 @@ export function RoleManager({
   }, [initialCustomRoleIds]);
 
   useEffect(() => {
-    setCurrentEmail(email ?? "");
+    const nextEmail = email ?? "";
+    setCurrentEmail(nextEmail);
+    setProfileEmail(nextEmail);
   }, [email]);
 
   useEffect(() => {
-    setCurrentFirstName(firstName ?? "");
+    const nextFirstName = firstName ?? "";
+    setCurrentFirstName(nextFirstName);
+    setProfileFirstName(nextFirstName);
   }, [firstName]);
 
   useEffect(() => {
-    setCurrentLastName(lastName ?? "");
+    const nextLastName = lastName ?? "";
+    setCurrentLastName(nextLastName);
+    setProfileLastName(nextLastName);
   }, [lastName]);
 
   useEffect(() => {
-    setCurrentNameFallback(name ?? "");
+    const nextName = name ?? "";
+    setCurrentNameFallback(nextName);
   }, [name]);
 
   const displayName =
-    combineNameParts(currentFirstName, currentLastName) || currentNameFallback || "Unbekannte Person";
+    combineNameParts(profileFirstName, profileLastName) ||
+    profileEmail ||
+    currentNameFallback ||
+    "Unbekannte Person";
 
-  const dirty = useMemo(() => selected.join("|") !== saved.join("|") || selectedCustomIds.join("|") !== savedCustomIds.join("|"), [selected, saved, selectedCustomIds, savedCustomIds]);
+  const rolesDirty = useMemo(
+    () => selected.join("|") !== saved.join("|") || selectedCustomIds.join("|") !== savedCustomIds.join("|"),
+    [selected, saved, selectedCustomIds, savedCustomIds],
+  );
 
-  const handleSave = async () => {
+  const profileDirty = useMemo(() => {
+    const normalizedEmail = profileEmail.trim().toLowerCase();
+    const normalizedSavedEmail = currentEmail.trim().toLowerCase();
+    const trimmedFirstName = profileFirstName.trim();
+    const trimmedSavedFirstName = currentFirstName.trim();
+    const trimmedLastName = profileLastName.trim();
+    const trimmedSavedLastName = currentLastName.trim();
+    const passwordChanged = Boolean(profilePassword) || Boolean(profileConfirmPassword);
+
+    return (
+      normalizedEmail !== normalizedSavedEmail ||
+      trimmedFirstName !== trimmedSavedFirstName ||
+      trimmedLastName !== trimmedSavedLastName ||
+      passwordChanged
+    );
+  }, [
+    profileEmail,
+    currentEmail,
+    profileFirstName,
+    currentFirstName,
+    profileLastName,
+    currentLastName,
+    profilePassword,
+    profileConfirmPassword,
+  ]);
+
+  const dirty = rolesDirty || profileDirty;
+
+  const handleRolesSave = async () => {
     if (selected.length === 0) {
       setError("Mindestens eine Rolle muss ausgewählt sein.");
       return;
@@ -100,7 +151,12 @@ export function RoleManager({
         body: JSON.stringify({ userId, roles: selected, customRoleIds: selectedCustomIds }),
       });
 
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        roles?: Role[];
+        customRoles?: { id: string }[];
+      };
+
       if (!response.ok) {
         throw new Error(data?.error ?? "Speichern fehlgeschlagen");
       }
@@ -109,7 +165,7 @@ export function RoleManager({
       setSelected(updatedRoles);
       setSaved(updatedRoles);
       const updatedCustom: string[] = Array.isArray(data?.customRoles)
-        ? data.customRoles.map((r: { id: string }) => r.id)
+        ? data.customRoles.map((r) => r.id)
         : selectedCustomIds;
       setSelectedCustomIds(updatedCustom);
       setSavedCustomIds(updatedCustom);
@@ -124,39 +180,142 @@ export function RoleManager({
     }
   };
 
-  const handleReset = () => {
+  const handleRolesReset = () => {
     setSelected(saved);
     setSelectedCustomIds(savedCustomIds);
     setError(null);
   };
 
+  const handleProfileReset = () => {
+    setProfileEmail(currentEmail);
+    setProfileFirstName(currentFirstName);
+    setProfileLastName(currentLastName);
+    setProfilePassword("");
+    setProfileConfirmPassword("");
+    setProfileError(null);
+  };
+
+  const handleProfileSave = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setProfileError(null);
+
+    const trimmedEmail = profileEmail.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setProfileError("E-Mail darf nicht leer sein.");
+      return;
+    }
+
+    const trimmedFirstName = profileFirstName.trim();
+    const trimmedLastName = profileLastName.trim();
+
+    if (!trimmedFirstName) {
+      setProfileError("Vorname darf nicht leer sein.");
+      return;
+    }
+
+    if (profilePassword && profilePassword.length < 6) {
+      setProfileError("Passwort muss mindestens 6 Zeichen haben.");
+      return;
+    }
+
+    if (profilePassword && profilePassword !== profileConfirmPassword) {
+      setProfileError("Passwörter stimmen nicht überein.");
+      return;
+    }
+
+    const combinedName = combineNameParts(trimmedFirstName, trimmedLastName);
+    const payload: Record<string, unknown> = {
+      email: trimmedEmail,
+      firstName: trimmedFirstName || null,
+      lastName: trimmedLastName || null,
+      name: combinedName ?? null,
+    };
+
+    if (profilePassword) {
+      payload.password = profilePassword;
+    }
+
+    setProfileSaving(true);
+    try {
+      const response = await fetch(`/api/members/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        user?: {
+          email?: string | null;
+          firstName?: string | null;
+          lastName?: string | null;
+          name?: string | null;
+        };
+      };
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Aktualisierung fehlgeschlagen");
+      }
+
+      const updatedEmail = data?.user?.email ?? trimmedEmail;
+      const updatedFirstName = data?.user?.firstName ?? (trimmedFirstName || null);
+      const updatedLastName = data?.user?.lastName ?? (trimmedLastName || null);
+      const updatedName =
+        combineNameParts(updatedFirstName, updatedLastName) ??
+        (data?.user?.name ?? combinedName ?? null);
+
+      const normalizedEmail = updatedEmail ?? "";
+      setCurrentEmail(normalizedEmail);
+      setCurrentFirstName(updatedFirstName ?? "");
+      setCurrentLastName(updatedLastName ?? "");
+      setCurrentNameFallback(updatedName ?? "");
+
+      setProfileEmail(normalizedEmail);
+      setProfileFirstName(updatedFirstName ?? "");
+      setProfileLastName(updatedLastName ?? "");
+      setProfilePassword("");
+      setProfileConfirmPassword("");
+
+      onUserUpdated?.({
+        email: updatedEmail,
+        firstName: updatedFirstName,
+        lastName: updatedLastName,
+        name: updatedName,
+      });
+
+      toast.success("Benutzer aktualisiert");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
+      setProfileError(message);
+      toast.error(message);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* User Profile Card */}
+    <div className="space-y-6 pb-2 sm:pb-4">
       <Card className="overflow-hidden">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
-              {/* Avatar */}
               <UserAvatar
-                email={currentEmail}
-                firstName={currentFirstName}
-                lastName={currentLastName}
+                email={profileEmail}
+                firstName={profileFirstName}
+                lastName={profileLastName}
                 name={displayName}
                 size={48}
                 className="h-12 w-12 text-lg"
               />
-              
-              {/* User Info */}
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-xl mb-1">{displayName}</CardTitle>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {currentEmail || "Keine E-Mail hinterlegt"}
+
+              <div className="min-w-0 flex-1">
+                <CardTitle className="mb-1 text-xl">{displayName}</CardTitle>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  {profileEmail || "Keine E-Mail hinterlegt"}
                 </p>
-                
-                {/* Current Roles Display */}
+
                 <div className="flex flex-wrap gap-2">
-                  {saved.map((role) => (
+                  {selected.map((role) => (
                     <span
                       key={role}
                       className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${ROLE_BADGE_VARIANTS[role]}`}
@@ -167,25 +326,129 @@ export function RoleManager({
                 </div>
               </div>
             </div>
-            
-            {/* Action Buttons */}
-            <div className="flex flex-col items-end gap-2 ml-4">
+
+            <div className="ml-4 flex flex-col items-end gap-2">
               {dirty && (
-                <div className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full border border-amber-200">
-                  <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
+                <div className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
+                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
                   Nicht gespeichert
                 </div>
               )}
-              <Button type="button" variant="outline" size="sm" onClick={() => setEditOpen(true)} className="gap-2">
-                <EditIcon className="w-4 h-4" />
-                Profil bearbeiten
-              </Button>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {/* Roles Management Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Profil &amp; Zugang</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Aktualisiere Kontaktdaten oder hinterlege ein neues Passwort.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-6" onSubmit={handleProfileSave}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto,1fr]">
+              <div className="flex items-center gap-4">
+                <UserAvatar
+                  userId={userId}
+                  email={profileEmail}
+                  firstName={profileFirstName}
+                  lastName={profileLastName}
+                  name={displayName}
+                  size={64}
+                  className="h-16 w-16 text-lg"
+                />
+                <div>
+                  <div className="text-sm font-medium">{displayName}</div>
+                  <div className="text-xs text-muted-foreground">ID: {userId}</div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="block text-sm">
+                  <span>E-Mail</span>
+                  <Input
+                    type="email"
+                    value={profileEmail}
+                    onChange={(event) => setProfileEmail(event.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span>Vorname</span>
+                    <Input
+                      value={profileFirstName}
+                      onChange={(event) => setProfileFirstName(event.target.value)}
+                      placeholder="Vorname"
+                      required
+                      autoComplete="given-name"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span>Nachname (optional)</span>
+                    <Input
+                      value={profileLastName}
+                      onChange={(event) => setProfileLastName(event.target.value)}
+                      placeholder="Nachname"
+                      autoComplete="family-name"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-sm font-medium">Neues Passwort (optional)</span>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="block text-sm">
+                  <span>Passwort</span>
+                  <Input
+                    type="password"
+                    value={profilePassword}
+                    onChange={(event) => setProfilePassword(event.target.value)}
+                    placeholder="Leer lassen, um das Passwort zu behalten"
+                    autoComplete="new-password"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span>Passwort bestätigen</span>
+                  <Input
+                    type="password"
+                    value={profileConfirmPassword}
+                    onChange={(event) => setProfileConfirmPassword(event.target.value)}
+                    placeholder="Nur bei Änderung erforderlich"
+                    autoComplete="new-password"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {profileError && (
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                {profileError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3 border-t pt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleProfileReset}
+                disabled={!profileDirty || profileSaving}
+              >
+                Zurücksetzen
+              </Button>
+              <Button type="submit" size="sm" disabled={!profileDirty || profileSaving} className="min-w-24">
+                {profileSaving ? "Speichern…" : "Speichern"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Rollen verwalten</CardTitle>
@@ -196,10 +459,9 @@ export function RoleManager({
             value={selected}
             canEditOwner={canEditOwner}
             onChange={(next) => {
-              // prevent empty selection and enforce owner guard
               const nextSet = new Set<Role>(next);
               if (!canEditOwner) nextSet.delete("owner");
-              if (nextSet.size === 0) return; // keep at least one role
+              if (nextSet.size === 0) return;
               const arr = sortRoles(Array.from(nextSet));
               setSelected(arr);
               setError(null);
@@ -210,14 +472,14 @@ export function RoleManager({
             <div className="space-y-3">
               <div className="text-sm font-medium text-foreground">Zusätzliche Rollen</div>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {availableCustomRoles.map((r) => {
-                  const active = selectedCustomIds.includes(r.id);
+                {availableCustomRoles.map((role) => {
+                  const active = selectedCustomIds.includes(role.id);
                   return (
                     <label
-                      key={r.id}
+                      key={role.id}
                       className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-all ${
-                        active 
-                          ? "border-primary bg-primary/10 text-primary" 
+                        active
+                          ? "border-primary bg-primary/10 text-primary"
                           : "border-border hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
@@ -227,11 +489,13 @@ export function RoleManager({
                         checked={active}
                         onChange={() =>
                           setSelectedCustomIds((prev) =>
-                            prev.includes(r.id) ? prev.filter((id) => id !== r.id) : [...prev, r.id],
+                            prev.includes(role.id)
+                              ? prev.filter((id) => id !== role.id)
+                              : [...prev, role.id],
                           )
                         }
                       />
-                      <span className="font-medium">{r.name}</span>
+                      <span className="font-medium">{role.name}</span>
                     </label>
                   );
                 })}
@@ -240,54 +504,33 @@ export function RoleManager({
           )}
 
           {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
-              <p className="text-sm text-destructive font-medium">{error}</p>
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+              <p className="text-sm font-medium text-destructive">{error}</p>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            <Button type="button" variant="ghost" size="sm" onClick={handleReset} disabled={!dirty || saving}>
+          <div className="flex items-center justify-between border-t pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRolesReset}
+              disabled={!rolesDirty || saving}
+            >
               Zurücksetzen
             </Button>
-            <Button type="button" size="sm" onClick={handleSave} disabled={!dirty || saving || selected.length === 0} className="min-w-24">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleRolesSave}
+              disabled={!rolesDirty || saving || selected.length === 0}
+              className="min-w-24"
+            >
               {saving ? "Speichern…" : "Speichern"}
             </Button>
           </div>
         </CardContent>
       </Card>
-
-      <UserEditModal
-        user={{
-          id: userId,
-          email: currentEmail,
-          firstName: currentFirstName,
-          lastName: currentLastName,
-          name: currentNameFallback,
-        }}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        onUpdated={(updated) => {
-          if (updated.email !== undefined) {
-            setCurrentEmail(updated.email ?? "");
-          }
-          if (updated.firstName !== undefined) {
-            setCurrentFirstName(updated.firstName ?? "");
-          }
-          if (updated.lastName !== undefined) {
-            setCurrentLastName(updated.lastName ?? "");
-          }
-          if (updated.name !== undefined) {
-            setCurrentNameFallback(updated.name ?? "");
-          }
-          onUserUpdated?.({
-            email: updated.email,
-            firstName: updated.firstName,
-            lastName: updated.lastName,
-            name: updated.name,
-          });
-        }}
-      />
     </div>
   );
 }
