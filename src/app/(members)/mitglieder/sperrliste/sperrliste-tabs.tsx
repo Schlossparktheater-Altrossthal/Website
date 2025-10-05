@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { addDays, format } from "date-fns";
 import { de } from "date-fns/locale/de";
 
@@ -18,6 +18,7 @@ interface SperrlisteTabsProps {
   freezeDays?: number;
   preferredWeekdays?: number[];
   exceptionWeekdays?: number[];
+  actions?: ReactNode;
 }
 
 export function SperrlisteTabs({
@@ -27,6 +28,7 @@ export function SperrlisteTabs({
   freezeDays = 0,
   preferredWeekdays = [],
   exceptionWeekdays = [],
+  actions,
 }: SperrlisteTabsProps) {
   const formattedFreeze = useMemo(() => {
     if (!freezeDays || freezeDays <= 0) {
@@ -40,16 +42,23 @@ export function SperrlisteTabs({
 
   return (
     <Tabs defaultValue="personal" className="space-y-6">
-      <TabsList className="mb-6 flex w-full justify-start overflow-x-auto rounded-full bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur-sm sm:pr-0">
-        <TabsTrigger value="personal" className="gap-2 whitespace-nowrap px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-          <CalendarCheck2 className="h-4 w-4 text-muted-foreground/80" aria-hidden />
-          <span>Meine Sperrtermine</span>
-        </TabsTrigger>
-        <TabsTrigger value="overview" className="gap-2 whitespace-nowrap px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-          <UsersRound className="h-4 w-4 text-muted-foreground/80" aria-hidden />
-          <span>Übersicht</span>
-        </TabsTrigger>
-      </TabsList>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {actions ? (
+          <div className="order-1 flex justify-end sm:order-2 sm:flex-none sm:justify-end">
+            {actions}
+          </div>
+        ) : null}
+        <TabsList className="order-2 flex w-full justify-start overflow-x-auto rounded-full bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur-sm sm:order-1 sm:w-auto sm:flex-1 sm:pr-0">
+          <TabsTrigger value="personal" className="gap-2 whitespace-nowrap px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            <CalendarCheck2 className="h-4 w-4 text-muted-foreground/80" aria-hidden />
+            <span>Meine Sperrtermine</span>
+          </TabsTrigger>
+          <TabsTrigger value="overview" className="gap-2 whitespace-nowrap px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+            <UsersRound className="h-4 w-4 text-muted-foreground/80" aria-hidden />
+            <span>Übersicht</span>
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="personal" className="space-y-6">
         {formattedFreeze ? (
