@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PermissionExplorer } from "@/components/members/permissions/permission-explorer";
 import { RoleAdministrationPanel } from "@/components/members/permissions/role-administration-panel";
@@ -66,27 +66,6 @@ export function PermissionWorkbenchClient({
   );
   const [activeTab, setActiveTab] = useState("permissions");
 
-  const assignedPermissions = useMemo(() => {
-    const permissionsWithAssignments = new Set<string>();
-    for (const set of Object.values(roleGrants)) {
-      if (!set) continue;
-      for (const permissionKey of set) {
-        permissionsWithAssignments.add(permissionKey);
-      }
-    }
-    for (const set of Object.values(departmentGrants)) {
-      if (!set) continue;
-      for (const permissionKey of set) {
-        permissionsWithAssignments.add(permissionKey);
-      }
-    }
-    return permissionsWithAssignments;
-  }, [roleGrants, departmentGrants]);
-
-  const unassignedCount = useMemo(() => {
-    return permissions.reduce((count, permission) => (assignedPermissions.has(permission.key) ? count : count + 1), 0);
-  }, [permissions, assignedPermissions]);
-
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <TabsList>
@@ -104,7 +83,6 @@ export function PermissionWorkbenchClient({
           departmentGrants={departmentGrants}
           setRoleGrants={setRoleGrants}
           setDepartmentGrants={setDepartmentGrants}
-          unassignedCount={unassignedCount}
         />
       </TabsContent>
       <TabsContent value="roles">
