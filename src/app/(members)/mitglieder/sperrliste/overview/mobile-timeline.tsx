@@ -11,6 +11,7 @@ import {
 import * as React from 'react';
 
 import { UserAvatar } from '@/components/user-avatar';
+import { Badge } from '@/components/ui/badge';
 import {
   Sheet,
   SheetContent,
@@ -38,6 +39,7 @@ import {
 } from './timeline-legend';
 import type {
   BlockOverviewSummary,
+  DaySummary,
   PreparedMember,
   VisibleDayInfo,
 } from './useBlockOverviewData';
@@ -124,6 +126,7 @@ type MobileTimelineProps = {
   visibleDayInfo: VisibleDayInfo[];
   holidayMap: Map<string, HolidayRange[]>;
   summary: BlockOverviewSummary;
+  daySummaries: Map<string, DaySummary>;
   onSelectBlockedDay: (selection: {
     member: PreparedMember;
     entry: BlockedDay;
@@ -138,6 +141,7 @@ export function MobileTimeline({
   visibleDayInfo,
   holidayMap,
   summary,
+  daySummaries,
   onSelectBlockedDay,
   formatCreatedAtLabel,
 }: MobileTimelineProps) {
@@ -174,11 +178,22 @@ export function MobileTimeline({
                       ? `${stats.total} Sperrtermin${stats.total === 1 ? '' : 'e'}`
                       : 'Keine Sperrtermine'}
                   </div>
-                  {stats?.upcoming ? (
-                    <div className="text-sm leading-5 text-primary">
-                      {stats.upcoming} bevorstehend
-                    </div>
-                  ) : null}
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <Badge
+                      variant={stats?.total ? 'destructive' : 'muted'}
+                      size="sm"
+                      className="uppercase tracking-[0.16em]"
+                    >
+                      {stats?.total ?? 0} gesamt
+                    </Badge>
+                    <Badge
+                      variant={stats?.upcoming ? 'info' : 'muted'}
+                      size="sm"
+                      className="uppercase tracking-[0.16em]"
+                    >
+                      {stats?.upcoming ? `${stats.upcoming} bevorstehend` : 'Keine neuen'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
 
@@ -196,7 +211,8 @@ export function MobileTimeline({
                   <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
                 </div>
                 <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pl-1 pr-6 [scrollbar-width:thin]">
-                  {visibleDayInfo.map(({ day, key }) => {
+                  {visibleDayInfo.map((info) => {
+                    const { day, key, isWeekend, isCurrentMonth, weekday } = info;
                     const entry = member.blockedMap.get(key);
                     const holidayEntries = holidayMap.get(key) ?? [];
                     const isHoliday = holidayEntries.length > 0;
@@ -206,6 +222,9 @@ export function MobileTimeline({
                     const trimmedReason = entry?.reason?.trim();
                     const hasReason = Boolean(trimmedReason);
                     const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
+                    const columnSummary = daySummaries.get(key);
+                    const summaryBadges: React.ReactNode[] = [];
+
                     const holidaySummary = holidayEntries
                       .map((holiday) =>
                         `${holiday.category === 'publicHoliday' ? 'Feiertag' : 'Ferien'}: ${holiday.title}`,
@@ -253,7 +272,41 @@ export function MobileTimeline({
                       isInteractive &&
                         'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                       isToday(day) && 'ring-2 ring-primary/70',
+                      isWeekend && !isInteractive && !isLimited && !isPreferred && !isHoliday && 'bg-muted/40',
+                      !isCurrentMonth && 'opacity-80',
                     );
+
+                    if (columnSummary?.blocked) {
+                      summaryBadges.push(
+                        <Badge key="blocked" variant="destructive" size="sm" className="uppercase">
+                          {columnSummary.blocked} gesperrt
+                        </Badge>,
+                      );
+                    }
+
+                    if (columnSummary?.limited) {
+                      summaryBadges.push(
+                        <Badge key="limited" variant="warning" size="sm" className="uppercase">
+                          {columnSummary.limited} eingeschränkt
+                        </Badge>,
+                      );
+                    }
+
+                    if (columnSummary?.preferred) {
+                      summaryBadges.push(
+                        <Badge key="preferred" variant="success" size="sm" className="uppercase">
+                          {columnSummary.preferred} bevorzugt
+                        </Badge>,
+                      );
+                    }
+
+                    if (columnSummary?.holidayCount) {
+                      summaryBadges.push(
+                        <Badge key="holiday" variant="info" size="sm" className="uppercase">
+                          {columnSummary.holidayCount} Ferien
+                        </Badge>,
+                      );
+                    }
 
                     const handleSelect = () => {
                       if (isInteractive && entry) {
@@ -289,13 +342,29 @@ export function MobileTimeline({
                           onClick={handleSelect}
                           onKeyDown={handleKeyDown}
                         >
-                          <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                              {format(day, 'EE', { locale: de })}
-                            </span>
-                            <span className="text-sm font-semibold">
-                              {format(day, 'd', { locale: de })}
-                            </span>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex flex-col items-center gap-0.5">
+                              {weekday === 1 ? (
+                                <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+                                  KW {format(day, 'I', { locale: de })}
+                                </span>
+                              ) : null}
+                              <span className="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                {format(day, 'EE', { locale: de })}
+                              </span>
+                              <span className="text-sm font-semibold">
+                                {format(day, 'd', { locale: de })}
+                              </span>
+                            </div>
+                            {summaryBadges.length ? (
+                              <div className="flex flex-wrap justify-center gap-1">
+                                {summaryBadges}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/60">
+                                Frei
+                              </span>
+                            )}
                           </div>
                           <div className="flex flex-1 flex-col items-center justify-center">
                             {isInteractive && hasReason && trimmedReason ? (

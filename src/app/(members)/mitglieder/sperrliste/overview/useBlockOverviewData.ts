@@ -7,6 +7,8 @@ import {
   endOfMonth,
   endOfWeek,
   format,
+  getISOWeek,
+  isSameMonth,
   parseISO,
   startOfMonth,
   startOfToday,
@@ -44,6 +46,17 @@ export type PreparedMember = OverviewMember & {
 export type VisibleDayInfo = {
   day: Date;
   key: string;
+  weekday: number;
+  isoWeek: number;
+  isWeekend: boolean;
+  isCurrentMonth: boolean;
+};
+
+export type DaySummary = {
+  blocked: number;
+  limited: number;
+  preferred: number;
+  holidayCount: number;
 };
 
 export type HolidaySegment = {
@@ -212,15 +225,32 @@ export function useBlockOverviewData({
   const visibleDayInfo = useMemo(
     () =>
       daysInView
-        .map((day) => ({ day, key: format(day, DATE_FORMAT) }))
-        .filter(({ day, key }) => {
+        .map((day) => {
           const weekday = day.getDay();
-          const isPreferredDay = preferredWeekdaySet.has(weekday);
-          const isExceptionDay = exceptionWeekdaySet.has(weekday);
+          const key = format(day, DATE_FORMAT);
 
-          return isPreferredDay || isExceptionDay || preferredDayKeys.has(key);
+          return {
+            day,
+            key,
+            weekday,
+            isoWeek: getISOWeek(day),
+            isWeekend: weekday === 0 || weekday === 6,
+            isCurrentMonth: isSameMonth(day, currentMonth),
+          } satisfies VisibleDayInfo;
+        })
+        .filter((info) => {
+          const isPreferredDay = preferredWeekdaySet.has(info.weekday);
+          const isExceptionDay = exceptionWeekdaySet.has(info.weekday);
+
+          return isPreferredDay || isExceptionDay || preferredDayKeys.has(info.key);
         }),
-    [daysInView, preferredDayKeys, preferredWeekdaySet, exceptionWeekdaySet],
+    [
+      daysInView,
+      preferredDayKeys,
+      preferredWeekdaySet,
+      exceptionWeekdaySet,
+      currentMonth,
+    ],
   );
 
   const dayKeys = useMemo(() => visibleDayInfo.map((item) => item.key), [visibleDayInfo]);

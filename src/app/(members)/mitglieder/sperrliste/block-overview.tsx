@@ -80,7 +80,6 @@ export function BlockOverview({
   return (
     <div className="space-y-6">
       <OverviewShell
-        currentMonth={currentMonth}
         monthLabel={data.monthLabel}
         membersCount={data.preparedMembers.length}
         totalBlockedDays={data.summary.total}
