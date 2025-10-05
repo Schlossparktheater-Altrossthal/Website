@@ -66,6 +66,7 @@ export interface MonthCalendarProps {
   title?: ReactNode;
   subtitle?: ReactNode;
   headerActions?: ReactNode;
+  headerActionsPlacement?: "left" | "right";
   todayLabel?: string;
   showTodayButton?: boolean;
   showWeekNumbers?: boolean;
@@ -97,6 +98,7 @@ export function MonthCalendar({
   title,
   subtitle,
   headerActions,
+  headerActionsPlacement = "right",
   todayLabel = "Heute",
   showTodayButton = true,
   showWeekNumbers = true,
@@ -224,18 +226,25 @@ export function MonthCalendar({
 
   return (
     <div className={cn("w-full rounded-xl border bg-card shadow-sm", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-4 py-3">
-        <div className="space-y-1">
-          {typeof headerTitle === "string" ? (
-            <h2 className="text-xl font-semibold">{headerTitle}</h2>
-          ) : (
-            headerTitle
-          )}
-          {subtitle ? (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
+      <div className="flex flex-wrap items-center gap-3 border-b bg-muted/40 px-4 py-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="space-y-1">
+            {typeof headerTitle === "string" ? (
+              <h2 className="text-xl font-semibold">{headerTitle}</h2>
+            ) : (
+              headerTitle
+            )}
+            {subtitle ? (
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
+            ) : null}
+          </div>
+          {headerActionsPlacement === "left" && headerActions ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {headerActions}
+            </div>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           {showTodayButton ? (
             <Button type="button" variant="outline" size="sm" onClick={goToday}>
               {todayLabel}
@@ -259,7 +268,7 @@ export function MonthCalendar({
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-          {headerActions}
+          {headerActionsPlacement === "right" ? headerActions : null}
         </div>
       </div>
       <div className="overflow-x-auto">

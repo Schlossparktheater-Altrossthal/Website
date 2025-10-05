@@ -945,30 +945,27 @@ export function BlockCalendar({
   ) : null;
 
   const holidayHeaderToggle = (
-    <label
+    <button
+      type="button"
+      onClick={() => setShowHolidays((prev) => !prev)}
       className={cn(
-        "flex cursor-pointer select-none items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition",
+        "flex select-none items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950",
         showHolidays
-          ? "border-sky-300 bg-sky-50 text-sky-900 shadow-sm hover:bg-sky-100 dark:border-sky-500/60 dark:bg-sky-500/20 dark:text-sky-50 dark:hover:bg-sky-500/30"
-          : "border-border/60 bg-background/80 text-muted-foreground hover:border-sky-200 hover:text-foreground dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-slate-900/60",
+          ? "border-sky-300 bg-sky-50 text-sky-900 shadow-sm hover:bg-sky-100 focus-visible:ring-offset-background dark:border-sky-500/60 dark:bg-sky-500/20 dark:text-sky-50 dark:hover:bg-sky-500/30"
+          : "border-border/60 bg-background/80 text-muted-foreground hover:border-sky-200 hover:text-foreground focus-visible:ring-offset-background dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-slate-900/60",
       )}
+      aria-pressed={showHolidays}
     >
-      <input
-        type="checkbox"
-        checked={showHolidays}
-        onChange={(event) => setShowHolidays(event.target.checked)}
-        className="h-4 w-4 accent-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:accent-sky-400"
-      />
       <span className="flex items-center gap-1.5">
         <CalendarDays className="h-4 w-4" aria-hidden />
-        <span>Ferien &amp; Feiertage anzeigen</span>
+        <span>{showHolidays ? "Ferien & Feiertage eingeblendet" : "Ferien & Feiertage anzeigen"}</span>
       </span>
-    </label>
+    </button>
   );
 
   const holidayDescription = (
     <p className="text-xs leading-5 text-muted-foreground">
-      Schulferien und gesetzliche Feiertage werden im Kalender hervorgehoben. Über das Kästchen oben kannst du sie bei Bedarf ausblenden.
+      Schulferien und gesetzliche Feiertage werden im Kalender hervorgehoben. Über den Schalter oben blendest du sie bei Bedarf aus.
     </p>
   );
 
@@ -1203,6 +1200,7 @@ export function BlockCalendar({
         onMonthChange={handleMonthChange}
         transitionDirection={enterDir}
         subtitle="Tippe auf einen Tag, um ihn zu sperren, einzuschränken oder als bevorzugt zu markieren."
+        headerActionsPlacement="left"
         headerActions={
           <div className="flex flex-wrap items-center gap-2">
             {holidayHeaderToggle}
