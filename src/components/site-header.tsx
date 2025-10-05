@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
-import { ctaNavigation, primaryNavigation } from "@/config/navigation";
+import { primaryNavigation } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -81,11 +81,6 @@ const drawerLinkGroupStyles = {
   "--drawer-link-gap": HEADER_SPACING.mobile.linkGroupGap,
 } as CSSProperties;
 
-const drawerFooterStyles = {
-  "--drawer-footer-space": HEADER_SPACING.mobile.footerSpace,
-  "--drawer-footer-padding-top": HEADER_SPACING.mobile.footerPaddingTop,
-} as CSSProperties;
-
 const drawerLinkPaddingStyles = {
   paddingInline: HEADER_SPACING.mobile.linkPaddingInline,
   paddingBlock: HEADER_SPACING.mobile.linkPaddingBlock,
@@ -93,11 +88,6 @@ const drawerLinkPaddingStyles = {
 
 const drawerLinkDescriptionStyles = {
   marginTop: HEADER_SPACING.mobile.linkDescriptionMarginTop,
-} satisfies CSSProperties;
-
-const drawerCtaPaddingStyles = {
-  paddingInline: HEADER_SPACING.mobile.ctaPaddingInline,
-  paddingBlock: HEADER_SPACING.mobile.ctaPaddingBlock,
 } satisfies CSSProperties;
 
 const heroGradientStyles = {
@@ -327,21 +317,10 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
           })}
         </div>
 
-        <div
-          style={drawerFooterStyles}
-          className="mt-auto space-y-[var(--drawer-footer-space)] border-t border-border/60 pt-[var(--drawer-footer-padding-top)] text-sm text-muted-foreground"
-        >
-          <span className="block text-xs uppercase tracking-[0.12em] text-foreground/70">
-            Bleib verbunden
+        <div className="mt-auto text-xs text-muted-foreground">
+          <span className="block uppercase tracking-[0.12em] text-foreground/70">
+            Gute Unterhaltung!
           </span>
-          <Link
-            href={ctaNavigation.href}
-            style={drawerCtaPaddingStyles}
-            className="block rounded-lg border border-dashed border-primary/50 bg-primary/10 text-foreground transition-colors hover:border-primary hover:bg-primary/20"
-            onClick={() => setOpen(false)}
-          >
-            {ctaNavigation.label}
-          </Link>
         </div>
       </SheetContent>
     </Sheet>

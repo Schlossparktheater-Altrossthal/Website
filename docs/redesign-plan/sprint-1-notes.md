@@ -24,7 +24,7 @@ Container-Padding folgt diesen Breakpoints (`1.5rem`, `2rem`, `3rem`).
 
 ## Navigationsrichtlinien
 - **Primäre Einträge** (`Über uns`, `Das Geheimnis`, `Chronik`) werden in `@/config/navigation.ts` verwaltet und zentral in Header & Footer verwendet.
-- **Sekundärbereich** fasst `Login`, `Newsletter`, `Impressum` zusammen und sitzt im Footer als Service-Spalte. CTA `Newsletter abonnieren` nutzt dasselbe Config-Objekt.
+- **Sekundärbereich** fasst `Login`, `Impressum` und weitere Service-Links zusammen und sitzt im Footer als Service-Spalte. CTA-Labels werden zentral über die Navigationskonfiguration gepflegt.
 - **Header-Verhalten**: Transparenter Header auf der Startseite, der beim Scrollen in eine dunkle, blur-basierte Variante mit Border übergeht. Desktop-Menü (`md`+) inline, Mobil (`< md`) als overlay Panel mit Escape/ClickOutside-Handling.
 - **Footer-Verlinkung**: Enthält Impressum & Kontakt sowie Build-Informationen. Kontaktinfos (`mailto`, Telefonnummer, Adresse) sind prominent in der Einleitung verankert.
 
@@ -36,6 +36,6 @@ Container-Padding folgt diesen Breakpoints (`1.5rem`, `2rem`, `3rem`).
 ## Barrierefreiheit
 - Skip-Link verweist auf `#main`, Landmark-Rollen bleiben (header/nav/main/footer).
 - Mobile Overlay fokussiert auf Escape/Outside Click, aktive Links haben `aria-current="page"`.
-- Newsletter-CTA im Footer besitzt ausreichenden Kontrast (> 4.5:1) und border-dashed-Indikator.
+- Footer-CTAs behalten ausreichenden Kontrast (> 4.5:1) und eine visuelle Hervorhebung.
 
 Diese Richtlinien bilden die Basis für Sprint 2 (Token & Komponenten), ohne bestehende Seitenlogik zu beeinträchtigen.

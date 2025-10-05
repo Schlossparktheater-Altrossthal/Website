@@ -66,7 +66,7 @@ describe("aggregateSessionMetrics", () => {
         path: "/landing",
         referrer: null,
         referrerDomain: null,
-        utmSource: "newsletter",
+        utmSource: "mailing",
         utmMedium: "email",
         utmCampaign: "winter-sale",
         utmTerm: null,
