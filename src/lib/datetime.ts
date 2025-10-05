@@ -88,8 +88,19 @@ export function formatRelativeBetween(
   const { formatter = DEFAULT_RELATIVE_TIME_FORMATTER, segments = RELATIVE_TIME_SEGMENTS, roundingMethod = Math.round } =
     options;
   const diffInSeconds = (target.getTime() - reference.getTime()) / 1000;
+
+  if (!Number.isFinite(diffInSeconds)) {
+    return formatter.format(0, "second");
+  }
+
   const { unit, value } = selectSegment(diffInSeconds, segments);
-  return formatter.format(roundingMethod(value), unit);
+  const rounded = roundingMethod(value);
+
+  if (!Number.isFinite(rounded)) {
+    return formatter.format(0, "second");
+  }
+
+  return formatter.format(rounded, unit);
 }
 
 export function formatRelativeFromNow(
