@@ -20,7 +20,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   ISSUE_CATEGORY_BADGE_CLASSES,
@@ -242,11 +241,7 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
           title="Feedback & Support"
           description="Melde Probleme, Bugs oder Verbesserungsvorschläge und verfolge den Bearbeitungsstand im Mitglieder-Issue-Board."
           breadcrumbs={breadcrumbs}
-          actions={
-            <DialogTrigger asChild>
-              <Button>Neues Anliegen melden</Button>
-            </DialogTrigger>
-          }
+          actions={<Button onClick={() => setCreateOpen(true)}>Neues Anliegen melden</Button>}
           status={statusSummary}
         />
         <DialogContent className="max-w-2xl">
