@@ -37,7 +37,7 @@ Dieser Plan übersetzt die Analyse des aktuellen Screenshots in umsetzbare Arbei
 - **Aufgaben:**
   - Feature-/Programmsektionen, Testimonials, FAQ und Kontaktbereich als modulare Komponenten bauen.
   - Bild- und Medienhandling (Optimized Images, Ratio-Wrapper) integrieren.
-  - Formular-Interaktionen (Newsletter, Kontakt) mit Validierung, Fehlermeldungen und Success States ergänzen.
+  - Formular-Interaktionen (Kontakt) mit Validierung, Fehlermeldungen und Success States ergänzen.
   - Animationen/Transitions sparsam implementieren (z. B. `framer-motion` oder CSS), Fokus auf Micro-Feedback.
 - **Deliverables:** Content-Komponenten mit Beispieldaten, dokumentierte Props & Usage-Beispiele, Responsiveness-Tests.
 - **Erfolgskriterien:** Nutzer finden Kerninformationen binnen <3 Klicks, Formulare erfüllen WCAG-Standards.

@@ -33,16 +33,7 @@ export const secondaryNavigation: NavigationItem[] = [
     href: "/login",
   },
   {
-    label: "Newsletter",
-    href: "/onboarding",
-  },
-  {
     label: "Impressum",
     href: "/impressum",
   },
 ];
-
-export const ctaNavigation = {
-  label: "Newsletter abonnieren",
-  href: "/onboarding",
-};

@@ -134,7 +134,7 @@ function normalizeChannel(rawChannel: string | null | undefined): string {
     return "Direct";
   }
 
-  if (["email", "newsletter"].includes(normalized)) {
+  if (["email"].includes(normalized)) {
     return "E-Mail";
   }
   if (["social", "social_media", "social-media", "facebook", "instagram", "twitter", "linkedin"].includes(normalized)) {

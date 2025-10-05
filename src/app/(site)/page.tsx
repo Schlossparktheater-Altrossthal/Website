@@ -41,7 +41,7 @@ export default async function Home() {
     {
       question: "Wann startet der Ticketverkauf?",
       answer:
-        "Der genaue Starttermin wird in Kürze bekannt gegeben. Trag dich am besten in unseren Newsletter ein oder folge uns auf Social Media, damit du den Verkaufsbeginn und mögliche Frühbucheraktionen nicht verpasst.",
+        "Der genaue Starttermin wird in Kürze bekannt gegeben. Folge uns auf Social Media, damit du den Verkaufsbeginn und mögliche Frühbucheraktionen nicht verpasst.",
     },
     {
       question: "Benötige ich Vorkenntnisse, um das Stück zu genießen?",

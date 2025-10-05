@@ -1,11 +1,7 @@
 import Link from "next/link";
 
 import { BuildInfoTimestamp } from "@/components/build-info-timestamp";
-import {
-  ctaNavigation,
-  primaryNavigation,
-  secondaryNavigation,
-} from "@/config/navigation";
+import { primaryNavigation, secondaryNavigation } from "@/config/navigation";
 
 type CommitInfo = {
   short: string;
@@ -60,17 +56,6 @@ export function SiteFooter({ buildInfo, isDevBuild, siteTitle }: SiteFooterProps
             </div>
 
             <div className="mt-6 flex flex-col gap-6 sm:mt-8 sm:flex-row sm:items-start sm:gap-8">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Newsletter</p>
-                <Link
-                  href={ctaNavigation.href}
-                  className="mt-2 inline-flex items-center gap-2 rounded-full border border-dashed border-primary/60 bg-primary/10 px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/15"
-                >
-                  {ctaNavigation.label}
-                  <span aria-hidden className="text-base">→</span>
-                </Link>
-              </div>
-
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Folge uns</p>
                 <div className="mt-2 flex items-center gap-3">
