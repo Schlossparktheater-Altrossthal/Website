@@ -335,7 +335,7 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
 
             <form
               onSubmit={handleSearchSubmit}
-              className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center"
+              className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-end"
             >
               <div className="flex-1 space-y-2">
                 <Label htmlFor="issue-search" className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
@@ -348,7 +348,7 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
                   placeholder="Titel oder Beschreibung durchsuchen"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 lg:self-end">
                 <Button type="submit" variant="secondary">
                   Anwenden
                 </Button>
