@@ -67,6 +67,7 @@ export interface MonthCalendarProps {
   subtitle?: ReactNode;
   headerActions?: ReactNode;
   headerActionsPlacement?: "left" | "right";
+  headerLayout?: "default" | "stacked";
   navigationPlacement?: "left" | "right";
   todayLabel?: string;
   showTodayButton?: boolean;
@@ -100,6 +101,7 @@ export function MonthCalendar({
   subtitle,
   headerActions,
   headerActionsPlacement = "right",
+  headerLayout = "default",
   navigationPlacement = "right",
   todayLabel = "Heute",
   showTodayButton = true,
@@ -254,7 +256,9 @@ export function MonthCalendar({
     </div>
   );
 
-  const hasRightActions = headerActionsPlacement === "right" && Boolean(headerActions);
+  const hasRightActions =
+    headerLayout === "default" && headerActionsPlacement === "right" && Boolean(headerActions);
+  const isStackedHeader = headerLayout === "stacked";
 
   return (
     <div className={cn("w-full rounded-xl border bg-card shadow-sm", className)}>
@@ -263,7 +267,7 @@ export function MonthCalendar({
           <div
             className={cn(
               "flex min-w-0 flex-col gap-3",
-              navigationPlacement === "left"
+              navigationPlacement === "left" && !isStackedHeader
                 ? "sm:flex-row sm:items-center sm:justify-between"
                 : undefined
             )}
@@ -278,13 +282,29 @@ export function MonthCalendar({
                 <p className="text-sm text-muted-foreground">{subtitle}</p>
               ) : null}
             </div>
-            {navigationPlacement === "left" ? navigationControls : null}
+            {navigationPlacement === "left" && !isStackedHeader
+              ? navigationControls
+              : null}
           </div>
-          {headerActionsPlacement === "left" && headerActions ? (
+          {isStackedHeader ? (
+            <div className="flex w-full flex-wrap items-center gap-2">
+              {navigationPlacement !== "right" ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {navigationControls}
+                </div>
+              ) : null}
+              {(navigationPlacement === "right" || headerActions) && (
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                  {navigationPlacement === "right" ? navigationControls : null}
+                  {headerActions ? headerActions : null}
+                </div>
+              )}
+            </div>
+          ) : headerActionsPlacement === "left" && headerActions ? (
             <div className="flex flex-wrap items-center gap-2">{headerActions}</div>
           ) : null}
         </div>
-        {navigationPlacement === "right" || hasRightActions ? (
+        {!isStackedHeader && (navigationPlacement === "right" || hasRightActions) ? (
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {navigationPlacement === "right" ? navigationControls : null}
             {hasRightActions ? headerActions : null}

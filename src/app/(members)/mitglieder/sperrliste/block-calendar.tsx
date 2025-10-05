@@ -1224,6 +1224,7 @@ export function BlockCalendar({
         transitionDirection={enterDir}
         subtitle="Tippe auf einen Tag, um ihn zu sperren, einzuschränken oder als bevorzugt zu markieren."
         headerActionsPlacement="right"
+        headerLayout="stacked"
         navigationPlacement="left"
         headerActions={
           <div className="flex flex-wrap items-center justify-end gap-2">
