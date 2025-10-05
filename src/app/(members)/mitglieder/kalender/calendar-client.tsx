@@ -4,7 +4,6 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 import {
   addDays,
-  addMonths,
   addWeeks,
   differenceInMinutes,
   eachDayOfInterval,
@@ -20,13 +19,11 @@ import {
   setHours,
   setMinutes,
   startOfDay,
-  startOfMonth,
   startOfWeek,
 } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 
-import { MonthCalendar, type CalendarDay } from "@/components/calendar/month-calendar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +45,7 @@ interface CalendarClientProps {
   summary: MemberCalendarSummaryItem[];
 }
 
-type CalendarView = "day" | "week" | "month" | "agenda";
+type CalendarView = "day" | "week" | "agenda";
 
 type DeviceKind = "mobile" | "tablet" | "desktop";
 
@@ -159,7 +156,6 @@ function computeEventLayouts(events: CalendarEventWithDates[]) {
 export function CalendarClient({ initialDate, calendars, events, summary }: CalendarClientProps) {
   const parsedInitialDate = useMemo(() => parseISO(initialDate), [initialDate]);
   const [currentDate, setCurrentDate] = useState<Date>(parsedInitialDate);
-  const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(parsedInitialDate));
   const [view, setView] = useState<CalendarView>("week");
   const [hasUserCustomizedView, setHasUserCustomizedView] = useState(false);
   const [activeCalendarIds, setActiveCalendarIds] = useState<string[]>(() =>
@@ -182,15 +178,9 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
 
   const preferredView = useMemo<CalendarView>(() => {
     if (deviceKind === "desktop") return "week";
-    if (deviceKind === "tablet") return "month";
+    if (deviceKind === "tablet") return "week";
     return "agenda";
   }, [deviceKind]);
-
-  useEffect(() => {
-    if (!isTablet) {
-      setView((previous) => (previous === "month" ? "week" : previous));
-    }
-  }, [isTablet]);
 
   useEffect(() => {
     if (isDesktop) {
@@ -202,9 +192,6 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
     if (hasUserCustomizedView) return;
     setView((previous) => {
       if (previous === preferredView) return previous;
-      if (preferredView === "month") {
-        setCurrentMonth(startOfMonth(currentDate));
-      }
       return preferredView;
     });
   }, [preferredView, hasUserCustomizedView, currentDate]);
@@ -257,11 +244,6 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
     return map;
   }, [activeEvents]);
 
-  const selectedDayKey = useMemo(
-    () => formatISO(startOfDay(currentDate), { representation: "date" }),
-    [currentDate],
-  );
-
   const rangeLabel = useMemo(() => {
     if (view === "day") {
       return format(currentDate, "EEEE, d. MMMM yyyy", { locale: de });
@@ -275,13 +257,10 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
         : `${format(start, "MMMM", { locale: de })} – ${format(end, "MMMM yyyy", { locale: de })}`;
       return `${format(start, "d.", { locale: de })} – ${format(end, "d.", { locale: de })} ${monthPart}`;
     }
-    if (view === "month") {
-      return format(currentMonth, "MMMM yyyy", { locale: de });
-    }
     const start = startOfDay(currentDate);
     const end = addDays(start, AGENDA_RANGE_DAYS);
     return `${format(start, "d. MMM", { locale: de })} – ${format(end, "d. MMM yyyy", { locale: de })}`;
-  }, [currentDate, currentMonth, view]);
+  }, [currentDate, view]);
 
   const agendaEvents = useMemo(() => {
     if (view !== "agenda") return [] as CalendarEventWithDates[];
@@ -293,22 +272,10 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
     );
   }, [activeEvents, currentDate, view]);
 
-  const upcomingEvents = useMemo(() => {
-    const now = new Date();
-    return activeEvents
-      .filter((event) => isAfter(event.endDate, now))
-      .slice(0, 20);
-  }, [activeEvents]);
-
   const handleNavigate = (direction: "previous" | "next") => {
     const factor = direction === "next" ? 1 : -1;
     if (view === "day") {
       setCurrentDate((prev) => addDays(prev, factor));
-    } else if (view === "week") {
-      setCurrentDate((prev) => addWeeks(prev, factor));
-    } else if (view === "month") {
-      setCurrentDate((prev) => addMonths(prev, factor));
-      setCurrentMonth((prev) => addMonths(prev, factor));
     } else {
       setCurrentDate((prev) => addWeeks(prev, factor));
     }
@@ -317,7 +284,6 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
   const handleToday = () => {
     const today = new Date();
     setCurrentDate(today);
-    setCurrentMonth(startOfMonth(today));
   };
 
   const toggleCalendar = (calendarId: string) => {
@@ -331,78 +297,6 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
 
   const handleViewChange = (nextView: CalendarView) => {
     setViewFromUser(nextView);
-    if (nextView === "month") {
-      setCurrentMonth(startOfMonth(currentDate));
-    }
-  };
-
-  const renderDayCell = (day: CalendarDay) => {
-    const key = formatISO(day.date, { representation: "date" });
-    const dayEvents = eventsByDay.get(key) ?? [];
-    const hasEvents = dayEvents.length > 0;
-    const isSelected = key === selectedDayKey;
-    const eventSummary = hasEvents
-      ? `${dayEvents.length} Termin${dayEvents.length === 1 ? "" : "e"}`
-      : "Keine Termine";
-
-    return {
-      onClick: () => {
-        setCurrentDate(day.date);
-        setCurrentMonth(startOfMonth(day.date));
-        if (!isTablet) {
-          setViewFromUser("day");
-        }
-      },
-      className: cn(
-        "relative transition",
-        hasEvents && "border-primary/40 bg-primary/10",
-        isSelected && "border-primary bg-primary/15 shadow-[0_12px_30px_rgba(129,140,248,0.25)]",
-      ),
-      "aria-label": `${format(day.date, "EEEE, d. MMMM yyyy", { locale: de })}. ${eventSummary}.`,
-      content: (
-        <div className="flex h-full flex-col justify-between gap-1 text-xs">
-          <div className="flex items-start justify-between">
-            <span className="font-medium text-foreground">{format(day.date, "d.")}</span>
-            {!day.isCurrentMonth ? (
-              <span className="text-[10px] text-muted-foreground">{format(day.date, "MMM", { locale: de })}</span>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1">
-            {dayEvents.slice(0, 3).map((event) => {
-              const source = calendarMap.get(event.calendarId);
-              const accentColor = source?.color ?? null;
-              return (
-                <div
-                  key={`${event.id}-${event.calendarId}`}
-                  className={cn(
-                    "flex items-center gap-2 rounded-full border px-2 py-1 text-[10px] font-medium",
-                    accentColor ? "border-transparent" : "border-primary/30 bg-primary/10 text-primary",
-                  )}
-                  style={
-                    accentColor
-                      ? {
-                          borderColor: `${accentColor}55`,
-                          backgroundColor: `${accentColor}1A`,
-                          color: accentColor,
-                        }
-                      : undefined
-                  }
-                >
-                  <span
-                    className={cn("h-1.5 w-1.5 rounded-full", !accentColor && "bg-primary")}
-                    style={accentColor ? { backgroundColor: accentColor } : undefined}
-                  />
-                  <span className="truncate">{event.title}</span>
-                </div>
-              );
-            })}
-            {dayEvents.length > 3 ? (
-              <span className="text-[10px] text-muted-foreground">+{dayEvents.length - 3} weitere</span>
-            ) : null}
-          </div>
-        </div>
-      ),
-    };
   };
 
   const bucketsForWeek = useMemo(() => {
@@ -441,31 +335,8 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
 
   return (
     <section className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="hidden flex-col gap-6 lg:flex">
-          <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold">Monatsübersicht</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Tippe auf ein Datum, um in die Tages- oder Wochenansicht zu wechseln.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <MonthCalendar
-                month={currentMonth}
-                onMonthChange={(next) => {
-                  setCurrentMonth(next);
-                  setCurrentDate(next);
-                }}
-                renderDay={renderDayCell}
-                showWeekNumbers={false}
-                weekStartsOn={1}
-                className="rounded-2xl border border-border/60"
-                contentClassName="p-2"
-              />
-            </CardContent>
-          </Card>
-
+      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+        <div className="order-1 flex flex-col gap-6 lg:order-1">
           <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base font-semibold">Meine Kalender</CardTitle>
@@ -509,7 +380,7 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="order-2 space-y-4 lg:order-2">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -531,27 +402,18 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
                     ? `Kalenderwoche ${format(currentDate, "I", { locale: de })}`
                     : view === "day"
                       ? format(currentDate, "EEEE", { locale: de })
-                      : view === "month"
-                        ? `Monat ${format(currentMonth, "MMMM", { locale: de })}`
-                        : `${agendaEvents.length} Termine in der Liste`}
+                      : `${agendaEvents.length} Termine in der Liste`}
                 </p>
               </div>
             </div>
 
             <Tabs value={view} onValueChange={(value) => handleViewChange(value as CalendarView)} className="w-full md:w-auto">
-              <TabsList className="w-full justify-start sm:grid sm:grid-cols-4">
+              <TabsList className="w-full justify-start sm:grid sm:grid-cols-3">
                 <TabsTrigger value="day" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
                   Tag
                 </TabsTrigger>
                 <TabsTrigger value="week" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
                   Woche
-                </TabsTrigger>
-                <TabsTrigger
-                  value="month"
-                  disabled={!isTablet}
-                  className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4"
-                >
-                  Monat
                 </TabsTrigger>
                 <TabsTrigger value="agenda" className="min-w-0 basis-1/2 px-3 py-2 sm:basis-auto sm:px-4">
                   Agenda
@@ -562,23 +424,6 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
 
           <Card className="rounded-3xl border border-border/60 bg-card/80 shadow-sm">
             <CardContent className="p-0">
-              {view === "month" ? (
-                <div className="p-4">
-                  <MonthCalendar
-                    month={currentMonth}
-                    onMonthChange={(next) => {
-                      setCurrentMonth(next);
-                      setCurrentDate(next);
-                    }}
-                    renderDay={renderDayCell}
-                    showWeekNumbers
-                    weekStartsOn={1}
-                    className="rounded-2xl border border-border/60"
-                    contentClassName="p-2"
-                  />
-                </div>
-              ) : null}
-
               {view === "week" || view === "day" ? (
                 isMobileTimeBreakpoint ? (
                   <div className="p-3 sm:p-4">
@@ -625,25 +470,7 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Bevorstehende Termine</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Die nächsten persönlichen Ereignisse aus allen aktiven Kalendern.
-            </p>
-          </CardHeader>
-          <CardContent className="divide-y divide-border/60">
-            {upcomingEvents.length ? (
-              upcomingEvents.map((event) => (
-                <AgendaRow key={`upcoming-${event.id}`} event={event} source={calendarMap.get(event.calendarId)} />
-              ))
-            ) : (
-              <p className="py-6 text-sm text-muted-foreground">Keine anstehenden Termine gefunden.</p>
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="max-w-xl">
         <Card className="rounded-3xl border border-border/60 bg-card/70 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold">Kalenderstatistiken</CardTitle>

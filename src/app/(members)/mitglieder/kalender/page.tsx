@@ -9,10 +9,12 @@ import {
 } from "date-fns";
 import { de } from "date-fns/locale/de";
 
+import type { Prisma } from "@prisma/client";
+
 import { PageHeader } from "@/components/members/page-header";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
-import { requireAuth } from "@/lib/rbac";
+import { hasRole, requireAuth } from "@/lib/rbac";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 import { CalendarClient } from "./calendar-client";
@@ -98,6 +100,8 @@ export default async function MitgliederKalenderPage() {
     notFound();
   }
 
+  const isEnsembleMember = hasRole(session.user, "cast");
+
   const now = new Date();
   const rangeStart = startOfDay(subMonths(now, CALENDAR_LOOKBACK_MONTHS));
   const rangeEnd = startOfDay(addMonths(now, CALENDAR_LOOKAHEAD_MONTHS));
@@ -124,24 +128,31 @@ export default async function MitgliederKalenderPage() {
       })
     : [];
 
-  const [rehearsals, blockedDays, birthdayMembers, taskAssignments] = await Promise.all([
-    prisma.rehearsal.findMany({
-      where: {
-        status: { not: "DRAFT" },
-        start: { gte: rangeStart, lte: rangeEnd },
-        OR: [
-          { attendance: { some: { userId } } },
-          { invitees: { some: { userId } } },
-        ],
+  const rehearsalQuery = {
+    where: {
+      status: { not: "DRAFT" },
+      start: { gte: rangeStart, lte: rangeEnd },
+      OR: [
+        { attendance: { some: { userId } } },
+        { invitees: { some: { userId } } },
+      ],
+    },
+    include: {
+      attendance: {
+        where: { userId },
+        select: { status: true },
       },
-      include: {
-        attendance: {
-          where: { userId },
-          select: { status: true },
-        },
-      },
-      orderBy: { start: "asc" },
-    }),
+    },
+    orderBy: { start: "asc" },
+  } satisfies Prisma.RehearsalFindManyArgs;
+
+  type RehearsalWithAttendance = Prisma.RehearsalGetPayload<typeof rehearsalQuery>;
+
+  const rehearsals: RehearsalWithAttendance[] = isEnsembleMember
+    ? await prisma.rehearsal.findMany(rehearsalQuery)
+    : [];
+
+  const [blockedDays, birthdayMembers, taskAssignments] = await Promise.all([
     prisma.blockedDay.findMany({
       where: {
         userId,
@@ -195,30 +206,32 @@ export default async function MitgliederKalenderPage() {
   let overdueTaskCount = 0;
   let dueSoonTaskCount = 0;
 
-  calendarSources.push({
-    id: "rehearsals",
-    label: "Meine Proben",
-    color: DEFAULT_REHEARSAL_COLOR,
-    type: "rehearsal",
-    secondaryLabel: "Einladungen & Teilnahmen",
-  });
-
-  for (const rehearsal of rehearsals) {
-    const attendanceStatus = rehearsal.attendance.at(0)?.status ?? null;
-    const normalizedEnd = rehearsal.end ?? rehearsal.start;
-    calendarEvents.push({
-      id: `rehearsal-${rehearsal.id}`,
-      calendarId: "rehearsals",
-      title: rehearsal.title,
-      start: rehearsal.start.toISOString(),
-      end: normalizedEnd.toISOString(),
-      allDay: false,
-      location: rehearsal.location,
-      description: rehearsal.description ?? null,
-      metadata: attendanceStatus
-        ? { attendanceStatus: formatAttendance(attendanceStatus) }
-        : undefined,
+  if (isEnsembleMember) {
+    calendarSources.push({
+      id: "rehearsals",
+      label: "Meine Proben",
+      color: DEFAULT_REHEARSAL_COLOR,
+      type: "rehearsal",
+      secondaryLabel: "Einladungen & Teilnahmen",
     });
+
+    for (const rehearsal of rehearsals) {
+      const attendanceStatus = rehearsal.attendance.at(0)?.status ?? null;
+      const normalizedEnd = rehearsal.end ?? rehearsal.start;
+      calendarEvents.push({
+        id: `rehearsal-${rehearsal.id}`,
+        calendarId: "rehearsals",
+        title: rehearsal.title,
+        start: rehearsal.start.toISOString(),
+        end: normalizedEnd.toISOString(),
+        allDay: false,
+        location: rehearsal.location,
+        description: rehearsal.description ?? null,
+        metadata: attendanceStatus
+          ? { attendanceStatus: formatAttendance(attendanceStatus) }
+          : undefined,
+      });
+    }
   }
 
   const departmentColorMap = new Map<string, string>();
@@ -401,23 +414,26 @@ export default async function MitgliederKalenderPage() {
 
   const nextEvent = upcoming.at(0) ?? null;
 
-  const summary: MemberCalendarSummaryItem[] = [
-    {
+  const summary: MemberCalendarSummaryItem[] = [];
+
+  if (isEnsembleMember) {
+    summary.push({
       id: "rehearsal-count",
       label: "Proben im Zeitraum",
       value: String(rehearsals.length),
       hint: "Eigene Einladungen und zugesagte Termine",
-    },
-    {
-      id: "department-count",
-      label: "Gewerk-Termine",
-      value: String(departmentEvents.length),
-      hint:
-        departmentColorMap.size === 1
-          ? "1 aktives Gewerk"
-          : `${departmentColorMap.size} aktive Gewerke`,
-    },
-  ];
+    });
+  }
+
+  summary.push({
+    id: "department-count",
+    label: "Gewerk-Termine",
+    value: String(departmentEvents.length),
+    hint:
+      departmentColorMap.size === 1
+        ? "1 aktives Gewerk"
+        : `${departmentColorMap.size} aktive Gewerke`,
+  });
 
   const taskHintParts: string[] = [];
   if (overdueTaskCount) {
