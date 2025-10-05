@@ -38,28 +38,6 @@ export function SperrlistePageClient({
 
   return (
     <div className="space-y-6">
-      {canManageSettings ? (
-        <div className="flex justify-end">
-          <SperrlisteSettingsDialog
-            settings={settings}
-            defaultHolidaySourceUrl={defaultHolidayUrl}
-            defaultPublicHolidaySourceUrl={defaultPublicHolidayUrl}
-            onSettingsChange={(payload) => {
-              setSettings(payload.settings);
-              if (payload.holidays) {
-                setHolidays(payload.holidays);
-              }
-              if (payload.defaults?.holidaySourceUrl) {
-                setDefaultHolidayUrl(payload.defaults.holidaySourceUrl);
-              }
-              if (payload.defaults?.publicHolidaySourceUrl) {
-                setDefaultPublicHolidayUrl(payload.defaults.publicHolidaySourceUrl);
-              }
-            }}
-          />
-        </div>
-      ) : null}
-
       <SperrlisteTabs
         initialBlockedDays={initialBlockedDays}
         holidays={holidays}
@@ -67,6 +45,29 @@ export function SperrlistePageClient({
         freezeDays={settings.freezeDays}
         preferredWeekdays={settings.preferredWeekdays}
         exceptionWeekdays={settings.exceptionWeekdays}
+        actions={
+          canManageSettings ? (
+            <SperrlisteSettingsDialog
+              settings={settings}
+              defaultHolidaySourceUrl={defaultHolidayUrl}
+              defaultPublicHolidaySourceUrl={defaultPublicHolidayUrl}
+              onSettingsChange={(payload) => {
+                setSettings(payload.settings);
+                if (payload.holidays) {
+                  setHolidays(payload.holidays);
+                }
+                if (payload.defaults?.holidaySourceUrl) {
+                  setDefaultHolidayUrl(payload.defaults.holidaySourceUrl);
+                }
+                if (payload.defaults?.publicHolidaySourceUrl) {
+                  setDefaultPublicHolidayUrl(
+                    payload.defaults.publicHolidaySourceUrl,
+                  );
+                }
+              }}
+            />
+          ) : null
+        }
       />
     </div>
   );
