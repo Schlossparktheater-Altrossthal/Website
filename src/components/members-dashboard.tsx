@@ -120,12 +120,6 @@ const QUICK_ACTION_LINKS = [
     permissionKey: "mitglieder.profil",
   },
   {
-    href: "/mitglieder/kalender",
-    label: "Kalender",
-    icon: CalendarRange,
-    permissionKey: "mitglieder.kalender",
-  },
-  {
     href: "/mitglieder/meine-proben",
     label: "Meine Proben",
     icon: CalendarCheck,
