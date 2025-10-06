@@ -3,13 +3,13 @@ import path from "node:path";
 
 import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
-import { Cat, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
+import { Cat, Fish, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 
-import { DennisDieterEncountersSection } from "./encounters-section";
+import { DieterEncountersSection } from "./encounters-section";
 import { SchulkatzeImageRotator } from "./image-rotator";
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
@@ -39,14 +39,14 @@ const schulkatzeImages = resolveSchulkatzeImages();
 export const metadata: Metadata = {
   title: "Unsere Schulkatze",
   description:
-    "Wir stellen Dennis Dieter von Altroßthal, die neugierige Schulkatze des BSZ Altroßthal, vor und sammeln seine Geschichten.",
+    "Wir erinnern uns an Dieter Dennis von Altroßthal, die grau getigerte Schulkatze des BSZ Altrossthal, und erzählen seine Geschichte.",
   alternates: {
     canonical: "/unsere-schulkatze",
   },
   openGraph: {
-    title: "Unsere Schulkatze | Sommertheater Altroßthal",
+    title: "Unsere Schulkatze | Sommertheater Altrossthal",
     description:
-      "Porträt und Begegnungen mit Dennis Dieter, unserer grau getigerten Schulkatze, der seit 2024 Teil des BSZ Altroßthal ist.",
+      "Porträt und Erinnerungen an Dieter, unsere grau getigerte Schulkatze, die uns über viele Jahre begleitet hat.",
     url: "/unsere-schulkatze",
     type: "website",
   },
@@ -75,63 +75,69 @@ const highlights: Highlight[] = [
     icon: Cat,
     title: "Porträt",
     description:
-      "Dennis Dieter von Altroßthal ist unsere grau getigerte Schulkatze – aufmerksam, verspielt und immer auf der Suche nach einem sonnigen Platz.",
+      "Dieter Dennis von Altroßthal war unsere grau getigerte Schulkatze – verlässlich, gelassen und immer bereit für eine stille Beobachtung.",
   },
   {
     icon: MoonStar,
-    title: "Neu auf dem Campus",
+    title: "Uralter Bekannter",
     description:
-      "Seit dem Frühjahr 2024 erkundet er jeden Winkel des Schulgeländes und begrüßt Frühaufsteher auf dem Weg zur ersten Stunde.",
+      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn, zwanzig Jahren über das Schulgelände.",
   },
   {
     icon: Heart,
     title: "Teil der Gemeinschaft",
     description:
-      "Ob Unterricht, Probentage oder Premiere: Dennis Dieter sucht die Nähe der Menschen und schenkt uns Momente der Ruhe.",
+      "Ob Unterricht oder Premiere: Dieter gehörte einfach dazu und brachte eine Ruhe mit, die uns alle miteinander verband.",
   },
 ];
 
 const memories: Memory[] = [
   {
     icon: Sun,
-    title: "Uralter Bekannter",
+    title: "Frühe Streifzüge",
     detail:
-      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn Jahren über das Schulgelände.",
+      "Geschichten erzählen davon, dass Dieter morgens schon vor dem ersten Klingeln seine Runden drehte und uns mit prüfendem Blick begrüßte.",
   },
   {
     icon: PawPrint,
     title: "Lieblingsorte",
     detail:
-      "Die Bänke und Tische im Grünen Klassenzimmer, die Probebühne und sonnige Plätzchen wurden zu seinen Ruhepolen – überall dort wirkte er wie ein grauer Wächter des Geländes.",
+      "Fensterbänke, Probebühnen und Parkbänke wurden zu seinen Ruhepolen – überall dort wirkte er wie ein grauer Wächter des Geländes.",
   },
   {
     icon: MoonStar,
     title: "Abende im Park",
     detail:
-      "Nach Proben oder Aufführungen begleitet er uns noch bis zur Straßenbahnhaltestelle und verabschiedet die letzten Gäste mit einem sanften Miauen.",
+      "Wenn der Tag endete, blieb er oft noch eine Weile, als wolle er sicherstellen, dass alles seinen Platz hat, bevor er in die Nacht verschwand.",
   },
 ];
 
 const careCircle: Supporter[] = [
   {
     icon: Users,
-    title: "Schüler:innen & Kollegium",
+    title: "Pflege-AG & Schülerschaft",
     description:
-      "Ohne feste Dienste brachten Schüler:innen und Lehrkräfte Futter, frisches Wasser und liebevolle Aufmerksamkeit direkt aus dem Alltag mit.",
+      "In festen Diensten sorgten engagierte Schüler für Futter, frisches Wasser und liebevolle Aufmerksamkeit.",
   },
   {
     icon: ShieldCheck,
-    title: "Hausmeisterteam & Tierarzt",
+    title: "Hausmeisterteam & Tierärztin",
     description:
-      "Sie behielten Dennis Dieters Gesundheit im Blick, koordinierten Checks und sorgten für sichere Rückzugsorte auf dem Campus.",
+      "Sie behielten Gesundheit und Sicherheit im Blick, koordinierten Checks und boten Dieter auch in seinen älteren Jahren Halt.",
+  },
+  {
+    icon: Fish,
+    title: "Patenschaften & Spenden",
+    description:
+      "Klassen und Kollegium legten zusammen, damit Futter, Medikamente und letzte Wege gemeinschaftlich getragen wurden.",
   },
 ];
 
 const lessons: string[] = [
-  "Dennis Dieter zeigte uns, wie sehr er Streicheleinheiten schätzte – und wie achtsam wir mit seinen Signalen umgehen mussten.",
-  "Gleichzeitig liebte er seine Freiheit: offene Türen, weite Wege und das Recht, jederzeit eigene Runden zu drehen.",
-  "Ruhige Ecken und respektvolle Distanz gaben ihm Kraft, nach neugierigen Streifzügen wieder aufzutanken.",
-  "Wer künftig eine Schulkatze willkommen heißt, sollte Nähe und Freiraum im Gleichgewicht halten.",
+  "Tiere, die unsere Schule begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
+  "Gemeinsame Rituale schaffen Vertrauen, besonders wenn ein Vierbeiner über so viele Jahre Teil der Gemeinschaft ist.",
+  "In Abschiedsmomenten hilft es, Erinnerungen zu teilen und Orte des Gedenkens zu schaffen.",
+  "Wer künftig eine Schulkatze willkommen heißt, sollte an Dieters Bedürfnisse denken: Ruhe, Respekt und Zeit.",
 ];
 
 export default function SchulkatzePage() {
@@ -152,19 +158,9 @@ export default function SchulkatzePage() {
         />
       </div>
 
-      <section className="layout-container pb-12 pt-responsive-hero">
-        <div className="feature-grid">
-          <figure className="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg feature-grid__media">
-            <SchulkatzeImageRotator
-              images={schulkatzeImages}
-              alt="Schulkatze Dennis Dieter von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
-            />
-            <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-              Dennis Dieter von Altroßthal ist seit 2024 Teil unserer Schulgemeinschaft.
-            </figcaption>
-          </figure>
-
-          <div className="max-w-3xl space-y-6 feature-grid__content">
+      <section className="layout-container pb-12 pt-16 sm:pt-24">
+        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+          <div className="max-w-3xl space-y-6">
             <Text variant="eyebrow" uppercase tone="primary">
               Schulkultur
             </Text>
@@ -172,23 +168,32 @@ export default function SchulkatzePage() {
               Unsere Schulkatze
             </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
-              Dennis Dieter von Altroßthal – von allen nur Dennis Dieter genannt – ist unsere neue grau getigerte Schulkatze. Seit dem Frühjahr
-              2024 streift er über das Schulgelände und begrüßt Besucher mit neugierigen Blicken.
+              Dieter Dennis von Altroßthal – von allen nur Dieter genannt – war unsere grau getigerte Schulkatze. Über Generationen hinweg
+              streifte er über das Schulgelände und wurde zum vertrauten Gesicht des BSZ Altrossthal.
             </Text>
             <Text tone="muted">
-              Mit seiner offenen Art begleitet er Unterricht, Proben und Premieren gleichermaßen. Mal liegt er mitten im
-              Kostümfundus, mal sitzt er aufmerksam im Zuschauerraum und beobachtet jede Szene.
+              Niemand wusste genau, seit wann er da war; gefühlt waren es weit über fünfzehn Jahre. Seine stille Präsenz begleitete Unterricht,
+              Proben und Festspiele gleichermaßen.
             </Text>
             <Text tone="muted">
-              Schüler:innen und Lehrkräfte achten gemeinsam darauf, dass Dennis Dieter seinen eigenen Rhythmus behalten kann. Er zeigt uns,
-              wie Fürsorge und Rücksicht eine Gemeinschaft stärken – auch ohne feste Dienste oder eine eigene AG.
+              In diesem Jahr mussten wir uns von Dieter verabschieden. Die Erinnerungen an ihn, seine Gelassenheit und die Fürsorge der
+              Schulgemeinschaft bleiben und prägen, wie wir auch künftig füreinander da sind.
             </Text>
           </div>
+          <figure className="relative mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg">
+            <SchulkatzeImageRotator
+              images={schulkatzeImages}
+              alt="Schulkatze Dieter Dennis von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
+            />
+            <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+              Dieter Dennis von Altroßthal war über viele Jahre Teil unserer Schulgemeinschaft.
+            </figcaption>
+          </figure>
         </div>
       </section>
 
       <section className="layout-container pb-16">
-        <div className="grid-responsive grid-responsive--cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {highlights.map((item) => (
             <Card key={item.title} className="h-full">
               <div className="flex items-start gap-3">
@@ -196,7 +201,7 @@ export default function SchulkatzePage() {
                   <item.icon className="h-5 w-5" aria-hidden />
                 </div>
                 <div className="space-y-2">
-                  <Text weight="semibold" className="text-responsive-lg">
+                  <Text weight="semibold" className="text-base sm:text-lg">
                     {item.title}
                   </Text>
                   <Text variant="small" tone="muted" className="leading-relaxed">
@@ -210,14 +215,14 @@ export default function SchulkatzePage() {
       </section>
 
       <section className="layout-container pb-16">
-        <div className="split-responsive split-responsive--at-medium split-responsive--wide-focus">
+        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <Card className="h-full space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
                 <PawPrint className="h-5 w-5" aria-hidden />
               </div>
-              <Text weight="semibold" className="text-responsive-lg">
-                Erinnerungen an Dennis Dieter
+              <Text weight="semibold" className="text-base sm:text-lg">
+                Erinnerungen an Dieter
               </Text>
             </div>
             <div className="space-y-4">
@@ -242,8 +247,8 @@ export default function SchulkatzePage() {
               <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
                 <Heart className="h-5 w-5" aria-hidden />
               </div>
-              <Text weight="semibold" className="text-responsive-lg">
-                Wer sich kümmert
+              <Text weight="semibold" className="text-base sm:text-lg">
+                Wer sich gekümmert hat
               </Text>
             </div>
             <div className="space-y-3">
@@ -271,13 +276,13 @@ export default function SchulkatzePage() {
             <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
               <ShieldCheck className="h-5 w-5" aria-hidden />
             </div>
-            <Text weight="semibold" className="text-responsive-lg">
-              Was wir aus Dennis Dieters Zeit mitnehmen
+            <Text weight="semibold" className="text-base sm:text-lg">
+              Was wir aus Dieters Zeit mitnehmen
             </Text>
           </div>
           <div className="space-y-3">
             <Text variant="small" tone="muted">
-              Dennis Dieter hat uns gelehrt, Nähe und Freiraum in Balance zu halten. Diese Gedanken begleiten uns:
+              Dieter hat uns gezeigt, wie wichtig Achtsamkeit ist. Diese Gedanken begleiten uns auch in Zukunft:
             </Text>
             <ul className="space-y-2">
               {lessons.map((lesson) => (
@@ -293,19 +298,19 @@ export default function SchulkatzePage() {
         </Card>
       </section>
 
-      <DennisDieterEncountersSection />
+      <DieterEncountersSection />
 
       <section className="layout-container pb-24">
         <div className="mx-auto max-w-3xl space-y-4 text-center">
           <Heading level="h2" align="center">
-            Gemeinsam für Dennis Dieter
+            In Erinnerung an Dieter
           </Heading>
           <Text variant="bodyLg" tone="muted" align="center">
-            Dennis Dieter bringt frischen Wind in unsere Schulgemeinschaft und erinnert uns daran, wie schön geteilte Verantwortung sein
-            kann. Jede Begegnung mit ihm erzählt eine neue Geschichte.
+            Dieter hat Generationen von Schülern begleitet und unserer Schule ein unverwechselbares Gefühl von Heimat gegeben.
+            Seine Geschichte erinnert uns daran, wie wertvoll Fürsorge und Gemeinschaft sind.
           </Text>
           <Text tone="muted" align="center">
-            Wer Tipps zur Eingewöhnung hat oder schöne Erinnerungen teilen möchte, erreicht uns unter{' '}
+            Wer Erinnerungen teilen oder die Arbeit der Pflege-AG weiterführen möchte, erreicht uns unter{' '}
             <TextLink href="mailto:schulkatze@sommertheater-altrossthal.de">schulkatze@sommertheater-altrossthal.de</TextLink>.
           </Text>
         </div>
