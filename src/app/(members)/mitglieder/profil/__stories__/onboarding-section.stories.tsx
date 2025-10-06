@@ -21,7 +21,14 @@ const createOnboarding = (
   whatsappLinkVisitedAt: null,
   updatedAt: new Date().toISOString(),
   preferences: defaultPreferences,
-  show: { title: "Sommerproduktion", year: 2025 },
+  show: {
+    id: "show-1",
+    title: "Sommerproduktion",
+    year: 2025,
+    periodLabel: "Juni 2025",
+    status: "active",
+  },
+  whatsappLink: "https://example.com/whatsapp",
   ...overrides,
 });
 
@@ -29,7 +36,10 @@ const baseProps: OnboardingSectionProps = {
   onboarding: createOnboarding(),
   onOnboardingChange: () => undefined,
   rolePreferences: defaultPreferences,
-  whatsappLink: "https://example.com/whatsapp",
+  availableOnboardings: [
+    { id: "show-1", title: "Sommerproduktion", periodLabel: "Juni 2025", status: "active" },
+    { id: "show-2", title: "Winterrevue", periodLabel: "Dezember 2025", status: "draft" },
+  ],
   whatsappVisitedAt: null,
   onWhatsAppVisit: async () => ({ visitedAt: new Date().toISOString(), alreadyVisited: false }),
   dietaryPreference: { label: "Vegetarisch", strictnessLabel: "Flexibel" },

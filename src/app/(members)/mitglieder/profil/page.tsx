@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/members/page-header";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { getUserDisplayName } from "@/lib/names";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
+import { getAvailableOnboardings } from "@/lib/onboarding/dashboard-service";
 import { prisma } from "@/lib/prisma";
 import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
 import { hasPermission } from "@/lib/permissions";
@@ -76,7 +77,7 @@ export default async function ProfilePage() {
           dietaryPreferenceStrictness: true,
           whatsappLinkVisitedAt: true,
           updatedAt: true,
-          show: { select: { meta: true, title: true, year: true } },
+          show: { select: { id: true, meta: true, title: true, year: true } },
         },
       },
       photoConsent: {
@@ -100,7 +101,7 @@ export default async function ProfilePage() {
     notFound();
   }
 
-  const [allergiesRaw, measurementsRaw] = await Promise.all([
+  const [allergiesRaw, measurementsRaw, availableOnboardings] = await Promise.all([
     prisma.dietaryRestriction.findMany({
       where: { userId, isActive: true },
       orderBy: { allergen: "asc" },
@@ -128,6 +129,7 @@ export default async function ProfilePage() {
           },
         })
       : Promise.resolve([]),
+    getAvailableOnboardings(),
   ]);
 
   const displayName = getUserDisplayName(
@@ -219,6 +221,9 @@ export default async function ProfilePage() {
   const whatsappLink = onboardingProfile?.show
     ? getOnboardingWhatsAppLink(onboardingProfile.show.meta)
     : null;
+  const onboardingSummary = onboardingProfile?.show
+    ? availableOnboardings.find((entry) => entry.id === onboardingProfile.show?.id)
+    : null;
 
   const checklist = buildProfileChecklist({
     hasBasicData,
@@ -244,10 +249,14 @@ export default async function ProfilePage() {
         preferences: preferenceSummaries,
         show: onboardingProfile.show
           ? {
+              id: onboardingProfile.show.id,
               title: onboardingProfile.show.title ?? null,
               year: onboardingProfile.show.year,
+              periodLabel: onboardingSummary?.periodLabel ?? null,
+              status: onboardingSummary?.status ?? "draft",
             }
           : null,
+        whatsappLink,
       }
     : null;
 
@@ -283,7 +292,7 @@ export default async function ProfilePage() {
         measurements={measurementSummaries}
         canManageMeasurements={canManageMeasurements}
         checklist={checklist}
-        whatsappLink={whatsappLink}
+        availableOnboardings={availableOnboardings}
       />
     </div>
   );
