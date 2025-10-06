@@ -367,6 +367,20 @@ export type SaveOnboardingResult = {
   };
 };
 
+export type StartOnboardingResult = {
+  onboarding: {
+    show: {
+      id: string;
+      title: string | null;
+      year: number | null;
+      periodLabel: string | null;
+      status: string;
+    };
+    whatsappLink: string | null;
+    whatsappLinkVisitedAt: string | null;
+  };
+};
+
 export type SaveRolePreferencesInput = {
   code: string;
   domain: "acting" | "crew";
@@ -418,6 +432,57 @@ export async function saveOnboardingAction(
   } catch (error) {
     console.error("[profile][onboarding]", error);
     return { ok: false, error: "Netzwerkfehler: Onboarding-Angaben konnten nicht gespeichert werden." };
+  }
+}
+
+export async function startOnboardingAction(
+  showId: string,
+): Promise<ActionResult<StartOnboardingResult>> {
+  try {
+    const response = await authorizedFetch("/api/profile/onboarding/show", {
+      method: "PUT",
+      body: JSON.stringify({ showId }),
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const error = typeof data?.error === "string" ? data.error : "Onboarding konnte nicht aktualisiert werden.";
+      return { ok: false, error };
+    }
+
+    const onboarding = data?.onboarding;
+    if (!onboarding || typeof onboarding !== "object") {
+      return { ok: false, error: "Antwort des Servers war ungültig." };
+    }
+
+    const show = onboarding.show;
+    if (!show || typeof show !== "object") {
+      return { ok: false, error: "Antwort des Servers war ungültig." };
+    }
+
+    return {
+      ok: true,
+      data: {
+        onboarding: {
+          show: {
+            id: typeof show.id === "string" ? show.id : showId,
+            title: typeof show.title === "string" ? show.title : null,
+            year: typeof show.year === "number" ? show.year : null,
+            periodLabel: typeof show.periodLabel === "string" ? show.periodLabel : null,
+            status: typeof show.status === "string" ? show.status : "draft",
+          },
+          whatsappLink: typeof onboarding.whatsappLink === "string" ? onboarding.whatsappLink : null,
+          whatsappLinkVisitedAt:
+            typeof onboarding.whatsappLinkVisitedAt === "string"
+              ? onboarding.whatsappLinkVisitedAt
+              : null,
+        },
+      },
+    };
+  } catch (error) {
+    console.error("[profile][onboarding.show]", error);
+    return { ok: false, error: "Netzwerkfehler: Onboarding konnte nicht aktualisiert werden." };
   }
 }
 

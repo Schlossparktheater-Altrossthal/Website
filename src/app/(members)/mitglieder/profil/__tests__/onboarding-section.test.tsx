@@ -26,13 +26,29 @@ function createProps(overrides: Partial<OnboardingSectionProps> = {}): Onboardin
     .fn<NonNullable<OnboardingSectionProps["onWhatsAppVisit"]>>()
     .mockResolvedValue({ visitedAt: new Date().toISOString(), alreadyVisited: false });
 
+  const onboarding: OnboardingSectionProps["onboarding"] = overrides.onboarding ?? {
+    focus: "acting",
+    background: null,
+    backgroundClass: null,
+    notes: null,
+    memberSinceYear: null,
+    dietaryPreference: null,
+    dietaryPreferenceStrictness: null,
+    whatsappLinkVisitedAt: overrides.whatsappVisitedAt ?? null,
+    updatedAt: null,
+    preferences: [],
+    show: null,
+    whatsappLink: "https://example.com",
+  };
+
+  const whatsappVisitedAt = overrides.whatsappVisitedAt ?? onboarding?.whatsappLinkVisitedAt ?? null;
+
   return {
-    onboarding: null,
+    onboarding,
     onOnboardingChange: vi.fn(),
     rolePreferences: [],
-    onRolePreferencesChange: vi.fn(),
-    whatsappLink: "https://example.com",
-    whatsappVisitedAt: null,
+    availableOnboardings: [],
+    whatsappVisitedAt,
     onWhatsAppVisit: defaultOnWhatsAppVisit,
     dietaryPreference: { label: null, strictnessLabel: null },
     ...overrides,

@@ -73,6 +73,7 @@ import {
 } from "@/lib/profile-completion";
 import { getUserDisplayName } from "@/lib/names";
 import { cn } from "@/lib/utils";
+import type { OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 import { AllergyLevel, type OnboardingFocus, type PayoutMethod, type Role } from "@prisma/client";
 
@@ -82,6 +83,7 @@ import {
   saveInterestsAction,
   saveMeasurementAction,
   saveOnboardingAction,
+  startOnboardingAction,
   saveRolePreferencesAction,
   updateProfileBasicsAction,
   upsertAllergyAction,
@@ -112,6 +114,12 @@ const ROLE_PREFERENCE_DEFINITIONS = {
 } as const;
 
 const DEFAULT_ROLE_PREFERENCE_WEIGHT = 60;
+const ONBOARDING_STATUS_LABELS: Record<OnboardingSummary["status"], string> = {
+  draft: "In Vorbereitung",
+  active: "Aktiv",
+  completed: "Abgeschlossen",
+  archived: "Archiviert",
+};
 
 type RolePreferenceFormEntry = {
   code: string;
@@ -248,7 +256,16 @@ type ProfileClientProps = {
       domain: "acting" | "crew";
       weight: number;
     }>;
-    show: { title: string | null; year: number } | null;
+    show:
+      | {
+          id: string;
+          title: string | null;
+          year: number | null;
+          periodLabel: string | null;
+          status: OnboardingSummary["status"];
+        }
+      | null;
+    whatsappLink: string | null;
   } | null;
   interests: string[];
   allergies: Array<{
@@ -270,7 +287,7 @@ type ProfileClientProps = {
   }>;
   canManageMeasurements: boolean;
   checklist: ProfileCompletionSummary;
-  whatsappLink: string | null;
+  availableOnboardings: OnboardingSummary[];
 };
 
 type ProfileUser = ProfileClientProps["user"];
@@ -565,7 +582,7 @@ export function ProfileClient({
   measurements,
   canManageMeasurements,
   checklist,
-  whatsappLink,
+  availableOnboardings,
 }: ProfileClientProps) {
   return (
     <ProfileCompletionProvider initialSummary={checklist}>
@@ -577,7 +594,7 @@ export function ProfileClient({
         initialAllergies={allergies}
         initialMeasurements={measurements}
         canManageMeasurements={canManageMeasurements}
-        whatsappLink={whatsappLink}
+        availableOnboardings={availableOnboardings}
       />
     </ProfileCompletionProvider>
   );
@@ -591,7 +608,7 @@ type ProfileClientInnerProps = {
   initialAllergies: ProfileClientProps["allergies"];
   initialMeasurements: ProfileClientProps["measurements"];
   canManageMeasurements: boolean;
-  whatsappLink: string | null;
+  availableOnboardings: OnboardingSummary[];
 };
 
 function ProfileClientInner({
@@ -602,7 +619,7 @@ function ProfileClientInner({
   initialAllergies,
   initialMeasurements,
   canManageMeasurements,
-  whatsappLink,
+  availableOnboardings,
 }: ProfileClientInnerProps) {
   const { summary, replaceSummary } = useProfileCompletion();
   const { update: refreshSession } = useSession();
@@ -627,6 +644,7 @@ function ProfileClientInner({
   const [measurementDialogOpen, setMeasurementDialogOpen] = useState(false);
   const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
   const [activeTab, setActiveTab] = useState<string>("stammdaten");
+  const whatsappLink = onboarding?.whatsappLink ?? null;
   const activeChecklistTarget = useMemo<ProfileChecklistTarget | undefined>(() => {
     const maybeTarget = activeTab as ProfileChecklistTarget;
     return CHECKLIST_TARGETS.includes(maybeTarget) ? maybeTarget : undefined;
@@ -639,7 +657,9 @@ function ProfileClientInner({
     hasDietaryPreference: Boolean(initialOnboarding?.dietaryPreference?.trim()),
     hasMeasurements: canManageMeasurements ? initialMeasurements.length > 0 : undefined,
     photoConsentGiven: summary.items.find((item) => item.id === "photo-consent")?.complete ?? undefined,
-    hasWhatsappVisit: whatsappLink ? Boolean(initialOnboarding?.whatsappLinkVisitedAt) : undefined,
+    hasWhatsappVisit: initialOnboarding?.whatsappLink
+      ? Boolean(initialOnboarding.whatsappLinkVisitedAt)
+      : undefined,
   }));
 
   const buildSummaryFromState = useCallback(
@@ -709,6 +729,14 @@ function ProfileClientInner({
     [whatsappVisitedAt],
   );
 
+  useEffect(() => {
+    if (!whatsappLink) {
+      updateChecklist({ hasWhatsappVisit: undefined });
+      return;
+    }
+    updateChecklist({ hasWhatsappVisit: Boolean(onboarding?.whatsappLinkVisitedAt) });
+  }, [onboarding?.whatsappLinkVisitedAt, updateChecklist, whatsappLink]);
+
   const percentComplete = summary.total
     ? Math.round((summary.completed / summary.total) * 100)
     : 0;
@@ -753,6 +781,7 @@ function ProfileClientInner({
             updatedAt: null,
             preferences: [],
             show: null,
+            whatsappLink: null,
           } satisfies OnboardingProfile;
         }
         return {
@@ -831,6 +860,7 @@ function ProfileClientInner({
             updatedAt: null,
             preferences: [],
             show: null,
+            whatsappLink: null,
           } satisfies OnboardingProfile;
         }
 
@@ -1008,10 +1038,10 @@ function ProfileClientInner({
             onboarding={onboarding}
             onOnboardingChange={setOnboarding}
             rolePreferences={rolePreferences}
-            whatsappLink={whatsappLink}
             whatsappVisitedAt={whatsappVisitedAt}
             onWhatsAppVisit={handleWhatsAppVisit}
             dietaryPreference={dietaryPreference}
+            availableOnboardings={availableOnboardings}
             onFocusChange={setOnboardingFocus}
           />
         </TabsContent>
@@ -1059,6 +1089,17 @@ function ProfileOverviewCard({
 }: ProfileOverviewCardProps) {
   const email = user.email?.trim() ?? "";
   const show = onboarding?.show ?? null;
+  const showTitle = show?.title && show.title.trim().length ? show.title.trim() : null;
+  const showYear = typeof show?.year === "number" ? show.year : null;
+  const showLabel = show
+    ? showTitle
+      ? showYear
+        ? `${showTitle} (${showYear})`
+        : showTitle
+      : showYear
+        ? `Produktion ${showYear}`
+        : "Produktion"
+    : null;
   const checklistBadgeLabel = summary.complete ? "Profil vollständig" : null;
   const checklistCountLabel = summary.total ? `${summary.completed}/${summary.total}` : null;
   const pendingChecklistItems = summary.items.filter((item) => !item.complete);
@@ -1254,7 +1295,8 @@ function ProfileOverviewCard({
           <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
             <Users className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>
-              Produktion: {show.title ? `${show.title} (${show.year})` : show.year}
+              Produktion: {showLabel}
+              {show?.periodLabel ? ` · ${show.periodLabel}` : ""}
             </span>
           </div>
         ) : null}
@@ -2537,7 +2579,7 @@ export type OnboardingSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
   onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
   rolePreferences: ProfileClientProps["rolePreferences"];
-  whatsappLink: string | null;
+  availableOnboardings: OnboardingSummary[];
   whatsappVisitedAt: string | null;
   onWhatsAppVisit?: () => Promise<{ visitedAt: string | null; alreadyVisited: boolean }>;
   dietaryPreference: { label: string | null; strictnessLabel: string | null };
@@ -2548,12 +2590,14 @@ export function OnboardingSection({
   onboarding,
   onOnboardingChange,
   rolePreferences,
-  whatsappLink,
+  availableOnboardings,
   whatsappVisitedAt,
   onWhatsAppVisit,
   dietaryPreference,
   onFocusChange,
 }: OnboardingSectionProps) {
+  const whatsappLink = onboarding?.whatsappLink ?? null;
+  const currentShow = onboarding?.show ?? null;
   const initialForm = useMemo<OnboardingFormState>(() => ({
     focus: (onboarding?.focus as OnboardingFocus) ?? "acting",
     background: onboarding?.background ?? "",
@@ -2565,6 +2609,26 @@ export function OnboardingSection({
   const [formState, setFormState] = useState<OnboardingFormState>(initialForm);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showDialogOpen, setShowDialogOpen] = useState(false);
+  const [selectedShowId, setSelectedShowId] = useState<string>(() => currentShow?.id ?? "");
+  const [showSubmitting, setShowSubmitting] = useState(false);
+  const [showError, setShowError] = useState<string | null>(null);
+  const hasOnboardingOptions = availableOnboardings.length > 0;
+  const showTitle = currentShow?.title && currentShow.title.trim().length ? currentShow.title.trim() : null;
+  const showYear = typeof currentShow?.year === "number" ? currentShow.year : null;
+  const showLabel = currentShow
+    ? showTitle
+      ? showYear
+        ? `${showTitle} (${showYear})`
+        : showTitle
+      : showYear
+        ? `Produktion ${showYear}`
+        : "Produktion"
+    : "Noch keine Produktion verknüpft";
+  const showHelper = currentShow
+    ? currentShow.periodLabel ?? "Zeitraum wird noch geplant."
+    : "Wähle eine Produktion, um mit dem Onboarding zu starten.";
+  const showStatusLabel = currentShow ? ONBOARDING_STATUS_LABELS[currentShow.status] ?? currentShow.status : null;
   const { backgroundSuggestions, classSuggestions, activeTag, requiresClass } =
     useOnboardingBackgroundData(formState.background, {
       initialSuggestions: PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
@@ -2573,12 +2637,75 @@ export function OnboardingSection({
   const whatsappVisitedLabel = useMemo(() => formatDate(whatsappVisitedAt), [whatsappVisitedAt]);
 
   useEffect(() => {
+    setSelectedShowId(currentShow?.id ?? "");
+  }, [currentShow?.id]);
+
+  useEffect(() => {
     setFormState(initialForm);
   }, [initialForm]);
 
   useEffect(() => {
     onFocusChange?.(formState.focus);
   }, [formState.focus, onFocusChange]);
+
+  const handleShowAssign = async () => {
+    if (!selectedShowId) {
+      setShowError("Bitte wähle eine Produktion.");
+      return;
+    }
+
+    setShowSubmitting(true);
+    setShowError(null);
+
+    try {
+      const result = await startOnboardingAction(selectedShowId);
+      if (!result.ok) {
+        setShowError(result.error);
+        toast.error(result.error);
+        return;
+      }
+
+      const payload = result.data.onboarding;
+      const option = availableOnboardings.find((entry) => entry.id === payload.show.id) ?? null;
+      const nextShow = {
+        id: payload.show.id,
+        title: payload.show.title,
+        year: payload.show.year,
+        periodLabel: option?.periodLabel ?? payload.show.periodLabel ?? null,
+        status: (option?.status ?? payload.show.status ?? "draft") as OnboardingSummary["status"],
+      } satisfies NonNullable<OnboardingProfile["show"]>;
+
+      const nextOnboarding: OnboardingProfile = onboarding
+        ? {
+            ...onboarding,
+            show: nextShow,
+            whatsappLink: payload.whatsappLink,
+            whatsappLinkVisitedAt: payload.whatsappLinkVisitedAt,
+          }
+        : {
+            focus: (formState.focus as OnboardingFocus) ?? "acting",
+            background: formState.background.trim() ? formState.background.trim() : null,
+            backgroundClass: formState.backgroundClass.trim() ? formState.backgroundClass.trim() : null,
+            notes: formState.notes.trim() ? formState.notes.trim() : null,
+            memberSinceYear: formState.memberSinceYear
+              ? Number.parseInt(formState.memberSinceYear, 10)
+              : null,
+            dietaryPreference: null,
+            dietaryPreferenceStrictness: null,
+            whatsappLinkVisitedAt: payload.whatsappLinkVisitedAt,
+            updatedAt: null,
+            preferences: rolePreferences,
+            show: nextShow,
+            whatsappLink: payload.whatsappLink,
+          } satisfies OnboardingProfile;
+
+      onOnboardingChange(nextOnboarding);
+      toast.success(onboarding?.show ? "Produktion aktualisiert" : "Onboarding gestartet");
+      setShowDialogOpen(false);
+    } finally {
+      setShowSubmitting(false);
+    }
+  };
 
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -2624,6 +2751,7 @@ export function OnboardingSection({
         whatsappLinkVisitedAt: onboarding?.whatsappLinkVisitedAt ?? null,
         preferences: onboarding?.preferences ?? rolePreferences,
         show: onboarding?.show ?? null,
+        whatsappLink: onboarding?.whatsappLink ?? null,
       };
       onOnboardingChange(next);
       setFormState({
@@ -2667,6 +2795,40 @@ export function OnboardingSection({
         <CardTitle className="text-base font-semibold">Onboarding-Angaben</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">{showLabel}</p>
+              <p className="text-xs text-muted-foreground">{showHelper}</p>
+            </div>
+            {currentShow && showStatusLabel ? (
+              <Badge
+                variant="outline"
+                className="self-start rounded-full border-border/60 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide"
+              >
+                {showStatusLabel}
+              </Badge>
+            ) : null}
+          </div>
+          {hasOnboardingOptions ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowDialogOpen(true);
+                  setShowError(null);
+                }}
+              >
+                {currentShow ? "Produktion wechseln" : "Onboarding starten"}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Aktuell sind keine Produktionen verfügbar.</p>
+          )}
+        </div>
+
         {whatsappLink ? (
           <div
             className={cn(
@@ -2877,6 +3039,94 @@ export function OnboardingSection({
           </div>
         </form>
       </CardContent>
+
+      <Dialog
+        open={showDialogOpen}
+        onOpenChange={(open) => {
+          setShowDialogOpen(open);
+          if (!open) {
+            setShowError(null);
+            setSelectedShowId(currentShow?.id ?? "");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Produktion auswählen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {hasOnboardingOptions ? (
+              <div className="grid gap-2">
+                {availableOnboardings.map((option) => {
+                  const active = option.id === selectedShowId;
+                  return (
+                    <button
+                      type="button"
+                      key={option.id}
+                      onClick={() => setSelectedShowId(option.id)}
+                      className={cn(
+                        "w-full rounded-lg border px-4 py-3 text-left transition",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                        active
+                          ? "border-primary/60 bg-primary/10 shadow-sm"
+                          : "border-border/60 bg-background hover:border-primary/40"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-foreground">{option.title}</p>
+                          {option.periodLabel ? (
+                            <p className="text-xs text-muted-foreground">{option.periodLabel}</p>
+                          ) : null}
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="rounded-full border-border/60 px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide"
+                        >
+                          {ONBOARDING_STATUS_LABELS[option.status] ?? option.status}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 text-xs">
+                        {active ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
+                            <span className="font-medium text-primary">Ausgewählt</span>
+                          </>
+                        ) : (
+                          <>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                            <span className="text-muted-foreground">Auswählen</span>
+                          </>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Es sind keine Produktionen verfügbar.</p>
+            )}
+            {showError ? <p className="text-sm text-destructive">{showError}</p> : null}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setShowDialogOpen(false)} disabled={showSubmitting}>
+              Abbrechen
+            </Button>
+            <Button type="button" onClick={handleShowAssign} disabled={showSubmitting || !selectedShowId}>
+              {showSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Speichern…
+                </>
+              ) : currentShow ? (
+                "Produktion wechseln"
+              ) : (
+                "Onboarding starten"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
