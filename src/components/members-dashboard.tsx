@@ -79,34 +79,40 @@ type MetricItem = {
   tone: MetricTone;
 };
 
-const DASHBOARD_CARD_SURFACE =
-  "rounded-3xl border border-border/60 bg-gradient-to-br from-background via-background/95 to-background shadow-lg shadow-primary/5 backdrop-blur";
-
 const DAY_IN_MS = 86_400_000;
 
-const DASHBOARD_CARD_ACCENT =
-  "rounded-3xl border border-primary/45 bg-gradient-to-br from-primary/12 via-background/95 to-background shadow-xl shadow-primary/10 backdrop-blur";
+// Zentralisiertes Card-Design-System
+const CARD_VARIANTS = {
+  surface: "rounded-2xl border border-border bg-card shadow-lg",
+  elevated: "rounded-2xl border border-border bg-card shadow-xl shadow-primary/5",
+  accent: "rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/8 to-primary/4 shadow-lg shadow-primary/10",
+  metric: "rounded-2xl border border-border bg-gradient-to-br from-card to-background shadow-md"
+} as const;
 
 const METRIC_CARD_CLASSES: Record<MetricTone, string> = {
-  neutral:
-    "border-border/60 bg-gradient-to-br from-background via-background/95 to-background shadow-lg shadow-primary/5 backdrop-blur",
-  accent:
-    "border-primary/50 bg-gradient-to-br from-primary/18 via-primary/10 to-background shadow-xl shadow-primary/10 text-primary",
-  positive:
-    "border-success/50 bg-gradient-to-br from-success/18 via-success/10 to-background shadow-xl text-success",
-  warning:
-    "border-warning/50 bg-gradient-to-br from-warning/18 via-warning/10 to-background shadow-xl text-warning",
-  destructive:
-    "border-destructive/50 bg-gradient-to-br from-destructive/18 via-destructive/10 to-background shadow-xl text-destructive",
+  neutral: `${CARD_VARIANTS.metric}`,
+  accent: `rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/8 text-primary`,
+  positive: `rounded-2xl border border-success/30 bg-gradient-to-br from-success/10 to-success/5 shadow-lg shadow-success/8 text-success`,
+  warning: `rounded-2xl border border-warning/30 bg-gradient-to-br from-warning/10 to-warning/5 shadow-lg shadow-warning/8 text-warning`,
+  destructive: `rounded-2xl border border-destructive/30 bg-gradient-to-br from-destructive/10 to-destructive/5 shadow-lg shadow-destructive/8 text-destructive`,
 };
 
 const METRIC_ICON_CLASSES: Record<MetricTone, string> = {
-  neutral: "border-border/50 bg-background/80 text-muted-foreground",
-  accent: "border-primary/40 bg-primary/15 text-primary",
-  positive: "border-success/45 bg-success/15 text-success",
-  warning: "border-warning/45 bg-warning/15 text-warning",
-  destructive: "border-destructive/45 bg-destructive/15 text-destructive",
+  neutral: "border border-border bg-background text-muted-foreground",
+  accent: "border border-primary/30 bg-primary/12 text-primary",
+  positive: "border border-success/30 bg-success/12 text-success",
+  warning: "border border-warning/30 bg-warning/12 text-warning",
+  destructive: "border border-destructive/30 bg-destructive/12 text-destructive",
 };
+
+// Konsistente Spacing-Konstanten
+const SPACING = {
+  cardPadding: "p-6",
+  cardCompact: "p-4",
+  cardHeader: "p-6 pb-4",
+  cardContent: "p-6 pt-0",
+  sectionGap: "space-y-6",
+} as const;
 
 interface MembersDashboardProps {
   permissions?: readonly string[];
@@ -528,16 +534,16 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
     if (!profileCompletion.complete) {
       return (
-        <div className="flex flex-col gap-4 rounded-2xl border border-warning bg-warning/20 p-4 text-sm text-warning shadow-[0_18px_48px_rgba(249,115,22,0.25)] backdrop-blur">
+        <div className="flex flex-col gap-4 rounded-lg border border-warning bg-warning/15 p-4 text-sm text-warning shadow-lg" role="alert" aria-live="polite">
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
             <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-warning bg-warning/25 text-warning">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-warning/30 bg-warning/20 text-warning" aria-hidden="true">
                 <CalendarRange className="h-5 w-5" />
               </div>
               <p className="text-base font-semibold">Profilangaben unvollständig</p>
             </div>
             {profileCompletion.total ? (
-              <Badge className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-warning bg-warning/25 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning shadow-[0_10px_32px_rgba(249,115,22,0.25)] ring-1 ring-inset ring-warning backdrop-blur-sm">
+              <Badge className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-warning/30 bg-warning/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning shadow-sm" aria-label={`Profil zu ${percentComplete} Prozent vollständig`}>
                 {percentLabel}
               </Badge>
             ) : null}
@@ -546,7 +552,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             type="button"
             variant="outline"
             size="sm"
-            className="border-warning bg-warning/25 text-warning shadow-[0_12px_36px_rgba(249,115,22,0.25)] transition hover:border-warning hover:bg-warning/30"
+            className="border-warning/30 bg-warning/20 text-warning shadow-sm transition-all duration-200 hover:border-warning hover:bg-warning/25 focus:ring-2 focus:ring-warning/30"
             asChild
           >
             <Link href="/mitglieder/profil">Profil aktualisieren</Link>
@@ -556,8 +562,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     }
 
     return (
-      <div className="flex items-start gap-3 rounded-2xl border border-success/50 bg-gradient-to-br from-success/20 via-success/10 to-success/5 p-4 text-sm text-success">
-        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-success/50 bg-success/20">
+      <div className="flex items-start gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm text-success" role="status" aria-live="polite">
+        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border border-success/30 bg-success/15" aria-hidden="true">
           <CheckCircle2 className="h-4 w-4" />
         </div>
         <div>
@@ -621,19 +627,15 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
       <div className="space-y-10 pb-12">
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <Card className={cn(DASHBOARD_CARD_ACCENT, "relative overflow-hidden")}>
+          <Card className={cn(CARD_VARIANTS.accent, "relative overflow-hidden")}>
             <div
               aria-hidden
-              className="pointer-events-none absolute -left-24 -top-24 h-48 w-48 rounded-full bg-primary/20 opacity-60 blur-3xl dark:bg-primary/30"
+              className="pointer-events-none absolute -right-24 top-0 h-40 w-40 rounded-full bg-primary/15 opacity-40 blur-2xl"
             />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-24 bottom-0 h-44 w-44 rounded-full bg-emerald-300/25 opacity-70 blur-3xl dark:bg-emerald-500/20"
-            />
-            <CardContent className="relative z-10 space-y-6 p-6">
+            <CardContent className={cn(SPACING.cardPadding, SPACING.sectionGap)}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/40 bg-primary/10 text-primary">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/12 text-primary">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div className="space-y-1">
@@ -644,7 +646,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                   </div>
                 </div>
                 {onlineUsers.length ? (
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-gradient-to-r from-muted/20 via-background/85 to-background px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
                     <Users className="h-3.5 w-3.5" />
                     <span>{numberFormatter.format(onlineUsers.length)} online</span>
                   </div>
@@ -656,39 +658,31 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               {profileReminder ? <div>{profileReminder}</div> : null}
             </CardContent>
           </Card>
-          <Card className={cn(DASHBOARD_CARD_SURFACE, "relative overflow-hidden")}>
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-24 top-1/2 h-44 w-44 -translate-y-1/2 rounded-full bg-primary/10 opacity-60 blur-3xl dark:bg-primary/20"
-            />
-            <CardHeader className="relative z-10 space-y-1 p-6 pb-4">
+          <Card className={cn(CARD_VARIANTS.surface, "relative overflow-hidden")}>
+            <CardHeader className={cn(SPACING.cardHeader, "space-y-1")}>
               <CardTitle className="text-base font-semibold">Schnellaktionen</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Direkt zu den wichtigsten Bereichen springen.
               </p>
             </CardHeader>
-            <CardContent className="relative z-10 p-6 pt-0">
+            <CardContent className={SPACING.cardContent}>
               {quickActions.length ? (
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2">
                   {quickActions.map((link) => {
                     const Icon = link.icon;
                     return (
                       <Link
                         key={link.href}
                         href={link.href}
-                        className="group relative flex items-center justify-between gap-3 overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-muted/20 via-background/90 to-background px-3 py-3 text-sm font-medium transition hover:border-primary/45 hover:bg-primary/5"
+                        className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-3 text-sm font-medium shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
                       >
-                        <span
-                          aria-hidden
-                          className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-primary/10 opacity-0 transition duration-300 group-hover:opacity-80"
-                        />
                         <span className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-background/80 text-muted-foreground transition group-hover:border-primary/45 group-hover:text-primary">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors group-hover:border-primary/30 group-hover:bg-primary/8 group-hover:text-primary">
                             <Icon className="h-4 w-4" />
                           </span>
                           {link.label}
                         </span>
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:text-primary" />
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                       </Link>
                     );
                   })}
@@ -704,49 +698,44 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           {metrics.map((metric) => (
             <Card
               key={metric.key}
-              className={cn(
-                "rounded-2xl border",
-                METRIC_CARD_CLASSES[metric.tone],
-              )}
+              className={METRIC_CARD_CLASSES[metric.tone]}
             >
-              <CardHeader className="space-y-4 p-5">
+              <CardHeader className={cn(SPACING.cardPadding, "space-y-4")}>
                 <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/90">
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {metric.label}
                     </p>
-                    <p className="text-2xl font-semibold tracking-tight">{metric.value}</p>
+                    <p className="text-2xl font-bold tracking-tight">{metric.value}</p>
                   </div>
                   <div
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-xl border text-sm",
+                      "flex h-10 w-10 items-center justify-center rounded-lg",
                       METRIC_ICON_CLASSES[metric.tone],
                     )}
                   >
                     {metric.icon}
                   </div>
                 </div>
-                {metric.hint ? <p className="text-xs text-muted-foreground">{metric.hint}</p> : null}
+                {metric.hint ? (
+                  <p className="text-xs text-muted-foreground leading-relaxed">{metric.hint}</p>
+                ) : null}
               </CardHeader>
             </Card>
           ))}
         </section>
 
         <section>
-          <Card className={cn("relative overflow-hidden", DASHBOARD_CARD_SURFACE)}>
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-24 top-0 h-40 w-40 rounded-full bg-success/15 opacity-40 blur-3xl dark:bg-success/25"
-            />
-            <CardHeader className="relative z-10 space-y-1 pb-4">
+          <Card className={CARD_VARIANTS.surface}>
+            <CardHeader className={cn(SPACING.cardHeader, "space-y-1")}>
               <CardTitle>Aktive Mitglieder</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
               </p>
             </CardHeader>
-            <CardContent className="relative z-10 flex flex-col gap-4">
+            <CardContent className={cn(SPACING.cardContent, "flex flex-col gap-4")}>
               {onlineList.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border/60 bg-gradient-to-br from-muted/20 via-background/90 to-background p-4 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
                   {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
                 </div>
               ) : (
@@ -754,10 +743,10 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                   {onlineList.map((user) => (
                     <li
                       key={`${user.id}-${user.joinedAt.getTime()}`}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-gradient-to-r from-muted/20 via-background/90 to-background px-4 py-3"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="flex h-2.5 w-2.5 rounded-full bg-success" />
+                        <span className="flex h-2 w-2 rounded-full bg-success shadow-sm" />
                         <span className="text-sm font-medium">{user.name}</span>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
