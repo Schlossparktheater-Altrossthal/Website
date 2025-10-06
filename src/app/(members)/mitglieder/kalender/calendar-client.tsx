@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, CSSProperties } from "react";
 import {
   addDays,
   addWeeks,
@@ -59,6 +59,10 @@ type CalendarEventWithDates = Omit<MemberCalendarEvent, "start" | "end"> & {
 type BigCalendarEvent = CalendarEventWithDates & {
   start: Date;
   end: Date;
+};
+
+type CalendarEventStyle = CSSProperties & {
+  "--member-calendar-accent"?: string;
 };
 
 const AGENDA_RANGE_DAYS = 60;
@@ -266,18 +270,18 @@ export function CalendarClient({ initialDate, calendars, events, summary }: Cale
     (event) => {
       const source = calendarMap.get(event.calendarId);
       const accentColor = source?.color;
+      const style: CalendarEventStyle = {};
+
+      if (accentColor) {
+        style["--member-calendar-accent"] = accentColor;
+      }
+
       return {
         className: cn(
           "member-calendar-event",
           event.allDay ? "member-calendar-event--all-day" : "member-calendar-event--timed",
         ),
-        style: {
-          backgroundColor: "var(--color-card)",
-          border: `1px solid ${accentColor ?? "var(--border)"}`,
-          color: "var(--color-foreground)",
-          borderRadius: "1rem",
-          padding: 0,
-        },
+        style,
       };
     },
     [calendarMap],
@@ -469,31 +473,39 @@ function CalendarEventContent({ event, calendarMap }: CalendarEventComponentProp
     : `${format(event.startDate, "HH:mm", { locale: de })} – ${format(event.endDate, "HH:mm", { locale: de })}`;
 
   return (
-    <div className="flex h-full flex-col justify-between gap-2 rounded-[0.9rem] bg-background/95 p-2 text-xs">
+    <div className="member-calendar-event-content flex h-full flex-col justify-between gap-2 rounded-[0.9rem] bg-background/95 p-2 text-xs">
       <div className="space-y-1">
-        <p className="line-clamp-2 text-sm font-semibold leading-tight" style={accentColor ? { color: accentColor } : undefined}>
+        <p
+          className="member-calendar-event-title line-clamp-2 text-sm font-semibold leading-tight"
+          style={accentColor ? { color: accentColor } : undefined}
+        >
           {event.title}
         </p>
-        <p className="text-[11px] text-muted-foreground">{timeLabel}</p>
+        <p className="member-calendar-event-meta text-[11px] text-muted-foreground">{timeLabel}</p>
         {event.location ? (
-          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <p className="member-calendar-event-location flex items-center gap-1 text-[11px] text-muted-foreground">
             <MapPin className="h-3 w-3" /> {event.location}
           </p>
         ) : null}
-        {note ? <p className="line-clamp-2 text-[11px] text-muted-foreground/90">{note}</p> : null}
+        {note ? (
+          <p className="member-calendar-event-note line-clamp-2 text-[11px] text-muted-foreground/90">{note}</p>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-1">
         {attendance ? (
           <Badge
             variant="outline"
-            className="rounded-full px-2 py-0 text-[10px]"
+            className="member-calendar-event-attendance-badge rounded-full px-2 py-0 text-[10px]"
             style={accentColor ? { borderColor: accentColor, color: accentColor } : undefined}
           >
             {attendance}
           </Badge>
         ) : null}
         {badge ? (
-          <Badge variant={resolveBadgeVariant(badge.tone)} className="rounded-full px-2 py-0 text-[10px]">
+          <Badge
+            variant={resolveBadgeVariant(badge.tone)}
+            className="member-calendar-event-badge rounded-full px-2 py-0 text-[10px]"
+          >
             {badge.label}
           </Badge>
         ) : null}
@@ -510,22 +522,25 @@ function AgendaEventContent({ event, calendarMap }: CalendarEventComponentProps)
   const badge = event.metadata?.badge ?? null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-background/85 px-3 py-2 text-xs">
+    <div className="member-calendar-agenda-event flex flex-col gap-2 rounded-2xl border border-border/60 bg-background/85 px-3 py-2 text-xs">
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1">
-          <p className="text-sm font-semibold" style={accentColor ? { color: accentColor } : undefined}>
+          <p
+            className="member-calendar-event-title text-sm font-semibold"
+            style={accentColor ? { color: accentColor } : undefined}
+          >
             {event.title}
           </p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="member-calendar-event-meta text-[11px] text-muted-foreground">
             {format(event.startDate, "EEEE, d. MMMM yyyy", { locale: de })}
           </p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="member-calendar-event-meta text-[11px] text-muted-foreground">
             {event.allDay
               ? "Ganztägig"
               : `${format(event.startDate, "HH:mm", { locale: de })} – ${format(event.endDate, "HH:mm", { locale: de })}`}
           </p>
           {event.location ? (
-            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <p className="member-calendar-event-location flex items-center gap-1 text-[11px] text-muted-foreground">
               <MapPin className="h-3 w-3" /> {event.location}
             </p>
           ) : null}
@@ -533,22 +548,25 @@ function AgendaEventContent({ event, calendarMap }: CalendarEventComponentProps)
         {source ? (
           <Badge
             variant="outline"
-            className="h-fit rounded-full px-2 py-0 text-[10px]"
+            className="member-calendar-agenda-source-badge h-fit rounded-full px-2 py-0 text-[10px]"
             style={accentColor ? { borderColor: accentColor, color: accentColor } : undefined}
           >
             {source.label}
           </Badge>
         ) : null}
       </div>
-      {note ? <p className="text-[11px] text-muted-foreground/90">{note}</p> : null}
+      {note ? <p className="member-calendar-event-note text-[11px] text-muted-foreground/90">{note}</p> : null}
       <div className="flex flex-wrap gap-1">
         {attendance ? (
-          <Badge variant="secondary" className="rounded-full px-2 py-0 text-[10px]">
+          <Badge variant="secondary" className="member-calendar-event-badge rounded-full px-2 py-0 text-[10px]">
             {attendance}
           </Badge>
         ) : null}
         {badge ? (
-          <Badge variant={resolveBadgeVariant(badge.tone)} className="rounded-full px-2 py-0 text-[10px]">
+          <Badge
+            variant={resolveBadgeVariant(badge.tone)}
+            className="member-calendar-event-badge rounded-full px-2 py-0 text-[10px]"
+          >
             {badge.label}
           </Badge>
         ) : null}
