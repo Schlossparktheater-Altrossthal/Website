@@ -140,16 +140,6 @@ const RehearsalsIcon = createMembersNavIcon(
   </>,
 );
 
-const PersonalCalendarIcon = createMembersNavIcon(
-  <>
-    <rect x="3" y="4" width="18" height="17" rx="2" />
-    <path d="M8 2v4" />
-    <path d="M16 2v4" />
-    <path d="M3 10h18" />
-    <rect x="8" y="13" width="8" height="6" rx="1.5" />
-  </>,
-);
-
 const DepartmentsIcon = createMembersNavIcon(
   <>
     <rect x="5" y="4" width="14" height="16" rx="2" />
@@ -397,12 +387,6 @@ export const membersNavigation = [
         label: "Profil",
         permissionKey: "mitglieder.profil",
         icon: ProfileIcon,
-      },
-      {
-        href: "/mitglieder/kalender",
-        label: "Kalender",
-        permissionKey: "mitglieder.kalender",
-        icon: PersonalCalendarIcon,
       },
       {
         href: "/mitglieder/sperrliste",

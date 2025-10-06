@@ -20,7 +20,6 @@ const BASE_PERMISSIONS = [
   "mitglieder.galerie",
   "mitglieder.sperrliste",
   "mitglieder.issues",
-  "mitglieder.kalender",
   "mitglieder.meine-proben",
   "mitglieder.meine-gewerke",
   "mitglieder.koerpermasse",
@@ -110,10 +109,10 @@ describe("resolveAssignmentsGroupLabel", () => {
 
   it("infers label from permissions when focus is none", () => {
     expect(
-      resolveAssignmentsGroupLabel("none", ["mitglieder.meine-gewerke", "mitglieder.kalender"]),
+      resolveAssignmentsGroupLabel("none", ["mitglieder.meine-gewerke", "mitglieder.meine-proben"]),
     ).toBe("Proben & Gewerke");
     expect(resolveAssignmentsGroupLabel("none", ["mitglieder.meine-gewerke"])).toBe("Gewerke");
-    expect(resolveAssignmentsGroupLabel("none", ["mitglieder.kalender"])).toBe("Proben");
+    expect(resolveAssignmentsGroupLabel("none", ["mitglieder.meine-proben"])).toBe("Proben");
     expect(resolveAssignmentsGroupLabel("none", [])).toBe("Proben");
   });
 });
