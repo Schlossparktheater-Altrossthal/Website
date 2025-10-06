@@ -128,10 +128,22 @@ const milestones = [
       "Toni Burghard Friedrich initiiert das Sommertheater mit \"Die lustigen Weiber von Windsor\" und schafft einen neuen Ort für Schüler:innen des BSZ.",
   },
   {
-    year: "2012",
-    title: "Floristik trifft Bühne",
+    year: "2017",
+    title: "Werkstatt-Ateliers",
     description:
-      "Florist:innen gestalten erstmals lebendige Bühnenbilder aus regionalen Pflanzen und geben dem Park seine ikonischen Duftinseln.",
+      "Neue Workshops ermöglichen Schüler:innen, sich in Lichttechnik, Metallbau und Kostümhandwerk auszuprobieren und Verantwortung zu übernehmen.",
+  },
+  {
+    year: "2023",
+    title: "Digital verbunden",
+    description:
+      "Livestreams für Menschen, die nicht vor Ort sein können, und ein hybrides Probenformat für unser Ensemble.",
+  },
+  {
+    year: "2023",
+    title: "Headsets für präzisen Klang",
+    description:
+      "Erstes Theaterstück, bei dem Headsets eingesetzt werden, um Stimmen auf der Freiluftbühne noch klarer zu transportieren.",
   },
   {
     year: "2025",
