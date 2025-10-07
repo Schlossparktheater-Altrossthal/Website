@@ -134,7 +134,14 @@ function drawTable(
       const fontSize = cell.style.fontSize ?? 9;
       doc.font(font).fontSize(fontSize);
       const width = Math.max(columnWidths[cellIndex] - paddingX * 2, 32);
-      const height = doc.heightOfString(cell.text, { width, align: resolveAlign(cell.style) }) + paddingY * 2;
+      const align = resolveAlign(cell.style);
+      const textHeight = doc.heightOfString(cell.text, {
+        width,
+        align,
+        lineBreak: false,
+      });
+      const effectiveHeight = Math.max(textHeight, (cell.style.fontSize ?? 9) + 1.5);
+      const height = effectiveHeight + paddingY * 2;
       return Math.max(max, height);
     }, 0);
   };
@@ -165,7 +172,12 @@ function drawTable(
       const fontSize = cell.style.fontSize ?? 9;
       const align = resolveAlign(cell.style);
       doc.font(font).fontSize(fontSize).fillColor(cell.style.textColor ?? "#111827");
-      doc.text(cell.text, x, doc.y + paddingY, { width, align });
+      doc.text(cell.text, x, doc.y + paddingY, {
+        width,
+        align,
+        lineBreak: false,
+        ellipsis: true,
+      });
     });
     doc.y += headerHeight;
     doc.moveTo(startX, doc.y).lineTo(startX + totalWidth, doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke();
@@ -216,7 +228,12 @@ function drawTable(
         .font(font)
         .fontSize(fontSize)
         .fillColor(textColor)
-        .text(cell.text, x + paddingX, doc.y + paddingY, { width: textWidth, align });
+        .text(cell.text, x + paddingX, doc.y + paddingY, {
+          width: textWidth,
+          align,
+          lineBreak: false,
+          ellipsis: true,
+        });
     });
 
     doc.y += rowHeight;
@@ -242,31 +259,62 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
   },
   async render(doc, data) {
     doc.font("Helvetica-Bold").fontSize(18).fillColor("#111827").text("Sperrliste · Wichtige Probentage");
-    doc.moveDown(0.2);
+
+    const accentStartX = doc.page.margins.left;
+    const accentEndX = accentStartX + 64;
+    const accentY = doc.y + 6;
+    doc
+      .moveTo(accentStartX, accentY)
+      .lineTo(accentEndX, accentY)
+      .strokeColor("#4f46e5")
+      .lineWidth(2)
+      .stroke();
+    doc.moveDown(0.9);
 
     const generatedAt = new Date(data.generatedAt);
-    doc
-      .font("Helvetica")
-      .fontSize(10)
-      .fillColor("#4b5563")
-      .text(`Generiert am ${dateTimeFormatter.format(generatedAt)}`);
-    doc.moveDown(0.6);
-
     const effectiveRangeLabel = data.range.label ?? buildRangeLabel(data.range) ?? "–";
-    doc.font("Helvetica").fontSize(11).fillColor("#1f2937").text(`Zeitraum: ${effectiveRangeLabel}`);
-    doc.moveDown(0.1);
+    const metadataItems = [
+      `Zeitraum: ${effectiveRangeLabel}`,
+      `Generiert: ${dateTimeFormatter.format(generatedAt)}`,
+      data.summary.importantWeekdays
+        ? `Berücksichtigte Tage: ${data.summary.importantWeekdays}`
+        : null,
+      `Mitglieder mit Sperrterminen: ${data.summary.memberCount}`,
+    ].filter((value): value is string => Boolean(value));
 
-    if (data.summary.importantWeekdays) {
-      doc.font("Helvetica").fontSize(11).fillColor("#1f2937").text(`Berücksichtigte Tage: ${data.summary.importantWeekdays}`);
-      doc.moveDown(0.1);
-    }
+    const summaryBoxX = doc.page.margins.left;
+    const summaryBoxY = doc.y;
+    const summaryBoxWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const summaryBoxPaddingX = 14;
+    const summaryBoxPaddingY = 12;
+    const summaryTextWidth = Math.max(summaryBoxWidth - summaryBoxPaddingX * 2, 120);
+
+    const summaryText = metadataItems.join("   •   ");
+    doc.font("Helvetica").fontSize(10);
+    const summaryTextHeight = doc.heightOfString(summaryText, {
+      width: summaryTextWidth,
+      align: "left",
+      lineGap: 2,
+      lineBreak: false,
+    });
+    const summaryBoxHeight = summaryTextHeight + summaryBoxPaddingY * 2;
 
     doc
-      .font("Helvetica")
-      .fontSize(11)
+      .save()
+      .rect(summaryBoxX, summaryBoxY, summaryBoxWidth, summaryBoxHeight)
+      .fill("#f9fafb")
+      .restore();
+
+    doc
       .fillColor("#1f2937")
-      .text(`Mitglieder mit Sperrterminen: ${data.summary.memberCount}`);
-    doc.moveDown(0.8);
+      .text(summaryText, summaryBoxX + summaryBoxPaddingX, summaryBoxY + summaryBoxPaddingY, {
+        width: summaryTextWidth,
+        lineGap: 2,
+        lineBreak: false,
+        ellipsis: true,
+      });
+
+    doc.y = summaryBoxY + summaryBoxHeight + 12;
 
     if (!data.days.length || !data.members.length || data.summary.memberCount === 0) {
       doc
