@@ -161,7 +161,6 @@ export function MembersTable({
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
                         <div className="mt-2 flex flex-wrap gap-1">
                           {sorted.map((r) => (
                             <span
@@ -231,7 +230,6 @@ export function MembersTable({
                                   </Badge>
                                 )}
                               </div>
-                              <div className="text-xs text-muted-foreground">{u.email || "—"}</div>
                             </div>
                           </div>
                         </td>
