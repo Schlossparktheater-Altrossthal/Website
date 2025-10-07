@@ -1,3 +1,5 @@
+import { resolveMx } from "node:dns/promises";
+
 import { z } from "zod";
 
 const EMAIL_SCHEMA = z.string().email();
@@ -89,6 +91,43 @@ const KNOWN_PROVIDERS: KnownProvider[] = [
 ];
 
 const DEFAULT_PORT = 587;
+
+function sortMxRecords(records: Awaited<ReturnType<typeof resolveMx>>): string | null {
+  if (!records?.length) {
+    return null;
+  }
+
+  const sorted = [...records].sort((a, b) => a.priority - b.priority);
+  for (const record of sorted) {
+    const host = record.exchange?.trim();
+    if (host) {
+      return host.toLowerCase();
+    }
+  }
+
+  return null;
+}
+
+async function resolveMailHostFromDns(domainCandidates: string[]): Promise<string | null> {
+  for (const candidate of domainCandidates) {
+    try {
+      const records = await resolveMx(candidate);
+      const host = sortMxRecords(records);
+      if (host) {
+        return host;
+      }
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException | undefined)?.code;
+      if (code) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  return null;
+}
 
 export type MailServerSuggestion = {
   mailHost: string;
@@ -195,7 +234,7 @@ function determineUsername(
   return fallbackEmail ?? null;
 }
 
-export function autoDetectMailServerSettings(input: AutoDetectInput): MailServerSuggestion | null {
+export async function autoDetectMailServerSettings(input: AutoDetectInput): Promise<MailServerSuggestion | null> {
   const email = normaliseEmail(input.email ?? null);
   const host = normaliseHost(input.host ?? null);
   const domainCandidates = collectDomainCandidates(email, host);
@@ -212,14 +251,38 @@ export function autoDetectMailServerSettings(input: AutoDetectInput): MailServer
     };
   }
 
+  if (host) {
+    return {
+      mailHost: host,
+      mailPort: DEFAULT_PORT,
+      mailSecure: false,
+      mailUsername: determineUsername(undefined, email, input.username ?? null),
+      confidence: "medium",
+      provider: null,
+    };
+  }
+
+  const dnsHost = await resolveMailHostFromDns(domainCandidates);
+
+  if (dnsHost) {
+    return {
+      mailHost: dnsHost,
+      mailPort: DEFAULT_PORT,
+      mailSecure: false,
+      mailUsername: determineUsername(undefined, email, input.username ?? null),
+      confidence: "medium",
+      provider: null,
+    };
+  }
+
   const emailDomain = extractDomainFromEmail(email);
-  const suggestionHost = host ?? (emailDomain ? `smtp.${emailDomain}` : null);
+  const suggestionHost = emailDomain ? `smtp.${emailDomain}` : null;
 
   if (!suggestionHost) {
     return null;
   }
 
-  const confidence: MailServerSuggestion["confidence"] = host ? "medium" : emailDomain ? "low" : "low";
+  const confidence: MailServerSuggestion["confidence"] = "low";
   const username = determineUsername(undefined, email, input.username ?? null);
 
   return {

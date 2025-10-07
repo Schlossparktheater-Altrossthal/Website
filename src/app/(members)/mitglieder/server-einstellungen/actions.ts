@@ -324,7 +324,7 @@ export async function autoDetectMailServerSettingsAction(
     };
   }
 
-  const suggestion = autoDetectMailServerSettings({
+  const suggestion = await autoDetectMailServerSettings({
     email: mailFromAddress,
     host: mailHost,
     username: mailUsername,
