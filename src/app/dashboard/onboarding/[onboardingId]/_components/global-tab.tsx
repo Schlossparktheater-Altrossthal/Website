@@ -110,6 +110,7 @@ export function GlobalOverviewTab({ data, participants }: GlobalOverviewTabProps
           coverage={data.roleCoverage.crew}
         />
         <RoleHeatmap
+          className="lg:col-span-2"
           data={data.roleHeatmap}
           subtitle="Intensität der Doppel-Präferenzen acting × crew"
           title="Heatmap"
