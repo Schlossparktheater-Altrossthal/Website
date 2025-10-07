@@ -2,6 +2,8 @@
 
 import { Fragment, type Dispatch, type SetStateAction, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Check, Minus } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -325,10 +327,10 @@ export function PermissionExplorer({
                                 >
                                   <Button
                                     type="button"
-                                    size="sm"
-                                    variant={granted ? "default" : "outline"}
+                                    size="icon"
+                                    variant={granted ? "success" : "outline"}
                                     className={cn(
-                                      "h-9 w-full whitespace-normal text-xs",
+                                      "mx-auto h-8 w-8",
                                       pending && "opacity-60",
                                     )}
                                     aria-pressed={granted}
@@ -339,7 +341,14 @@ export function PermissionExplorer({
                                     disabled={pending}
                                     onClick={() => void mutateGrant("role", role.id, permission.key, !granted)}
                                   >
-                                    {granted ? "Aktiv" : "Inaktiv"}
+                                    {granted ? (
+                                      <Check aria-hidden className="h-4 w-4" />
+                                    ) : (
+                                      <Minus aria-hidden className="h-4 w-4" />
+                                    )}
+                                    <span className="sr-only">
+                                      {granted ? "Recht aktiv" : "Recht inaktiv"}
+                                    </span>
                                   </Button>
                                 </td>
                               );
@@ -356,10 +365,10 @@ export function PermissionExplorer({
                               >
                                 <Button
                                   type="button"
-                                  size="sm"
-                                  variant={granted ? "secondary" : "outline"}
+                                  size="icon"
+                                  variant={granted ? "success" : "outline"}
                                   className={cn(
-                                    "h-9 w-full whitespace-normal text-xs",
+                                    "mx-auto h-8 w-8",
                                     pending && "opacity-60",
                                   )}
                                   aria-pressed={granted}
@@ -372,7 +381,14 @@ export function PermissionExplorer({
                                     void mutateGrant("department", department.id, permission.key, !granted)
                                   }
                                 >
-                                  {granted ? "Aktiv" : "Inaktiv"}
+                                  {granted ? (
+                                    <Check aria-hidden className="h-4 w-4" />
+                                  ) : (
+                                    <Minus aria-hidden className="h-4 w-4" />
+                                  )}
+                                  <span className="sr-only">
+                                    {granted ? "Recht aktiv" : "Recht inaktiv"}
+                                  </span>
                                 </Button>
                               </td>
                             );
