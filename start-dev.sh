@@ -80,7 +80,7 @@ setup_environment() {
         REALTIME_TOKEN=$(openssl rand -base64 32)
         CRON_SECRET=$(openssl rand -base64 32)
         
-        # Replace placeholder values
+        # Replace placeholder values for Docker-based development
         sed -i.bak \
             -e "s/change-me-with-a-long-random-string/$AUTH_SECRET/g" \
             -e "s/replace-with-realtime-token/$REALTIME_TOKEN/g" \
@@ -90,6 +90,7 @@ setup_environment() {
             -e "s/CORS_ORIGIN=https:\/\/devtheater.beegreenx.de/CORS_ORIGIN=http:\/\/localhost:3000/g" \
             -e "s/NEXT_PUBLIC_PWA_ENABLED=0/NEXT_PUBLIC_PWA_ENABLED=1/g" \
             -e "s/NEXT_PUBLIC_AUTH_DEV_NO_DB=0/NEXT_PUBLIC_AUTH_DEV_NO_DB=1/g" \
+            -e "s/DATABASE_URL=postgresql:\/\/postgres:postgres@localhost:5432\/theater?schema=public/DATABASE_URL=postgresql:\/\/postgres:postgres@localhost:5432\/theater_dev?schema=public/g" \
             "$ENV_FILE"
         
         rm "$ENV_FILE.bak" 2>/dev/null || true
@@ -135,20 +136,17 @@ start_services() {
 setup_database() {
     print_status "Setting up database..."
     
-    # Generate Prisma client
+    # Generate Prisma client locally
     pnpm prisma:generate
     
-    # Run migrations
-    node scripts/run-prisma-migrate.mjs
-    
-    # Seed database (optional, ignore errors)
-    pnpm db:seed || print_warning "Database seeding failed (this is usually fine for fresh setups)"
-    
-    print_status "Database setup complete ✓"
+    print_status "Database setup will be handled by Docker container startup ✓"
 }
 
 start_development() {
     print_status "Starting development server..."
+    
+    # Start the app container which includes database setup and migration
+    docker compose up -d app
     
     echo
     echo -e "${GREEN}🚀 Development Environment Ready!${NC}"
@@ -160,14 +158,15 @@ start_development() {
     echo
     echo "🔧 Useful commands:"
     echo "   • Stop services: docker compose down"
-    echo "   • View logs:     docker compose logs -f"
+    echo "   • View logs:     docker compose logs -f app"
     echo "   • Reset DB:      docker compose down -v && ./start-dev.sh"
+    echo "   • Shell into app: docker compose exec app sh"
     echo
-    echo "Press Ctrl+C to stop the development server"
+    echo "Following application logs (Ctrl+C to stop)..."
     echo
     
-    # Start the combined server (app + realtime)
-    node scripts/start-with-proxy.mjs
+    # Follow the app container logs
+    docker compose logs -f app
 }
 
 cleanup() {
@@ -207,10 +206,10 @@ main() {
             echo "The script will:"
             echo "  1. Check requirements (Docker, Node.js, pnpm)"
             echo "  2. Setup .env file with secure defaults"
-            echo "  3. Install Node.js dependencies"
-            echo "  4. Start PostgreSQL and Mailpit services"
-            echo "  5. Setup and seed database"
-            echo "  6. Start the development server with realtime support"
+            echo "  3. Install Node.js dependencies (for Prisma client)"
+            echo "  4. Start PostgreSQL and Mailpit services via Docker"
+            echo "  5. Start the app container (includes DB setup and seeding)"
+            echo "  6. Follow application logs"
             exit 0
             ;;
     esac

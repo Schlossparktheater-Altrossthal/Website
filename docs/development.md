@@ -23,10 +23,10 @@ Das Script startet automatisch:
 
 1. **Requirements Check**: Überprüft Docker, Node.js, pnpm
 2. **Environment Setup**: Erstellt `.env` mit sicheren Zufallswerten
-3. **Dependencies**: Installiert Node.js Abhängigkeiten
-4. **Services**: Startet PostgreSQL und Mailpit
-5. **Database**: Führt Migrations und Seeding aus
-6. **Development Server**: Startet App mit Realtime Support
+3. **Dependencies**: Installiert Node.js Abhängigkeiten (für Prisma Client)
+4. **Services**: Startet PostgreSQL und Mailpit via Docker Compose
+5. **Application**: Startet App-Container (inkl. DB-Setup, Migrations, Seeding)
+6. **Logs**: Zeigt Live-Logs der Anwendung
 
 ## URLs nach dem Start
 
@@ -41,7 +41,9 @@ Das Script startet automatisch:
 docker compose down
 
 # Logs anzeigen
-docker compose logs -f
+docker compose logs -f app          # App-Container
+docker compose logs -f db           # Datenbank
+docker compose logs -f              # Alle Services
 
 # Datenbank zurücksetzen
 docker compose down -v && ./start-dev.sh
@@ -50,8 +52,13 @@ docker compose down -v && ./start-dev.sh
 docker compose ps
 
 # In Container connecten
-docker compose exec app sh
-docker compose exec db psql -U postgres theater_dev
+docker compose exec app sh                                    # App Shell
+docker compose exec db psql -U postgres -d theater_dev        # Datenbank
+docker compose exec app pnpm prisma studio                    # Prisma Studio
+
+# Einzelne Services verwalten
+docker compose restart app          # App neu starten
+docker compose up -d db            # Nur DB starten
 ```
 
 ## Troubleshooting
