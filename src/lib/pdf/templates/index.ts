@@ -1,8 +1,9 @@
 import type { PdfTemplate } from "../types";
 import { onboardingInviteTemplate } from "./onboarding-invite";
 import { onboardingStatisticsTemplate } from "./onboarding-statistics";
+import { sperrlisteImportantDaysTemplate } from "./sperrliste-wichtige-tage";
 
-const templates = [onboardingInviteTemplate, onboardingStatisticsTemplate] as const;
+const templates = [onboardingInviteTemplate, onboardingStatisticsTemplate, sperrlisteImportantDaysTemplate] as const;
 
 const templateMap = new Map<string, PdfTemplate<unknown>>();
 for (const template of templates) {

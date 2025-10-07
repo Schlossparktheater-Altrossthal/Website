@@ -78,6 +78,7 @@ export function BlockOverview({
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedBlockedDay, setSelectedBlockedDay] = useState<SelectedBlockedDay | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const data = useBlockOverviewData({
     members,
@@ -169,6 +170,106 @@ export function BlockOverview({
     setDetailsOpen(true);
   };
 
+  const extractFilenameFromDisposition = (disposition: string | null) => {
+    if (!disposition) return null;
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return utf8Match[1];
+      }
+    }
+    const quotedMatch = disposition.match(/filename="([^"\\]*(?:\\.[^"\\]*)*)"/i);
+    if (quotedMatch?.[1]) {
+      return quotedMatch[1].replace(/\\"/g, "").replace(/\\/g, "").trim();
+    }
+    const simpleMatch = disposition.match(/filename=([^;]+)/i);
+    if (simpleMatch?.[1]) {
+      return simpleMatch[1].replace(/"/g, "").trim();
+    }
+    return null;
+  };
+
+  const handleExportPdf = async () => {
+    if (!exportWindow || exportRows.length === 0) {
+      toast.warning('Keine Sperrtermine auf wichtigen Tagen im ausgewählten Zeitraum gefunden.');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const pdfPayload = {
+        generatedAt: new Date().toISOString(),
+        range: {
+          start: exportWindow.start.toISOString(),
+          end: exportWindow.end.toISOString(),
+          label: exportRangeLabel,
+        },
+        summary: {
+          memberCount: exportRows.length,
+          importantWeekdays: importantWeekdaySummary,
+        },
+        days: exportWindow.days.map((day) => ({
+          key: day.key,
+          label: day.header,
+          title: day.title,
+        })),
+        members: exportRows.map(({ member, entries }) => ({
+          name: member.displayName,
+          email: member.email ?? null,
+          entries: exportWindow.days.map((day, index) => {
+            const entry = entries[index];
+            if (!entry) {
+              return { dayKey: day.key, value: null };
+            }
+            const reason = normaliseReason(entry.reason);
+            return { dayKey: day.key, value: reason || 'gesperrt' };
+          }),
+        })),
+      };
+
+      const response = await fetch('/api/pdfs/sperrliste-wichtige-tage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pdfPayload),
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.error ?? 'PDF konnte nicht erstellt werden.');
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition');
+      const filenameFromHeader = extractFilenameFromDisposition(disposition);
+      let filename =
+        filenameFromHeader?.trim() ||
+        `sperrliste-wichtige-tage-${format(exportWindow.start, 'yyyyMMdd')}-${format(exportWindow.end, 'yyyyMMdd')}.pdf`;
+      filename = filename.replace(/[\\/]/g, '_').replace(/[\r\n]/g, '').trim();
+      if (!filename.toLowerCase().endsWith('.pdf')) {
+        filename = `${filename}.pdf`;
+      }
+
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+      toast.success('PDF wurde heruntergeladen.');
+    } catch (error) {
+      console.error(error);
+      const message = error instanceof Error ? error.message : 'PDF konnte nicht erstellt werden.';
+      toast.error(message);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleExportTable = () => {
     if (!exportWindow || exportRows.length === 0) {
       toast.warning('Keine Sperrtermine auf wichtigen Tagen im ausgewählten Zeitraum gefunden.');
@@ -224,7 +325,7 @@ export function BlockOverview({
     <div className="space-y-6">
       {canExport ? (
         <div className="rounded-lg border border-border/60 bg-muted/40 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1 text-sm text-muted-foreground">
               {exportWindow ? (
                 <>
@@ -247,15 +348,27 @@ export function BlockOverview({
                 </p>
               )}
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleExportTable}
-              disabled={exportDisabled}
-              className="sm:w-auto"
-            >
-              CSV exportieren
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportTable}
+                disabled={exportDisabled}
+                className="sm:w-auto"
+              >
+                CSV exportieren
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportPdf}
+                disabled={exportDisabled || isExportingPdf}
+                aria-busy={isExportingPdf}
+                className="sm:w-auto"
+              >
+                PDF exportieren
+              </Button>
+            </div>
           </div>
         </div>
       ) : null}
