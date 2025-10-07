@@ -655,11 +655,11 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               {profileReminder ? <div>{profileReminder}</div> : null}
             </CardContent>
           </Card>
-          <Card className={cn(CARD_VARIANTS.surface, "relative overflow-hidden")}>
-            <CardHeader className={cn(SPACING.cardHeader, "space-y-1")}>
+          <Card className="p-0">
+            <CardHeader className="mb-0 border-b border-border/60 px-6 py-5">
               <CardTitle className="text-base font-semibold">Schnellaktionen</CardTitle>
             </CardHeader>
-            <CardContent className={SPACING.cardContent}>
+            <CardContent className="space-y-4 px-6 py-5">
               {quickActions.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {quickActions.map((link) => {
@@ -669,15 +669,20 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                         key={link.href}
                         href={link.href}
                         className={cn(
-                          "group relative flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-background px-4 py-4 text-sm font-semibold shadow-md transition-all duration-200",
-                          "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                          "group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-medium shadow-sm transition",
+                          "hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
                         )}
                       >
                         <span className="flex items-center gap-3">
-                          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-background/80 text-muted-foreground transition-colors group-hover:border-primary/40 group-hover:bg-primary/10 group-hover:text-primary">
+                          <span
+                            className={cn(
+                              "flex h-10 w-10 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition-colors",
+                              "group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground"
+                            )}
+                          >
                             <Icon className="h-4 w-4" />
                           </span>
-                          {link.label}
+                          <span className="text-left font-medium leading-tight">{link.label}</span>
                         </span>
                         <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                       </Link>
@@ -723,16 +728,16 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         </section>
 
         <section>
-          <Card className={CARD_VARIANTS.surface}>
-            <CardHeader className={cn(SPACING.cardHeader, "space-y-1")}>
+          <Card className="p-0">
+            <CardHeader className="mb-0 border-b border-border/60 px-6 py-5">
               <CardTitle>Aktive Mitglieder</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
               </p>
             </CardHeader>
-            <CardContent className={cn(SPACING.cardContent, "flex flex-col gap-4")}>
+            <CardContent className="flex flex-col gap-4 px-6 py-5">
               {onlineList.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
                   {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
                 </div>
               ) : (
@@ -740,14 +745,14 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                   {onlineList.map((user) => (
                     <li
                       key={`${user.id}-${user.joinedAt.getTime()}`}
-                      className="group relative flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-background px-4 py-3 text-sm font-medium shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-success/40 hover:shadow-lg"
+                      className="group flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-medium shadow-sm transition hover:border-success/40 hover:bg-success/10"
                     >
                       <div className="flex items-center gap-3">
                         <span className="relative flex h-2.5 w-2.5 items-center justify-center">
                           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/40" />
                           <span className="relative inline-flex h-2 w-2 rounded-full bg-success shadow-sm" />
                         </span>
-                        <span>{user.name}</span>
+                        <span className="truncate">{user.name}</span>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
                         {formatTimeAgo(user.joinedAt)}
