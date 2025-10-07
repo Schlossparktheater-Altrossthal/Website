@@ -79,11 +79,30 @@ function buildRangeLabel(range: SperrlisteImportantDaysPdfData["range"]) {
   }
 }
 
+type TableCellStyle = {
+  align?: "left" | "center" | "right";
+  font?: "regular" | "bold";
+  fontSize?: number;
+  textColor?: string;
+  fillColor?: string | null;
+};
+
+type TableCellConfig = {
+  text: string;
+  style: TableCellStyle;
+};
+
+type TableOptions = {
+  headerStyles?: readonly TableCellStyle[];
+  cellStyles?: readonly (readonly TableCellStyle[])[];
+};
+
 function drawTable(
   doc: PDFKit.PDFDocument,
   headers: readonly string[],
   rows: readonly (readonly string[])[],
   columnWidths: readonly number[],
+  options: TableOptions = {},
 ) {
   if (!rows.length) {
     return;
@@ -100,35 +119,71 @@ function drawTable(
   const totalWidth = columnWidths.reduce((sum, value) => sum + value, 0);
   const bottom = doc.page.height - doc.page.margins.bottom;
 
-  const computeRowHeight = (cells: readonly string[], font: string, fontSize: number) => {
-    doc.font(font).fontSize(fontSize);
+  const resolveFont = (style: TableCellStyle) => {
+    if (style.font === "bold") {
+      return "Helvetica-Bold";
+    }
+    return "Helvetica";
+  };
+
+  const resolveAlign = (style: TableCellStyle) => style.align ?? "left";
+
+  const computeRowHeight = (cells: readonly TableCellConfig[]) => {
     return cells.reduce((max, cell, cellIndex) => {
+      const font = resolveFont(cell.style);
+      const fontSize = cell.style.fontSize ?? 9;
+      doc.font(font).fontSize(fontSize);
       const width = Math.max(columnWidths[cellIndex] - paddingX * 2, 32);
-      const height = doc.heightOfString(cell, { width, align: "left" }) + paddingY * 2;
+      const height = doc.heightOfString(cell.text, { width, align: resolveAlign(cell.style) }) + paddingY * 2;
       return Math.max(max, height);
     }, 0);
   };
 
   const drawHeaderRow = () => {
-    const headerHeight = computeRowHeight(headers, "Helvetica-Bold", 9);
+    const headerCells: TableCellConfig[] = headers.map((header, index) => ({
+      text: header,
+      style: {
+        align: index <= 1 ? "left" : "center",
+        font: "bold",
+        fontSize: 9,
+        textColor: "#111827",
+        ...(options.headerStyles?.[index] ?? {}),
+      },
+    }));
+
+    const headerHeight = computeRowHeight(headerCells);
     ensurePageSpace(doc, headerHeight + 6);
 
     doc.save();
     doc.rect(startX, doc.y, totalWidth, headerHeight).fill("#f3f4f6");
     doc.restore();
 
-    doc.font("Helvetica-Bold").fontSize(9).fillColor("#111827");
-    headers.forEach((header, index) => {
+    headerCells.forEach((cell, index) => {
       const x = columnPositions[index] + paddingX;
       const width = Math.max(columnWidths[index] - paddingX * 2, 32);
-      doc.text(header, x, doc.y + paddingY, { width, align: "left" });
+      const font = resolveFont(cell.style);
+      const fontSize = cell.style.fontSize ?? 9;
+      const align = resolveAlign(cell.style);
+      doc.font(font).fontSize(fontSize).fillColor(cell.style.textColor ?? "#111827");
+      doc.text(cell.text, x, doc.y + paddingY, { width, align });
     });
     doc.y += headerHeight;
     doc.moveTo(startX, doc.y).lineTo(startX + totalWidth, doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke();
   };
 
-  const drawDataRow = (row: readonly string[], index: number) => {
-    const rowHeight = computeRowHeight(row, "Helvetica", 9);
+  const drawDataRow = (row: readonly string[], rowIndex: number) => {
+    const cells: TableCellConfig[] = row.map((cell, cellIndex) => {
+      const defaultStyle: TableCellStyle = {
+        align: cellIndex <= 1 ? "left" : "center",
+        font: cellIndex === 0 ? "bold" : "regular",
+        fontSize: 9,
+        textColor: cellIndex === 1 ? "#4b5563" : "#1f2937",
+      };
+      const style = { ...defaultStyle, ...(options.cellStyles?.[rowIndex]?.[cellIndex] ?? {}) } satisfies TableCellStyle;
+      return { text: cell, style };
+    });
+
+    const rowHeight = computeRowHeight(cells);
     if (doc.y + rowHeight > bottom) {
       doc.addPage();
       doc.x = doc.page.margins.left;
@@ -136,17 +191,32 @@ function drawTable(
       drawHeaderRow();
     }
 
-    if (index % 2 === 1) {
+    if (rowIndex % 2 === 1) {
       doc.save();
       doc.rect(startX, doc.y, totalWidth, rowHeight).fill("#f9fafb");
       doc.restore();
     }
 
-    doc.font("Helvetica").fontSize(9).fillColor("#1f2937");
-    row.forEach((cell, cellIndex) => {
-      const x = columnPositions[cellIndex] + paddingX;
-      const width = Math.max(columnWidths[cellIndex] - paddingX * 2, 32);
-      doc.text(cell, x, doc.y + paddingY, { width, align: "left" });
+    cells.forEach((cell, cellIndex) => {
+      const x = columnPositions[cellIndex];
+      const width = Math.max(columnWidths[cellIndex], 32);
+      const textWidth = Math.max(width - paddingX * 2, 32);
+      const align = resolveAlign(cell.style);
+      const font = resolveFont(cell.style);
+      const fontSize = cell.style.fontSize ?? 9;
+      const textColor = cell.style.textColor ?? "#1f2937";
+
+      if (cell.style.fillColor) {
+        doc.save();
+        doc.rect(x, doc.y, width, rowHeight).fill(cell.style.fillColor);
+        doc.restore();
+      }
+
+      doc
+        .font(font)
+        .fontSize(fontSize)
+        .fillColor(textColor)
+        .text(cell.text, x + paddingX, doc.y + paddingY, { width: textWidth, align });
     });
 
     doc.y += rowHeight;
@@ -267,27 +337,73 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     const dayLookup = new Map(data.days.map((day, index) => [day.key, index] as const));
 
     const rows = data.members.map((member) => {
-      const cells = Array<string>(dayCount).fill("");
+      const cells = Array<string>(dayCount).fill("–");
+      const styles: TableCellStyle[] = Array.from({ length: dayCount }, () => ({
+        align: "center",
+        textColor: "#9ca3af",
+      }));
+
       member.entries.forEach((entry, entryIndex) => {
         const columnIndex = dayLookup.get(entry.dayKey) ?? entryIndex;
-        if (columnIndex < dayCount) {
-          cells[columnIndex] = entry.value && entry.value.trim() ? entry.value.trim() : "gesperrt";
+        if (columnIndex >= dayCount) {
+          return;
         }
+
+        if (!entry.value || !entry.value.trim()) {
+          cells[columnIndex] = "✓";
+          styles[columnIndex] = {
+            align: "center",
+            font: "bold",
+            textColor: "#1e3a8a",
+            fillColor: "#eef2ff",
+          };
+          return;
+        }
+
+        const trimmed = entry.value.replace(/\s+/g, " ").trim();
+        const isGeneric = trimmed.toLowerCase() === "gesperrt";
+        const truncated = trimmed.length > 60 ? `${trimmed.slice(0, 57).trimEnd()}…` : trimmed;
+        cells[columnIndex] = isGeneric ? "✓" : `✓ ${truncated}`;
+        styles[columnIndex] = {
+          align: "center",
+          font: isGeneric ? "bold" : "regular",
+          fontSize: isGeneric ? 10 : 8.5,
+          textColor: "#1e3a8a",
+          fillColor: "#eef2ff",
+        };
       });
-      return [member.name, member.email?.trim() || "–", ...cells] as const;
+
+      const nameCellStyle: TableCellStyle = { font: "bold", textColor: "#111827" };
+      const emailCellStyle: TableCellStyle = {
+        textColor: member.email ? "#4b5563" : "#9ca3af",
+      };
+
+      return {
+        values: [member.name, member.email?.trim() || "–", ...cells] as const,
+        styles: [nameCellStyle, emailCellStyle, ...styles],
+      };
     });
 
     doc.font("Helvetica-Bold").fontSize(12).fillColor("#111827").text("Sperrtermine im Überblick");
     doc.moveDown(0.4);
 
-    drawTable(doc, headers, rows, columnWidths);
+    drawTable(
+      doc,
+      headers,
+      rows.map((row) => row.values),
+      columnWidths,
+      {
+        headerStyles: headers.map((_, index) => ({ align: index <= 1 ? "left" : "center" })),
+        cellStyles: rows.map((row) => row.styles),
+      },
+    );
 
     doc
       .font("Helvetica")
       .fontSize(9)
       .fillColor("#6b7280")
       .text(
-        "Hinweis: Leere Felder bedeuten keine Sperre am jeweiligen Tag. Der Eintrag 'gesperrt' weist auf eine Sperre ohne näheren Grund hin.",
+        "Hinweis: ✓ markiert Sperrtage. Angegebene Gründe werden neben dem Häkchen angezeigt; leere Felder bedeuten keine Sperre am jeweiligen Tag.",
       );
   },
   schema: sperrlisteImportantDaysSchema,
