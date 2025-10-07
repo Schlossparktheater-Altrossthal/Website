@@ -181,6 +181,7 @@ const rankingPreferenceSchema = z.object({
 const rankingCandidateSchema = z.object({
   userId: z.string(),
   name: z.string(),
+  email: z.string().nullable(),
   focus: z.enum(["acting", "tech", "both"]).nullable(),
   rank: z.number(),
   normalizedShare: z.number(),

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
+import { RoleSpiderChart } from "./role-spider-chart";
 
 const domainLabels: Record<"acting" | "crew", string> = {
   acting: "Acting & Rollengrößen",
@@ -44,118 +45,106 @@ type RankingTabProps = {
 
 type Domain = "acting" | "crew";
 
-function renderPreferenceBadges(
-  preferences: OnboardingDashboardData["ranking"]["roles"][number]["candidates"][number]["otherPreferences"],
-  label: string,
-) {
-  if (preferences.length === 0) {
-    return null;
-  }
 
-  return (
-    <div className="space-y-1">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {preferences.map((preference) => (
-          <Badge key={`${preference.domain}-${preference.roleId}-${preference.rank}`} variant="ghost" size="sm">
-            #{preference.rank} {preference.label}
-            <span className="ml-1 text-foreground/70">
-              {percentageFormatter.format(preference.normalizedShare * 100)}%
-            </span>
-          </Badge>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function CandidateCard({
   candidate,
 }: {
   candidate: OnboardingDashboardData["ranking"]["roles"][number]["candidates"][number];
 }) {
-  const preferenceGroups = useMemo(() => {
-    const acting = candidate.otherPreferences.filter((item) => item.domain === "acting");
-    const crew = candidate.otherPreferences.filter((item) => item.domain === "crew");
-    return { acting, crew };
-  }, [candidate.otherPreferences]);
-
   const shareLabel = percentageFormatter.format(candidate.normalizedShare * 100);
   const confidencePercentage = Math.round(candidate.confidence * 100);
-  const interestPreview = candidate.interests.slice(0, 4);
+  const interestPreview = candidate.interests.slice(0, 3);
   const remainingInterests = candidate.interests.length - interestPreview.length;
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 text-xs font-semibold text-muted-foreground">#{candidate.rank}</span>
-          <div>
-            <p className="text-sm font-semibold leading-5 text-foreground">{candidate.name}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-              {candidate.focus ? (
-                <Badge variant={focusVariant[candidate.focus]} size="sm">
-                  {focusLabel[candidate.focus]}
-                </Badge>
-              ) : null}
-              <Badge variant="outline" size="sm">
-                {shareLabel}% Präferenz
-              </Badge>
-              <Badge variant="ghost" size="sm">
-                Score {scoreFormatter.format(candidate.score)}
-              </Badge>
-              <Badge variant="info" size="sm">
-                Sicherheit {numberFormatter.format(confidencePercentage)}%
-              </Badge>
-              {candidate.experienceYears !== null ? (
-                <Badge variant="secondary" size="sm">
-                  {candidate.experienceYears === 0
-                    ? "Neu dabei"
-                    : `${candidate.experienceYears} Jahre Erfahrung`}
-                </Badge>
-              ) : null}
+    <div className="group relative rounded-lg border border-border/50 bg-card p-3 transition-all hover:border-border hover:shadow-sm">
+      {/* Header mit Name und Rang */}
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10 text-[10px] font-bold text-primary">
+              {candidate.rank}
+            </span>
+            <h4 className="truncate text-sm font-semibold text-foreground">{candidate.name}</h4>
+          </div>
+          
+          {/* Kompakte Metriken */}
+          <div className="mt-1 space-y-0.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium">{shareLabel}% Präferenz</span>
+              <span className="text-muted-foreground/60">•</span>
+              <span>Score {scoreFormatter.format(candidate.score)}</span>
+              <span className="text-muted-foreground/60">•</span>
+              <span>{numberFormatter.format(confidencePercentage)}% Sicherheit</span>
             </div>
+            {candidate.email && (
+              <div className="text-xs text-muted-foreground">
+                <span className="font-mono">{candidate.email}</span>
+              </div>
+            )}
           </div>
         </div>
+        
+        {/* Fokus Badge */}
+        {candidate.focus && (
+          <Badge variant={focusVariant[candidate.focus]} size="sm" className="shrink-0">
+            {focusLabel[candidate.focus]}
+          </Badge>
+        )}
       </div>
 
-      {candidate.interests.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+      {/* Eigenschaften kompakt */}
+      <div className="space-y-2">
+        {/* Erfahrung und Interessen in einer Zeile */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {candidate.experienceYears !== null && (
+            <Badge variant="secondary" size="sm">
+              {candidate.experienceYears === 0 ? "Neu" : `${candidate.experienceYears}J`}
+            </Badge>
+          )}
           {interestPreview.map((interest) => (
-            <Badge key={interest} variant="muted" size="sm">
-              #{interest}
+            <Badge key={interest} variant="muted" size="sm" className="text-[10px]">
+              {interest}
             </Badge>
           ))}
-          {remainingInterests > 0 ? (
-            <Badge variant="ghost" size="sm">+{remainingInterests}</Badge>
-          ) : null}
+          {remainingInterests > 0 && (
+            <Badge variant="ghost" size="sm" className="text-[10px]">
+              +{remainingInterests}
+            </Badge>
+          )}
         </div>
-      ) : null}
 
-      {(preferenceGroups.acting.length > 0 || preferenceGroups.crew.length > 0) && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {preferenceGroups.acting.length > 0
-            ? renderPreferenceBadges(preferenceGroups.acting, "Acting")
-            : null}
-          {preferenceGroups.crew.length > 0
-            ? renderPreferenceBadges(preferenceGroups.crew, "Crew")
-            : null}
-        </div>
-      )}
+        {/* Weitere Präferenzen kompakter */}
+        {candidate.otherPreferences.length > 0 && (
+          <div className="flex flex-wrap gap-1 text-[10px] text-muted-foreground">
+            {candidate.otherPreferences.slice(0, 3).map((pref) => (
+              <span key={`${pref.domain}-${pref.roleId}`} className="rounded bg-muted/50 px-1.5 py-0.5">
+                #{pref.rank} {pref.label} ({percentageFormatter.format(pref.normalizedShare * 100)}%)
+              </span>
+            ))}
+            {candidate.otherPreferences.length > 3 && (
+              <span className="rounded bg-muted/30 px-1.5 py-0.5">+{candidate.otherPreferences.length - 3}</span>
+            )}
+          </div>
+        )}
 
-      {candidate.background ? (
-        <p className="mt-4 text-xs text-muted-foreground line-clamp-2">
-          <span className="font-semibold text-foreground/80">Background:</span> {candidate.background}
-        </p>
-      ) : null}
-
-      {candidate.notes ? (
-        <p className="mt-2 whitespace-pre-line text-xs text-muted-foreground line-clamp-3">
-          <span className="font-semibold text-foreground/80">Notiz:</span> {candidate.notes}
-        </p>
-      ) : null}
+        {/* Background/Notes sehr kompakt */}
+        {(candidate.background || candidate.notes) && (
+          <div className="space-y-1 text-[11px] text-muted-foreground">
+            {candidate.background && (
+              <p className="line-clamp-1">
+                <span className="font-medium text-foreground/70">BG:</span> {candidate.background}
+              </p>
+            )}
+            {candidate.notes && (
+              <p className="line-clamp-1">
+                <span className="font-medium text-foreground/70">Note:</span> {candidate.notes}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -168,23 +157,25 @@ function RoleColumn({
   role: OnboardingDashboardData["ranking"]["roles"][number];
 }) {
   return (
-    <Card className="h-full">
-      <CardHeader className="space-y-1.5">
+    <Card className="h-full border-border/40">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base font-semibold tracking-tight text-foreground">
+          <CardTitle className="text-sm font-semibold text-foreground">
             {role.label}
           </CardTitle>
-          <Badge variant="muted" size="sm">
+          <Badge variant="muted" size="sm" className="text-[10px]">
             {role.demand} Personen
           </Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Ranking der stärksten Präferenzen für {domain === "acting" ? "Rollengrößen" : "Gewerke"}.
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Ranking nach {domain === "acting" ? "Rollengrößen" : "Gewerken"}
         </p>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 pt-0">
         {role.candidates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Keine Angaben vorhanden.</p>
+          <div className="flex h-20 items-center justify-center">
+            <p className="text-xs text-muted-foreground">Keine Kandidat:innen</p>
+          </div>
         ) : (
           role.candidates.map((candidate) => (
             <CandidateCard key={candidate.userId} candidate={candidate} />
@@ -236,11 +227,23 @@ export function RankingTab({ ranking }: RankingTabProps) {
             Keine Daten für {domainLabels.acting} verfügbar.
           </p>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {actingRoles.map((role) => (
-              <RoleColumn key={role.roleId} role={role} domain="acting" />
-            ))}
-          </div>
+          <>
+            {/* Spiderdiagramm für Acting-Präferenzen */}
+            <RoleSpiderChart
+              title="Acting Rollenpräferenzen"
+              subtitle="Verteilung der Rollengrößen nach Präferenzstärke"
+              data={actingRoles.map((role) => ({
+                label: role.label,
+                value: role.candidates.reduce((sum, c) => sum + c.normalizedShare, 0) / Math.max(role.candidates.length, 1) * 100
+              }))}
+            />
+            
+            <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+              {actingRoles.map((role) => (
+                <RoleColumn key={role.roleId} role={role} domain="acting" />
+              ))}
+            </div>
+          </>
         )}
       </TabsContent>
       <TabsContent value="crew" className="mt-0 space-y-4">
@@ -249,11 +252,23 @@ export function RankingTab({ ranking }: RankingTabProps) {
             Keine Daten für {domainLabels.crew} verfügbar.
           </p>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {crewRoles.map((role) => (
-              <RoleColumn key={role.roleId} role={role} domain="crew" />
-            ))}
-          </div>
+          <>
+            {/* Spiderdiagramm für Crew-Präferenzen */}
+            <RoleSpiderChart
+              title="Crew Rollenpräferenzen"
+              subtitle="Verteilung der Gewerke nach Präferenzstärke"
+              data={crewRoles.map((role) => ({
+                label: role.label,
+                value: role.candidates.reduce((sum, c) => sum + c.normalizedShare, 0) / Math.max(role.candidates.length, 1) * 100
+              }))}
+            />
+            
+            <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+              {crewRoles.map((role) => (
+                <RoleColumn key={role.roleId} role={role} domain="crew" />
+              ))}
+            </div>
+          </>
         )}
       </TabsContent>
     </Tabs>
