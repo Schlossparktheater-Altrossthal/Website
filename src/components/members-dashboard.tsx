@@ -652,18 +652,12 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                   </div>
                 ) : null}
               </div>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                Halte Produktionen, Proben und Teamkommunikation im Blick. Nutze die Schnellaktionen für den direkten Einstieg.
-              </p>
               {profileReminder ? <div>{profileReminder}</div> : null}
             </CardContent>
           </Card>
           <Card className={cn(CARD_VARIANTS.surface, "relative overflow-hidden")}>
             <CardHeader className={cn(SPACING.cardHeader, "space-y-1")}>
               <CardTitle className="text-base font-semibold">Schnellaktionen</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Direkt zu den wichtigsten Bereichen springen.
-              </p>
             </CardHeader>
             <CardContent className={SPACING.cardContent}>
               {quickActions.length ? (
@@ -674,10 +668,13 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                       <Link
                         key={link.href}
                         href={link.href}
-                        className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-3 text-sm font-medium shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className={cn(
+                          "group relative flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-background px-4 py-4 text-sm font-semibold shadow-md transition-all duration-200",
+                          "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        )}
                       >
                         <span className="flex items-center gap-3">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors group-hover:border-primary/30 group-hover:bg-primary/8 group-hover:text-primary">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-background/80 text-muted-foreground transition-colors group-hover:border-primary/40 group-hover:bg-primary/10 group-hover:text-primary">
                             <Icon className="h-4 w-4" />
                           </span>
                           {link.label}
@@ -743,11 +740,14 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                   {onlineList.map((user) => (
                     <li
                       key={`${user.id}-${user.joinedAt.getTime()}`}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm"
+                      className="group relative flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-background px-4 py-3 text-sm font-medium shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-success/40 hover:shadow-lg"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="flex h-2 w-2 rounded-full bg-success shadow-sm" />
-                        <span className="text-sm font-medium">{user.name}</span>
+                        <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/40" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-success shadow-sm" />
+                        </span>
+                        <span>{user.name}</span>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
                         {formatTimeAgo(user.joinedAt)}
