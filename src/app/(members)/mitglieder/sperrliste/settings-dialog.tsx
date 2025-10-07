@@ -30,7 +30,7 @@ export function SperrlisteSettingsDialog({
         <Button
           variant="ghost"
           size="sm"
-          className="h-auto gap-2 rounded-full border border-transparent px-5 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-none hover:border-primary/20 hover:bg-primary/10 hover:text-foreground sm:text-sm"
+          className="h-auto w-full justify-center gap-2 rounded-xl border border-transparent px-4 py-2 text-sm font-semibold text-muted-foreground shadow-none hover:border-primary/20 hover:bg-primary/10 hover:text-foreground sm:w-auto sm:rounded-full sm:px-5 sm:text-sm sm:uppercase sm:tracking-wide"
         >
           <Settings2 className="h-4 w-4" aria-hidden />
           <span>Sperrlisten-Einstellungen</span>

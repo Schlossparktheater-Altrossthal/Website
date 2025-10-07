@@ -252,7 +252,7 @@ export function BlockOverview({
               variant="outline"
               onClick={handleExportTable}
               disabled={exportDisabled}
-              className="sm:w-auto"
+              className="w-full sm:w-auto"
             >
               CSV exportieren
             </Button>

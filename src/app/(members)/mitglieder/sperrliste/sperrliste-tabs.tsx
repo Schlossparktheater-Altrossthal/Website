@@ -43,23 +43,31 @@ export function SperrlisteTabs({
   }, [freezeDays]);
 
   return (
-    <Tabs defaultValue="personal" className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {actions ? (
-          <div className="order-1 flex justify-end sm:order-2 sm:flex-none sm:justify-end">
-            {actions}
-          </div>
-        ) : null}
-        <TabsList className="order-2 flex w-full justify-start overflow-x-auto rounded-full bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur-sm sm:order-1 sm:w-auto sm:flex-1 sm:pr-0">
-          <TabsTrigger value="personal" className="gap-2 whitespace-nowrap px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+    <Tabs defaultValue="personal" className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <TabsList className="inline-flex w-full flex-col gap-2 rounded-2xl border border-border/60 bg-background/80 p-2 shadow-sm ring-1 ring-primary/10 backdrop-blur-sm sm:w-auto sm:flex-row sm:items-center sm:gap-1.5 sm:rounded-full sm:border-transparent sm:bg-background/40 sm:p-1.5 sm:shadow-inner">
+          <TabsTrigger
+            value="personal"
+            className="w-full justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold text-muted-foreground transition sm:w-auto sm:justify-start sm:rounded-full sm:px-5 sm:py-2 sm:text-sm sm:uppercase sm:tracking-wide"
+          >
             <CalendarCheck2 className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>Meine Sperrtermine</span>
           </TabsTrigger>
-          <TabsTrigger value="overview" className="gap-2 whitespace-nowrap px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="overview"
+            className="w-full justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold text-muted-foreground transition sm:w-auto sm:justify-start sm:rounded-full sm:px-5 sm:py-2 sm:text-sm sm:uppercase sm:tracking-wide"
+          >
             <UsersRound className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>Übersicht</span>
           </TabsTrigger>
         </TabsList>
+        {actions ? (
+          <div className="w-full sm:w-auto sm:flex-none">
+            <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+              {actions}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <TabsContent value="personal" className="space-y-6">
