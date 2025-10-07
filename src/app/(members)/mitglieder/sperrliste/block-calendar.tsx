@@ -12,7 +12,14 @@ import {
 import { addDays, format, parseISO, startOfMonth, isValid } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { toast } from "sonner";
-import { CalendarDays, ChevronDown, CircleX, Clock, Star } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CalendarDays,
+  ChevronDown,
+  CircleX,
+  Clock,
+  Star,
+} from "lucide-react";
 
 import {
   MonthCalendar,
@@ -1107,6 +1114,13 @@ export function BlockCalendar({
     </div>
   );
 
+  const mobileScrollHint = (
+    <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary dark:border-primary/30 dark:bg-primary/10 sm:hidden">
+      <ArrowLeftRight className="h-4 w-4" aria-hidden />
+      <span>Wische seitlich, um weitere Tage zu sehen.</span>
+    </div>
+  );
+
   const handleCreate = async () => {
     if (!selectedDateKey) return;
     const trimmed = reason.trim();
@@ -1235,6 +1249,7 @@ export function BlockCalendar({
         renderDay={renderCalendarDay}
         additionalContent={
           <>
+            {mobileScrollHint}
             {rehearsalHint}
             {selectionPanel}
             {holidayDescription}
