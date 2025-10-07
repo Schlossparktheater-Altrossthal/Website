@@ -154,6 +154,9 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
   const groupedMembers = useMemo(() => {
     const map = new Map<string, MemberOption[]>();
     for (const member of members) {
+      if (blockedUserIds.has(member.id)) {
+        continue;
+      }
       const primaryRole = member.role ?? "member";
       const list = map.get(primaryRole) ?? [];
       list.push(member);
@@ -163,7 +166,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
     return orderedRoles
       .map((role) => [role, map.get(role) ?? []] as const)
       .filter(([, list]) => list.length > 0);
-  }, [members]);
+  }, [blockedUserIds, members]);
 
   const selectedSet = useMemo(() => new Set(selectedInvitees), [selectedInvitees]);
 
@@ -206,6 +209,16 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
   useEffect(() => {
     fetchBlockedForDate(date).catch(() => null);
   }, [date, fetchBlockedForDate]);
+
+  useEffect(() => {
+    setSelectedInvitees((prev) => {
+      const filtered = prev.filter((id) => !blockedUserIds.has(id));
+      if (filtered.length === prev.length) {
+        return prev;
+      }
+      return filtered;
+    });
+  }, [blockedUserIds]);
 
   const skipInitialSave = useRef(true);
 
