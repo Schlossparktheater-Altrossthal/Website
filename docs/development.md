@@ -15,8 +15,8 @@ Das Script startet automatisch:
 
 ```bash
 ./start-dev.sh --help     # Hilfe anzeigen
-./start-dev.sh --reset    # Alles zurücksetzen (Container, Volumes, node_modules)
-./start-dev.sh --clean    # Tiefe Reinigung (inkl. Docker System Prune)
+./start-dev.sh --reset    # Vollständiger Reset (Container, Volumes, node_modules)
+./start-dev.sh --clean    # Projekt-spezifische Bereinigung (Container, Images, Volumes)
 ```
 
 ## Was macht das Script?
@@ -59,6 +59,12 @@ docker compose exec app pnpm prisma studio                    # Prisma Studio
 # Einzelne Services verwalten
 docker compose restart app          # App neu starten
 docker compose up -d db            # Nur DB starten
+
+# Sichere projekt-spezifische Bereinigung
+docker compose down --volumes                    # Container + Volumes stoppen/löschen
+docker compose rm -f                            # Container-Definitionen entfernen
+docker image ls | grep theater-website          # Projekt-Images anzeigen
+docker volume ls | grep theater-website         # Projekt-Volumes anzeigen
 ```
 
 ## Troubleshooting

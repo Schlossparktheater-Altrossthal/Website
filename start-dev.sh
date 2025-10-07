@@ -191,8 +191,10 @@ main() {
             ;;
         --clean)
             print_status "Cleaning development environment..."
-            docker compose down
-            docker system prune -f
+            docker compose down --volumes --remove-orphans
+            docker compose rm -f
+            # Only remove images built for this project
+            docker image rm $(docker compose config --images) 2>/dev/null || true
             rm -rf node_modules .next 2>/dev/null || true
             ;;
         --help|-h)
@@ -200,7 +202,7 @@ main() {
             echo
             echo "Options:"
             echo "  --reset    Reset everything (containers, volumes, node_modules)"
-            echo "  --clean    Deep clean (includes Docker system prune)" 
+            echo "  --clean    Deep clean (project containers, images, volumes, node_modules)" 
             echo "  --help     Show this help message"
             echo
             echo "The script will:"
