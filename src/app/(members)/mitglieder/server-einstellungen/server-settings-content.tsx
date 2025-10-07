@@ -13,8 +13,10 @@ import type { ClientServerSettings } from "@/lib/server-settings";
 import {
   saveServerSettingsAction,
   testMailServerConnectionAction,
+  autoDetectMailServerSettingsAction,
   type SaveServerSettingsResult,
   type TestMailServerResult,
+  type AutoDetectMailServerResult,
 } from "./actions";
 
 type ServerSettingsFormValues = {
@@ -69,10 +71,12 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
   const [testFeedback, setTestFeedback] = useState<TestFeedback>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(initialSettings.updatedAt);
   const [passwordPersisted, setPasswordPersisted] = useState<boolean>(initialSettings.mailPasswordSet);
+  const [autoDetectInfo, setAutoDetectInfo] = useState<string | null>(null);
   const passwordHintId = useId();
 
   const [isSaving, startSaving] = useTransition();
   const [isTesting, startTesting] = useTransition();
+  const [isAutodetecting, startAutodetect] = useTransition();
 
   const lastUpdatedLabel = useMemo(() => {
     if (!lastUpdated) {
@@ -100,12 +104,21 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
       const value = event.target.value;
       setFormState((previous) => ({ ...previous, [field]: value }));
       clearFieldError(field);
+      if (
+        field === "mailHost" ||
+        field === "mailPort" ||
+        field === "mailUsername" ||
+        field === "mailFromAddress"
+      ) {
+        setAutoDetectInfo(null);
+      }
     };
 
   const handleSecureChange = (event: ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
     setFormState((previous) => ({ ...previous, mailSecure: checked }));
     clearFieldError("mailSecure");
+    setAutoDetectInfo(null);
   };
 
   const handlePasswordChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -160,6 +173,7 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
       setPasswordState({ mode: "preserve", value: "" });
       setFieldErrors({});
       setTestFeedback(null);
+      setAutoDetectInfo(null);
       setLastUpdated(result.settings.updatedAt);
       setPasswordPersisted(result.settings.mailPasswordSet);
       toast.success("Servereinstellungen gespeichert.");
@@ -239,6 +253,63 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
     });
   };
 
+  const applyAutoDetectResult = (result: AutoDetectMailServerResult) => {
+    if (result.success) {
+      setFormState((previous) => ({
+        ...previous,
+        mailHost: result.suggestion.mailHost,
+        mailPort: String(result.suggestion.mailPort ?? ""),
+        mailSecure: result.suggestion.mailSecure,
+        mailUsername: result.suggestion.mailUsername ?? previous.mailUsername,
+      }));
+      setFieldErrors((previous) => {
+        const next = { ...previous };
+        delete next.mailHost;
+        delete next.mailPort;
+        delete next.mailSecure;
+        delete next.mailUsername;
+        return next;
+      });
+      const providerSuffix = result.suggestion.provider ? ` (${result.suggestion.provider})` : "";
+      const confidenceLabel = (() => {
+        switch (result.suggestion.confidence) {
+          case "high":
+            return `Vorkonfiguration${providerSuffix} erkannt.`;
+          case "medium":
+            return `Vorschlag anhand der vorhandenen Angaben${providerSuffix}.`;
+          default:
+            return `Generischer Vorschlag basierend auf der Domain${providerSuffix}.`;
+        }
+      })();
+      setAutoDetectInfo(confidenceLabel);
+      toast.success("SMTP-Einstellungen wurden vorausgefüllt.");
+      return;
+    }
+
+    if (result.error === "not_authorized") {
+      toast.error("Du darfst diese Einstellungen nicht ändern.");
+      return;
+    }
+
+    if (isValidationError(result) && result.fieldErrors) {
+      setFieldErrors(result.fieldErrors);
+      toast.error("Bitte prüfe die markierten Felder.");
+      return;
+    }
+
+    const message = result.message ?? "Die SMTP-Einstellungen konnten nicht automatisch erkannt werden.";
+    toast.error(message);
+  };
+
+  const handleAutoDetect = () => {
+    setAutoDetectInfo(null);
+    startAutodetect(async () => {
+      const payload = buildPayload();
+      const result = await autoDetectMailServerSettingsAction(payload);
+      applyAutoDetectResult(result);
+    });
+  };
+
   const renderFieldErrors = (field: keyof FieldErrors) => {
     const messages = fieldErrors[field];
     if (!messages?.length) {
@@ -287,6 +358,21 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
                 onChange={handleTextChange("mailHost")}
                 placeholder="smtp.example.org"
               />
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoDetect}
+                  disabled={isAutodetecting || isSaving || isTesting}
+                  data-state={isAutodetecting ? "loading" : undefined}
+                >
+                  Automatisch erkennen
+                </Button>
+                {autoDetectInfo ? (
+                  <span className="text-xs text-muted-foreground">{autoDetectInfo}</span>
+                ) : null}
+              </div>
               {renderFieldErrors("mailHost")}
             </div>
             <div className="space-y-2">

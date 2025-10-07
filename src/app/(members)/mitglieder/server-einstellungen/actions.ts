@@ -16,6 +16,10 @@ import {
   type ClientServerSettings,
   type ServerSettingsInput,
 } from "@/lib/server-settings";
+import {
+  autoDetectMailServerSettings,
+  type MailServerSuggestion,
+} from "@/lib/server-settings-autodetect";
 
 const EMAIL_SCHEMA = z.string().email();
 
@@ -277,4 +281,62 @@ export async function testMailServerConnectionAction(
       message: message ?? "Verbindung zum SMTP-Server konnte nicht aufgebaut werden.",
     };
   }
+}
+
+export type AutoDetectMailServerResult =
+  | { success: true; suggestion: MailServerSuggestion }
+  | {
+      success: false;
+      error: "not_authorized" | "validation_failed" | "not_found";
+      fieldErrors?: FieldErrors;
+      message?: string;
+    };
+
+export async function autoDetectMailServerSettingsAction(
+  input: Partial<Record<keyof ServerSettingsInput, unknown>>,
+): Promise<AutoDetectMailServerResult> {
+  const session = await requireAuth();
+  const allowed = await hasPermission(session.user, "mitglieder.server.settings");
+  if (!allowed) {
+    return { success: false, error: "not_authorized" };
+  }
+
+  const parsed = validateServerSettingsPayload(input);
+  if (!parsed.success) {
+    return { success: false, error: "validation_failed", fieldErrors: parsed.fieldErrors };
+  }
+
+  const data = parsed.data;
+
+  const mailHost = data.mailHost ?? null;
+  const mailFromAddress = data.mailFromAddress ?? null;
+  const mailUsername = data.mailUsername ?? null;
+
+  if (!mailHost && !mailFromAddress) {
+    return {
+      success: false,
+      error: "validation_failed",
+      fieldErrors: {
+        mailHost: ["Bitte gib einen SMTP-Server oder eine Absenderadresse an."],
+        mailFromAddress: ["Bitte gib eine Absenderadresse an oder trage den SMTP-Server ein."],
+      },
+      message: "Es fehlen Angaben zur automatischen Erkennung.",
+    };
+  }
+
+  const suggestion = autoDetectMailServerSettings({
+    email: mailFromAddress,
+    host: mailHost,
+    username: mailUsername,
+  });
+
+  if (!suggestion) {
+    return {
+      success: false,
+      error: "not_found",
+      message: "Es konnten keine passenden SMTP-Einstellungen ermittelt werden.",
+    };
+  }
+
+  return { success: true, suggestion };
 }
