@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 
-import { DieterEncountersSection } from "./encounters-section";
+import { DennisDieterEncountersSection } from "./encounters-section";
 import { SchulkatzeImageRotator } from "./image-rotator";
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
@@ -298,7 +298,7 @@ export default function SchulkatzePage() {
         </Card>
       </section>
 
-      <DieterEncountersSection />
+      <DennisDieterEncountersSection />
 
       <section className="layout-container pb-24">
         <div className="mx-auto max-w-3xl space-y-4 text-center">
