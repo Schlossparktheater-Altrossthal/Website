@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { z } from "zod";
 
 import { heatmapCellSchema } from "@/lib/onboarding/dashboard-schemas";
+import { cn } from "@/lib/utils";
 
 type HeatmapCell = z.infer<typeof heatmapCellSchema>;
 
@@ -17,9 +18,10 @@ type RoleHeatmapProps = {
   title?: string;
   data: HeatmapCell[];
   subtitle?: string;
+  className?: string;
 };
 
-export function RoleHeatmap({ title = "Kombinationen", data, subtitle }: RoleHeatmapProps) {
+export function RoleHeatmap({ title = "Kombinationen", data, subtitle, className }: RoleHeatmapProps) {
   const axes = useMemo(() => {
     const acting = Array.from(new Set(data.map((cell) => cell.x))).sort();
     const crew = Array.from(new Set(data.map((cell) => cell.y))).sort();
@@ -44,7 +46,7 @@ export function RoleHeatmap({ title = "Kombinationen", data, subtitle }: RoleHea
   }, [maxValue]);
 
   return (
-    <Card className="h-full">
+    <Card className={cn("h-full", className)}>
       <CardHeader className="space-y-1">
         <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">{title}</CardTitle>
         {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
