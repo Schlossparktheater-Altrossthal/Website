@@ -108,7 +108,7 @@ export function MonthCalendar({
   showWeekNumbers = true,
   className,
   contentClassName,
-  minGridWidthClassName = "min-w-[540px] sm:min-w-[640px]",
+  minGridWidthClassName = "min-w-full sm:min-w-[640px] lg:min-w-[720px]",
   dayClassName,
   additionalContent,
 }: MonthCalendarProps) {
