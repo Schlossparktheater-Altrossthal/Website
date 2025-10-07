@@ -79,6 +79,7 @@ export type SessionSummary = {
   peakConcurrentUsers: number;
   membersRealtimeEvents: number;
   membersAvgSessionDurationSeconds: number;
+  guestAvgSessionDurationSeconds: number;
 };
 
 function toTimestamp(date: Date | string | number): number {
@@ -328,6 +329,10 @@ export function aggregateSessionMetrics({
   const memberDurations = memberSessions.map((session) => computeDurationSeconds(session, fallbackEnd));
   const membersAvgSessionDurationSeconds = Math.round(average(memberDurations));
 
+  const guestSessions = sessions.filter((session) => !session.isMember);
+  const guestDurations = guestSessions.map((session) => computeDurationSeconds(session, fallbackEnd));
+  const guestAvgSessionDurationSeconds = Math.round(average(guestDurations));
+
   const concurrencyWindowStart = windowStart;
   const concurrencyEvents: Array<{ timestamp: number; delta: number }> = [];
 
@@ -377,6 +382,7 @@ export function aggregateSessionMetrics({
       peakConcurrentUsers,
       membersRealtimeEvents: memberRealtimeEvents,
       membersAvgSessionDurationSeconds,
+      guestAvgSessionDurationSeconds,
     },
   };
 }

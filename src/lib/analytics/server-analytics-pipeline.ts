@@ -279,10 +279,15 @@ export async function runHttpAnalyticsAggregation(
         frontendCacheHitRate: summary.frontendCacheHitRate,
         membersRequests: summary.membersRequests,
         membersAvgResponseMs: summary.membersAvgResponseMs,
+        guestRequests: summary.guestRequests,
+        guestAvgResponseMs: summary.guestAvgResponseMs,
         apiRequests: summary.apiRequests,
         apiAvgResponseMs: summary.apiAvgResponseMs,
         apiErrorRate: summary.apiErrorRate,
         apiBackgroundJobs: summary.apiBackgroundJobs,
+        botRequests: summary.botRequests,
+        botAvgResponseMs: summary.botAvgResponseMs,
+        botBlockedRequests: summary.botBlockedRequests,
       },
     });
 
@@ -443,6 +448,8 @@ export async function runSessionAnalyticsAggregation(
         membersRealtimeEvents: result.sessionSummary.membersRealtimeEvents,
         membersAvgSessionDurationSeconds:
           result.sessionSummary.membersAvgSessionDurationSeconds,
+        guestAvgSessionDurationSeconds:
+          result.sessionSummary.guestAvgSessionDurationSeconds,
       },
     });
 

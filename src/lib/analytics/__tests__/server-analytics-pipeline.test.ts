@@ -87,10 +87,15 @@ describe("server analytics pipeline", () => {
         frontendCacheHitRate: 0.5,
         membersRequests: 0,
         membersAvgResponseMs: 0,
+        guestRequests: 1,
+        guestAvgResponseMs: 120,
         apiRequests: 0,
         apiAvgResponseMs: 0,
         apiErrorRate: 0,
         apiBackgroundJobs: 0,
+        botRequests: 0,
+        botAvgResponseMs: 0,
+        botBlockedRequests: 0,
       },
       peakHours: [
         {
@@ -225,6 +230,7 @@ describe("server analytics pipeline", () => {
         peakConcurrentUsers: 2,
         membersRealtimeEvents: 1,
         membersAvgSessionDurationSeconds: 420,
+        guestAvgSessionDurationSeconds: 180,
       },
     });
 

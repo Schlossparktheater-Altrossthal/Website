@@ -1484,10 +1484,15 @@ model AnalyticsHttpSummary {
   frontendCacheHitRate      Float    @default(0)
   membersRequests           Int      @default(0)
   membersAvgResponseMs      Float    @default(0)
+  guestRequests             Int      @default(0)
+  guestAvgResponseMs        Float    @default(0)
   apiRequests               Int      @default(0)
   apiAvgResponseMs          Float    @default(0)
   apiErrorRate              Float    @default(0)
   apiBackgroundJobs         Int      @default(0)
+  botRequests               Int      @default(0)
+  botAvgResponseMs          Float    @default(0)
+  botBlockedRequests        Int      @default(0)
   generatedAt               DateTime @default(now())
 
   @@map("analytics_http_summary")
@@ -1716,6 +1721,7 @@ model AnalyticsSessionSummary {
   peakConcurrentUsers                Int      @default(0)
   membersRealtimeEvents              Int      @default(0)
   membersAvgSessionDurationSeconds   Float    @default(0)
+  guestAvgSessionDurationSeconds     Float    @default(0)
   generatedAt                        DateTime @default(now())
 
   @@map("analytics_session_summary")

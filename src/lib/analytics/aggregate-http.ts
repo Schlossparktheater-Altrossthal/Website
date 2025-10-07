@@ -33,10 +33,15 @@ export type HttpSummaryAggregation = {
   frontendCacheHitRate: number;
   membersRequests: number;
   membersAvgResponseMs: number;
+  guestRequests: number;
+  guestAvgResponseMs: number;
   apiRequests: number;
   apiAvgResponseMs: number;
   apiErrorRate: number;
   apiBackgroundJobs: number;
+  botRequests: number;
+  botAvgResponseMs: number;
+  botBlockedRequests: number;
 };
 
 export type HttpPeakHourAggregation = Pick<
@@ -245,6 +250,45 @@ function isLikelyCacheHit(request: HttpRequestLike): boolean {
 
 const NON_GET_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+const BOT_ROUTE_PATTERNS: RegExp[] = [
+  /^\/robots\.txt$/i,
+  /^\/sitemap(?:[-\w]*)?(?:\.xml|\.txt)?$/i,
+  /^\/\.well-known\//i,
+  /^\/ads\.txt$/i,
+  /^\/feed/i,
+  /^\/rss/i,
+  /^\/wp-/i,
+  /^\/xmlrpc\.php$/i,
+];
+
+function isBlockedStatus(statusCode: number): boolean {
+  return statusCode === 401 || statusCode === 403 || statusCode === 429;
+}
+
+function isLikelyBotRequest(request: HttpRequestLike): boolean {
+  if (request.area === "api" || request.area === "members") {
+    return false;
+  }
+
+  const route = request.route.toLowerCase();
+
+  if (BOT_ROUTE_PATTERNS.some((pattern) => pattern.test(route))) {
+    return true;
+  }
+
+  if (request.method === "HEAD") {
+    return true;
+  }
+
+  if (request.method === "GET") {
+    if (route.includes("sitemap")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function isBackgroundJobRequest(request: HttpRequestLike): boolean {
   if (request.area !== "api") {
     return false;
@@ -357,6 +401,18 @@ export function aggregateHttpMetrics({
     0,
   );
 
+  const botRequestEntries = normalizedRequests.filter((request) => isLikelyBotRequest(request));
+  const botDurations = botRequestEntries.map((request) => sanitizeDuration(request.durationMs));
+  const botBlockedRequests = botRequestEntries.reduce(
+    (count, request) => (isBlockedStatus(request.statusCode) ? count + 1 : count),
+    0,
+  );
+
+  const guestRequestEntries = normalizedRequests.filter(
+    (request) => request.area === "public" && !isLikelyBotRequest(request),
+  );
+  const guestDurations = guestRequestEntries.map((request) => sanitizeDuration(request.durationMs));
+
   const summary: HttpSummaryAggregation = {
     windowStart: normalizedWindowStart,
     windowEnd: normalizedWindowEnd,
@@ -375,10 +431,15 @@ export function aggregateHttpMetrics({
     frontendCacheHitRate: groups.public.length > 0 ? frontendCacheHits / groups.public.length : 0,
     membersRequests: groups.members.length,
     membersAvgResponseMs: calculateAreaAverage(groups.members),
+    guestRequests: guestRequestEntries.length,
+    guestAvgResponseMs: average(guestDurations),
     apiRequests: groups.api.length,
     apiAvgResponseMs: calculateAreaAverage(groups.api),
     apiErrorRate: calculateAreaErrorRate(groups.api),
     apiBackgroundJobs: backgroundJobs,
+    botRequests: botRequestEntries.length,
+    botAvgResponseMs: average(botDurations),
+    botBlockedRequests,
   };
 
   const peakHours = aggregatePeakHours(

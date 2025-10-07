@@ -174,6 +174,7 @@ describe("aggregateSessionMetrics", () => {
     expect(result.sessionSummary.peakConcurrentUsers).toBe(1);
     expect(result.sessionSummary.membersRealtimeEvents).toBe(3);
     expect(result.sessionSummary.membersAvgSessionDurationSeconds).toBe(3150);
+    expect(result.sessionSummary.guestAvgSessionDurationSeconds).toBe(1800);
     expect(result.sessionSummary.windowEnd.toISOString()).toBe(now.toISOString());
   });
 });
