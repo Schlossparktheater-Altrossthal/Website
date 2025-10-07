@@ -212,25 +212,21 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
       key: "open",
       label: "Offene Anliegen",
       value: formattedCounts.open,
-      description: "Neu oder noch unbearbeitet.",
     },
     {
       key: "in_progress",
       label: "In Bearbeitung",
       value: formattedCounts.in_progress,
-      description: "Aktiv in Umsetzung.",
     },
     {
       key: "resolved",
       label: "Gelöst",
       value: formattedCounts.resolved,
-      description: "Erledigt, wartet auf Feedback.",
     },
     {
       key: "closed",
       label: "Geschlossen",
       value: formattedCounts.closed,
-      description: "Abgeschlossen und dokumentiert.",
     },
   ] as const;
 
@@ -258,9 +254,6 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
       <Card>
         <CardHeader className="space-y-1">
           <CardTitle>Aktueller Überblick</CardTitle>
-          <Text variant="small" tone="muted">
-            Vier Kennzahlen zeigen dir den Status aller gemeldeten Anliegen.
-          </Text>
         </CardHeader>
         <CardContent>
           <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -269,11 +262,8 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
                 key={item.key}
                 className="space-y-1.5 rounded-lg border border-border/60 bg-muted/20 p-4"
               >
-                <dt className="text-sm font-medium text-muted-foreground">{item.label}</dt>
+                <dt className="text-base font-semibold text-foreground">{item.label}</dt>
                 <dd className="text-2xl font-semibold text-foreground">{item.value}</dd>
-                <Text variant="caption" tone="muted">
-                  {item.description}
-                </Text>
               </div>
             ))}
           </dl>
