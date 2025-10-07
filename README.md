@@ -7,6 +7,24 @@ Node.js process and expose the realtime API under `/realtime` (websocket path
 lightweight reverse proxy so external deployments only have to expose a single
 HTTP endpoint.
 
+## Quick Start (Development)
+
+```bash
+./start-dev.sh
+```
+
+This automatically sets up and starts the complete development environment:
+- PostgreSQL database + Mailpit email interface
+- Secure `.env` configuration with random secrets  
+- Database migrations and seeding
+- Next.js development server with realtime support
+
+**Access URLs after startup:**
+- Main App: http://localhost:3000
+- Email UI: http://localhost:8025
+
+See [docs/development.md](docs/development.md) for more details and troubleshooting.
+
 ## Prerequisites
 
 - Node.js 24 LTS (matches the `Dockerfile.*` images)
