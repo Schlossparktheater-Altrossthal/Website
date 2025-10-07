@@ -19,7 +19,6 @@ import { useMembersPermissions } from "@/components/members/permissions-context"
 import { PageHeader, PageHeaderDescription, PageHeaderStatus, PageHeaderTitle } from "@/design-system/patterns";
 import {
   Users,
-  Activity,
   Calendar,
   Wifi,
   WifiOff,
@@ -471,8 +470,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         label: "Mitglieder gesamt",
         value: numberFormatter.format(stats.totalMembers),
         hint: "inkl. Ensemble und Technik",
-        icon: <Activity className="h-4 w-4" />,
-        tone: "neutral",
+        icon: <Users className="h-4 w-4" />,
+        tone: "positive",
       },
       {
         key: "rehearsals",
