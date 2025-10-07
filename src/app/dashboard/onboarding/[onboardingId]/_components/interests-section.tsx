@@ -1,12 +1,10 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { Component, type ReactNode, useMemo } from "react";
 import { motion } from "framer-motion";
 import { scaleSequential } from "d3-scale";
 import { interpolatePuBuGn } from "d3-scale-chromatic";
-import type { CallbacksProp, OptionsProp, Props as WordCloudProps, Word } from "react-wordcloud";
-import "tippy.js/dist/tippy.css";
+import cloud, { type Word as CloudWord } from "d3-cloud";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,36 +19,7 @@ import {
 
 import { DistributionBars } from "./distribution-bars";
 
-const ReactWordcloud = dynamic<WordCloudProps>(() => import("react-wordcloud"), { ssr: false });
-
-class WordCloudErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: unknown) {
-    console.error("[onboarding.interests.wordcloud]", error);
-  }
-
-  componentDidUpdate(prevProps: Readonly<{ children: ReactNode }>) {
-    if (prevProps.children !== this.props.children && this.state.hasError) {
-      this.setState({ hasError: false });
-    }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <p className="text-sm text-muted-foreground">
-          Wordcloud konnte nicht geladen werden. Bitte neu laden oder später erneut versuchen.
-        </p>
-      );
-    }
-    return this.props.children;
-  }
-}
+type WordCloudWord = { text: string; value: number };
 
 type InterestsSectionProps = {
   topTags: Array<z.infer<typeof distributionEntrySchema>>;
@@ -69,7 +38,7 @@ const clusterColors: Record<string, string> = {
 };
 
 export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, diversity }: InterestsSectionProps) {
-  const words = useMemo<Word[]>(() => {
+  const words = useMemo<WordCloudWord[]>(() => {
     return wordCloud
       .map((entry) => ({ text: entry.tag, value: Number(entry.weight) || 0 }))
       .filter((entry) => Number.isFinite(entry.value) && entry.value >= 0);
@@ -82,37 +51,7 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
     return scaleSequential(interpolatePuBuGn).domain([0, safeMax]);
   }, [maxWeight]);
 
-  const callbacks = useMemo<CallbacksProp | undefined>(() => {
-    if (!words.length) {
-      return undefined;
-    }
-    return {
-      getWordColor: (word) => colorScale(word.value),
-      getWordTooltip: (word) =>
-        `${word.text} – ${word.value.toLocaleString("de-DE")}${word.value === 1 ? " Nennung" : " Nennungen"}`,
-    } satisfies CallbacksProp;
-  }, [colorScale, words.length]);
-
-  const wordCloudOptions = useMemo<OptionsProp>(() => {
-    const maxFont = Math.max(28, Math.min(68, 18 + maxWeight * 3));
-    return {
-      rotations: 3,
-      rotationAngles: [-20, 20],
-      fontFamily: "var(--font-sans)",
-      fontStyle: "normal",
-      fontWeight: "600",
-      fontSizes: [14, maxFont],
-      padding: 2,
-      scale: "sqrt",
-      spiral: "rectangular",
-      deterministic: true,
-      enableTooltip: true,
-      enableOptimizations: true,
-      transitionDuration: 720,
-      tooltipOptions: { placement: "top" },
-      colors: ["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9"],
-    } satisfies OptionsProp;
-  }, [maxWeight]);
+  const maxFont = useMemo(() => Math.max(28, Math.min(68, 18 + maxWeight * 3)), [maxWeight]);
 
   const topWord = useMemo(() => {
     return wordCloud.length ? [...wordCloud].sort((a, b) => b.weight - a.weight)[0] : undefined;
@@ -158,9 +97,7 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
                 <span>{words.length} Stichwörter</span>
               </div>
               <div className="relative h-[300px] w-full overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-background via-muted/40 to-background p-2">
-                <WordCloudErrorBoundary>
-                  <ReactWordcloud words={words} callbacks={callbacks} options={wordCloudOptions} />
-                </WordCloudErrorBoundary>
+                <WordCloudCanvas words={words} maxWeight={maxWeight} maxFont={maxFont} colorScale={colorScale} />
               </div>
             </>
           )}
@@ -248,4 +185,179 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
       </Card>
     </div>
   );
+}
+
+type WordCloudCanvasProps = {
+  words: WordCloudWord[];
+  maxWeight: number;
+  maxFont: number;
+  colorScale: (value: number) => string;
+};
+
+type LayoutWord = CloudWord & WordCloudWord;
+
+const MIN_FONT_SIZE = 14;
+const ROTATION_VALUES = [-20, 0, 20] as const;
+
+function WordCloudCanvas({ words, maxWeight, maxFont, colorScale }: WordCloudCanvasProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [layoutWords, setLayoutWords] = useState<LayoutWord[]>([]);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) {
+      return undefined;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+      setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!dimensions.width || !dimensions.height || words.length === 0) {
+      setLayoutWords([]);
+      setHasError(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    try {
+      const layout = cloud<LayoutWord>()
+        .size([Math.max(1, Math.floor(dimensions.width)), Math.max(1, Math.floor(dimensions.height))])
+        .words(words.map((word) => ({ ...word })) as LayoutWord[])
+        .padding(2)
+        .rotate((datum) => computeRotation(datum.text ?? ""))
+        .font("var(--font-sans)")
+        .fontStyle("normal")
+        .fontWeight("600")
+        .fontSize((datum) => computeFontSize(datum.value ?? 0, maxWeight, maxFont))
+        .random(createDeterministicRandom("interests-wordcloud"));
+
+      layout.on("end", (generated) => {
+        if (cancelled) {
+          return;
+        }
+        setLayoutWords(generated.map((item) => ({ ...item, text: item.text ?? "" })));
+        setHasError(false);
+      });
+
+      layout.start();
+
+      return () => {
+        cancelled = true;
+        layout.stop();
+      };
+    } catch (error) {
+      console.error("[onboarding.interests.wordcloud]", error);
+      setHasError(true);
+      return undefined;
+    }
+  }, [dimensions.height, dimensions.width, maxFont, maxWeight, words]);
+
+  const width = Math.max(1, Math.floor(dimensions.width));
+  const height = Math.max(1, Math.floor(dimensions.height));
+
+  if (hasError) {
+    return (
+      <div ref={containerRef} className="flex h-full w-full items-center justify-center">
+        <p className="text-sm text-muted-foreground text-center">
+          Wordcloud konnte nicht geladen werden. Bitte neu laden oder später erneut versuchen.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="h-full w-full">
+      <svg
+        role="img"
+        aria-label="Wordcloud der Interessen"
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <g transform={`translate(${width / 2}, ${height / 2})`}>
+          {layoutWords.map((word) => {
+            const rotation = word.rotate ?? 0;
+            const tooltip = `${word.text} – ${word.value.toLocaleString("de-DE")}${
+              word.value === 1 ? " Nennung" : " Nennungen"
+            }`;
+            return (
+              <text
+                key={`${word.text}-${word.x ?? 0}-${word.y ?? 0}-${word.size ?? 0}`}
+                textAnchor="middle"
+                fontFamily="var(--font-sans)"
+                fontWeight={600}
+                fontStyle="normal"
+                fontSize={word.size ?? MIN_FONT_SIZE}
+                fill={colorScale(word.value)}
+                transform={`translate(${word.x ?? 0}, ${word.y ?? 0}) rotate(${rotation})`}
+              >
+                <title>{tooltip}</title>
+                {word.text}
+              </text>
+            );
+          })}
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+function computeFontSize(value: number, maxWeight: number, maxFont: number) {
+  if (!Number.isFinite(value) || maxWeight <= 0) {
+    return MIN_FONT_SIZE;
+  }
+
+  if (maxFont <= MIN_FONT_SIZE) {
+    return MIN_FONT_SIZE;
+  }
+
+  const ratio = value / maxWeight;
+  return MIN_FONT_SIZE + ratio * (maxFont - MIN_FONT_SIZE);
+}
+
+function computeRotation(text: string) {
+  if (!text) {
+    return 0;
+  }
+
+  const index = Math.abs(hashString(text)) % ROTATION_VALUES.length;
+  return ROTATION_VALUES[index];
+}
+
+function hashString(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
+
+function createDeterministicRandom(seed: string) {
+  let state = 1779033703 ^ seed.length;
+  for (let index = 0; index < seed.length; index += 1) {
+    state = Math.imul(state ^ seed.charCodeAt(index), 3432918353);
+    state = (state << 13) | (state >>> 19);
+  }
+
+  return () => {
+    state = Math.imul(state ^ (state >>> 16), 2246822507);
+    state = Math.imul(state ^ (state >>> 13), 3266489909);
+    state ^= state >>> 16;
+    return (state >>> 0) / 4294967296;
+  };
 }
