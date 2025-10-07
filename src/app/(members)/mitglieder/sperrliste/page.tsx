@@ -31,7 +31,13 @@ export default async function SperrlistePage() {
   const settingsRecord = await readSperrlisteSettings();
   const resolvedSettingsBefore = resolveSperrlisteSettings(settingsRecord);
 
-  const [personalBlockedDays, holidayRanges, overviewUsers, canManageSettings] = await Promise.all([
+  const [
+    personalBlockedDays,
+    holidayRanges,
+    overviewUsers,
+    canManageSettings,
+    canExport,
+  ] = await Promise.all([
     prisma.blockedDay.findMany({
       where: { userId },
       orderBy: { date: "asc" },
@@ -63,6 +69,7 @@ export default async function SperrlistePage() {
       },
     }),
     hasPermission(session.user, "mitglieder.sperrliste.settings"),
+    hasPermission(session.user, "mitglieder.sperrliste.export"),
   ]);
 
   const refreshedSettingsRecord = await readSperrlisteSettings();
@@ -113,6 +120,7 @@ export default async function SperrlistePage() {
         overviewMembers={overviewMembers}
         initialSettings={clientSettings}
         canManageSettings={canManageSettings}
+        canExport={canExport}
         defaultHolidaySourceUrl={defaultHolidaySourceUrl}
         defaultPublicHolidaySourceUrl={defaultPublicHolidaySourceUrl}
       />

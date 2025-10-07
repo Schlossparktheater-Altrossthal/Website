@@ -18,6 +18,7 @@ interface SperrlisteTabsProps {
   freezeDays?: number;
   preferredWeekdays?: number[];
   exceptionWeekdays?: number[];
+  canExport?: boolean;
   actions?: ReactNode;
 }
 
@@ -28,6 +29,7 @@ export function SperrlisteTabs({
   freezeDays = 0,
   preferredWeekdays = [],
   exceptionWeekdays = [],
+  canExport = false,
   actions,
 }: SperrlisteTabsProps) {
   const formattedFreeze = useMemo(() => {
@@ -81,6 +83,7 @@ export function SperrlisteTabs({
           holidays={holidays}
           preferredWeekdays={preferredWeekdays}
           exceptionWeekdays={exceptionWeekdays}
+          canExport={canExport}
         />
       </TabsContent>
     </Tabs>
