@@ -1,0 +1,294 @@
+import { z } from "zod";
+
+import type { PdfTemplate } from "../types";
+
+const daySchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  title: z.string(),
+});
+
+const entrySchema = z.object({
+  dayKey: z.string(),
+  value: z.string().nullable(),
+});
+
+const memberSchema = z.object({
+  name: z.string(),
+  email: z.string().nullable(),
+  entries: z.array(entrySchema),
+});
+
+const sperrlisteImportantDaysSchema = z
+  .object({
+    generatedAt: z.string().datetime(),
+    range: z.object({
+      start: z.string().datetime(),
+      end: z.string().datetime(),
+      label: z.string().nullable(),
+    }),
+    summary: z.object({
+      memberCount: z.number().int().nonnegative(),
+      importantWeekdays: z.string().nullable(),
+    }),
+    days: z.array(daySchema),
+    members: z.array(memberSchema),
+  })
+  .superRefine((data, ctx) => {
+    data.members.forEach((member, memberIndex) => {
+      if (member.entries.length !== data.days.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["members", memberIndex, "entries"],
+          message: "entries length must match number of days",
+        });
+      }
+    });
+  });
+
+export type SperrlisteImportantDaysPdfData = z.infer<typeof sperrlisteImportantDaysSchema>;
+
+const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
+const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
+
+function ensurePageSpace(doc: PDFKit.PDFDocument, neededHeight: number) {
+  const bottom = doc.page.height - doc.page.margins.bottom;
+  if (doc.y + neededHeight <= bottom) {
+    return;
+  }
+  doc.addPage();
+  doc.x = doc.page.margins.left;
+  doc.y = doc.page.margins.top;
+}
+
+function formatDateForFilename(value: string) {
+  try {
+    return value.slice(0, 10).replace(/-/g, "");
+  } catch {
+    return "unknown";
+  }
+}
+
+function buildRangeLabel(range: SperrlisteImportantDaysPdfData["range"]) {
+  try {
+    const start = new Date(range.start);
+    const end = new Date(range.end);
+    return `${dateFormatter.format(start)} – ${dateFormatter.format(end)}`;
+  } catch {
+    return null;
+  }
+}
+
+function drawTable(
+  doc: PDFKit.PDFDocument,
+  headers: readonly string[],
+  rows: readonly (readonly string[])[],
+  columnWidths: readonly number[],
+) {
+  if (!rows.length) {
+    return;
+  }
+
+  const paddingX = 6;
+  const paddingY = 4;
+  const startX = doc.page.margins.left;
+  const columnPositions = columnWidths.reduce<number[]>((positions, width, index) => {
+    const previous = index === 0 ? startX : positions[index - 1] + columnWidths[index - 1];
+    positions.push(previous);
+    return positions;
+  }, []);
+  const totalWidth = columnWidths.reduce((sum, value) => sum + value, 0);
+  const bottom = doc.page.height - doc.page.margins.bottom;
+
+  const computeRowHeight = (cells: readonly string[], font: string, fontSize: number) => {
+    doc.font(font).fontSize(fontSize);
+    return cells.reduce((max, cell, cellIndex) => {
+      const width = Math.max(columnWidths[cellIndex] - paddingX * 2, 32);
+      const height = doc.heightOfString(cell, { width, align: "left" }) + paddingY * 2;
+      return Math.max(max, height);
+    }, 0);
+  };
+
+  const drawHeaderRow = () => {
+    const headerHeight = computeRowHeight(headers, "Helvetica-Bold", 9);
+    ensurePageSpace(doc, headerHeight + 6);
+
+    doc.save();
+    doc.rect(startX, doc.y, totalWidth, headerHeight).fill("#f3f4f6");
+    doc.restore();
+
+    doc.font("Helvetica-Bold").fontSize(9).fillColor("#111827");
+    headers.forEach((header, index) => {
+      const x = columnPositions[index] + paddingX;
+      const width = Math.max(columnWidths[index] - paddingX * 2, 32);
+      doc.text(header, x, doc.y + paddingY, { width, align: "left" });
+    });
+    doc.y += headerHeight;
+    doc.moveTo(startX, doc.y).lineTo(startX + totalWidth, doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke();
+  };
+
+  const drawDataRow = (row: readonly string[], index: number) => {
+    const rowHeight = computeRowHeight(row, "Helvetica", 9);
+    if (doc.y + rowHeight > bottom) {
+      doc.addPage();
+      doc.x = doc.page.margins.left;
+      doc.y = doc.page.margins.top;
+      drawHeaderRow();
+    }
+
+    if (index % 2 === 1) {
+      doc.save();
+      doc.rect(startX, doc.y, totalWidth, rowHeight).fill("#f9fafb");
+      doc.restore();
+    }
+
+    doc.font("Helvetica").fontSize(9).fillColor("#1f2937");
+    row.forEach((cell, cellIndex) => {
+      const x = columnPositions[cellIndex] + paddingX;
+      const width = Math.max(columnWidths[cellIndex] - paddingX * 2, 32);
+      doc.text(cell, x, doc.y + paddingY, { width, align: "left" });
+    });
+
+    doc.y += rowHeight;
+    doc.moveTo(startX, doc.y).lineTo(startX + totalWidth, doc.y).strokeColor("#e5e7eb").lineWidth(0.5).stroke();
+  };
+
+  drawHeaderRow();
+  rows.forEach((row, index) => {
+    drawDataRow(row, index);
+  });
+  doc.moveDown(0.6);
+}
+
+export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDaysPdfData> = {
+  id: "sperrliste-wichtige-tage",
+  label: "Sperrliste · Wichtige Probentage",
+  description:
+    "Zeigt Sperrtermine der wichtigsten Probentage im Zwei-Wochen-Fenster als kompakt formatiertes Tabellen-PDF.",
+  filename: (data) => {
+    const start = formatDateForFilename(data.range.start);
+    const end = formatDateForFilename(data.range.end);
+    return `sperrliste-wichtige-tage-${start}-${end}.pdf`;
+  },
+  async render(doc, data) {
+    doc.font("Helvetica-Bold").fontSize(18).fillColor("#111827").text("Sperrliste · Wichtige Probentage");
+    doc.moveDown(0.2);
+
+    const generatedAt = new Date(data.generatedAt);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor("#4b5563")
+      .text(`Generiert am ${dateTimeFormatter.format(generatedAt)}`);
+    doc.moveDown(0.6);
+
+    const effectiveRangeLabel = data.range.label ?? buildRangeLabel(data.range) ?? "–";
+    doc.font("Helvetica").fontSize(11).fillColor("#1f2937").text(`Zeitraum: ${effectiveRangeLabel}`);
+    doc.moveDown(0.1);
+
+    if (data.summary.importantWeekdays) {
+      doc.font("Helvetica").fontSize(11).fillColor("#1f2937").text(`Berücksichtigte Tage: ${data.summary.importantWeekdays}`);
+      doc.moveDown(0.1);
+    }
+
+    doc
+      .font("Helvetica")
+      .fontSize(11)
+      .fillColor("#1f2937")
+      .text(`Mitglieder mit Sperrterminen: ${data.summary.memberCount}`);
+    doc.moveDown(0.8);
+
+    if (!data.days.length || !data.members.length || data.summary.memberCount === 0) {
+      doc
+        .font("Helvetica")
+        .fontSize(11)
+        .fillColor("#4b5563")
+        .text("Für den angegebenen Zeitraum liegen keine Sperrtermine auf wichtigen Tagen vor.");
+      return;
+    }
+
+    const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const dayCount = data.days.length;
+    const minNameWidth = 120;
+    const minEmailWidth = 120;
+    const minDayWidth = 56;
+    const absoluteMinNameWidth = 90;
+    const absoluteMinEmailWidth = 90;
+    const absoluteMinDayWidth = 36;
+
+    let nameWidth = minNameWidth;
+    let emailWidth = minEmailWidth;
+    let dayWidth = minDayWidth;
+
+    const minimalTotal = nameWidth + emailWidth + dayWidth * dayCount;
+    if (minimalTotal > availableWidth) {
+      const excess = minimalTotal - availableWidth;
+      const adjustableName = Math.max(0, nameWidth - absoluteMinNameWidth);
+      const adjustableEmail = Math.max(0, emailWidth - absoluteMinEmailWidth);
+      const adjustableDay = Math.max(0, dayWidth - absoluteMinDayWidth) * dayCount;
+      const adjustableTotal = adjustableName + adjustableEmail + adjustableDay;
+
+      if (adjustableTotal > 0) {
+        const ratio = Math.min(1, excess / adjustableTotal);
+        nameWidth -= adjustableName * ratio;
+        emailWidth -= adjustableEmail * ratio;
+        dayWidth -= Math.max(0, dayWidth - absoluteMinDayWidth) * ratio;
+      }
+
+      const adjustedTotal = nameWidth + emailWidth + dayWidth * dayCount;
+      if (adjustedTotal > availableWidth && adjustedTotal > 0) {
+        const scale = availableWidth / adjustedTotal;
+        nameWidth *= scale;
+        emailWidth *= scale;
+        dayWidth *= scale;
+      }
+    } else {
+      const extra = availableWidth - minimalTotal;
+      const weightName = 1.2;
+      const weightEmail = 1.1;
+      const weightDay = dayCount > 0 ? 0.9 * dayCount : 0;
+      const weightSum = weightName + weightEmail + weightDay;
+      if (weightSum > 0) {
+        nameWidth += (weightName / weightSum) * extra;
+        emailWidth += (weightEmail / weightSum) * extra;
+        if (dayCount > 0) {
+          dayWidth += ((weightDay / weightSum) * extra) / dayCount;
+        }
+      }
+    }
+
+    nameWidth = Math.max(0, nameWidth);
+    emailWidth = Math.max(0, emailWidth);
+    dayWidth = Math.max(0, dayWidth);
+
+    const columnWidths = [nameWidth, emailWidth, ...Array(dayCount).fill(dayWidth)];
+
+    const headers: string[] = ["Mitglied", "E-Mail", ...data.days.map((day) => day.label)];
+    const dayLookup = new Map(data.days.map((day, index) => [day.key, index] as const));
+
+    const rows = data.members.map((member) => {
+      const cells = Array<string>(dayCount).fill("");
+      member.entries.forEach((entry, entryIndex) => {
+        const columnIndex = dayLookup.get(entry.dayKey) ?? entryIndex;
+        if (columnIndex < dayCount) {
+          cells[columnIndex] = entry.value && entry.value.trim() ? entry.value.trim() : "gesperrt";
+        }
+      });
+      return [member.name, member.email?.trim() || "–", ...cells] as const;
+    });
+
+    doc.font("Helvetica-Bold").fontSize(12).fillColor("#111827").text("Sperrtermine im Überblick");
+    doc.moveDown(0.4);
+
+    drawTable(doc, headers, rows, columnWidths);
+
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor("#6b7280")
+      .text(
+        "Hinweis: Leere Felder bedeuten keine Sperre am jeweiligen Tag. Der Eintrag 'gesperrt' weist auf eine Sperre ohne näheren Grund hin.",
+      );
+  },
+  schema: sperrlisteImportantDaysSchema,
+};
