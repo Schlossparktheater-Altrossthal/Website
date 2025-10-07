@@ -16,6 +16,7 @@ interface SperrlistePageClientProps {
   overviewMembers: OverviewMember[];
   initialSettings: ClientSperrlisteSettings;
   canManageSettings: boolean;
+  canExport: boolean;
   defaultHolidaySourceUrl: string;
   defaultPublicHolidaySourceUrl: string;
 }
@@ -26,6 +27,7 @@ export function SperrlistePageClient({
   overviewMembers,
   initialSettings,
   canManageSettings,
+  canExport,
   defaultHolidaySourceUrl,
   defaultPublicHolidaySourceUrl,
 }: SperrlistePageClientProps) {
@@ -45,6 +47,7 @@ export function SperrlistePageClient({
         freezeDays={settings.freezeDays}
         preferredWeekdays={settings.preferredWeekdays}
         exceptionWeekdays={settings.exceptionWeekdays}
+        canExport={canExport}
         actions={
           canManageSettings ? (
             <SperrlisteSettingsDialog

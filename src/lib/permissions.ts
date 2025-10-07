@@ -208,6 +208,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
+    key: "mitglieder.sperrliste.export",
+    label: "Sperrlisten-Export herunterladen",
+    description:
+      "CSV-Übersichten der nächsten zwei Wochen für die wichtigsten Probentage exportieren.",
+    category: "membership",
+  },
+  {
     key: "mitglieder.website.settings",
     label: "Website-Einstellungen verwalten",
     description:
