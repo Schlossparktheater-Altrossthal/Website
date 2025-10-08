@@ -165,6 +165,7 @@ function drawTable(
     doc.rect(startX, doc.y, totalWidth, headerHeight).fill("#f3f4f6");
     doc.restore();
 
+    const rowTop = doc.y;
     headerCells.forEach((cell, index) => {
       const x = columnPositions[index] + paddingX;
       const width = Math.max(columnWidths[index] - paddingX * 2, 32);
@@ -172,12 +173,14 @@ function drawTable(
       const fontSize = cell.style.fontSize ?? 9;
       const align = resolveAlign(cell.style);
       doc.font(font).fontSize(fontSize).fillColor(cell.style.textColor ?? "#111827");
-      doc.text(cell.text, x, doc.y + paddingY, {
+      doc.text(cell.text, x, rowTop + paddingY, {
         width,
         align,
         lineBreak: false,
         ellipsis: true,
       });
+      doc.y = rowTop;
+      doc.x = startX;
     });
     doc.y += headerHeight;
     doc.moveTo(startX, doc.y).lineTo(startX + totalWidth, doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke();
@@ -209,6 +212,7 @@ function drawTable(
       doc.restore();
     }
 
+    const rowTop = doc.y;
     cells.forEach((cell, cellIndex) => {
       const x = columnPositions[cellIndex];
       const width = Math.max(columnWidths[cellIndex], 32);
@@ -228,12 +232,14 @@ function drawTable(
         .font(font)
         .fontSize(fontSize)
         .fillColor(textColor)
-        .text(cell.text, x + paddingX, doc.y + paddingY, {
+        .text(cell.text, x + paddingX, rowTop + paddingY, {
           width: textWidth,
           align,
           lineBreak: false,
           ellipsis: true,
         });
+      doc.y = rowTop;
+      doc.x = startX;
     });
 
     doc.y += rowHeight;
