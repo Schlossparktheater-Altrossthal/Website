@@ -281,6 +281,7 @@ function evaluateCandidateForRole(
 interface CandidateInput {
   userId: string;
   name: string;
+  email: string | null;
   focus: OnboardingFocus | null;
   interests: string[];
   experienceYears: number | null;
@@ -419,6 +420,7 @@ async function computeOnboardingDashboardData(
               name: true,
               firstName: true,
               lastName: true,
+              email: true,
               dateOfBirth: true,
               photoConsent: {
                 select: {
@@ -745,6 +747,7 @@ async function computeOnboardingDashboardData(
     return {
       userId: profile.user.id,
       name: fullName,
+      email: profile.user.email ?? null,
       focus: profile.focus,
       interests: userInterestMap.get(profile.user.id) ?? [],
       experienceYears,
@@ -848,6 +851,7 @@ async function computeOnboardingDashboardData(
         return {
           userId: candidate.userId,
           name: candidate.name,
+          email: candidate.email,
           focus: candidate.focus,
           normalizedShare: roundTo(metrics.share, 3),
           score: roundTo(metrics.score, 3),
