@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type RolePreference = {
@@ -16,51 +16,83 @@ type RoleSpiderChartProps = {
   size?: number;
 };
 
-export function RoleSpiderChart({ 
-  data, 
-  title = "Rollenpräferenzen", 
+const percentFormatter = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
+
+export function RoleSpiderChart({
+  data,
+  title = "Rollenpräferenzen",
   subtitle = "Verteilung der Rollengrößen-Präferenzen",
-  size = 200 
+  size = 220,
 }: RoleSpiderChartProps) {
-  const { pathData, labels, maxValue } = useMemo(() => {
-    if (data.length === 0) return { pathData: "", labels: [], maxValue: 1 };
-    
-    const max = Math.max(...data.map(d => d.maxValue || d.value));
-    const center = size / 2;
-    const radius = (size - 60) / 2; // Abstand für Labels
-    const angleStep = (2 * Math.PI) / data.length;
-    
-    // Punkte für das Polygon berechnen
-    const points = data.map((item, index) => {
-      const angle = index * angleStep - Math.PI / 2; // Start oben
-      const normalizedValue = (item.value / max) * radius;
-      const x = center + normalizedValue * Math.cos(angle);
-      const y = center + normalizedValue * Math.sin(angle);
-      return { x, y };
-    });
-    
-    // SVG Path erstellen
-    const pathData = points.length > 0 
-      ? `M${points.map(p => `${p.x},${p.y}`).join('L')}Z`
-      : "";
-    
-    // Label-Positionen berechnen
-    const labels = data.map((item, index) => {
-      const angle = index * angleStep - Math.PI / 2;
-      const labelRadius = radius + 20;
-      const x = center + labelRadius * Math.cos(angle);
-      const y = center + labelRadius * Math.sin(angle);
-      
+  const chartId = useId();
+
+  const { pathData, labels, maxValue, center, radius, angleStep, points } = useMemo(() => {
+    if (data.length === 0) {
+      const fallbackCenter = size / 2;
+      const fallbackRadius = (size - 72) / 2;
+      return {
+        pathData: "",
+        labels: [],
+        maxValue: 1,
+        center: fallbackCenter,
+        radius: fallbackRadius,
+        angleStep: 0,
+        points: [],
+      };
+    }
+
+    const max = Math.max(...data.map((entry) => entry.maxValue ?? entry.value));
+    const computedCenter = size / 2;
+    const computedRadius = (size - 72) / 2;
+    const computedAngleStep = (2 * Math.PI) / data.length;
+
+    const calculatedPoints = data.map((item, index) => {
+      const angle = index * computedAngleStep - Math.PI / 2;
+      const normalizedValue = max === 0 ? 0 : (item.value / max) * computedRadius;
+      const x = computedCenter + normalizedValue * Math.cos(angle);
+      const y = computedCenter + normalizedValue * Math.sin(angle);
+      const axisX = computedCenter + computedRadius * Math.cos(angle);
+      const axisY = computedCenter + computedRadius * Math.sin(angle);
+
       return {
         x,
         y,
-        label: item.label,
+        axisX,
+        axisY,
+        angle,
         value: item.value,
-        angle
+        label: item.label,
       };
     });
-    
-    return { pathData, labels, maxValue: max };
+
+    const path =
+      calculatedPoints.length > 0
+        ? `M${calculatedPoints.map((point) => `${point.x},${point.y}`).join("L")}Z`
+        : "";
+
+    const calculatedLabels = calculatedPoints.map((point) => {
+      const labelRadius = computedRadius + 26;
+      const x = computedCenter + labelRadius * Math.cos(point.angle);
+      const y = computedCenter + labelRadius * Math.sin(point.angle);
+
+      return {
+        x,
+        y,
+        angle: point.angle,
+        label: point.label,
+        value: point.value,
+      };
+    });
+
+    return {
+      pathData: path,
+      labels: calculatedLabels,
+      maxValue: max,
+      center: computedCenter,
+      radius: computedRadius,
+      angleStep: computedAngleStep,
+      points: calculatedPoints,
+    };
   }, [data, size]);
 
   if (data.length === 0) {
@@ -77,8 +109,8 @@ export function RoleSpiderChart({
     );
   }
 
-  const center = size / 2;
-  const radius = (size - 60) / 2;
+  const ringSteps = 4;
+  const ringFactors = Array.from({ length: ringSteps }, (_, index) => (index + 1) / ringSteps);
 
   return (
     <Card className="h-full">
@@ -86,109 +118,155 @@ export function RoleSpiderChart({
         <CardTitle className="text-sm font-semibold">{title}</CardTitle>
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </CardHeader>
-      <CardContent className="flex items-center justify-center p-4">
-        <svg width={size} height={size} className="overflow-visible">
-          {/* Rasterlinien */}
-          {[0.2, 0.4, 0.6, 0.8, 1.0].map((factor) => {
-            const r = radius * factor;
-            const angleStep = (2 * Math.PI) / data.length;
-            const points = Array.from({ length: data.length }, (_, index) => {
-              const angle = index * angleStep - Math.PI / 2;
-              const x = center + r * Math.cos(angle);
-              const y = center + r * Math.sin(angle);
+      <CardContent className="flex items-center justify-center p-6">
+        <svg width={size} height={size} className="overflow-visible" role="img" aria-label={title}>
+          <defs>
+            <linearGradient id={`spider-fill-${chartId}`} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
+            </linearGradient>
+            <linearGradient id={`spider-stroke-${chartId}`} x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
+            </linearGradient>
+            <filter id={`spider-shadow-${chartId}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="hsl(var(--primary))" floodOpacity="0.12" />
+            </filter>
+          </defs>
+
+          <circle
+            cx={center}
+            cy={center}
+            r={radius + 18}
+            fill="hsl(var(--muted) / 0.18)"
+            stroke="hsl(var(--border))"
+            strokeWidth="0.75"
+          />
+
+          {ringFactors.map((factor, index) => {
+            const ringRadius = radius * factor;
+            const ringPoints = Array.from({ length: data.length }, (_, pointIndex) => {
+              const angle = pointIndex * angleStep - Math.PI / 2;
+              const x = center + ringRadius * Math.cos(angle);
+              const y = center + ringRadius * Math.sin(angle);
               return `${x},${y}`;
-            }).join(' ');
-            
+            }).join(" ");
+
             return (
               <polygon
-                key={factor}
-                points={points}
-                fill="none"
-                stroke="hsl(var(--muted))"
-                strokeWidth="0.5"
-                opacity={factor === 1.0 ? 0.8 : 0.3}
+                key={`ring-${factor}`}
+                points={ringPoints}
+                fill={index % 2 === 0 ? "hsl(var(--background))" : "hsl(var(--muted) / 0.1)"}
+                stroke="hsl(var(--border))"
+                strokeWidth="0.75"
+                opacity={factor === 1 ? 0.75 : 0.45}
               />
             );
           })}
-          
-          {/* Achsen */}
-          {data.map((_, index) => {
-            const angleStep = (2 * Math.PI) / data.length;
-            const angle = index * angleStep - Math.PI / 2;
-            const x2 = center + radius * Math.cos(angle);
-            const y2 = center + radius * Math.sin(angle);
-            
-            return (
-              <line
-                key={`axis-${index}`}
-                x1={center}
-                y1={center}
-                x2={x2}
-                y2={y2}
-                stroke="hsl(var(--muted))"
-                strokeWidth="0.5"
-                opacity="0.4"
-              />
-            );
-          })}
-          
-          {/* Datenpfad */}
+
+          {points.map((point) => (
+            <line
+              key={`axis-${point.label}`}
+              x1={center}
+              y1={center}
+              x2={point.axisX}
+              y2={point.axisY}
+              stroke="hsl(var(--border))"
+              strokeWidth="0.75"
+              strokeOpacity={0.35}
+            />
+          ))}
+
+          <circle cx={center} cy={center} r={4} fill="hsl(var(--primary))" fillOpacity={0.6} />
+
           <path
             d={pathData}
-            fill="hsl(var(--primary))"
-            fillOpacity="0.2"
-            stroke="hsl(var(--primary))"
-            strokeWidth="2"
+            fill={`url(#spider-fill-${chartId})`}
+            stroke={`url(#spider-stroke-${chartId})`}
+            strokeWidth={2}
             strokeLinejoin="round"
+            filter={`url(#spider-shadow-${chartId})`}
           />
-          
-          {/* Datenpunkte */}
-          {data.map((item, index) => {
-            const angleStep = (2 * Math.PI) / data.length;
-            const angle = index * angleStep - Math.PI / 2;
-            const normalizedValue = (item.value / maxValue) * radius;
-            const x = center + normalizedValue * Math.cos(angle);
-            const y = center + normalizedValue * Math.sin(angle);
-            
-            return (
+
+          {points.map((point) => (
+            <g key={`point-${point.label}`}>
               <circle
-                key={`point-${index}`}
-                cx={x}
-                cy={y}
-                r="3"
-                fill="hsl(var(--primary))"
-                stroke="hsl(var(--background))"
-                strokeWidth="2"
+                cx={point.x}
+                cy={point.y}
+                r={3.5}
+                fill="hsl(var(--background))"
+                stroke="hsl(var(--primary))"
+                strokeWidth={1.5}
               />
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={1.4}
+                fill="hsl(var(--primary))"
+              />
+            </g>
+          ))}
+
+          {ringFactors.map((factor) => {
+            const ringValue = maxValue * factor;
+            return (
+              <text
+                key={`ring-label-${factor}`}
+                x={center}
+                y={center - radius * factor - 6}
+                textAnchor="middle"
+                className="text-[9px] fill-muted-foreground"
+              >
+                {`${percentFormatter.format(ringValue)}%`}
+              </text>
             );
           })}
-          
-          {/* Labels */}
+
           {labels.map((label, index) => {
-            // Text-Anker basierend auf Position bestimmen
             let textAnchor: "start" | "middle" | "end" = "middle";
-            if (label.x > center + 5) textAnchor = "start";
-            else if (label.x < center - 5) textAnchor = "end";
-            
+            if (label.x > center + 6) textAnchor = "start";
+            else if (label.x < center - 6) textAnchor = "end";
+
+            const valueLabel = `${percentFormatter.format(label.value)}%`;
+            const labelWidth = 120;
+            const labelHeight = 34;
+            const rectX =
+              textAnchor === "end"
+                ? -labelWidth
+                : textAnchor === "middle"
+                  ? -labelWidth / 2
+                  : 0;
+
             return (
-              <g key={`label-${index}`}>
+              <g key={`label-${index}`} transform={`translate(${label.x}, ${label.y})`}>
+                <rect
+                  x={rectX}
+                  y={-labelHeight / 2}
+                  width={labelWidth}
+                  height={labelHeight}
+                  rx={8}
+                  fill="hsl(var(--background))"
+                  opacity={0.92}
+                  stroke="hsl(var(--border))"
+                  strokeWidth={0.5}
+                />
                 <text
-                  x={label.x}
-                  y={label.y - 2}
+                  x={0}
+                  y={-4}
                   textAnchor={textAnchor}
-                  className="text-[10px] font-medium fill-foreground"
+                  className="text-[10px] font-semibold fill-foreground"
                   dominantBaseline="middle"
                 >
                   {label.label}
                 </text>
                 <text
-                  x={label.x}
-                  y={label.y + 8}
+                  x={0}
+                  y={8}
                   textAnchor={textAnchor}
-                  className="text-[9px] fill-muted-foreground"
+                  className="text-[9px] font-medium fill-muted-foreground"
                   dominantBaseline="middle"
                 >
-                  {label.value.toFixed(0)}%
+                  {valueLabel}
                 </text>
               </g>
             );
