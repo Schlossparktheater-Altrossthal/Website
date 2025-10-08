@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type RolePreference = {
@@ -18,6 +18,47 @@ type RoleSpiderChartProps = {
 };
 
 const percentFormatter = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
+const FALLBACK_ACCENT = "oklch(0.66 0.18 63.3)";
+
+function normalizeCssColor(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  if (/^(#|rgb|hsl|oklch|oklab|lab|lch|color|var)\(/i.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  return `hsl(${trimmedValue})`;
+}
+
+function useResolvedAccentColor(accentColor?: string): string {
+  const normalizedPropColor = normalizeCssColor(accentColor);
+  const [resolvedAccent, setResolvedAccent] = useState<string>(
+    () => normalizedPropColor ?? accentColor ?? FALLBACK_ACCENT,
+  );
+
+  useEffect(() => {
+    if (accentColor) {
+      const normalizedColor = normalizeCssColor(accentColor);
+      setResolvedAccent(normalizedColor ?? accentColor);
+      return;
+    }
+
+    const root = document.documentElement;
+    const primaryValue = getComputedStyle(root).getPropertyValue("--primary");
+    const normalizedPrimary = normalizeCssColor(primaryValue);
+
+    setResolvedAccent(normalizedPrimary ?? FALLBACK_ACCENT);
+  }, [accentColor]);
+
+  return resolvedAccent;
+}
 
 export function RoleSpiderChart({
   data,
@@ -27,7 +68,7 @@ export function RoleSpiderChart({
   accentColor,
 }: RoleSpiderChartProps) {
   const chartId = useId();
-  const accent = accentColor ?? "hsl(var(--primary))";
+  const accent = useResolvedAccentColor(accentColor);
 
   const { pathData, labels, maxValue, center, radius, angleStep, points } = useMemo(() => {
     if (data.length === 0) {
