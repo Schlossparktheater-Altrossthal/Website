@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
+import { cn } from "@/lib/utils";
 import { RoleSpiderChart } from "./role-spider-chart";
 import { TalentDetailDialog } from "./talent-detail-dialog";
 import type {
@@ -81,25 +82,32 @@ function PreferenceList({
             return (
               <li
                 key={`${domain}-${pref.roleId}`}
-                className={`flex items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 leading-snug transition-colors ${
+                className={cn(
+                  "rounded-lg px-2.5 py-1.5 leading-snug transition-colors",
+                  "border border-transparent bg-muted/40",
                   isActive
                     ? "bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/30"
-                    : "bg-muted/40 text-muted-foreground"
-                }`}
+                    : "text-muted-foreground",
+                )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-                      isActive ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
-                    }`}
+                    className={cn(
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground",
+                    )}
                   >
                     {pref.rank}
                   </span>
-                  <span className="font-medium text-foreground/90">{pref.label}</span>
+                  <span className="min-w-0 flex-1 font-medium text-foreground/90">
+                    {pref.label}
+                  </span>
+                  <span className="ml-auto shrink-0 text-[11px] font-semibold text-foreground/80">
+                    {percentageFormatter.format(pref.share * 100)}%
+                  </span>
                 </div>
-                <span className="shrink-0 font-semibold text-foreground/80">
-                  {percentageFormatter.format(pref.share * 100)}%
-                </span>
               </li>
             );
           })}
