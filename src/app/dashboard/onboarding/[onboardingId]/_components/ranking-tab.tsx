@@ -1,12 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
 import { RoleSpiderChart } from "./role-spider-chart";
+import { TalentDetailDialog } from "./talent-detail-dialog";
+import type {
+  CandidateAggregate,
+  CandidatePreference,
+  Domain,
+  HighlightContext,
+  RoleCandidate,
+  RoleGroup,
+  RoleSummary,
+} from "./ranking-types";
 
 const domainLabels: Record<"acting" | "crew", string> = {
   acting: "Acting & Rollengrößen",
@@ -41,37 +51,6 @@ const scoreFormatter = new Intl.NumberFormat("de-DE", {
 
 type RankingTabProps = {
   ranking: OnboardingDashboardData["ranking"];
-};
-
-type Domain = "acting" | "crew";
-
-type CandidatePreference = {
-  roleId: string;
-  label: string;
-  share: number;
-  rank: number;
-};
-
-type CandidateAggregate = {
-  userId: string;
-  name: string;
-  email: string | null;
-  focus: "acting" | "tech" | "both" | null;
-  score: number;
-  confidence: number;
-  experienceYears: number | null;
-  interests: string[];
-  background: string | null;
-  notes: string | null;
-  preferences: Record<Domain, CandidatePreference[]>;
-};
-
-type HighlightContext = {
-  domain: Domain;
-  roleId: string;
-  label: string;
-  rank: number;
-  share: number;
 };
 
 function PreferenceList({
@@ -133,9 +112,11 @@ function PreferenceList({
 function CandidateCard({
   candidate,
   highlight,
+  onSelectCandidate,
 }: {
   candidate: CandidateAggregate;
   highlight: HighlightContext;
+  onSelectCandidate: (candidate: CandidateAggregate, highlight: HighlightContext) => void;
 }) {
   const experienceLabel =
     candidate.experienceYears === null
@@ -162,7 +143,13 @@ function CandidateCard({
               </span>
             </div>
             <CardTitle className="text-base font-semibold text-foreground">
-              {candidate.name}
+              <button
+                type="button"
+                onClick={() => onSelectCandidate(candidate, highlight)}
+                className="rounded-md text-left text-base font-semibold text-foreground transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {candidate.name}
+              </button>
             </CardTitle>
             {candidate.email && (
               <p className="text-xs text-muted-foreground break-words">{candidate.email}</p>
@@ -237,26 +224,15 @@ function CandidateCard({
   );
 }
 
-type RoleCandidate = {
-  candidate: CandidateAggregate;
-  highlight: HighlightContext;
-};
-
-type RoleGroup = {
-  roleId: string;
-  label: string;
+function DomainSection({
+  domain,
+  groups,
+  onSelectCandidate,
+}: {
   domain: Domain;
-  candidates: RoleCandidate[];
-};
-
-type RoleSummary = {
-  roleId: string;
-  label: string;
-  domain: Domain;
-  averageShare: number;
-};
-
-function DomainSection({ domain, groups }: { domain: Domain; groups: RoleGroup[] }) {
+  groups: RoleGroup[];
+  onSelectCandidate: (candidate: CandidateAggregate, highlight: HighlightContext) => void;
+}) {
   const label = domain === "acting" ? "Acting Talente" : "Crew Talente";
 
   if (groups.length === 0) {
@@ -283,6 +259,7 @@ function DomainSection({ domain, groups }: { domain: Domain; groups: RoleGroup[]
                 key={`${group.roleId}-${candidate.userId}`}
                 candidate={candidate}
                 highlight={highlight}
+                onSelectCandidate={onSelectCandidate}
               />
             ))}
           </div>
@@ -294,6 +271,17 @@ function DomainSection({ domain, groups }: { domain: Domain; groups: RoleGroup[]
 
 export function RankingTab({ ranking }: RankingTabProps) {
   const [domain, setDomain] = useState<Domain>("acting");
+  const [selectedCandidate, setSelectedCandidate] = useState<{
+    candidate: CandidateAggregate;
+    highlight: HighlightContext;
+  } | null>(null);
+
+  const handleSelectCandidate = useCallback(
+    (candidate: CandidateAggregate, highlight: HighlightContext) => {
+      setSelectedCandidate({ candidate, highlight });
+    },
+    [],
+  );
 
   const roleSummaries = useMemo<RoleSummary[]>(() => {
     return ranking.roles.map((role) => {
@@ -486,12 +474,13 @@ export function RankingTab({ ranking }: RankingTabProps) {
   );
 
   return (
-    <Tabs value={domain} onValueChange={(value) => setDomain(value as Domain)} className="space-y-6">
-      <TabsList className="w-fit bg-muted/40">
-        <TabsTrigger value="acting">Acting</TabsTrigger>
-        <TabsTrigger value="crew">Crew</TabsTrigger>
-      </TabsList>
-      <TabsContent value="acting" className="mt-0 space-y-4">
+    <>
+      <Tabs value={domain} onValueChange={(value) => setDomain(value as Domain)} className="space-y-6">
+        <TabsList className="w-fit bg-muted/40">
+          <TabsTrigger value="acting">Acting</TabsTrigger>
+          <TabsTrigger value="crew">Crew</TabsTrigger>
+        </TabsList>
+        <TabsContent value="acting" className="mt-0 space-y-4">
         {actingRoleSummaries.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Keine Daten für {domainLabels.acting} verfügbar.
@@ -507,11 +496,15 @@ export function RankingTab({ ranking }: RankingTabProps) {
               }))}
             />
 
-            <DomainSection domain="acting" groups={actingGroups} />
+            <DomainSection
+              domain="acting"
+              groups={actingGroups}
+              onSelectCandidate={handleSelectCandidate}
+            />
           </>
         )}
-      </TabsContent>
-      <TabsContent value="crew" className="mt-0 space-y-4">
+        </TabsContent>
+        <TabsContent value="crew" className="mt-0 space-y-4">
         {crewRoleSummaries.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Keine Daten für {domainLabels.crew} verfügbar.
@@ -527,10 +520,26 @@ export function RankingTab({ ranking }: RankingTabProps) {
               }))}
             />
 
-            <DomainSection domain="crew" groups={crewGroups} />
+            <DomainSection
+              domain="crew"
+              groups={crewGroups}
+              onSelectCandidate={handleSelectCandidate}
+            />
           </>
         )}
-      </TabsContent>
-    </Tabs>
+        </TabsContent>
+      </Tabs>
+
+      <TalentDetailDialog
+        open={selectedCandidate !== null}
+        candidate={selectedCandidate?.candidate ?? null}
+        highlight={selectedCandidate?.highlight ?? null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedCandidate(null);
+          }
+        }}
+      />
+    </>
   );
 }
