@@ -63,25 +63,30 @@ type CandidateAggregate = {
   interests: string[];
   background: string | null;
   notes: string | null;
-  bestRank: number | null;
   preferences: Record<Domain, CandidatePreference[]>;
 };
 
-function PreferenceColumn({
+type HighlightContext = {
+  domain: Domain;
+  roleId: string;
+  label: string;
+  rank: number;
+  share: number;
+};
+
+function PreferenceList({
   domain,
   preferences,
-  isActive,
+  highlight,
 }: {
   domain: Domain;
   preferences: CandidatePreference[];
-  isActive: boolean;
+  highlight: HighlightContext;
 }) {
+  const activeRoleId = highlight.domain === domain ? highlight.roleId : null;
+
   return (
-    <div
-      className={`rounded-xl border p-3 shadow-sm transition-colors ${
-        isActive ? "border-primary/60 bg-primary/5" : "border-border/60 bg-muted/30"
-      }`}
-    >
+    <div className="rounded-xl border border-border/60 bg-background/60 p-3">
       <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         <span>{domain === "acting" ? "Acting" : "Gewerk"}</span>
         {preferences.length > 0 && (
@@ -89,45 +94,49 @@ function PreferenceColumn({
         )}
       </div>
       {preferences.length === 0 ? (
-        <p className="mt-4 text-[11px] text-muted-foreground/80">
-          Keine Präferenzen vorhanden.
-        </p>
+        <p className="mt-3 text-[11px] text-muted-foreground/80">Keine Präferenzen vorhanden.</p>
       ) : (
-        <>
-          <ol className="mt-3 space-y-1.5">
-            {preferences.slice(0, 3).map((pref, index) => (
+        <ul className="mt-2 space-y-1.5 text-xs">
+          {preferences.map((pref) => {
+            const isActive = pref.roleId === activeRoleId;
+            return (
               <li
                 key={`${domain}-${pref.roleId}`}
-                className="flex items-center justify-between gap-3 rounded-lg bg-background/70 px-2.5 py-1.5 text-xs"
+                className={`flex items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 leading-snug transition-colors ${
+                  isActive
+                    ? "bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/30"
+                    : "bg-muted/40 text-muted-foreground"
+                }`}
               >
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex items-center gap-2">
                   <span
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-                      index === 0 ? "bg-primary/15 text-primary" : "bg-muted text-foreground/80"
+                      isActive ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
                     }`}
                   >
-                    {index + 1}
+                    {pref.rank}
                   </span>
-                  <span className="truncate font-medium text-foreground">{pref.label}</span>
+                  <span className="font-medium text-foreground/90">{pref.label}</span>
                 </div>
-                <span className="shrink-0 text-[11px] text-muted-foreground">
+                <span className="shrink-0 font-semibold text-foreground/80">
                   {percentageFormatter.format(pref.share * 100)}%
                 </span>
               </li>
-            ))}
-          </ol>
-          {preferences.length > 3 && (
-            <p className="mt-2 text-[10px] text-muted-foreground/80">
-              +{preferences.length - 3} weitere Präferenzen
-            </p>
-          )}
-        </>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
 }
 
-function CandidateCard({ candidate, activeDomain }: { candidate: CandidateAggregate; activeDomain: Domain }) {
+function CandidateCard({
+  candidate,
+  highlight,
+}: {
+  candidate: CandidateAggregate;
+  highlight: HighlightContext;
+}) {
   const experienceLabel =
     candidate.experienceYears === null
       ? null
@@ -137,22 +146,26 @@ function CandidateCard({ candidate, activeDomain }: { candidate: CandidateAggreg
   const securityLabel = `${numberFormatter.format(Math.round(candidate.confidence * 100))}% Sicherheit`;
 
   return (
-    <Card className="min-w-[320px] max-w-[360px] border-border/50">
-      <CardHeader className="pb-4">
+    <Card className="h-full border-border/50">
+      <CardHeader className="space-y-3 pb-4">
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              {candidate.bestRank !== null && (
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-semibold text-primary">
-                  #{candidate.bestRank}
-                </span>
-              )}
-              <CardTitle className="truncate text-base font-semibold text-foreground">
-                {candidate.name}
-              </CardTitle>
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+              <Badge variant="muted" size="sm" className="font-semibold">
+                {highlight.label}
+              </Badge>
+              <Badge variant="default" size="sm">
+                #{highlight.rank}
+              </Badge>
+              <span className="font-semibold text-foreground/80">
+                {percentageFormatter.format(highlight.share * 100)}% Präferenz
+              </span>
             </div>
+            <CardTitle className="text-base font-semibold text-foreground">
+              {candidate.name}
+            </CardTitle>
             {candidate.email && (
-              <p className="mt-1 truncate text-xs text-muted-foreground">{candidate.email}</p>
+              <p className="text-xs text-muted-foreground break-words">{candidate.email}</p>
             )}
           </div>
           {candidate.focus && (
@@ -161,31 +174,31 @@ function CandidateCard({ candidate, activeDomain }: { candidate: CandidateAggreg
             </Badge>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
           {experienceLabel && (
-            <span className="rounded-full bg-muted/60 px-2 py-0.5 font-medium text-foreground/80">
+            <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 font-medium text-foreground/80">
               {experienceLabel}
             </span>
           )}
-          <span className="rounded-full bg-muted/40 px-2 py-0.5 font-medium text-foreground/80">
+          <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 font-medium text-foreground/80">
             Score {scoreFormatter.format(candidate.score)}
           </span>
-          <span className="rounded-full bg-muted/40 px-2 py-0.5 font-medium text-foreground/80">
+          <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 font-medium text-foreground/80">
             {securityLabel}
           </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
         <div className="grid gap-3 sm:grid-cols-2">
-          <PreferenceColumn
+          <PreferenceList
             domain="acting"
             preferences={candidate.preferences.acting}
-            isActive={activeDomain === "acting"}
+            highlight={highlight}
           />
-          <PreferenceColumn
+          <PreferenceList
             domain="crew"
             preferences={candidate.preferences.crew}
-            isActive={activeDomain === "crew"}
+            highlight={highlight}
           />
         </div>
         {candidate.interests.length > 0 && (
@@ -224,16 +237,22 @@ function CandidateCard({ candidate, activeDomain }: { candidate: CandidateAggreg
   );
 }
 
-function DomainSection({
-  domain,
-  candidates,
-}: {
+type RoleCandidate = {
+  candidate: CandidateAggregate;
+  highlight: HighlightContext;
+};
+
+type RoleGroup = {
+  roleId: string;
+  label: string;
   domain: Domain;
-  candidates: CandidateAggregate[];
-}) {
+  candidates: RoleCandidate[];
+};
+
+function DomainSection({ domain, groups }: { domain: Domain; groups: RoleGroup[] }) {
   const label = domain === "acting" ? "Acting Talente" : "Crew Talente";
 
-  if (candidates.length === 0) {
+  if (groups.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-6 text-sm text-muted-foreground">
         Keine Kandidat:innen für {label} verfügbar.
@@ -242,18 +261,26 @@ function DomainSection({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between text-sm">
-        <h3 className="font-semibold text-foreground">{label}</h3>
-        <span className="text-xs text-muted-foreground">{candidates.length} Profile</span>
-      </div>
-      <div className="overflow-x-auto">
-        <div className="flex gap-4 pb-2">
-          {candidates.map((candidate) => (
-            <CandidateCard key={`${domain}-${candidate.userId}`} candidate={candidate} activeDomain={domain} />
-          ))}
-        </div>
-      </div>
+    <div className="space-y-6">
+      {groups.map((group) => (
+        <section key={group.roleId} className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <h3 className="font-semibold text-foreground">{group.label}</h3>
+            <span className="text-xs text-muted-foreground">
+              {group.candidates.length} {group.candidates.length === 1 ? "Profil" : "Profile"}
+            </span>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {group.candidates.map(({ candidate, highlight }) => (
+              <CandidateCard
+                key={`${group.roleId}-${candidate.userId}`}
+                candidate={candidate}
+                highlight={highlight}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
@@ -287,7 +314,7 @@ export function RankingTab({ ranking }: RankingTabProps) {
     }
   }, [actingRoles.length, crewRoles.length, domain]);
 
-  const candidateAggregates = useMemo(() => {
+  const roleGroups = useMemo(() => {
     const map = new Map<string, CandidateAggregate>();
 
     for (const role of ranking.roles) {
@@ -306,7 +333,6 @@ export function RankingTab({ ranking }: RankingTabProps) {
             interests: [...new Set(candidate.interests)],
             background: candidate.background,
             notes: candidate.notes,
-            bestRank: candidate.rank,
             preferences: {
               acting: [],
               crew: [],
@@ -327,7 +353,6 @@ export function RankingTab({ ranking }: RankingTabProps) {
           entry.interests = Array.from(new Set([...entry.interests, ...candidate.interests]));
           entry.background = entry.background ?? candidate.background;
           entry.notes = entry.notes ?? candidate.notes;
-          entry.bestRank = entry.bestRank === null ? candidate.rank : Math.min(entry.bestRank, candidate.rank);
         }
 
         const addPreference = (prefDomain: Domain, pref: CandidatePreference) => {
@@ -358,34 +383,53 @@ export function RankingTab({ ranking }: RankingTabProps) {
       }
     }
 
-    const aggregates = Array.from(map.values());
-
-    for (const aggregate of aggregates) {
+    for (const aggregate of map.values()) {
       aggregate.preferences.acting.sort((a, b) => b.share - a.share);
       aggregate.preferences.crew.sort((a, b) => b.share - a.share);
     }
 
-    return aggregates;
+    const groups = ranking.roles.map((role) => ({
+      roleId: role.roleId,
+      label: role.label,
+      domain: role.domain as Domain,
+      candidates: role.candidates.map((candidate) => {
+        const aggregate = map.get(candidate.userId);
+        return {
+          candidate: aggregate!,
+          highlight: {
+            domain: role.domain as Domain,
+            roleId: role.roleId,
+            label: role.label,
+            rank: candidate.rank,
+            share: candidate.normalizedShare,
+          },
+        } satisfies RoleCandidate;
+      }),
+    } satisfies RoleGroup));
+
+    return groups;
   }, [ranking.roles]);
 
-  const actingCandidates = useMemo(
+  const actingGroups = useMemo(
     () =>
-      candidateAggregates
-        .filter((candidate) => candidate.preferences.acting.length > 0)
-        .slice()
-        .sort(
-          (a, b) => (b.preferences.acting[0]?.share ?? 0) - (a.preferences.acting[0]?.share ?? 0),
-        ),
-    [candidateAggregates],
+      roleGroups
+        .filter((group) => group.domain === "acting" && group.candidates.length > 0)
+        .map((group) => ({
+          ...group,
+          candidates: group.candidates.slice().sort((a, b) => a.highlight.rank - b.highlight.rank),
+        })),
+    [roleGroups],
   );
 
-  const crewCandidates = useMemo(
+  const crewGroups = useMemo(
     () =>
-      candidateAggregates
-        .filter((candidate) => candidate.preferences.crew.length > 0)
-        .slice()
-        .sort((a, b) => (b.preferences.crew[0]?.share ?? 0) - (a.preferences.crew[0]?.share ?? 0)),
-    [candidateAggregates],
+      roleGroups
+        .filter((group) => group.domain === "crew" && group.candidates.length > 0)
+        .map((group) => ({
+          ...group,
+          candidates: group.candidates.slice().sort((a, b) => a.highlight.rank - b.highlight.rank),
+        })),
+    [roleGroups],
   );
 
   return (
@@ -413,7 +457,7 @@ export function RankingTab({ ranking }: RankingTabProps) {
               }))}
             />
 
-            <DomainSection domain="acting" candidates={actingCandidates} />
+            <DomainSection domain="acting" groups={actingGroups} />
           </>
         )}
       </TabsContent>
@@ -436,7 +480,7 @@ export function RankingTab({ ranking }: RankingTabProps) {
               }))}
             />
 
-            <DomainSection domain="crew" candidates={crewCandidates} />
+            <DomainSection domain="crew" groups={crewGroups} />
           </>
         )}
       </TabsContent>
