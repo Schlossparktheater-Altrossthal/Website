@@ -249,6 +249,13 @@ type RoleGroup = {
   candidates: RoleCandidate[];
 };
 
+type RoleSummary = {
+  roleId: string;
+  label: string;
+  domain: Domain;
+  averageShare: number;
+};
+
 function DomainSection({ domain, groups }: { domain: Domain; groups: RoleGroup[] }) {
   const label = domain === "acting" ? "Acting Talente" : "Crew Talente";
 
@@ -288,31 +295,61 @@ function DomainSection({ domain, groups }: { domain: Domain; groups: RoleGroup[]
 export function RankingTab({ ranking }: RankingTabProps) {
   const [domain, setDomain] = useState<Domain>("acting");
 
-  const actingRoles = useMemo(
-    () =>
-      ranking.roles
-        .filter((role) => role.domain === "acting")
-        .slice()
-        .sort((a, b) => a.label.localeCompare(b.label, "de-DE")),
-    [ranking.roles],
+  const roleSummaries = useMemo<RoleSummary[]>(() => {
+    return ranking.roles.map((role) => {
+      const totalShare = role.candidates.reduce((sum, candidate) => sum + candidate.normalizedShare, 0);
+      const averageShare =
+        role.candidates.length === 0 ? 0 : totalShare / role.candidates.length;
+
+      return {
+        roleId: role.roleId,
+        label: role.label,
+        domain: role.domain as Domain,
+        averageShare,
+      } satisfies RoleSummary;
+    });
+  }, [ranking.roles]);
+
+  const roleSummaryMap = useMemo(
+    () => new Map<string, RoleSummary>(roleSummaries.map((summary) => [summary.roleId, summary])),
+    [roleSummaries],
   );
 
-  const crewRoles = useMemo(
+  const actingRoleSummaries = useMemo(
     () =>
-      ranking.roles
-        .filter((role) => role.domain === "crew")
+      roleSummaries
+        .filter((summary) => summary.domain === "acting")
         .slice()
-        .sort((a, b) => a.label.localeCompare(b.label, "de-DE")),
-    [ranking.roles],
+        .sort((a, b) => {
+          if (b.averageShare === a.averageShare) {
+            return a.label.localeCompare(b.label, "de-DE");
+          }
+          return b.averageShare - a.averageShare;
+        }),
+    [roleSummaries],
+  );
+
+  const crewRoleSummaries = useMemo(
+    () =>
+      roleSummaries
+        .filter((summary) => summary.domain === "crew")
+        .slice()
+        .sort((a, b) => {
+          if (b.averageShare === a.averageShare) {
+            return a.label.localeCompare(b.label, "de-DE");
+          }
+          return b.averageShare - a.averageShare;
+        }),
+    [roleSummaries],
   );
 
   useEffect(() => {
-    if (domain === "acting" && actingRoles.length === 0 && crewRoles.length > 0) {
+    if (domain === "acting" && actingRoleSummaries.length === 0 && crewRoleSummaries.length > 0) {
       setDomain("crew");
-    } else if (domain === "crew" && crewRoles.length === 0 && actingRoles.length > 0) {
+    } else if (domain === "crew" && crewRoleSummaries.length === 0 && actingRoleSummaries.length > 0) {
       setDomain("acting");
     }
-  }, [actingRoles.length, crewRoles.length, domain]);
+  }, [actingRoleSummaries.length, crewRoleSummaries.length, domain]);
 
   const roleGroups = useMemo(() => {
     const map = new Map<string, CandidateAggregate>();
@@ -417,8 +454,16 @@ export function RankingTab({ ranking }: RankingTabProps) {
         .map((group) => ({
           ...group,
           candidates: group.candidates.slice().sort((a, b) => a.highlight.rank - b.highlight.rank),
-        })),
-    [roleGroups],
+        }))
+        .sort((a, b) => {
+          const aSummary = roleSummaryMap.get(a.roleId)?.averageShare ?? 0;
+          const bSummary = roleSummaryMap.get(b.roleId)?.averageShare ?? 0;
+          if (bSummary === aSummary) {
+            return a.label.localeCompare(b.label, "de-DE");
+          }
+          return bSummary - aSummary;
+        }),
+    [roleGroups, roleSummaryMap],
   );
 
   const crewGroups = useMemo(
@@ -428,8 +473,16 @@ export function RankingTab({ ranking }: RankingTabProps) {
         .map((group) => ({
           ...group,
           candidates: group.candidates.slice().sort((a, b) => a.highlight.rank - b.highlight.rank),
-        })),
-    [roleGroups],
+        }))
+        .sort((a, b) => {
+          const aSummary = roleSummaryMap.get(a.roleId)?.averageShare ?? 0;
+          const bSummary = roleSummaryMap.get(b.roleId)?.averageShare ?? 0;
+          if (bSummary === aSummary) {
+            return a.label.localeCompare(b.label, "de-DE");
+          }
+          return bSummary - aSummary;
+        }),
+    [roleGroups, roleSummaryMap],
   );
 
   return (
@@ -439,7 +492,7 @@ export function RankingTab({ ranking }: RankingTabProps) {
         <TabsTrigger value="crew">Crew</TabsTrigger>
       </TabsList>
       <TabsContent value="acting" className="mt-0 space-y-4">
-        {actingRoles.length === 0 ? (
+        {actingRoleSummaries.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Keine Daten für {domainLabels.acting} verfügbar.
           </p>
@@ -448,12 +501,9 @@ export function RankingTab({ ranking }: RankingTabProps) {
             <RoleSpiderChart
               title="Acting Rollenpräferenzen"
               subtitle="Verteilung der Rollengrößen nach Präferenzstärke"
-              data={actingRoles.map((role) => ({
+              data={actingRoleSummaries.map((role) => ({
                 label: role.label,
-                value:
-                  (role.candidates.reduce((sum, c) => sum + c.normalizedShare, 0) /
-                    Math.max(role.candidates.length, 1)) *
-                  100,
+                value: role.averageShare * 100,
               }))}
             />
 
@@ -462,7 +512,7 @@ export function RankingTab({ ranking }: RankingTabProps) {
         )}
       </TabsContent>
       <TabsContent value="crew" className="mt-0 space-y-4">
-        {crewRoles.length === 0 ? (
+        {crewRoleSummaries.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Keine Daten für {domainLabels.crew} verfügbar.
           </p>
@@ -471,12 +521,9 @@ export function RankingTab({ ranking }: RankingTabProps) {
             <RoleSpiderChart
               title="Crew Rollenpräferenzen"
               subtitle="Verteilung der Gewerke nach Präferenzstärke"
-              data={crewRoles.map((role) => ({
+              data={crewRoleSummaries.map((role) => ({
                 label: role.label,
-                value:
-                  (role.candidates.reduce((sum, c) => sum + c.normalizedShare, 0) /
-                    Math.max(role.candidates.length, 1)) *
-                  100,
+                value: role.averageShare * 100,
               }))}
             />
 
