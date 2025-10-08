@@ -14,6 +14,7 @@ type RoleSpiderChartProps = {
   title?: string;
   subtitle?: string;
   size?: number;
+  accentColor?: string;
 };
 
 const percentFormatter = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
@@ -23,8 +24,10 @@ export function RoleSpiderChart({
   title = "Rollenpräferenzen",
   subtitle = "Verteilung der Rollengrößen-Präferenzen",
   size = 220,
+  accentColor,
 }: RoleSpiderChartProps) {
   const chartId = useId();
+  const accent = accentColor ?? "hsl(var(--primary))";
 
   const { pathData, labels, maxValue, center, radius, angleStep, points } = useMemo(() => {
     if (data.length === 0) {
@@ -122,15 +125,15 @@ export function RoleSpiderChart({
         <svg width={size} height={size} className="overflow-visible" role="img" aria-label={title}>
           <defs>
             <linearGradient id={`spider-fill-${chartId}`} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
+              <stop offset="0%" stopColor={accent} stopOpacity="0.45" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0.15" />
             </linearGradient>
             <linearGradient id={`spider-stroke-${chartId}`} x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
+              <stop offset="0%" stopColor={accent} stopOpacity="0.7" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0.4" />
             </linearGradient>
             <filter id={`spider-shadow-${chartId}`} x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="hsl(var(--primary))" floodOpacity="0.12" />
+              <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor={accent} floodOpacity="0.12" />
             </filter>
           </defs>
 
@@ -177,7 +180,7 @@ export function RoleSpiderChart({
             />
           ))}
 
-          <circle cx={center} cy={center} r={4} fill="hsl(var(--primary))" fillOpacity={0.6} />
+          <circle cx={center} cy={center} r={4} fill={accent} fillOpacity={0.6} />
 
           <path
             d={pathData}
@@ -195,14 +198,14 @@ export function RoleSpiderChart({
                 cy={point.y}
                 r={3.5}
                 fill="hsl(var(--background))"
-                stroke="hsl(var(--primary))"
+                stroke={accent}
                 strokeWidth={1.5}
               />
               <circle
                 cx={point.x}
                 cy={point.y}
                 r={1.4}
-                fill="hsl(var(--primary))"
+                fill={accent}
               />
             </g>
           ))}
