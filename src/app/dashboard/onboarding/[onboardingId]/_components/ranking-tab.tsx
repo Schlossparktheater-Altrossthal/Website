@@ -24,6 +24,7 @@ import {
   sortRoleGroupsByDomain,
   sortRoleSummariesByDomain,
 } from "./ranking-data";
+import { getRolePreferenceOrder, getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
 import type {
   CandidateAggregate,
   CandidatePreference,
@@ -64,7 +65,7 @@ const scoreFormatter = new Intl.NumberFormat("de-DE", {
   maximumFractionDigits: 2,
 });
 
-type FocusFilter = "all" | "acting" | "tech" | "both";
+type RoleFilter = "all" | string;
 
 const roleAccentStyles: Record<string, string> = {
   acting_lead: "border-amber-400/60 bg-amber-500/10 dark:border-amber-400/40 dark:bg-amber-500/5",
@@ -276,12 +277,14 @@ function DomainSection({
   domain,
   groups,
   onSelectCandidate,
-  focusFilter,
+  roleFilter,
+  roleFilterLabel,
 }: {
   domain: Domain;
   groups: RoleGroup[];
   onSelectCandidate: (candidate: CandidateAggregate, highlight: HighlightContext) => void;
-  focusFilter: FocusFilter;
+  roleFilter: RoleFilter;
+  roleFilterLabel: string | null;
 }) {
   const label = domain === "acting" ? "Acting Talente" : "Crew Talente";
 
@@ -293,35 +296,24 @@ function DomainSection({
     );
   }
 
-  const matchesFocus = (focus: CandidateAggregate["focus"]): boolean => {
-    if (focusFilter === "all") {
-      return true;
-    }
-    if (focus === null) {
-      return focusFilter === "acting";
-    }
-    if (focusFilter === "both") {
-      return focus === "both";
-    }
-    if (focusFilter === "acting") {
-      return focus === "acting" || focus === "both";
-    }
-    if (focusFilter === "tech") {
-      return focus === "tech" || focus === "both";
-    }
-    return true;
-  };
+  const visibleGroups =
+    roleFilter === "all" ? groups : groups.filter((group) => group.roleId === roleFilter);
+
+  if (visibleGroups.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 p-6 text-sm text-muted-foreground">
+        {roleFilterLabel
+          ? `Keine Profile für ${roleFilterLabel} verfügbar.`
+          : "Keine Profile für den aktuellen Filter verfügbar."}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
-      {groups.map((group) => {
+      {visibleGroups.map((group) => {
         const accentClass = roleAccentStyles[group.roleId] ?? roleAccentStyles.default;
-        const filteredCandidates = group.candidates.filter(({ candidate }) => matchesFocus(candidate.focus));
-        const totalCandidates = group.candidates.length;
-        const profileLabel =
-          focusFilter === "all"
-            ? `Profile: ${totalCandidates}`
-            : `Treffer: ${filteredCandidates.length} / ${totalCandidates}`;
+        const profileLabel = `Profile: ${numberFormatter.format(group.candidates.length)}`;
 
         return (
           <section key={group.roleId}>
@@ -353,13 +345,13 @@ function DomainSection({
                   </Badge>
                 </div>
               </div>
-              {filteredCandidates.length === 0 ? (
+              {group.candidates.length === 0 ? (
                 <p className="mt-4 rounded-lg border border-dashed border-border/60 bg-background/60 p-4 text-sm text-muted-foreground">
-                  Keine Profile für den aktuellen Filter sichtbar.
+                  Keine Profile für diesen Bereich verfügbar.
                 </p>
               ) : (
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredCandidates.map(({ candidate, highlight }) => (
+                  {group.candidates.map(({ candidate, highlight }) => (
                     <CandidateCard
                       key={`${group.roleId}-${candidate.userId}`}
                       candidate={candidate}
@@ -379,7 +371,7 @@ function DomainSection({
 
 export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: RankingTabProps) {
   const [domain, setDomain] = useState<Domain>("acting");
-  const [focusFilter, setFocusFilter] = useState<FocusFilter>("all");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const router = useRouter();
 
   const handleSelectCandidate = useCallback(
@@ -407,6 +399,41 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
     };
   }, [ranking]);
 
+  const roleFilterOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    const labels = new Map<string, string>();
+
+    for (const role of ranking.roles) {
+      counts.set(role.roleId, role.candidates.length);
+      labels.set(role.roleId, role.label);
+    }
+
+    const buildOptions = (domain: Domain) => {
+      const order = getRolePreferenceOrder(domain === "acting" ? "acting" : "crew");
+      const base = order.map((roleId) => ({
+        value: roleId,
+        label: labels.get(roleId) ?? getRolePreferenceTitle(roleId),
+        count: counts.get(roleId) ?? 0,
+      }));
+
+      const extras = ranking.roles
+        .filter((role) => role.domain === domain && !order.includes(role.roleId))
+        .map((role) => ({
+          value: role.roleId,
+          label: role.label,
+          count: role.candidates.length,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label, "de-DE"));
+
+      return [...base, ...extras];
+    };
+
+    return {
+      acting: buildOptions("acting"),
+      crew: buildOptions("crew"),
+    };
+  }, [ranking.roles]);
+
   useEffect(() => {
     if (domain === "acting" && actingRoleSummaries.length === 0 && crewRoleSummaries.length > 0) {
       setDomain("crew");
@@ -415,34 +442,63 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
     }
   }, [actingRoleSummaries.length, crewRoleSummaries.length, domain]);
 
+  useEffect(() => {
+    setRoleFilter("all");
+  }, [domain]);
+
+  const activeFilterOptions = domain === "acting" ? roleFilterOptions.acting : roleFilterOptions.crew;
+  const totalProfiles = activeFilterOptions.reduce((sum, option) => sum + option.count, 0);
+  const selectedRoleMeta =
+    roleFilter === "all" ? null : activeFilterOptions.find((option) => option.value === roleFilter) ?? null;
+  const filterLabel = domain === "acting" ? "Rollengröße" : "Gewerk";
+  const filterDescription =
+    domain === "acting"
+      ? "Blende Rollengrößen aus, um gezielt nach passenden Talenten zu suchen."
+      : "Blende Gewerke aus, um gezielt nach passenden Talenten zu suchen.";
+  const allLabel = domain === "acting" ? "Alle Rollen" : "Alle Gewerke";
+
   return (
     <>
       <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/20 p-4 sm:flex sm:items-center sm:justify-between sm:space-y-0">
         <div className="space-y-1">
-          <h2 className="text-sm font-semibold text-foreground/90">Talente filtern</h2>
-          <p className="text-xs text-muted-foreground">
-            Blende Rollen nach Schwerpunkt aus, um schneller passende Talente zu finden.
-          </p>
+          <h2 className="text-sm font-semibold text-foreground/90">
+            {domain === "acting" ? "Rollengrößen filtern" : "Gewerke filtern"}
+          </h2>
+          <p className="text-xs text-muted-foreground">{filterDescription}</p>
         </div>
         <div className="flex items-center gap-3">
           <Label
-            htmlFor="focus-filter"
+            htmlFor="role-filter"
             className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
           >
-            Fokus
+            {filterLabel}
           </Label>
-          <Select value={focusFilter} onValueChange={(value) => setFocusFilter(value as FocusFilter)}>
+          <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value)}>
             <SelectTrigger
-              id="focus-filter"
-              className="w-[220px] border-border/60 bg-background/80 text-sm"
+              id="role-filter"
+              className="w-[240px] border-border/60 bg-background/80 text-sm"
             >
-              <SelectValue placeholder="Alle Talente" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Talente</SelectItem>
-              <SelectItem value="acting">Fokus Acting</SelectItem>
-              <SelectItem value="tech">Fokus Technik</SelectItem>
-              <SelectItem value="both">Fokus Acting + Crew</SelectItem>
+              <SelectItem value="all" className="flex items-center justify-between gap-3">
+                <span>{allLabel}</span>
+                <span className="text-xs text-muted-foreground">
+                  {numberFormatter.format(totalProfiles)} Profile
+                </span>
+              </SelectItem>
+              {activeFilterOptions.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span>{option.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {numberFormatter.format(option.count)} Profile
+                  </span>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -472,7 +528,8 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
                 domain="acting"
                 groups={actingGroups}
                 onSelectCandidate={handleSelectCandidate}
-                focusFilter={focusFilter}
+                roleFilter={roleFilter}
+                roleFilterLabel={selectedRoleMeta?.label ?? null}
               />
             </>
           )}
@@ -497,7 +554,8 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
                 domain="crew"
                 groups={crewGroups}
                 onSelectCandidate={handleSelectCandidate}
-                focusFilter={focusFilter}
+                roleFilter={roleFilter}
+                roleFilterLabel={selectedRoleMeta?.label ?? null}
               />
             </>
           )}
