@@ -137,12 +137,12 @@ function isBlockedEntry(entry: MemberEntry) {
   return true;
 }
 
-function isCompletelyBlocked(member: Member) {
+function hasAnyAvailability(member: Member) {
   if (member.entries.length === 0) {
-    return false;
+    return true;
   }
 
-  return member.entries.every((entry) => isBlockedEntry(entry));
+  return member.entries.some((entry) => !isBlockedEntry(entry));
 }
 
 type TableCellIcon = {
@@ -771,16 +771,16 @@ function drawTable(
 
 export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDaysPdfData> = {
   id: "sperrliste-wichtige-tage",
-  label: "Sperrliste · Wichtige Probentage",
+  label: "Verfügbarkeiten · Wichtige Probentage",
   description:
-    "Zeigt Sperrtermine der wichtigsten Probentage im Zwei-Wochen-Fenster als kompakt formatiertes Tabellen-PDF.",
+    "Zeigt Verfügbarkeiten für die wichtigsten Probentage im Zwei-Wochen-Fenster als kompakt formatiertes Tabellen-PDF.",
   filename: (data) => {
     const start = formatDateForFilename(data.range.start);
     const end = formatDateForFilename(data.range.end);
     return `sperrliste-wichtige-tage-${start}-${end}.pdf`;
   },
   async render(doc, data) {
-    doc.font("Helvetica-Bold").fontSize(17).fillColor("#111827").text("Sperrliste · Wichtige Probentage");
+    doc.font("Helvetica-Bold").fontSize(17).fillColor("#111827").text("Verfügbarkeiten · Wichtige Probentage");
 
     const accentStartX = doc.page.margins.left;
     const accentEndX = accentStartX + 64;
@@ -801,7 +801,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       data.summary.importantWeekdays
         ? `Berücksichtigte Tage: ${data.summary.importantWeekdays}`
         : null,
-      `Mitglieder mit Sperrterminen: ${data.summary.memberCount}`,
+      `Mitglieder mit Verfügbarkeiten: ${data.summary.memberCount}`,
     ].filter((value): value is string => Boolean(value));
 
     const summaryBoxX = doc.page.margins.left;
@@ -838,14 +838,14 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
 
     doc.y = summaryBoxY + summaryBoxHeight + 10;
 
-    const membersToDisplay = data.members.filter((member) => !isCompletelyBlocked(member));
+    const membersToDisplay = data.members.filter((member) => hasAnyAvailability(member));
 
     if (!data.days.length || membersToDisplay.length === 0) {
       doc
         .font("Helvetica")
         .fontSize(9)
         .fillColor("#4b5563")
-        .text("Für den angegebenen Zeitraum liegen keine Sperrtermine auf wichtigen Tagen vor.");
+        .text("Für den angegebenen Zeitraum liegen keine Verfügbarkeiten auf wichtigen Tagen vor.");
       return;
     }
 
@@ -960,52 +960,20 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         }
 
         const status = (entry.status ?? "none") as MemberEntryStatus;
-        if (status === "none") {
-          return;
-        }
-
         const normalized = entry.value?.replace(/\s+/g, " ").trim() ?? "";
         const lower = normalized.toLowerCase();
         const truncate = (value: string) =>
           value.length > 60 ? `${value.slice(0, 57).trimEnd()}…` : value;
         const iconSize = 10;
 
-        if (status === "blocked") {
-          if (lower === "frei" || lower === "verfügbar") {
-            return;
-          }
-
-          const isGeneric = lower === "gesperrt";
-          const truncated = truncate(normalized);
-          cells[columnIndex] = "";
-          styles[columnIndex] = {
-            align: "center",
-            font: "bold",
-            fontSize: 7.5,
-            textColor: "#7f1d1d",
-            fillColor: isGeneric ? "#fee2e2" : "#fef2f2",
-            prefixIcon: {
-              type: "cross",
-              size: iconSize,
-              strokeColor: "#b91c1c",
-              align: "center",
-              verticalAlign: isGeneric ? "middle" : "top",
-            },
-            verticalAlign: isGeneric ? "middle" : "top",
-            contentOffsetY: isGeneric ? undefined : iconSize + 3,
-            secondaryText: isGeneric ? null : truncated,
-            secondaryFont: isGeneric ? undefined : "regular",
-            secondaryFontSize: isGeneric ? undefined : 6.3,
-            secondaryTextColor: isGeneric ? undefined : "#991b1b",
-            secondarySpacing: isGeneric ? undefined : 2,
-          };
-          return;
-        }
-
         if (status === "limited" || status === "preferred") {
-          const baseLabel = status === "limited" ? "eingeschränkt" : "bevorzugt";
+          const baseLabel = status === "limited" ? "eingeschränkt verfügbar" : "bevorzugt";
           const displayLabel = `${baseLabel.charAt(0).toUpperCase()}${baseLabel.slice(1)}`;
-          const hasCustomReason = normalized && lower !== baseLabel;
+          const hasCustomReason =
+            normalized &&
+            (status === "limited"
+              ? !["eingeschränkt", "eingeschränkt verfügbar"].includes(lower)
+              : lower !== "bevorzugt");
           const truncated = hasCustomReason ? truncate(normalized) : null;
           const palette =
             status === "limited"
@@ -1037,6 +1005,36 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
           };
           return;
         }
+
+        if (isBlockedEntry(entry)) {
+          return;
+        }
+
+        const isAffirmativeRemark = isPositiveAvailabilityRemark(normalized);
+        const truncatedRemark = normalized && !isAffirmativeRemark ? truncate(normalized) : null;
+
+        cells[columnIndex] = "Verfügbar";
+        styles[columnIndex] = {
+          align: "center",
+          font: "bold",
+          fontSize: 7.5,
+          textColor: "#047857",
+          fillColor: "#ecfdf5",
+          prefixIcon: {
+            type: "check",
+            size: iconSize,
+            strokeColor: "#047857",
+            align: "center",
+            verticalAlign: truncatedRemark ? "top" : "middle",
+          },
+          verticalAlign: truncatedRemark ? "top" : "middle",
+          contentOffsetY: truncatedRemark ? iconSize + 3 : undefined,
+          secondaryText: truncatedRemark,
+          secondaryFont: truncatedRemark ? "regular" : undefined,
+          secondaryFontSize: truncatedRemark ? 6.3 : undefined,
+          secondaryTextColor: truncatedRemark ? "#047857" : undefined,
+          secondarySpacing: truncatedRemark ? 2 : undefined,
+        };
       });
 
       const trimmedEmail = member.email?.trim() ?? "";
@@ -1101,7 +1099,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       });
     }
 
-    doc.font("Helvetica-Bold").fontSize(11).fillColor("#111827").text("Sperrtermine im Überblick");
+    doc.font("Helvetica-Bold").fontSize(11).fillColor("#111827").text("Verfügbarkeiten im Überblick");
     doc.moveDown(0.4);
 
     drawTable(
@@ -1123,7 +1121,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       .fontSize(7.4)
       .fillColor("#6b7280")
       .text(
-        "Hinweis: Kreuze markieren Sperrtage. Angegebene Gründe werden neben dem Symbol angezeigt; leere Felder bedeuten keine Sperre am jeweiligen Tag.",
+        "Hinweis: Häkchen markieren Verfügbarkeiten. Angegebene Hinweise werden neben dem Symbol angezeigt; leere Felder bedeuten keine Verfügbarkeit am jeweiligen Tag.",
       );
   },
   schema: sperrlisteImportantDaysSchema,
