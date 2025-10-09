@@ -1,5 +1,7 @@
 export type PhotoConsentStatus = "none" | "pending" | "approved" | "rejected";
 
+import type { SignaturePayload } from "./signature";
+
 export type PhotoConsentSummary = {
   status: PhotoConsentStatus;
   requiresDocument: boolean;
@@ -17,6 +19,9 @@ export type PhotoConsentSummary = {
   documentUploadedAt: string | null;
   documentMime: string | null;
   documentPreviewUrl: string | null;
+  signatureVersion: string | null;
+  signatureCapturedAt: string | null;
+  signaturePayload: SignaturePayload | null;
 };
 
 export type PhotoConsentAdminEntry = {
@@ -41,4 +46,7 @@ export type PhotoConsentAdminEntry = {
   documentUploadedAt: string | null;
   documentMime: string | null;
   documentPreviewUrl: string | null;
+  signatureVersion: string | null;
+  signatureCapturedAt: string | null;
+  signaturePayload: SignaturePayload | null;
 };

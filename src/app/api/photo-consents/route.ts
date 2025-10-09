@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { getUserDisplayName } from "@/lib/names";
@@ -8,6 +9,7 @@ import {
   dispatchPhotoConsentBoardNotification,
 } from "@/lib/photo-consent-notifications";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
+import { signaturePayloadSchema, type SignaturePayload } from "@/types/signature";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024; // 8 MB
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -28,6 +30,9 @@ type ConsentRecord = {
   documentUploadedAt: Date | null;
   documentName: string | null;
   documentMime: string | null;
+  signatureVersion: string | null;
+  signatureCapturedAt: Date | null;
+  signaturePayload: unknown;
   approvedBy: { name: string | null } | null;
 };
 
@@ -65,6 +70,15 @@ function calculateAge(date: Date | null | undefined): number | null {
   return age;
 }
 
+function parseSignaturePayload(value: unknown) {
+  if (!value) return null;
+  const parsed = signaturePayloadSchema.safeParse(value);
+  if (!parsed.success) {
+    return null;
+  }
+  return parsed.data;
+}
+
 function buildSummary(user: UserRecord): PhotoConsentSummary {
   const consent = user.photoConsent;
   const dateOfBirth = user.dateOfBirth;
@@ -78,6 +92,13 @@ function buildSummary(user: UserRecord): PhotoConsentSummary {
   const documentPreviewUrl =
     consent?.documentUploadedAt && documentMime?.toLowerCase().startsWith("image/")
       ? `/api/photo-consents/${consent.id}/document?mode=inline`
+      : null;
+
+  const signaturePayload = parseSignaturePayload(consent?.signaturePayload ?? null);
+  const signatureVersion = consent?.signatureVersion ?? null;
+  const signatureCapturedAt =
+    consent?.signatureCapturedAt && !Number.isNaN(consent.signatureCapturedAt.valueOf())
+      ? consent.signatureCapturedAt.toISOString()
       : null;
 
   return {
@@ -97,6 +118,9 @@ function buildSummary(user: UserRecord): PhotoConsentSummary {
     documentUploadedAt: consent?.documentUploadedAt ? consent.documentUploadedAt.toISOString() : null,
     documentMime,
     documentPreviewUrl,
+    signatureVersion,
+    signatureCapturedAt,
+    signaturePayload,
   };
 }
 
@@ -144,6 +168,9 @@ export async function GET() {
           documentUploadedAt: true,
           documentName: true,
           documentMime: true,
+          signatureVersion: true,
+          signatureCapturedAt: true,
+          signaturePayload: true,
           approvedBy: { select: { name: true } },
         },
       },
@@ -237,6 +264,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Bitte lade die unterschriebene Einverständniserklärung hoch" }, { status: 400 });
   }
 
+  let signaturePayload: SignaturePayload | null = null;
+  let signatureVersion: string | null = null;
+  let signatureCapturedAt: Date | null = null;
+
+  const rawSignaturePayload = body.signaturePayload;
+  if (rawSignaturePayload !== undefined && rawSignaturePayload !== null) {
+    let parsedValue: unknown = null;
+    if (typeof rawSignaturePayload === "string") {
+      const trimmed = rawSignaturePayload.trim();
+      if (trimmed) {
+        try {
+          parsedValue = JSON.parse(trimmed);
+        } catch {
+          return NextResponse.json({ error: "Signaturdaten konnten nicht gelesen werden" }, { status: 400 });
+        }
+      }
+    } else if (typeof rawSignaturePayload === "object") {
+      parsedValue = rawSignaturePayload;
+    }
+
+    if (parsedValue) {
+      const parsed = signaturePayloadSchema.safeParse(parsedValue);
+      if (!parsed.success) {
+        return NextResponse.json({ error: "Ungültige Signaturdaten" }, { status: 400 });
+      }
+      signaturePayload = parsed.data;
+      signatureVersion = parsed.data.version;
+      const parsedDate = new Date(parsed.data.endedAt);
+      signatureCapturedAt = Number.isNaN(parsedDate.valueOf()) ? new Date() : parsedDate;
+    }
+  }
+
   let documentBuffer: Buffer | undefined;
   let documentMime: string | undefined;
   let documentName: string | undefined;
@@ -260,6 +319,10 @@ export async function POST(request: NextRequest) {
     documentSize = upload.size;
   }
 
+  if (signaturePayload && !documentBuffer) {
+    return NextResponse.json({ error: "Digitale Unterschrift konnte nicht gespeichert werden" }, { status: 400 });
+  }
+
   const now = new Date();
   const docData = documentBuffer
     ? {
@@ -270,6 +333,20 @@ export async function POST(request: NextRequest) {
         documentUploadedAt: now,
       }
     : {};
+
+  const signatureData = signaturePayload
+    ? {
+        signatureVersion,
+        signaturePayload,
+        signatureCapturedAt: signatureCapturedAt ?? now,
+      }
+    : documentBuffer
+      ? {
+          signatureVersion: null,
+          signaturePayload: Prisma.JsonNull,
+          signatureCapturedAt: null,
+        }
+      : {};
 
   const actorDisplayName = getUserDisplayName(
     {
@@ -303,6 +380,7 @@ export async function POST(request: NextRequest) {
         rejectionReason: null,
         exclusionNote,
         ...docData,
+        ...signatureData,
       },
       update: {
         status: "pending",
@@ -312,6 +390,7 @@ export async function POST(request: NextRequest) {
         rejectionReason: null,
         exclusionNote,
         ...(documentBuffer ? docData : {}),
+        ...(signaturePayload || documentBuffer ? signatureData : {}),
       },
       select: {
         id: true,
@@ -324,6 +403,9 @@ export async function POST(request: NextRequest) {
         documentUploadedAt: true,
         documentName: true,
         documentMime: true,
+        signatureVersion: true,
+        signatureCapturedAt: true,
+        signaturePayload: true,
         approvedBy: { select: { name: true } },
       },
     });

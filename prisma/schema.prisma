@@ -1205,6 +1205,9 @@ model PhotoConsent {
   documentSize     Int?
   documentUploadedAt DateTime?
   documentData     Bytes?
+  signatureVersion    String?
+  signatureCapturedAt DateTime?
+  signaturePayload    Json?
   user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   approvedBy       User?               @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
 }

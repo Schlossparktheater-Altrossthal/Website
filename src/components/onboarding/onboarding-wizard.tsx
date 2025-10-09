@@ -8,7 +8,7 @@ import { AllergyLevel, type Role } from "@prisma/client";
 import { Sparkles, ShieldCheck, Lock, Target, MessageCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 
-import { SignaturePad } from "@/components/onboarding/signature-pad";
+import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -296,7 +296,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
   const {
     suggestions: interestSuggestions,
     loading: interestsLoading,
@@ -684,21 +684,21 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
     if (documentMode !== "upload") {
       setDocumentMode("upload");
     }
-    setSignatureDataUrl(null);
+    setSignatureResult(null);
     setDocumentFromFile(file);
   };
 
   const handleSelectUploadMode = () => {
     if (documentMode === "upload") return;
     setDocumentMode("upload");
-    setSignatureDataUrl(null);
+    setSignatureResult(null);
     setDocumentFromFile(null);
   };
 
   const handleSelectSignatureMode = () => {
     if (isMinor || documentMode === "signature") return;
     setDocumentMode("signature");
-    setSignatureDataUrl(null);
+    setSignatureResult(null);
     setDocumentFromFile(null);
   };
 
@@ -710,12 +710,12 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       }));
       if (skip) {
         setDocumentMode("upload");
-        setSignatureDataUrl(null);
+        setSignatureResult(null);
         setDocumentFromFile(null);
         setDocumentError(null);
       }
     },
-    [setDocumentError, setDocumentFromFile, setDocumentMode, setForm, setSignatureDataUrl],
+    [setDocumentError, setDocumentFromFile, setDocumentMode, setForm, setSignatureResult],
   );
 
   useEffect(() => {
@@ -726,36 +726,37 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       setDocumentMode("upload");
       setDocumentFromFile(null);
     }
-    if (signatureDataUrl) {
-      setSignatureDataUrl(null);
+    if (signatureResult) {
+      setSignatureResult(null);
     }
-  }, [documentMode, isMinor, setDocumentFromFile, signatureDataUrl]);
+  }, [documentMode, isMinor, setDocumentFromFile, signatureResult]);
 
-  const handleSignatureChange = (dataUrl: string | null) => {
+  const handleSignatureChange = (result: SignatureResult | null) => {
     if (documentMode !== "signature") {
       setDocumentMode("signature");
     }
-    setSignatureDataUrl(dataUrl);
+    setSignatureResult(result);
   };
 
   useEffect(() => {
-    if (!signatureDataUrl) {
+    if (!signatureResult) {
       if (documentMode === "signature") {
         setDocumentFromFile(null);
         setDocumentError(null);
       }
       return;
     }
-    const commaIndex = signatureDataUrl.indexOf(",");
+    const dataUrl = signatureResult.dataUrl;
+    const commaIndex = dataUrl.indexOf(",");
     if (commaIndex === -1) {
       setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
       setDocumentFile(null);
       return;
     }
-    const header = signatureDataUrl.slice(0, commaIndex);
+    const header = dataUrl.slice(0, commaIndex);
     const mimeMatch = header.match(/data:(.*?);base64/);
     const mime = (mimeMatch?.[1] ?? "image/png").toLowerCase();
-    const base64 = signatureDataUrl.slice(commaIndex + 1);
+    const base64 = dataUrl.slice(commaIndex + 1);
     try {
       const binary = atob(base64);
       const length = binary.length;
@@ -770,7 +771,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
       setDocumentFile(null);
     }
-  }, [documentMode, signatureDataUrl, setDocumentError, setDocumentFile, setDocumentFromFile]);
+  }, [documentMode, setDocumentError, setDocumentFile, setDocumentFromFile, signatureResult]);
 
   const goNext = () => {
     setError(null);
@@ -915,6 +916,11 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       const parsedYear = trimmedYear ? Number.parseInt(trimmedYear, 10) : Number.NaN;
       const memberSinceYear = Number.isFinite(parsedYear) ? parsedYear : null;
       const notes = form.notes.trim();
+      const signatureSubmission =
+        documentMode === "signature" && signatureResult
+          ? { version: signatureResult.payload.version, payload: signatureResult.payload }
+          : null;
+
       const payload = {
         sessionToken,
         firstName: form.firstName.trim(),
@@ -941,6 +947,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
         photoConsent: {
           consent: form.photoConsent.consent,
           skipDocument: form.photoConsent.skipDocument,
+          signature: signatureSubmission,
         },
         dietary: form.dietary.map((entry) => ({
           allergen: entry.allergen,
@@ -1805,7 +1812,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                   ) : (
                     <div className="space-y-2">
                       <label className="block font-medium">Digital unterschreiben</label>
-                      <SignaturePad value={signatureDataUrl} onChange={handleSignatureChange} />
+                      <SignaturePad value={signatureResult} onChange={handleSignatureChange} />
                       <div className="space-y-1 text-xs text-muted-foreground leading-relaxed">
                         <p>
                           {documentFile
