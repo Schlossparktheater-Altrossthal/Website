@@ -111,6 +111,8 @@ type TableCellStyle = {
   lineBreak?: boolean;
   lineGap?: number;
   verticalAlign?: "top" | "middle" | "bottom";
+  rotate?: number;
+  affectsRowHeight?: boolean;
 };
 
 type TableCellConfig = {
@@ -123,6 +125,17 @@ type TableOptions = {
   cellStyles?: readonly (readonly TableCellStyle[])[];
   rowBackgrounds?: readonly (string | null | undefined)[];
   repeatHeaderAtBottom?: boolean;
+  mergedColumnGroups?: readonly TableMergedColumnGroup[];
+};
+
+type TableMergedColumnGroup = {
+  columnIndex: number;
+  groups: readonly {
+    startRow: number;
+    rowSpan: number;
+    text: string;
+    style?: TableCellStyle;
+  }[];
 };
 
 function drawTable(
@@ -149,15 +162,55 @@ function drawTable(
 
   const columnBoundaries = columnPositions.map((position, index) => position + columnWidths[index]);
   const gridLinesX = [startX, ...columnBoundaries];
+  const horizontalSegments = columnPositions.map((position, index) => ({
+    start: position,
+    end: columnBoundaries[index],
+    columnIndex: index,
+  }));
   const gridColor = "#9ca3af";
   const gridWidth = 0.75;
 
-  const drawGridLines = (top: number, bottom: number, includeTop: boolean) => {
+  const mergedColumnGroups = options.mergedColumnGroups ?? [];
+  type MergedCellInfo = {
+    columnIndex: number;
+    group: (typeof mergedColumnGroups)[number]["groups"][number];
+  };
+  const mergedCellLookup = new Map<string, MergedCellInfo>();
+  const skipHorizontalBoundaries = new Set<string>();
+
+  mergedColumnGroups.forEach((columnGroup) => {
+    columnGroup.groups.forEach((group) => {
+      for (let offset = 0; offset < group.rowSpan; offset += 1) {
+        const rowIndex = group.startRow + offset;
+        const key = `${rowIndex}:${columnGroup.columnIndex}`;
+        mergedCellLookup.set(key, { columnIndex: columnGroup.columnIndex, group });
+        if (offset < group.rowSpan - 1) {
+          skipHorizontalBoundaries.add(`${columnGroup.columnIndex}:${rowIndex}`);
+        }
+      }
+    });
+  });
+
+  const rowMetrics: { top: number; height: number }[] = [];
+
+  const drawHorizontalLine = (y: number, boundaryRowIndex: number | null) => {
+    horizontalSegments.forEach(({ start, end, columnIndex }) => {
+      if (boundaryRowIndex !== null) {
+        const key = `${columnIndex}:${boundaryRowIndex}`;
+        if (skipHorizontalBoundaries.has(key)) {
+          return;
+        }
+      }
+      doc.moveTo(start, y).lineTo(end, y).stroke();
+    });
+  };
+
+  const drawGridLines = (top: number, bottom: number, includeTop: boolean, boundaryRowIndex: number | null) => {
     doc.save().lineWidth(gridWidth).strokeColor(gridColor);
     if (includeTop) {
-      doc.moveTo(startX, top).lineTo(startX + totalWidth, top).stroke();
+      drawHorizontalLine(top, null);
     }
-    doc.moveTo(startX, bottom).lineTo(startX + totalWidth, bottom).stroke();
+    drawHorizontalLine(bottom, boundaryRowIndex);
     gridLinesX.forEach((x) => {
       doc.moveTo(x, top).lineTo(x, bottom).stroke();
     });
@@ -189,6 +242,9 @@ function drawTable(
 
   const computeRowHeight = (cells: readonly TableCellConfig[]) => {
     return cells.reduce((max, cell, cellIndex) => {
+      if (cell.style.affectsRowHeight === false) {
+        return max;
+      }
       const font = resolveFont(cell.style);
       const fontSize = cell.style.fontSize ?? 9;
       const icon = cell.style.prefixIcon;
@@ -336,7 +392,7 @@ function drawTable(
       doc.y = y;
       doc.x = startX;
     });
-    drawGridLines(y, y + headerHeight, includeTopBorder);
+    drawGridLines(y, y + headerHeight, includeTopBorder, null);
   };
 
   const drawHeaderRow = () => {
@@ -391,6 +447,9 @@ function drawTable(
 
     const rowTop = doc.y;
     cells.forEach((cell, cellIndex) => {
+      if (mergedCellLookup.has(`${rowIndex}:${cellIndex}`)) {
+        return;
+      }
       const x = columnPositions[cellIndex];
       const width = Math.max(columnWidths[cellIndex], 32);
       const icon = cell.style.prefixIcon;
@@ -480,13 +539,129 @@ function drawTable(
     });
 
     doc.y += rowHeight;
-    drawGridLines(rowTop, doc.y, false);
+    rowMetrics[rowIndex] = { top: rowTop, height: rowHeight };
+    drawGridLines(rowTop, doc.y, false, rowIndex);
   };
 
   drawHeaderRow();
   rows.forEach((row, index) => {
     drawDataRow(row, index);
   });
+  if (mergedColumnGroups.length) {
+    const savedX = doc.x;
+    const savedY = doc.y;
+    mergedColumnGroups.forEach((columnGroup) => {
+      const columnIndex = columnGroup.columnIndex;
+      const columnX = columnPositions[columnIndex];
+      const columnWidth = columnWidths[columnIndex];
+      columnGroup.groups.forEach((group) => {
+        const { startRow, rowSpan, text } = group;
+        const rowsForGroup = rowMetrics.slice(startRow, startRow + rowSpan);
+        if (!rowsForGroup.length) {
+          return;
+        }
+        const top = rowsForGroup[0]?.top ?? 0;
+        const height = rowsForGroup.reduce((sum, metric) => sum + metric.height, 0);
+        if (height <= 0) {
+          return;
+        }
+        const style: TableCellStyle = {
+          align: "center",
+          font: "bold",
+          fontSize: 7.3,
+          textColor: "#111827",
+          verticalAlign: "middle",
+          ...group.style,
+        };
+        if (style.fillColor) {
+          doc.save();
+          doc.rect(columnX, top, columnWidth, height).fill(style.fillColor);
+          doc.restore();
+        }
+
+        const paddingX = 5;
+        const paddingY = 3;
+        const availableWidth = Math.max(columnWidth - paddingX * 2, 8);
+        const availableHeight = Math.max(height - paddingY * 2, 8);
+        const rotation = ((style.rotate ?? 0) % 360 + 360) % 360;
+        const font = resolveFont(style);
+        const fontSize = style.fontSize ?? 9;
+        const textColor = style.textColor ?? "#1f2937";
+        const align = resolveAlign(style);
+        const verticalAlign = style.verticalAlign ?? "middle";
+        doc.font(font).fontSize(fontSize);
+        const lineBreak = style.lineBreak ?? false;
+        const lineGap = style.lineGap;
+        let textWidth = 0;
+        let textHeight = 0;
+        if (lineBreak) {
+          textWidth = availableWidth;
+          textHeight = doc.heightOfString(text, {
+            width: availableWidth,
+            align,
+            lineGap,
+            lineBreak: true,
+          });
+        } else {
+          textWidth = doc.widthOfString(text);
+          textHeight = doc.currentLineHeight();
+        }
+
+        const normalizedRotation = rotation % 360;
+        if (normalizedRotation === 90 || normalizedRotation === 270) {
+          const centerX = columnX + paddingX + availableWidth / 2;
+          const centerY = top + paddingY + availableHeight / 2;
+          const drawWidth = textWidth;
+          const drawHeight = textHeight;
+          doc.save();
+          doc.rotate(normalizedRotation, { origin: [centerX, centerY] });
+          const textX = centerX - drawWidth / 2;
+          const textY = centerY - drawHeight / 2;
+          doc
+            .font(font)
+            .fontSize(fontSize)
+            .fillColor(textColor)
+            .text(text, textX, textY, {
+              width: drawWidth,
+              align: "center",
+              lineBreak: false,
+            });
+          doc.restore();
+        } else {
+          const horizontalSpace = availableWidth - textWidth;
+          let offsetX = paddingX;
+          if (align === "center") {
+            offsetX = paddingX + Math.max(horizontalSpace / 2, 0);
+          }
+          if (align === "right") {
+            offsetX = paddingX + Math.max(horizontalSpace, 0);
+          }
+
+          let offsetY = paddingY;
+          const verticalSpace = availableHeight - textHeight;
+          if (verticalAlign === "middle") {
+            offsetY = paddingY + Math.max(verticalSpace / 2, 0);
+          }
+          if (verticalAlign === "bottom") {
+            offsetY = paddingY + Math.max(verticalSpace, 0);
+          }
+          doc
+            .font(font)
+            .fontSize(fontSize)
+            .fillColor(textColor)
+            .text(text, columnX + offsetX, top + offsetY, {
+              width: availableWidth,
+              align,
+              lineBreak,
+              ellipsis: !lineBreak,
+              lineGap,
+            });
+        }
+      });
+    });
+    doc.x = savedX;
+    doc.y = savedY;
+  }
   drawFooterRow();
   doc.moveDown(0.6);
 }
@@ -620,36 +795,36 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     const headers: string[] = ["Zone", "Mitglied", ...data.days.map((day) => day.label)];
     const dayLookup = new Map(data.days.map((day, index) => [day.key, index] as const));
 
-    const zonePalette: Record<MemberZone, { rowFill: string | null; columnFill: string; textColor: string; verticalLabel: string }> = {
+    const zonePalette: Record<MemberZone, { rowFill: string | null; columnFill: string; textColor: string; columnLabel: string }> = {
       acting: {
         rowFill: "#eef2ff",
         columnFill: "#e0e7ff",
         textColor: "#312e81",
-        verticalLabel: "A\nc\nt\ni\nn\ng",
+        columnLabel: "Acting",
       },
       crew: {
         rowFill: "#ecfdf5",
         columnFill: "#d1fae5",
         textColor: "#065f46",
-        verticalLabel: "C\nr\ne\nw",
+        columnLabel: "Crew",
       },
       both: {
         rowFill: "#fef3c7",
         columnFill: "#fde68a",
         textColor: "#92400e",
-        verticalLabel: "B\ne\ni\nd\ne\ns",
+        columnLabel: "Beides",
       },
       unknown: {
         rowFill: "#f3f4f6",
         columnFill: "#e5e7eb",
         textColor: "#374151",
-        verticalLabel: "–",
+        columnLabel: "–",
       },
     };
 
     const rowBackgrounds: (string | null)[] = [];
 
-    const rows = data.members.map((member) => {
+    const rowDefinitions = data.members.map((member) => {
       const zone = (member.zone ?? "unknown") as MemberZone;
       const zoneConfig = zonePalette[zone] ?? zonePalette.unknown;
       const cells = Array<string>(dayCount).fill("–");
@@ -727,9 +902,9 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         fontSize: 7.3,
         textColor: zoneConfig.textColor,
         fillColor: zoneConfig.columnFill,
-        lineBreak: true,
-        lineGap: 0.6,
         verticalAlign: "middle",
+        rotate: -90,
+        affectsRowHeight: false,
       };
       const nameCellStyle: TableCellStyle = {
         font: "bold",
@@ -745,10 +920,41 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       rowBackgrounds.push(zoneConfig.rowFill);
 
       return {
-        values: [zoneConfig.verticalLabel, member.name, ...cells] as const,
+        zone,
+        zoneLabel: zoneConfig.columnLabel,
+        zoneStyle: zoneCellStyle,
+        values: [zoneConfig.columnLabel, member.name, ...cells] as const,
         styles: [zoneCellStyle, nameCellStyle, ...styles],
       };
     });
+
+    const rows = rowDefinitions.map((row) => row.values);
+    const cellStyles = rowDefinitions.map((row) => row.styles);
+
+    const mergedColumnGroups: TableMergedColumnGroup[] = [];
+    if (rowDefinitions.length > 0) {
+      type ZoneGroup = { startRow: number; rowSpan: number; zone: MemberZone };
+      const zoneGroups: ZoneGroup[] = [];
+      let current: ZoneGroup | null = null;
+      rowDefinitions.forEach((row, index) => {
+        if (!current || row.zone !== current.zone) {
+          current = { startRow: index, rowSpan: 1, zone: row.zone };
+          zoneGroups.push(current);
+          return;
+        }
+        current.rowSpan += 1;
+      });
+
+      mergedColumnGroups.push({
+        columnIndex: 0,
+        groups: zoneGroups.map((group) => ({
+          startRow: group.startRow,
+          rowSpan: group.rowSpan,
+          text: rowDefinitions[group.startRow]?.zoneLabel ?? "",
+          style: rowDefinitions[group.startRow]?.zoneStyle,
+        })),
+      });
+    }
 
     doc.font("Helvetica-Bold").fontSize(11).fillColor("#111827").text("Sperrtermine im Überblick");
     doc.moveDown(0.4);
@@ -756,13 +962,14 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     drawTable(
       doc,
       headers,
-      rows.map((row) => row.values),
+      rows,
       columnWidths,
       {
         headerStyles: headers.map((_, index) => ({ align: index === 1 ? "left" : "center" })),
-        cellStyles: rows.map((row) => row.styles),
+        cellStyles,
         rowBackgrounds,
         repeatHeaderAtBottom: true,
+        mergedColumnGroups,
       },
     );
 
