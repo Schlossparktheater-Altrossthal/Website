@@ -1097,7 +1097,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
         aria-label="Onboarding-Fortschritt"
         className="max-w-full overflow-x-auto rounded-xl border border-border/60 bg-background/80 px-3 py-2 shadow-sm sm:overflow-visible sm:border-none sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none"
       >
-        <ol className="flex list-none flex-wrap items-center gap-3 md:flex-nowrap">
+        <ol className="mx-auto flex list-none flex-wrap items-center gap-3 md:flex-nowrap lg:justify-center">
           {steps.map((item, index) => {
             const isActive = index === step;
             const isComplete = index < step;
