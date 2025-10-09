@@ -52,6 +52,27 @@ export const MEASUREMENT_TYPE_LABELS: Record<MeasurementType, string> = {
   HEAD: "Kopfumfang",
 };
 
+export const MEASUREMENT_TYPE_DESCRIPTIONS: Record<MeasurementType, string> = {
+  HEIGHT:
+    "Gemessen von der Oberseite des Kopfes bis zur Fußsohle – wichtig für den generellen Fit.",
+  CHEST:
+    "Horizontale Messung über die breiteste Stelle der Brust – entscheidend für Jacken und Oberteile.",
+  WAIST:
+    "Rund um die schmalste Stelle des Rumpfs auf Höhe des Bauchnabels gemessen.",
+  HIPS:
+    "Über die stärkste Stelle des Gesäßes geführt, sorgt diese Messung für eine passende Hüftweite.",
+  INSEAM:
+    "Vom Schritt bis zum Boden entlang der Beininnenseite gemessen – essenziell für Hosenlängen.",
+  SHOULDER:
+    "Von Schulterpunkt zu Schulterpunkt über den Rücken gemessen, definiert die Breite von Oberteilen.",
+  SLEEVE:
+    "Vom Schulterpunkt entlang des Arms bis zum Handgelenk – bestimmt die Ärmellänge.",
+  SHOE_SIZE:
+    "Innere Länge des Schuhs bzw. Fußlänge für das korrekte Schuhmaß.",
+  HEAD:
+    "Horizontal über Stirn und Hinterkopf geführt – Grundlage für Hüte und Kopfbedeckungen.",
+};
+
 export const MEASUREMENT_UNIT_LABELS: Record<MeasurementUnit, string> = {
   CM: "cm",
   INCH: "Zoll",
