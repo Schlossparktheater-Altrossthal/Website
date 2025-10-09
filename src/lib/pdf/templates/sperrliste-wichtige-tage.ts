@@ -57,6 +57,8 @@ const sperrlisteImportantDaysSchema = z
 export type SperrlisteImportantDaysPdfData = z.infer<typeof sperrlisteImportantDaysSchema>;
 type MemberZone = (typeof memberZoneValues)[number];
 type MemberEntryStatus = (typeof entryStatusValues)[number];
+type MemberEntry = z.infer<typeof entrySchema>;
+type Member = z.infer<typeof memberSchema>;
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -87,6 +89,27 @@ function buildRangeLabel(range: SperrlisteImportantDaysPdfData["range"]) {
   } catch {
     return null;
   }
+}
+
+function normalizeEntryValue(value: string | null | undefined) {
+  return value?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
+}
+
+function isBlockedEntry(entry: MemberEntry) {
+  if (entry.status !== "blocked") {
+    return false;
+  }
+
+  const normalized = normalizeEntryValue(entry.value);
+  return normalized !== "frei" && normalized !== "verfügbar";
+}
+
+function isCompletelyBlocked(member: Member) {
+  if (member.entries.length === 0) {
+    return false;
+  }
+
+  return member.entries.every((entry) => isBlockedEntry(entry));
 }
 
 type TableCellIcon = {
@@ -772,7 +795,9 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
 
     doc.y = summaryBoxY + summaryBoxHeight + 10;
 
-    if (!data.days.length || !data.members.length || data.summary.memberCount === 0) {
+    const membersToDisplay = data.members.filter((member) => !isCompletelyBlocked(member));
+
+    if (!data.days.length || membersToDisplay.length === 0) {
       doc
         .font("Helvetica")
         .fontSize(9)
@@ -862,7 +887,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     const rowBackgrounds: (string | null)[] = [];
 
     const zoneSortOrder: MemberZone[] = ["acting", "both", "crew", "unknown"];
-    const members = [...data.members].sort((a, b) => {
+    const members = [...membersToDisplay].sort((a, b) => {
       const zoneA = (a.zone ?? "unknown") as MemberZone;
       const zoneB = (b.zone ?? "unknown") as MemberZone;
       const zoneIndexDifference = zoneSortOrder.indexOf(zoneA) - zoneSortOrder.indexOf(zoneB);
