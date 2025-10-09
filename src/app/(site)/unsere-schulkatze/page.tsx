@@ -10,7 +10,7 @@ import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 
 import { DennisDieterEncountersSection } from "./encounters-section";
-import { SchulkatzeImageRotator } from "./image-rotator";
+import { SchulkatzeGallery } from "./schulkatze-gallery";
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
 
@@ -180,15 +180,11 @@ export default function SchulkatzePage() {
               Schulgemeinschaft bleiben und prägen, wie wir auch künftig füreinander da sind.
             </Text>
           </div>
-          <figure className="relative mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg">
-            <SchulkatzeImageRotator
-              images={schulkatzeImages}
-              alt="Schulkatze Dieter Dennis von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
-            />
-            <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-              Dieter Dennis von Altroßthal war über viele Jahre Teil unserer Schulgemeinschaft.
-            </figcaption>
-          </figure>
+          <SchulkatzeGallery
+            images={schulkatzeImages}
+            alt="Schulkatze Dieter Dennis von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
+            caption="Dieter Dennis von Altroßthal war über viele Jahre Teil unserer Schulgemeinschaft."
+          />
         </div>
       </section>
 
