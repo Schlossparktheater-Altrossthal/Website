@@ -240,6 +240,12 @@ function drawTable(
   const mergedCellLookup = new Map<string, MergedCellInfo>();
   const skipHorizontalBoundaries = new Set<string>();
 
+  const getCurrentPageIndex = () => {
+    const page = (doc as unknown as { page?: { document?: { _pageBufferStart?: number } } }).page;
+    const pageIndex = page?.document?._pageBufferStart;
+    return typeof pageIndex === "number" ? pageIndex : 0;
+  };
+
   mergedColumnGroups.forEach((columnGroup) => {
     columnGroup.groups.forEach((group) => {
       for (let offset = 0; offset < group.rowSpan; offset += 1) {
@@ -253,7 +259,7 @@ function drawTable(
     });
   });
 
-  const rowMetrics: { top: number; height: number }[] = [];
+  const rowMetrics: { top: number; height: number; pageIndex: number }[] = [];
 
   const drawHorizontalLine = (y: number, boundaryRowIndex: number | null) => {
     horizontalSegments.forEach(({ start, end, columnIndex }) => {
@@ -550,6 +556,7 @@ function drawTable(
     }
 
     const rowTop = doc.y;
+    const pageIndexForRow = getCurrentPageIndex();
     cells.forEach((cell, cellIndex) => {
       if (mergedCellLookup.has(`${rowIndex}:${cellIndex}`)) {
         return;
@@ -643,7 +650,7 @@ function drawTable(
     });
 
     doc.y += rowHeight;
-    rowMetrics[rowIndex] = { top: rowTop, height: rowHeight };
+    rowMetrics[rowIndex] = { top: rowTop, height: rowHeight, pageIndex: pageIndexForRow };
     drawGridLines(rowTop, doc.y, false, rowIndex);
   };
 
@@ -654,19 +661,17 @@ function drawTable(
   if (mergedColumnGroups.length) {
     const savedX = doc.x;
     const savedY = doc.y;
+    const savedPageIndex = getCurrentPageIndex();
     mergedColumnGroups.forEach((columnGroup) => {
       const columnIndex = columnGroup.columnIndex;
       const columnX = columnPositions[columnIndex];
       const columnWidth = columnWidths[columnIndex];
       columnGroup.groups.forEach((group) => {
         const { startRow, rowSpan, text } = group;
-        const rowsForGroup = rowMetrics.slice(startRow, startRow + rowSpan);
+        const rowsForGroup = rowMetrics
+          .slice(startRow, startRow + rowSpan)
+          .filter((metric): metric is { top: number; height: number; pageIndex: number } => Boolean(metric));
         if (!rowsForGroup.length) {
-          return;
-        }
-        const top = rowsForGroup[0]?.top ?? 0;
-        const height = rowsForGroup.reduce((sum, metric) => sum + metric.height, 0);
-        if (height <= 0) {
           return;
         }
         const style: TableCellStyle = {
@@ -677,61 +682,76 @@ function drawTable(
           verticalAlign: "middle",
           ...group.style,
         };
-        if (style.fillColor) {
-          doc.save();
-          doc.rect(columnX, top, columnWidth, height).fill(style.fillColor);
-          doc.restore();
-        }
 
-        const paddingX = 5;
-        const paddingY = 3;
-        const availableWidth = Math.max(columnWidth - paddingX * 2, 8);
-        const availableHeight = Math.max(height - paddingY * 2, 8);
-        const rotation = ((style.rotate ?? 0) % 360 + 360) % 360;
-        const font = resolveFont(style);
-        const fontSize = style.fontSize ?? 9;
-        const textColor = style.textColor ?? "#1f2937";
-        const align = resolveAlign(style);
-        const verticalAlign = style.verticalAlign ?? "middle";
-        doc.font(font).fontSize(fontSize);
-        const lineBreak = style.lineBreak ?? false;
-        const lineGap = style.lineGap;
-        let textWidth = 0;
-        let textHeight = 0;
-        if (lineBreak) {
-          textWidth = availableWidth;
-          textHeight = doc.heightOfString(text, {
-            width: availableWidth,
-            align,
-            lineGap,
-            lineBreak: true,
-          });
-        } else {
-          textWidth = doc.widthOfString(text);
-          textHeight = doc.currentLineHeight();
-        }
+        const segments: { pageIndex: number; top: number; height: number }[] = [];
+        rowsForGroup.forEach((metric) => {
+          const lastSegment = segments[segments.length - 1];
+          if (!lastSegment || lastSegment.pageIndex !== metric.pageIndex) {
+            segments.push({ pageIndex: metric.pageIndex, top: metric.top, height: metric.height });
+            return;
+          }
+          lastSegment.height += metric.height;
+        });
 
-        const normalizedRotation = rotation % 360;
-        if (normalizedRotation === 90 || normalizedRotation === 270) {
-          const centerX = columnX + paddingX + availableWidth / 2;
-          const centerY = top + paddingY + availableHeight / 2;
-          const drawWidth = textWidth;
-          const drawHeight = textHeight;
-          doc.save();
-          doc.rotate(normalizedRotation, { origin: [centerX, centerY] });
-          const textX = centerX - drawWidth / 2;
-          const textY = centerY - drawHeight / 2;
-          doc
-            .font(font)
-            .fontSize(fontSize)
-            .fillColor(textColor)
-            .text(text, textX, textY, {
-              width: drawWidth,
-              align: "center",
-              lineBreak: false,
+        segments.forEach((segment) => {
+          doc.switchToPage(segment.pageIndex);
+          if (style.fillColor) {
+            doc.save();
+            doc.rect(columnX, segment.top, columnWidth, segment.height).fill(style.fillColor);
+            doc.restore();
+          }
+
+          const paddingX = 5;
+          const paddingY = 3;
+          const availableWidth = Math.max(columnWidth - paddingX * 2, 8);
+          const availableHeight = Math.max(segment.height - paddingY * 2, 8);
+          const rotation = ((style.rotate ?? 0) % 360 + 360) % 360;
+          const font = resolveFont(style);
+          const fontSize = style.fontSize ?? 9;
+          const textColor = style.textColor ?? "#1f2937";
+          const align = resolveAlign(style);
+          const verticalAlign = style.verticalAlign ?? "middle";
+          doc.font(font).fontSize(fontSize);
+          const lineBreak = style.lineBreak ?? false;
+          const lineGap = style.lineGap;
+          let textWidth = 0;
+          let textHeight = 0;
+          if (lineBreak) {
+            textWidth = availableWidth;
+            textHeight = doc.heightOfString(text, {
+              width: availableWidth,
+              align,
+              lineGap,
+              lineBreak: true,
             });
-          doc.restore();
-        } else {
+          } else {
+            textWidth = doc.widthOfString(text);
+            textHeight = doc.currentLineHeight();
+          }
+
+          const normalizedRotation = rotation % 360;
+          if (normalizedRotation === 90 || normalizedRotation === 270) {
+            const centerX = columnX + paddingX + availableWidth / 2;
+            const centerY = segment.top + paddingY + availableHeight / 2;
+            const drawWidth = textWidth;
+            const drawHeight = textHeight;
+            doc.save();
+            doc.rotate(normalizedRotation, { origin: [centerX, centerY] });
+            const textX = centerX - drawWidth / 2;
+            const textY = centerY - drawHeight / 2;
+            doc
+              .font(font)
+              .fontSize(fontSize)
+              .fillColor(textColor)
+              .text(text, textX, textY, {
+                width: drawWidth,
+                align: "center",
+                lineBreak: false,
+              });
+            doc.restore();
+            return;
+          }
+
           const horizontalSpace = availableWidth - textWidth;
           let offsetX = paddingX;
           if (align === "center") {
@@ -753,16 +773,17 @@ function drawTable(
             .font(font)
             .fontSize(fontSize)
             .fillColor(textColor)
-            .text(text, columnX + offsetX, top + offsetY, {
+            .text(text, columnX + offsetX, segment.top + offsetY, {
               width: availableWidth,
               align,
               lineBreak,
               ellipsis: !lineBreak,
               lineGap,
             });
-        }
+        });
       });
     });
+    doc.switchToPage(savedPageIndex);
     doc.x = savedX;
     doc.y = savedY;
   }
@@ -779,6 +800,9 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     const start = formatDateForFilename(data.range.start);
     const end = formatDateForFilename(data.range.end);
     return `sperrliste-wichtige-tage-${start}-${end}.pdf`;
+  },
+  documentOptions: {
+    bufferPages: true,
   },
   async render(doc, data) {
     doc.font("Helvetica-Bold").fontSize(17).fillColor("#111827").text("Verfügbarkeiten · Wichtige Probentage");
