@@ -23,8 +23,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { measurementSchema, measurementUnitEnum, type MeasurementFormData } from "@/data/measurements";
-import { MeasurementTypeSelector } from "@/components/forms/measurement-type-selector";
+import {
+  MEASUREMENT_TYPE_LABELS,
+  measurementSchema,
+  measurementTypeEnum,
+  measurementUnitEnum,
+  type MeasurementFormData,
+} from "@/data/measurements";
 
 interface MeasurementFormProps {
   initialData?: Partial<MeasurementFormData>;
@@ -70,14 +75,24 @@ export function MeasurementForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Art des Maßes</FormLabel>
-              <FormControl>
-                <MeasurementTypeSelector
-                  name={field.name}
-                  value={field.value}
-                  onChange={field.onChange}
-                  disabled={disableTypeSelection}
-                />
-              </FormControl>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value}
+                disabled={disableTypeSelection}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wähle den Messpunkt" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {measurementTypeEnum.options.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {MEASUREMENT_TYPE_LABELS[type] ?? type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
