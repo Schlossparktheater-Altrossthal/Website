@@ -2978,49 +2978,56 @@ export function OnboardingSection({
         </div>
 
         {whatsappLink ? (
-          <div
-            className={cn(
-              "flex flex-col gap-2 rounded-lg border p-4 text-sm",
-              whatsappVisitedAt
-                ? "border-success/40 bg-success/10 text-success"
-                : "border-primary/40 bg-primary/10 text-primary",
-            )}
-          >
-            <div className="flex items-center gap-2">
-              {whatsappVisitedAt ? (
-                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              )}
-              <span>
-                {whatsappVisitedAt
-                  ? `WhatsApp-Onboarding bestätigt${whatsappVisitedLabel
-                      ? ` am ${whatsappVisitedLabel}`
-                      : ""}.`
-                  : "WhatsApp-Onboarding steht noch aus."}
+          whatsappVisitedAt ? (
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
+                {`WhatsApp-Onboarding bestätigt${
+                  whatsappVisitedLabel ? ` am ${whatsappVisitedLabel}` : ""
+                }.`}
               </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleWhatsAppClick}
+                disabled={whatsappSubmitting}
+              >
+                {whatsappSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Aktualisiere…
+                  </>
+                ) : (
+                  "WhatsApp öffnen"
+                )}
+              </Button>
             </div>
-            <p
+          ) : (
+            <div
               className={cn(
-                "text-xs",
-                whatsappVisitedAt ? "text-success/80" : "text-primary/80",
+                "flex flex-col gap-2 rounded-lg border p-4 text-sm",
+                "border-primary/40 bg-primary/10 text-primary",
               )}
             >
-              {whatsappVisitedAt
-                ? "Du kannst den Infokanal jederzeit erneut öffnen."
-                : "Öffne die Gruppe jetzt – wir markieren dich anschließend als informiert."}
-            </p>
-            <Button size="sm" onClick={handleWhatsAppClick} disabled={whatsappSubmitting}>
-              {whatsappSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Aktualisiere…
-                </>
-              ) : (
-                "WhatsApp öffnen"
-              )}
-            </Button>
-          </div>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                <span>WhatsApp-Onboarding steht noch aus.</span>
+              </div>
+              <p className="text-xs text-primary/80">
+                Öffne die Gruppe jetzt – wir markieren dich anschließend als informiert.
+              </p>
+              <Button size="sm" onClick={handleWhatsAppClick} disabled={whatsappSubmitting}>
+                {whatsappSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Aktualisiere…
+                  </>
+                ) : (
+                  "WhatsApp öffnen"
+                )}
+              </Button>
+            </div>
+          )
         ) : null}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
