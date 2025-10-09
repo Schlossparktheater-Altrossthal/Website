@@ -8,8 +8,12 @@ const daySchema = z.object({
   title: z.string(),
 });
 
+const entryStatusValues = ["none", "blocked", "limited", "preferred"] as const;
+const entryStatusSchema = z.enum(entryStatusValues);
+
 const entrySchema = z.object({
   dayKey: z.string(),
+  status: entryStatusSchema,
   value: z.string().nullable(),
 });
 
@@ -52,6 +56,7 @@ const sperrlisteImportantDaysSchema = z
 
 export type SperrlisteImportantDaysPdfData = z.infer<typeof sperrlisteImportantDaysSchema>;
 type MemberZone = (typeof memberZoneValues)[number];
+type MemberEntryStatus = (typeof entryStatusValues)[number];
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -360,10 +365,11 @@ function drawTable(
   const headerCells: TableCellConfig[] = headers.map((header, index) => ({
     text: header,
     style: {
-      align: index === 0 ? "left" : "center",
+      align: "center",
       font: "bold",
       fontSize: 8,
       textColor: "#111827",
+      verticalAlign: "middle",
       ...(options.headerStyles?.[index] ?? {}),
     },
   }));
@@ -375,20 +381,52 @@ function drawTable(
     doc.restore();
 
     headerCells.forEach((cell, index) => {
-      const x = columnPositions[index] + paddingX;
-      const width = Math.max(columnWidths[index] - paddingX * 2, 32);
+      const columnX = columnPositions[index];
+      const columnWidth = Math.max(columnWidths[index], 32);
+      const availableWidth = Math.max(columnWidth - paddingX * 2, 16);
       const font = resolveFont(cell.style);
       const fontSize = cell.style.fontSize ?? 8.5;
       const align = resolveAlign(cell.style);
       const lineBreak = cell.style.lineBreak ?? false;
-      doc.font(font).fontSize(fontSize).fillColor(cell.style.textColor ?? "#111827");
-      doc.text(cell.text, x, y + paddingY, {
-        width,
+      const lineGap = cell.style.lineGap;
+      const verticalAlign = cell.style.verticalAlign ?? "middle";
+      const textColor = cell.style.textColor ?? "#111827";
+
+      doc.font(font).fontSize(fontSize);
+      const textHeight = doc.heightOfString(cell.text, {
+        width: availableWidth,
         align,
         lineBreak,
-        ellipsis: !lineBreak,
-        lineGap: cell.style.lineGap,
+        lineGap,
       });
+      const textWidth = lineBreak ? availableWidth : doc.widthOfString(cell.text);
+
+      let offsetX = paddingX;
+      if (align === "center") {
+        offsetX = paddingX + Math.max((availableWidth - textWidth) / 2, 0);
+      } else if (align === "right") {
+        offsetX = paddingX + Math.max(availableWidth - textWidth, 0);
+      }
+
+      const availableHeight = Math.max(headerHeight - paddingY * 2, 0);
+      let offsetY = paddingY;
+      if (verticalAlign === "middle") {
+        offsetY = paddingY + Math.max((availableHeight - textHeight) / 2, 0);
+      } else if (verticalAlign === "bottom") {
+        offsetY = paddingY + Math.max(availableHeight - textHeight, 0);
+      }
+
+      doc
+        .font(font)
+        .fontSize(fontSize)
+        .fillColor(textColor)
+        .text(cell.text, columnX + offsetX, y + offsetY, {
+          width: availableWidth,
+          align,
+          lineBreak,
+          ellipsis: !lineBreak,
+          lineGap,
+        });
       doc.y = y;
       doc.x = startX;
     });
@@ -800,13 +838,13 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         rowFill: "#eef2ff",
         columnFill: "#e0e7ff",
         textColor: "#312e81",
-        columnLabel: "Acting",
+        columnLabel: "Schauspiel",
       },
       crew: {
         rowFill: "#ecfdf5",
         columnFill: "#d1fae5",
         textColor: "#065f46",
-        columnLabel: "Crew",
+        columnLabel: "Gewerke",
       },
       both: {
         rowFill: "#fef3c7",
@@ -845,6 +883,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         fontSize: 7.2,
         textColor: "#9ca3af",
         prefixIcon: null,
+        verticalAlign: "middle",
       }));
 
       member.entries.forEach((entry, entryIndex) => {
@@ -853,58 +892,84 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
           return;
         }
 
-        const normalized = entry.value?.replace(/\s+/g, " ").trim();
-        if (!normalized) {
+        const status = (entry.status ?? "none") as MemberEntryStatus;
+        if (status === "none") {
           return;
         }
 
+        const normalized = entry.value?.replace(/\s+/g, " ").trim() ?? "";
         const lower = normalized.toLowerCase();
-        if (lower === "frei" || lower === "verfügbar") {
-          return;
-        }
-
-        const isGeneric = lower === "gesperrt";
-        const truncated = normalized.length > 60 ? `${normalized.slice(0, 57).trimEnd()}…` : normalized;
+        const truncate = (value: string) =>
+          value.length > 60 ? `${value.slice(0, 57).trimEnd()}…` : value;
         const iconSize = 10;
-        if (isGeneric) {
+
+        if (status === "blocked") {
+          if (lower === "frei" || lower === "verfügbar") {
+            return;
+          }
+
+          const isGeneric = lower === "gesperrt";
+          const truncated = truncate(normalized);
           cells[columnIndex] = "";
           styles[columnIndex] = {
             align: "center",
             font: "bold",
             fontSize: 7.5,
             textColor: "#7f1d1d",
-            fillColor: "#fee2e2",
+            fillColor: isGeneric ? "#fee2e2" : "#fef2f2",
             prefixIcon: {
               type: "cross",
               size: iconSize,
               strokeColor: "#b91c1c",
               align: "center",
+              verticalAlign: isGeneric ? "middle" : "top",
             },
+            verticalAlign: isGeneric ? "middle" : "top",
+            contentOffsetY: isGeneric ? undefined : iconSize + 3,
+            secondaryText: isGeneric ? null : truncated,
+            secondaryFont: isGeneric ? undefined : "regular",
+            secondaryFontSize: isGeneric ? undefined : 6.3,
+            secondaryTextColor: isGeneric ? undefined : "#991b1b",
+            secondarySpacing: isGeneric ? undefined : 2,
           };
           return;
         }
 
-        cells[columnIndex] = "";
-        styles[columnIndex] = {
-          align: "center",
-          font: "bold",
-          fontSize: 7.2,
-          textColor: "#7f1d1d",
-          fillColor: "#fef2f2",
-          prefixIcon: {
-            type: "cross",
-            size: iconSize,
-            strokeColor: "#b91c1c",
+        if (status === "limited" || status === "preferred") {
+          const baseLabel = status === "limited" ? "eingeschränkt" : "bevorzugt";
+          const displayLabel = `${baseLabel.charAt(0).toUpperCase()}${baseLabel.slice(1)}`;
+          const hasCustomReason = normalized && lower !== baseLabel;
+          const truncated = hasCustomReason ? truncate(normalized) : null;
+          const palette =
+            status === "limited"
+              ? {
+                  fill: "#fef3c7",
+                  text: "#92400e",
+                  secondary: "#92400e",
+                }
+              : {
+                  fill: "#d1fae5",
+                  text: "#065f46",
+                  secondary: "#047857",
+                };
+
+          cells[columnIndex] = displayLabel;
+          styles[columnIndex] = {
             align: "center",
-            verticalAlign: "top",
-          },
-          contentOffsetY: iconSize + 3,
-          secondaryText: truncated,
-          secondaryFont: "regular",
-          secondaryFontSize: 6.3,
-          secondaryTextColor: "#991b1b",
-          secondarySpacing: 2,
-        };
+            font: "bold",
+            fontSize: 7.3,
+            textColor: palette.text,
+            fillColor: palette.fill,
+            verticalAlign: "middle",
+            secondaryText: truncated,
+            secondaryFont: truncated ? "regular" : undefined,
+            secondaryFontSize: truncated ? 6.2 : undefined,
+            secondaryTextColor: truncated ? palette.secondary : undefined,
+            secondarySpacing: truncated ? 1.6 : undefined,
+            lineGap: truncated ? 1.2 : undefined,
+          };
+          return;
+        }
       });
 
       const trimmedEmail = member.email?.trim() ?? "";
@@ -927,6 +992,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         secondaryFontSize: trimmedEmail ? 6.4 : undefined,
         secondaryTextColor: trimmedEmail ? "#6b7280" : undefined,
         secondarySpacing: trimmedEmail ? 1.2 : undefined,
+        verticalAlign: "middle",
       };
 
       rowBackgrounds.push(zoneConfig.rowFill);
@@ -977,7 +1043,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       rows,
       columnWidths,
       {
-        headerStyles: headers.map((_, index) => ({ align: index === 1 ? "left" : "center" })),
+        headerStyles: headers.map(() => ({ align: "center", verticalAlign: "middle" })),
         cellStyles,
         rowBackgrounds,
         repeatHeaderAtBottom: true,
