@@ -163,7 +163,7 @@ function drawTable(
     return positions;
   }, []);
   const totalWidth = columnWidths.reduce((sum, value) => sum + value, 0);
-  const bottom = doc.page.height - doc.page.margins.bottom;
+  const pageBottom = doc.page.height - doc.page.margins.bottom;
 
   const columnBoundaries = columnPositions.map((position, index) => position + columnWidths[index]);
   const gridLinesX = [startX, ...columnBoundaries];
@@ -374,6 +374,10 @@ function drawTable(
     },
   }));
   const headerHeight = computeRowHeight(headerCells);
+  const tableBottom = Math.max(
+    options.repeatHeaderAtBottom ? pageBottom - headerHeight : pageBottom,
+    doc.page.margins.top,
+  );
 
   const renderHeaderRowAt = (y: number, includeTopBorder: boolean) => {
     doc.save();
@@ -383,10 +387,11 @@ function drawTable(
     headerCells.forEach((cell, index) => {
       const columnX = columnPositions[index];
       const columnWidth = Math.max(columnWidths[index], 32);
-      const availableWidth = Math.max(columnWidth - paddingX * 2, 16);
+      const align = resolveAlign(cell.style);
+      const useFullWidth = align === "center";
+      const availableWidth = useFullWidth ? columnWidth : Math.max(columnWidth - paddingX * 2, 16);
       const font = resolveFont(cell.style);
       const fontSize = cell.style.fontSize ?? 8.5;
-      const align = resolveAlign(cell.style);
       const lineBreak = cell.style.lineBreak ?? false;
       const lineGap = cell.style.lineGap;
       const verticalAlign = cell.style.verticalAlign ?? "middle";
@@ -399,21 +404,15 @@ function drawTable(
         lineBreak,
         lineGap,
       });
-      const textWidth = lineBreak ? availableWidth : doc.widthOfString(cell.text);
 
-      let offsetX = paddingX;
-      if (align === "center") {
-        offsetX = paddingX + Math.max((availableWidth - textWidth) / 2, 0);
-      } else if (align === "right") {
-        offsetX = paddingX + Math.max(availableWidth - textWidth, 0);
-      }
-
-      const availableHeight = Math.max(headerHeight - paddingY * 2, 0);
-      let offsetY = paddingY;
+      const offsetX = useFullWidth ? 0 : paddingX;
+      const basePaddingY = useFullWidth ? 0 : paddingY;
+      const extraVerticalSpace = Math.max(headerHeight - textHeight - basePaddingY * 2, 0);
+      let offsetY = basePaddingY;
       if (verticalAlign === "middle") {
-        offsetY = paddingY + Math.max((availableHeight - textHeight) / 2, 0);
+        offsetY = basePaddingY + extraVerticalSpace / 2;
       } else if (verticalAlign === "bottom") {
-        offsetY = paddingY + Math.max(availableHeight - textHeight, 0);
+        offsetY = basePaddingY + extraVerticalSpace;
       }
 
       doc
@@ -444,7 +443,7 @@ function drawTable(
     if (!options.repeatHeaderAtBottom) {
       return;
     }
-    const footerTop = bottom - headerHeight;
+    const footerTop = pageBottom - headerHeight;
     const previousY = doc.y;
     renderHeaderRowAt(footerTop, true);
     doc.y = previousY;
@@ -464,7 +463,7 @@ function drawTable(
     });
 
     const rowHeight = computeRowHeight(cells);
-    if (doc.y + rowHeight > bottom) {
+    if (doc.y + rowHeight > tableBottom) {
       drawFooterRow();
       doc.addPage();
       doc.x = doc.page.margins.left;
