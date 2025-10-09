@@ -38,6 +38,7 @@ export type RoleGroup = {
   roleId: string;
   label: string;
   domain: Domain;
+  demand: number;
   candidates: RoleCandidate[];
 };
 

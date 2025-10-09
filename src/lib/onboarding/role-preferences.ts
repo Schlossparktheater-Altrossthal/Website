@@ -97,6 +97,10 @@ const ROLE_ORDER: Record<RolePreferenceDomain, readonly string[]> = {
   ],
 };
 
+export function getRolePreferenceOrder(domain: RolePreferenceDomain): readonly string[] {
+  return ROLE_ORDER[domain];
+}
+
 export function listRolePreferenceDefinitions(
   domain?: RolePreferenceDomain,
 ): RolePreferenceDefinition[] {

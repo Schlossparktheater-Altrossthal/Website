@@ -1,4 +1,5 @@
 import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
+import { getRolePreferenceOrder } from "@/lib/onboarding/role-preferences";
 
 import type {
   CandidateAggregate,
@@ -119,6 +120,7 @@ export function createRoleGroups(
     roleId: role.roleId,
     label: role.label,
     domain: role.domain as Domain,
+    demand: role.demand,
     candidates: role.candidates.map((candidate) => {
       const aggregate = candidateMap.get(candidate.userId);
       if (!aggregate) {
@@ -158,6 +160,9 @@ export function sortRoleGroupsByDomain(
   domain: Domain,
   summaryMap: Map<string, RoleSummary>,
 ): RoleGroup[] {
+  const roleOrder = getRolePreferenceOrder(domain === "acting" ? "acting" : "crew");
+  const orderMap = new Map<string, number>(roleOrder.map((code, index) => [code, index]));
+
   return groups
     .filter((group) => group.domain === domain && group.candidates.length > 0)
     .map((group) => ({
@@ -165,11 +170,20 @@ export function sortRoleGroupsByDomain(
       candidates: group.candidates.slice().sort((a, b) => a.highlight.rank - b.highlight.rank),
     }))
     .sort((a, b) => {
+      const aPriority = orderMap.get(a.roleId) ?? Number.MAX_SAFE_INTEGER;
+      const bPriority = orderMap.get(b.roleId) ?? Number.MAX_SAFE_INTEGER;
+
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+
       const aSummary = summaryMap.get(a.roleId)?.averageShare ?? 0;
       const bSummary = summaryMap.get(b.roleId)?.averageShare ?? 0;
+
       if (bSummary === aSummary) {
         return a.label.localeCompare(b.label, "de-DE");
       }
+
       return bSummary - aSummary;
     });
 }
