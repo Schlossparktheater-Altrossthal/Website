@@ -567,6 +567,9 @@ const interestSchema = z
   .min(2, "Interesse ist zu kurz")
   .max(80, "Interesse ist zu lang");
 
+const INTEREST_SEPARATOR_PATTERN = /[;,\n]/;
+const INTEREST_SEPARATOR_SPLIT_PATTERN = /[,;\n]+/;
+
 function formatDate(value: string | null | undefined) {
   if (!value) return null;
   const parsed = new Date(value);
@@ -2477,6 +2480,30 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
     return true;
   };
 
+  const handleInputChange = (value: string) => {
+    if (!value) {
+      setInput("");
+      return;
+    }
+
+    if (!INTEREST_SEPARATOR_PATTERN.test(value)) {
+      setInput(value);
+      return;
+    }
+
+    const segments = value.split(INTEREST_SEPARATOR_SPLIT_PATTERN);
+    const remainder = segments.pop() ?? "";
+
+    segments.forEach((segment) => {
+      const clean = segment.trim();
+      if (clean) {
+        tryAddInterest(clean);
+      }
+    });
+
+    setInput(remainder.replace(/^\s+/, ""));
+  };
+
   const addInterest = () => {
     if (tryAddInterest(input)) {
       setInput("");
@@ -2525,7 +2552,7 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
               <Input
                 id="interestInput"
                 value={input}
-                onChange={(event) => setInput(event.target.value)}
+                onChange={(event) => handleInputChange(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
