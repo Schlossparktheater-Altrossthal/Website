@@ -56,6 +56,11 @@ export default async function SperrlistePage() {
         email: true,
         avatarSource: true,
         avatarImageUpdatedAt: true,
+        onboardingProfile: {
+          select: {
+            focus: true,
+          },
+        },
         blockedDays: {
           orderBy: { date: "asc" },
           select: {
@@ -96,6 +101,7 @@ export default async function SperrlistePage() {
     avatarUpdatedAt: user.avatarImageUpdatedAt
       ? user.avatarImageUpdatedAt.toISOString()
       : null,
+    onboardingFocus: user.onboardingProfile?.focus ?? null,
     blockedDays: user.blockedDays.map((entry) => ({
       id: entry.id,
       date: format(entry.date, "yyyy-MM-dd"),
