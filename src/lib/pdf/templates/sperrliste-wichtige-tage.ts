@@ -79,12 +79,23 @@ function buildRangeLabel(range: SperrlisteImportantDaysPdfData["range"]) {
   }
 }
 
+type TableCellIcon = {
+  type: "check";
+  size?: number;
+  strokeColor?: string;
+  strokeWidth?: number;
+  offsetY?: number;
+  spacing?: number;
+  align?: "left" | "center" | "right";
+};
+
 type TableCellStyle = {
   align?: "left" | "center" | "right";
   font?: "regular" | "bold";
   fontSize?: number;
   textColor?: string;
   fillColor?: string | null;
+  prefixIcon?: TableCellIcon | null;
 };
 
 type TableCellConfig = {
@@ -108,8 +119,8 @@ function drawTable(
     return;
   }
 
-  const paddingX = 6;
-  const paddingY = 4;
+  const paddingX = 5;
+  const paddingY = 3;
   const startX = doc.page.margins.left;
   const columnPositions = columnWidths.reduce<number[]>((positions, width, index) => {
     const previous = index === 0 ? startX : positions[index - 1] + columnWidths[index - 1];
@@ -128,22 +139,85 @@ function drawTable(
 
   const resolveAlign = (style: TableCellStyle) => style.align ?? "left";
 
+  const measurePrefixIconWidth = (
+    icon: TableCellIcon | null | undefined,
+    hasText: boolean,
+  ): number => {
+    if (!icon) {
+      return 0;
+    }
+    const align = icon.align ?? "left";
+    if (align !== "left" || !hasText) {
+      return 0;
+    }
+    return (icon.size ?? 9) + (icon.spacing ?? 4);
+  };
+
   const computeRowHeight = (cells: readonly TableCellConfig[]) => {
     return cells.reduce((max, cell, cellIndex) => {
       const font = resolveFont(cell.style);
       const fontSize = cell.style.fontSize ?? 9;
+      const icon = cell.style.prefixIcon;
+      const text = cell.text?.trim() ?? "";
+      const iconWidth = measurePrefixIconWidth(icon, text.length > 0);
       doc.font(font).fontSize(fontSize);
-      const width = Math.max(columnWidths[cellIndex] - paddingX * 2, 32);
+      const width = Math.max(columnWidths[cellIndex] - paddingX * 2 - iconWidth, 16);
       const align = resolveAlign(cell.style);
-      const textHeight = doc.heightOfString(cell.text, {
-        width,
-        align,
-        lineBreak: false,
-      });
-      const effectiveHeight = Math.max(textHeight, (cell.style.fontSize ?? 9) + 1.5);
+      const textHeight = text
+        ? doc.heightOfString(text, {
+            width,
+            align,
+            lineBreak: false,
+          })
+        : 0;
+      const iconHeight = icon?.size ?? 0;
+      const effectiveHeight = Math.max(textHeight, iconHeight, (cell.style.fontSize ?? 9) + 1.5);
       const height = effectiveHeight + paddingY * 2;
       return Math.max(max, height);
     }, 0);
+  };
+
+  const drawPrefixIcon = (
+    icon: TableCellIcon,
+    cellX: number,
+    columnWidth: number,
+    rowTop: number,
+    rowHeight: number,
+    textColor: string,
+    hasText: boolean,
+  ) => {
+    if (icon.type !== "check") {
+      return;
+    }
+
+    const size = icon.size ?? 9;
+    const strokeWidth = icon.strokeWidth ?? Math.max(1, size / 5.5);
+    const align = icon.align ?? "left";
+    const iconAreaWidth = Math.max(columnWidth - paddingX * 2, size);
+    let iconX = cellX + paddingX;
+    if (align === "center") {
+      iconX = cellX + paddingX + Math.max((iconAreaWidth - size) / 2, 0);
+    }
+    if (align === "right") {
+      iconX = cellX + paddingX + Math.max(iconAreaWidth - size, 0);
+    }
+    if (align === "left" && !hasText) {
+      const offset = Math.max((iconAreaWidth - size) / 2, 0);
+      iconX = cellX + paddingX + offset;
+    }
+
+    const iconY = rowTop + paddingY + (rowHeight - paddingY * 2 - size) / 2 + (icon.offsetY ?? 0);
+    const strokeColor = icon.strokeColor ?? textColor;
+
+    doc
+      .save()
+      .lineWidth(strokeWidth)
+      .strokeColor(strokeColor)
+      .moveTo(iconX, iconY + size * 0.6)
+      .lineTo(iconX + size * 0.35, iconY + size * 0.9)
+      .lineTo(iconX + size, iconY + size * 0.1)
+      .stroke()
+      .restore();
   };
 
   const drawHeaderRow = () => {
@@ -216,11 +290,14 @@ function drawTable(
     cells.forEach((cell, cellIndex) => {
       const x = columnPositions[cellIndex];
       const width = Math.max(columnWidths[cellIndex], 32);
-      const textWidth = Math.max(width - paddingX * 2, 32);
+      const icon = cell.style.prefixIcon;
+      const textColor = cell.style.textColor ?? "#1f2937";
+      const text = cell.text?.trim() ?? "";
+      const iconWidth = measurePrefixIconWidth(icon, text.length > 0);
+      const textWidth = Math.max(width - paddingX * 2 - iconWidth, 16);
       const align = resolveAlign(cell.style);
       const font = resolveFont(cell.style);
       const fontSize = cell.style.fontSize ?? 9;
-      const textColor = cell.style.textColor ?? "#1f2937";
 
       if (cell.style.fillColor) {
         doc.save();
@@ -228,16 +305,22 @@ function drawTable(
         doc.restore();
       }
 
-      doc
-        .font(font)
-        .fontSize(fontSize)
-        .fillColor(textColor)
-        .text(cell.text, x + paddingX, rowTop + paddingY, {
-          width: textWidth,
-          align,
-          lineBreak: false,
-          ellipsis: true,
-        });
+      if (icon) {
+        drawPrefixIcon(icon, x, width, rowTop, rowHeight, textColor, text.length > 0);
+      }
+
+      if (text) {
+        doc
+          .font(font)
+          .fontSize(fontSize)
+          .fillColor(textColor)
+          .text(text, x + paddingX + iconWidth, rowTop + paddingY, {
+            width: textWidth,
+            align,
+            lineBreak: false,
+            ellipsis: true,
+          });
+      }
       doc.y = rowTop;
       doc.x = startX;
     });
@@ -291,11 +374,11 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     const summaryBoxX = doc.page.margins.left;
     const summaryBoxY = doc.y;
     const summaryBoxWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const summaryBoxPaddingX = 14;
-    const summaryBoxPaddingY = 12;
+    const summaryBoxPaddingX = 12;
+    const summaryBoxPaddingY = 10;
     const summaryTextWidth = Math.max(summaryBoxWidth - summaryBoxPaddingX * 2, 120);
 
-    const summaryText = metadataItems.join("   •   ");
+    const summaryText = metadataItems.join(" • ");
     doc.font("Helvetica").fontSize(10);
     const summaryTextHeight = doc.heightOfString(summaryText, {
       width: summaryTextWidth,
@@ -320,7 +403,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         ellipsis: true,
       });
 
-    doc.y = summaryBoxY + summaryBoxHeight + 12;
+    doc.y = summaryBoxY + summaryBoxHeight + 10;
 
     if (!data.days.length || !data.members.length || data.summary.memberCount === 0) {
       doc
@@ -333,12 +416,12 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
 
     const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const dayCount = data.days.length;
-    const minNameWidth = 120;
-    const minEmailWidth = 120;
-    const minDayWidth = 56;
-    const absoluteMinNameWidth = 90;
-    const absoluteMinEmailWidth = 90;
-    const absoluteMinDayWidth = 36;
+    const minNameWidth = 112;
+    const minEmailWidth = 112;
+    const minDayWidth = 52;
+    const absoluteMinNameWidth = 88;
+    const absoluteMinEmailWidth = 88;
+    const absoluteMinDayWidth = 34;
 
     let nameWidth = minNameWidth;
     let emailWidth = minEmailWidth;
@@ -395,6 +478,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       const styles: TableCellStyle[] = Array.from({ length: dayCount }, () => ({
         align: "center",
         textColor: "#9ca3af",
+        prefixIcon: null,
       }));
 
       member.entries.forEach((entry, entryIndex) => {
@@ -404,12 +488,17 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         }
 
         if (!entry.value || !entry.value.trim()) {
-          cells[columnIndex] = "✓";
+          cells[columnIndex] = "";
           styles[columnIndex] = {
             align: "center",
-            font: "bold",
             textColor: "#1e3a8a",
             fillColor: "#eef2ff",
+            prefixIcon: {
+              type: "check",
+              size: 9,
+              strokeColor: "#1e3a8a",
+              align: "center",
+            },
           };
           return;
         }
@@ -417,13 +506,20 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         const trimmed = entry.value.replace(/\s+/g, " ").trim();
         const isGeneric = trimmed.toLowerCase() === "gesperrt";
         const truncated = trimmed.length > 60 ? `${trimmed.slice(0, 57).trimEnd()}…` : trimmed;
-        cells[columnIndex] = isGeneric ? "✓" : `✓ ${truncated}`;
+        cells[columnIndex] = isGeneric ? "" : truncated;
         styles[columnIndex] = {
-          align: "center",
+          align: isGeneric ? "center" : "left",
           font: isGeneric ? "bold" : "regular",
-          fontSize: isGeneric ? 10 : 8.5,
+          fontSize: isGeneric ? 9.5 : 8.5,
           textColor: "#1e3a8a",
           fillColor: "#eef2ff",
+          prefixIcon: {
+            type: "check",
+            size: 9,
+            strokeColor: "#1e3a8a",
+            align: isGeneric ? "center" : "left",
+            spacing: isGeneric ? 0 : 4,
+          },
         };
       });
 
@@ -457,7 +553,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       .fontSize(9)
       .fillColor("#6b7280")
       .text(
-        "Hinweis: ✓ markiert Sperrtage. Angegebene Gründe werden neben dem Häkchen angezeigt; leere Felder bedeuten keine Sperre am jeweiligen Tag.",
+        "Hinweis: Häkchen markieren Sperrtage. Angegebene Gründe werden neben dem Symbol angezeigt; leere Felder bedeuten keine Sperre am jeweiligen Tag.",
       );
   },
   schema: sperrlisteImportantDaysSchema,
