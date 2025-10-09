@@ -34,12 +34,14 @@ type DashboardClientProps = {
   initialData: OnboardingDashboardData;
   onboardings: OnboardingSummary[];
   navigateHrefTemplate?: string;
+  detailHrefTemplate?: string;
 };
 
 export function DashboardClient({
   initialData,
   onboardings,
   navigateHrefTemplate = "/dashboard/onboarding/%s",
+  detailHrefTemplate = "/dashboard/onboarding/%s/talente/%s",
 }: DashboardClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -200,7 +202,11 @@ export function DashboardClient({
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <RankingTab ranking={currentData.ranking} />
+              <RankingTab
+                ranking={currentData.ranking}
+                onboardingId={currentData.onboarding.id}
+                detailHrefTemplate={detailHrefTemplate}
+              />
             </motion.div>
           </TabsContent>
           <TabsContent key="allocation" value="allocation" className="space-y-6">
