@@ -7,10 +7,23 @@ import type { AvatarSource, PayoutMethod } from "@prisma/client";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_AVATAR_BYTES = 8 * 1024 * 1024; // 8 MB Upload-Limit
 const AVATAR_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const AVATAR_TARGET_SIZE = 512;
 const AVATAR_SOURCE_VALUES = ["GRAVATAR", "UPLOAD", "INITIALS"] as const;
 const PAYOUT_METHOD_VALUES = ["BANK_TRANSFER", "PAYPAL", "OTHER"] as const;
+
+type AvatarCrop = { x: number; y: number; width: number; height: number };
+type SharpModule = typeof import("sharp");
+type SharpModuleWithDefault = SharpModule & { default: SharpModule };
+let sharpModulePromise: Promise<SharpModuleWithDefault> | null = null;
+
+async function getSharp(): Promise<SharpModuleWithDefault> {
+  if (!sharpModulePromise) {
+    sharpModulePromise = import("sharp") as unknown as Promise<SharpModuleWithDefault>;
+  }
+  return sharpModulePromise;
+}
 
 const isAvatarSource = (value: string): value is AvatarSource =>
   (AVATAR_SOURCE_VALUES as readonly string[]).includes(value);
@@ -22,6 +35,104 @@ function parseAvatarSource(value: unknown): AvatarSource | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toUpperCase();
   return isAvatarSource(normalized) ? (normalized as AvatarSource) : null;
+}
+
+function parseAvatarCrop(value: unknown): AvatarCrop | null {
+  if (!value && value !== 0) {
+    return null;
+  }
+
+  const raw =
+    typeof value === "string"
+      ? (() => {
+          try {
+            return JSON.parse(value) as unknown;
+          } catch {
+            return null;
+          }
+        })()
+      : value;
+
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const maybe = raw as Record<string, unknown>;
+  const keys: Array<keyof AvatarCrop> = ["x", "y", "width", "height"];
+  const parsed = Object.fromEntries(
+    keys.map((key) => {
+      const numeric = Number(maybe[key]);
+      return [key, Number.isFinite(numeric) ? numeric : NaN];
+    }),
+  ) as AvatarCrop;
+
+  if (keys.some((key) => Number.isNaN(parsed[key]) || parsed[key] <= 0 && key !== "x" && key !== "y")) {
+    return null;
+  }
+
+  const normalized: AvatarCrop = {
+    x: Math.min(1, Math.max(0, parsed.x)),
+    y: Math.min(1, Math.max(0, parsed.y)),
+    width: Math.min(1, Math.max(0, parsed.width)),
+    height: Math.min(1, Math.max(0, parsed.height)),
+  };
+
+  if (normalized.width <= 0 || normalized.height <= 0) {
+    return null;
+  }
+
+  return normalized;
+}
+
+async function processAvatarImage(
+  buffer: Buffer,
+  mime: string,
+  crop: AvatarCrop | null,
+): Promise<{ buffer: Buffer; mime: string }> {
+  const sharpModule = await getSharp();
+  const sharpFactory = sharpModule.default;
+  const image = sharpFactory(buffer, { failOnError: false });
+  const metadata = await image.metadata();
+
+  const sourceWidth = metadata.width ?? 0;
+  const sourceHeight = metadata.height ?? 0;
+
+  if (sourceWidth <= 0 || sourceHeight <= 0) {
+    throw new Error("Ungültige Bildabmessungen");
+  }
+
+  let pipeline = sharpFactory(buffer, { failOnError: false });
+
+  if (crop) {
+    const clamp = (value: number, max: number) => Math.min(max, Math.max(0, value));
+    const width = Math.max(1, Math.round(sourceWidth * crop.width));
+    const height = Math.max(1, Math.round(sourceHeight * crop.height));
+    const left = clamp(Math.round(sourceWidth * crop.x), sourceWidth - 1);
+    const top = clamp(Math.round(sourceHeight * crop.y), sourceHeight - 1);
+    const adjustedWidth = Math.min(width, sourceWidth - left);
+    const adjustedHeight = Math.min(height, sourceHeight - top);
+
+    if (adjustedWidth <= 0 || adjustedHeight <= 0) {
+      throw new Error("Ungültiger Bildausschnitt");
+    }
+
+    pipeline = pipeline.extract({ left, top, width: adjustedWidth, height: adjustedHeight });
+  }
+
+  pipeline = pipeline.resize(AVATAR_TARGET_SIZE, AVATAR_TARGET_SIZE, {
+    fit: "cover",
+    position: "centre",
+  });
+
+  if (mime === "image/png") {
+    return { buffer: await pipeline.png({ compressionLevel: 9 }).toBuffer(), mime: "image/png" };
+  }
+
+  if (mime === "image/webp") {
+    return { buffer: await pipeline.webp({ quality: 85 }).toBuffer(), mime: "image/webp" };
+  }
+
+  return { buffer: await pipeline.jpeg({ quality: 85, mozjpeg: true }).toBuffer(), mime: "image/jpeg" };
 }
 
 function parsePayoutMethod(value: unknown): PayoutMethod | null {
@@ -155,6 +266,7 @@ export async function PUT(request: NextRequest) {
 
   const updates: Record<string, unknown> = {};
   let parsedAvatarSource: AvatarSource | null = null;
+  let parsedAvatarCrop: AvatarCrop | null = null;
 
   let firstNameProvided = false;
   let lastNameProvided = false;
@@ -442,6 +554,15 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  if ("avatarCrop" in body) {
+    const crop = parseAvatarCrop(body.avatarCrop);
+    if (crop) {
+      parsedAvatarCrop = crop;
+    } else if (body.avatarCrop !== undefined && body.avatarCrop !== null && body.avatarCrop !== "") {
+      return NextResponse.json({ error: "Ungültiger Bildausschnitt" }, { status: 400 });
+    }
+  }
+
   const removeAvatar = "removeAvatar" in body ? parseBooleanFlag(body.removeAvatar) : false;
 
   let avatarBuffer: Buffer | undefined;
@@ -449,7 +570,7 @@ export async function PUT(request: NextRequest) {
 
   if (avatarFile) {
     if (avatarFile.size > MAX_AVATAR_BYTES) {
-      return NextResponse.json({ error: "Bild darf maximal 2 MB groß sein" }, { status: 400 });
+      return NextResponse.json({ error: "Bild darf maximal 8 MB groß sein" }, { status: 400 });
     }
     const mime = avatarFile.type?.toLowerCase() ?? "";
     if (!AVATAR_MIME_TYPES.has(mime)) {
@@ -467,6 +588,15 @@ export async function PUT(request: NextRequest) {
   }
 
   if (avatarBuffer) {
+    try {
+      const processed = await processAvatarImage(avatarBuffer, avatarMime ?? "image/jpeg", parsedAvatarCrop);
+      avatarBuffer = processed.buffer;
+      avatarMime = processed.mime;
+    } catch (error) {
+      console.error("[profile][avatar]", error);
+      return NextResponse.json({ error: "Bild konnte nicht verarbeitet werden" }, { status: 400 });
+    }
+
     updates.avatarImage = avatarBuffer;
     updates.avatarImageMime = avatarMime;
     updates.avatarImageUpdatedAt = new Date();
