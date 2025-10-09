@@ -19,7 +19,7 @@ type MeasurementArea = {
   type: MeasurementType;
   label: string;
   description: string;
-  svg: JSX.Element;
+  svg: React.ReactElement;
 };
 
 const BASE_FILL = "fill-muted/60";
