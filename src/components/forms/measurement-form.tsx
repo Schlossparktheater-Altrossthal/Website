@@ -23,14 +23,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import {
-  MEASUREMENT_TYPE_LABELS,
-  measurementSchema,
-  measurementTypeEnum,
-  measurementUnitEnum,
-  type MeasurementFormData,
-  type MeasurementType,
-} from "@/data/measurements";
+import { measurementSchema, measurementUnitEnum, type MeasurementFormData } from "@/data/measurements";
+import { MeasurementTypeSelector } from "@/components/forms/measurement-type-selector";
 
 interface MeasurementFormProps {
   initialData?: Partial<MeasurementFormData>;
@@ -76,24 +70,14 @@ export function MeasurementForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Art des Maßes</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                disabled={disableTypeSelection}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Wählen Sie die Art des Maßes" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {measurementTypeEnum.options.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {getMeasurementTypeLabel(type)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <MeasurementTypeSelector
+                  name={field.name}
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={disableTypeSelection}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -171,8 +155,4 @@ export function MeasurementForm({
       </form>
     </Form>
   );
-}
-
-function getMeasurementTypeLabel(type: MeasurementType): string {
-  return MEASUREMENT_TYPE_LABELS[type] ?? type;
 }
