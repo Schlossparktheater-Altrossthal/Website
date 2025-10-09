@@ -110,15 +110,16 @@ function isPositiveAvailabilityRemark(value: string) {
     return false;
   }
 
+  const tagPattern = "tag(?:e|en)?";
   const positivePatterns = [
     /\bfrei\b/,
     /\bverf(?:u|ue)gbar\b/,
     /\bimmer\b.*\bverf(?:u|ue)gbar\b/,
-    /\bkann\b.*\balle\b.*\btag/,
-    /\balle\b.*\btag\b.*\bkann\b/,
-    /\buber\b.*\balle\b.*\btag/,
-    /\bkann\b.*\bjed[ea]n\b.*\btag/,
-    /\bjed[ea]n\b.*\btag\b.*\bkann\b/,
+    new RegExp(`\\bkann\\b.*\\balle\\b.*\\b${tagPattern}`),
+    new RegExp(`\\balle\\b.*\\b${tagPattern}\\b.*\\bkann\\b`),
+    new RegExp(`\\buber\\b.*\\balle\\b.*\\b${tagPattern}`),
+    new RegExp(`\\bkann\\b.*\\bjed[ea]n\\b.*\\b${tagPattern}`),
+    new RegExp(`\\bjed[ea]n\\b.*\\b${tagPattern}\\b.*\\bkann\\b`),
   ];
 
   return positivePatterns.some((pattern) => pattern.test(asciiValue));
