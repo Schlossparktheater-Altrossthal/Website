@@ -148,10 +148,13 @@ export function BlockOverview({
       .map<ExportRow | null>((member) => {
         const entries = exportWindow.days.map((day) => {
           const entry = member.blockedMap.get(day.key);
-          if (!entry || entry.kind !== 'BLOCKED') {
+          if (!entry) {
             return null;
           }
-          return entry;
+          if (entry.kind === 'BLOCKED' || entry.kind === 'LIMITED' || entry.kind === 'PREFERRED') {
+            return entry;
+          }
+          return null;
         });
 
         if (entries.every((entry) => entry === null)) {
@@ -237,10 +240,30 @@ export function BlockOverview({
           entries: exportWindow.days.map((day, index) => {
             const entry = entries[index];
             if (!entry) {
-              return { dayKey: day.key, value: null };
+              return { dayKey: day.key, status: 'none', value: null };
             }
             const reason = normaliseReason(entry.reason);
-            return { dayKey: day.key, value: reason || 'gesperrt' };
+            const status =
+              entry.kind === 'BLOCKED'
+                ? 'blocked'
+                : entry.kind === 'LIMITED'
+                  ? 'limited'
+                  : entry.kind === 'PREFERRED'
+                    ? 'preferred'
+                    : 'none';
+            if (status === 'none') {
+              return { dayKey: day.key, status: 'none', value: reason || null };
+            }
+            const fallbackLabels: Record<'blocked' | 'limited' | 'preferred', string> = {
+              blocked: 'gesperrt',
+              limited: 'eingeschränkt',
+              preferred: 'bevorzugt',
+            };
+            return {
+              dayKey: day.key,
+              status,
+              value: reason || fallbackLabels[status],
+            };
           }),
         })),
       };
