@@ -56,6 +56,7 @@ import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
 import { UserAvatar } from "@/components/user-avatar";
 import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
+import { useInterestSuggestions } from "@/hooks/useInterestSuggestions";
 import {
   getRolePreferenceDescription,
   getRolePreferenceTitle,
@@ -2444,29 +2445,42 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { suggestions: interestSuggestions, loading: suggestionsLoading } = useInterestSuggestions();
+  const availableInterestSuggestions = useMemo(() => {
+    const selected = new Set(state.items.map((item) => item.toLowerCase()));
+    return interestSuggestions
+      .filter((suggestion) => suggestion.name && !selected.has(suggestion.name.toLowerCase()))
+      .slice(0, 12);
+  }, [interestSuggestions, state.items]);
 
   useEffect(() => {
     setState({ items: interests, dirty: false });
   }, [interests]);
 
-  const addInterest = () => {
+  const tryAddInterest = (rawValue: string) => {
     setError(null);
-    const parsed = interestSchema.safeParse(input);
+    const parsed = interestSchema.safeParse(rawValue);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Ungültiges Interesse");
-      return;
+      return false;
     }
     const value = parsed.data;
     if (state.items.length >= MAX_INTERESTS_PER_USER) {
       setError(`Maximal ${MAX_INTERESTS_PER_USER} Interessen erlaubt.`);
-      return;
+      return false;
     }
     if (state.items.some((entry) => entry.toLowerCase() === value.toLowerCase())) {
       setError("Dieses Interesse ist bereits erfasst.");
-      return;
+      return false;
     }
     setState((prev) => ({ items: [...prev.items, value], dirty: true }));
-    setInput("");
+    return true;
+  };
+
+  const addInterest = () => {
+    if (tryAddInterest(input)) {
+      setInput("");
+    }
   };
 
   const removeInterest = (interest: string) => {
@@ -2552,6 +2566,37 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
                 </span>
               ))
             )}
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Beliebte Tags</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestionsLoading ? (
+                <span className="text-xs text-muted-foreground">Lade Vorschläge …</span>
+              ) : availableInterestSuggestions.length > 0 ? (
+                availableInterestSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.name}
+                    type="button"
+                    className="flex items-center gap-2 rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
+                    onClick={() => {
+                      if (tryAddInterest(suggestion.name)) {
+                        setInput("");
+                      }
+                    }}
+                  >
+                    <span>{suggestion.name}</span>
+                    {suggestion.usage > 0 ? (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {suggestion.usage}
+                      </span>
+                    ) : null}
+                  </button>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">Keine Vorschläge verfügbar.</span>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-between gap-2">

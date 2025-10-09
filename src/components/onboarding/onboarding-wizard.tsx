@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useInterestSuggestions } from "@/hooks/useInterestSuggestions";
 import { cn } from "@/lib/utils";
 import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 import {
@@ -127,11 +128,6 @@ type PreferenceSummaryEntry = {
   label: string;
   isCustom: boolean;
   domain: "acting" | "crew";
-};
-
-type InterestSuggestion = {
-  name: string;
-  usage: number;
 };
 
 type DietaryEntry = {
@@ -301,8 +297,10 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
-  const [availableInterests, setAvailableInterests] = useState<InterestSuggestion[]>([]);
-  const [interestsLoading, setInterestsLoading] = useState(false);
+  const {
+    suggestions: interestSuggestions,
+    loading: interestsLoading,
+  } = useInterestSuggestions();
   const [form, setForm] = useState(() => createInitialFormState(variant));
   const {
     backgroundSuggestions,
@@ -333,49 +331,6 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   });
 
   const notesHelpId = useId();
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadInterests = async () => {
-      setInterestsLoading(true);
-      try {
-        const response = await fetch("/api/onboarding/interests", { cache: "no-store" });
-        const data = await response.json().catch(() => null);
-        if (!cancelled && Array.isArray(data?.interests)) {
-          const entries = data.interests
-            .map((entry: unknown): InterestSuggestion | null => {
-              if (typeof entry === "string") {
-                return { name: entry, usage: 0 } satisfies InterestSuggestion;
-              }
-              if (entry && typeof entry === "object") {
-                const record = entry as { name?: unknown; usage?: unknown };
-                const name = typeof record.name === "string" ? record.name : null;
-                if (!name) return null;
-                const usage = typeof record.usage === "number" && Number.isFinite(record.usage)
-                  ? record.usage
-                  : 0;
-                return { name, usage } satisfies InterestSuggestion;
-              }
-              return null;
-            })
-            .filter(
-              (entry: InterestSuggestion | null): entry is InterestSuggestion => Boolean(entry?.name),
-            );
-          setAvailableInterests(entries);
-        }
-      } catch {
-        if (!cancelled) {
-          setAvailableInterests([]);
-        }
-      } finally {
-        if (!cancelled) setInterestsLoading(false);
-      }
-    };
-    void loadInterests();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
   const isMinor = age !== null && age < 18;
@@ -462,10 +417,10 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
 
   const availableInterestSuggestions = useMemo(() => {
     const selected = new Set(form.interests.map((item) => item.toLowerCase()));
-    return availableInterests
+    return interestSuggestions
       .filter((interest) => interest.name && !selected.has(interest.name.toLowerCase()))
       .slice(0, 12);
-  }, [availableInterests, form.interests]);
+  }, [interestSuggestions, form.interests]);
 
   const addInterestToForm = useCallback(
     (interest: string) => {
