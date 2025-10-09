@@ -1410,6 +1410,64 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     return () => URL.revokeObjectURL(url);
   }, [avatarFile]);
 
+  const avatarPreviewState = useMemo(
+    () => {
+      if (formState.avatarSource === "GRAVATAR") {
+        return {
+          source: "GRAVATAR" as const,
+          previewUrl: null,
+          description: "Vorschau deines Gravatar-Bildes.",
+        };
+      }
+
+      if (formState.avatarSource === "UPLOAD") {
+        if (avatarPreviewUrl) {
+          return {
+            source: "UPLOAD" as const,
+            previewUrl: avatarPreviewUrl,
+            description: "Vorschau deines neuen Uploads (noch nicht gespeichert).",
+          };
+        }
+
+        if (user.avatarSource === "UPLOAD") {
+          if (formState.removeAvatar) {
+            return {
+              source: "INITIALS" as const,
+              previewUrl: null,
+              description: "Eigenes Bild wird entfernt – wir zeigen deine Initialen.",
+            };
+          }
+
+          return {
+            source: "UPLOAD" as const,
+            previewUrl: null,
+            description: "Aktuell gespeichertes, eigenes Bild.",
+          };
+        }
+
+        return {
+          source: "INITIALS" as const,
+          previewUrl: null,
+          description: "Kein Upload vorhanden – wir zeigen deine Initialen.",
+        };
+      }
+
+      return {
+        source: "INITIALS" as const,
+        previewUrl: null,
+        description: "Avatar basiert auf deinen Initialen.",
+      };
+    },
+    [
+      avatarPreviewUrl,
+      formState.avatarSource,
+      formState.removeAvatar,
+      user.avatarSource,
+    ],
+  );
+
+  const useStoredUploadPreview = avatarPreviewState.source === "UPLOAD" && !avatarPreviewState.previewUrl;
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
@@ -1581,6 +1639,24 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                     </button>
                   );
                 })}
+              </div>
+              <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
+                <UserAvatar
+                  userId={useStoredUploadPreview ? user.id : undefined}
+                  email={formState.email}
+                  firstName={formState.firstName}
+                  lastName={formState.lastName}
+                  name={formState.displayName}
+                  size={48}
+                  className="h-12 w-12"
+                  avatarSource={avatarPreviewState.source}
+                  avatarUpdatedAt={useStoredUploadPreview ? user.avatarUpdatedAt : undefined}
+                  previewUrl={avatarPreviewState.previewUrl}
+                />
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground">Aktuelle Vorschau</p>
+                  <p className="text-xs text-muted-foreground">{avatarPreviewState.description}</p>
+                </div>
               </div>
               {formState.avatarSource === "GRAVATAR" ? (
                 <p className="text-xs text-muted-foreground">

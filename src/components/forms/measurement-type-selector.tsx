@@ -1,6 +1,6 @@
 "use client";
 
-import React, { forwardRef, useId, useMemo, useState, type JSX } from "react";
+import React, { forwardRef, useId, useMemo, useState } from "react";
 
 import {
   MEASUREMENT_TYPE_DESCRIPTIONS,
