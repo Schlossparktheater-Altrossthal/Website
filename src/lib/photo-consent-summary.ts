@@ -1,4 +1,5 @@
 import type { PhotoConsentSummary } from "@/types/photo-consent";
+import { signaturePayloadSchema, type SignaturePayload } from "@/types/signature";
 
 type ConsentRecord = {
   id?: string;
@@ -12,6 +13,9 @@ type ConsentRecord = {
   documentName?: string | null;
   documentMime?: string | null;
   approvedByName?: string | null;
+  signatureVersion?: string | null;
+  signatureCapturedAt?: Date | null;
+  signaturePayload?: unknown;
 };
 
 type PhotoConsentUserLike = {
@@ -48,6 +52,20 @@ export function buildPhotoConsentSummary(
       ? `/api/photo-consents/${consent.id}/document?mode=inline`
       : null;
 
+  const signatureVersion = consent?.signatureVersion ?? null;
+  const signatureCapturedAt =
+    consent?.signatureCapturedAt && !Number.isNaN(consent.signatureCapturedAt.valueOf())
+      ? consent.signatureCapturedAt.toISOString()
+      : null;
+
+  let signaturePayload: SignaturePayload | null = null;
+  if (consent?.signaturePayload) {
+    const parsed = signaturePayloadSchema.safeParse(consent.signaturePayload);
+    if (parsed.success) {
+      signaturePayload = parsed.data;
+    }
+  }
+
   return {
     status,
     requiresDocument,
@@ -67,5 +85,8 @@ export function buildPhotoConsentSummary(
       : null,
     documentMime,
     documentPreviewUrl,
+    signatureVersion,
+    signatureCapturedAt,
+    signaturePayload,
   };
 }

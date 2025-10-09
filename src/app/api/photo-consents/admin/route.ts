@@ -9,6 +9,7 @@ import {
   createPhotoConsentBoardNotification,
   dispatchPhotoConsentBoardNotification,
 } from "@/lib/photo-consent-notifications";
+import { signaturePayloadSchema } from "@/types/signature";
 
 type ConsentWithUser = {
   id: string;
@@ -21,6 +22,9 @@ type ConsentWithUser = {
   documentUploadedAt: Date | null;
   documentName: string | null;
   documentMime: string | null;
+  signatureVersion: string | null;
+  signatureCapturedAt: Date | null;
+  signaturePayload: unknown;
   userId: string;
   user: {
     id: string;
@@ -49,6 +53,15 @@ function calculateAge(date: Date | null | undefined): number | null {
   return age;
 }
 
+function parseSignaturePayload(value: unknown) {
+  if (!value) return null;
+  const parsed = signaturePayloadSchema.safeParse(value);
+  if (!parsed.success) {
+    return null;
+  }
+  return parsed.data;
+}
+
 function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
   const dateOfBirth = consent.user.dateOfBirth;
   const age = calculateAge(dateOfBirth);
@@ -64,6 +77,12 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
   const documentPreviewUrl =
     consent.documentUploadedAt && consent.documentMime?.toLowerCase().startsWith("image/")
       ? `/api/photo-consents/${consent.id}/document?mode=inline`
+      : null;
+  const signaturePayload = parseSignaturePayload(consent.signaturePayload);
+  const signatureVersion = consent.signatureVersion ?? null;
+  const signatureCapturedAt =
+    consent.signatureCapturedAt && !Number.isNaN(consent.signatureCapturedAt.valueOf())
+      ? consent.signatureCapturedAt.toISOString()
       : null;
   return {
     id: consent.id,
@@ -87,6 +106,9 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
     documentUploadedAt: consent.documentUploadedAt ? consent.documentUploadedAt.toISOString() : null,
     documentMime: consent.documentMime ?? null,
     documentPreviewUrl,
+    signatureVersion,
+    signatureCapturedAt,
+    signaturePayload,
   };
 }
 

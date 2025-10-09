@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentAdminEntry } from "@/types/photo-consent";
+import { SignatureVisualizer } from "@/components/signature/signature-visualizer";
 
 const statusLabels: Record<PhotoConsentAdminEntry["status"], string> = {
   pending: "In Prüfung",
@@ -78,24 +79,119 @@ function formatDateTime(value: string | null | undefined) {
 type DocumentPreviewProps = {
   previewUrl: string | null;
   documentName: string | null;
+  signatureVersion: string | null;
+  signaturePayload: PhotoConsentAdminEntry["signaturePayload"];
 };
 
-function DocumentPreview({ previewUrl, documentName }: DocumentPreviewProps) {
-  if (!previewUrl) {
+type PreviewMode = "preview" | "outline" | "velocity" | "replay";
+
+function DocumentPreview({ previewUrl, documentName, signatureVersion, signaturePayload }: DocumentPreviewProps) {
+  const hasSignature = signatureVersion === "velocity.v1" && Boolean(signaturePayload);
+  const hasPreview = Boolean(previewUrl);
+  const [mode, setMode] = useState<PreviewMode>(() => {
+    if (!hasSignature) {
+      return "preview";
+    }
+    return hasPreview ? "preview" : "outline";
+  });
+
+  useEffect(() => {
+    if (!hasSignature) {
+      setMode("preview");
+      return;
+    }
+    setMode(hasPreview ? "preview" : "outline");
+  }, [hasPreview, hasSignature]);
+
+  if (!hasPreview && !hasSignature) {
     return null;
   }
-  return (
-    <div className="mt-3 space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dokumentvorschau</p>
-      <div className="relative h-60 w-full overflow-hidden rounded-lg border border-border/60 bg-background shadow-sm">
+
+  const renderContent = () => {
+    if (hasSignature && signaturePayload) {
+      if (mode === "preview" && hasPreview) {
+        return (
+          <Image
+            src={previewUrl!}
+            alt={documentName ? `Dokumentvorschau: ${documentName}` : "Digitale Unterschrift"}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
+            className="object-contain bg-white"
+            unoptimized
+          />
+        );
+      }
+
+      if (mode === "outline") {
+        return <SignatureVisualizer payload={signaturePayload} mode="outline" className="rounded-lg" />;
+      }
+
+      if (mode === "velocity") {
+        return <SignatureVisualizer payload={signaturePayload} mode="velocity" className="rounded-lg" />;
+      }
+
+      if (mode === "replay") {
+        return <SignatureVisualizer payload={signaturePayload} mode="replay" className="rounded-lg" />;
+      }
+    }
+
+    if (hasPreview) {
+      return (
         <Image
-          src={previewUrl}
+          src={previewUrl!}
           alt={documentName ? `Dokumentvorschau: ${documentName}` : "Digitale Unterschrift"}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
           className="object-contain bg-white"
           unoptimized
         />
+      );
+    }
+
+    return (
+      <div className="flex h-full items-center justify-center rounded-lg bg-muted/40 text-sm text-muted-foreground">
+        Keine Vorschau verfügbar
+      </div>
+    );
+  };
+
+  const controls: Array<{ key: PreviewMode; label: string }> = [];
+  if (hasSignature) {
+    if (hasPreview) {
+      controls.push({ key: "preview", label: "Normal" });
+    }
+    controls.push({ key: "outline", label: hasPreview ? "Kontur" : "Normal" });
+    controls.push({ key: "velocity", label: "Geschwindigkeit" });
+    controls.push({ key: "replay", label: "Replay" });
+  }
+
+  return (
+    <div className="mt-3 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dokumentvorschau</p>
+        {controls.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em]">
+            {controls.map((control) => (
+              <button
+                key={control.key}
+                type="button"
+                onClick={() => setMode(control.key)}
+                className={cn(
+                  "rounded-full px-2 py-0.5 transition",
+                  mode === control.key
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+                aria-pressed={mode === control.key}
+              >
+                {control.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="relative h-60 w-full overflow-hidden rounded-lg border border-border/60 bg-background shadow-sm">
+        {renderContent()}
       </div>
     </div>
   );
@@ -485,7 +581,12 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
               )}
             </div>
           )}
-          <DocumentPreview previewUrl={entry.documentPreviewUrl} documentName={entry.documentName} />
+          <DocumentPreview
+            previewUrl={entry.documentPreviewUrl}
+            documentName={entry.documentName}
+            signatureVersion={entry.signatureVersion}
+            signaturePayload={entry.signaturePayload}
+          />
         </div>
         <div className="space-y-2">
           {allRequirementsMet ? (
@@ -635,7 +736,12 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
             )}
           </div>
         )}
-        <DocumentPreview previewUrl={entry.documentPreviewUrl} documentName={entry.documentName} />
+        <DocumentPreview
+          previewUrl={entry.documentPreviewUrl}
+          documentName={entry.documentName}
+          signatureVersion={entry.signatureVersion}
+          signaturePayload={entry.signaturePayload}
+        />
       </div>
       </div>
 

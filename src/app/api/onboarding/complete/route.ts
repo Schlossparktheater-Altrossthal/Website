@@ -9,6 +9,7 @@ import { hashPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 import { broadcastOnboardingDashboardSnapshot } from "@/lib/onboarding/dashboard-events";
+import { signatureSubmissionSchema, type SignaturePayload } from "@/types/signature";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -123,9 +124,10 @@ const payloadSchema = z.object({
     .object({
       consent: z.boolean(),
       skipDocument: z.boolean().optional(),
+      signature: signatureSubmissionSchema.optional().nullable(),
     })
     .optional()
-    .default({ consent: true }),
+    .default({ consent: true, signature: null }),
   dietary: z.array(dietarySchema).optional().default([]),
 });
 
@@ -249,8 +251,18 @@ export async function POST(request: NextRequest) {
   }
 
   const age = calculateAge(dateOfBirth);
-  const photoConsent = payload.photoConsent ?? { consent: true, skipDocument: false };
+  const photoConsent = payload.photoConsent ?? { consent: true, skipDocument: false, signature: null };
   const skipDocument = Boolean(photoConsent.skipDocument);
+  const signatureSubmission = photoConsent.signature ?? null;
+
+  const signaturePayload: SignaturePayload | null = signatureSubmission?.payload ?? null;
+  const signatureVersion = signatureSubmission?.version ?? null;
+  const signatureCapturedAt = signaturePayload
+    ? (() => {
+        const parsed = new Date(signaturePayload.endedAt);
+        return Number.isNaN(parsed.valueOf()) ? new Date() : parsed;
+      })()
+    : null;
 
   let documentBuffer: Buffer | null = null;
   let documentMime: string | null = null;
@@ -270,6 +282,10 @@ export async function POST(request: NextRequest) {
     documentMime = type || null;
     documentName = sanitizeFilename(documentFile.name);
     documentSize = documentBuffer.length;
+  }
+
+  if (signaturePayload && !documentBuffer) {
+    return NextResponse.json({ error: "Digitale Unterschrift konnte nicht gespeichert werden" }, { status: 400 });
   }
 
   if (!documentBuffer && photoConsent.consent && !skipDocument) {
@@ -493,6 +509,9 @@ export async function POST(request: NextRequest) {
             documentSize: documentSize ?? undefined,
             documentUploadedAt: documentBuffer ? new Date() : null,
             documentData: documentBuffer ?? undefined,
+            signatureVersion: signaturePayload ? signatureVersion ?? "velocity.v1" : null,
+            signatureCapturedAt: signaturePayload ? signatureCapturedAt ?? new Date() : null,
+            signaturePayload: signaturePayload ?? undefined,
           },
         });
       }

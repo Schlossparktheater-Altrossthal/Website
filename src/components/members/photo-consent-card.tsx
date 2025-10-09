@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
+import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
+import { SignatureVisualizer } from "@/components/signature/signature-visualizer";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const MAX_NOTE_LENGTH = 1000;
@@ -63,6 +65,9 @@ const EMPTY_SUMMARY: PhotoConsentSummary = {
   documentUploadedAt: null,
   documentMime: null,
   documentPreviewUrl: null,
+  signatureVersion: null,
+  signatureCapturedAt: null,
+  signaturePayload: null,
 };
 
 function formatDate(value: string | null | undefined) {
@@ -75,24 +80,114 @@ function formatDate(value: string | null | undefined) {
 type ConsentDocumentPreviewProps = {
   previewUrl: string | null;
   documentName: string | null;
+  signatureVersion: string | null;
+  signaturePayload: PhotoConsentSummary["signaturePayload"];
 };
 
-function ConsentDocumentPreview({ previewUrl, documentName }: ConsentDocumentPreviewProps) {
-  if (!previewUrl) {
+type ConsentPreviewMode = "preview" | "outline" | "velocity" | "replay";
+
+function ConsentDocumentPreview({ previewUrl, documentName, signatureVersion, signaturePayload }: ConsentDocumentPreviewProps) {
+  const hasSignature = signatureVersion === "velocity.v1" && Boolean(signaturePayload);
+  const hasPreview = Boolean(previewUrl);
+  const [mode, setMode] = useState<ConsentPreviewMode>(() => {
+    if (hasSignature) {
+      return hasPreview ? "preview" : "outline";
+    }
+    return "preview";
+  });
+
+  useEffect(() => {
+    if (!hasSignature) {
+      setMode("preview");
+    } else {
+      setMode(hasPreview ? "preview" : "outline");
+    }
+  }, [hasPreview, hasSignature]);
+
+  if (!hasPreview && !hasSignature) {
     return null;
   }
-  return (
-    <div className="space-y-3 rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Digitale Unterschrift</p>
-      <div className="relative h-60 w-full overflow-hidden rounded-lg border border-border/50 bg-background">
+
+  const renderContent = () => {
+    if (hasSignature && signaturePayload) {
+      if (mode === "preview" && hasPreview) {
+        return (
+          <Image
+            src={previewUrl!}
+            alt={documentName ? `Digitale Unterschrift: ${documentName}` : "Digitale Unterschrift"}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
+            className="object-contain bg-white"
+            unoptimized
+          />
+        );
+      }
+      if (mode === "outline") {
+        return <SignatureVisualizer payload={signaturePayload} mode="outline" className="rounded-lg" />;
+      }
+      if (mode === "velocity") {
+        return <SignatureVisualizer payload={signaturePayload} mode="velocity" className="rounded-lg" />;
+      }
+      return <SignatureVisualizer payload={signaturePayload} mode="replay" className="rounded-lg" />;
+    }
+
+    if (hasPreview) {
+      return (
         <Image
-          src={previewUrl}
+          src={previewUrl!}
           alt={documentName ? `Digitale Unterschrift: ${documentName}` : "Digitale Unterschrift"}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
           className="object-contain bg-white"
           unoptimized
         />
+      );
+    }
+
+    return (
+      <div className="flex h-full items-center justify-center rounded-lg bg-muted/40 text-sm text-muted-foreground">
+        Keine Vorschau vorhanden
+      </div>
+    );
+  };
+
+  const controls: Array<{ key: ConsentPreviewMode; label: string }> = [];
+  if (hasSignature) {
+    if (hasPreview) {
+      controls.push({ key: "preview", label: "Normal" });
+    }
+    controls.push({ key: "outline", label: hasPreview ? "Kontur" : "Normal" });
+    controls.push({ key: "velocity", label: "Geschwindigkeit" });
+    controls.push({ key: "replay", label: "Replay" });
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Digitale Unterschrift</p>
+        {controls.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em]">
+            {controls.map((control) => (
+              <button
+                key={control.key}
+                type="button"
+                onClick={() => setMode(control.key)}
+                className={cn(
+                  "rounded-full px-2 py-0.5 transition",
+                  mode === control.key
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+                aria-pressed={mode === control.key}
+              >
+                {control.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="relative h-60 w-full overflow-hidden rounded-lg border border-border/50 bg-background">
+        {renderContent()}
       </div>
       <p className="text-xs text-muted-foreground">Die Unterschrift ist nur für freigeschaltete Mitglieder sichtbar.</p>
     </div>
@@ -117,6 +212,9 @@ export function PhotoConsentCard({
   const [note, setNote] = useState("");
   const [noteError, setNoteError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [signatureMode, setSignatureMode] = useState<"upload" | "signature">("upload");
+  const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
+  const [signaturePreviewMode, setSignaturePreviewMode] = useState<"outline" | "velocity" | "replay">("outline");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -170,6 +268,8 @@ export function PhotoConsentCard({
   const resetFileInput = () => {
     setDocumentFile(null);
     setDocumentError(null);
+    setSignatureResult(null);
+    setSignaturePreviewMode("outline");
     const input = fileInputRef.current;
     if (input) {
       input.value = "";
@@ -195,12 +295,23 @@ export function PhotoConsentCard({
     }
   }, [editing]);
 
+  useEffect(() => {
+    if (requiresDocument) {
+      setSignatureMode("upload");
+      setSignatureResult(null);
+      setSignaturePreviewMode("outline");
+    }
+  }, [requiresDocument]);
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
     if (!file) {
       resetFileInput();
       return;
     }
+    setSignatureMode("upload");
+    setSignatureResult(null);
+    setSignaturePreviewMode("outline");
     if (file.size > MAX_DOCUMENT_BYTES) {
       setDocumentError("Dokument darf maximal 8 MB groß sein");
       event.target.value = "";
@@ -217,6 +328,73 @@ export function PhotoConsentCard({
     setDocumentError(null);
     setDocumentFile(file);
   };
+
+  const handleSelectUploadMode = () => {
+    setSignatureMode("upload");
+    setSignatureResult(null);
+    setSignaturePreviewMode("outline");
+    setDocumentError(null);
+  };
+
+  const handleSelectSignatureMode = () => {
+    if (requiresDocument) {
+      return;
+    }
+    setSignatureMode("signature");
+    setDocumentFile(null);
+    setDocumentError(null);
+    const input = fileInputRef.current;
+    if (input) {
+      input.value = "";
+    }
+  };
+
+  const handleSignatureChange = (result: SignatureResult | null) => {
+    if (signatureMode !== "signature") {
+      setSignatureMode("signature");
+    }
+    setSignatureResult(result);
+    if (!result) {
+      setSignaturePreviewMode("outline");
+      setDocumentError(null);
+    }
+  };
+
+  useEffect(() => {
+    if (signatureMode !== "signature") {
+      return;
+    }
+    if (!signatureResult) {
+      setDocumentFile(null);
+      return;
+    }
+    const dataUrl = signatureResult.dataUrl;
+    const commaIndex = dataUrl.indexOf(",");
+    if (commaIndex === -1) {
+      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
+      setDocumentFile(null);
+      return;
+    }
+    const header = dataUrl.slice(0, commaIndex);
+    const mimeMatch = header.match(/data:(.*?);base64/);
+    const mime = (mimeMatch?.[1] ?? "image/png").toLowerCase();
+    const base64 = dataUrl.slice(commaIndex + 1);
+    try {
+      const binary = atob(base64);
+      const length = binary.length;
+      const bytes = new Uint8Array(length);
+      for (let index = 0; index < length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      const file = new File([bytes], "digitale-unterschrift.png", { type: mime || "image/png" });
+      setDocumentError(null);
+      setDocumentFile(file);
+    } catch (conversionError) {
+      console.error("[photo-consent.signature]", conversionError);
+      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
+      setDocumentFile(null);
+    }
+  }, [signatureMode, signatureResult]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -235,6 +413,11 @@ export function PhotoConsentCard({
       return;
     }
 
+    if (!requiresDocument && signatureMode === "signature" && !signatureResult) {
+      setDocumentError("Bitte zeichne deine digitale Unterschrift.");
+      return;
+    }
+
     if (trimmedNote.length > MAX_NOTE_LENGTH) {
       setNoteError(`Bitte kürze deine Hinweise auf maximal ${MAX_NOTE_LENGTH} Zeichen`);
       return;
@@ -247,6 +430,9 @@ export function PhotoConsentCard({
       formData.append("exclusionNote", trimmedNote);
       if (documentFile) {
         formData.append("document", documentFile);
+      }
+      if (!requiresDocument && signatureMode === "signature" && signatureResult) {
+        formData.append("signaturePayload", JSON.stringify(signatureResult.payload));
       }
       const response = await fetch("/api/photo-consents", {
         method: "POST",
@@ -515,7 +701,7 @@ export function PhotoConsentCard({
                   {noteError && <p className="text-sm text-destructive">{noteError}</p>}
                 </div>
 
-                {requiresDocument && (
+                {requiresDocument ? (
                   <div className="space-y-3 rounded-xl border border-dashed border-primary/30 bg-background/80 p-4 shadow-sm backdrop-blur">
                     <div className="font-medium text-foreground">Elterliche Einwilligung (PDF oder JPG/PNG)</div>
                     <Input
@@ -532,6 +718,87 @@ export function PhotoConsentCard({
                       </p>
                     )}
                     {documentError && <p className="text-sm text-destructive">{documentError}</p>}
+                  </div>
+                ) : (
+                  <div className="space-y-4 rounded-xl border border-primary/30 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant={signatureMode === "upload" ? "default" : "outline"}
+                        size="sm"
+                        onClick={handleSelectUploadMode}
+                        disabled={submitting}
+                      >
+                        Datei hochladen
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={signatureMode === "signature" ? "default" : "outline"}
+                        size="sm"
+                        onClick={handleSelectSignatureMode}
+                        disabled={submitting}
+                      >
+                        Digital unterschreiben
+                      </Button>
+                    </div>
+                    {signatureMode === "upload" ? (
+                      <div className="space-y-3">
+                        <Input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="application/pdf,image/jpeg,image/png"
+                          onChange={handleFileChange}
+                          disabled={submitting}
+                        />
+                        {documentFile && <p className="text-xs text-foreground/70">Ausgewählt: {documentFile.name}</p>}
+                        {summary?.hasDocument && !documentFile && (
+                          <p className="text-xs text-foreground/60">
+                            Es liegt bereits ein Dokument vor. Du kannst hier ein neues hochladen, falls du etwas aktualisieren möchtest.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <SignaturePad value={signatureResult} onChange={handleSignatureChange} className="bg-background" />
+                        <p className="text-xs text-foreground/60">
+                          Zeichne deine Unterschrift direkt hier. Du kannst sie unten als Kontur, mit Geschwindigkeitsfarben oder als Replay ansehen.
+                        </p>
+                        {signatureResult && (
+                          <div className="space-y-3 rounded-lg border border-border/60 bg-background/90 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                Vorschau
+                              </span>
+                              <div className="flex flex-wrap items-center gap-1">
+                                {(["outline", "velocity", "replay"] as const).map((mode) => (
+                                  <button
+                                    key={mode}
+                                    type="button"
+                                    onClick={() => setSignaturePreviewMode(mode)}
+                                    className={cn(
+                                      "rounded-full px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] transition",
+                                      signaturePreviewMode === mode
+                                        ? "bg-primary text-primary-foreground shadow"
+                                        : "text-muted-foreground hover:bg-muted",
+                                    )}
+                                    aria-pressed={signaturePreviewMode === mode}
+                                  >
+                                    {mode === "outline"
+                                      ? "Kontur"
+                                      : mode === "velocity"
+                                      ? "Geschwindigkeit"
+                                      : "Replay"}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="relative h-48 w-full overflow-hidden rounded-md border border-border/60 bg-background">
+                              <SignatureVisualizer payload={signatureResult.payload} mode={signaturePreviewMode} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -576,10 +843,12 @@ export function PhotoConsentCard({
               </form>
             )}
 
-            {summary?.documentPreviewUrl && (
+            {(summary?.documentPreviewUrl || summary?.signaturePayload) && (
               <ConsentDocumentPreview
-                previewUrl={summary.documentPreviewUrl}
-                documentName={summary.documentName}
+                previewUrl={summary?.documentPreviewUrl ?? null}
+                documentName={summary?.documentName ?? null}
+                signatureVersion={summary?.signatureVersion ?? null}
+                signaturePayload={summary?.signaturePayload ?? null}
               />
             )}
           </>
