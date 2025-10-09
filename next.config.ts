@@ -22,7 +22,17 @@ const nextConfig: NextConfig = {
     ],
   },
   // Next.js 15+: serverComponentsExternalPackages moved to serverExternalPackages
-  serverExternalPackages: ["bcryptjs", "pdfkit", "qrcode", "node-ical"],
+  serverExternalPackages: ["bcryptjs", "pdfkit", "qrcode", "node-ical", "sharp"],
+  webpack: (config) => {
+    config.resolve ??= {};
+    config.resolve.alias ??= {};
+    Object.assign(config.resolve.alias, {
+      "@img/sharp-libvips-dev/include": false,
+      "@img/sharp-libvips-dev/cplusplus": false,
+      "@img/sharp-wasm32/versions": false,
+    });
+    return config;
+  },
 };
 
 export default nextConfig;

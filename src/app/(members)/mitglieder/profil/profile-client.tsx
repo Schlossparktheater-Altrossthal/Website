@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -92,9 +92,10 @@ import {
   type SaveRolePreferencesInput,
 } from "./actions";
 import { ProfileCompletionProvider, useProfileCompletion } from "./profile-completion-context";
+import { AvatarCropDialog, type AvatarCropSelection } from "./avatar-crop-dialog";
 
 const AVATAR_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
 const CURRENT_YEAR = new Date().getFullYear();
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
@@ -1373,9 +1374,131 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
   }));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [avatarCropSelection, setAvatarCropSelection] = useState<AvatarCropSelection | null>(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  const cleanupCropImage = useCallback(() => {
+    setCropImageUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return null;
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      cleanupCropImage();
+    };
+  }, [cleanupCropImage]);
+
+  const loadImage = useCallback((src: string) => {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Bild konnte nicht geladen werden"));
+      image.src = src;
+    });
+  }, []);
+
+  const createAvatarPreview = useCallback(
+    async (file: File, selection: AvatarCropSelection): Promise<string> => {
+      const objectUrl = URL.createObjectURL(file);
+      try {
+        const image = await loadImage(objectUrl);
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
+
+        if (!sourceWidth || !sourceHeight) {
+          throw new Error("Ungültige Bildabmessungen");
+        }
+
+        const canvas = document.createElement("canvas");
+        const PREVIEW_SIZE = 256;
+        canvas.width = PREVIEW_SIZE;
+        canvas.height = PREVIEW_SIZE;
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          throw new Error("Canvas-Kontext nicht verfügbar");
+        }
+
+        const cropWidth = Math.min(sourceWidth, Math.max(1, Math.round(sourceWidth * selection.width)));
+        const cropHeight = Math.min(sourceHeight, Math.max(1, Math.round(sourceHeight * selection.height)));
+        const cropX = Math.min(sourceWidth - 1, Math.max(0, Math.round(sourceWidth * selection.x)));
+        const cropY = Math.min(sourceHeight - 1, Math.max(0, Math.round(sourceHeight * selection.y)));
+        const safeCropWidth = Math.min(cropWidth, sourceWidth - cropX);
+        const safeCropHeight = Math.min(cropHeight, sourceHeight - cropY);
+
+        context.clearRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+        context.drawImage(
+          image,
+          cropX,
+          cropY,
+          safeCropWidth,
+          safeCropHeight,
+          0,
+          0,
+          PREVIEW_SIZE,
+          PREVIEW_SIZE,
+        );
+
+        return canvas.toDataURL("image/png");
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    },
+    [loadImage],
+  );
+
+  const openCropDialogForFile = useCallback(
+    (file: File) => {
+      cleanupCropImage();
+      const url = URL.createObjectURL(file);
+      setPendingAvatarFile(file);
+      setCropImageUrl(url);
+      setCropDialogOpen(true);
+    },
+    [cleanupCropImage],
+  );
+
+  const handleCropDialogClose = useCallback(() => {
+    setCropDialogOpen(false);
+    setPendingAvatarFile(null);
+    cleanupCropImage();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [cleanupCropImage]);
+
+  const handleCropDialogConfirm = useCallback(
+    async (selection: AvatarCropSelection) => {
+      if (!pendingAvatarFile) {
+        handleCropDialogClose();
+        return;
+      }
+
+      try {
+        const preview = await createAvatarPreview(pendingAvatarFile, selection);
+        setAvatarFile(pendingAvatarFile);
+        setAvatarCropSelection(selection);
+        setAvatarPreviewUrl(preview);
+        setFormState((prev) => ({ ...prev, avatarSource: "UPLOAD", removeAvatar: false }));
+      } catch (cropError) {
+        console.error("[profile][avatar-crop]", cropError);
+        toast.error("Bild konnte nicht verarbeitet werden.");
+      } finally {
+        handleCropDialogClose();
+      }
+    },
+    [createAvatarPreview, handleCropDialogClose, pendingAvatarFile],
+  );
 
   useEffect(() => {
     setFormState((prev) => ({
@@ -1403,11 +1526,8 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
   useEffect(() => {
     if (!avatarFile) {
       setAvatarPreviewUrl(null);
-      return;
+      setAvatarCropSelection(null);
     }
-    const url = URL.createObjectURL(avatarFile);
-    setAvatarPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
   }, [avatarFile]);
 
   const avatarPreviewState = useMemo(
@@ -1425,7 +1545,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
           return {
             source: "UPLOAD" as const,
             previewUrl: avatarPreviewUrl,
-            description: "Vorschau deines neuen Uploads (noch nicht gespeichert).",
+            description: "Vorschau deines neuen Uploads mit individuellem Ausschnitt (noch nicht gespeichert).",
           };
         }
 
@@ -1480,7 +1600,9 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
   const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
     if (!file) {
-      setAvatarFile(null);
+      if (event.target.value) {
+        event.target.value = "";
+      }
       return;
     }
     if (!AVATAR_MIME_TYPES.has(file.type.toLowerCase())) {
@@ -1489,12 +1611,17 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
-      toast.error("Bitte nutze ein Bild bis maximal 2 MB.");
+      toast.error("Bitte nutze ein Bild bis maximal 8 MB.");
       event.target.value = "";
       return;
     }
-    setAvatarFile(file);
-    setFormState((prev) => ({ ...prev, avatarSource: "UPLOAD", removeAvatar: false }));
+    openCropDialogForFile(file);
+  };
+
+  const handleAvatarCropReopen = () => {
+    if (avatarFile) {
+      openCropDialogForFile(avatarFile);
+    }
   };
 
   const resetPasswordFields = () => {
@@ -1545,6 +1672,9 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     }
     if (avatarFile) {
       formData.append("avatarFile", avatarFile);
+      if (avatarCropSelection) {
+        formData.append("avatarCrop", JSON.stringify(avatarCropSelection));
+      }
     }
 
     setSubmitting(true);
@@ -1569,170 +1699,205 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
   };
 
   return (
-    <Card className="border border-border/60">
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">Stammdaten &amp; Zugang</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Vorname</Label>
-              <Input
-                id="firstName"
-                name="firstName"
-                value={formState.firstName}
-                onChange={handleInputChange}
-                autoComplete="given-name"
-              />
-              {fieldErrors.firstName ? <p className="text-sm text-destructive">{fieldErrors.firstName}</p> : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Nachname</Label>
-              <Input id="lastName" name="lastName" value={formState.lastName} onChange={handleInputChange} autoComplete="family-name" />
-              {fieldErrors.lastName ? <p className="text-sm text-destructive">{fieldErrors.lastName}</p> : null}
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Anzeigename</Label>
-              <Input id="displayName" name="displayName" value={formState.displayName} onChange={handleInputChange} />
-              {fieldErrors.displayName ? <p className="text-sm text-destructive">{fieldErrors.displayName}</p> : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-Mail</Label>
-              <Input id="email" name="email" type="email" value={formState.email} onChange={handleInputChange} autoComplete="email" />
-              {fieldErrors.email ? <p className="text-sm text-destructive">{fieldErrors.email}</p> : null}
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="dateOfBirth">Geburtsdatum</Label>
-              <Input id="dateOfBirth" name="dateOfBirth" type="date" value={formState.dateOfBirth} onChange={handleInputChange} />
-              {fieldErrors.dateOfBirth ? <p className="text-sm text-destructive">{fieldErrors.dateOfBirth}</p> : null}
-              <p className="text-xs text-muted-foreground">Benötigt für Fotoeinverständnis und Altersfreigaben.</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Avatar-Quelle</Label>
-              <div className="flex flex-wrap gap-2">
-                {([
-                  { value: "INITIALS", label: "Initialen" },
-                  { value: "GRAVATAR", label: "Gravatar" },
-                  { value: "UPLOAD", label: "Eigenes Bild" },
-                ] satisfies Array<{ value: BasicsFormState["avatarSource"]; label: string }>).map((option) => {
-                  const active = formState.avatarSource === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleAvatarSourceChange(option.value)}
-                      className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium transition",
-                        active
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:border-primary hover:text-primary",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
-                <UserAvatar
-                  userId={useStoredUploadPreview ? user.id : undefined}
-                  email={formState.email}
-                  firstName={formState.firstName}
-                  lastName={formState.lastName}
-                  name={formState.displayName}
-                  size={48}
-                  className="h-12 w-12"
-                  avatarSource={avatarPreviewState.source}
-                  avatarUpdatedAt={useStoredUploadPreview ? user.avatarUpdatedAt : undefined}
-                  previewUrl={avatarPreviewState.previewUrl}
-                />
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-foreground">Aktuelle Vorschau</p>
-                  <p className="text-xs text-muted-foreground">{avatarPreviewState.description}</p>
-                </div>
-              </div>
-              {formState.avatarSource === "GRAVATAR" ? (
-                <p className="text-xs text-muted-foreground">
-                  Wir nutzen den Gravatar zu deiner E-Mail-Adresse. Stelle sicher, dass dort ein Bild hinterlegt ist.
-                </p>
-              ) : null}
-              {formState.avatarSource === "UPLOAD" ? (
-                <div className="space-y-2 pt-2">
-                  <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarFileChange} />
-                  <p className="text-xs text-muted-foreground">PNG, JPG oder WebP bis 2 MB.</p>
-                  {avatarPreviewUrl ? (
-                    <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
-                      <UserAvatar name={user.displayName} size={48} className="h-12 w-12" previewUrl={avatarPreviewUrl} />
-                      <span className="text-xs text-muted-foreground">Vorschau des neuen Avatars</span>
-                    </div>
-                  ) : null}
-                  {user.avatarSource === "UPLOAD" && !avatarFile ? (
-                    <button
-                      type="button"
-                      className="text-xs text-muted-foreground underline transition hover:text-foreground"
-                      onClick={() => setFormState((prev) => ({ ...prev, removeAvatar: !prev.removeAvatar }))}
-                    >
-                      {formState.removeAvatar ? "Eigenes Bild behalten" : "Eigenes Bild entfernen"}
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Passwort zurücksetzen</Label>
+    <>
+      <Card className="border border-border/60">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Stammdaten &amp; Zugang</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
-              <Input
-                name="password"
-                type="password"
-                value={formState.password}
-                onChange={handleInputChange}
-                placeholder="Neues Passwort"
-                autoComplete="new-password"
-              />
-              <Input
-                name="confirmPassword"
-                type="password"
-                value={formState.confirmPassword}
-                onChange={handleInputChange}
-                placeholder="Bestätigung"
-                autoComplete="new-password"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Vorname</Label>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  value={formState.firstName}
+                  onChange={handleInputChange}
+                  autoComplete="given-name"
+                />
+                {fieldErrors.firstName ? <p className="text-sm text-destructive">{fieldErrors.firstName}</p> : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Nachname</Label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  value={formState.lastName}
+                  onChange={handleInputChange}
+                  autoComplete="family-name"
+                />
+                {fieldErrors.lastName ? <p className="text-sm text-destructive">{fieldErrors.lastName}</p> : null}
+              </div>
             </div>
-            {(fieldErrors.password || fieldErrors.confirmPassword) && (
-              <p className="text-sm text-destructive">{fieldErrors.password ?? fieldErrors.confirmPassword}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Lasse die Felder leer, wenn das Passwort unverändert bleiben soll.
-            </p>
-          </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Anzeigename</Label>
+                <Input id="displayName" name="displayName" value={formState.displayName} onChange={handleInputChange} />
+                {fieldErrors.displayName ? <p className="text-sm text-destructive">{fieldErrors.displayName}</p> : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-Mail</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formState.email}
+                  onChange={handleInputChange}
+                  autoComplete="email"
+                />
+                {fieldErrors.email ? <p className="text-sm text-destructive">{fieldErrors.email}</p> : null}
+              </div>
+            </div>
 
-          <div className="flex items-center justify-end gap-3">
-            <Button type="submit" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Speichern…
-                </>
-              ) : (
-                "Änderungen speichern"
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Geburtsdatum</Label>
+                <Input id="dateOfBirth" name="dateOfBirth" type="date" value={formState.dateOfBirth} onChange={handleInputChange} />
+                {fieldErrors.dateOfBirth ? <p className="text-sm text-destructive">{fieldErrors.dateOfBirth}</p> : null}
+                <p className="text-xs text-muted-foreground">Benötigt für Fotoeinverständnis und Altersfreigaben.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Avatar-Quelle</Label>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { value: "INITIALS", label: "Initialen" },
+                    { value: "GRAVATAR", label: "Gravatar" },
+                    { value: "UPLOAD", label: "Eigenes Bild" },
+                  ] satisfies Array<{ value: BasicsFormState["avatarSource"]; label: string }>).map((option) => {
+                    const active = formState.avatarSource === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => handleAvatarSourceChange(option.value)}
+                        className={cn(
+                          "rounded-full border px-3 py-1 text-xs font-medium transition",
+                          active
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
+                  <UserAvatar
+                    userId={useStoredUploadPreview ? user.id : undefined}
+                    email={formState.email}
+                    firstName={formState.firstName}
+                    lastName={formState.lastName}
+                    name={formState.displayName}
+                    size={48}
+                    className="h-12 w-12"
+                    avatarSource={avatarPreviewState.source}
+                    avatarUpdatedAt={useStoredUploadPreview ? user.avatarUpdatedAt : undefined}
+                    previewUrl={avatarPreviewState.previewUrl}
+                  />
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-foreground">Aktuelle Vorschau</p>
+                    <p className="text-xs text-muted-foreground">{avatarPreviewState.description}</p>
+                  </div>
+                </div>
+                {formState.avatarSource === "GRAVATAR" ? (
+                  <p className="text-xs text-muted-foreground">
+                    Wir nutzen den Gravatar zu deiner E-Mail-Adresse. Stelle sicher, dass dort ein Bild hinterlegt ist.
+                  </p>
+                ) : null}
+                {formState.avatarSource === "UPLOAD" ? (
+                  <div className="space-y-2 pt-2">
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleAvatarFileChange}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG oder WebP bis 8 MB. Wir skalieren dein Bild automatisch und speichern es optimiert.
+                    </p>
+                    {avatarPreviewUrl ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
+                          <UserAvatar name={user.displayName} size={48} className="h-12 w-12" previewUrl={avatarPreviewUrl} />
+                          <span className="text-xs text-muted-foreground">Vorschau des neuen Avatars</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="button" variant="outline" size="xs" onClick={handleAvatarCropReopen}>
+                            Bildausschnitt anpassen
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {user.avatarSource === "UPLOAD" && !avatarFile ? (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground underline transition hover:text-foreground"
+                        onClick={() => setFormState((prev) => ({ ...prev, removeAvatar: !prev.removeAvatar }))}
+                      >
+                        {formState.removeAvatar ? "Eigenes Bild behalten" : "Eigenes Bild entfernen"}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Passwort zurücksetzen</Label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  name="password"
+                  type="password"
+                  value={formState.password}
+                  onChange={handleInputChange}
+                  placeholder="Neues Passwort"
+                  autoComplete="new-password"
+                />
+                <Input
+                  name="confirmPassword"
+                  type="password"
+                  value={formState.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="Bestätigung"
+                  autoComplete="new-password"
+                />
+              </div>
+              {(fieldErrors.password || fieldErrors.confirmPassword) && (
+                <p className="text-sm text-destructive">{fieldErrors.password ?? fieldErrors.confirmPassword}</p>
               )}
-            </Button>
-          </div>
-        </form>
+              <p className="text-xs text-muted-foreground">
+                Lasse die Felder leer, wenn das Passwort unverändert bleiben soll.
+              </p>
+            </div>
 
-      </CardContent>
-    </Card>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+            <div className="flex items-center justify-end gap-3">
+              <Button type="submit" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Speichern…
+                  </>
+                ) : (
+                  "Änderungen speichern"
+                )}
+              </Button>
+            </div>
+          </form>
+
+        </CardContent>
+      </Card>
+      <AvatarCropDialog
+        open={Boolean(cropDialogOpen && cropImageUrl)}
+        imageUrl={cropImageUrl}
+        onClose={handleCropDialogClose}
+        onConfirm={handleCropDialogConfirm}
+      />
+    </>
   );
 }
 
