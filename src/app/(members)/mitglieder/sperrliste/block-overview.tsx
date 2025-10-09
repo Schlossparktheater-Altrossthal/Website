@@ -71,12 +71,6 @@ function normaliseReason(value: string | null | undefined) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function escapeCsvValue(value: string) {
-  const needsQuotes = value.includes(';') || value.includes('"') || value.includes('\n');
-  const escaped = value.replace(/"/g, '""');
-  return needsQuotes ? `"${escaped}"` : escaped;
-}
-
 export function BlockOverview({
   members,
   holidays = [],
@@ -309,49 +303,6 @@ export function BlockOverview({
     }
   };
 
-  const handleExportTable = () => {
-    if (!exportWindow || exportRows.length === 0) {
-      toast.warning('Keine Sperrtermine auf wichtigen Tagen im ausgewählten Zeitraum gefunden.');
-      return;
-    }
-
-    try {
-      const header = ['Mitglied', 'E-Mail', ...exportWindow.days.map((day) => day.header)];
-      const csvRows = [
-        header,
-        ...exportRows.map(({ member, entries }) => {
-          const cells = entries.map((entry) => {
-            if (!entry) {
-              return '';
-            }
-            const reason = normaliseReason(entry.reason);
-            return reason || 'gesperrt';
-          });
-          return [member.displayName, member.email ?? '', ...cells];
-        }),
-      ];
-
-      const csvContent = csvRows.map((row) => row.map((value) => escapeCsvValue(value)).join(';')).join('\n');
-      const blob = new Blob([`\uFEFF${csvContent}`], {
-        type: 'text/csv;charset=utf-8;',
-      });
-      const url = URL.createObjectURL(blob);
-      const fileName = `sperrliste-wichtige-tage-${format(exportWindow.start, 'yyyyMMdd')}-${format(exportWindow.end, 'yyyyMMdd')}.csv`;
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      link.rel = 'noopener';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success('Export wurde gestartet.');
-    } catch (error) {
-      console.error(error);
-      toast.error('Export konnte nicht erstellt werden.');
-    }
-  };
-
   if (!data.preparedMembers.length) {
     return (
       <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -388,15 +339,6 @@ export function BlockOverview({
               )}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleExportTable}
-                disabled={exportDisabled}
-                className="sm:w-auto"
-              >
-                CSV exportieren
-              </Button>
               <Button
                 type="button"
                 variant="outline"
