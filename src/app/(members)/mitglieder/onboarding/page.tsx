@@ -68,6 +68,7 @@ export default async function MembersOnboardingAnalyticsPage({
           onboardings={options}
           initialData={dashboard}
           navigateHrefTemplate="/mitglieder/onboarding?onboardingId=%s"
+          detailHrefTemplate="/mitglieder/onboarding/%s/talente/%s"
         />
       </Suspense>
     </main>

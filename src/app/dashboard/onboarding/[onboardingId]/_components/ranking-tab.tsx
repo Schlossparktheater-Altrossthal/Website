@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,13 +9,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
 import { cn } from "@/lib/utils";
 import { RoleSpiderChart } from "./role-spider-chart";
-import { TalentDetailDialog } from "./talent-detail-dialog";
+import {
+  buildCandidateAggregates,
+  createRoleGroups,
+  createRoleSummaries,
+  sortRoleGroupsByDomain,
+  sortRoleSummariesByDomain,
+} from "./ranking-data";
 import type {
   CandidateAggregate,
   CandidatePreference,
   Domain,
   HighlightContext,
-  RoleCandidate,
   RoleGroup,
   RoleSummary,
 } from "./ranking-types";
@@ -52,7 +58,15 @@ const scoreFormatter = new Intl.NumberFormat("de-DE", {
 
 type RankingTabProps = {
   ranking: OnboardingDashboardData["ranking"];
+  onboardingId: string;
+  detailHrefTemplate: string;
 };
+
+function formatDetailHref(template: string, onboardingId: string, candidateId: string) {
+  let index = 0;
+  const replacements = [onboardingId, candidateId] as const;
+  return template.replace(/%s/g, () => encodeURIComponent(replacements[index++] ?? ""));
+}
 
 function PreferenceList({
   domain,
@@ -277,67 +291,34 @@ function DomainSection({
   );
 }
 
-export function RankingTab({ ranking }: RankingTabProps) {
+export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: RankingTabProps) {
   const [domain, setDomain] = useState<Domain>("acting");
-  const [selectedCandidate, setSelectedCandidate] = useState<{
-    candidate: CandidateAggregate;
-    highlight: HighlightContext;
-  } | null>(null);
+  const router = useRouter();
 
   const handleSelectCandidate = useCallback(
     (candidate: CandidateAggregate, highlight: HighlightContext) => {
-      setSelectedCandidate({ candidate, highlight });
+      const baseHref = formatDetailHref(detailHrefTemplate, onboardingId, candidate.userId);
+      const href = highlight
+        ? `${baseHref}${baseHref.includes("?") ? "&" : "?"}roleId=${encodeURIComponent(highlight.roleId)}`
+        : baseHref;
+      router.push(href);
     },
-    [],
+    [detailHrefTemplate, onboardingId, router],
   );
 
-  const roleSummaries = useMemo<RoleSummary[]>(() => {
-    return ranking.roles.map((role) => {
-      const totalShare = role.candidates.reduce((sum, candidate) => sum + candidate.normalizedShare, 0);
-      const averageShare =
-        role.candidates.length === 0 ? 0 : totalShare / role.candidates.length;
+  const { actingRoleSummaries, crewRoleSummaries, actingGroups, crewGroups } = useMemo(() => {
+    const candidateMap = buildCandidateAggregates(ranking);
+    const summaries = createRoleSummaries(ranking);
+    const summaryMap = new Map<string, RoleSummary>(summaries.map((summary) => [summary.roleId, summary]));
+    const groups = createRoleGroups(ranking, candidateMap);
 
-      return {
-        roleId: role.roleId,
-        label: role.label,
-        domain: role.domain as Domain,
-        averageShare,
-      } satisfies RoleSummary;
-    });
-  }, [ranking.roles]);
-
-  const roleSummaryMap = useMemo(
-    () => new Map<string, RoleSummary>(roleSummaries.map((summary) => [summary.roleId, summary])),
-    [roleSummaries],
-  );
-
-  const actingRoleSummaries = useMemo(
-    () =>
-      roleSummaries
-        .filter((summary) => summary.domain === "acting")
-        .slice()
-        .sort((a, b) => {
-          if (b.averageShare === a.averageShare) {
-            return a.label.localeCompare(b.label, "de-DE");
-          }
-          return b.averageShare - a.averageShare;
-        }),
-    [roleSummaries],
-  );
-
-  const crewRoleSummaries = useMemo(
-    () =>
-      roleSummaries
-        .filter((summary) => summary.domain === "crew")
-        .slice()
-        .sort((a, b) => {
-          if (b.averageShare === a.averageShare) {
-            return a.label.localeCompare(b.label, "de-DE");
-          }
-          return b.averageShare - a.averageShare;
-        }),
-    [roleSummaries],
-  );
+    return {
+      actingRoleSummaries: sortRoleSummariesByDomain(summaries, "acting"),
+      crewRoleSummaries: sortRoleSummariesByDomain(summaries, "crew"),
+      actingGroups: sortRoleGroupsByDomain(groups, "acting", summaryMap),
+      crewGroups: sortRoleGroupsByDomain(groups, "crew", summaryMap),
+    };
+  }, [ranking]);
 
   useEffect(() => {
     if (domain === "acting" && actingRoleSummaries.length === 0 && crewRoleSummaries.length > 0) {
@@ -346,140 +327,6 @@ export function RankingTab({ ranking }: RankingTabProps) {
       setDomain("acting");
     }
   }, [actingRoleSummaries.length, crewRoleSummaries.length, domain]);
-
-  const roleGroups = useMemo(() => {
-    const map = new Map<string, CandidateAggregate>();
-
-    for (const role of ranking.roles) {
-      for (const candidate of role.candidates) {
-        let entry = map.get(candidate.userId);
-
-        if (!entry) {
-          entry = {
-            userId: candidate.userId,
-            name: candidate.name,
-            email: candidate.email,
-            focus: candidate.focus,
-            score: candidate.score,
-            confidence: candidate.confidence,
-            experienceYears: candidate.experienceYears,
-            interests: [...new Set(candidate.interests)],
-            background: candidate.background,
-            notes: candidate.notes,
-            preferences: {
-              acting: [],
-              crew: [],
-            },
-          } satisfies CandidateAggregate;
-          map.set(candidate.userId, entry);
-        } else {
-          entry.email = entry.email ?? candidate.email;
-          entry.focus = entry.focus ?? candidate.focus;
-          entry.score = Math.max(entry.score, candidate.score);
-          entry.confidence = Math.max(entry.confidence, candidate.confidence);
-          entry.experienceYears =
-            entry.experienceYears === null
-              ? candidate.experienceYears
-              : candidate.experienceYears === null
-                ? entry.experienceYears
-                : Math.max(entry.experienceYears, candidate.experienceYears);
-          entry.interests = Array.from(new Set([...entry.interests, ...candidate.interests]));
-          entry.background = entry.background ?? candidate.background;
-          entry.notes = entry.notes ?? candidate.notes;
-        }
-
-        const addPreference = (prefDomain: Domain, pref: CandidatePreference) => {
-          const list = entry!.preferences[prefDomain];
-          const existingIndex = list.findIndex((item) => item.roleId === pref.roleId);
-          if (existingIndex === -1) {
-            list.push(pref);
-          } else if (list[existingIndex].share < pref.share) {
-            list[existingIndex] = pref;
-          }
-        };
-
-        addPreference(role.domain, {
-          roleId: role.roleId,
-          label: role.label,
-          share: candidate.normalizedShare,
-          rank: candidate.rank,
-        });
-
-        for (const otherPreference of candidate.otherPreferences) {
-          addPreference(otherPreference.domain, {
-            roleId: otherPreference.roleId,
-            label: otherPreference.label,
-            share: otherPreference.normalizedShare,
-            rank: otherPreference.rank,
-          });
-        }
-      }
-    }
-
-    for (const aggregate of map.values()) {
-      aggregate.preferences.acting.sort((a, b) => b.share - a.share);
-      aggregate.preferences.crew.sort((a, b) => b.share - a.share);
-    }
-
-    const groups = ranking.roles.map((role) => ({
-      roleId: role.roleId,
-      label: role.label,
-      domain: role.domain as Domain,
-      candidates: role.candidates.map((candidate) => {
-        const aggregate = map.get(candidate.userId);
-        return {
-          candidate: aggregate!,
-          highlight: {
-            domain: role.domain as Domain,
-            roleId: role.roleId,
-            label: role.label,
-            rank: candidate.rank,
-            share: candidate.normalizedShare,
-          },
-        } satisfies RoleCandidate;
-      }),
-    } satisfies RoleGroup));
-
-    return groups;
-  }, [ranking.roles]);
-
-  const actingGroups = useMemo(
-    () =>
-      roleGroups
-        .filter((group) => group.domain === "acting" && group.candidates.length > 0)
-        .map((group) => ({
-          ...group,
-          candidates: group.candidates.slice().sort((a, b) => a.highlight.rank - b.highlight.rank),
-        }))
-        .sort((a, b) => {
-          const aSummary = roleSummaryMap.get(a.roleId)?.averageShare ?? 0;
-          const bSummary = roleSummaryMap.get(b.roleId)?.averageShare ?? 0;
-          if (bSummary === aSummary) {
-            return a.label.localeCompare(b.label, "de-DE");
-          }
-          return bSummary - aSummary;
-        }),
-    [roleGroups, roleSummaryMap],
-  );
-
-  const crewGroups = useMemo(
-    () =>
-      roleGroups
-        .filter((group) => group.domain === "crew" && group.candidates.length > 0)
-        .map((group) => ({
-          ...group,
-          candidates: group.candidates.slice().sort((a, b) => a.highlight.rank - b.highlight.rank),
-        }))
-        .sort((a, b) => {
-          const aSummary = roleSummaryMap.get(a.roleId)?.averageShare ?? 0;
-          const bSummary = roleSummaryMap.get(b.roleId)?.averageShare ?? 0;
-          if (bSummary === aSummary) {
-            return a.label.localeCompare(b.label, "de-DE");
-          }
-          return bSummary - aSummary;
-        }),
-    [roleGroups, roleSummaryMap],
-  );
 
   return (
     <>
@@ -538,16 +385,6 @@ export function RankingTab({ ranking }: RankingTabProps) {
         </TabsContent>
       </Tabs>
 
-      <TalentDetailDialog
-        open={selectedCandidate !== null}
-        candidate={selectedCandidate?.candidate ?? null}
-        highlight={selectedCandidate?.highlight ?? null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedCandidate(null);
-          }
-        }}
-      />
     </>
   );
 }
