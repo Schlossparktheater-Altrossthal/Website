@@ -997,7 +997,10 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
 
         if (status === "limited" || status === "preferred") {
           const baseLabel = status === "limited" ? "eingeschränkt verfügbar" : "bevorzugt";
-          const displayLabel = `${baseLabel.charAt(0).toUpperCase()}${baseLabel.slice(1)}`;
+          const displayLabel =
+            status === "limited"
+              ? "Eingeschränkt\nverfügbar"
+              : `${baseLabel.charAt(0).toUpperCase()}${baseLabel.slice(1)}`;
           const hasCustomReason =
             normalized &&
             (status === "limited"
@@ -1031,11 +1034,36 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
             secondaryTextColor: truncated ? palette.secondary : undefined,
             secondarySpacing: truncated ? 1.6 : undefined,
             lineGap: truncated ? 1.2 : undefined,
+            lineBreak: status === "limited",
           };
           return;
         }
 
         if (isBlockedEntry(entry)) {
+          const truncatedRemark = normalized ? truncate(normalized) : null;
+
+          cells[columnIndex] = "";
+          styles[columnIndex] = {
+            align: "center",
+            font: "bold",
+            fontSize: 7.4,
+            textColor: "#b91c1c",
+            fillColor: "#fee2e2",
+            prefixIcon: {
+              type: "cross",
+              size: iconSize,
+              strokeColor: "#b91c1c",
+              align: "center",
+              verticalAlign: truncatedRemark ? "top" : "middle",
+            },
+            verticalAlign: truncatedRemark ? "top" : "middle",
+            contentOffsetY: truncatedRemark ? iconSize + 3 : undefined,
+            secondaryText: truncatedRemark,
+            secondaryFont: truncatedRemark ? "regular" : undefined,
+            secondaryFontSize: truncatedRemark ? 6.1 : undefined,
+            secondaryTextColor: truncatedRemark ? "#b91c1c" : undefined,
+            secondarySpacing: truncatedRemark ? 2 : undefined,
+          };
           return;
         }
 
