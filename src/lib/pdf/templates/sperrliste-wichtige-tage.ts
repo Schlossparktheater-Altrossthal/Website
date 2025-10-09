@@ -95,13 +95,46 @@ function normalizeEntryValue(value: string | null | undefined) {
   return value?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
 }
 
+function removeDiacritics(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function isPositiveAvailabilityRemark(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  const asciiValue = removeDiacritics(value).replace(/ß/g, "ss");
+  const negativeIndicators = ["nicht", "kein", "keine", "keinen", "keiner", "nie"];
+  if (negativeIndicators.some((indicator) => asciiValue.includes(indicator))) {
+    return false;
+  }
+
+  const positivePatterns = [
+    /\bfrei\b/,
+    /\bverf(?:u|ue)gbar\b/,
+    /\bimmer\b.*\bverf(?:u|ue)gbar\b/,
+    /\bkann\b.*\balle\b.*\btag/,
+    /\balle\b.*\btag\b.*\bkann\b/,
+    /\buber\b.*\balle\b.*\btag/,
+    /\bkann\b.*\bjed[ea]n\b.*\btag/,
+    /\bjed[ea]n\b.*\btag\b.*\bkann\b/,
+  ];
+
+  return positivePatterns.some((pattern) => pattern.test(asciiValue));
+}
+
 function isBlockedEntry(entry: MemberEntry) {
   if (entry.status !== "blocked") {
     return false;
   }
 
   const normalized = normalizeEntryValue(entry.value);
-  return normalized !== "frei" && normalized !== "verfügbar";
+  if (isPositiveAvailabilityRemark(normalized)) {
+    return false;
+  }
+
+  return true;
 }
 
 function isCompletelyBlocked(member: Member) {
@@ -462,7 +495,7 @@ function drawTable(
     doc.y = top + headerHeight;
   };
 
-  const drawFooterRow = () => {
+  const drawFooterRowAtPageBottom = () => {
     if (!options.repeatHeaderAtBottom) {
       return;
     }
@@ -470,6 +503,16 @@ function drawTable(
     const previousY = doc.y;
     renderHeaderRowAt(footerTop, true);
     doc.y = previousY;
+  };
+
+  const drawFooterRowAtCurrentPosition = () => {
+    if (!options.repeatHeaderAtBottom) {
+      return;
+    }
+    ensurePageSpace(doc, headerHeight);
+    const footerTop = doc.y;
+    renderHeaderRowAt(footerTop, true);
+    doc.y = footerTop + headerHeight;
   };
 
   const drawDataRow = (row: readonly string[], rowIndex: number) => {
@@ -487,7 +530,7 @@ function drawTable(
 
     const rowHeight = computeRowHeight(cells);
     if (doc.y + rowHeight > tableBottom) {
-      drawFooterRow();
+      drawFooterRowAtPageBottom();
       doc.addPage();
       doc.x = doc.page.margins.left;
       doc.y = doc.page.margins.top;
@@ -722,7 +765,7 @@ function drawTable(
     doc.x = savedX;
     doc.y = savedY;
   }
-  drawFooterRow();
+  drawFooterRowAtCurrentPosition();
   doc.moveDown(0.6);
 }
 
