@@ -8,9 +8,17 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, "realtime-server/**", "e2e/**"],
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+      {
+        find: /^react-easy-crop$/,
+        replacement: path.resolve(__dirname, "./src/test/mocks/react-easy-crop"),
+      },
+      {
+        find: /^react-easy-crop\/react-easy-crop\.css$/,
+        replacement: path.resolve(__dirname, "./src/test/mocks/react-easy-crop.css"),
+      },
+    ],
   },
   css: {
     postcss: {
