@@ -606,7 +606,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
           return;
         }
 
-        cells[columnIndex] = "Notiz";
+        cells[columnIndex] = "";
         styles[columnIndex] = {
           align: "center",
           font: "bold",
