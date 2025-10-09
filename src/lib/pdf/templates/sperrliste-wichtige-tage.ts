@@ -824,7 +824,19 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
 
     const rowBackgrounds: (string | null)[] = [];
 
-    const rowDefinitions = data.members.map((member) => {
+    const zoneSortOrder: MemberZone[] = ["acting", "both", "crew", "unknown"];
+    const members = [...data.members].sort((a, b) => {
+      const zoneA = (a.zone ?? "unknown") as MemberZone;
+      const zoneB = (b.zone ?? "unknown") as MemberZone;
+      const zoneIndexDifference = zoneSortOrder.indexOf(zoneA) - zoneSortOrder.indexOf(zoneB);
+      if (zoneIndexDifference !== 0) {
+        return zoneIndexDifference;
+      }
+
+      return a.name.localeCompare(b.name, "de", { sensitivity: "base" });
+    });
+
+    const rowDefinitions = members.map((member) => {
       const zone = (member.zone ?? "unknown") as MemberZone;
       const zoneConfig = zonePalette[zone] ?? zonePalette.unknown;
       const cells = Array<string>(dayCount).fill("–");
