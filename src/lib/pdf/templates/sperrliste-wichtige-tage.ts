@@ -80,7 +80,7 @@ function buildRangeLabel(range: SperrlisteImportantDaysPdfData["range"]) {
 }
 
 type TableCellIcon = {
-  type: "check";
+  type: "check" | "cross";
   size?: number;
   strokeColor?: string;
   strokeWidth?: number;
@@ -96,6 +96,11 @@ type TableCellStyle = {
   textColor?: string;
   fillColor?: string | null;
   prefixIcon?: TableCellIcon | null;
+  secondaryText?: string | null;
+  secondaryFont?: "regular" | "bold";
+  secondaryFontSize?: number;
+  secondaryTextColor?: string;
+  secondarySpacing?: number;
 };
 
 type TableCellConfig = {
@@ -160,18 +165,35 @@ function drawTable(
       const icon = cell.style.prefixIcon;
       const text = cell.text?.trim() ?? "";
       const iconWidth = measurePrefixIconWidth(icon, text.length > 0);
-      doc.font(font).fontSize(fontSize);
       const width = Math.max(columnWidths[cellIndex] - paddingX * 2 - iconWidth, 16);
       const align = resolveAlign(cell.style);
-      const textHeight = text
+      doc.font(font).fontSize(fontSize);
+      const primaryHeight = text
         ? doc.heightOfString(text, {
             width,
             align,
             lineBreak: false,
           })
         : 0;
+      const secondaryText = cell.style.secondaryText?.trim() ?? "";
+      const secondaryFont = resolveFont({ font: cell.style.secondaryFont ?? "regular" });
+      const secondaryFontSize = cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5);
+      doc.font(secondaryFont).fontSize(secondaryFontSize);
+      const secondaryHeight = secondaryText
+        ? doc.heightOfString(secondaryText, {
+            width,
+            align,
+            lineBreak: false,
+          })
+        : 0;
+      const spacing = secondaryHeight > 0 && primaryHeight > 0 ? cell.style.secondarySpacing ?? 1.6 : 0;
+      const textHeight = primaryHeight + spacing + secondaryHeight;
       const iconHeight = icon?.size ?? 0;
-      const effectiveHeight = Math.max(textHeight, iconHeight, (cell.style.fontSize ?? 9) + 1.5);
+      const fallbackHeight =
+        (cell.style.fontSize ?? 9) +
+        1.5 +
+        (secondaryHeight > 0 ? (cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5)) : 0);
+      const effectiveHeight = Math.max(textHeight, iconHeight, fallbackHeight);
       const height = effectiveHeight + paddingY * 2;
       return Math.max(max, height);
     }, 0);
@@ -186,10 +208,6 @@ function drawTable(
     textColor: string,
     hasText: boolean,
   ) => {
-    if (icon.type !== "check") {
-      return;
-    }
-
     const size = icon.size ?? 9;
     const strokeWidth = icon.strokeWidth ?? Math.max(1, size / 5.5);
     const align = icon.align ?? "left";
@@ -209,24 +227,46 @@ function drawTable(
     const iconY = rowTop + paddingY + (rowHeight - paddingY * 2 - size) / 2 + (icon.offsetY ?? 0);
     const strokeColor = icon.strokeColor ?? textColor;
 
-    doc
-      .save()
-      .lineWidth(strokeWidth)
-      .strokeColor(strokeColor)
-      .moveTo(iconX, iconY + size * 0.6)
-      .lineTo(iconX + size * 0.35, iconY + size * 0.9)
-      .lineTo(iconX + size, iconY + size * 0.1)
-      .stroke()
-      .restore();
+    if (icon.type === "check") {
+      doc
+        .save()
+        .lineWidth(strokeWidth)
+        .strokeColor(strokeColor)
+        .moveTo(iconX, iconY + size * 0.6)
+        .lineTo(iconX + size * 0.35, iconY + size * 0.9)
+        .lineTo(iconX + size, iconY + size * 0.1)
+        .stroke()
+        .restore();
+      return;
+    }
+
+    if (icon.type === "cross") {
+      const inset = Math.max(size * 0.1, strokeWidth / 2);
+      const startX = iconX + inset;
+      const startY = iconY + inset;
+      const endX = iconX + size - inset;
+      const endY = iconY + size - inset;
+
+      doc
+        .save()
+        .lineWidth(strokeWidth)
+        .strokeColor(strokeColor)
+        .moveTo(startX, startY)
+        .lineTo(endX, endY)
+        .moveTo(endX, startY)
+        .lineTo(startX, endY)
+        .stroke()
+        .restore();
+    }
   };
 
   const drawHeaderRow = () => {
     const headerCells: TableCellConfig[] = headers.map((header, index) => ({
       text: header,
       style: {
-        align: index <= 1 ? "left" : "center",
+        align: index === 0 ? "left" : "center",
         font: "bold",
-        fontSize: 9,
+        fontSize: 8.5,
         textColor: "#111827",
         ...(options.headerStyles?.[index] ?? {}),
       },
@@ -244,7 +284,7 @@ function drawTable(
       const x = columnPositions[index] + paddingX;
       const width = Math.max(columnWidths[index] - paddingX * 2, 32);
       const font = resolveFont(cell.style);
-      const fontSize = cell.style.fontSize ?? 9;
+      const fontSize = cell.style.fontSize ?? 8.5;
       const align = resolveAlign(cell.style);
       doc.font(font).fontSize(fontSize).fillColor(cell.style.textColor ?? "#111827");
       doc.text(cell.text, x, rowTop + paddingY, {
@@ -263,10 +303,10 @@ function drawTable(
   const drawDataRow = (row: readonly string[], rowIndex: number) => {
     const cells: TableCellConfig[] = row.map((cell, cellIndex) => {
       const defaultStyle: TableCellStyle = {
-        align: cellIndex <= 1 ? "left" : "center",
+        align: cellIndex === 0 ? "left" : "center",
         font: cellIndex === 0 ? "bold" : "regular",
-        fontSize: 9,
-        textColor: cellIndex === 1 ? "#4b5563" : "#1f2937",
+        fontSize: cellIndex === 0 ? 8.5 : 8,
+        textColor: cellIndex === 0 ? "#111827" : "#1f2937",
       };
       const style = { ...defaultStyle, ...(options.cellStyles?.[rowIndex]?.[cellIndex] ?? {}) } satisfies TableCellStyle;
       return { text: cell, style };
@@ -298,6 +338,10 @@ function drawTable(
       const align = resolveAlign(cell.style);
       const font = resolveFont(cell.style);
       const fontSize = cell.style.fontSize ?? 9;
+      const secondaryText = cell.style.secondaryText?.trim() ?? "";
+      const secondaryFont = resolveFont({ font: cell.style.secondaryFont ?? "regular" });
+      const secondaryFontSize = cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5);
+      const spacing = secondaryText && text ? cell.style.secondarySpacing ?? 1.6 : 0;
 
       if (cell.style.fillColor) {
         doc.save();
@@ -309,12 +353,34 @@ function drawTable(
         drawPrefixIcon(icon, x, width, rowTop, rowHeight, textColor, text.length > 0);
       }
 
+      doc.font(font).fontSize(fontSize);
+      const primaryHeight = text
+        ? doc.heightOfString(text, {
+            width: textWidth,
+            align,
+            lineBreak: false,
+          })
+        : 0;
+
       if (text) {
         doc
           .font(font)
           .fontSize(fontSize)
           .fillColor(textColor)
           .text(text, x + paddingX + iconWidth, rowTop + paddingY, {
+            width: textWidth,
+            align,
+            lineBreak: false,
+            ellipsis: true,
+          });
+      }
+
+      if (secondaryText) {
+        doc
+          .font(secondaryFont)
+          .fontSize(secondaryFontSize)
+          .fillColor(cell.style.secondaryTextColor ?? textColor)
+          .text(secondaryText, x + paddingX + iconWidth, rowTop + paddingY + primaryHeight + spacing, {
             width: textWidth,
             align,
             lineBreak: false,
@@ -379,7 +445,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     const summaryTextWidth = Math.max(summaryBoxWidth - summaryBoxPaddingX * 2, 120);
 
     const summaryText = metadataItems.join(" • ");
-    doc.font("Helvetica").fontSize(10);
+    doc.font("Helvetica").fontSize(9);
     const summaryTextHeight = doc.heightOfString(summaryText, {
       width: summaryTextWidth,
       align: "left",
@@ -408,7 +474,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     if (!data.days.length || !data.members.length || data.summary.memberCount === 0) {
       doc
         .font("Helvetica")
-        .fontSize(11)
+        .fontSize(10)
         .fillColor("#4b5563")
         .text("Für den angegebenen Zeitraum liegen keine Sperrtermine auf wichtigen Tagen vor.");
       return;
@@ -416,48 +482,40 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
 
     const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const dayCount = data.days.length;
-    const minNameWidth = 112;
-    const minEmailWidth = 112;
-    const minDayWidth = 52;
-    const absoluteMinNameWidth = 88;
-    const absoluteMinEmailWidth = 88;
-    const absoluteMinDayWidth = 34;
+    const minNameWidth = 136;
+    const minDayWidth = 48;
+    const absoluteMinNameWidth = 100;
+    const absoluteMinDayWidth = 32;
 
     let nameWidth = minNameWidth;
-    let emailWidth = minEmailWidth;
     let dayWidth = minDayWidth;
 
-    const minimalTotal = nameWidth + emailWidth + dayWidth * dayCount;
+    const minimalTotal = nameWidth + dayWidth * dayCount;
     if (minimalTotal > availableWidth) {
       const excess = minimalTotal - availableWidth;
       const adjustableName = Math.max(0, nameWidth - absoluteMinNameWidth);
-      const adjustableEmail = Math.max(0, emailWidth - absoluteMinEmailWidth);
       const adjustableDay = Math.max(0, dayWidth - absoluteMinDayWidth) * dayCount;
-      const adjustableTotal = adjustableName + adjustableEmail + adjustableDay;
+      const adjustableTotal = adjustableName + adjustableDay;
 
       if (adjustableTotal > 0) {
         const ratio = Math.min(1, excess / adjustableTotal);
         nameWidth -= adjustableName * ratio;
-        emailWidth -= adjustableEmail * ratio;
         dayWidth -= Math.max(0, dayWidth - absoluteMinDayWidth) * ratio;
       }
 
-      const adjustedTotal = nameWidth + emailWidth + dayWidth * dayCount;
+      const adjustedTotal = nameWidth + dayWidth * dayCount;
       if (adjustedTotal > availableWidth && adjustedTotal > 0) {
         const scale = availableWidth / adjustedTotal;
         nameWidth *= scale;
-        emailWidth *= scale;
         dayWidth *= scale;
       }
     } else {
       const extra = availableWidth - minimalTotal;
-      const weightName = 1.2;
-      const weightEmail = 1.1;
-      const weightDay = dayCount > 0 ? 0.9 * dayCount : 0;
-      const weightSum = weightName + weightEmail + weightDay;
+      const weightName = 1.35;
+      const weightDay = dayCount > 0 ? 0.85 * dayCount : 0;
+      const weightSum = weightName + weightDay;
       if (weightSum > 0) {
         nameWidth += (weightName / weightSum) * extra;
-        emailWidth += (weightEmail / weightSum) * extra;
         if (dayCount > 0) {
           dayWidth += ((weightDay / weightSum) * extra) / dayCount;
         }
@@ -465,18 +523,18 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     }
 
     nameWidth = Math.max(0, nameWidth);
-    emailWidth = Math.max(0, emailWidth);
     dayWidth = Math.max(0, dayWidth);
 
-    const columnWidths = [nameWidth, emailWidth, ...Array(dayCount).fill(dayWidth)];
+    const columnWidths = [nameWidth, ...Array(dayCount).fill(dayWidth)];
 
-    const headers: string[] = ["Mitglied", "E-Mail", ...data.days.map((day) => day.label)];
+    const headers: string[] = ["Mitglied", ...data.days.map((day) => day.label)];
     const dayLookup = new Map(data.days.map((day, index) => [day.key, index] as const));
 
     const rows = data.members.map((member) => {
       const cells = Array<string>(dayCount).fill("–");
       const styles: TableCellStyle[] = Array.from({ length: dayCount }, () => ({
         align: "center",
+        fontSize: 8,
         textColor: "#9ca3af",
         prefixIcon: null,
       }));
@@ -487,54 +545,54 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
           return;
         }
 
-        if (!entry.value || !entry.value.trim()) {
-          cells[columnIndex] = "";
-          styles[columnIndex] = {
-            align: "center",
-            textColor: "#1e3a8a",
-            fillColor: "#eef2ff",
-            prefixIcon: {
-              type: "check",
-              size: 9,
-              strokeColor: "#1e3a8a",
-              align: "center",
-            },
-          };
+        const normalized = entry.value?.replace(/\s+/g, " ").trim();
+        if (!normalized) {
           return;
         }
 
-        const trimmed = entry.value.replace(/\s+/g, " ").trim();
-        const isGeneric = trimmed.toLowerCase() === "gesperrt";
-        const truncated = trimmed.length > 60 ? `${trimmed.slice(0, 57).trimEnd()}…` : trimmed;
+        const lower = normalized.toLowerCase();
+        if (lower === "frei" || lower === "verfügbar") {
+          return;
+        }
+
+        const isGeneric = lower === "gesperrt";
+        const truncated = normalized.length > 60 ? `${normalized.slice(0, 57).trimEnd()}…` : normalized;
         cells[columnIndex] = isGeneric ? "" : truncated;
         styles[columnIndex] = {
           align: isGeneric ? "center" : "left",
           font: isGeneric ? "bold" : "regular",
-          fontSize: isGeneric ? 9.5 : 8.5,
-          textColor: "#1e3a8a",
-          fillColor: "#eef2ff",
+          fontSize: isGeneric ? 8 : 7.5,
+          textColor: "#7f1d1d",
+          fillColor: "#fee2e2",
           prefixIcon: {
-            type: "check",
+            type: "cross",
             size: 9,
-            strokeColor: "#1e3a8a",
+            strokeColor: "#b91c1c",
             align: isGeneric ? "center" : "left",
             spacing: isGeneric ? 0 : 4,
           },
         };
       });
 
-      const nameCellStyle: TableCellStyle = { font: "bold", textColor: "#111827" };
-      const emailCellStyle: TableCellStyle = {
-        textColor: member.email ? "#4b5563" : "#9ca3af",
+      const trimmedEmail = member.email?.trim() ?? "";
+      const nameCellStyle: TableCellStyle = {
+        font: "bold",
+        fontSize: 9,
+        textColor: "#111827",
+        secondaryText: trimmedEmail || null,
+        secondaryFont: "regular",
+        secondaryFontSize: trimmedEmail ? 6.8 : undefined,
+        secondaryTextColor: trimmedEmail ? "#6b7280" : undefined,
+        secondarySpacing: trimmedEmail ? 1.2 : undefined,
       };
 
       return {
-        values: [member.name, member.email?.trim() || "–", ...cells] as const,
-        styles: [nameCellStyle, emailCellStyle, ...styles],
+        values: [member.name, ...cells] as const,
+        styles: [nameCellStyle, ...styles],
       };
     });
 
-    doc.font("Helvetica-Bold").fontSize(12).fillColor("#111827").text("Sperrtermine im Überblick");
+    doc.font("Helvetica-Bold").fontSize(11).fillColor("#111827").text("Sperrtermine im Überblick");
     doc.moveDown(0.4);
 
     drawTable(
@@ -543,17 +601,17 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       rows.map((row) => row.values),
       columnWidths,
       {
-        headerStyles: headers.map((_, index) => ({ align: index <= 1 ? "left" : "center" })),
+        headerStyles: headers.map((_, index) => ({ align: index === 0 ? "left" : "center" })),
         cellStyles: rows.map((row) => row.styles),
       },
     );
 
     doc
       .font("Helvetica")
-      .fontSize(9)
+      .fontSize(8)
       .fillColor("#6b7280")
       .text(
-        "Hinweis: Häkchen markieren Sperrtage. Angegebene Gründe werden neben dem Symbol angezeigt; leere Felder bedeuten keine Sperre am jeweiligen Tag.",
+        "Hinweis: Kreuze markieren Sperrtage. Angegebene Gründe werden neben dem Symbol angezeigt; leere Felder bedeuten keine Sperre am jeweiligen Tag.",
       );
   },
   schema: sperrlisteImportantDaysSchema,
