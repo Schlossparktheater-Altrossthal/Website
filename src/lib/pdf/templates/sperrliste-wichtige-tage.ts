@@ -13,7 +13,11 @@ const entrySchema = z.object({
   value: z.string().nullable(),
 });
 
+const memberZoneValues = ["acting", "crew", "both", "unknown"] as const;
+const memberZoneSchema = z.enum(memberZoneValues);
+
 const memberSchema = z.object({
+  zone: memberZoneSchema,
   name: z.string(),
   email: z.string().nullable(),
   entries: z.array(entrySchema),
@@ -47,6 +51,7 @@ const sperrlisteImportantDaysSchema = z
   });
 
 export type SperrlisteImportantDaysPdfData = z.infer<typeof sperrlisteImportantDaysSchema>;
+type MemberZone = (typeof memberZoneValues)[number];
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -103,6 +108,9 @@ type TableCellStyle = {
   secondaryTextColor?: string;
   secondarySpacing?: number;
   contentOffsetY?: number;
+  lineBreak?: boolean;
+  lineGap?: number;
+  verticalAlign?: "top" | "middle" | "bottom";
 };
 
 type TableCellConfig = {
@@ -113,6 +121,8 @@ type TableCellConfig = {
 type TableOptions = {
   headerStyles?: readonly TableCellStyle[];
   cellStyles?: readonly (readonly TableCellStyle[])[];
+  rowBackgrounds?: readonly (string | null | undefined)[];
+  repeatHeaderAtBottom?: boolean;
 };
 
 function drawTable(
@@ -186,12 +196,15 @@ function drawTable(
       const iconWidth = measurePrefixIconWidth(icon, text.length > 0);
       const width = Math.max(columnWidths[cellIndex] - paddingX * 2 - iconWidth, 16);
       const align = resolveAlign(cell.style);
+      const lineBreak = cell.style.lineBreak ?? false;
+      const lineGap = cell.style.lineGap;
       doc.font(font).fontSize(fontSize);
       const primaryHeight = text
         ? doc.heightOfString(text, {
             width,
             align,
-            lineBreak: false,
+            lineBreak,
+            lineGap,
           })
         : 0;
       const secondaryText = cell.style.secondaryText?.trim() ?? "";
@@ -288,53 +301,69 @@ function drawTable(
     }
   };
 
-  const drawHeaderRow = () => {
-    const headerCells: TableCellConfig[] = headers.map((header, index) => ({
-      text: header,
-      style: {
-        align: index === 0 ? "left" : "center",
-        font: "bold",
-        fontSize: 8,
-        textColor: "#111827",
-        ...(options.headerStyles?.[index] ?? {}),
-      },
-    }));
+  const headerCells: TableCellConfig[] = headers.map((header, index) => ({
+    text: header,
+    style: {
+      align: index === 0 ? "left" : "center",
+      font: "bold",
+      fontSize: 8,
+      textColor: "#111827",
+      ...(options.headerStyles?.[index] ?? {}),
+    },
+  }));
+  const headerHeight = computeRowHeight(headerCells);
 
-    const headerHeight = computeRowHeight(headerCells);
-    ensurePageSpace(doc, headerHeight + 6);
-
+  const renderHeaderRowAt = (y: number, includeTopBorder: boolean) => {
     doc.save();
-    doc.rect(startX, doc.y, totalWidth, headerHeight).fill("#f3f4f6");
+    doc.rect(startX, y, totalWidth, headerHeight).fill("#f3f4f6");
     doc.restore();
 
-    const rowTop = doc.y;
     headerCells.forEach((cell, index) => {
       const x = columnPositions[index] + paddingX;
       const width = Math.max(columnWidths[index] - paddingX * 2, 32);
       const font = resolveFont(cell.style);
       const fontSize = cell.style.fontSize ?? 8.5;
       const align = resolveAlign(cell.style);
+      const lineBreak = cell.style.lineBreak ?? false;
       doc.font(font).fontSize(fontSize).fillColor(cell.style.textColor ?? "#111827");
-      doc.text(cell.text, x, rowTop + paddingY, {
+      doc.text(cell.text, x, y + paddingY, {
         width,
         align,
-        lineBreak: false,
-        ellipsis: true,
+        lineBreak,
+        ellipsis: !lineBreak,
+        lineGap: cell.style.lineGap,
       });
-      doc.y = rowTop;
+      doc.y = y;
       doc.x = startX;
     });
-    doc.y += headerHeight;
-    drawGridLines(rowTop, doc.y, true);
+    drawGridLines(y, y + headerHeight, includeTopBorder);
+  };
+
+  const drawHeaderRow = () => {
+    ensurePageSpace(doc, headerHeight + 6);
+    const top = doc.y;
+    renderHeaderRowAt(top, true);
+    doc.y = top + headerHeight;
+  };
+
+  const drawFooterRow = () => {
+    if (!options.repeatHeaderAtBottom) {
+      return;
+    }
+    const footerTop = bottom - headerHeight;
+    const previousY = doc.y;
+    renderHeaderRowAt(footerTop, true);
+    doc.y = previousY;
   };
 
   const drawDataRow = (row: readonly string[], rowIndex: number) => {
     const cells: TableCellConfig[] = row.map((cell, cellIndex) => {
+      const isNameColumn = cellIndex === 1;
       const defaultStyle: TableCellStyle = {
-        align: cellIndex === 0 ? "left" : "center",
-        font: cellIndex === 0 ? "bold" : "regular",
-        fontSize: cellIndex === 0 ? 8 : 7.4,
-        textColor: cellIndex === 0 ? "#111827" : "#1f2937",
+        align: isNameColumn ? "left" : "center",
+        font: isNameColumn ? "bold" : "regular",
+        fontSize: isNameColumn ? 8 : 7.4,
+        textColor: isNameColumn ? "#111827" : "#1f2937",
       };
       const style = { ...defaultStyle, ...(options.cellStyles?.[rowIndex]?.[cellIndex] ?? {}) } satisfies TableCellStyle;
       return { text: cell, style };
@@ -342,13 +371,19 @@ function drawTable(
 
     const rowHeight = computeRowHeight(cells);
     if (doc.y + rowHeight > bottom) {
+      drawFooterRow();
       doc.addPage();
       doc.x = doc.page.margins.left;
       doc.y = doc.page.margins.top;
       drawHeaderRow();
     }
 
-    if (rowIndex % 2 === 1) {
+    const rowBackground = options.rowBackgrounds?.[rowIndex];
+    if (rowBackground) {
+      doc.save();
+      doc.rect(startX, doc.y, totalWidth, rowHeight).fill(rowBackground);
+      doc.restore();
+    } else if (rowIndex % 2 === 1) {
       doc.save();
       doc.rect(startX, doc.y, totalWidth, rowHeight).fill("#f9fafb");
       doc.restore();
@@ -370,6 +405,8 @@ function drawTable(
       const secondaryFont = resolveFont({ font: cell.style.secondaryFont ?? "regular" });
       const secondaryFontSize = cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5);
       const spacing = secondaryText && text ? cell.style.secondarySpacing ?? 1.6 : 0;
+      const lineBreak = cell.style.lineBreak ?? false;
+      const lineGap = cell.style.lineGap;
 
       if (cell.style.fillColor) {
         doc.save();
@@ -386,11 +423,31 @@ function drawTable(
         ? doc.heightOfString(text, {
             width: textWidth,
             align,
-            lineBreak: false,
+            lineBreak,
+            lineGap,
           })
         : 0;
       const contentOffsetY = cell.style.contentOffsetY ?? 0;
-      const textStartY = rowTop + paddingY + contentOffsetY;
+      const secondaryHeight = secondaryText
+        ? doc
+            .font(secondaryFont)
+            .fontSize(secondaryFontSize)
+            .heightOfString(secondaryText, {
+              width: textWidth,
+              align,
+              lineBreak: false,
+            })
+        : 0;
+      const totalTextHeight = (text ? primaryHeight : 0) + (secondaryText ? spacing + secondaryHeight : 0);
+      const availableHeight = Math.max(rowHeight - paddingY * 2, 0);
+      const verticalAlign = cell.style.verticalAlign ?? "top";
+      let textStartY = rowTop + paddingY + contentOffsetY;
+      if (verticalAlign === "middle") {
+        textStartY = rowTop + paddingY + Math.max((availableHeight - totalTextHeight) / 2, 0) + contentOffsetY;
+      }
+      if (verticalAlign === "bottom") {
+        textStartY = rowTop + rowHeight - paddingY - totalTextHeight + contentOffsetY;
+      }
 
       if (text) {
         doc
@@ -400,8 +457,9 @@ function drawTable(
           .text(text, x + paddingX + iconWidth, textStartY, {
             width: textWidth,
             align,
-            lineBreak: false,
-            ellipsis: true,
+            lineBreak,
+            ellipsis: !lineBreak,
+            lineGap,
           });
       }
 
@@ -429,6 +487,7 @@ function drawTable(
   rows.forEach((row, index) => {
     drawDataRow(row, index);
   });
+  drawFooterRow();
   doc.moveDown(0.6);
 }
 
@@ -555,12 +614,44 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     nameWidth = Math.max(0, nameWidth);
     dayWidth = Math.max(0, dayWidth);
 
-    const columnWidths = [nameWidth, ...Array(dayCount).fill(dayWidth)];
+    const zoneColumnWidth = 28;
+    const columnWidths = [zoneColumnWidth, nameWidth, ...Array(dayCount).fill(dayWidth)];
 
-    const headers: string[] = ["Mitglied", ...data.days.map((day) => day.label)];
+    const headers: string[] = ["Zone", "Mitglied", ...data.days.map((day) => day.label)];
     const dayLookup = new Map(data.days.map((day, index) => [day.key, index] as const));
 
+    const zonePalette: Record<MemberZone, { rowFill: string | null; columnFill: string; textColor: string; verticalLabel: string }> = {
+      acting: {
+        rowFill: "#eef2ff",
+        columnFill: "#e0e7ff",
+        textColor: "#312e81",
+        verticalLabel: "A\nc\nt\ni\nn\ng",
+      },
+      crew: {
+        rowFill: "#ecfdf5",
+        columnFill: "#d1fae5",
+        textColor: "#065f46",
+        verticalLabel: "C\nr\ne\nw",
+      },
+      both: {
+        rowFill: "#fef3c7",
+        columnFill: "#fde68a",
+        textColor: "#92400e",
+        verticalLabel: "B\ne\ni\nd\ne\ns",
+      },
+      unknown: {
+        rowFill: "#f3f4f6",
+        columnFill: "#e5e7eb",
+        textColor: "#374151",
+        verticalLabel: "–",
+      },
+    };
+
+    const rowBackgrounds: (string | null)[] = [];
+
     const rows = data.members.map((member) => {
+      const zone = (member.zone ?? "unknown") as MemberZone;
+      const zoneConfig = zonePalette[zone] ?? zonePalette.unknown;
       const cells = Array<string>(dayCount).fill("–");
       const styles: TableCellStyle[] = Array.from({ length: dayCount }, () => ({
         align: "center",
@@ -630,6 +721,16 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       });
 
       const trimmedEmail = member.email?.trim() ?? "";
+      const zoneCellStyle: TableCellStyle = {
+        align: "center",
+        font: "bold",
+        fontSize: 7.3,
+        textColor: zoneConfig.textColor,
+        fillColor: zoneConfig.columnFill,
+        lineBreak: true,
+        lineGap: 0.6,
+        verticalAlign: "middle",
+      };
       const nameCellStyle: TableCellStyle = {
         font: "bold",
         fontSize: 8.5,
@@ -641,9 +742,11 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         secondarySpacing: trimmedEmail ? 1.2 : undefined,
       };
 
+      rowBackgrounds.push(zoneConfig.rowFill);
+
       return {
-        values: [member.name, ...cells] as const,
-        styles: [nameCellStyle, ...styles],
+        values: [zoneConfig.verticalLabel, member.name, ...cells] as const,
+        styles: [zoneCellStyle, nameCellStyle, ...styles],
       };
     });
 
@@ -656,8 +759,10 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       rows.map((row) => row.values),
       columnWidths,
       {
-        headerStyles: headers.map((_, index) => ({ align: index === 0 ? "left" : "center" })),
+        headerStyles: headers.map((_, index) => ({ align: index === 1 ? "left" : "center" })),
         cellStyles: rows.map((row) => row.styles),
+        rowBackgrounds,
+        repeatHeaderAtBottom: true,
       },
     );
 

@@ -36,6 +36,7 @@ export type OverviewMember = {
   avatarSource: string | null;
   avatarUpdatedAt: string | null;
   blockedDays: BlockedDay[];
+  onboardingFocus: "acting" | "tech" | "both" | null;
 };
 
 export type PreparedMember = OverviewMember & {

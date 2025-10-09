@@ -47,6 +47,21 @@ type ExportRow = {
   entries: (BlockedDay | null)[];
 };
 
+type PdfMemberZone = "acting" | "crew" | "both" | "unknown";
+
+function toPdfZone(focus: PreparedMember["onboardingFocus"]): PdfMemberZone {
+  switch (focus) {
+    case "acting":
+      return "acting";
+    case "both":
+      return "both";
+    case "tech":
+      return "crew";
+    default:
+      return "unknown";
+  }
+}
+
 export type { OverviewMember } from './overview/useBlockOverviewData';
 
 function normaliseReason(value: string | null | undefined) {
@@ -216,6 +231,7 @@ export function BlockOverview({
           title: day.title,
         })),
         members: exportRows.map(({ member, entries }) => ({
+          zone: toPdfZone(member.onboardingFocus),
           name: member.displayName,
           email: member.email ?? null,
           entries: exportWindow.days.map((day, index) => {
