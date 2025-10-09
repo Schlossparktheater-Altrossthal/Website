@@ -138,27 +138,38 @@ export function BlockOverview({
       return [];
     }
 
-    return data.preparedMembers
-      .map<ExportRow | null>((member) => {
-        const entries = exportWindow.days.map((day) => {
-          const entry = member.blockedMap.get(day.key);
-          if (!entry) {
-            return null;
-          }
-          if (entry.kind === 'BLOCKED' || entry.kind === 'LIMITED' || entry.kind === 'PREFERRED') {
-            return entry;
-          }
-          return null;
-        });
-
-        if (entries.every((entry) => entry === null)) {
+    return data.preparedMembers.map((member) => ({
+      member,
+      entries: exportWindow.days.map((day) => {
+        const entry = member.blockedMap.get(day.key);
+        if (!entry) {
           return null;
         }
-
-        return { member, entries };
-      })
-      .filter((row): row is ExportRow => row !== null);
+        if (entry.kind === 'BLOCKED' || entry.kind === 'LIMITED' || entry.kind === 'PREFERRED') {
+          return entry;
+        }
+        return null;
+      }),
+    }));
   }, [data.preparedMembers, exportWindow]);
+
+  const membersWithEntries = useMemo(
+    () => exportRows.filter((row) => row.entries.some((entry) => entry !== null)).length,
+    [exportRows],
+  );
+
+  const membersWithAvailability = useMemo(
+    () =>
+      exportRows.filter((row) =>
+        row.entries.some((entry) => {
+          if (!entry) {
+            return true;
+          }
+          return entry.kind === 'LIMITED' || entry.kind === 'PREFERRED';
+        }),
+      ).length,
+    [exportRows],
+  );
 
   const exportRangeLabel = useMemo(() => {
     if (!exportWindow) {
@@ -219,7 +230,7 @@ export function BlockOverview({
           label: exportRangeLabel,
         },
         summary: {
-          memberCount: exportRows.length,
+          memberCount: membersWithAvailability,
           importantWeekdays: importantWeekdaySummary,
         },
         days: exportWindow.days.map((day) => ({
@@ -323,12 +334,12 @@ export function BlockOverview({
                     Zeitraum: {exportRangeLabel ?? '–'}. Berücksichtigte Tage:{' '}
                     {importantWeekdaySummary ?? '–'}.
                   </p>
-                  {exportRows.length === 0 ? (
+                  {membersWithEntries === 0 ? (
                     <p>Aktuell liegen keine Sperrtermine auf diesen Tagen in den nächsten zwei Wochen vor.</p>
                   ) : (
                     <p>
-                      Mitglieder mit Sperrterminen: {exportRows.length}{' '}
-                      {exportRows.length === 1 ? 'Person' : 'Personen'}.
+                      Mitglieder mit Sperrterminen: {membersWithEntries}{' '}
+                      {membersWithEntries === 1 ? 'Person' : 'Personen'}.
                     </p>
                   )}
                 </>
