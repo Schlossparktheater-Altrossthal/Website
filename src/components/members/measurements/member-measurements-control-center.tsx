@@ -15,7 +15,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/ui/data-table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { UserAvatar, type AvatarSource } from "@/components/user-avatar";
 import {
   MEASUREMENT_TYPE_LABELS,
@@ -179,6 +187,15 @@ export function MemberMeasurementsControlCenter({
     });
   }, [filteredMembers]);
 
+  const memberSelectOptions = useMemo(() => {
+    return [...preparedMembers]
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, "de-DE"))
+      .map((member) => ({
+        value: member.id,
+        label: member.displayName,
+      }));
+  }, [preparedMembers]);
+
   useEffect(() => {
     if (memberDialogId && !sortedMembers.some((member) => member.id === memberDialogId)) {
       setMemberDialogId(null);
@@ -336,6 +353,17 @@ export function MemberMeasurementsControlCenter({
   const handleMemberDialogClose = () => {
     if (saving) return;
     setMemberDialogId(null);
+  };
+
+  const handleDialogMemberChange = (nextMemberId: string) => {
+    setDialogState((prev) => {
+      if (!prev || prev.mode !== "create") return prev;
+      if (prev.memberId === nextMemberId) return prev;
+      return {
+        ...prev,
+        memberId: nextMemberId,
+      };
+    });
   };
 
   const handleSubmit = async (memberId: string, data: MeasurementFormData) => {
@@ -673,27 +701,60 @@ export function MemberMeasurementsControlCenter({
             </DialogTitle>
             {dialogMember ? (
               <DialogDescription>
-                Änderungen werden direkt im Profil von {dialogMember.displayName} sichtbar.
+                {dialogState?.mode === "edit"
+                  ? `Änderungen werden direkt im Profil von ${dialogMember.displayName} sichtbar.`
+                  : `Maße werden dem Profil von ${dialogMember.displayName} zugeordnet.`}
               </DialogDescription>
             ) : null}
           </DialogHeader>
           {dialogState ? (
-            <MeasurementForm
-              initialData={
-                dialogState.mode === "edit"
-                  ? {
-                      type: dialogState.entry.type,
-                      value: dialogState.entry.value,
-                      unit: dialogState.entry.unit,
-                      note: dialogState.entry.note ?? "",
-                    }
-                  : dialogState.initialType
-                  ? { type: dialogState.initialType }
-                  : undefined
-              }
-              disableTypeSelection={dialogState.mode === "edit"}
-              onSubmit={(formData) => handleSubmit(dialogState.memberId, formData)}
-            />
+            <div className="space-y-6">
+              {dialogState.mode === "create" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="measurement-member">Mitglied</Label>
+                  <Select
+                    value={dialogState.memberId}
+                    onValueChange={handleDialogMemberChange}
+                    disabled={saving || memberSelectOptions.length === 0}
+                  >
+                    <SelectTrigger id="measurement-member">
+                      <SelectValue placeholder="Mitglied wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {memberSelectOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Wähle ein Mitglied der aktuellen Produktion aus, dem das Maß zugeordnet werden soll.
+                  </p>
+                </div>
+              ) : null}
+              <MeasurementForm
+                key={`${dialogState.mode}-${dialogState.memberId}-${
+                  dialogState.mode === "edit"
+                    ? dialogState.entry.id
+                    : dialogState.initialType ?? "new"
+                }`}
+                initialData={
+                  dialogState.mode === "edit"
+                    ? {
+                        type: dialogState.entry.type,
+                        value: dialogState.entry.value,
+                        unit: dialogState.entry.unit,
+                        note: dialogState.entry.note ?? "",
+                      }
+                    : dialogState.initialType
+                    ? { type: dialogState.initialType }
+                    : undefined
+                }
+                disableTypeSelection={dialogState.mode === "edit"}
+                onSubmit={(formData) => handleSubmit(dialogState.memberId, formData)}
+              />
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>
