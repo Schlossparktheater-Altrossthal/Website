@@ -241,9 +241,11 @@ function drawTable(
   const skipHorizontalBoundaries = new Set<string>();
 
   const getCurrentPageIndex = () => {
-    const page = (doc as unknown as { page?: { document?: { _pageBufferStart?: number } } }).page;
-    const pageIndex = page?.document?._pageBufferStart;
-    return typeof pageIndex === "number" ? pageIndex : 0;
+    const range = doc.bufferedPageRange?.();
+    if (range && typeof range.start === "number" && typeof range.count === "number") {
+      return range.start + Math.max(range.count - 1, 0);
+    }
+    return 0;
   };
 
   mergedColumnGroups.forEach((columnGroup) => {
@@ -502,13 +504,15 @@ function drawTable(
     doc.y = top + headerHeight;
   };
 
-  const drawFooterRowAtPageBottom = () => {
+  const drawFooterRowBeforePageBreak = () => {
     if (!options.repeatHeaderAtBottom) {
       return;
     }
-    const footerTop = pageBottom - headerHeight;
     const previousY = doc.y;
-    renderHeaderRowAt(footerTop, true);
+    if (previousY <= doc.page.margins.top) {
+      return;
+    }
+    renderHeaderRowAt(previousY, true);
     doc.y = previousY;
   };
 
@@ -537,7 +541,7 @@ function drawTable(
 
     const rowHeight = computeRowHeight(cells);
     if (doc.y + rowHeight > tableBottom) {
-      drawFooterRowAtPageBottom();
+      drawFooterRowBeforePageBreak();
       doc.addPage();
       doc.x = doc.page.margins.left;
       doc.y = doc.page.margins.top;
