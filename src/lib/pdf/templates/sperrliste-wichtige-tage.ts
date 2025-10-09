@@ -1042,7 +1042,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         const isAffirmativeRemark = isPositiveAvailabilityRemark(normalized);
         const truncatedRemark = normalized && !isAffirmativeRemark ? truncate(normalized) : null;
 
-        cells[columnIndex] = "Verfügbar";
+        cells[columnIndex] = "";
         styles[columnIndex] = {
           align: "center",
           font: "bold",
