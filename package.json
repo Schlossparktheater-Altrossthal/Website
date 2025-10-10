@@ -5,9 +5,9 @@
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "predev": "node scripts/run-prisma-migrate.mjs",
+    "predev": "pnpm run workbox:copy-lib && node scripts/run-prisma-migrate.mjs",
     "dev": "next dev --turbopack",
-    "prebuild": "pnpm prisma:generate",
+    "prebuild": "pnpm prisma:generate && pnpm run workbox:copy-lib",
     "build": "next build",
     "prestart": "node scripts/run-prisma-migrate.mjs",
     "postinstall": "node -e \"if(!process.env.SKIP_PRISMA_POSTINSTALL){require('child_process').execSync('pnpm prisma:generate',{stdio:'inherit'})}\"",
@@ -20,7 +20,8 @@
     "db:migrate": "prisma migrate dev --name init",
     "db:seed": "node prisma/seed.mjs",
     "swatches:gen": "node scripts/generate-swatches.mjs --json docs/swatches/palette.sample.json --out docs/swatches --size 14 --adoc docs/swatches/generated.adoc",
-    "design-system:tokens": "node scripts/build-design-tokens.mjs"
+    "design-system:tokens": "node scripts/build-design-tokens.mjs",
+    "workbox:copy-lib": "workbox copyLibraries public/workbox"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -109,6 +110,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.3.8",
     "typescript": "^5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "workbox-cli": "7.1.0"
   }
 }

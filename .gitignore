@@ -24,6 +24,9 @@
 # production
 /build
 
+# generated service worker libraries
+public/workbox/
+
 # misc
 .DS_Store
 *.pem

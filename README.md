@@ -112,6 +112,11 @@ pnpm build
 (Documentation-only changes can skip these checks but should mention it in the
 PR description.)
 
+Offline support vendors Workbox locally. The script `pnpm run workbox:copy-lib`
+downloads the matching `workbox-sw.js` bundle into `public/workbox/` and runs
+automatically before `pnpm dev` and `pnpm build`. Re-run it manually whenever the
+Workbox packages are updated to refresh the local copy that gets deployed.
+
 ### Dev-only screenshot sessions
 
 For local screenshot automation the endpoint
