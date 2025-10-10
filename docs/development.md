@@ -111,3 +111,14 @@ Das Script generiert automatisch eine `.env` Datei mit:
 - PWA und Dev-Login aktiviert
 
 Bei Bedarf die `.env` manuell anpassen.
+
+## Offline Dashboard Fixture
+
+Für UI-Screenshots und visuelle Regressionen lässt sich das Mitglieder-Dashboard ohne laufende Datenbank verwenden. Sobald im
+Development/Preview keine `DATABASE_URL` gesetzt ist, liefert der Endpunkt [`GET /api/dashboard/overview`](../src/app/api/dashboard/overview/route.ts)
+eine deterministische Demo-Antwort zurück (`offline: true`).
+
+- Der Fallback deckt Kennzahlen, Aktivitäten, Endproben-Woche und die Profil-Checkliste ab.
+- Im Frontend erscheint ein dezenter Hinweisbanner, damit Screenshots klar als Demo-Daten gekennzeichnet sind.
+
+Für echte Daten einfach wieder eine gültige `DATABASE_URL` setzen oder den Dev-Stack über `./start-dev.sh` starten.

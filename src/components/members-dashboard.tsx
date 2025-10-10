@@ -181,6 +181,7 @@ type OverviewStatsPayload = {
 };
 
 type OverviewResponse = {
+  offline?: boolean;
   stats?: OverviewStatsPayload;
   finalRehearsalWeek?: unknown;
   profileCompletion?: unknown;
@@ -266,6 +267,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   const [profileCompletion, setProfileCompletion] = useState<
     { complete: boolean; completed: number; total: number } | null
   >(null);
+  const [isOfflineFallback, setIsOfflineFallback] = useState(false);
 
   useEffect(() => {
     setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
@@ -283,6 +285,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         }
         const payload = (await response.json()) as OverviewResponse;
         if (cancelled) return;
+
+        setIsOfflineFallback(payload?.offline === true);
 
         setStats((prev) => {
           const statsPayload = isRecord(payload?.stats) ? payload.stats : {};
@@ -307,6 +311,9 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         setFinalRehearsalWeek(parseFinalRehearsalWeek(payload?.finalRehearsalWeek));
         setProfileCompletion(parseProfileCompletion(payload?.profileCompletion));
       } catch (error) {
+        if (!cancelled) {
+          setIsOfflineFallback(false);
+        }
         console.error("[Dashboard] Error loading overview", error);
       }
     }
@@ -626,6 +633,14 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
       <div className="space-y-10 pb-12">
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          {isOfflineFallback ? (
+            <div className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 xl:col-span-2">
+              <p className="text-sm font-semibold text-warning">Offline-Demo-Modus</p>
+              <p className="text-xs text-warning/80">
+                Der Dashboard-Endpunkt liefert Beispielwerte, da keine Datenbank verbunden ist.
+              </p>
+            </div>
+          ) : null}
           <Card className={cn(CARD_VARIANTS.accent, "relative overflow-hidden")}>
             <div
               aria-hidden
