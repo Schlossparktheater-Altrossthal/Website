@@ -77,14 +77,19 @@ export function SchulkatzeGallery({
         </figcaption>
       </figure>
 
-      <DialogContent className="max-w-4xl border border-border/60 bg-background/95 p-0 sm:rounded-3xl">
+      <DialogContent
+        className="max-h-[min(90vh,64rem)] max-w-5xl border border-border/60 bg-background/95 p-0 sm:rounded-[2rem]"
+      >
         <DialogHeader className="px-6 pb-2 pt-6">
           <DialogTitle>Galerie unserer Schulkatze</DialogTitle>
           <DialogDescription>{caption}</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-3 px-6 pb-6 sm:grid-cols-2">
+        <div className="grid max-h-[calc(90vh-11rem)] gap-3 overflow-y-auto px-6 pb-6 sm:grid-cols-2 lg:grid-cols-3">
           {validImages.map((src, index) => (
-            <div key={src} className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-muted">
+            <div
+              key={src}
+              className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border/50 bg-muted shadow-sm"
+            >
               <Image
                 src={src}
                 alt={alt}
