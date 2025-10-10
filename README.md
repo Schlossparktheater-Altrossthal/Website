@@ -123,7 +123,12 @@ to set the session cookie and get redirected to the protected page. Append
 `mode=json` to receive a JSON payload instead of a redirect or pass a custom
 `email` query parameter to reuse a specific test account. The route reuses the
 test users from `@/lib/auth-dev-test-users` and relies on the configured
-NextAuth secret (`AUTH_SECRET`/`NEXTAUTH_SECRET`) for JWT signing.
+NextAuth secret (`AUTH_SECRET`/`NEXTAUTH_SECRET`) for JWT signing. When no
+database connection is available in development or test environments the
+endpoint returns a deterministic offline profile (stable ID derived from the
+email, generated names, `roles: [role]`, `avatarSource: null`) so automation can
+keep working without Prisma access. Responses in JSON mode include an
+`offlineProfile` flag to signal the fallback.
 
 ## Docker overview
 

@@ -3,6 +3,7 @@ import { differenceInYears, isAfter, isBefore, isWithinInterval } from "date-fns
 
 import { prisma } from "@/lib/prisma";
 import type { AllergyLevel, OnboardingFocus } from "@prisma/client";
+import { DEV_ONBOARDING_DASHBOARD, DEV_ONBOARDING_SUMMARY } from "./dashboard-dev-fixture";
 import { getRolePreferenceTitle } from "./role-preferences";
 import {
   onboardingDashboardSchema,
@@ -16,6 +17,8 @@ import {
   optimizeRoleAllocation,
   type AllocationOptimizerResult,
 } from "./allocation-optimizer";
+
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 interface DateRange {
   start?: Date | null;
@@ -383,6 +386,10 @@ export const getAvailableOnboardings = cache(async (): Promise<OnboardingSummary
     take: 12,
   });
 
+  if (shows.length === 0 && !IS_PRODUCTION) {
+    return [DEV_ONBOARDING_SUMMARY];
+  }
+
   return shows.map((show) => {
     const range = extractDateRange(show.dates);
     const summary = onboardingSummarySchema.parse({
@@ -399,6 +406,10 @@ async function computeOnboardingDashboardData(
   onboardingId: string,
   options: DashboardComputationOptions = {},
 ): Promise<OnboardingDashboardData | null> {
+
+  if (!IS_PRODUCTION && onboardingId === DEV_ONBOARDING_SUMMARY.id) {
+    return DEV_ONBOARDING_DASHBOARD;
+  }
 
   const show = await prisma.show.findUnique({
     where: { id: onboardingId },
