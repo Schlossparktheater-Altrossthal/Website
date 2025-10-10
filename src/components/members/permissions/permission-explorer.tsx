@@ -247,7 +247,7 @@ export function PermissionExplorer({
                   <tr className="bg-muted/40">
                     <th
                       scope="col"
-                      className="sticky left-0 z-20 min-w-[260px] bg-muted/40 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
+                      className="sticky left-0 top-0 z-30 min-w-[260px] border-b border-border/60 bg-muted/40 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
                     >
                       Recht
                     </th>
@@ -255,7 +255,7 @@ export function PermissionExplorer({
                       <th
                         key={column.id}
                         scope="col"
-                        className="min-w-[150px] border-l border-border/60 px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                        className="sticky top-0 z-20 min-w-[150px] border-l border-border/60 border-b border-border/60 bg-muted/40 px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
                       >
                         {targetType === "role" ? (
                           <div className="flex flex-col items-center gap-1 text-center">
