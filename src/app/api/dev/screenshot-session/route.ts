@@ -156,6 +156,7 @@ export async function GET(request: NextRequest) {
           email: devUser.email,
           role: devUser.role,
           target,
+          offlineProfile: devUser.isOfflineProfile,
         })
       : NextResponse.redirect(new URL(target, url.origin));
 
@@ -171,7 +172,7 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("[dev-screenshot-session]", error);
+    console.warn("[dev-screenshot-session]", error);
     const message =
       error instanceof Error ? error.message : "Entwicklungs-Session konnte nicht erstellt werden.";
     return NextResponse.json({ ok: false, error: message }, { status: 400 });
