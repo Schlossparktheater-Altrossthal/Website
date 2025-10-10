@@ -1,7 +1,9 @@
 /* global workbox */
-importScripts("https://storage.googleapis.com/workbox-cdn/releases/7.1.0/workbox-sw.js");
+const WORKBOX_VERSION = "7.1.0";
+importScripts(`./workbox/workbox-v${WORKBOX_VERSION}/workbox-sw.js`);
 
 if (workbox) {
+  workbox.setConfig({ modulePathPrefix: `./workbox/workbox-v${WORKBOX_VERSION}` });
   const { precaching, routing, strategies, backgroundSync, core } = workbox;
 
   const OFFLINE_QUEUE_NAME = "offline-events";
