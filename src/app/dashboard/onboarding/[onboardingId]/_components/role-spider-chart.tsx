@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState } from "react";
-import type { TooltipProps } from "recharts";
+import type { TooltipContentProps } from "recharts";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -127,14 +127,9 @@ export function RoleSpiderChart({
     [chartData],
   );
 
-  const radialTicks = useMemo(() => {
-    const step = 100 / levelCount;
-    return Array.from({ length: levelCount }, (_, index) => Math.round(step * (index + 1)));
-  }, [levelCount]);
-
   const tooltipLabelFormatter = (value: string | number) => (typeof value === "string" ? value : `${value}%`);
 
-  const renderTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+  const renderTooltip = ({ active, payload }: TooltipContentProps<number, string>) => {
     if (!active || !payload?.length) {
       return null;
     }
@@ -219,7 +214,6 @@ export function RoleSpiderChart({
                 fontSize: 10,
               }}
               tickFormatter={(value) => `${percentFormatter.format(value)}%`}
-              ticks={radialTicks}
             />
             <Radar
               name="Präferenz"
