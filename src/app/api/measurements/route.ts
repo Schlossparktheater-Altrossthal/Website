@@ -11,15 +11,10 @@ const measurementRequestSchema = measurementSchema.extend({
 });
 
 // GET: Hole alle Maße eines Benutzers
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     const userId = session.user?.id;
-
-    const allowed = await hasPermission(session.user, "mitglieder.koerpermasse");
-    if (!allowed) {
-      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
-    }
 
     if (!userId) {
       return NextResponse.json(
@@ -28,8 +23,16 @@ export async function GET() {
       );
     }
 
+    const canManageAll = await hasPermission(session.user, "mitglieder.koerpermasse");
+    const requestedUserId = request.nextUrl.searchParams.get("userId");
+    const targetUserId = requestedUserId ?? userId;
+
+    if (targetUserId !== userId && !canManageAll) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    }
+
     const measurements = await prisma.memberMeasurement.findMany({
-      where: { userId },
+      where: { userId: targetUserId },
       orderBy: { type: "asc" },
     });
 
@@ -49,10 +52,6 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
     const userId = session.user?.id;
 
-    const allowed = await hasPermission(session.user, "mitglieder.koerpermasse");
-    if (!allowed) {
-      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
-    }
     if (!userId) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
@@ -68,6 +67,11 @@ export async function POST(request: NextRequest) {
 
     if (!targetUserId) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+    }
+
+    const canManageAll = await hasPermission(session.user, "mitglieder.koerpermasse");
+    if (targetUserId !== userId && !canManageAll) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
 
     const targetUser = await prisma.user.findUnique({
