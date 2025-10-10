@@ -5,25 +5,9 @@ import type { AvatarSource } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { combineNameParts, splitFullName } from "@/lib/names";
 import type { Role } from "@/lib/roles";
+import { databaseEnabled } from "@/lib/dev-database";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
-
-function isDatabaseConfigured(): boolean {
-  const connectionString = process.env.DATABASE_URL?.trim();
-  if (!connectionString) {
-    return false;
-  }
-
-  try {
-    // Validate the connection string for obvious mistakes without opening a
-    // connection. Invalid URLs should still trigger the offline fallback.
-    new URL(connectionString);
-    return true;
-  } catch (error) {
-    console.warn("[dev-auth] Invalid DATABASE_URL configured", error);
-    return false;
-  }
-}
 
 function toTitleCase(value: string): string {
   return value
@@ -106,7 +90,7 @@ export async function ensureDevTestUser(email: string, role: Role): Promise<DevT
   const { firstName: derivedFirstName, lastName: derivedLastName } = splitFullName(trimmedName);
   const combinedName = combineNameParts(derivedFirstName, derivedLastName) ?? (trimmedName || null);
 
-  if (!IS_PRODUCTION && !isDatabaseConfigured()) {
+  if (!databaseEnabled()) {
     console.warn("[dev-auth] No DATABASE_URL configured, using offline dev profile");
     return createOfflineProfile({
       normalizedEmail,

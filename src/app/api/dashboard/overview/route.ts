@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
+import { databaseEnabled } from "@/lib/dev-database";
+import { DEV_DASHBOARD_OVERVIEW_FIXTURE } from "@/lib/dev-dashboard-fixture";
 
 type MembershipSummary = {
   showId: string;
@@ -18,6 +20,10 @@ type MembershipSummary = {
 };
 
 export async function GET() {
+  if (!databaseEnabled()) {
+    return NextResponse.json(DEV_DASHBOARD_OVERVIEW_FIXTURE);
+  }
+
   try {
     const session = await requireAuth();
     const userId = session.user?.id;
@@ -260,6 +266,7 @@ export async function GET() {
       : null;
 
     return NextResponse.json({
+      offline: false,
       stats: {
         totalMembers,
         rehearsalsThisWeek,
