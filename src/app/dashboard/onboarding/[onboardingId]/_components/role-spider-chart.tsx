@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState } from "react";
+import type { TooltipProps } from "recharts";
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  Tooltip,
+} from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -67,31 +76,6 @@ type ChartEntry = {
   maxValue: number;
 };
 
-type RadarPoint = ChartEntry & {
-  angle: number;
-  axisX: number;
-  axisY: number;
-  pointX: number;
-  pointY: number;
-  labelX: number;
-  labelY: number;
-  textAnchor: "start" | "middle" | "end";
-};
-
-function polarToCartesian(center: number, radius: number, angle: number) {
-  return {
-    x: center + radius * Math.cos(angle),
-    y: center + radius * Math.sin(angle),
-  };
-}
-
-function computeTextAnchor(angle: number) {
-  const cos = Math.cos(angle);
-  if (cos > 0.3) return "start";
-  if (cos < -0.3) return "end";
-  return "middle";
-}
-
 export function RoleSpiderChart({
   data,
   title = "Rollenpräferenzen",
@@ -102,7 +86,7 @@ export function RoleSpiderChart({
   const chartId = useId();
   const accent = useResolvedAccentColor(accentColor);
 
-  const { chartData, maxValue } = useMemo(() => {
+  const { chartData } = useMemo(() => {
     if (data.length === 0) {
       return {
         chartData: [] as ChartEntry[],
@@ -123,80 +107,50 @@ export function RoleSpiderChart({
   }, [data]);
 
   const levelCount = 4;
-  const safeSize = Math.max(size, 200);
-  const padding = 28;
-  const chartSize = safeSize - padding * 2;
-  const radius = chartSize / 2;
-  const center = padding + radius;
-  const points: RadarPoint[] = useMemo(() => {
-    if (chartData.length === 0) {
-      return [];
-    }
-
-    const angleStep = (Math.PI * 2) / chartData.length;
-
-    return chartData.map((entry, index) => {
-      const angle = angleStep * index - Math.PI / 2;
-      const axis = polarToCartesian(center, radius, angle);
-      const normalized = entry.maxValue === 0 ? 0 : entry.value / entry.maxValue;
-      const clamped = Number.isFinite(normalized) ? Math.max(0, Math.min(1, normalized)) : 0;
-      const point = polarToCartesian(center, radius * clamped, angle);
-      const labelPosition = polarToCartesian(center, radius + 22, angle);
-      const anchor = computeTextAnchor(angle);
-
-      return {
-        ...entry,
-        angle,
-        axisX: axis.x,
-        axisY: axis.y,
-        pointX: point.x,
-        pointY: point.y,
-        labelX: labelPosition.x,
-        labelY: labelPosition.y,
-        textAnchor: anchor,
-      };
-    });
-  }, [center, chartData, radius]);
-
-  const gridPolygons = useMemo(() => {
-    if (chartData.length === 0) {
-      return [] as string[];
-    }
-
-    const angleStep = (Math.PI * 2) / chartData.length;
-
-    return Array.from({ length: levelCount }, (_, levelIndex) => {
-      const ratio = (levelIndex + 1) / levelCount;
-      const coords = chartData.map((_, index) => {
-        const angle = angleStep * index - Math.PI / 2;
-        const vertex = polarToCartesian(center, radius * ratio, angle);
-        return `${vertex.x},${vertex.y}`;
-      });
-      return coords.join(" ");
-    });
-  }, [center, chartData, radius, levelCount]);
-
-  const outlinePath = useMemo(() => {
-    if (points.length === 0) {
-      return "";
-    }
-
-    return points
-      .map((point, index) => `${index === 0 ? "M" : "L"}${point.pointX} ${point.pointY}`)
-      .join(" ")
-      .concat(" Z");
-  }, [points]);
-
+  const safeSize = Math.max(size, 220);
   const accentStroke = `url(#spider-stroke-${chartId})`;
   const accentFill = `url(#spider-fill-${chartId})`;
 
-  const radialLabels = useMemo(() => {
-    const step = maxValue / levelCount;
-    return Array.from({ length: levelCount }, (_, index) => {
-      const value = step * (index + 1);
-      return `${percentFormatter.format(value)}%`;
-    });
-  }, [levelCount, maxValue]);
+  const normalizedChartData = useMemo(
+    () =>
+      chartData.map((entry) => {
+        const normalized = entry.maxValue === 0 ? 0 : (entry.value / entry.maxValue) * 100;
+        const clamped = Number.isFinite(normalized) ? Math.max(0, Math.min(100, normalized)) : 0;
+
+        return {
+          label: entry.label,
+          value: entry.value,
+          normalized: clamped,
+          maxValue: entry.maxValue,
+        };
+      }),
+    [chartData],
+  );
+
+  const radialTicks = useMemo(() => {
+    const step = 100 / levelCount;
+    return Array.from({ length: levelCount }, (_, index) => Math.round(step * (index + 1)));
+  }, [levelCount]);
+
+  const tooltipLabelFormatter = (value: string | number) => (typeof value === "string" ? value : `${value}%`);
+
+  const renderTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+    if (!active || !payload?.length) {
+      return null;
+    }
+
+    const [{ payload: entry }] = payload;
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+
+    return (
+      <div className="rounded-md border border-border/60 bg-background/95 px-3 py-2 text-xs shadow-md">
+        <p className="font-semibold text-foreground">{entry.label}</p>
+        <p className="text-muted-foreground">{percentFormatter.format(entry.value)}%</p>
+      </div>
+    );
+  };
 
   if (chartData.length === 0) {
     return (
@@ -219,113 +173,73 @@ export function RoleSpiderChart({
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </CardHeader>
       <CardContent className="flex items-center justify-center p-6">
-        <svg
-          viewBox={`0 0 ${safeSize} ${safeSize}`}
-          width="100%"
-          height="100%"
-          style={{ maxWidth: size, maxHeight: size }}
-          role="img"
-          aria-labelledby={`${chartId}-title`}
+        <div
+          className="w-full max-w-full"
+          style={{
+            maxWidth: safeSize,
+          }}
         >
-          <title id={`${chartId}-title`}>{title}</title>
-          <defs>
-            <linearGradient id={`spider-fill-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={accent} stopOpacity={0.45} />
-              <stop offset="100%" stopColor={accent} stopOpacity={0.15} />
-            </linearGradient>
-            <linearGradient id={`spider-stroke-${chartId}`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={accent} stopOpacity={0.7} />
-              <stop offset="100%" stopColor={accent} stopOpacity={0.4} />
-            </linearGradient>
-          </defs>
+          <RadarChart
+            data={normalizedChartData}
+            width={safeSize}
+            height={safeSize}
+            outerRadius="70%"
+          >
+            <title id={`${chartId}-title`}>{title}</title>
+            <defs>
+              <linearGradient id={`spider-fill-${chartId}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={accent} stopOpacity={0.45} />
+                <stop offset="100%" stopColor={accent} stopOpacity={0.15} />
+              </linearGradient>
+              <linearGradient id={`spider-stroke-${chartId}`} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor={accent} stopOpacity={0.7} />
+                <stop offset="100%" stopColor={accent} stopOpacity={0.4} />
+              </linearGradient>
+            </defs>
 
-          {gridPolygons.map((polygon, index) => (
-            <g key={`grid-${index}`}>
-              <polygon
-                points={polygon}
-                fill="none"
-                stroke="hsl(var(--border))"
-                strokeWidth={0.6}
-                strokeOpacity={0.4}
-              />
-              <text
-                x={center}
-                y={center - (radius * (index + 1)) / levelCount - 2}
-                textAnchor="middle"
-                className="text-[9px] fill-muted-foreground"
-              >
-                {radialLabels[index]}
-              </text>
-            </g>
-          ))}
-
-          {points.map((point) => (
-            <line
-              key={`axis-${point.label}`}
-              x1={center}
-              y1={center}
-              x2={point.axisX}
-              y2={point.axisY}
+            <PolarGrid
+              gridType="polygon"
               stroke="hsl(var(--border))"
-              strokeWidth={0.6}
               strokeOpacity={0.4}
             />
-          ))}
-
-          {outlinePath && (
-            <path
-              d={outlinePath}
-              fill={accentFill}
+            <PolarAngleAxis
+              dataKey="label"
+              tickLine={false}
+              tick={{
+                fill: "hsl(var(--foreground))",
+                fontSize: 11,
+              }}
+            />
+            <PolarRadiusAxis
+              angle={90}
+              domain={[0, 100]}
+              tickCount={levelCount}
+              tick={{
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 10,
+              }}
+              tickFormatter={(value) => `${percentFormatter.format(value)}%`}
+              ticks={radialTicks}
+            />
+            <Radar
+              name="Präferenz"
+              dataKey="normalized"
               stroke={accentStroke}
+              fill={accentFill}
+              fillOpacity={1}
               strokeWidth={2}
-              strokeLinejoin="round"
             />
-          )}
-
-          {points.map((point) => (
-            <circle
-              key={`point-${point.label}`}
-              cx={point.pointX}
-              cy={point.pointY}
-              r={3.5}
-              fill="hsl(var(--background))"
-              stroke={accent}
-              strokeWidth={1.5}
+            <Tooltip
+              cursor={{
+                stroke: accent,
+                strokeWidth: 1,
+                fill: "transparent",
+              }}
+              content={renderTooltip}
+              labelFormatter={tooltipLabelFormatter}
             />
-          ))}
-
-          {points.map((point) => (
-            <g key={`label-${point.label}`} transform={`translate(${point.labelX}, ${point.labelY})`}>
-              <rect
-                x={point.textAnchor === "middle" ? -60 : point.textAnchor === "end" ? -120 : 0}
-                y={-16}
-                width={120}
-                height={32}
-                rx={8}
-                fill="hsl(var(--background))"
-                opacity={0.92}
-                stroke="hsl(var(--border))"
-                strokeWidth={0.5}
-              />
-              <text
-                x={point.textAnchor === "middle" ? 0 : point.textAnchor === "end" ? -6 : 6}
-                y={-2}
-                textAnchor={point.textAnchor}
-                className="text-[10px] font-semibold fill-foreground"
-              >
-                {point.label}
-              </text>
-              <text
-                x={point.textAnchor === "middle" ? 0 : point.textAnchor === "end" ? -6 : 6}
-                y={10}
-                textAnchor={point.textAnchor}
-                className="text-[9px] font-medium fill-muted-foreground"
-              >
-                {`${percentFormatter.format(point.value)}%`}
-              </text>
-            </g>
-          ))}
-        </svg>
+          </RadarChart>
+        </div>
       </CardContent>
     </Card>
   );
