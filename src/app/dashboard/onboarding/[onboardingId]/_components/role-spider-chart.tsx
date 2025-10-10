@@ -110,7 +110,9 @@ export function RoleSpiderChart({
       };
     }
 
-    const computedMax = Math.max(...data.map((entry) => entry.maxValue ?? entry.value), 1);
+    const hasExplicitMax = data.some((entry) => entry.maxValue !== undefined);
+    const values = data.map((entry) => entry.maxValue ?? entry.value);
+    const computedMax = Math.max(...values, hasExplicitMax ? 1 : 100);
     const mapped: ChartEntry[] = data.map((entry) => ({
       label: entry.label,
       value: entry.value,
