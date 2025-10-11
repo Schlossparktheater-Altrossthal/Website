@@ -141,3 +141,144 @@
     background-color: hsl(var(--muted-foreground) / 0.5);
   }
 }
+
+@layer components {
+  .sperrlisten-overview {
+    color-scheme: light dark;
+  }
+
+  .sperrlisten-overview .bg-white,
+  .sperrlisten-overview .bg-white\/95,
+  .sperrlisten-overview .bg-white\/90,
+  .sperrlisten-overview .bg-white\/85,
+  .sperrlisten-overview .bg-white\/80,
+  .sperrlisten-overview .bg-white\/75,
+  .sperrlisten-overview .bg-white\/70,
+  .sperrlisten-overview .bg-white\/60,
+  .sperrlisten-overview .bg-white\/50 {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .sperrlisten-overview .bg-slate-50,
+  .sperrlisten-overview .bg-slate-50\/30,
+  .sperrlisten-overview .bg-slate-50\/80,
+  .sperrlisten-overview .bg-slate-100,
+  .sperrlisten-overview .bg-gray-100 {
+    background-color: hsl(var(--muted) / 0.4) !important;
+  }
+
+  .sperrlisten-overview .border-slate-100,
+  .sperrlisten-overview .border-slate-200,
+  .sperrlisten-overview .border-slate-200\/70,
+  .sperrlisten-overview .border-slate-300,
+  .sperrlisten-overview .border-gray-200,
+  .sperrlisten-overview .border-gray-300 {
+    border-color: hsl(var(--border) / 0.6) !important;
+  }
+
+  .sperrlisten-overview .text-slate-900,
+  .sperrlisten-overview .text-slate-800,
+  .sperrlisten-overview .text-slate-700,
+  .sperrlisten-overview .text-gray-800 {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .sperrlisten-overview .text-slate-600,
+  .sperrlisten-overview .text-slate-500,
+  .sperrlisten-overview .text-slate-400,
+  .sperrlisten-overview .text-gray-600 {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .sperrlisten-overview .bg-green-100,
+  .sperrlisten-overview .bg-green-100\/80,
+  .sperrlisten-overview .from-green-50,
+  .sperrlisten-overview .from-green-50\/80,
+  .sperrlisten-overview .to-green-100\/50 {
+    background-color: hsl(var(--success) / 0.18) !important;
+    --tw-gradient-from: hsl(var(--success) / 0.18) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--success) / 0.05) !important;
+  }
+
+  .sperrlisten-overview .text-green-700,
+  .sperrlisten-overview .text-green-700\/90,
+  .sperrlisten-overview .text-green-700\/80,
+  .sperrlisten-overview .border-green-200,
+  .sperrlisten-overview .border-green-200\/70,
+  .sperrlisten-overview .border-green-200\/80 {
+    color: hsl(var(--success)) !important;
+    border-color: hsl(var(--success) / 0.4) !important;
+  }
+
+  .sperrlisten-overview .bg-orange-100,
+  .sperrlisten-overview .bg-orange-100\/80,
+  .sperrlisten-overview .from-orange-50,
+  .sperrlisten-overview .from-orange-50\/80,
+  .sperrlisten-overview .to-orange-100\/50 {
+    background-color: hsl(var(--warning) / 0.2) !important;
+    --tw-gradient-from: hsl(var(--warning) / 0.2) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--warning) / 0.06) !important;
+  }
+
+  .sperrlisten-overview .text-orange-700,
+  .sperrlisten-overview .text-orange-700\/90,
+  .sperrlisten-overview .border-orange-200,
+  .sperrlisten-overview .border-orange-200\/70 {
+    color: hsl(var(--warning)) !important;
+    border-color: hsl(var(--warning) / 0.45) !important;
+  }
+
+  .sperrlisten-overview .bg-red-100,
+  .sperrlisten-overview .bg-red-100\/80,
+  .sperrlisten-overview .from-red-50,
+  .sperrlisten-overview .from-red-50\/80,
+  .sperrlisten-overview .to-red-100\/50 {
+    background-color: hsl(var(--destructive) / 0.18) !important;
+    --tw-gradient-from: hsl(var(--destructive) / 0.18) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--destructive) / 0.06) !important;
+  }
+
+  .sperrlisten-overview .text-red-700,
+  .sperrlisten-overview .text-red-700\/90,
+  .sperrlisten-overview .border-red-200,
+  .sperrlisten-overview .border-red-200\/70 {
+    color: hsl(var(--destructive)) !important;
+    border-color: hsl(var(--destructive) / 0.45) !important;
+  }
+
+  .sperrlisten-overview .bg-sky-100,
+  .sperrlisten-overview .bg-sky-100\/80,
+  .sperrlisten-overview .from-sky-100,
+  .sperrlisten-overview .to-sky-200,
+  .sperrlisten-overview .from-sky-400,
+  .sperrlisten-overview .to-sky-500 {
+    background-color: hsl(var(--info) / 0.18) !important;
+    --tw-gradient-from: hsl(var(--info)) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), color-mix(in srgb, hsl(var(--info)) 80%, transparent) !important;
+    --tw-gradient-to: color-mix(in srgb, hsl(var(--info)) 70%, transparent) !important;
+  }
+
+  .sperrlisten-overview .text-sky-700,
+  .sperrlisten-overview .text-sky-700\/90,
+  .sperrlisten-overview .text-blue-800,
+  .sperrlisten-overview .border-blue-500,
+  .sperrlisten-overview .border-blue-400 {
+    color: hsl(var(--info)) !important;
+    border-color: hsl(var(--info) / 0.55) !important;
+  }
+
+  .sperrlisten-overview .bg-blue-50,
+  .sperrlisten-overview .bg-blue-50\/80,
+  .sperrlisten-overview .from-blue-50,
+  .sperrlisten-overview .to-blue-100\/50 {
+    background-color: hsl(var(--primary) / 0.18) !important;
+    --tw-gradient-from: hsl(var(--primary) / 0.2) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--primary) / 0.06) !important;
+  }
+
+  .sperrlisten-overview .ring-blue-500\/30,
+  .sperrlisten-overview .ring-blue-400\/30,
+  .sperrlisten-overview .ring-blue-200\/50 {
+    --tw-ring-color: hsl(var(--ring) / 0.3) !important;
+  }
+}

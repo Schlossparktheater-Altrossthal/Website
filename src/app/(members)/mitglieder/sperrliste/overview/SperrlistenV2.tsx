@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./sperrliste-styles.css";
+import { Button } from "@/components/ui/button";
+
 import { DesktopCalendar } from "./DesktopCalendar";
 import { DesktopTable } from "./desktop-table";
 import { MobileByDay } from "./MobileByDay";
@@ -105,21 +107,29 @@ export default function SperrlistenV2({
   }, [handleKeyDown]);
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
+    <div className="sperrlisten-overview min-h-dvh bg-background text-foreground">
       <main className="mx-auto space-y-4 p-4 sm:p-6" role="main" aria-label="Sperrlistenübersicht">
         <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
             <h1 className="text-lg font-semibold sm:text-xl" id="page-title">Sperrlistenübersicht</h1>
             <div className="flex flex-wrap gap-2 text-xs" role="status" aria-live="polite">
-              {month && <span className="rounded px-2 py-1 text-blue-800 bg-blue-100">{month.label}</span>}
-              <span className="rounded px-2 py-1 text-sky-800 bg-sky-100">Zeitraum</span>
-              <span className="rounded px-2 py-1 text-gray-800 bg-gray-100">{dayCols.length} Tage</span>
+              {month && (
+                <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/15 px-2.5 py-1 font-medium text-primary">
+                  {month.label}
+                </span>
+              )}
+              <span className="inline-flex items-center rounded-full border border-info/40 bg-info/18 px-2.5 py-1 font-medium text-info">
+                Zeitraum
+              </span>
+              <span className="inline-flex items-center rounded-full border border-muted/60 bg-muted/40 px-2.5 py-1 font-medium text-muted-foreground">
+                {dayCols.length} Tage
+              </span>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {/* Monatswechsel-Handler (nur wenn verfügbar) */}
             {(onPreviousMonth || onNextMonth) && (
-              <div className="flex items-center gap-1 rounded-xl border border-slate-200/70 bg-white/80 p-1 shadow-sm" role="group" aria-label="Monatsnavigation">
+              <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/80 p-1 shadow-sm backdrop-blur" role="group" aria-label="Monatsnavigation">
                 {onPreviousMonth && (
                   <IconButton aria-label="Vorheriger Monat" onClick={onPreviousMonth}>
                     &larr;
@@ -132,7 +142,7 @@ export default function SperrlistenV2({
                 )}
                 <button
                   type="button"
-                  className="ml-1 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-2.5 py-1 text-sm font-medium hover:bg-white transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="ml-1 inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/70 px-2.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label="Zu heute springen"
                   onClick={handleJumpToToday}
                 >
@@ -140,11 +150,11 @@ export default function SperrlistenV2({
                 </button>
               </div>
             )}
-            
-            <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white" role="group" aria-label="Personenfilter">
+
+            <div className="flex overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm" role="group" aria-label="Personenfilter">
               <button
                 type="button"
-                className={`px-3 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${personFilter === "all" ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "all" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setPersonFilter("all")}
                 aria-pressed={personFilter === "all"}
                 aria-label={`Alle Personen anzeigen (${groupedCounts.total})`}
@@ -153,7 +163,7 @@ export default function SperrlistenV2({
               </button>
               <button
                 type="button"
-                className={`border-l border-slate-200 px-3 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${personFilter === "actors" ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "actors" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setPersonFilter("actors")}
                 aria-pressed={personFilter === "actors"}
                 aria-label={`Schauspieler anzeigen (${groupedCounts.actors})`}
@@ -162,7 +172,7 @@ export default function SperrlistenV2({
               </button>
               <button
                 type="button"
-                className={`border-l border-slate-200 px-3 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${personFilter === "crew" ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "crew" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setPersonFilter("crew")}
                 aria-pressed={personFilter === "crew"}
                 aria-label={`Gewerke anzeigen (${groupedCounts.crew})`}
@@ -171,7 +181,7 @@ export default function SperrlistenV2({
               </button>
               <button
                 type="button"
-                className={`border-l border-slate-200 px-3 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${personFilter === "both" ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "both" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setPersonFilter("both")}
                 aria-pressed={personFilter === "both"}
                 aria-label={`Beides anzeigen (${groupedCounts.both})`}
@@ -180,7 +190,7 @@ export default function SperrlistenV2({
               </button>
               <button
                 type="button"
-                className={`border-l border-slate-200 px-3 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${personFilter === "other" ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "other" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setPersonFilter("other")}
                 aria-pressed={personFilter === "other"}
                 aria-label={`Sonstige anzeigen (${groupedCounts.other})`}
@@ -188,10 +198,10 @@ export default function SperrlistenV2({
                 Sonstige ({groupedCounts.other})
               </button>
             </div>
-            <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white sm:flex" role="group" aria-label="Ansichtsauswahl">
+            <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm sm:flex" role="group" aria-label="Ansichtsauswahl">
               <button
                 type="button"
-                className={`px-3 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${view === "calendar" ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "calendar" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setView("calendar")}
                 aria-pressed={view === "calendar"}
                 aria-label="Kalenderansicht (Tastenkombination: Strg+1)"
@@ -200,7 +210,7 @@ export default function SperrlistenV2({
               </button>
               <button
                 type="button"
-                className={`border-l border-slate-200 px-3 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${view === "table" ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "table" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setView("table")}
                 aria-pressed={view === "table"}
                 aria-label="Tabellenansicht (Tastenkombination: Strg+2)"
@@ -209,7 +219,7 @@ export default function SperrlistenV2({
               </button>
               <button
                 type="button"
-                className={`border-l border-slate-200 px-3 py-1.5 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${view === "timeline" ? "bg-slate-50 text-slate-900" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "timeline" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setView("timeline")}
                 aria-pressed={view === "timeline"}
                 aria-label="Timeline-Ansicht (Tastenkombination: Strg+3)"
@@ -228,30 +238,30 @@ export default function SperrlistenV2({
 
         {/* Kompakte Mobile-Legende (nur sm:hidden) - analog Spielplatz */}
         <section className="sm:hidden">
-          <div className="rounded-xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-white px-3 py-2 shadow-sm">
-            <div className="flex items-center justify-between gap-3 text-[10px]">
+          <div className="rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-muted-foreground shadow-sm backdrop-blur">
+            <div className="flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
-                  <div className="h-3 w-3 rounded-full bg-green-100 border border-green-200" />
-                  <span className="text-slate-600">Frei</span>
+                  <div className="h-3 w-3 rounded-full border border-[hsl(var(--success)/0.35)] bg-[hsl(var(--success)/0.18)]" />
+                  <span>Frei</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="h-3 w-3 rounded-full bg-orange-100 border border-orange-200" />
-                  <span className="text-slate-600">Begrenzt</span>
+                  <div className="h-3 w-3 rounded-full border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.2)]" />
+                  <span>Begrenzt</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="h-3 w-3 rounded-full bg-red-100 border border-red-200" />
-                  <span className="text-slate-600">Gesperrt</span>
+                  <div className="h-3 w-3 rounded-full border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.2)]" />
+                  <span>Gesperrt</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 border-l border-slate-300 pl-3">
+              <div className="flex items-center gap-2 border-l border-border/60 pl-3">
                 <div className="flex items-center gap-0.5">
                   <CalendarStarIcon className="h-3 w-3 text-amber-500" />
-                  <span className="text-slate-600">Feiertag</span>
+                  <span>Feiertag</span>
                 </div>
                 <div className="flex items-center gap-0.5">
                   <UmbrellaIcon className="h-3 w-3 text-sky-500" />
-                  <span className="text-slate-600">Ferien</span>
+                  <span>Ferien</span>
                 </div>
               </div>
             </div>
@@ -311,14 +321,14 @@ export default function SperrlistenV2({
           />
         )}
 
-        <button
+        <Button
           type="button"
-          className="self-end rounded bg-primary px-4 py-2 text-white shadow hover:bg-primary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className="self-end"
           onClick={onExportPdf}
           aria-label="Sperrlistenübersicht als PDF exportieren"
         >
           PDF exportieren
-        </button>
+        </Button>
       </main>
     </div>
   );

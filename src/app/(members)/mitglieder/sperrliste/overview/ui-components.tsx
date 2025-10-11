@@ -5,6 +5,8 @@
 
 import React from "react";
 
+import { cn } from "@/lib/utils";
+
 // ============================================================================
 // Badge
 // ============================================================================
@@ -22,15 +24,19 @@ type BadgeProps = {
  */
 export function Badge({ children, tone = "default", className = "" }: BadgeProps) {
   const palettes: Record<BadgeTone, string> = {
-    info: "border-sky-200 bg-sky-100/80 text-sky-700",
-    danger: "border-red-200 bg-red-100/80 text-red-700",
-    ok: "border-green-200 bg-green-100/80 text-green-700",
-    default: "border-slate-200 bg-white/80 text-slate-600",
+    info: "border-info/40 bg-info/15 text-info",
+    danger: "border-destructive/40 bg-destructive/20 text-destructive",
+    ok: "border-success/40 bg-success/15 text-success",
+    default: "border-border/60 bg-card/75 text-muted-foreground",
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${palettes[tone]} ${className}`}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]",
+        palettes[tone],
+        className,
+      )}
     >
       {children}
     </span>
@@ -50,7 +56,10 @@ export function IconButton({ children, className = "", ...props }: IconButtonPro
   return (
     <button
       {...props}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 ${className}`}
+      className={cn(
+        "inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-card/70 text-muted-foreground transition hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        className,
+      )}
     >
       {children}
     </button>
@@ -75,21 +84,31 @@ type StatusBadgeProps = {
  */
 export function StatusBadge({ icon, count, tone, compact = false }: StatusBadgeProps) {
   const colors: Record<StatusBadgeTone, string> = {
-    ok: "bg-green-100 text-green-700 border-green-300",
-    warn: "bg-orange-100 text-orange-700 border-orange-300",
-    danger: "bg-red-100 text-red-700 border-red-300",
+    ok: "border-success/40 bg-success/15 text-success",
+    warn: "border-warning/40 bg-warning/15 text-warning",
+    danger: "border-destructive/40 bg-destructive/15 text-destructive",
   };
 
   if (compact) {
     return (
-      <div className={`flex items-center justify-center rounded-md border px-1 py-0.5 text-[10px] font-bold ${colors[tone]}`}>
+      <div
+        className={cn(
+          "flex items-center justify-center rounded-md border px-1 py-0.5 text-[10px] font-semibold",
+          colors[tone],
+        )}
+      >
         <span>{count}</span>
       </div>
     );
   }
 
   return (
-    <div className={`flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[10px] font-bold shadow-sm ${colors[tone]}`}>
+    <div
+      className={cn(
+        "flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[10px] font-semibold shadow-sm",
+        colors[tone],
+      )}
+    >
       {icon}
       <span>{count}</span>
     </div>
@@ -110,13 +129,18 @@ type MiniChipProps = {
  */
 export function MiniChip({ count, tone }: MiniChipProps) {
   const colorMap: Record<StatusBadgeTone, string> = {
-    ok: "bg-green-100/80 text-green-700 border-green-200",
-    warn: "bg-orange-100/80 text-orange-700 border-orange-200",
-    danger: "bg-red-100/80 text-red-700 border-red-200",
+    ok: "border-success/35 bg-success/15 text-success",
+    warn: "border-warning/35 bg-warning/15 text-warning",
+    danger: "border-destructive/35 bg-destructive/15 text-destructive",
   };
 
   return (
-    <span className={`inline-flex min-w-5 items-center justify-center rounded-md border px-1 text-[10px] ${colorMap[tone]}`}>
+    <span
+      className={cn(
+        "inline-flex min-w-5 items-center justify-center rounded-md border px-1 text-[10px] font-medium",
+        colorMap[tone],
+      )}
+    >
       {count}
     </span>
   );
@@ -145,9 +169,14 @@ type NoteProps = {
  */
 export function Note({ title, children, className = "" }: NoteProps) {
   return (
-    <article className={`rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm ${className}`}>
-      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-700">{children}</p>
+    <article
+      className={cn(
+        "rounded-2xl border border-border/60 bg-card/80 p-4 text-sm leading-6 text-card-foreground shadow-sm backdrop-blur",
+        className,
+      )}
+    >
+      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-foreground/85">{children}</p>
     </article>
   );
 }
@@ -171,18 +200,18 @@ type KpiProps = {
  */
 export function Kpi({ icon, title, value, hint, tone = "default" }: KpiProps) {
   const bgMap: Record<KpiTone, string> = {
-    danger: "bg-red-100/80 text-red-700",
-    info: "bg-sky-100/80 text-sky-700",
-    default: "bg-blue-100/80 text-blue-700",
+    danger: "bg-destructive/15 text-destructive",
+    info: "bg-info/18 text-info",
+    default: "bg-primary/15 text-primary",
   };
 
   return (
-    <article className="flex items-start gap-3 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm">
-      <span className={`flex h-11 w-11 items-center justify-center rounded-full ${bgMap[tone]}`}>{icon}</span>
+    <article className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card/80 p-4 text-card-foreground shadow-sm backdrop-blur">
+      <span className={cn("flex h-11 w-11 items-center justify-center rounded-full", bgMap[tone])}>{icon}</span>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</p>
-        <p className="truncate text-lg font-semibold sm:text-xl">{value}</p>
-        {hint && <p className="text-xs leading-5 text-slate-600">{hint}</p>}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
+        <p className="truncate text-lg font-semibold text-foreground sm:text-xl">{value}</p>
+        {hint && <p className="text-xs leading-5 text-foreground/80">{hint}</p>}
       </div>
     </article>
   );

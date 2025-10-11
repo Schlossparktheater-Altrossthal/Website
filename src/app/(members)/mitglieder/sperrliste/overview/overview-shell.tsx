@@ -6,12 +6,7 @@ import { de } from "date-fns/locale/de";
 import {
   ArrowLeft,
   ArrowRight,
-  CalendarDays,
   Clock,
-  Sparkles,
-  Sun,
-  Umbrella,
-  Users2,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading, Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import { getNameInitials } from "@/lib/names";
 import { formatWeekdayList, type WeekdayValue } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";
@@ -31,7 +25,6 @@ import type {
   VisibleDayInfo,
 } from "./useBlockOverviewData";
 import type {
-  DayBucket,
   DayColumn,
   HolidayIndicator,
   OverviewPerson,
@@ -74,26 +67,11 @@ function normaliseReason(value: string | null | undefined) {
   return trimmed || null;
 }
 
-function selectDayBuckets(
-  people: OverviewPerson[],
-  dayCols: DayColumn[],
-  holidays: HolidayIndicator[],
-): DayBucket[] {
-  return dayCols.map((column, index) => {
-    const entries = people.map((person) => ({ person, cell: person.days[index] }));
-    const available = entries.filter((entry) => entry.cell.type === "free" || entry.cell.type === "preferred");
-    const limited = entries.filter((entry) => entry.cell.type === "limited");
-    const blocked = entries.filter((entry) => entry.cell.type === "block");
-    const holiday = holidays.find((indicator) => indicator.dayIndex === index) ?? null;
-    return { column, available, limited, blocked, holiday } satisfies DayBucket;
-  });
-}
-
 export function OverviewShell({
   monthLabel,
   summary,
-  holidaysInRangeCount,
-  busiestMember,
+  holidaysInRangeCount: _holidaysInRangeCount,
+  busiestMember: _busiestMember,
   preferredDescription,
   exceptionDescription,
   preparedMembers,
@@ -106,6 +84,8 @@ export function OverviewShell({
   onSelectBlockedDay,
 }: OverviewShellProps) {
   const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE"), []);
+  void _holidaysInRangeCount;
+  void _busiestMember;
 
   const dayCols = useMemo<DayColumn[]>(() => {
     return visibleDayInfo.map((info) => {
@@ -214,27 +194,12 @@ export function OverviewShell({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [dayCols, highlightedDay, view]);
 
-  const filteredPeople = useMemo(() => {
-    if (personFilter === "all") return people;
-    return people.filter((person) => person.group === personFilter);
-  }, [people, personFilter]);
-
   const groupedPeople = useMemo(() => {
     const actors = people.filter((person) => person.group === "actors");
     const crew = people.filter((person) => person.group === "crew");
     const both = people.filter((person) => person.group === "both" || person.group === "other");
     return { actors, crew, both };
   }, [people]);
-
-  const activePeople = personFilter === "all" ? people : filteredPeople;
-  const dayBuckets = useMemo(
-    () => selectDayBuckets(activePeople, dayCols, holidayIndicators),
-    [activePeople, dayCols, holidayIndicators],
-  );
-
-  const membersCount = people.length;
-  const totalBlockedDays = summary.total;
-  const upcomingBlockedDays = summary.upcoming;
 
   const monthRangeLabel = useMemo(() => {
     if (!dayCols.length) return null;
@@ -261,59 +226,6 @@ export function OverviewShell({
     if (!uniqueWeekdays.length) return "–";
     return formatWeekdayList(uniqueWeekdays, { style: "short" });
   }, [dayCols]);
-
-  const stats = useMemo(
-    () => [
-      {
-        title: "Mitglieder im Überblick",
-        value: numberFormatter.format(membersCount),
-        hint:
-          membersCount === 1
-            ? "Eine Person in der Übersicht"
-            : `${numberFormatter.format(membersCount)} Personen in der Übersicht`,
-        icon: <Users2 className="h-5 w-5" aria-hidden />,
-      },
-      {
-        title: "Sperrtermine gesamt",
-        value: numberFormatter.format(totalBlockedDays),
-        hint:
-          totalBlockedDays === 1
-            ? "Ein Sperrtermin im Zeitraum"
-            : `${numberFormatter.format(totalBlockedDays)} Sperrtermine im Zeitraum`,
-        icon: <CalendarDays className="h-5 w-5" aria-hidden />,
-      },
-      {
-        title: "Anstehende Sperrtermine",
-        value: numberFormatter.format(upcomingBlockedDays),
-        hint:
-          upcomingBlockedDays === 1
-            ? "Ein Termin ab heute"
-            : `${numberFormatter.format(upcomingBlockedDays)} Termine ab heute`,
-        icon: <Clock className="h-5 w-5" aria-hidden />,
-      },
-      {
-        title: "Ferien & Feiertage",
-        value: numberFormatter.format(holidaysInRangeCount),
-        hint: holidaysInRangeCount === 1 ? "Ein relevanter Tag" : `${holidaysInRangeCount} relevante Tage`,
-        icon: <Umbrella className="h-5 w-5" aria-hidden />,
-      },
-    ],
-    [
-      holidaysInRangeCount,
-      membersCount,
-      numberFormatter,
-      totalBlockedDays,
-      upcomingBlockedDays,
-    ],
-  );
-
-  const busiestHint = useMemo(() => {
-    if (!busiestMember) {
-      return "Sobald Sperrtermine vorliegen, erscheint hier der Spitzenreiter.";
-    }
-    const totalLabel = numberFormatter.format(busiestMember.total);
-    return `${busiestMember.name} · ${totalLabel} Sperrtermin${busiestMember.total === 1 ? "" : "e"}`;
-  }, [busiestMember, numberFormatter]);
 
   return (
     <div className="min-h-dvh bg-muted/20 text-foreground">
