@@ -50,7 +50,6 @@ export default function OverviewContent({
   highlightedDay: controlledHighlightedDay,
   onHighlightedDayChange,
 }: OverviewContentProps) {
-}: SperrlistenV2Props) {
   const [internalPersonFilter, setInternalPersonFilter] = useState<PersonFilter>("all");
   const [internalView, setInternalView] = useState<"table" | "calendar" | "timeline">("table");
   const [internalHighlightedDay, setInternalHighlightedDay] = useState<number | null>(null);
