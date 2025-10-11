@@ -17,6 +17,7 @@ ENV PNPM_HOME=/root/.local/share/pnpm \
     REALTIME_BASE_PATH=/realtime \
     NEXT_PUBLIC_REALTIME_URL=/realtime \
     NEXT_PUBLIC_REALTIME_PATH=/realtime/socket.io \
+    NEXT_PUBLIC_REALTIME_INIT_PATH=/api/socket \
     REALTIME_SERVER_EVENT_PATH=/realtime/events \
     TURBOPACK=1
 
