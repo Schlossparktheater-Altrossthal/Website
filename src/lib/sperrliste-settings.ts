@@ -229,33 +229,42 @@ type ReadSperrlisteSettingsOptions =
   | ReadSperrlisteSettingsOptionsWithMeta
   | ReadSperrlisteSettingsOptionsWithoutMeta;
 
-export async function readSperrlisteSettings(): Promise<SperrlisteSettingsRecord>;
-export async function readSperrlisteSettings(
-  options: ReadSperrlisteSettingsOptionsWithMeta,
-): Promise<ReadSperrlisteSettingsMeta>;
-export async function readSperrlisteSettings(
-  options?: ReadSperrlisteSettingsOptionsWithoutMeta,
-): Promise<SperrlisteSettingsRecord>;
-export async function readSperrlisteSettings(
-  options?: ReadSperrlisteSettingsOptions,
-) {
+type ReadSperrlisteSettingsResult<
+  TOptions extends ReadSperrlisteSettingsOptions | undefined,
+> = TOptions extends ReadSperrlisteSettingsOptionsWithMeta
+  ? ReadSperrlisteSettingsMeta
+  : SperrlisteSettingsRecord;
+
+export async function readSperrlisteSettings<
+  TOptions extends ReadSperrlisteSettingsOptions | undefined = undefined,
+>(
+  options?: TOptions,
+): Promise<ReadSperrlisteSettingsResult<TOptions>> {
+  const withMeta = options?.withMeta ?? false;
+
   if (!databaseEnabled()) {
     const record = cloneRecord(DEV_SPERRLISTE_SETTINGS_RECORD_FIXTURE);
-    if (options?.withMeta) {
-      return { record, offline: true } satisfies ReadSperrlisteSettingsMeta;
+    if (withMeta) {
+      return {
+        record,
+        offline: true,
+      } as ReadSperrlisteSettingsResult<TOptions>;
     }
-    return record;
+    return record as ReadSperrlisteSettingsResult<TOptions>;
   }
 
   const record = await prisma.sperrlisteSettings.findUnique({
     where: { id: DEFAULT_RECORD_ID },
   });
 
-  if (options?.withMeta) {
-    return { record, offline: false } satisfies ReadSperrlisteSettingsMeta;
+  if (withMeta) {
+    return {
+      record,
+      offline: false,
+    } as ReadSperrlisteSettingsResult<TOptions>;
   }
 
-  return record;
+  return record as ReadSperrlisteSettingsResult<TOptions>;
 }
 
 export function resolveSperrlisteSettings(record: SperrlisteSettingsRecord): ResolvedSperrlisteSettings {

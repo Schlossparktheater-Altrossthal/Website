@@ -6,7 +6,6 @@ import type {
   DayColumn,
   HolidayIndicator,
   OverviewPerson,
-  PersonGroup,
 } from "./types";
 
 type MobileByDayProps = {
