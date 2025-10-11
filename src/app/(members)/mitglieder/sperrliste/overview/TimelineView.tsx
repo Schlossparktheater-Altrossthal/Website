@@ -128,13 +128,13 @@ export function TimelineView({
                   <div className="flex items-center justify-end border-r border-border/60 px-3">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-600">Ferien</span>
                   </div>
-                  <div className="grid grid-cols-7 gap-0 relative">
+                  <div className="grid grid-cols-7 gap-0 relative min-w-0">
                     {holidaySpans.map((span, idx) => {
                       const colSpan = span.end - span.start + 1;
                       return (
                         <div
                           key={`span-${idx}`}
-                          className="absolute top-0 h-10 flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-400 to-sky-500 px-3 text-white shadow-md"
+                          className="absolute top-0 h-10 flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-400 to-sky-500 px-3 text-white shadow-md whitespace-nowrap"
                           style={{
                             left: `${(span.start / 7) * 100}%`,
                             width: `${(colSpan / 7) * 100}%`,
@@ -157,13 +157,13 @@ export function TimelineView({
                   <div className="flex items-center justify-end border-r border-border/60 px-3">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">Feiertage</span>
                   </div>
-                  <div className="grid grid-cols-7 gap-0 relative">
+                  <div className="grid grid-cols-7 gap-0 relative min-w-0">
                     {days.map((day, idx) => {
                       if (day.holidayType === 'holiday' || day.isPublicHoliday) {
                         return (
                           <div
                             key={`holiday-${idx}`}
-                            className="absolute top-0 h-10 flex items-center justify-center rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 px-2 text-white shadow-md"
+                            className="absolute top-0 h-10 flex items-center justify-center rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 px-2 text-white shadow-md whitespace-nowrap"
                             style={{
                               left: `${(idx / 7) * 100}%`,
                               width: `${(1 / 7) * 100}%`,
@@ -190,13 +190,13 @@ export function TimelineView({
               <div className="border-r border-border/60 px-4 py-3">
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Mitglied</span>
               </div>
-              <div className="grid grid-cols-7 gap-0">
+              <div className="grid grid-cols-7 gap-0 min-w-0">
                 {dayCols.map((d) => (
                   <button
                     key={d.key}
                     data-day={d.n}
                     onClick={() => setHighlightedDay(highlightedDay === d.n ? null : d.n)}
-                    className={`group flex flex-col items-center gap-1 border-l border-border/50 px-2 py-2 transition-colors hover:bg-muted/50 ${
+                    className={`group flex flex-col items-center gap-1 border-l border-border/50 px-2 py-2 transition-colors hover:bg-muted/50 min-w-[90px] ${
                       highlightedDay === d.n ? 'bg-primary/10' : ''
                     }`}
                     aria-label={`Tag ${d.n} ${highlightedDay === d.n ? 'hervorgehoben' : 'hervorheben'}`}
@@ -348,11 +348,11 @@ function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneP
         </div>
 
         {/* Timeline Cells */}
-        <div className="grid grid-cols-7 gap-0">
+        <div className="grid grid-cols-7 gap-0 min-w-0">
           {person.days.map((cell, i) => (
             <div
               key={`${person.id}-${cell.dayKey}`}
-              className={`relative border-l border-border/50 px-2.5 py-3 transition-all ${
+              className={`relative border-l border-border/50 px-2.5 py-3 transition-all min-w-[90px] ${
                 highlightedDay === dayCols[i].n ? 'bg-primary/10 ring-2 ring-inset ring-primary/30' : ''
               }`}
             >
