@@ -11,12 +11,14 @@ const {
   hasPermissionMock,
   readSettingsMock,
   resolveSettingsMock,
+  databaseEnabledMock,
 } = vi.hoisted(() => ({
   createMock: vi.fn(),
   requireAuthMock: vi.fn(),
   hasPermissionMock: vi.fn(),
   readSettingsMock: vi.fn(),
   resolveSettingsMock: vi.fn(),
+  databaseEnabledMock: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -41,6 +43,10 @@ vi.mock("@/lib/sperrliste-settings", () => ({
   resolveSperrlisteSettings: resolveSettingsMock,
 }));
 
+vi.mock("@/lib/dev-database", () => ({
+  databaseEnabled: databaseEnabledMock,
+}));
+
 const createSettings = (freezeDays: number): ResolvedSperrlisteSettings => ({
   id: "default",
   freezeDays,
@@ -62,6 +68,7 @@ describe("block days route", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-01-10T12:00:00.000Z"));
 
+    databaseEnabledMock.mockReturnValue(true);
     requireAuthMock.mockResolvedValue({ user: { id: "user-1" } });
     hasPermissionMock.mockResolvedValue(true);
     readSettingsMock.mockResolvedValue(null);

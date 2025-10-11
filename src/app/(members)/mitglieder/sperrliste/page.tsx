@@ -15,29 +15,100 @@ import {
 import { SperrlistePageClient } from "./page-client";
 import type { OverviewMember } from "./block-overview";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import { databaseEnabled } from "@/lib/dev-database";
+import {
+  DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE,
+  DEV_SPERRLISTE_CLIENT_SETTINGS_FIXTURE,
+  DEV_SPERRLISTE_DEFAULTS_FIXTURE,
+  DEV_SPERRLISTE_HOLIDAYS_FIXTURE,
+  DEV_SPERRLISTE_OFFLINE_MESSAGE,
+  DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE,
+} from "@/lib/dev-sperrliste-fixture";
 
 export default async function SperrlistePage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.sperrliste");
+  const userId = session.user?.id;
+  if (!userId) {
+    throw new Error("Benutzerinformationen konnten nicht geladen werden.");
+  }
+
+  const databaseOnline = databaseEnabled();
+
+  let allowed = true;
+  let canManageSettings = false;
+  let canExport = false;
+
+  if (databaseOnline) {
+    const [allowedResult, manageResult, exportResult] = await Promise.all([
+      hasPermission(session.user, "mitglieder.sperrliste"),
+      hasPermission(session.user, "mitglieder.sperrliste.settings"),
+      hasPermission(session.user, "mitglieder.sperrliste.export"),
+    ]);
+    allowed = allowedResult;
+    canManageSettings = manageResult;
+    canExport = exportResult;
+  }
+
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Sperrliste</div>;
   }
-  const userId = session.user?.id;
 
-  if (!userId) {
-    throw new Error("Benutzerinformationen konnten nicht geladen werden.");
+  if (!databaseOnline) {
+    const initialBlockedDays: BlockedDayDTO[] = DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE.map((entry) => ({
+      id: entry.id,
+      date: entry.date,
+      reason: entry.reason,
+      kind: entry.kind,
+      createdAt: entry.createdAt,
+    }));
+
+    const overviewMembers: OverviewMember[] = DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE.map((member) => ({
+      id: member.id,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      name: member.name,
+      email: member.email,
+      avatarSource: member.avatarSource,
+      avatarUpdatedAt: member.avatarUpdatedAt,
+      onboardingFocus: member.onboardingFocus,
+      blockedDays: member.blockedDays.map((entry) => ({
+        id: entry.id,
+        date: entry.date,
+        reason: entry.reason,
+        kind: entry.kind,
+        createdAt: entry.createdAt,
+      })),
+    }));
+
+    const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/sperrliste")];
+
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Sperrliste"
+          description="Markiere Tage, an denen du nicht verfügbar bist, damit das Team die Planung im Blick behält."
+          breadcrumbs={breadcrumbs}
+        />
+        <SperrlistePageClient
+          initialBlockedDays={initialBlockedDays}
+          initialHolidays={DEV_SPERRLISTE_HOLIDAYS_FIXTURE}
+          overviewMembers={overviewMembers}
+          initialSettings={DEV_SPERRLISTE_CLIENT_SETTINGS_FIXTURE}
+          canManageSettings={false}
+          canExport={false}
+          defaultHolidaySourceUrl={DEV_SPERRLISTE_DEFAULTS_FIXTURE.holidaySourceUrl}
+          defaultPublicHolidaySourceUrl={DEV_SPERRLISTE_DEFAULTS_FIXTURE.publicHolidaySourceUrl}
+          isOffline
+          offlineMessage={DEV_SPERRLISTE_OFFLINE_MESSAGE}
+        />
+      </div>
+    );
   }
 
   const settingsRecord = await readSperrlisteSettings();
   const resolvedSettingsBefore = resolveSperrlisteSettings(settingsRecord);
 
-  const [
-    personalBlockedDays,
-    holidayRanges,
-    overviewUsers,
-    canManageSettings,
-    canExport,
-  ] = await Promise.all([
+  const [personalBlockedDays, holidayRanges, overviewUsers] = await Promise.all([
     prisma.blockedDay.findMany({
       where: { userId },
       orderBy: { date: "asc" },
@@ -73,8 +144,6 @@ export default async function SperrlistePage() {
         },
       },
     }),
-    hasPermission(session.user, "mitglieder.sperrliste.settings"),
-    hasPermission(session.user, "mitglieder.sperrliste.export"),
   ]);
 
   const refreshedSettingsRecord = await readSperrlisteSettings();
@@ -129,6 +198,7 @@ export default async function SperrlistePage() {
         canExport={canExport}
         defaultHolidaySourceUrl={defaultHolidaySourceUrl}
         defaultPublicHolidaySourceUrl={defaultPublicHolidaySourceUrl}
+        isOffline={false}
       />
     </div>
   );

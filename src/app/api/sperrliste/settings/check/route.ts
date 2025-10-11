@@ -13,6 +13,7 @@ import {
 import { fetchHolidayRangesForSettings, isHolidaySourceUrlAllowed } from "@/lib/holidays";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
+import { databaseEnabled } from "@/lib/dev-database";
 
 const checkSchema = z.object({
   source: z.enum(["holiday", "publicHoliday"]),
@@ -29,6 +30,12 @@ const checkSchema = z.object({
 
 async function ensurePermission() {
   const session = await requireAuth();
+  if (!databaseEnabled()) {
+    return NextResponse.json(
+      { error: "Ferienquellen können im Offline-Demo-Modus nicht geprüft werden." },
+      { status: 503 },
+    );
+  }
   if (!(await hasPermission(session.user, "mitglieder.sperrliste.settings"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

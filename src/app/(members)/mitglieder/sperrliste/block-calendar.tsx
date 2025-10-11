@@ -134,6 +134,8 @@ interface BlockCalendarProps {
   freezeDays?: number;
   preferredWeekdays?: number[];
   exceptionWeekdays?: number[];
+  readOnly?: boolean;
+  readOnlyMessage?: string;
 }
 
 type SelectionIntent = "select" | "deselect";
@@ -144,6 +146,8 @@ export function BlockCalendar({
   freezeDays = 0,
   preferredWeekdays = [],
   exceptionWeekdays = [],
+  readOnly = false,
+  readOnlyMessage,
 }: BlockCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [blockedDays, setBlockedDays] = useState<BlockedDay[]>(() =>
@@ -178,6 +182,17 @@ export function BlockCalendar({
     startKey: null,
     triggered: false,
   });
+
+  const readOnlyNotice =
+    readOnlyMessage ??
+    "Im Offline-Demo-Modus können keine Sperrtermine bearbeitet werden.";
+
+  useEffect(() => {
+    if (readOnly) {
+      setSelectionMode(false);
+      setSelectedDayKeys(new Set<string>());
+    }
+  }, [readOnly]);
 
   const resetGestureSelection = useCallback(() => {
     gestureSelectionRef.current = { startKey: null, triggered: false };
@@ -458,6 +473,9 @@ export function BlockCalendar({
   );
 
   const handleToggleSelectionMode = () => {
+    if (readOnly) {
+      return;
+    }
     const nextMode = !selectionMode;
     setSelectionMode(nextMode);
     if (nextMode) {
@@ -494,6 +512,10 @@ export function BlockCalendar({
 
   const handleDayPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, key: string) => {
+      if (readOnly) {
+        resetGestureSelection();
+        return;
+      }
       if (event.button !== 0) {
         resetGestureSelection();
         return;
@@ -513,11 +535,14 @@ export function BlockCalendar({
       dragIntentRef.current = null;
       draggingRef.current = false;
     },
-    [resetGestureSelection, selectionMode, selectedDayKeys, updateSelection]
+    [readOnly, resetGestureSelection, selectionMode, selectedDayKeys, updateSelection]
   );
 
   const handleDayPointerEnter = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, key: string) => {
+      if (readOnly) {
+        return;
+      }
       if (selectionMode) {
         if (!draggingRef.current) {
           return;
@@ -559,7 +584,7 @@ export function BlockCalendar({
 
       updateSelection(key, true);
     },
-    [resetGestureSelection, selectionMode, startGestureSelection, updateSelection]
+    [readOnly, resetGestureSelection, selectionMode, startGestureSelection, updateSelection]
   );
 
   const handleDayClick = useCallback(
@@ -733,6 +758,9 @@ export function BlockCalendar({
   );
   // Define bulk handlers before they are referenced in JSX
   const handleBulkCreate = async () => {
+    if (readOnly) {
+      return;
+    }
     const keysToCreate = selectedKeys.filter((key) => !blockedByDate.has(key));
     if (keysToCreate.length === 0) return;
 
@@ -775,6 +803,9 @@ export function BlockCalendar({
   };
 
   const handleBulkRemove = async () => {
+    if (readOnly) {
+      return;
+    }
     const entriesToRemove = selectedKeys
       .map((key) => blockedByDate.get(key))
       .filter((entry): entry is BlockedDay => Boolean(entry));
@@ -887,10 +918,15 @@ export function BlockCalendar({
                     type="button"
                     role="radio"
                     aria-checked={isActive}
-                    onClick={() => setBulkKind(option.kind)}
+                    onClick={() => {
+                      if (readOnly) return;
+                      setBulkKind(option.kind);
+                    }}
+                    disabled={readOnly}
                     className={cn(
                       "rounded-lg border border-border/60 bg-background/80 p-3 text-left transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                      isActive && "border-primary bg-primary/10 shadow-sm"
+                      isActive && "border-primary bg-primary/10 shadow-sm",
+                      readOnly && "cursor-not-allowed opacity-60",
                     )}
                   >
                     <div className="text-sm font-semibold">{option.title}</div>
@@ -916,13 +952,13 @@ export function BlockCalendar({
                 onChange={(event) => setBulkReason(event.target.value)}
                 placeholder="z. B. Urlaub, nur bis 20 Uhr"
                 maxLength={200}
-                disabled={bulkSubmitting}
+                disabled={readOnly || bulkSubmitting}
               />
             </div>
             <Button
               type="button"
               className="w-full sm:w-auto"
-              disabled={bulkSubmitting}
+              disabled={readOnly || bulkSubmitting || selectedKeys.length === 0}
               onClick={handleBulkCreate}
             >
               {getBulkActionLabel(bulkKind, selectedFreeCount)}
@@ -936,7 +972,7 @@ export function BlockCalendar({
           <Button
             type="button"
             variant="outline"
-            disabled={bulkSubmitting}
+            disabled={readOnly || bulkSubmitting}
             onClick={handleBulkRemove}
             className="w-full sm:w-auto"
           >
@@ -982,12 +1018,14 @@ export function BlockCalendar({
     <button
       type="button"
       onClick={handleToggleSelectionMode}
-      className={cn(
-        headerToggleBase,
-        "w-full justify-center sm:w-auto sm:justify-start",
-        selectionMode ? selectionToggleActive : headerToggleInactive,
-      )}
+        className={cn(
+          headerToggleBase,
+          "w-full justify-center sm:w-auto sm:justify-start",
+          selectionMode ? selectionToggleActive : headerToggleInactive,
+          readOnly && "cursor-not-allowed opacity-60",
+        )}
       aria-pressed={selectionMode}
+      disabled={readOnly}
     >
       {selectionMode ? "Auswahl beenden" : "Mehrfachauswahl"}
     </button>
@@ -1123,6 +1161,9 @@ export function BlockCalendar({
 
   const handleCreate = async () => {
     if (!selectedDateKey) return;
+    if (readOnly) {
+      return;
+    }
     const trimmed = reason.trim();
     setSubmitting(true);
     setError(null);
@@ -1166,6 +1207,9 @@ export function BlockCalendar({
 
   const handleUpdate = async () => {
     if (!selectedEntry) return;
+    if (readOnly) {
+      return;
+    }
     const trimmed = reason.trim();
     setSubmitting(true);
     setError(null);
@@ -1203,6 +1247,9 @@ export function BlockCalendar({
 
   const handleRemove = async () => {
     if (!selectedEntry) return;
+    if (readOnly) {
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -1249,6 +1296,11 @@ export function BlockCalendar({
         renderDay={renderCalendarDay}
         additionalContent={
           <>
+            {readOnly ? (
+              <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
+                {readOnlyNotice}
+              </div>
+            ) : null}
             {mobileScrollHint}
             {rehearsalHint}
             {selectionPanel}
@@ -1305,10 +1357,15 @@ export function BlockCalendar({
                       type="button"
                       role="radio"
                       aria-checked={isActive}
-                      onClick={() => setSelectedKind(option.kind)}
+                      onClick={() => {
+                        if (readOnly) return;
+                        setSelectedKind(option.kind);
+                      }}
+                      disabled={readOnly}
                       className={cn(
                         "rounded-lg border border-border/60 bg-background/80 p-3 text-left transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                         isActive && "border-primary bg-primary/10 shadow-sm",
+                        readOnly && "cursor-not-allowed opacity-60",
                       )}
                     >
                       <div className="text-sm font-semibold">{option.title}</div>
@@ -1329,6 +1386,7 @@ export function BlockCalendar({
                 onChange={(event) => setReason(event.target.value)}
                 placeholder="z. B. Urlaub, nur bis 20 Uhr"
                 maxLength={200}
+                disabled={readOnly}
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 Die Angabe hilft der Planung, bleibt aber für andere Mitglieder kurz gehalten.
@@ -1349,7 +1407,7 @@ export function BlockCalendar({
                   type="button"
                   variant="default"
                   className="sm:flex-1"
-                  disabled={submitting}
+                  disabled={submitting || readOnly}
                   onClick={handleUpdate}
                 >
                   Eintrag speichern
@@ -1358,7 +1416,7 @@ export function BlockCalendar({
                   type="button"
                   variant="outline"
                   className="sm:flex-1"
-                  disabled={submitting}
+                  disabled={submitting || readOnly}
                   onClick={handleRemove}
                 >
                   Eintrag entfernen
@@ -1368,7 +1426,7 @@ export function BlockCalendar({
               <Button
                 type="button"
                 className="w-full"
-                disabled={submitting}
+                disabled={submitting || readOnly}
                 onClick={handleCreate}
               >
                 {getSingleActionLabel(selectedKind)}

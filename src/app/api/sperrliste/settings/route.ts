@@ -14,6 +14,13 @@ import { fetchHolidayRangesForSettings } from "@/lib/holidays";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { sortWeekdays } from "@/lib/weekdays";
+import { databaseEnabled } from "@/lib/dev-database";
+import {
+  DEV_SPERRLISTE_CLIENT_SETTINGS_FIXTURE,
+  DEV_SPERRLISTE_DEFAULTS_FIXTURE,
+  DEV_SPERRLISTE_HOLIDAYS_FIXTURE,
+  DEV_SPERRLISTE_OFFLINE_MESSAGE,
+} from "@/lib/dev-sperrliste-fixture";
 
 const updateSchema = z.object({
   freezeDays: z.coerce.number().int().min(0).max(365),
@@ -50,28 +57,43 @@ function sanitiseExceptionWeekdays(preferred: number[], exception: number[]) {
   return exception.filter((weekday) => !preferredSet.has(weekday));
 }
 
-async function ensurePermission() {
+type PermissionResult =
+  | { status: "ok"; response: null }
+  | { status: "offline"; response: null }
+  | { status: "denied"; response: NextResponse };
+
+async function ensurePermission(): Promise<PermissionResult> {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.sperrliste.settings"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!databaseEnabled()) {
+    return { status: "offline", response: null };
   }
-  return null;
+  if (!(await hasPermission(session.user, "mitglieder.sperrliste.settings"))) {
+    return { status: "denied", response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+  return { status: "ok", response: null };
 }
 
 export async function GET() {
-  const permissionResponse = await ensurePermission();
-  if (permissionResponse) {
-    return permissionResponse;
+  const permission = await ensurePermission();
+  if (permission.status === "denied" && permission.response) {
+    return permission.response;
   }
 
-  if (!process.env.DATABASE_URL) {
-    return NextResponse.json({ error: "Datenbank ist nicht konfiguriert." }, { status: 500 });
+  if (permission.status === "offline") {
+    return NextResponse.json({
+      offline: true,
+      settings: DEV_SPERRLISTE_CLIENT_SETTINGS_FIXTURE,
+      defaults: DEV_SPERRLISTE_DEFAULTS_FIXTURE,
+      holidays: DEV_SPERRLISTE_HOLIDAYS_FIXTURE,
+      message: DEV_SPERRLISTE_OFFLINE_MESSAGE,
+    });
   }
 
   try {
-    const record = await readSperrlisteSettings();
+    const { record, offline } = await readSperrlisteSettings({ withMeta: true });
     const resolved = resolveSperrlisteSettings(record);
     return NextResponse.json({
+      offline,
       settings: toClientSperrlisteSettings(resolved),
       defaults: {
         holidaySourceUrl: getDefaultHolidaySourceUrl(),
@@ -85,13 +107,19 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  const permissionResponse = await ensurePermission();
-  if (permissionResponse) {
-    return permissionResponse;
+  const permission = await ensurePermission();
+  if (permission.status === "denied" && permission.response) {
+    return permission.response;
   }
 
-  if (!process.env.DATABASE_URL) {
-    return NextResponse.json({ error: "Datenbank ist nicht konfiguriert." }, { status: 500 });
+  if (permission.status === "offline") {
+    return NextResponse.json(
+      {
+        error:
+          "Der Sperrlistenbereich läuft im Offline-Demo-Modus. Einstellungen können momentan nicht gespeichert werden.",
+      },
+      { status: 503 },
+    );
   }
 
   let payload: unknown;
@@ -169,6 +197,7 @@ export async function PUT(request: NextRequest) {
     const resolved = resolveSperrlisteSettings(refreshedRecord);
 
     return NextResponse.json({
+      offline: false,
       settings: toClientSperrlisteSettings(resolved),
       holidays: result.ranges,
       defaults: {

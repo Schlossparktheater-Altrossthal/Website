@@ -30,6 +30,8 @@ export type SperrlisteSettingsChangePayload = {
   settings: ClientSperrlisteSettings;
   holidays?: HolidayRange[];
   defaults?: { holidaySourceUrl: string; publicHolidaySourceUrl: string };
+  offline?: boolean;
+  message?: string;
 };
 
 interface SperrlisteSettingsManagerProps {
@@ -651,6 +653,8 @@ export function SperrlisteSettingsManager({
         settings?: ClientSperrlisteSettings;
         holidays?: HolidayRange[];
         defaults?: { holidaySourceUrl: string; publicHolidaySourceUrl: string };
+        offline?: boolean;
+        message?: string;
         error?: string;
       };
 
@@ -671,6 +675,8 @@ export function SperrlisteSettingsManager({
         settings: data.settings,
         holidays: data.holidays,
         defaults: data.defaults,
+        offline: data.offline,
+        message: data.message,
       });
     } catch (err) {
       setError({
