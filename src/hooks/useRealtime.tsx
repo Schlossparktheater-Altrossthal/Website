@@ -26,6 +26,7 @@ const MAX_RECONNECT_ATTEMPTS: number = Number.POSITIVE_INFINITY;
 const PING_INTERVAL_MS = 30_000;
 const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL;
 const REALTIME_PATH = process.env.NEXT_PUBLIC_REALTIME_PATH || '/socket.io';
+const REALTIME_INIT_PATH = process.env.NEXT_PUBLIC_REALTIME_INIT_PATH || '/api/socket';
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
 
@@ -114,6 +115,49 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       };
     }
 
+    const warmupRealtimeBridge = async (signal?: AbortSignal): Promise<void> => {
+      if (!REALTIME_INIT_PATH) {
+        return;
+      }
+
+      let target = REALTIME_INIT_PATH;
+      if (typeof window !== 'undefined' && !/^https?:/i.test(target)) {
+        const shouldWarmup = (() => {
+          if (!REALTIME_URL) {
+            return true;
+          }
+          try {
+            const parsed = new URL(REALTIME_URL, window.location.origin);
+            return parsed.origin === window.location.origin;
+          } catch (error) {
+            console.warn('[Realtime] Failed to parse NEXT_PUBLIC_REALTIME_URL for warmup', error);
+            return REALTIME_URL.startsWith('/');
+          }
+        })();
+
+        if (!shouldWarmup) {
+          return;
+        }
+
+        target = target.startsWith('/') ? target : `/${target}`;
+      }
+
+      try {
+        const response = await fetch(target, {
+          method: 'GET',
+          cache: 'no-store',
+          signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Socket bootstrap failed (${response.status})`);
+        }
+      } catch (error) {
+        console.error('Failed to initialize realtime bridge', error);
+        throw error;
+      }
+    };
+
     const requestHandshake = async (signal?: AbortSignal): Promise<HandshakeAuthPayload> => {
       const response = await fetch('/api/realtime/handshake', {
         method: 'GET',
@@ -196,6 +240,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
 
       try {
+        await warmupRealtimeBridge(abortController.signal);
         const handshake = await requestHandshake(abortController.signal);
         if (disposed) return;
         latestAuth = handshake;
