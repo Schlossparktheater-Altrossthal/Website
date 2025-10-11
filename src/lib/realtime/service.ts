@@ -64,15 +64,17 @@ export class RealtimeService {
   }
 
   private setupEventHandlers(): void {
-    if (!this.io || !this.core) return;
+    const io = this.io;
+    const core = this.core;
 
-    this.io.use((socket, next) => {
+    if (!io || !core) return;
+
+    io.use((socket, next) => {
       this.authenticateSocket(socket as IOSocket, next);
     });
 
-    this.io.on("connection", (socket) => {
+    io.on("connection", (socket) => {
       const client = socket as IOSocket;
-      const core = this.core;
       console.log(`[Realtime] socket connected: ${client.id}`);
 
       client.data.rooms = new Set<RoomType>();

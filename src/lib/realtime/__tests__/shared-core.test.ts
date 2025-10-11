@@ -1,60 +1,105 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { RoomType } from '@/lib/realtime/types';
+import type { RealtimeCoreOptions } from '@/lib/realtime/shared';
+import type { RoomType, TicketRealtimePayload } from '@/lib/realtime/types';
 import { createRealtimeCore } from '@/lib/realtime/shared';
 
+type RoomEvent = { event: string; payload: unknown; excluded?: string };
+
+type FakeSocket = {
+  id: string;
+  data: { userId?: string; userName?: string; rooms: Set<RoomType> };
+  emit: (event: string, payload: unknown) => void;
+  to: (room: string) => { emit: (event: string, payload: unknown) => void };
+};
+
 type FakeSocketRecord = {
-  socket: any;
+  socket: FakeSocket;
   directEmits: Array<{ event: string; payload: unknown }>;
   roomEmits: Array<{ room: string; event: string; payload: unknown }>;
 };
 
 type RoomEmission = {
   room: string;
-  events: Array<{ event: string; payload: unknown; excluded?: string }>;
+  events: RoomEvent[];
 };
 
+type FakeServer = RealtimeCoreOptions['io'];
+
 type FakeIO = {
-  io: any;
-  sockets: Map<string, any>;
+  io: FakeServer;
+  sockets: Map<string, FakeSocket>;
   rooms: Map<string, Set<string>>;
   globalEmits: Array<{ event: string; payload: unknown }>;
   roomEmits: RoomEmission[];
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function assertOnlineStatsPayload(payload: unknown): asserts payload is { stats: { totalOnline: number } } {
+  if (!isRecord(payload)) {
+    throw new Error('Expected payload to be a record');
+  }
+
+  const { stats } = payload;
+  if (!isRecord(stats) || typeof stats.totalOnline !== 'number') {
+    throw new Error('Expected stats with totalOnline number');
+  }
+}
+
+function assertRehearsalUsersPayload(
+  payload: unknown,
+): asserts payload is { users: Array<{ id: string; name?: string }> } {
+  if (!isRecord(payload) || !Array.isArray(payload.users)) {
+    throw new Error('Expected payload with users array');
+  }
+
+  payload.users.forEach((entry) => {
+    if (!isRecord(entry) || typeof entry.id !== 'string') {
+      throw new Error('Expected user entries with an id');
+    }
+
+    if ('name' in entry && entry.name !== undefined && typeof entry.name !== 'string') {
+      throw new Error('Expected optional name to be a string');
+    }
+  });
+}
+
 function createFakeSocket(id: string, userId?: string, userName?: string): FakeSocketRecord {
   const directEmits: Array<{ event: string; payload: unknown }> = [];
   const roomEmits: Array<{ room: string; event: string; payload: unknown }> = [];
-  const socket = {
+  const socket: FakeSocket = {
     id,
     data: {
       userId,
       userName,
       rooms: new Set<RoomType>(),
     },
-    emit: vi.fn((event: string, payload: unknown) => {
+    emit: (event: string, payload: unknown) => {
       directEmits.push({ event, payload });
-    }),
-    to: vi.fn((room: string) => ({
+    },
+    to: (room: string) => ({
       emit: (event: string, payload: unknown) => {
         roomEmits.push({ room, event, payload });
       },
-    })),
+    }),
   };
 
   return { socket, directEmits, roomEmits };
 }
 
 function createFakeIO(): FakeIO {
-  const sockets = new Map<string, any>();
+  const sockets = new Map<string, FakeSocket>();
   const rooms = new Map<string, Set<string>>();
   const globalEmits: Array<{ event: string; payload: unknown }> = [];
   const roomEmits: RoomEmission[] = [];
 
   const io = {
-    emit: vi.fn((event: string, payload: unknown) => {
+    emit: (event: string, payload: unknown) => {
       globalEmits.push({ event, payload });
-    }),
-    to: vi.fn((room: string) => {
+    },
+    to: (room: string) => {
       const entry: RoomEmission = { room, events: [] };
       roomEmits.push(entry);
       return {
@@ -67,12 +112,12 @@ function createFakeIO(): FakeIO {
           },
         }),
       };
-    }),
+    },
     sockets: {
       sockets,
       adapter: { rooms },
     },
-  };
+  } as unknown as FakeServer;
 
   return { io, sockets, rooms, globalEmits, roomEmits };
 }
@@ -91,7 +136,8 @@ describe('createRealtimeCore', () => {
 
     expect(directEmits).toHaveLength(1);
     expect(directEmits[0].event).toBe('online_stats_update');
-    expect((directEmits[0].payload as any).stats.totalOnline).toBe(1);
+    assertOnlineStatsPayload(directEmits[0].payload);
+    expect(directEmits[0].payload.stats.totalOnline).toBe(1);
     expect(fakeIO.globalEmits).toHaveLength(0);
   });
 
@@ -122,7 +168,13 @@ describe('createRealtimeCore', () => {
     const fakeIO = createFakeIO();
     const core = createRealtimeCore({ io: fakeIO.io, logger: console });
 
-    core.broadcastTicketScanEvent({ scope: 'tickets', showId: 'abc' } as any);
+    const payload: TicketRealtimePayload = {
+      scope: 'tickets',
+      showId: 'abc',
+      delta: { upserts: [], deletes: [] },
+    };
+
+    core.broadcastTicketScanEvent(payload);
 
     const rooms = fakeIO.roomEmits.map((entry) => entry.room);
     expect(rooms).toContain('global');
@@ -148,7 +200,8 @@ describe('createRealtimeCore', () => {
     core.emitRehearsalUsersList({ rehearsalId: 'test', socket: requester.socket });
 
     expect(requester.directEmits[0].event).toBe('rehearsal_users_list');
-    expect((requester.directEmits[0].payload as any).users).toEqual([
+    assertRehearsalUsersPayload(requester.directEmits[0].payload);
+    expect(requester.directEmits[0].payload.users).toEqual([
       { id: 'user-a', name: 'Anna' },
       { id: 'user-b', name: 'Ben' },
     ]);
