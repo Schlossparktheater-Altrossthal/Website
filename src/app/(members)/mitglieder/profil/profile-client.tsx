@@ -979,23 +979,24 @@ function ProfileClientInner({
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col gap-3">
-          <div className="xl:hidden">
-            <Select value={activeTab} onValueChange={setActiveTab}>
-              <SelectTrigger id="profile-tab-select" className="h-11 w-full justify-between rounded-full border-border/60 px-4 text-sm font-semibold">
-                <SelectValue placeholder="Bereich wählen">
-                  {tabOptions.find((option) => option.value === activeTab)?.label}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="max-h-64">
+          {/* Mobile: Horizontale scrollbare Tabs */}
+          <div className="xl:hidden -mx-4 sm:-mx-6">
+            <div className="overflow-x-auto px-4 sm:px-6">
+              <TabsList className="inline-flex h-auto w-auto min-w-full gap-2 rounded-none border-b border-border/60 bg-transparent p-0">
                 {tabOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <TabsTrigger
+                    key={option.value}
+                    value={option.value}
+                    className="relative min-w-[120px] whitespace-nowrap rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                  >
                     {option.label}
-                  </SelectItem>
+                  </TabsTrigger>
                 ))}
-              </SelectContent>
-            </Select>
+              </TabsList>
+            </div>
           </div>
 
+          {/* Desktop: Pill-Tabs */}
           <TabsList className="hidden w-full flex-nowrap items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/60 bg-background/80 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10 backdrop-blur xl:flex">
             {tabOptions.map((option) => (
               <TabsTrigger
