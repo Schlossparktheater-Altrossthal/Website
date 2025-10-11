@@ -1,272 +1,57 @@
+import { createRealtimeCore } from '../../src/lib/realtime/shared/core.js';
+
 export function createEventHandlers({ io, logger, toISO }) {
   if (!io) {
     throw new Error('Socket server instance is required');
   }
 
-  const formatTimestamp = typeof toISO === 'function' ? toISO : (value) => new Date(value).toISOString();
+  const core = createRealtimeCore({ io, logger, toISO });
+
   const logWarn =
     typeof logger?.warn === 'function' ? (...args) => logger.warn(...args) : (...args) => console.warn(...args);
 
-  const onlineUsers = new Map();
-  let peakConcurrentUsers = 0;
-
   function broadcastOnlineStats() {
-    const snapshot = {
-      totalOnline: onlineUsers.size,
-      peakConcurrentUsers,
-      onlineUsers: Array.from(onlineUsers.entries()).map(([userId, info]) => ({
-        id: userId,
-        name: info.name,
-        lastSeen: formatTimestamp(info.lastSeen),
-      })),
-    };
-
-    io.emit('online_stats_update', {
-      type: 'online_stats_update',
-      timestamp: formatTimestamp(Date.now()),
-      stats: snapshot,
-    });
+    core.emitOnlineStatsUpdate({ broadcast: true });
   }
 
   function emitUserPresence(room, socket, action) {
-    const userId = socket.data.userId;
-    if (!userId) return;
-    const payload = {
-      type: 'user_presence',
-      timestamp: formatTimestamp(Date.now()),
-      action,
-      room,
-      user: {
-        id: userId,
-        name: socket.data.userName,
-      },
-    };
-    socket.to(room).emit('user_presence', payload);
+    core.emitRehearsalPresence({ room, socket, action });
   }
 
   function emitRehearsalUsersList(rehearsalId, socket) {
-    const roomName = `rehearsal_${rehearsalId}`;
-    const room = io.sockets.adapter.rooms.get(roomName);
-    if (!room) {
-      socket.emit('rehearsal_users_list', {
-        type: 'rehearsal_users_list',
-        timestamp: formatTimestamp(Date.now()),
-        rehearsalId,
-        users: [],
-      });
-      return;
-    }
-
-    const users = [];
-    for (const socketId of room) {
-      const member = io.sockets.sockets.get(socketId);
-      if (member?.data?.userId) {
-        users.push({
-          id: member.data.userId,
-          name: member.data.userName,
-        });
-      }
-    }
-
-    socket.emit('rehearsal_users_list', {
-      type: 'rehearsal_users_list',
-      timestamp: formatTimestamp(Date.now()),
-      rehearsalId,
-      users,
-    });
+    core.emitRehearsalUsersList({ rehearsalId, socket });
   }
 
   function registerUser(socket) {
     const userId = socket.data.userId;
-    const name = socket.data.userName;
-    const existing = onlineUsers.get(userId);
-    if (existing) {
-      existing.sockets.add(socket.id);
-      existing.lastSeen = Date.now();
-    } else {
-      onlineUsers.set(userId, {
-        name,
-        lastSeen: Date.now(),
-        sockets: new Set([socket.id]),
-      });
-      io.emit('user_joined', {
-        type: 'user_joined',
-        timestamp: formatTimestamp(Date.now()),
-        user: { id: userId, name },
-      });
-    }
-    if (onlineUsers.size > peakConcurrentUsers) {
-      peakConcurrentUsers = onlineUsers.size;
+    if (!userId) return;
+    const { isFirstConnection } = core.trackConnection({
+      userId,
+      socketId: socket.id,
+      userName: socket.data.userName,
+    });
+    if (isFirstConnection) {
+      core.emitUserJoined({ userId, userName: socket.data.userName, targets: 'all' });
     }
     broadcastOnlineStats();
   }
 
   function unregisterUser(socket) {
     const userId = socket.data.userId;
-    const existing = onlineUsers.get(userId);
-    if (!existing) return;
-
-    existing.sockets.delete(socket.id);
-    if (existing.sockets.size === 0) {
-      onlineUsers.delete(userId);
-      io.emit('user_left', {
-        type: 'user_left',
-        timestamp: formatTimestamp(Date.now()),
-        user: { id: userId, name: socket.data.userName },
-      });
-    } else {
-      existing.lastSeen = Date.now();
+    if (!userId) return;
+    const { isLastConnection, userName } = core.releaseConnection({ userId, socketId: socket.id });
+    if (isLastConnection) {
+      core.emitUserLeft({ userId, userName: userName ?? socket.data.userName, targets: 'all' });
     }
     broadcastOnlineStats();
   }
 
   function getOnlineStatsSnapshot() {
+    const snapshot = core.getOnlineStatsSnapshot();
     return {
-      totalOnline: onlineUsers.size,
-      peakConcurrentUsers,
+      totalOnline: snapshot.totalOnline,
+      peakConcurrentUsers: snapshot.peakConcurrentUsers ?? snapshot.totalOnline,
     };
-  }
-
-  function broadcastAttendanceUpdate(payload) {
-    if (!payload || !payload.rehearsalId) return false;
-    const event = {
-      type: 'attendance_updated',
-      rehearsalId: payload.rehearsalId,
-      targetUserId: payload.targetUserId,
-      status: payload.status ?? null,
-      comment: payload.comment,
-      actorUserId: payload.actorUserId,
-      timestamp: formatTimestamp(Date.now()),
-    };
-
-    io.to(`rehearsal_${payload.rehearsalId}`).emit('attendance_updated', event);
-    if (payload.targetUserId) {
-      io.to(`user_${payload.targetUserId}`).emit('attendance_updated', event);
-    }
-    return true;
-  }
-
-  function broadcastRehearsalCreated(payload) {
-    if (!payload || !payload.rehearsal) return false;
-    const event = {
-      type: 'rehearsal_created',
-      rehearsal: payload.rehearsal,
-      targetUserIds: Array.isArray(payload.targetUserIds) ? payload.targetUserIds : [],
-      timestamp: formatTimestamp(Date.now()),
-    };
-
-    if (event.targetUserIds.length) {
-      event.targetUserIds.forEach((userId) => {
-        io.to(`user_${userId}`).emit('rehearsal_created', event);
-      });
-    } else {
-      io.emit('rehearsal_created', event);
-    }
-    return true;
-  }
-
-  function broadcastRehearsalUpdated(payload) {
-    if (!payload || !payload.rehearsalId) return false;
-    const event = {
-      type: 'rehearsal_updated',
-      rehearsalId: payload.rehearsalId,
-      changes: payload.changes || {},
-      targetUserIds: Array.isArray(payload.targetUserIds) ? payload.targetUserIds : [],
-      timestamp: formatTimestamp(Date.now()),
-    };
-
-    io.to(`rehearsal_${payload.rehearsalId}`).emit('rehearsal_updated', event);
-    event.targetUserIds.forEach((userId) => {
-      io.to(`user_${userId}`).emit('rehearsal_updated', event);
-    });
-    return true;
-  }
-
-  function sendNotification(payload) {
-    if (!payload || !payload.targetUserId || !payload.notification) return false;
-    const event = {
-      type: 'notification_created',
-      notification: payload.notification,
-      targetUserId: payload.targetUserId,
-      timestamp: formatTimestamp(Date.now()),
-    };
-
-    io.to(`user_${payload.targetUserId}`).emit('notification_created', event);
-    return true;
-  }
-
-  function broadcastInventoryEvent(data) {
-    if (!data || typeof data !== 'object') return false;
-
-    io.to('global').emit('inventory_event', {
-      type: 'inventory_event',
-      payload: data,
-      timestamp: formatTimestamp(Date.now()),
-    });
-
-    return true;
-  }
-
-  function broadcastTicketScanEvent(data) {
-    if (!data || typeof data !== 'object') return false;
-
-    const event = {
-      type: 'ticket_scan_event',
-      payload: data,
-      timestamp: formatTimestamp(Date.now()),
-    };
-
-    io.to('global').emit('ticket_scan_event', event);
-
-    if (typeof data.showId === 'string' && data.showId.trim()) {
-      io.to(`show_${data.showId}`).emit('ticket_scan_event', event);
-    }
-
-    return true;
-  }
-
-  function broadcastOnboardingDashboardUpdate(payload) {
-    if (!payload || typeof payload !== 'object') return false;
-
-    const { onboardingId, dashboard, broadcastToGlobal } = payload;
-    if (typeof onboardingId !== 'string' || !onboardingId.trim()) return false;
-    if (!dashboard || typeof dashboard !== 'object') return false;
-
-    const event = {
-      type: 'onboarding_dashboard_update',
-      onboardingId,
-      dashboard,
-      timestamp: formatTimestamp(Date.now()),
-    };
-
-    io.to(`onboarding_${onboardingId}`).emit('onboarding_dashboard_update', event);
-
-    if (broadcastToGlobal) {
-      io.to('global').emit('onboarding_dashboard_update', event);
-    }
-
-    return true;
-  }
-
-  function handleServerEvent(eventType, data) {
-    switch (eventType) {
-      case 'attendance_updated':
-        return broadcastAttendanceUpdate(data);
-      case 'rehearsal_created':
-        return broadcastRehearsalCreated(data);
-      case 'rehearsal_updated':
-        return broadcastRehearsalUpdated(data);
-      case 'notification_created':
-        return sendNotification(data);
-      case 'inventory_event':
-        return broadcastInventoryEvent(data);
-      case 'ticket_scan_event':
-        return broadcastTicketScanEvent(data);
-      case 'onboarding_dashboard_update':
-        return broadcastOnboardingDashboardUpdate(data);
-      default:
-        return false;
-    }
   }
 
   function isValidRoomIdentifier(room, prefixLength) {
@@ -310,14 +95,14 @@ export function createEventHandlers({ io, logger, toISO }) {
     emitRehearsalUsersList,
     registerUser,
     unregisterUser,
-    broadcastAttendanceUpdate,
-    broadcastRehearsalCreated,
-    broadcastRehearsalUpdated,
-    sendNotification,
-    broadcastInventoryEvent,
-    broadcastTicketScanEvent,
-    broadcastOnboardingDashboardUpdate,
-    handleServerEvent,
+    broadcastAttendanceUpdate: core.broadcastAttendanceUpdate,
+    broadcastRehearsalCreated: core.broadcastRehearsalCreated,
+    broadcastRehearsalUpdated: core.broadcastRehearsalUpdated,
+    sendNotification: core.sendNotification,
+    broadcastInventoryEvent: core.broadcastInventoryEvent,
+    broadcastTicketScanEvent: core.broadcastTicketScanEvent,
+    broadcastOnboardingDashboardUpdate: core.broadcastOnboardingDashboardUpdate,
+    handleServerEvent: core.handleServerEvent,
     validateRoom,
     getOnlineStatsSnapshot,
   };

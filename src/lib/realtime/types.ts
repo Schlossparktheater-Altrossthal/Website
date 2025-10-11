@@ -121,6 +121,7 @@ export interface OnlineStatsSnapshot {
     name?: string;
     lastSeen?: string;
   }>;
+  peakConcurrentUsers?: number;
 }
 
 export interface OnlineStatsUpdateEvent extends BaseRealtimeEvent {

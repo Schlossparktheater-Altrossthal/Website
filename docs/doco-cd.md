@@ -2,7 +2,9 @@
 
 Die Docker-Umgebung wurde vereinheitlicht: Website und Realtime-Server laufen
 jetzt immer gemeinsam im selben Container und exponieren die Socket.IO-Endpunkte
-unter `/realtime`.
+unter `/realtime`. Beide Prozesse verwenden dieselbe Core-Implementierung aus
+`src/lib/realtime/shared`, sodass Presence-Tracking, Broadcasts und
+Zugriffsregeln in jeder Deployment-Variante identisch sind.
 
 ## Compose-Dateien
 

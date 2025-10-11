@@ -112,6 +112,17 @@ Das Script generiert automatisch eine `.env` Datei mit:
 
 Bei Bedarf die `.env` manuell anpassen.
 
+## Realtime-Architektur
+
+- Der Next.js App-Server und der eigenständige Socket.io-Dienst greifen beide auf
+  `createRealtimeCore` (`src/lib/realtime/shared`) zurück. Dieses Modul kapselt
+  Verbindungs-Tracking, Presence-Events sowie sämtliche Broadcast-Helfer.
+- Tests (Vitest + Node Test Runner) laufen gegen dieselbe Implementierung. Neue
+  Events oder Raumregeln müssen daher nur noch an einer Stelle ergänzt werden.
+- Für lokale Entwicklung bedeutet das: egal ob du `pnpm dev`, den
+  Standalone-Server (`realtime-server/src`) oder `scripts/start-combined-server.mjs`
+  nutzt – die Event-Verarbeitung verhält sich identisch.
+
 ## Offline Dashboard Fixture
 
 Für UI-Screenshots und visuelle Regressionen lässt sich das Mitglieder-Dashboard ohne laufende Datenbank verwenden. Sobald im
