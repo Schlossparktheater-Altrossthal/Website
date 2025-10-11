@@ -224,8 +224,10 @@ export function useBlockOverviewData({
   }, [preparedMembers]);
 
   const visibleDayInfo = useMemo(
-    () =>
-      daysInView
+    () => {
+      const today = startOfToday();
+
+      return daysInView
         .map((day) => {
           const weekday = day.getDay();
           const key = format(day, DATE_FORMAT);
@@ -240,11 +242,16 @@ export function useBlockOverviewData({
           } satisfies VisibleDayInfo;
         })
         .filter((info) => {
+          if (info.day < today) {
+            return false;
+          }
+
           const isPreferredDay = preferredWeekdaySet.has(info.weekday);
           const isExceptionDay = exceptionWeekdaySet.has(info.weekday);
 
           return isPreferredDay || isExceptionDay || preferredDayKeys.has(info.key);
-        }),
+        });
+    },
     [
       daysInView,
       preferredDayKeys,
