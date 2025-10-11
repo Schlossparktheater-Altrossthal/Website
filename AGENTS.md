@@ -1,7 +1,18 @@
 # AGENTS.md
 
 ## Stack & Einstieg
-- Der Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion (siehe Dockerfiles); aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
+-## UI, UX & Content
+- Tailwind CSS und shadcn/ui bilden die Basis. Baue auf Komponenten aus `src/components/ui` auf und erweitere sie konsistent mit `tailwind-variants` bzw. `class-variance-authority`.
+- Designentscheidungen, Farbpaletten und Typografie folgen den Vorgaben in `docs/design-system.md` sowie den generierten Swatches (`docs/swatches`). Bei Änderungen Token neu generieren.
+- Barrierefreiheit hat Priorität: semantische HTML-Strukturen, beschreibende `aria`-Attribute, sichtbare Fokuszustände und ausreichende Kontraste gemäß bestehendem Layout (`src/app/layout.tsx`).
+- Toaster/Feedback-Komponenten laufen über `sonner`. Bei neuen Interaktionen sparsame, zugängliche Rückmeldungen implementieren.
+
+## Design-System & Layout-System
+- **Design-Tokens statt hard-coded Farben:** Verwende ausschließlich semantische Tokens (`bg-card`, `text-foreground`, `border-border`, `bg-muted` etc.) statt hard-coded Tailwind-Farben (`bg-white`, `text-slate-*`, `bg-gray-*`, `border-slate-*`). Alle Komponenten müssen in Light & Dark Mode funktionieren.
+- **Mitgliederbereich-Layout:** `MembersAppShell` übernimmt automatisch Container und Padding. Seiten benötigen nur `<div className="space-y-6">` für Spacing – **keine eigenen** `mx-auto`, `px-*`, `py-*` oder `<main>`-Wrapper hinzufügen. Dies führt zu doppeltem Padding.
+- **Custom-Layouts:** Nur bei Bedarf `<MembersContentLayout width="..." padding="..." />` verwenden (z. B. `width="full"` für breite Tabellen). Aktuell nutzen nur 3 von ~94 Seiten Custom-Layouts.
+- **Legacy-Code:** Bestehende Komponenten mit hard-coded Farben (z. B. Sperrlistenübersicht) nutzen CSS-Override-Strategie (`.wrapper-class` mit `!important`-Mappings, siehe `sperrliste-styles.css`). Neue Komponenten immer von Anfang an mit Design-Tokens bauen.
+- **Vollständige Dokumentation:** Alle Details zu Farb-Tokens, Container-System, Typografie, Spacing, Komponenten-Patterns und Best Practices in `docs/design-system.md`. Bei Unsicherheiten dort nachschlagen oder bei UI-Änderungen die Checkliste verwenden.Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion (siehe Dockerfiles); aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
 - App-Code liegt im `src`-Ordner. Wichtige Bereiche: `src/app` (Routing & Server Components), `src/components` (UI-Bausteine inkl. shadcn/ui), `src/lib` (Domänenlogik & Hilfsfunktionen), `prisma` (Schema & Seeds) sowie `realtime-server` (Socket.io-Dienst).
 - Globale Provider für Session, React Query, Frontend-Editing und Realtime kommen aus `src/app/providers.tsx`. Ergänzende Kontexte bitte dort integrieren, nicht lokal verschachteln.
 - Legacy-Endpunkte unter `src/pages/api` existieren nur für die Socket-Bridge. Neue APIs gehören in `src/app/api` oder als dedizierte Server Actions.

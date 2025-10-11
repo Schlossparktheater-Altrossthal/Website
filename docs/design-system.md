@@ -87,6 +87,69 @@ Weitere Layout-Konstanten:
 
 - `.layout-container` steuert ausschließlich Breite und horizontale Außenabstände. Vertikale Polster fügst du je nach Kontext mit Tailwind-Utilities (`pt`, `pb`, `py`, `space-y` etc.) hinzu.
 
+### Mitgliederbereich: Container-System
+
+Der Mitgliederbereich nutzt ein spezialisiertes Container-System, das in `globals.css` als `.members-container` definiert ist:
+
+**CSS-Klassen:**
+- `.members-container` - Basis-Container mit CSS-Custom-Properties
+- `.members-container--width-{sm,md,lg,xl,2xl,full}` - Breiten-Varianten:
+  - `sm`: 40rem (640px)
+  - `md`: 48rem (768px)
+  - `lg`: 64rem (1024px)
+  - `xl`: 80rem (1280px)
+  - `2xl`: 96rem (1536px) - **Standard**
+  - `full`: 100% der Viewport-Breite
+- `.members-container--padding-{none,compact,default,relaxed}` - Padding-Varianten:
+  - `none`: 0
+  - `compact`: 0.75rem → 1rem (≥640px)
+  - `default`: `var(--layout-gutter)` - **Standard** (responsive 1rem → 4rem)
+  - `relaxed`: 1.5rem → 2rem (≥640px)
+
+**React-Komponenten:**
+- `<MembersContentLayout width="xl" padding="compact" spacing="comfortable" gap="md" />` - Registriert Layout-Präferenzen im App-Shell-Kontext
+- `useMembersContentLayout()` - Hook zum Auslesen der effektiven Layout-Werte
+
+**⚠️ WICHTIG - Häufiger Fehler:**
+`MembersAppShell` rendert Content automatisch in einem Container mit default-Werten:
+- Width: `2xl` (96rem)
+- Padding: `default` (`var(--layout-gutter)`)
+- Spacing: `comfortable` (`py-6 sm:py-8`)
+- Gap: `md` (`space-y-6`)
+
+**❌ NICHT tun:**
+```tsx
+// FALSCH - doppeltes Padding!
+<div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
+  <PageHeader />
+  <Content />
+</div>
+```
+
+**✅ Richtig:**
+```tsx
+// Korrekt - MembersAppShell kümmert sich um Container
+<>
+  <PageHeader />
+  <Content />
+</>
+
+// Oder mit Custom Layout:
+<>
+  <MembersContentLayout width="full" padding="compact" />
+  <PageHeader />
+  <Content />
+</>
+```
+
+**Status Quo (Stand: Oktober 2025):**
+Von ~94 Seiten im Mitgliederbereich nutzen nur 3 explizit `<MembersContentLayout>`:
+- `inventar-aufkleber`: `width="full" padding="compact"`
+- `scan`: `width="xl" padding="compact"`
+- `finanzen`: Custom Layout-Config
+
+Die meisten Seiten verwenden korrekt nur `<div className="space-y-6">` ohne eigene Container/Padding-Definitionen.
+
 ## Komponentenrichtlinien
 
 ### Mitgliederbereich: App Shell & Seitenaufbau
@@ -178,3 +241,238 @@ Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch di
 2. Farbänderungen in `docs/swatches/palette.sample.json` pflegen und per `pnpm swatches:gen` aktualisieren.
 3. Typografie/Spacing-Anpassungen in `src/app/globals.css` dokumentieren und in diesem Leitfaden vermerken.
 4. Für UI-Komponenten Beispiele in Storybook/Playground ergänzen (falls vorhanden) und die Varianten in Commit-Messages erwähnen.
+
+## Dark Mode & Design Token Verwendung
+
+### Semantische Farb-Tokens statt Hard-coded Werte
+
+**❌ Vermeide hard-coded Farben:**
+```tsx
+// FALSCH - funktioniert nicht im Dark Mode
+<div className="bg-white border-slate-200 text-slate-900">
+<div className="bg-slate-50 text-slate-600">
+<span className="text-gray-500">
+```
+
+**✅ Nutze semantische Design-Tokens:**
+```tsx
+// KORREKT - passt sich automatisch an Light/Dark Mode an
+<div className="bg-card border-border text-card-foreground">
+<div className="bg-muted text-muted-foreground">
+<span className="text-muted-foreground">
+```
+
+### Farb-Token Mapping
+
+| Hard-coded (❌) | Design Token (✅) | Verwendung |
+|-----------------|-------------------|------------|
+| `bg-white` | `bg-card` oder `bg-background` | Karten, Panels |
+| `bg-slate-50` | `bg-muted` | Sekundäre Flächen |
+| `bg-slate-100` | `bg-muted/40` | Hover-States, Highlights |
+| `border-slate-200` | `border-border` | Standard-Rahmen |
+| `border-slate-300` | `border-border/60` | Subtilere Rahmen |
+| `text-slate-900` | `text-foreground` | Haupttext |
+| `text-slate-700` | `text-foreground` | Sekundärtext |
+| `text-slate-600` | `text-muted-foreground` | Meta-Informationen |
+| `text-slate-500` | `text-muted-foreground` | Labels, Platzhalter |
+| `text-slate-400` | `text-muted-foreground/60` | Deaktivierte Elemente |
+
+### Status-Farben
+
+Für Status-Indikatoren nutze die semantischen Tokens statt direkter Farbnamen:
+
+```tsx
+// ✅ Erfolg
+<Badge variant="success">Erfolgreich</Badge>
+<div className="bg-success/15 text-success border-success/40">
+
+// ✅ Warnung
+<Badge variant="warning">Achtung</Badge>
+<div className="bg-warning/15 text-warning border-warning/40">
+
+// ✅ Fehler
+<Badge variant="destructive">Fehler</Badge>
+<div className="bg-destructive/15 text-destructive border-destructive/40">
+
+// ✅ Info
+<Badge variant="info">Information</Badge>
+<div className="bg-info/15 text-info border-info/40">
+```
+
+### CSS-Override-Strategie für Legacy-Komponenten
+
+Für bestehende Komponenten mit vielen hard-coded Farben (z.B. Sperrlistenübersicht) kann eine CSS-Override-Strategie verwendet werden:
+
+**Beispiel: `sperrliste-styles.css`**
+```css
+@layer components {
+  .sperrlisten-overview {
+    color-scheme: light dark;
+  }
+
+  /* Map hard-coded Tailwind classes to design tokens */
+  .sperrlisten-overview .bg-white,
+  .sperrlisten-overview .bg-white\/80 {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .sperrlisten-overview .bg-slate-50,
+  .sperrlisten-overview .bg-slate-100 {
+    background-color: hsl(var(--muted) / 0.4) !important;
+  }
+
+  .sperrlisten-overview .border-slate-200,
+  .sperrlisten-overview .border-slate-300 {
+    border-color: hsl(var(--border) / 0.6) !important;
+  }
+
+  .sperrlisten-overview .text-slate-900,
+  .sperrlisten-overview .text-slate-800 {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .sperrlisten-overview .text-slate-600,
+  .sperrlisten-overview .text-slate-500 {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+}
+```
+
+**Verwendung:**
+```tsx
+// Wrapper mit CSS-Klasse für Overrides
+<div className="sperrlisten-overview">
+  {/* Alle child-Elemente mit hard-coded Farben werden automatisch gemappt */}
+  <div className="bg-white border-slate-200 text-slate-900">
+    Content
+  </div>
+</div>
+```
+
+**⚠️ Hinweis:** Diese Strategie sollte nur für Legacy-Code verwendet werden. Neue Komponenten sollten von Anfang an Design-Tokens verwenden.
+
+## Best Practices: Neue Seiten im Mitgliederbereich
+
+### 1. Grundstruktur
+
+```tsx
+import { PageHeader } from "@/components/members/page-header";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+
+export default async function MeineSeitePage() {
+  // Data Fetching
+  const data = await fetchData();
+
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/meine-seite")];
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Seitentitel"
+        description="Kurze Beschreibung der Seite"
+        breadcrumbs={breadcrumbs}
+      />
+      
+      {/* Content */}
+      <section className="space-y-4">
+        {/* Komponenten */}
+      </section>
+    </div>
+  );
+}
+```
+
+### 2. Custom Layout (optional)
+
+Falls eine Seite eine andere Container-Breite oder Paddings benötigt:
+
+```tsx
+import { MembersContentLayout } from "@/components/members/members-app-shell";
+
+export default function BrEiteSeite() {
+  return (
+    <>
+      {/* Layout-Config registrieren */}
+      <MembersContentLayout width="full" padding="compact" />
+      
+      <div className="space-y-6">
+        <PageHeader title="Breite Ansicht" />
+        {/* Content */}
+      </div>
+    </>
+  );
+}
+```
+
+### 3. Typische Fehler vermeiden
+
+**❌ NICHT:**
+- Eigene Container mit `mx-auto` erstellen
+- Eigene Paddings mit `px-*` hinzufügen
+- Hard-coded Farben (`bg-white`, `text-slate-*`) verwenden
+- Direkt `<main>` oder `<article>` Tags nutzen (MembersAppShell macht das)
+
+**✅ STATTDESSEN:**
+- Nur `space-y-*` für vertikalen Abstand verwenden
+- Design-Tokens (`bg-card`, `text-foreground`) nutzen
+- MembersAppShell das Layout überlassen
+- Bei Bedarf `<MembersContentLayout>` für Anpassungen
+
+### 4. Komponenten-Patterns
+
+```tsx
+// Card mit korrekten Design-Tokens
+<Card className="border-border/60 bg-card shadow-sm">
+  <CardHeader>
+    <CardTitle className="text-foreground">Titel</CardTitle>
+    <CardDescription className="text-muted-foreground">
+      Beschreibung
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+    {/* Content */}
+  </CardContent>
+</Card>
+
+// Badge mit Varianten
+<Badge variant="info">Status</Badge>
+<Badge variant="success">Erfolgreich</Badge>
+<Badge variant="muted">Neutral</Badge>
+
+// Button mit Icons
+<Button variant="outline" size="sm">
+  <CalendarIcon className="h-4 w-4" aria-hidden />
+  <span>Kalender</span>
+</Button>
+```
+
+### 5. Responsive Design
+
+```tsx
+// Mobile-first approach
+<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+  <div className="space-y-1">
+    <h2 className="text-lg font-semibold sm:text-xl">Titel</h2>
+    <p className="text-sm text-muted-foreground">Beschreibung</p>
+  </div>
+  <div className="flex flex-wrap gap-2">
+    <Button size="sm">Aktion</Button>
+  </div>
+</div>
+```
+
+## Checkliste: Design System Compliance
+
+Beim Erstellen oder Refactoren von Komponenten:
+
+- [ ] Verwendet Design-Tokens statt hard-coded Farben
+- [ ] Folgt dem Container-System (keine eigenen `mx-auto`, `px-*`)
+- [ ] Nutzt semantische HTML-Elemente (`<section>`, `<article>`, `<header>`)
+- [ ] Icons haben `aria-hidden` wenn dekorativ
+- [ ] Buttons haben `title` oder `aria-label` bei Icon-only
+- [ ] Responsive Breakpoints folgen Tailwind-Defaults (`sm:`, `md:`, `lg:`, `xl:`, `2xl:`)
+- [ ] Spacing folgt 8pt-Grid (`space-y-*`, `gap-*`, `p-*`)
+- [ ] Typografie nutzt definierte Utilities (`.text-h1`, `.text-body`, etc.)
+- [ ] Fokus-States sind sichtbar (`focus-visible:ring-*`)
+- [ ] Komponente funktioniert in Light & Dark Mode
+
