@@ -10,13 +10,12 @@ import type { OverviewPersonDay } from "./types";
 type CellProps = {
   cell: OverviewPersonDay;
   compact?: boolean;
-  inTable?: boolean;
 };
 
 /**
  * Cell-Komponente für die Tabellen-Ansicht (memoized für Performance)
  */
-const CellComponent = ({ cell, compact = false, inTable = false }: CellProps) => {
+const CellComponent = ({ cell, compact = false }: CellProps) => {
   const baseClasses = `flex flex-col justify-center h-16 w-full rounded-lg px-2.5 text-left text-[12px] font-medium overflow-hidden ${
     compact ? "leading-4" : ""
   }`;

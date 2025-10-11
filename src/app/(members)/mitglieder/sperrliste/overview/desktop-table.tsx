@@ -5,8 +5,9 @@
 
 import React, { useMemo, useRef, useState, useEffect } from "react";
 
-import { CalendarStarIcon, UmbrellaIcon } from "./icons";
+import { CalendarStarIcon, ClockIcon, UmbrellaIcon } from "./icons";
 import { Cell } from "./table-cell";
+import { IconButton } from "./ui-components";
 import { getHolidaySpans, selectDayBuckets, groupPeopleByType } from "./data-helpers";
 import type { DayColumn, HolidayIndicator, OverviewPerson, PersonGroup } from "./types";
 
@@ -16,6 +17,10 @@ type DesktopTableProps = {
   holidays: HolidayIndicator[];
   personFilter?: PersonGroup | "all";
   compact?: boolean;
+  month?: { label: string; year: number; month: number };
+  onPreviousMonth?: () => void;
+  onNextMonth?: () => void;
+  onJumpToToday?: () => void;
 };
 
 export function DesktopTable({ 
@@ -23,7 +28,11 @@ export function DesktopTable({
   dayCols, 
   holidays, 
   personFilter = "all",
-  compact = false 
+  compact = false,
+  month,
+  onPreviousMonth,
+  onNextMonth,
+  onJumpToToday
 }: DesktopTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showHint, setShowHint] = useState(false);
@@ -57,6 +66,35 @@ export function DesktopTable({
 
   return (
     <section className="hidden sm:block">
+      {/* Monatsnavigation analog Spielplatz */}
+      {(month || onPreviousMonth || onNextMonth || onJumpToToday) && (
+        <div className="mb-2 flex items-center justify-between gap-2">
+          {month && <div className="text-sm font-semibold text-slate-700">{month.label}</div>}
+          <div className="flex items-center gap-1 rounded-xl border border-slate-200/70 bg-white/80 p-1 shadow-sm">
+            {onPreviousMonth && (
+              <IconButton aria-label="Vorheriger Monat" onClick={onPreviousMonth}>
+                &larr;
+              </IconButton>
+            )}
+            {onNextMonth && (
+              <IconButton aria-label="Nächster Monat" onClick={onNextMonth}>
+                &rarr;
+              </IconButton>
+            )}
+            {onJumpToToday && (
+              <button
+                type="button"
+                className="ml-1 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-2.5 py-1 text-sm font-medium hover:bg-white transition-colors"
+                aria-label="Zu heute springen"
+                onClick={onJumpToToday}
+              >
+                <ClockIcon className="h-4 w-4" /> Heute
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      
       {/* Tabelle mit sticky Header und Namen - lokaler Scroll-Container */}
       <div 
         className="relative max-h-[calc(100vh-16rem)] overflow-auto overscroll-y-auto rounded-2xl border border-slate-200/70 bg-white shadow-sm" 
@@ -187,7 +225,6 @@ export function DesktopTable({
                   <PersonRow 
                     key={p.id}
                     person={p}
-                    dayCols={dayCols}
                     compact={compact}
                     isFirstInGroup={idx === 0}
                     groupSize={groupedPeople.actors.length}
@@ -201,7 +238,6 @@ export function DesktopTable({
                   <PersonRow 
                     key={p.id}
                     person={p}
-                    dayCols={dayCols}
                     compact={compact}
                     isFirstInGroup={idx === 0}
                     groupSize={groupedPeople.both.length}
@@ -215,7 +251,6 @@ export function DesktopTable({
                   <PersonRow 
                     key={p.id}
                     person={p}
-                    dayCols={dayCols}
                     compact={compact}
                     isFirstInGroup={idx === 0}
                     groupSize={groupedPeople.crew.length}
@@ -235,9 +270,9 @@ export function DesktopTable({
                   >
                     <PersonInfo person={p} />
                   </th>
-                  {p.days.map((cell, i) => (
+                  {p.days.map((cell) => (
                     <td key={`${p.id}-${cell.dayKey}`} className="h-20 px-1.5 py-1.5 align-top whitespace-normal break-words">
-                      <Cell cell={cell} compact={compact} inTable={true} />
+                      <Cell cell={cell} compact={compact} />
                     </td>
                   ))}
                 </tr>
@@ -256,7 +291,6 @@ export function DesktopTable({
 
 type PersonRowProps = {
   person: OverviewPerson;
-  dayCols: DayColumn[];
   compact: boolean;
   isFirstInGroup: boolean;
   groupSize: number;
@@ -267,7 +301,6 @@ type PersonRowProps = {
 
 function PersonRow({ 
   person, 
-  dayCols, 
   compact, 
   isFirstInGroup, 
   groupSize, 
@@ -310,9 +343,9 @@ function PersonRow({
       >
         <PersonInfo person={person} groupColor={groupColor} />
       </th>
-      {person.days.map((cell, i) => (
+      {person.days.map((cell) => (
         <td key={`${person.id}-${cell.dayKey}`} className="h-20 px-1.5 py-1.5 align-top whitespace-normal break-words">
-          <Cell cell={cell} compact={compact} inTable={true} />
+          <Cell cell={cell} compact={compact} />
         </td>
       ))}
     </tr>

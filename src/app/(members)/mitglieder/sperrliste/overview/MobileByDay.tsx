@@ -13,15 +13,15 @@ type MobileByDayProps = {
   people: OverviewPerson[];
   dayCols: DayColumn[];
   holidays: HolidayIndicator[];
-  personFilter?: PersonGroup | "all";
+  groupedPeople?: { actors: OverviewPerson[]; crew: OverviewPerson[]; both: OverviewPerson[] } | null;
 };
 
-export function MobileByDay({ people, dayCols, holidays, personFilter = "all" }: MobileByDayProps) {
+export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }: MobileByDayProps) {
   const dtf = useMemo(() => new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }), []);
   const dayList = useMemo(() => selectDayBuckets(people, dayCols, holidays), [people, dayCols, holidays]);
 
-  // Gruppierung nur wenn gefiltert
-  const showGrouping = personFilter !== "all";
+  // Gruppierung nur wenn groupedPeople vorhanden
+  const showGrouping = groupedPeople !== null;
 
   return (
     <div className="space-y-3 sm:hidden">

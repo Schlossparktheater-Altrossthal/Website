@@ -6,7 +6,7 @@ import { DesktopTable } from "./desktop-table";
 import { MobileByDay } from "./MobileByDay";
 import { TimelineView } from "./TimelineView";
 import { WeekStrip } from "./WeekStrip";
-import { ClockIcon } from "./icons";
+import { CalendarStarIcon, ClockIcon, UmbrellaIcon } from "./icons";
 import { IconButton, Note } from "./ui-components";
 import type {
   DayColumn,
@@ -57,6 +57,19 @@ export default function SperrlistenV2({
   const filteredPeople = useMemo(() => {
     if (personFilter === "all") return people;
     return people.filter((person) => person.group === personFilter);
+  }, [people, personFilter]);
+
+  const groupedPeople = useMemo(() => {
+    if (personFilter !== "all") return null;
+    return people.reduce(
+      (acc, person) => {
+        if (person.group === "actors") acc.actors.push(person);
+        else if (person.group === "crew") acc.crew.push(person);
+        else if (person.group === "both") acc.both.push(person);
+        return acc;
+      },
+      { actors: [], crew: [], both: [] } as { actors: OverviewPerson[]; crew: OverviewPerson[]; both: OverviewPerson[] }
+    );
   }, [people, personFilter]);
 
   // "Heute"-Button Handler mit useCallback
@@ -213,35 +226,37 @@ export default function SperrlistenV2({
           <Note title="Ausnahmen">Mi (Sonderproben möglich)</Note>
         </section>
 
-        {/* Note-Komponenten für wichtige Hinweise */}
-        <div className="space-y-2 sm:hidden">
-          <Note title="Tipp" className="bg-blue-50/80 border-blue-200/70">
-            Nutze die Wochenübersicht zum schnellen Navigieren zu einem bestimmten Tag.
-          </Note>
-        </div>
-
-        {/* Kompakte Mobile-Legende (nur sm:hidden) */}
-        <div className="sm:hidden">
-          <details className="rounded-lg border border-slate-200/70 bg-slate-50/50">
-            <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
-              Legende anzeigen
-            </summary>
-            <div className="space-y-2 border-t border-slate-200/70 p-3 text-xs" role="list">
-              <div className="flex items-center gap-2" role="listitem">
-                <div className="h-4 w-4 rounded bg-green-100 border border-green-200" aria-hidden="true"></div>
-                <span>Frei / Bevorzugt</span>
+        {/* Kompakte Mobile-Legende (nur sm:hidden) - analog Spielplatz */}
+        <section className="sm:hidden">
+          <div className="rounded-xl border border-slate-200/70 bg-gradient-to-r from-slate-50 to-white px-3 py-2 shadow-sm">
+            <div className="flex items-center justify-between gap-3 text-[10px]">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <div className="h-3 w-3 rounded-full bg-green-100 border border-green-200" />
+                  <span className="text-slate-600">Frei</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="h-3 w-3 rounded-full bg-orange-100 border border-orange-200" />
+                  <span className="text-slate-600">Begrenzt</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="h-3 w-3 rounded-full bg-red-100 border border-red-200" />
+                  <span className="text-slate-600">Gesperrt</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2" role="listitem">
-                <div className="h-4 w-4 rounded bg-orange-100 border border-orange-200" aria-hidden="true"></div>
-                <span>Eingeschränkt</span>
-              </div>
-              <div className="flex items-center gap-2" role="listitem">
-                <div className="h-4 w-4 rounded bg-red-100 border border-red-200" aria-hidden="true"></div>
-                <span>Gesperrt</span>
+              <div className="flex items-center gap-2 border-l border-slate-300 pl-3">
+                <div className="flex items-center gap-0.5">
+                  <CalendarStarIcon className="h-3 w-3 text-amber-500" />
+                  <span className="text-slate-600">Feiertag</span>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <UmbrellaIcon className="h-3 w-3 text-sky-500" />
+                  <span className="text-slate-600">Ferien</span>
+                </div>
               </div>
             </div>
-          </details>
-        </div>
+          </div>
+        </section>
 
         {/* WeekStrip nur für mobile Ansicht */}
         <div className="sm:hidden">
@@ -260,10 +275,10 @@ export default function SperrlistenV2({
         {/* MobileByDay wird immer auf Mobile angezeigt */}
         <div className="sm:hidden">
           <MobileByDay 
-            people={filteredPeople} 
+            people={personFilter === 'all' ? people : filteredPeople} 
+            groupedPeople={personFilter === 'all' ? groupedPeople : null}
             dayCols={dayCols} 
             holidays={holidays}
-            personFilter={personFilter}
           />
         </div>
 
@@ -289,6 +304,10 @@ export default function SperrlistenV2({
             dayCols={dayCols} 
             holidays={holidays}
             personFilter={personFilter}
+            month={month}
+            onPreviousMonth={onPreviousMonth}
+            onNextMonth={onNextMonth}
+            onJumpToToday={handleJumpToToday}
           />
         )}
 

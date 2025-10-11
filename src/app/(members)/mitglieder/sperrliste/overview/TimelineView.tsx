@@ -4,12 +4,10 @@ import {
   CalendarStarIcon, 
   CheckIcon, 
   ClockAlertIcon, 
-  ClockIcon, 
   StarIcon, 
   UmbrellaIcon, 
   XCircleIcon 
 } from "./icons";
-import { IconButton } from "./ui-components";
 import { TimelineCell } from "./timeline-cell";
 import { getHolidaySpans, selectDayBuckets, groupPeopleByType } from "./data-helpers";
 import type { DayColumn, HolidayIndicator, OverviewPerson, PersonGroup } from "./types";
