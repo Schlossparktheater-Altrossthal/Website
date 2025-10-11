@@ -229,7 +229,6 @@ type ReadSperrlisteSettingsOptions =
   | ReadSperrlisteSettingsOptionsWithMeta
   | ReadSperrlisteSettingsOptionsWithoutMeta;
 
-export async function readSperrlisteSettings(): Promise<SperrlisteSettingsRecord>;
 export async function readSperrlisteSettings(
   options: ReadSperrlisteSettingsOptionsWithMeta,
 ): Promise<ReadSperrlisteSettingsMeta>;
@@ -238,7 +237,7 @@ export async function readSperrlisteSettings(
 ): Promise<SperrlisteSettingsRecord>;
 export async function readSperrlisteSettings(
   options?: ReadSperrlisteSettingsOptions,
-) {
+): Promise<SperrlisteSettingsRecord | ReadSperrlisteSettingsMeta> {
   if (!databaseEnabled()) {
     const record = cloneRecord(DEV_SPERRLISTE_SETTINGS_RECORD_FIXTURE);
     if (options?.withMeta) {

@@ -184,10 +184,9 @@ export function DesktopTable({
               <>
                 {/* Schauspieler Gruppe */}
                 {groupedPeople.actors.map((p, idx) => (
-                  <PersonRow 
+                  <PersonRow
                     key={p.id}
                     person={p}
-                    dayCols={dayCols}
                     compact={compact}
                     isFirstInGroup={idx === 0}
                     groupSize={groupedPeople.actors.length}
@@ -198,10 +197,9 @@ export function DesktopTable({
                 
                 {/* Beides Gruppe (Schauspieler & Gewerke) */}
                 {groupedPeople.both.map((p, idx) => (
-                  <PersonRow 
+                  <PersonRow
                     key={p.id}
                     person={p}
-                    dayCols={dayCols}
                     compact={compact}
                     isFirstInGroup={idx === 0}
                     groupSize={groupedPeople.both.length}
@@ -212,10 +210,9 @@ export function DesktopTable({
                 
                 {/* Gewerke Gruppe */}
                 {groupedPeople.crew.map((p, idx) => (
-                  <PersonRow 
+                  <PersonRow
                     key={p.id}
                     person={p}
-                    dayCols={dayCols}
                     compact={compact}
                     isFirstInGroup={idx === 0}
                     groupSize={groupedPeople.crew.length}
@@ -229,15 +226,15 @@ export function DesktopTable({
               /* Gefilterte Liste ohne Gruppierungs-Header */
               filteredPeople.map((p) => (
                 <tr key={p.id} className="border-b border-slate-200/60">
-                  <th 
-                    scope="row" 
+                  <th
+                    scope="row"
                     className="sticky left-0 z-10 w-[220px] sm:w-[260px] min-w-[220px] border-r border-slate-200/70 bg-white backdrop-blur shadow-sm px-3 py-2 text-left"
                   >
                     <PersonInfo person={p} />
                   </th>
-                  {p.days.map((cell, i) => (
+                  {p.days.map((cell) => (
                     <td key={`${p.id}-${cell.dayKey}`} className="h-20 px-1.5 py-1.5 align-top whitespace-normal break-words">
-                      <Cell cell={cell} compact={compact} inTable={true} />
+                      <Cell cell={cell} compact={compact} />
                     </td>
                   ))}
                 </tr>
@@ -256,7 +253,6 @@ export function DesktopTable({
 
 type PersonRowProps = {
   person: OverviewPerson;
-  dayCols: DayColumn[];
   compact: boolean;
   isFirstInGroup: boolean;
   groupSize: number;
@@ -265,13 +261,12 @@ type PersonRowProps = {
   isLastGroup?: boolean;
 };
 
-function PersonRow({ 
-  person, 
-  dayCols, 
-  compact, 
-  isFirstInGroup, 
-  groupSize, 
-  groupLabel, 
+function PersonRow({
+  person,
+  compact,
+  isFirstInGroup,
+  groupSize,
+  groupLabel,
   groupColor,
   isLastGroup = false
 }: PersonRowProps) {
@@ -310,9 +305,9 @@ function PersonRow({
       >
         <PersonInfo person={person} groupColor={groupColor} />
       </th>
-      {person.days.map((cell, i) => (
+      {person.days.map((cell) => (
         <td key={`${person.id}-${cell.dayKey}`} className="h-20 px-1.5 py-1.5 align-top whitespace-normal break-words">
-          <Cell cell={cell} compact={compact} inTable={true} />
+          <Cell cell={cell} compact={compact} />
         </td>
       ))}
     </tr>
