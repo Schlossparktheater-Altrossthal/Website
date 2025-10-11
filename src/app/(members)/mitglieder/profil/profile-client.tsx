@@ -1123,8 +1123,8 @@ function ProfileOverviewCard({
   return (
     <Card className="border border-border/60 bg-card shadow-sm">
       <CardHeader className="space-y-4 pb-2">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
             <UserAvatar
               userId={user.id}
               email={user.email}
@@ -1132,13 +1132,13 @@ function ProfileOverviewCard({
               lastName={user.lastName}
               name={displayName}
               size={80}
-              className="h-20 w-20 border border-border/60 text-xl shadow-sm"
+              className="h-20 w-20 shrink-0 border border-border/60 text-xl shadow-sm sm:h-20 sm:w-20"
               avatarSource={user.avatarSource}
               avatarUpdatedAt={user.avatarUpdatedAt}
             />
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-xl font-semibold leading-tight text-foreground">{displayName}</CardTitle>
+            <div className="space-y-2 text-center sm:text-left">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap">
+                <CardTitle className="text-lg font-semibold leading-tight text-foreground sm:text-xl">{displayName}</CardTitle>
                 {checklistBadgeLabel ? (
                   <Badge
                     variant={summary.complete ? "secondary" : "outline"}
@@ -1157,20 +1157,20 @@ function ProfileOverviewCard({
                 {email ? (
                   <a
                     href={`mailto:${email}`}
-                    className="flex items-center gap-2 font-medium text-foreground transition hover:text-primary"
+                    className="flex items-center justify-center gap-2 font-medium text-foreground transition hover:text-primary sm:justify-start"
                   >
-                    <Mail className="h-4 w-4" aria-hidden />
-                    {email}
+                    <Mail className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="truncate">{email}</span>
                   </a>
                 ) : (
-                  <span className="flex items-center gap-2 text-muted-foreground/80">
-                    <Mail className="h-4 w-4" aria-hidden />
+                  <span className="flex items-center justify-center gap-2 text-muted-foreground/80 sm:justify-start">
+                    <Mail className="h-4 w-4 shrink-0" aria-hidden />
                     Keine E-Mail hinterlegt
                   </span>
                 )}
                 {memberSinceLabel || createdAtLabel ? (
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <CalendarDays className="h-4 w-4" aria-hidden />
+                  <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground sm:justify-start">
+                    <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
                     <span>{memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}</span>
                   </div>
                 ) : null}
@@ -1644,7 +1644,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                         aria-checked={active}
                         onClick={() => handleAvatarSourceChange(option.value)}
                         className={cn(
-                          "rounded-full border px-3 py-1 text-xs font-medium transition",
+                          "min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition",
                           active
                             ? "border-primary bg-primary/10 text-primary"
                             : "border-border text-muted-foreground hover:border-primary hover:text-primary",
@@ -1771,8 +1771,8 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
 
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-            <div className="flex items-center justify-end gap-3">
-              <Button type="submit" disabled={submitting}>
+            <div className="flex flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center">
+              <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -2011,8 +2011,8 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          <div className="flex items-center justify-end gap-3">
-            <Button type="submit" disabled={submitting}>
+          <div className="flex flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center">
+            <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -2274,8 +2274,8 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <CheckCircle2 className="h-5 w-5 text-success" aria-hidden="true" />
             </div>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={dietarySubmitting}>
+            <div className="flex flex-col items-stretch justify-end sm:flex-row sm:items-center">
+              <Button type="submit" disabled={dietarySubmitting} className="w-full sm:w-auto">
                 {dietarySubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -2350,7 +2350,7 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               />
             </div>
             {allergyError ? <p className="text-sm text-destructive">{allergyError}</p> : null}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-center">
               {editingAllergyId ? (
                 <Button
                   type="button"
@@ -2359,11 +2359,12 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                     setEditingAllergyId(null);
         setAllergyState({ allergen: "", level: AllergyLevel.MILD, symptoms: "", treatment: "", note: "" });
                   }}
+                  className="w-full sm:w-auto"
                 >
                   Abbrechen
                 </Button>
               ) : null}
-              <Button type="submit" disabled={allergySubmitting}>
+              <Button type="submit" disabled={allergySubmitting} className="w-full sm:w-auto">
                 {allergySubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -2505,14 +2506,14 @@ function MeasurementsSection({
 
   return (
     <Card className="border border-border/60">
-      <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <CardTitle className="text-base font-semibold">Maße</CardTitle>
           <p className="text-sm text-muted-foreground">
             Sichtbar für dich und das Kostüm-Team. Bitte halte die Angaben aktuell.
           </p>
         </div>
-        <Button onClick={handleCreate} size="sm">
+        <Button onClick={handleCreate} size="sm" className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> Neues Maß
         </Button>
       </CardHeader>
@@ -2523,7 +2524,7 @@ function MeasurementsSection({
           <div className="grid gap-3">
             {sorted.map((measurement) => (
               <div key={measurement.id} className="rounded-lg border border-border/60 bg-muted/10 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-foreground">
                       {MEASUREMENT_TYPE_LABELS[measurement.type as MeasurementType] ?? measurement.type}
@@ -2532,7 +2533,7 @@ function MeasurementsSection({
                       {measurement.value} {MEASUREMENT_UNIT_LABELS[measurement.unit as MeasurementUnit] ?? measurement.unit}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(measurement)}>
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(measurement)} className="w-full sm:w-auto">
                     <Pencil className="mr-2 h-4 w-4" aria-hidden="true" /> Bearbeiten
                   </Button>
                 </div>
@@ -2765,11 +2766,11 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
             </div>
           </div>
 
-          <div className="flex justify-between gap-2">
-            <Button type="button" variant="outline" onClick={resetInterests} disabled={!state.dirty}>
+          <div className="flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
+            <Button type="button" variant="outline" onClick={resetInterests} disabled={!state.dirty} className="w-full sm:w-auto">
               Änderungen verwerfen
             </Button>
-            <Button type="submit" disabled={!state.dirty || saving}>
+            <Button type="submit" disabled={!state.dirty || saving} className="w-full sm:w-auto">
               {saving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -3031,6 +3032,7 @@ export function OnboardingSection({
                   setShowDialogOpen(true);
                   setShowError(null);
                 }}
+                className="w-full sm:w-auto"
               >
                 {currentShow ? "Produktion wechseln" : "Onboarding starten"}
               </Button>
@@ -3042,9 +3044,9 @@ export function OnboardingSection({
 
         {whatsappLink ? (
           whatsappVisitedAt ? (
-            <div className="flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex flex-col flex-wrap items-start gap-3 text-sm sm:flex-row sm:items-center">
               <span className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
                 {`WhatsApp-Onboarding bestätigt${
                   whatsappVisitedLabel ? ` am ${whatsappVisitedLabel}` : ""
                 }.`}
@@ -3054,6 +3056,7 @@ export function OnboardingSection({
                 variant="outline"
                 onClick={handleWhatsAppClick}
                 disabled={whatsappSubmitting}
+                className="w-full sm:w-auto"
               >
                 {whatsappSubmitting ? (
                   <>
@@ -3079,7 +3082,7 @@ export function OnboardingSection({
               <p className="text-xs text-primary/80">
                 Öffne die Gruppe jetzt – wir markieren dich anschließend als informiert.
               </p>
-              <Button size="sm" onClick={handleWhatsAppClick} disabled={whatsappSubmitting}>
+              <Button size="sm" onClick={handleWhatsAppClick} disabled={whatsappSubmitting} className="w-full sm:w-auto">
                 {whatsappSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -3110,7 +3113,7 @@ export function OnboardingSection({
                     role="radio"
                     aria-checked={active}
                     className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-medium transition",
+                      "min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition",
                       active
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border text-muted-foreground hover:border-primary hover:text-primary",
@@ -3245,8 +3248,8 @@ export function OnboardingSection({
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          <div className="flex justify-end">
-            <Button type="submit" disabled={submitting}>
+          <div className="flex flex-col items-stretch justify-end sm:flex-row sm:items-center">
+            <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -3494,9 +3497,9 @@ export function RolePreferencesSection({
                         pref.enabled ? "border-primary bg-primary/5" : "border-border bg-background",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h5 className="text-sm font-medium">{pref.title}</h5>
                             {pref.isCustom ? (
                               <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
@@ -3514,6 +3517,7 @@ export function RolePreferencesSection({
                           variant={pref.enabled ? "default" : "outline"}
                           onClick={() => toggleRolePreference("acting", pref.code)}
                           disabled={actingDisabled}
+                          className="w-full sm:w-auto"
                         >
                           {pref.enabled ? "Ausgewählt" : "Wählen"}
                         </Button>
@@ -3563,9 +3567,9 @@ export function RolePreferencesSection({
                         pref.enabled ? "border-primary/70 bg-primary/5" : "border-border bg-background",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h5 className="text-sm font-medium">{pref.title}</h5>
                             {pref.isCustom ? (
                               <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
@@ -3583,6 +3587,7 @@ export function RolePreferencesSection({
                           variant={pref.enabled ? "default" : "outline"}
                           onClick={() => toggleRolePreference("crew", pref.code)}
                           disabled={crewDisabled}
+                          className="w-full sm:w-auto"
                         >
                           {pref.enabled ? "Ausgewählt" : "Wählen"}
                         </Button>
@@ -3615,8 +3620,8 @@ export function RolePreferencesSection({
 
           {preferenceError ? <p className="text-sm text-destructive">{preferenceError}</p> : null}
 
-          <div className="flex justify-end">
-            <Button type="submit" disabled={preferenceSubmitting}>
+          <div className="flex flex-col items-stretch justify-end sm:flex-row sm:items-center">
+            <Button type="submit" disabled={preferenceSubmitting} className="w-full sm:w-auto">
               {preferenceSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
