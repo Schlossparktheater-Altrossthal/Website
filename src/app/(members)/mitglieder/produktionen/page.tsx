@@ -29,8 +29,10 @@ export default async function ProduktionenPage() {
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Du hast keinen Zugriff auf die Produktionsplanung.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
+          Du hast keinen Zugriff auf die Produktionsplanung.
+        </div>
       </div>
     );
   }
@@ -111,7 +113,7 @@ export default async function ProduktionenPage() {
   );
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
       <ProductionWorkspaceHeader
         title="Moderne Produktionsplanung"
         description="Koordiniere Teams, Besetzungen und Szenen mit einer klaren Navigation. Wähle eine aktive Produktion, um fokussiert zu arbeiten und behalte gleichzeitig alle Gewerke im Blick."

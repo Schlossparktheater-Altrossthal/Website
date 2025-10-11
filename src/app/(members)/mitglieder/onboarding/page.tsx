@@ -100,7 +100,7 @@ export default async function MembersOnboardingAnalyticsPage({
       ];
 
   return (
-    <main id="main" className="space-y-6 pb-12">
+    <div id="main" className="space-y-6">
       {analyticsOffline ? (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 px-5 py-4 text-sm text-warning-foreground shadow-sm">
           <div className="flex items-start gap-3">
@@ -126,6 +126,6 @@ export default async function MembersOnboardingAnalyticsPage({
           isOffline={analyticsOffline}
         />
       </Suspense>
-    </main>
+    </div>
   );
 }

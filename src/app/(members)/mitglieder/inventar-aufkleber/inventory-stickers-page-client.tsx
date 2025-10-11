@@ -501,7 +501,7 @@ export default function InventoryStickersPageClient({
   }, []);
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-6">
       <div className="print:hidden">
         <PageHeader
           title="Inventaraufkleber"

@@ -65,8 +65,10 @@ export default async function ProduktionsBesetzungPage() {
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Du hast keinen Zugriff auf die Produktionsplanung.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
+          Du hast keinen Zugriff auf die Produktionsplanung.
+        </div>
       </div>
     );
   }
@@ -80,7 +82,7 @@ export default async function ProduktionsBesetzungPage() {
 
   if (!activeProduction) {
     return (
-      <div className="space-y-10">
+      <div className="space-y-6">
         <ProductionWorkspaceHeader
           title="Rollen &amp; Besetzungen"
           description="Erstelle neue Figuren, pflege Beschreibungen und ordne Ensemble-Mitglieder als Primär-, Alternate- oder Cover-Besetzung zu."
@@ -168,7 +170,7 @@ export default async function ProduktionsBesetzungPage() {
   );
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       <ProductionWorkspaceHeader
         title="Rollen &amp; Besetzungen"
         description="Erstelle neue Figuren, pflege Beschreibungen und ordne Ensemble-Mitglieder als Primär-, Alternate- oder Cover-Besetzung zu."

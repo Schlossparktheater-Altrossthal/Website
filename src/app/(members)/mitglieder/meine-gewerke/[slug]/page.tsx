@@ -41,7 +41,11 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   const isEnsembleMember = hasRole(session.user, "cast");
   const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>;
+    return (
+      <div className="space-y-6">
+        <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>
+      </div>
+    );
   }
 
   const userId = session.user?.id;
@@ -352,7 +356,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   );
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {hero}
       <DepartmentEventPlanner
         events={departmentEvents}

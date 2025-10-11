@@ -48,8 +48,10 @@ export default async function MenueplanPage() {
   const allowed = await hasPermission(session.user, "mitglieder.essenplanung");
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
-        Kein Zugriff auf den Menüplan.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
+          Kein Zugriff auf den Menüplan.
+        </div>
       </div>
     );
   }
@@ -81,7 +83,7 @@ export default async function MenueplanPage() {
   const topAllergens = allergenSummaries.slice(0, 5);
 
   return (
-    <div className="space-y-8 lg:space-y-10">
+    <div className="space-y-6">
       <PageHeader
         title="Menüplan"
         description="Frühstück, Mittag und Abendbrot der Endprobenwoche im Überblick – inklusive Fokus-Stilen, Highlights und kritischen Hinweisen."

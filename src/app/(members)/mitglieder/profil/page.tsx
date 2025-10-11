@@ -24,8 +24,10 @@ export default async function ProfilePage() {
 
   if (!allowed) {
     return (
-      <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-destructive">
-        Kein Zugriff auf den Profilbereich
+      <div className="space-y-6">
+        <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-destructive">
+          Kein Zugriff auf den Profilbereich
+        </div>
       </div>
     );
   }
@@ -263,7 +265,7 @@ export default async function ProfilePage() {
   const headerDescription = "Pflege deine Stammdaten, Zahlungsdaten, Ernährungspräferenzen und Freigaben für unser Ensemble.";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader title="Mein Profil" description={headerDescription} breadcrumbs={[membersBreadcrumb]} />
       <ProfileClient
         user={{

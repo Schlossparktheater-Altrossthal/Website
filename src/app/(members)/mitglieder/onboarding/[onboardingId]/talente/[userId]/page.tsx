@@ -90,7 +90,7 @@ export default async function MembersTalentDetailPage({
   const backHref = `/mitglieder/onboarding?onboardingId=${encodeURIComponent(onboardingId)}`;
 
   return (
-    <main id="main" className="space-y-10 pb-12">
+    <div id="main" className="space-y-6">
       <div className="space-y-4">
         <Link
           href={backHref}
@@ -121,6 +121,6 @@ export default async function MembersTalentDetailPage({
       </div>
 
       <TalentDetailContent candidate={candidate} />
-    </main>
+    </div>
   );
 }

@@ -243,8 +243,10 @@ export default async function FinalRehearsalDutyPlanPage() {
   const canView = await hasPermission(session.user, FINAL_WEEK_VIEW_PERMISSION_KEY);
   if (!canView) {
     return (
-      <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
-        Kein Zugriff auf den Dienstplan der Endprobenwoche.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
+          Kein Zugriff auf den Dienstplan der Endprobenwoche.
+        </div>
       </div>
     );
   }

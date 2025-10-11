@@ -136,7 +136,7 @@ export default async function ArchiveOverviewPage() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Archiv und Bilder"
         description="Ordne Bilder und Videos den passenden Jahrgängen zu, entdecke Erinnerungen vergangener Spielzeiten und ergänze das Archiv gemeinsam mit dem Team."
