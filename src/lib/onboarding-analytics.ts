@@ -3,6 +3,8 @@ import type { AllergyLevel, OnboardingFocus, RolePreferenceDomain } from "@prism
 import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus } from "@/lib/member-invites";
 import { getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
+import { databaseEnabled } from "@/lib/dev-database";
+import { DEV_ONBOARDING_ANALYTICS_FIXTURE } from "@/lib/dev-onboarding-analytics-fixture";
 
 export type OnboardingInviteSummary = {
   id: string;
@@ -80,6 +82,7 @@ export type OnboardingTalentProfile = {
 };
 
 export type OnboardingAnalytics = {
+  offline?: boolean;
   invites: {
     total: number;
     active: number;
@@ -156,6 +159,10 @@ function ensureShowSummary(
 }
 
 export async function collectOnboardingAnalytics(now: Date = new Date()): Promise<OnboardingAnalytics> {
+  if (!databaseEnabled()) {
+    return DEV_ONBOARDING_ANALYTICS_FIXTURE;
+  }
+
   const [
     invites,
     profileRecords,
@@ -487,6 +494,7 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
     .sort((a, b) => b.year - a.year || (a.title ?? "").localeCompare(b.title ?? "", "de-DE"));
 
   return {
+    offline: false,
     invites: inviteStats,
     inviteUsage,
     completions,

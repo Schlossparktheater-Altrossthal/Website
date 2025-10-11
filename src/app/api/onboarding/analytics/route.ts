@@ -11,5 +11,9 @@ export async function GET() {
   }
 
   const data = await collectOnboardingAnalytics();
-  return NextResponse.json({ analytics: data });
+  const response = NextResponse.json({ analytics: data });
+  if (data.offline) {
+    response.headers.set("X-Analytics-Mode", "offline");
+  }
+  return response;
 }
