@@ -44,6 +44,7 @@ export function SchulkatzeGallery({
   );
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [fullScreenOpen, setFullScreenOpen] = useState(false);
 
   const totalImages = validImages.length;
   const activeImageSrc = validImages[activeIndex] ?? validImages[0];
@@ -75,6 +76,7 @@ export function SchulkatzeGallery({
   useEffect(() => {
     if (!open) {
       setActiveIndex(0);
+      setFullScreenOpen(false);
       return;
     }
 
@@ -101,12 +103,13 @@ export function SchulkatzeGallery({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
-      }}
-    >
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+        }}
+      >
       <figure
         className={cn(
           "relative mx-auto max-w-sm overflow-hidden rounded-3xl border border-border bg-background shadow-lg",
@@ -196,9 +199,9 @@ export function SchulkatzeGallery({
                     return;
                   }
 
-                  window.open(activeImageSrc, "_blank", "noopener,noreferrer");
+                  setFullScreenOpen(true);
                 }}
-                aria-label="Bild in neuem Tab öffnen"
+                aria-label="Bild vergrößert anzeigen"
               >
                 <Maximize2 className="h-4 w-4" aria-hidden="true" />
               </Button>
@@ -238,7 +241,37 @@ export function SchulkatzeGallery({
             ))}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+      {activeImageSrc ? (
+        <Dialog
+          open={fullScreenOpen}
+          onOpenChange={(nextOpen) => {
+            setFullScreenOpen(nextOpen);
+          }}
+        >
+          <DialogContent className="h-screen w-screen max-w-none gap-0 border-0 bg-background/98 p-0 sm:rounded-none sm:border-0 sm:p-0 [&>button[data-radix-dialog-close]]:right-6 [&>button[data-radix-dialog-close]]:top-6">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Bild in Vollbildansicht</DialogTitle>
+              <DialogDescription>
+                {caption} – {alt} (Bild {activeIndex + 1} von {totalImages})
+              </DialogDescription>
+            </DialogHeader>
+            <div className="relative flex h-full w-full items-center justify-center bg-muted/80">
+              <div className="relative h-full min-h-0 w-full min-w-0">
+                <Image
+                  src={activeImageSrc}
+                  alt={`${alt} – vergrößerte Ansicht`}
+                  fill
+                  sizes="100vw"
+                  className="object-contain"
+                  priority
+                />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+    </>
   );
 }
