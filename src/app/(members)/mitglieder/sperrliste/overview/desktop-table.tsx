@@ -306,7 +306,7 @@ function PersonRow({
       )}
       <th 
         scope="row" 
-        className="sticky left-3 z-10 w-[220px] sm:w-[260px] min-w-[220px] border-r border-slate-200/70 bg-white backdrop-blur shadow-sm px-3 py-2 text-left"
+        className="sticky left-3 z-10 w-[280px] sm:w-[340px] min-w-[280px] border-r border-slate-200/70 bg-white backdrop-blur shadow-sm px-3 py-2 text-left"
       >
         <PersonInfo person={person} groupColor={groupColor} />
       </th>

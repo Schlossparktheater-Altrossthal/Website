@@ -93,7 +93,7 @@ export default function SperrlistenV2({
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <main className="mx-auto max-w-6xl space-y-4 p-4 sm:p-6" role="main" aria-label="Sperrlistenübersicht">
+      <main className="mx-auto space-y-4 p-4 sm:p-6" role="main" aria-label="Sperrlistenübersicht">
         <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
             <h1 className="text-lg font-semibold sm:text-xl" id="page-title">Sperrlistenübersicht</h1>
@@ -207,6 +207,12 @@ export default function SperrlistenV2({
           </div>
         </header>
 
+        {/* Bevorzugte Tage und Ausnahmen (analog Spielplatz) */}
+        <section className="grid gap-3 lg:grid-cols-2">
+          <Note title="Bevorzugte Tage">Mo & Do</Note>
+          <Note title="Ausnahmen">Mi (Sonderproben möglich)</Note>
+        </section>
+
         {/* Note-Komponenten für wichtige Hinweise */}
         <div className="space-y-2 sm:hidden">
           <Note title="Tipp" className="bg-blue-50/80 border-blue-200/70">
@@ -237,24 +243,29 @@ export default function SperrlistenV2({
           </details>
         </div>
 
-        <WeekStrip
-          people={filteredPeople}
-          dayCols={dayCols}
-          holidays={holidays}
-          onJump={(day) => {
-            setHighlightedDay(day);
-            const element = document.getElementById(`day-${day}`);
-            element?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-          }}
-        />
+        {/* WeekStrip nur für mobile Ansicht */}
+        <div className="sm:hidden">
+          <WeekStrip
+            people={filteredPeople}
+            dayCols={dayCols}
+            holidays={holidays}
+            onJump={(day) => {
+              setHighlightedDay(day);
+              const element = document.getElementById(`day-${day}`);
+              element?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            }}
+          />
+        </div>
 
         {/* MobileByDay wird immer auf Mobile angezeigt */}
-        <MobileByDay 
-          people={filteredPeople} 
-          dayCols={dayCols} 
-          holidays={holidays}
-          personFilter={personFilter}
-        />
+        <div className="sm:hidden">
+          <MobileByDay 
+            people={filteredPeople} 
+            dayCols={dayCols} 
+            holidays={holidays}
+            personFilter={personFilter}
+          />
+        </div>
 
         {/* View-spezifische Komponenten für Desktop */}
         {view === "calendar" ? (

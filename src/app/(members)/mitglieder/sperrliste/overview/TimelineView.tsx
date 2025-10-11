@@ -119,10 +119,10 @@ export function TimelineView({
       </div>
 
       {/* Timeline mit sticky Header */}
-      <div className="rounded-2xl border border-slate-200/70 bg-slate-50/30 p-3">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200/70 bg-slate-50/30 p-3">
         {/* Holiday Spans Bar */}
         {(holidaySpans.length > 0 || holidays.some(h => h.type === 'holiday')) && (
-          <div className="mb-3 space-y-1.5">
+          <div className="mb-3 space-y-1.5 min-w-[900px]">
             {/* Ferien-Balken */}
             {holidaySpans.length > 0 && (
               <div className="relative h-10">
@@ -185,7 +185,7 @@ export function TimelineView({
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-3 min-w-[900px]">
           {/* Tage-Header */}
           <div className="sticky top-0 z-20 rounded-2xl border border-slate-200/70 bg-white/95 shadow-sm backdrop-blur">
             <div className="grid grid-cols-[200px_1fr] gap-0">
@@ -221,7 +221,7 @@ export function TimelineView({
               {/* Schauspieler Gruppe */}
               {groupedPeople.actors.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100/50 px-4 py-2.5 backdrop-blur-sm">
+                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100/50 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-blue-900">
                       Schauspieler <span className="ml-2 text-xs font-normal text-blue-700">({groupedPeople.actors.length})</span>
                     </h3>
@@ -241,7 +241,7 @@ export function TimelineView({
               {/* Beides Gruppe (Schauspieler & Gewerke) */}
               {groupedPeople.both.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg bg-gradient-to-r from-purple-50 to-pink-100/50 px-4 py-2.5 backdrop-blur-sm">
+                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-purple-500 bg-gradient-to-r from-purple-50 to-pink-100/50 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-purple-900">
                       Schauspieler & Gewerke <span className="ml-2 text-xs font-normal text-purple-700">({groupedPeople.both.length})</span>
                     </h3>
@@ -261,7 +261,7 @@ export function TimelineView({
               {/* Gewerke Gruppe */}
               {groupedPeople.crew.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg bg-gradient-to-r from-green-50 to-green-100/50 px-4 py-2.5 backdrop-blur-sm">
+                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-green-500 bg-gradient-to-r from-green-50 to-green-100/50 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-green-900">
                       Gewerke <span className="ml-2 text-xs font-normal text-green-700">({groupedPeople.crew.length})</span>
                     </h3>
