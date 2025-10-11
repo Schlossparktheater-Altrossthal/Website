@@ -34,6 +34,7 @@ type HeaderBarProps = {
   onRefresh?: () => void;
   onExportPdf?: () => void;
   isExportingPdf?: boolean;
+  isOffline?: boolean;
 };
 
 export function HeaderBar({
@@ -48,6 +49,7 @@ export function HeaderBar({
   onRefresh,
   onExportPdf,
   isExportingPdf = false,
+  isOffline = false,
 }: HeaderBarProps) {
   const [shareState, setShareState] = useState<"idle" | "success" | "error">("idle");
 
@@ -98,7 +100,7 @@ export function HeaderBar({
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Select value={selectedId} onValueChange={onSelect}>
+          <Select value={selectedId} onValueChange={onSelect} disabled={isOffline}>
             <SelectTrigger className="w-full min-w-[220px] sm:w-60">
               <SelectValue placeholder="Onboarding auswählen" />
             </SelectTrigger>

@@ -35,6 +35,7 @@ type DashboardClientProps = {
   onboardings: OnboardingSummary[];
   navigateHrefTemplate?: string;
   detailHrefTemplate?: string;
+  isOffline?: boolean;
 };
 
 export function DashboardClient({
@@ -42,6 +43,7 @@ export function DashboardClient({
   onboardings,
   navigateHrefTemplate = "/dashboard/onboarding/%s",
   detailHrefTemplate = "/dashboard/onboarding/%s/talente/%s",
+  isOffline = false,
 }: DashboardClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -50,6 +52,7 @@ export function DashboardClient({
   const [tabValue, setTabValue] = useState<"global" | "ranking" | "allocation" | "history">("global");
   const [isPending, startTransition] = useTransition();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const offline = isOffline;
 
   useEffect(() => {
     setSelectedOnboarding(initialData.onboarding.id);
@@ -61,11 +64,12 @@ export function DashboardClient({
     queryFn: () => fetchDashboard(selectedOnboarding),
     initialData: selectedOnboarding === initialData.onboarding.id ? initialData : undefined,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    enabled: !offline,
+    refetchInterval: offline ? false : 60_000,
   });
 
   useEffect(() => {
-    if (!selectedOnboarding) {
+    if (!selectedOnboarding || offline) {
       return;
     }
     const room = `onboarding_${selectedOnboarding}` as const;
@@ -73,10 +77,10 @@ export function DashboardClient({
     return () => {
       leaveRoom(room);
     };
-  }, [joinRoom, leaveRoom, selectedOnboarding]);
+  }, [joinRoom, leaveRoom, offline, selectedOnboarding]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || offline) return;
     const handleUpdate = (event: { onboardingId: string; dashboard: OnboardingDashboardData }) => {
       queryClient.setQueryData(dashboardQueryKey(event.onboardingId), event.dashboard);
     };
@@ -84,7 +88,7 @@ export function DashboardClient({
     return () => {
       socket.off("onboarding_dashboard_update", handleUpdate);
     };
-  }, [socket, queryClient]);
+  }, [socket, offline, queryClient]);
 
   const currentData = data ?? initialData;
 
@@ -95,7 +99,7 @@ export function DashboardClient({
   }, [tabValue, currentData.history]);
 
   const handleSelect = (nextId: string) => {
-    if (!nextId) return;
+    if (!nextId || offline) return;
     setSelectedOnboarding(nextId);
     startTransition(() => {
       const targetHref = navigateHrefTemplate.includes("%s")
@@ -106,7 +110,7 @@ export function DashboardClient({
   };
 
   const handleExportPdf = useCallback(async () => {
-    if (!selectedOnboarding || isExportingPdf) {
+    if (!selectedOnboarding || isExportingPdf || offline) {
       return;
     }
     setIsExportingPdf(true);
@@ -152,7 +156,7 @@ export function DashboardClient({
     } finally {
       setIsExportingPdf(false);
     }
-  }, [isExportingPdf, selectedOnboarding]);
+  }, [isExportingPdf, offline, selectedOnboarding]);
 
   const historyAvailable = (currentData.history?.length ?? 0) > 0;
 
@@ -165,22 +169,36 @@ export function DashboardClient({
         status={currentData.onboarding.status}
         timeSpan={currentData.onboarding.timeSpan}
         participants={currentData.onboarding.participants}
-        isRefreshing={isFetching || isPending}
+        isRefreshing={offline ? false : isFetching || isPending}
         onSelect={handleSelect}
-        onRefresh={() => void refetch()}
-        onExportPdf={handleExportPdf}
+        onRefresh={!offline ? () => void refetch() : undefined}
+        onExportPdf={!offline ? handleExportPdf : undefined}
         isExportingPdf={isExportingPdf}
+        isOffline={offline}
       />
       <Tabs
         value={tabValue}
-        onValueChange={(value) => setTabValue(value as typeof tabValue)}
+        onValueChange={(value) => {
+          if (offline) return;
+          setTabValue(value as typeof tabValue);
+        }}
         className="space-y-6"
       >
         <TabsList>
-          <TabsTrigger value="global">Global</TabsTrigger>
-          <TabsTrigger value="ranking">Ranking</TabsTrigger>
-          <TabsTrigger value="allocation">Zuteilung</TabsTrigger>
-          {historyAvailable ? <TabsTrigger value="history">Historie</TabsTrigger> : null}
+          <TabsTrigger value="global" disabled={offline}>
+            Global
+          </TabsTrigger>
+          <TabsTrigger value="ranking" disabled={offline}>
+            Ranking
+          </TabsTrigger>
+          <TabsTrigger value="allocation" disabled={offline}>
+            Zuteilung
+          </TabsTrigger>
+          {historyAvailable ? (
+            <TabsTrigger value="history" disabled={offline}>
+              Historie
+            </TabsTrigger>
+          ) : null}
         </TabsList>
         <AnimatePresence mode="wait">
           <TabsContent key="global" value="global" className="space-y-6">
