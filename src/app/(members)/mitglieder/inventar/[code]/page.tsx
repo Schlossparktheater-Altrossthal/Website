@@ -59,8 +59,10 @@ export default async function InventoryItemPage({ params }: PageProps) {
 
   if (!allowed) {
     return (
-      <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-red-600">
-        Kein Zugriff auf diesen Lagerbereich.
+      <div className="space-y-6">
+        <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-red-600">
+          Kein Zugriff auf diesen Lagerbereich.
+        </div>
       </div>
     );
   }
@@ -68,8 +70,10 @@ export default async function InventoryItemPage({ params }: PageProps) {
   const hasDatabase = Boolean(process.env.DATABASE_URL);
   if (!hasDatabase) {
     return (
-      <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-muted-foreground">
-        Keine Datenbankverbindung für das Inventar verfügbar.
+      <div className="space-y-6">
+        <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-muted-foreground">
+          Keine Datenbankverbindung für das Inventar verfügbar.
+        </div>
       </div>
     );
   }
@@ -158,7 +162,7 @@ export default async function InventoryItemPage({ params }: PageProps) {
   const breadcrumb = [parentBreadcrumb, currentBreadcrumb];
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6">
       <PageHeader
         title={item.name}
         description={description}

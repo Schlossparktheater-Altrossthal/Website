@@ -34,7 +34,11 @@ export default async function DepartmentTodosPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die Gewerke-Aufgabenübersicht.</div>;
+    return (
+      <div className="space-y-6">
+        <div className="text-sm text-red-600">Kein Zugriff auf die Gewerke-Aufgabenübersicht.</div>
+      </div>
+    );
   }
 
   const userId = session.user?.id;
@@ -379,7 +383,7 @@ export default async function DepartmentTodosPage() {
   );
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {hero}
       {aggregatedAssignments}
       <div className="space-y-8">

@@ -41,8 +41,10 @@ export default async function EinkaufslistePage() {
   const allowed = await hasPermission(session.user, "mitglieder.essenplanung");
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
-        Kein Zugriff auf die Einkaufsliste.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
+          Kein Zugriff auf die Einkaufsliste.
+        </div>
       </div>
     );
   }
@@ -103,7 +105,7 @@ export default async function EinkaufslistePage() {
   ];
 
   return (
-    <div className="space-y-8 lg:space-y-10">
+    <div className="space-y-6">
       <PageHeader
         title="Einkaufsliste"
         description="Die automatisch aggregierten Mengen aus der Essensplanung – inklusive eigener Ergänzungen und optionalem Sharing-Link."

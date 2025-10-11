@@ -63,8 +63,10 @@ export default async function ProduktionsSzenenPage() {
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Du hast keinen Zugriff auf die Produktionsplanung.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
+          Du hast keinen Zugriff auf die Produktionsplanung.
+        </div>
       </div>
     );
   }
@@ -78,7 +80,7 @@ export default async function ProduktionsSzenenPage() {
 
   if (!activeProduction) {
     return (
-      <div className="space-y-10">
+      <div className="space-y-6">
         <ProductionWorkspaceHeader
           title="Szenen &amp; Breakdowns"
           description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
@@ -199,7 +201,7 @@ export default async function ProduktionsSzenenPage() {
   );
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       <ProductionWorkspaceHeader
         title="Szenen &amp; Breakdowns"
         description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."

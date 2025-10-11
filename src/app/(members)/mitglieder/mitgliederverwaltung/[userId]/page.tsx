@@ -769,7 +769,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title={pageTitle}
         description="Einblick in Kontaktdaten, Rollen und Engagement des Mitglieds."

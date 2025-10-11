@@ -145,7 +145,7 @@ export default async function FileLibraryOverviewPage() {
   const canManage = accessContext.canManage;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Dateisystem"
         description="Organisiere Dateien in strukturierten Ordnern, teile Unterlagen mit ausgewählten Rollen und behalte Freigaben im Blick."

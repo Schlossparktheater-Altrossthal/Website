@@ -75,7 +75,11 @@ export default async function IssueDetailPage({ params }: PageProps) {
 
   const currentUserId = session.user?.id ?? "";
   if (issue.visibility === "private" && !canManage && issue.createdById !== currentUserId) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf dieses Anliegen.</div>;
+    return (
+      <div className="space-y-6">
+        <div className="text-sm text-red-600">Kein Zugriff auf dieses Anliegen.</div>
+      </div>
+    );
   }
 
   const mapped = mapIssueDetail(issue);

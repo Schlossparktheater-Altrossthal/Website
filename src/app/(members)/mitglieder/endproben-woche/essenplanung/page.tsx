@@ -53,8 +53,10 @@ export default async function EssensplanungPage() {
   const allowed = await hasPermission(session.user, "mitglieder.essenplanung");
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
-        Kein Zugriff auf die Essensplanung.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
+          Kein Zugriff auf die Essensplanung.
+        </div>
       </div>
     );
   }
@@ -147,7 +149,7 @@ export default async function EssensplanungPage() {
   );
 
   return (
-    <div className="space-y-8 lg:space-y-10">
+    <div className="space-y-6">
       <PageHeader
         title="Essensplanung"
         description="Plane die Verpflegung der Endprobenwoche abgestimmt auf Ernährungsstile, Allergien und Portionen – inklusive eigener Rezeptideen."

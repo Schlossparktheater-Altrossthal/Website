@@ -38,7 +38,11 @@ export default async function MeineGewerkePage() {
   const isEnsembleMember = hasRole(session.user, "cast");
   const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>;
+    return (
+      <div className="space-y-6">
+        <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>
+      </div>
+    );
   }
 
   const userId = session.user?.id;
@@ -432,7 +436,7 @@ export default async function MeineGewerkePage() {
 
   if (memberships.length === 0) {
     return (
-      <div className="space-y-10">
+      <div className="space-y-6">
         {hero}
         {joinSection}
         <section className="rounded-3xl border border-dashed border-primary/30 bg-background/70 p-6 text-sm text-muted-foreground shadow-inner sm:p-10 sm:text-base">
@@ -464,7 +468,7 @@ export default async function MeineGewerkePage() {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {hero}
       {joinSection}
 

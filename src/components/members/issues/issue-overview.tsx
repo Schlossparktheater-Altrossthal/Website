@@ -231,7 +231,7 @@ export function IssueOverview({ initialIssues, initialCounts, breadcrumbs }: Iss
   ] as const;
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-6">
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <PageHeader
           title="Feedback & Support"

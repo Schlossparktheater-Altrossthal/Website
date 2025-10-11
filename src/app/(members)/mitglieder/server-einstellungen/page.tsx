@@ -13,13 +13,19 @@ export default async function ServerSettingsPage() {
   const allowed = await hasPermission(session.user, "mitglieder.server.settings");
 
   if (!allowed) {
-    return <div className="text-sm text-muted-foreground">Kein Zugriff auf die Servereinstellungen.</div>;
+    return (
+      <div className="space-y-6">
+        <div className="text-sm text-muted-foreground">Kein Zugriff auf die Servereinstellungen.</div>
+      </div>
+    );
   }
 
   if (!process.env.DATABASE_URL) {
     return (
-      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        Die Datenbank ist nicht konfiguriert. Servereinstellungen können nicht geladen werden.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Die Datenbank ist nicht konfiguriert. Servereinstellungen können nicht geladen werden.
+        </div>
       </div>
     );
   }
@@ -29,7 +35,7 @@ export default async function ServerSettingsPage() {
     const clientSettings: ClientServerSettings = toClientServerSettings(resolved);
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Servereinstellungen</h1>
           <p className="text-sm text-muted-foreground">
@@ -42,8 +48,10 @@ export default async function ServerSettingsPage() {
   } catch (error) {
     console.error("[server-settings] Laden fehlgeschlagen", error);
     return (
-      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        Servereinstellungen konnten nicht geladen werden.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Servereinstellungen konnten nicht geladen werden.
+        </div>
       </div>
     );
   }

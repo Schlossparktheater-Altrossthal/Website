@@ -15,13 +15,19 @@ export default async function WebsiteSettingsPage() {
   const allowed = await hasPermission(session.user, "mitglieder.website.settings");
 
   if (!allowed) {
-    return <div className="text-sm text-muted-foreground">Kein Zugriff auf die Website-Einstellungen.</div>;
+    return (
+      <div className="space-y-6">
+        <div className="text-sm text-muted-foreground">Kein Zugriff auf die Website-Einstellungen.</div>
+      </div>
+    );
   }
 
   if (!process.env.DATABASE_URL) {
     return (
-      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        Die Datenbank ist nicht konfiguriert. Website-Einstellungen können nicht geladen werden.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Die Datenbank ist nicht konfiguriert. Website-Einstellungen können nicht geladen werden.
+        </div>
       </div>
     );
   }
@@ -34,7 +40,7 @@ export default async function WebsiteSettingsPage() {
     const themes = await listWebsiteThemes();
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Website & Theme</h1>
           <p className="text-sm text-muted-foreground">
@@ -50,8 +56,10 @@ export default async function WebsiteSettingsPage() {
   } catch (error) {
     console.error("Failed to load website settings", error);
     return (
-      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        Website-Einstellungen konnten nicht geladen werden.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Website-Einstellungen konnten nicht geladen werden.
+        </div>
       </div>
     );
   }

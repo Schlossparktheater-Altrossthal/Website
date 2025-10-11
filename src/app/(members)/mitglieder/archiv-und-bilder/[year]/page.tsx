@@ -83,7 +83,7 @@ export default async function ArchiveYearPage({
   const description = getGalleryYearDescription(year, new Date().getFullYear());
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title={`Archiv und Bilder ${year}`}
         description={description}

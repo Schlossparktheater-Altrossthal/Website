@@ -93,8 +93,10 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
     return (
-      <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Du hast keinen Zugriff auf die Produktionsplanung.
+      <div className="space-y-6">
+        <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
+          Du hast keinen Zugriff auf die Produktionsplanung.
+        </div>
       </div>
     );
   }
