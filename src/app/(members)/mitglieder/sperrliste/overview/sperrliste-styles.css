@@ -1,0 +1,143 @@
+/* Sperrlistenübersicht CSS Variablen - Mapping auf Theater-Website Design System */
+
+@layer base {
+  :root {
+    /* Status-Farben basierend auf Theater Design System */
+    /* OK/Success - Grün für frei/bevorzugt */
+    --spl-ok: var(--success);
+    --spl-ok-rgba: hsl(var(--success) / 0.14);
+    --spl-ok-foreground: var(--success-foreground);
+    
+    /* Warning - Orange für eingeschränkt */
+    --spl-warn: var(--warning);
+    --spl-warn-rgba: hsl(var(--warning) / 0.18);
+    --spl-warn-foreground: var(--warning-foreground);
+    
+    /* Danger/Destructive - Rot für gesperrt */
+    --spl-danger: var(--destructive);
+    --spl-danger-rgba: hsl(var(--destructive) / 0.12);
+    --spl-danger-foreground: var(--destructive-foreground);
+    
+    /* Info - Blau für Informationen */
+    --spl-info: var(--info);
+    --spl-info-rgba: hsl(var(--info) / 0.18);
+    --spl-info-foreground: var(--info-foreground);
+    
+    /* Primary - für Highlights */
+    --spl-primary: var(--primary);
+    --spl-primary-rgba: hsl(var(--primary) / 0.15);
+    --spl-primary-foreground: var(--primary-foreground);
+    
+    /* Muted - für dezente Elemente */
+    --spl-muted: var(--muted);
+    --spl-muted-foreground: var(--muted-foreground);
+    
+    /* Ferien-Farben (Sky/Cyan) */
+    --spl-vacation: 186 91% 54%;        /* Sky-500 */
+    --spl-vacation-light: 186 91% 60%;  /* Sky-400 */
+    --spl-vacation-bg: 186 100% 97%;    /* Sky-50 */
+    --spl-vacation-border: 186 75% 85%; /* Sky-200 */
+    
+    /* Feiertags-Farben (Amber/Gold) */
+    --spl-holiday: 38 92% 50%;          /* Amber-500 */
+    --spl-holiday-light: 43 96% 56%;    /* Amber-400 */
+    --spl-holiday-bg: 48 100% 96%;      /* Amber-50 */
+    --spl-holiday-border: 48 96% 85%;   /* Amber-200 */
+    
+    /* Gruppen-Farben für actors/crew/both */
+    --spl-actors-from: 217 91% 60%;     /* Blue-400 */
+    --spl-actors-to: 217 91% 54%;       /* Blue-500 */
+    --spl-actors-light: 217 91% 95%;    /* Blue-50 */
+    
+    --spl-crew-from: 142 71% 55%;       /* Green-400 */
+    --spl-crew-to: 142 76% 45%;         /* Green-500 */
+    --spl-crew-light: 142 76% 95%;      /* Green-50 */
+    
+    --spl-both-from: 271 81% 60%;       /* Purple-400 */
+    --spl-both-to: 326 78% 54%;         /* Pink-500 */
+    --spl-both-light: 271 81% 96%;      /* Purple-50 */
+    
+    /* Neutral-Farben für Borders, Backgrounds */
+    --spl-border: hsl(var(--border));
+    --spl-card: hsl(var(--card));
+    --spl-card-foreground: hsl(var(--card-foreground));
+    
+    /* Glass-morphism Effekte */
+    --spl-glass-bg: hsl(var(--card) / 0.9);
+    --spl-glass-border: hsl(var(--border) / 0.5);
+  }
+}
+
+/* Utility-Klassen für Sperrlistenübersicht */
+@layer utilities {
+  /* Glassmorphism */
+  .spl-glass {
+    background: var(--spl-glass-bg);
+    border: 1px solid var(--spl-glass-border);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  
+  /* Status-Backgrounds mit Alpha */
+  .spl-bg-ok {
+    background-color: hsl(var(--success) / 0.14);
+  }
+  
+  .spl-bg-warn {
+    background-color: hsl(var(--warning) / 0.18);
+  }
+  
+  .spl-bg-danger {
+    background-color: hsl(var(--destructive) / 0.12);
+  }
+  
+  .spl-bg-info {
+    background-color: hsl(var(--info) / 0.18);
+  }
+  
+  /* Gradients für Gruppen */
+  .spl-gradient-actors {
+    background: linear-gradient(to bottom right, hsl(var(--spl-actors-from)), hsl(var(--spl-actors-to)));
+  }
+  
+  .spl-gradient-crew {
+    background: linear-gradient(to bottom right, hsl(var(--spl-crew-from)), hsl(var(--spl-crew-to)));
+  }
+  
+  .spl-gradient-both {
+    background: linear-gradient(to bottom right, hsl(var(--spl-both-from)), hsl(var(--spl-both-to)));
+  }
+  
+  /* Vacation/Holiday Gradients */
+  .spl-gradient-vacation {
+    background: linear-gradient(to right, hsl(var(--spl-vacation-light)), hsl(var(--spl-vacation)));
+  }
+  
+  .spl-gradient-holiday {
+    background: linear-gradient(to right, hsl(var(--spl-holiday-light)), hsl(var(--spl-holiday)));
+  }
+  
+  /* Thin scrollbar */
+  .spl-scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+  
+  .spl-scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  
+  .spl-scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .spl-scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted));
+    border-radius: 4px;
+  }
+  
+  .spl-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+}
