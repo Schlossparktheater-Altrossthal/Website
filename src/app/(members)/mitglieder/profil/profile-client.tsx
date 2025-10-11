@@ -97,6 +97,8 @@ import {
   type AvatarCropSelection,
   type AvatarCropState,
 } from "./avatar-crop-dialog";
+// TODO: Refactor avatar crop logic to use useAvatarCrop hook from ./use-avatar-crop.ts
+// This will reduce BasicsSection complexity by ~200 lines
 
 const AVATAR_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
@@ -925,7 +927,7 @@ function ProfileClientInner({
             type="button"
             size="sm"
             variant="outline"
-            className="mt-2 w-full justify-between rounded-full border-border/70 text-sm font-semibold"
+            className="mt-2 w-full justify-between rounded-full border-border/60 text-sm font-semibold"
             onClick={() => {
               void handleWhatsAppVisit()
                 .then(({ alreadyVisited }) => {
@@ -986,7 +988,7 @@ function ProfileClientInner({
         <div className="flex flex-col gap-3">
           <div className="xl:hidden">
             <Select value={activeTab} onValueChange={setActiveTab}>
-              <SelectTrigger id="profile-tab-select" className="h-11 w-full justify-between rounded-full border-border/70 px-4 text-sm font-semibold">
+              <SelectTrigger id="profile-tab-select" className="h-11 w-full justify-between rounded-full border-border/60 px-4 text-sm font-semibold">
                 <SelectValue placeholder="Bereich wählen">
                   {tabOptions.find((option) => option.value === activeTab)?.label}
                 </SelectValue>
@@ -1001,7 +1003,7 @@ function ProfileClientInner({
             </Select>
           </div>
 
-          <TabsList className="hidden w-full flex-nowrap items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/70 bg-background/70 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10 backdrop-blur xl:flex">
+          <TabsList className="hidden w-full flex-nowrap items-center justify-between gap-1 overflow-x-auto rounded-full border border-border/60 bg-background/80 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10 backdrop-blur xl:flex">
             {tabOptions.map((option) => (
               <TabsTrigger
                 key={option.value}
@@ -1126,7 +1128,7 @@ function ProfileOverviewCard({
   const hasHighlights = highlights.length > 0;
 
   return (
-    <Card className="border border-border/70 bg-gradient-to-br from-background/85 via-background/70 to-background/80 shadow-sm">
+    <Card className="border border-border/60 bg-card shadow-sm">
       <CardHeader className="space-y-4 pb-2">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
@@ -1137,7 +1139,7 @@ function ProfileOverviewCard({
               lastName={user.lastName}
               name={displayName}
               size={80}
-              className="h-20 w-20 border border-border/70 text-xl shadow-sm"
+              className="h-20 w-20 border border-border/60 text-xl shadow-sm"
               avatarSource={user.avatarSource}
               avatarUpdatedAt={user.avatarUpdatedAt}
             />
@@ -1190,7 +1192,7 @@ function ProfileOverviewCard({
             <Badge
               key={role}
               variant="outline"
-              className="rounded-full border-border/70 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wide"
+              className="rounded-full border-border/60 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wide"
             >
               {role}
             </Badge>
@@ -1211,13 +1213,13 @@ function ProfileOverviewCard({
               <span>Profilstatus</span>
               <span>{checklistCountLabel}</span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full border border-border/60 bg-muted/50">
+            <div className="h-2 w-full overflow-hidden rounded-full border border-border/60 bg-muted/40">
               <div
                 className={cn(
                   "h-full rounded-full transition-all",
                   summary.complete
-                    ? "bg-gradient-to-r from-success/80 via-success/70 to-success/90"
-                    : "bg-gradient-to-r from-primary/80 via-primary/70 to-primary/90",
+                    ? "bg-success"
+                    : "bg-primary",
                 )}
                 style={{ width: `${Math.min(100, Math.max(0, percentComplete))}%` }}
               />
@@ -1821,8 +1823,8 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                 <p className="text-xs text-muted-foreground">Benötigt für Fotoeinverständnis und Altersfreigaben.</p>
               </div>
               <div className="space-y-2">
-                <Label>Avatar-Quelle</Label>
-                <div className="flex flex-wrap gap-2">
+                <Label id="avatar-source-label">Avatar-Quelle wählen</Label>
+                <div className="flex flex-wrap gap-2" role="group" aria-labelledby="avatar-source-label">
                   {([
                     { value: "INITIALS", label: "Initialen" },
                     { value: "GRAVATAR", label: "Gravatar" },
@@ -1833,6 +1835,8 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                       <button
                         key={option.value}
                         type="button"
+                        role="radio"
+                        aria-checked={active}
                         onClick={() => handleAvatarSourceChange(option.value)}
                         className={cn(
                           "rounded-full border px-3 py-1 text-xs font-medium transition",
@@ -2392,7 +2396,7 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
         <CardContent>
           <form className="space-y-4" onSubmit={handleDietarySubmit}>
             <div className="space-y-2">
-              <Label>Stil</Label>
+              <Label htmlFor="dietary-style">Ernährungsstil</Label>
               <Select
                 value={dietaryState.style}
                 onValueChange={(value) =>
@@ -2406,7 +2410,7 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                   }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id="dietary-style" aria-label="Ernährungsstil wählen">
                   <SelectValue placeholder="Wähle deinen Stil" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2431,13 +2435,13 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
             ) : null}
 
             <div className="space-y-2">
-              <Label>Strengegrad</Label>
+              <Label htmlFor="dietary-strictness">Strengegrad</Label>
               <Select
                 value={dietaryState.strictness}
                 onValueChange={(value) => setDietaryState((prev) => ({ ...prev, strictness: value as DietaryStrictnessOption }))}
                 disabled={dietaryState.style === "omnivore" || dietaryState.style === "none"}
               >
-                <SelectTrigger>
+                <SelectTrigger id="dietary-strictness" aria-label="Strengegrad des Ernährungsstils">
                   <SelectValue placeholder="Strengegrad wählen" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2497,12 +2501,12 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               />
             </div>
             <div className="space-y-2">
-              <Label>Schweregrad</Label>
+              <Label htmlFor="allergy-level">Schweregrad der Allergie</Label>
               <Select
                 value={allergyState.level}
                 onValueChange={(value) => setAllergyState((prev) => ({ ...prev, level: value as AllergyLevel }))}
               >
-                <SelectTrigger>
+                <SelectTrigger id="allergy-level" aria-label="Schweregrad der Allergie wählen">
                   <SelectValue placeholder="Schweregrad wählen" />
                 </SelectTrigger>
                 <SelectContent>
@@ -3286,8 +3290,8 @@ export function OnboardingSection({
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label>Fokus</Label>
-            <div className="flex flex-wrap gap-2">
+            <Label id="onboarding-focus-label">Onboarding-Fokus</Label>
+            <div className="flex flex-wrap gap-2" role="group" aria-labelledby="onboarding-focus-label">
               {([
                 { value: "acting", label: "Schauspiel" },
                 { value: "tech", label: "Gewerke" },
@@ -3298,6 +3302,8 @@ export function OnboardingSection({
                   <button
                     key={option.value}
                     type="button"
+                    role="radio"
+                    aria-checked={active}
                     className={cn(
                       "rounded-full border px-3 py-1 text-xs font-medium transition",
                       active
