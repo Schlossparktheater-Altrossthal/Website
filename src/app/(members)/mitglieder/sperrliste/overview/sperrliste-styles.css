@@ -2,65 +2,49 @@
 
 @layer base {
   :root {
-    /* Status-Farben basierend auf Theater Design System */
-    /* OK/Success - Grün für frei/bevorzugt */
+    /* Status-Farben direkt vom Design System */
     --spl-ok: var(--success);
-    --spl-ok-rgba: hsl(var(--success) / 0.14);
     --spl-ok-foreground: var(--success-foreground);
     
-    /* Warning - Orange für eingeschränkt */
     --spl-warn: var(--warning);
-    --spl-warn-rgba: hsl(var(--warning) / 0.18);
     --spl-warn-foreground: var(--warning-foreground);
     
-    /* Danger/Destructive - Rot für gesperrt */
     --spl-danger: var(--destructive);
-    --spl-danger-rgba: hsl(var(--destructive) / 0.12);
     --spl-danger-foreground: var(--destructive-foreground);
     
-    /* Info - Blau für Informationen */
     --spl-info: var(--info);
-    --spl-info-rgba: hsl(var(--info) / 0.18);
     --spl-info-foreground: var(--info-foreground);
     
-    /* Primary - für Highlights */
     --spl-primary: var(--primary);
-    --spl-primary-rgba: hsl(var(--primary) / 0.15);
     --spl-primary-foreground: var(--primary-foreground);
     
-    /* Muted - für dezente Elemente */
+    --spl-accent: var(--accent);
+    --spl-accent-foreground: var(--accent-foreground);
+    
+    /* Vacation = Info (Sky Blue) */
+    --spl-vacation: var(--info);
+    --spl-vacation-foreground: var(--info-foreground);
+    
+    /* Holiday = Accent (Amber/Gold) */
+    --spl-holiday: var(--accent);
+    --spl-holiday-foreground: var(--accent-foreground);
+    
+    /* Gruppen-Farben - abgeleitet vom Design System */
+    --spl-actors: var(--info);        /* Info = Blue */
+    --spl-actors-foreground: var(--info-foreground);
+    
+    --spl-crew: var(--success);       /* Success = Green */
+    --spl-crew-foreground: var(--success-foreground);
+    
+    --spl-both: var(--accent);        /* Accent = Purple/Amber */
+    --spl-both-foreground: var(--accent-foreground);
+    
+    /* Neutral-Farben */
+    --spl-border: var(--border);
+    --spl-card: var(--card);
+    --spl-card-foreground: var(--card-foreground);
     --spl-muted: var(--muted);
     --spl-muted-foreground: var(--muted-foreground);
-    
-    /* Ferien-Farben (Sky/Cyan) */
-    --spl-vacation: 186 91% 54%;        /* Sky-500 */
-    --spl-vacation-light: 186 91% 60%;  /* Sky-400 */
-    --spl-vacation-bg: 186 100% 97%;    /* Sky-50 */
-    --spl-vacation-border: 186 75% 85%; /* Sky-200 */
-    
-    /* Feiertags-Farben (Amber/Gold) */
-    --spl-holiday: 38 92% 50%;          /* Amber-500 */
-    --spl-holiday-light: 43 96% 56%;    /* Amber-400 */
-    --spl-holiday-bg: 48 100% 96%;      /* Amber-50 */
-    --spl-holiday-border: 48 96% 85%;   /* Amber-200 */
-    
-    /* Gruppen-Farben für actors/crew/both */
-    --spl-actors-from: 217 91% 60%;     /* Blue-400 */
-    --spl-actors-to: 217 91% 54%;       /* Blue-500 */
-    --spl-actors-light: 217 91% 95%;    /* Blue-50 */
-    
-    --spl-crew-from: 142 71% 55%;       /* Green-400 */
-    --spl-crew-to: 142 76% 45%;         /* Green-500 */
-    --spl-crew-light: 142 76% 95%;      /* Green-50 */
-    
-    --spl-both-from: 271 81% 60%;       /* Purple-400 */
-    --spl-both-to: 326 78% 54%;         /* Pink-500 */
-    --spl-both-light: 271 81% 96%;      /* Purple-50 */
-    
-    /* Neutral-Farben für Borders, Backgrounds */
-    --spl-border: hsl(var(--border));
-    --spl-card: hsl(var(--card));
-    --spl-card-foreground: hsl(var(--card-foreground));
     
     /* Glass-morphism Effekte */
     --spl-glass-bg: hsl(var(--card) / 0.9);
@@ -78,7 +62,7 @@
     -webkit-backdrop-filter: blur(8px);
   }
   
-  /* Status-Backgrounds mit Alpha */
+  /* Status-Backgrounds mit Alpha - passt sich automatisch an Light/Dark Mode an */
   .spl-bg-ok {
     background-color: hsl(var(--success) / 0.14);
   }
@@ -95,26 +79,66 @@
     background-color: hsl(var(--info) / 0.18);
   }
   
-  /* Gradients für Gruppen */
+  .spl-bg-primary {
+    background-color: hsl(var(--primary) / 0.15);
+  }
+  
+  .spl-bg-accent {
+    background-color: hsl(var(--accent) / 0.18);
+  }
+  
+  /* Gruppen-Backgrounds - nutzt Design System Farben */
+  .spl-bg-actors {
+    background-color: hsl(var(--info) / 0.18);
+  }
+  
+  .spl-bg-crew {
+    background-color: hsl(var(--success) / 0.14);
+  }
+  
+  .spl-bg-both {
+    background-color: hsl(var(--accent) / 0.18);
+  }
+  
+  /* Vacation/Holiday Backgrounds */
+  .spl-bg-vacation {
+    background-color: hsl(var(--info) / 0.18);
+  }
+  
+  .spl-bg-holiday {
+    background-color: hsl(var(--accent) / 0.18);
+  }
+  
+  /* Gradients für Gruppen - nutzt Design System Farben */
   .spl-gradient-actors {
-    background: linear-gradient(to bottom right, hsl(var(--spl-actors-from)), hsl(var(--spl-actors-to)));
+    background: linear-gradient(to bottom right, 
+      hsl(var(--info) / 0.8), 
+      hsl(var(--info)));
   }
   
   .spl-gradient-crew {
-    background: linear-gradient(to bottom right, hsl(var(--spl-crew-from)), hsl(var(--spl-crew-to)));
+    background: linear-gradient(to bottom right, 
+      hsl(var(--success) / 0.8), 
+      hsl(var(--success)));
   }
   
   .spl-gradient-both {
-    background: linear-gradient(to bottom right, hsl(var(--spl-both-from)), hsl(var(--spl-both-to)));
+    background: linear-gradient(to bottom right, 
+      hsl(var(--accent) / 0.8), 
+      hsl(var(--accent)));
   }
   
   /* Vacation/Holiday Gradients */
   .spl-gradient-vacation {
-    background: linear-gradient(to right, hsl(var(--spl-vacation-light)), hsl(var(--spl-vacation)));
+    background: linear-gradient(to right, 
+      hsl(var(--info) / 0.7), 
+      hsl(var(--info)));
   }
   
   .spl-gradient-holiday {
-    background: linear-gradient(to right, hsl(var(--spl-holiday-light)), hsl(var(--spl-holiday)));
+    background: linear-gradient(to right, 
+      hsl(var(--accent) / 0.7), 
+      hsl(var(--accent)));
   }
   
   /* Thin scrollbar */
@@ -163,6 +187,7 @@
   .sperrlisten-overview .bg-slate-50\/30,
   .sperrlisten-overview .bg-slate-50\/80,
   .sperrlisten-overview .bg-slate-100,
+  .sperrlisten-overview .bg-gray-50,
   .sperrlisten-overview .bg-gray-100 {
     background-color: hsl(var(--muted) / 0.4) !important;
   }
@@ -179,106 +204,191 @@
   .sperrlisten-overview .text-slate-900,
   .sperrlisten-overview .text-slate-800,
   .sperrlisten-overview .text-slate-700,
-  .sperrlisten-overview .text-gray-800 {
+  .sperrlisten-overview .text-gray-800,
+  .sperrlisten-overview .text-gray-900 {
     color: hsl(var(--foreground)) !important;
   }
 
   .sperrlisten-overview .text-slate-600,
   .sperrlisten-overview .text-slate-500,
   .sperrlisten-overview .text-slate-400,
-  .sperrlisten-overview .text-gray-600 {
+  .sperrlisten-overview .text-gray-600,
+  .sperrlisten-overview .text-gray-500 {
     color: hsl(var(--muted-foreground)) !important;
   }
 
   .sperrlisten-overview .bg-green-100,
   .sperrlisten-overview .bg-green-100\/80,
+  .sperrlisten-overview .bg-green-50,
+  .sperrlisten-overview .bg-green-50\/80,
   .sperrlisten-overview .from-green-50,
   .sperrlisten-overview .from-green-50\/80,
+  .sperrlisten-overview .to-green-100,
   .sperrlisten-overview .to-green-100\/50 {
     background-color: hsl(var(--success) / 0.18) !important;
     --tw-gradient-from: hsl(var(--success) / 0.18) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--success) / 0.05) !important;
+    --tw-gradient-to: hsl(var(--success) / 0.05) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
   }
 
   .sperrlisten-overview .text-green-700,
   .sperrlisten-overview .text-green-700\/90,
   .sperrlisten-overview .text-green-700\/80,
+  .sperrlisten-overview .text-green-600 {
+    color: hsl(var(--success)) !important;
+  }
+
   .sperrlisten-overview .border-green-200,
   .sperrlisten-overview .border-green-200\/70,
-  .sperrlisten-overview .border-green-200\/80 {
-    color: hsl(var(--success)) !important;
+  .sperrlisten-overview .border-green-200\/80,
+  .sperrlisten-overview .border-green-300 {
     border-color: hsl(var(--success) / 0.4) !important;
   }
 
   .sperrlisten-overview .bg-orange-100,
   .sperrlisten-overview .bg-orange-100\/80,
+  .sperrlisten-overview .bg-orange-50,
+  .sperrlisten-overview .bg-orange-50\/80,
   .sperrlisten-overview .from-orange-50,
   .sperrlisten-overview .from-orange-50\/80,
+  .sperrlisten-overview .to-orange-100,
   .sperrlisten-overview .to-orange-100\/50 {
     background-color: hsl(var(--warning) / 0.2) !important;
     --tw-gradient-from: hsl(var(--warning) / 0.2) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--warning) / 0.06) !important;
+    --tw-gradient-to: hsl(var(--warning) / 0.06) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
   }
 
   .sperrlisten-overview .text-orange-700,
   .sperrlisten-overview .text-orange-700\/90,
-  .sperrlisten-overview .border-orange-200,
-  .sperrlisten-overview .border-orange-200\/70 {
+  .sperrlisten-overview .text-orange-600 {
     color: hsl(var(--warning)) !important;
+  }
+
+  .sperrlisten-overview .border-orange-200,
+  .sperrlisten-overview .border-orange-200\/70,
+  .sperrlisten-overview .border-orange-300 {
     border-color: hsl(var(--warning) / 0.45) !important;
   }
 
   .sperrlisten-overview .bg-red-100,
   .sperrlisten-overview .bg-red-100\/80,
+  .sperrlisten-overview .bg-red-50,
+  .sperrlisten-overview .bg-red-50\/80,
   .sperrlisten-overview .from-red-50,
   .sperrlisten-overview .from-red-50\/80,
+  .sperrlisten-overview .to-red-100,
   .sperrlisten-overview .to-red-100\/50 {
     background-color: hsl(var(--destructive) / 0.18) !important;
     --tw-gradient-from: hsl(var(--destructive) / 0.18) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--destructive) / 0.06) !important;
+    --tw-gradient-to: hsl(var(--destructive) / 0.06) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
   }
 
   .sperrlisten-overview .text-red-700,
   .sperrlisten-overview .text-red-700\/90,
-  .sperrlisten-overview .border-red-200,
-  .sperrlisten-overview .border-red-200\/70 {
+  .sperrlisten-overview .text-red-600 {
     color: hsl(var(--destructive)) !important;
+  }
+
+  .sperrlisten-overview .border-red-200,
+  .sperrlisten-overview .border-red-200\/70,
+  .sperrlisten-overview .border-red-300 {
     border-color: hsl(var(--destructive) / 0.45) !important;
   }
 
   .sperrlisten-overview .bg-sky-100,
   .sperrlisten-overview .bg-sky-100\/80,
+  .sperrlisten-overview .bg-sky-50,
+  .sperrlisten-overview .bg-sky-50\/80,
   .sperrlisten-overview .from-sky-100,
+  .sperrlisten-overview .from-sky-50,
   .sperrlisten-overview .to-sky-200,
   .sperrlisten-overview .from-sky-400,
   .sperrlisten-overview .to-sky-500 {
     background-color: hsl(var(--info) / 0.18) !important;
-    --tw-gradient-from: hsl(var(--info)) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), color-mix(in srgb, hsl(var(--info)) 80%, transparent) !important;
-    --tw-gradient-to: color-mix(in srgb, hsl(var(--info)) 70%, transparent) !important;
+    --tw-gradient-from: hsl(var(--info) / 0.3) !important;
+    --tw-gradient-to: hsl(var(--info) / 0.1) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
   }
 
   .sperrlisten-overview .text-sky-700,
   .sperrlisten-overview .text-sky-700\/90,
+  .sperrlisten-overview .text-sky-600,
   .sperrlisten-overview .text-blue-800,
-  .sperrlisten-overview .border-blue-500,
-  .sperrlisten-overview .border-blue-400 {
+  .sperrlisten-overview .text-blue-700,
+  .sperrlisten-overview .text-blue-600 {
     color: hsl(var(--info)) !important;
+  }
+
+  .sperrlisten-overview .border-sky-200,
+  .sperrlisten-overview .border-sky-300,
+  .sperrlisten-overview .border-blue-500,
+  .sperrlisten-overview .border-blue-400,
+  .sperrlisten-overview .border-blue-300 {
     border-color: hsl(var(--info) / 0.55) !important;
   }
 
   .sperrlisten-overview .bg-blue-50,
   .sperrlisten-overview .bg-blue-50\/80,
+  .sperrlisten-overview .bg-blue-100,
+  .sperrlisten-overview .bg-blue-100\/80,
   .sperrlisten-overview .from-blue-50,
+  .sperrlisten-overview .to-blue-100,
   .sperrlisten-overview .to-blue-100\/50 {
     background-color: hsl(var(--primary) / 0.18) !important;
     --tw-gradient-from: hsl(var(--primary) / 0.2) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--primary) / 0.06) !important;
+    --tw-gradient-to: hsl(var(--primary) / 0.06) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .sperrlisten-overview .bg-blue-500,
+  .sperrlisten-overview .bg-blue-600 {
+    background-color: hsl(var(--primary)) !important;
+  }
+
+  .sperrlisten-overview .text-blue-500,
+  .sperrlisten-overview .text-blue-600 {
+    color: hsl(var(--primary)) !important;
   }
 
   .sperrlisten-overview .ring-blue-500\/30,
   .sperrlisten-overview .ring-blue-400\/30,
   .sperrlisten-overview .ring-blue-200\/50 {
     --tw-ring-color: hsl(var(--ring) / 0.3) !important;
+  }
+
+  /* Accent colors - Amber/Purple */
+  .sperrlisten-overview .bg-amber-100,
+  .sperrlisten-overview .bg-amber-100\/80,
+  .sperrlisten-overview .bg-amber-50,
+  .sperrlisten-overview .bg-amber-50\/80,
+  .sperrlisten-overview .bg-purple-100,
+  .sperrlisten-overview .bg-purple-100\/80,
+  .sperrlisten-overview .bg-purple-50,
+  .sperrlisten-overview .bg-purple-50\/80,
+  .sperrlisten-overview .from-amber-50,
+  .sperrlisten-overview .to-amber-100,
+  .sperrlisten-overview .from-purple-50,
+  .sperrlisten-overview .to-purple-100 {
+    background-color: hsl(var(--accent) / 0.18) !important;
+    --tw-gradient-from: hsl(var(--accent) / 0.25) !important;
+    --tw-gradient-to: hsl(var(--accent) / 0.08) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .sperrlisten-overview .text-amber-700,
+  .sperrlisten-overview .text-amber-700\/90,
+  .sperrlisten-overview .text-amber-600,
+  .sperrlisten-overview .text-purple-700,
+  .sperrlisten-overview .text-purple-600 {
+    color: hsl(var(--accent)) !important;
+  }
+
+  .sperrlisten-overview .border-amber-200,
+  .sperrlisten-overview .border-amber-300,
+  .sperrlisten-overview .border-purple-200,
+  .sperrlisten-overview .border-purple-300 {
+    border-color: hsl(var(--accent) / 0.45) !important;
   }
 }
