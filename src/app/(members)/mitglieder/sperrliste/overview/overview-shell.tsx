@@ -508,25 +508,8 @@ export function OverviewShell({
 
         <WeekStrip dayBuckets={dayBuckets} onJump={setHighlightedDay} />
 
-        {view === "calendar" ? (
-          <CalendarCards dayBuckets={dayBuckets} />
-        ) : view === "timeline" ? (
-          <TimelineSection
-            people={activePeople}
-            dayCols={dayCols}
-            highlightedDay={highlightedDay}
-            onHighlight={setHighlightedDay}
-            onSelect={handleSelectCell}
-          />
-        ) : (
-          <TableSection
-            people={activePeople}
-            groupedPeople={groupedPeople}
-            dayCols={dayCols}
-            onSelect={handleSelectCell}
-            compact
-          />
-        )}
+        {/* Neue Hauptübersicht: SperrlistenV2 */}
+        <SperrlistenV2 onExportPdf={() => {/* PDF-Export-Logik hier */}} />
       </main>
     </div>
   );
