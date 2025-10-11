@@ -228,9 +228,8 @@ export function OverviewShell({
   }, [dayCols]);
 
   return (
-    <div className="min-h-dvh bg-muted/20 text-foreground">
-      <main className="mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-6">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <Heading level="h3" className="text-h3">
               Wichtige Probentage
@@ -368,7 +367,6 @@ export function OverviewShell({
           dayCols={dayCols}
           holidays={holidayIndicators}
         />
-      </main>
     </div>
   );
 }

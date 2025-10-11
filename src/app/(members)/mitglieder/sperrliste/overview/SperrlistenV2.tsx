@@ -107,9 +107,8 @@ export default function SperrlistenV2({
   }, [handleKeyDown]);
 
   return (
-    <div className="sperrlisten-overview min-h-dvh bg-background text-foreground">
-      <main className="mx-auto space-y-4 p-4 sm:p-6" role="main" aria-label="Sperrlistenübersicht">
-        <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <div className="sperrlisten-overview space-y-4">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
             <h1 className="text-lg font-semibold sm:text-xl" id="page-title">Sperrlistenübersicht</h1>
             <div className="flex flex-wrap gap-2 text-xs" role="status" aria-live="polite">
@@ -329,7 +328,6 @@ export default function SperrlistenV2({
         >
           PDF exportieren
         </Button>
-      </main>
     </div>
   );
 }
