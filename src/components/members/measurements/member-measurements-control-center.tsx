@@ -121,6 +121,15 @@ export function MemberMeasurementsControlCenter({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    setMemberItems(
+      members.map((member) => ({
+        ...member,
+        measurements: sortMeasurements(member.measurements),
+      })),
+    );
+  }, [members]);
+
+  useEffect(() => {
     if (!members.length) {
       setMemberDialogId(null);
     }
