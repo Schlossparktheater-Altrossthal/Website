@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
+import { databaseEnabled } from "@/lib/dev-database";
+import {
+  DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE,
+  DEV_SPERRLISTE_OFFLINE_MESSAGE,
+} from "@/lib/dev-sperrliste-fixture";
 import {
   DEFAULT_FREEZE_DAYS,
   readSperrlisteSettings,
@@ -35,8 +40,18 @@ export async function GET() {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  if (!(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+  const offline = !databaseEnabled();
+
+  if (!offline && !(await hasPermission(session.user, "mitglieder.sperrliste"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (offline) {
+    return NextResponse.json({
+      offline: true,
+      blockedDays: DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE,
+      message: DEV_SPERRLISTE_OFFLINE_MESSAGE,
+    });
   }
 
   const entries = await prisma.blockedDay.findMany({
@@ -44,7 +59,10 @@ export async function GET() {
     orderBy: { date: "asc" },
   });
 
-  return NextResponse.json(entries.map(toResponse));
+  return NextResponse.json({
+    offline: false,
+    blockedDays: entries.map(toResponse),
+  });
 }
 
 async function resolveFreezeDays() {
@@ -81,8 +99,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  if (!(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+  const offline = !databaseEnabled();
+
+  if (!offline && !(await hasPermission(session.user, "mitglieder.sperrliste"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (offline) {
+    return NextResponse.json(
+      {
+        error:
+          "Sperrtermine können im Offline-Demo-Modus nicht bearbeitet werden. Änderungen werden verworfen.",
+      },
+      { status: 503 },
+    );
   }
 
   let payload: BlockDayPayload;

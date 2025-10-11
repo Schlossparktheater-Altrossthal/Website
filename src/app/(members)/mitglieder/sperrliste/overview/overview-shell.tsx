@@ -102,6 +102,7 @@ export function OverviewShell({
   onPrev,
   onNext,
   onReset,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onSelectBlockedDay,
 }: OverviewShellProps) {
   const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE"), []);
@@ -314,16 +315,6 @@ export function OverviewShell({
     return `${busiestMember.name} · ${totalLabel} Sperrtermin${busiestMember.total === 1 ? "" : "e"}`;
   }, [busiestMember, numberFormatter]);
 
-  const handleSelectCell = (person: OverviewPerson, cell: OverviewPersonDay) => {
-    if (!cell.entry) return;
-    onSelectBlockedDay({
-      member: person.member,
-      entry: cell.entry,
-      date: cell.date,
-      holidayEntries: cell.holidayEntries,
-    });
-  };
-
   return (
     <div className="min-h-dvh bg-muted/20 text-foreground">
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -483,6 +474,8 @@ export function OverviewShell({
     </div>
   );
 }
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 function TableSection({
   people,
@@ -777,6 +770,8 @@ function CalendarRow({
     </div>
   );
 }
+
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 function WeekStrip({ dayBuckets, onJump }: { dayBuckets: DayBucket[]; onJump: (day: number) => void }) {
   return (

@@ -77,12 +77,14 @@ export function BlockOverview({
   preferredWeekdays = [],
   exceptionWeekdays = [],
   canExport = false,
+  readOnly = false,
 }: {
   members: OverviewMember[];
   holidays?: HolidayRange[];
   preferredWeekdays?: number[];
   exceptionWeekdays?: number[];
   canExport?: boolean;
+  readOnly?: boolean;
 }) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -215,6 +217,10 @@ export function BlockOverview({
   };
 
   const handleExportPdf = async () => {
+    if (readOnly) {
+      toast.info("Im Offline-Demo-Modus steht der Export nicht zur Verfügung.");
+      return;
+    }
     if (!exportWindow || exportRows.length === 0) {
       toast.warning('Keine Sperrtermine auf wichtigen Tagen im ausgewählten Zeitraum gefunden.');
       return;
@@ -354,7 +360,7 @@ export function BlockOverview({
                 type="button"
                 variant="outline"
                 onClick={handleExportPdf}
-                disabled={exportDisabled || isExportingPdf}
+                disabled={exportDisabled || isExportingPdf || readOnly}
                 aria-busy={isExportingPdf}
                 className="sm:w-auto"
               >

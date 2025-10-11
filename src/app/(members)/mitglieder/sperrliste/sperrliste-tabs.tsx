@@ -20,6 +20,8 @@ interface SperrlisteTabsProps {
   exceptionWeekdays?: number[];
   canExport?: boolean;
   actions?: ReactNode;
+  readOnly?: boolean;
+  readOnlyMessage?: string;
 }
 
 export function SperrlisteTabs({
@@ -31,6 +33,8 @@ export function SperrlisteTabs({
   exceptionWeekdays = [],
   canExport = false,
   actions,
+  readOnly = false,
+  readOnlyMessage,
 }: SperrlisteTabsProps) {
   const formattedFreeze = useMemo(() => {
     if (!freezeDays || freezeDays <= 0) {
@@ -80,6 +84,8 @@ export function SperrlisteTabs({
           freezeDays={freezeDays}
           preferredWeekdays={preferredWeekdays}
           exceptionWeekdays={exceptionWeekdays}
+          readOnly={readOnly}
+          readOnlyMessage={readOnlyMessage}
         />
       </TabsContent>
 
@@ -90,6 +96,7 @@ export function SperrlisteTabs({
           preferredWeekdays={preferredWeekdays}
           exceptionWeekdays={exceptionWeekdays}
           canExport={canExport}
+          readOnly={readOnly}
         />
       </TabsContent>
     </Tabs>

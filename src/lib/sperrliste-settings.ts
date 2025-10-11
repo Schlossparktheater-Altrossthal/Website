@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { databaseEnabled } from "@/lib/dev-database";
+import { DEV_SPERRLISTE_SETTINGS_RECORD_FIXTURE } from "@/lib/dev-sperrliste-fixture";
 import type { Prisma, SperrlisteSettings } from "@prisma/client";
 
 export const DEFAULT_SAXONY_HOLIDAY_FEED =
@@ -106,6 +108,29 @@ export type HolidayStatusUpdates = {
 
 const DEFAULT_RECORD_ID = "default" as const;
 
+function cloneRecord(record: SperrlisteSettings): SperrlisteSettings {
+  const preferred = Array.isArray(record.preferredWeekdays)
+    ? ([...record.preferredWeekdays] as Prisma.JsonValue)
+    : record.preferredWeekdays;
+  const exceptions = Array.isArray(record.exceptionWeekdays)
+    ? ([...record.exceptionWeekdays] as Prisma.JsonValue)
+    : record.exceptionWeekdays;
+
+  return {
+    ...record,
+    createdAt: new Date(record.createdAt),
+    updatedAt: new Date(record.updatedAt),
+    holidaySourceCheckedAt: record.holidaySourceCheckedAt
+      ? new Date(record.holidaySourceCheckedAt)
+      : null,
+    publicHolidaySourceCheckedAt: record.publicHolidaySourceCheckedAt
+      ? new Date(record.publicHolidaySourceCheckedAt)
+      : null,
+    preferredWeekdays: preferred,
+    exceptionWeekdays: exceptions,
+  };
+}
+
 function normaliseUrl(value: unknown) {
   if (typeof value !== "string") {
     return null;
@@ -191,6 +216,39 @@ function resolveDefaultPublicHolidayUrl() {
 
 export function getDefaultPublicHolidaySourceUrl() {
   return resolveDefaultPublicHolidayUrl();
+}
+
+export type ReadSperrlisteSettingsMeta = {
+  record: SperrlisteSettingsRecord;
+  offline: boolean;
+};
+
+type ReadSperrlisteSettingsOptions = { withMeta?: boolean };
+
+export async function readSperrlisteSettings(): Promise<SperrlisteSettingsRecord>;
+export async function readSperrlisteSettings(
+  options: { withMeta: true },
+): Promise<ReadSperrlisteSettingsMeta>;
+export async function readSperrlisteSettings(
+  options?: ReadSperrlisteSettingsOptions,
+) {
+  if (!databaseEnabled()) {
+    const record = cloneRecord(DEV_SPERRLISTE_SETTINGS_RECORD_FIXTURE);
+    if (options?.withMeta) {
+      return { record, offline: true } satisfies ReadSperrlisteSettingsMeta;
+    }
+    return record;
+  }
+
+  const record = await prisma.sperrlisteSettings.findUnique({
+    where: { id: DEFAULT_RECORD_ID },
+  });
+
+  if (options?.withMeta) {
+    return { record, offline: false } satisfies ReadSperrlisteSettingsMeta;
+  }
+
+  return record;
 }
 
 export function resolveSperrlisteSettings(record: SperrlisteSettingsRecord): ResolvedSperrlisteSettings {
@@ -293,10 +351,6 @@ export function toClientSperrlisteSettings(
   };
 }
 
-export async function readSperrlisteSettings() {
-  return prisma.sperrlisteSettings.findUnique({ where: { id: DEFAULT_RECORD_ID } });
-}
-
 function toJsonArray(values: number[]) {
   const set = new Set<number>();
   for (const value of values) {
@@ -317,6 +371,9 @@ export async function saveSperrlisteSettings(
   data: SperrlisteSettingsInput,
   options: { resetHolidayStatus?: boolean; resetPublicHolidayStatus?: boolean } = {},
 ) {
+  if (!databaseEnabled()) {
+    throw new Error("Sperrlisten-Einstellungen können offline nicht gespeichert werden.");
+  }
   const id = DEFAULT_RECORD_ID;
   const resetHolidayStatus = Boolean(options.resetHolidayStatus);
   const resetPublicHolidayStatus = Boolean(options.resetPublicHolidayStatus);
@@ -362,6 +419,9 @@ export async function saveSperrlisteSettings(
 }
 
 export async function applyHolidaySourceStatuses(updates: HolidayStatusUpdates) {
+  if (!databaseEnabled()) {
+    return cloneRecord(DEV_SPERRLISTE_SETTINGS_RECORD_FIXTURE);
+  }
   const id = DEFAULT_RECORD_ID;
   const resolvedHolidayStatus =
     updates.holiday.status === "disabled" ? "disabled" : updates.holiday.status;
