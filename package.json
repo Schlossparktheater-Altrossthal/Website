@@ -21,7 +21,7 @@
     "db:seed": "node prisma/seed.mjs",
     "swatches:gen": "node scripts/generate-swatches.mjs --json docs/swatches/palette.sample.json --out docs/swatches --size 14 --adoc docs/swatches/generated.adoc",
     "design-system:tokens": "node scripts/build-design-tokens.mjs",
-    "workbox:copy-lib": "workbox copyLibraries public/workbox"
+    "workbox:copy-lib": "pnpm exec workbox copyLibraries public/workbox"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
