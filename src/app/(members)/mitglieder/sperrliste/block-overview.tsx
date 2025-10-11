@@ -366,27 +366,18 @@ export function BlockOverview({
       ) : null}
       <OverviewShell
         monthLabel={data.monthLabel}
-        membersCount={data.preparedMembers.length}
-        totalBlockedDays={data.summary.total}
-        upcomingBlockedDays={data.summary.upcoming}
+        summary={data.summary}
         holidaysInRangeCount={data.holidaysInRange.length}
         busiestMember={data.busiestMember}
         preferredDescription={data.preferredDescription}
         exceptionDescription={data.exceptionDescription}
         preparedMembers={data.preparedMembers}
         visibleDayInfo={data.visibleDayInfo}
-        holidaySegments={data.holidaySegments}
-        preferredWeekdaySet={data.preferredWeekdaySet}
-        exceptionWeekdaySet={data.exceptionWeekdaySet}
-        sortedPreferredWeekdays={data.sortedPreferredWeekdays}
-        preferredDayKeys={data.preferredDayKeys}
         holidayMap={data.holidayMap}
-        summary={data.summary}
         onPrev={handlePrev}
         onNext={handleNext}
         onReset={handleReset}
         onSelectBlockedDay={handleSelectBlockedDay}
-        formatCreatedAtLabel={formatCreatedAtLabel}
       />
       <Dialog
         open={detailsOpen}
