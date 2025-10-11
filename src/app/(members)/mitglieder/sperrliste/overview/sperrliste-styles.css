@@ -171,6 +171,7 @@
     color-scheme: light dark;
   }
 
+  /* Basis-Farben überschreiben */
   .sperrlisten-overview .bg-white,
   .sperrlisten-overview .bg-white\/95,
   .sperrlisten-overview .bg-white\/90,
@@ -204,112 +205,84 @@
   .sperrlisten-overview .text-slate-900,
   .sperrlisten-overview .text-slate-800,
   .sperrlisten-overview .text-slate-700,
-  .sperrlisten-overview .text-gray-800,
-  .sperrlisten-overview .text-gray-900 {
-    color: hsl(var(--foreground)) !important;
-  }
-
   .sperrlisten-overview .text-slate-600,
   .sperrlisten-overview .text-slate-500,
   .sperrlisten-overview .text-slate-400,
+  .sperrlisten-overview .text-gray-800,
+  .sperrlisten-overview .text-gray-900,
   .sperrlisten-overview .text-gray-600,
   .sperrlisten-overview .text-gray-500 {
     color: hsl(var(--muted-foreground)) !important;
   }
 
+  /* KRITISCH: Grün für "Bevorzugt" (PREFERRED) */
   .sperrlisten-overview .bg-green-100,
   .sperrlisten-overview .bg-green-100\/80,
   .sperrlisten-overview .bg-green-50,
-  .sperrlisten-overview .bg-green-50\/80,
-  .sperrlisten-overview .from-green-50,
-  .sperrlisten-overview .from-green-50\/80,
-  .sperrlisten-overview .to-green-100,
-  .sperrlisten-overview .to-green-100\/50 {
-    background-color: hsl(var(--success) / 0.18) !important;
-    --tw-gradient-from: hsl(var(--success) / 0.18) !important;
-    --tw-gradient-to: hsl(var(--success) / 0.05) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  .sperrlisten-overview .bg-green-50\/80 {
+    background-color: hsl(var(--success) / 0.2) !important;
   }
 
   .sperrlisten-overview .text-green-700,
   .sperrlisten-overview .text-green-700\/90,
   .sperrlisten-overview .text-green-700\/80,
   .sperrlisten-overview .text-green-600 {
-    color: hsl(var(--success)) !important;
+    color: hsl(var(--success-foreground)) !important;
   }
 
   .sperrlisten-overview .border-green-200,
   .sperrlisten-overview .border-green-200\/70,
   .sperrlisten-overview .border-green-200\/80,
   .sperrlisten-overview .border-green-300 {
-    border-color: hsl(var(--success) / 0.4) !important;
+    border-color: hsl(var(--success) / 0.5) !important;
   }
 
+  /* KRITISCH: Orange für "Eingeschränkt" (LIMITED) */
   .sperrlisten-overview .bg-orange-100,
   .sperrlisten-overview .bg-orange-100\/80,
   .sperrlisten-overview .bg-orange-50,
-  .sperrlisten-overview .bg-orange-50\/80,
-  .sperrlisten-overview .from-orange-50,
-  .sperrlisten-overview .from-orange-50\/80,
-  .sperrlisten-overview .to-orange-100,
-  .sperrlisten-overview .to-orange-100\/50 {
-    background-color: hsl(var(--warning) / 0.2) !important;
-    --tw-gradient-from: hsl(var(--warning) / 0.2) !important;
-    --tw-gradient-to: hsl(var(--warning) / 0.06) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  .sperrlisten-overview .bg-orange-50\/80 {
+    background-color: hsl(var(--warning) / 0.22) !important;
   }
 
   .sperrlisten-overview .text-orange-700,
   .sperrlisten-overview .text-orange-700\/90,
   .sperrlisten-overview .text-orange-600 {
-    color: hsl(var(--warning)) !important;
+    color: hsl(var(--warning-foreground)) !important;
   }
 
   .sperrlisten-overview .border-orange-200,
   .sperrlisten-overview .border-orange-200\/70,
   .sperrlisten-overview .border-orange-300 {
-    border-color: hsl(var(--warning) / 0.45) !important;
+    border-color: hsl(var(--warning) / 0.5) !important;
   }
 
+  /* KRITISCH: Rot für "Gesperrt" (BLOCKED) */
   .sperrlisten-overview .bg-red-100,
   .sperrlisten-overview .bg-red-100\/80,
   .sperrlisten-overview .bg-red-50,
-  .sperrlisten-overview .bg-red-50\/80,
-  .sperrlisten-overview .from-red-50,
-  .sperrlisten-overview .from-red-50\/80,
-  .sperrlisten-overview .to-red-100,
-  .sperrlisten-overview .to-red-100\/50 {
-    background-color: hsl(var(--destructive) / 0.18) !important;
-    --tw-gradient-from: hsl(var(--destructive) / 0.18) !important;
-    --tw-gradient-to: hsl(var(--destructive) / 0.06) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  .sperrlisten-overview .bg-red-50\/80 {
+    background-color: hsl(var(--destructive) / 0.2) !important;
   }
 
   .sperrlisten-overview .text-red-700,
   .sperrlisten-overview .text-red-700\/90,
   .sperrlisten-overview .text-red-600 {
-    color: hsl(var(--destructive)) !important;
+    color: hsl(var(--destructive-foreground)) !important;
   }
 
   .sperrlisten-overview .border-red-200,
   .sperrlisten-overview .border-red-200\/70,
   .sperrlisten-overview .border-red-300 {
-    border-color: hsl(var(--destructive) / 0.45) !important;
+    border-color: hsl(var(--destructive) / 0.5) !important;
   }
 
+  /* Sky/Blue für Info */
   .sperrlisten-overview .bg-sky-100,
   .sperrlisten-overview .bg-sky-100\/80,
   .sperrlisten-overview .bg-sky-50,
-  .sperrlisten-overview .bg-sky-50\/80,
-  .sperrlisten-overview .from-sky-100,
-  .sperrlisten-overview .from-sky-50,
-  .sperrlisten-overview .to-sky-200,
-  .sperrlisten-overview .from-sky-400,
-  .sperrlisten-overview .to-sky-500 {
-    background-color: hsl(var(--info) / 0.18) !important;
-    --tw-gradient-from: hsl(var(--info) / 0.3) !important;
-    --tw-gradient-to: hsl(var(--info) / 0.1) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  .sperrlisten-overview .bg-sky-50\/80 {
+    background-color: hsl(var(--info) / 0.2) !important;
   }
 
   .sperrlisten-overview .text-sky-700,
@@ -318,7 +291,7 @@
   .sperrlisten-overview .text-blue-800,
   .sperrlisten-overview .text-blue-700,
   .sperrlisten-overview .text-blue-600 {
-    color: hsl(var(--info)) !important;
+    color: hsl(var(--info-foreground)) !important;
   }
 
   .sperrlisten-overview .border-sky-200,
@@ -326,20 +299,14 @@
   .sperrlisten-overview .border-blue-500,
   .sperrlisten-overview .border-blue-400,
   .sperrlisten-overview .border-blue-300 {
-    border-color: hsl(var(--info) / 0.55) !important;
+    border-color: hsl(var(--info) / 0.5) !important;
   }
 
   .sperrlisten-overview .bg-blue-50,
   .sperrlisten-overview .bg-blue-50\/80,
   .sperrlisten-overview .bg-blue-100,
-  .sperrlisten-overview .bg-blue-100\/80,
-  .sperrlisten-overview .from-blue-50,
-  .sperrlisten-overview .to-blue-100,
-  .sperrlisten-overview .to-blue-100\/50 {
-    background-color: hsl(var(--primary) / 0.18) !important;
-    --tw-gradient-from: hsl(var(--primary) / 0.2) !important;
-    --tw-gradient-to: hsl(var(--primary) / 0.06) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  .sperrlisten-overview .bg-blue-100\/80 {
+    background-color: hsl(var(--primary) / 0.2) !important;
   }
 
   .sperrlisten-overview .bg-blue-500,
@@ -352,12 +319,6 @@
     color: hsl(var(--primary)) !important;
   }
 
-  .sperrlisten-overview .ring-blue-500\/30,
-  .sperrlisten-overview .ring-blue-400\/30,
-  .sperrlisten-overview .ring-blue-200\/50 {
-    --tw-ring-color: hsl(var(--ring) / 0.3) !important;
-  }
-
   /* Accent colors - Amber/Purple */
   .sperrlisten-overview .bg-amber-100,
   .sperrlisten-overview .bg-amber-100\/80,
@@ -366,15 +327,8 @@
   .sperrlisten-overview .bg-purple-100,
   .sperrlisten-overview .bg-purple-100\/80,
   .sperrlisten-overview .bg-purple-50,
-  .sperrlisten-overview .bg-purple-50\/80,
-  .sperrlisten-overview .from-amber-50,
-  .sperrlisten-overview .to-amber-100,
-  .sperrlisten-overview .from-purple-50,
-  .sperrlisten-overview .to-purple-100 {
-    background-color: hsl(var(--accent) / 0.18) !important;
-    --tw-gradient-from: hsl(var(--accent) / 0.25) !important;
-    --tw-gradient-to: hsl(var(--accent) / 0.08) !important;
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  .sperrlisten-overview .bg-purple-50\/80 {
+    background-color: hsl(var(--accent) / 0.2) !important;
   }
 
   .sperrlisten-overview .text-amber-700,
@@ -382,13 +336,74 @@
   .sperrlisten-overview .text-amber-600,
   .sperrlisten-overview .text-purple-700,
   .sperrlisten-overview .text-purple-600 {
-    color: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
   }
 
   .sperrlisten-overview .border-amber-200,
   .sperrlisten-overview .border-amber-300,
   .sperrlisten-overview .border-purple-200,
   .sperrlisten-overview .border-purple-300 {
-    border-color: hsl(var(--accent) / 0.45) !important;
+    border-color: hsl(var(--accent) / 0.5) !important;
+  }
+
+  /* Gradients */
+  .sperrlisten-overview .from-green-50,
+  .sperrlisten-overview .from-green-50\/80,
+  .sperrlisten-overview .to-green-100,
+  .sperrlisten-overview .to-green-100\/50 {
+    --tw-gradient-from: hsl(var(--success) / 0.2) !important;
+    --tw-gradient-to: hsl(var(--success) / 0.05) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .sperrlisten-overview .from-orange-50,
+  .sperrlisten-overview .from-orange-50\/80,
+  .sperrlisten-overview .to-orange-100,
+  .sperrlisten-overview .to-orange-100\/50 {
+    --tw-gradient-from: hsl(var(--warning) / 0.22) !important;
+    --tw-gradient-to: hsl(var(--warning) / 0.06) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .sperrlisten-overview .from-red-50,
+  .sperrlisten-overview .from-red-50\/80,
+  .sperrlisten-overview .to-red-100,
+  .sperrlisten-overview .to-red-100\/50 {
+    --tw-gradient-from: hsl(var(--destructive) / 0.2) !important;
+    --tw-gradient-to: hsl(var(--destructive) / 0.06) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .sperrlisten-overview .from-sky-100,
+  .sperrlisten-overview .from-sky-50,
+  .sperrlisten-overview .to-sky-200,
+  .sperrlisten-overview .from-sky-400,
+  .sperrlisten-overview .to-sky-500 {
+    --tw-gradient-from: hsl(var(--info) / 0.3) !important;
+    --tw-gradient-to: hsl(var(--info) / 0.1) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .sperrlisten-overview .from-blue-50,
+  .sperrlisten-overview .to-blue-100,
+  .sperrlisten-overview .to-blue-100\/50 {
+    --tw-gradient-from: hsl(var(--primary) / 0.2) !important;
+    --tw-gradient-to: hsl(var(--primary) / 0.06) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .sperrlisten-overview .from-amber-50,
+  .sperrlisten-overview .to-amber-100,
+  .sperrlisten-overview .from-purple-50,
+  .sperrlisten-overview .to-purple-100 {
+    --tw-gradient-from: hsl(var(--accent) / 0.25) !important;
+    --tw-gradient-to: hsl(var(--accent) / 0.08) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .sperrlisten-overview .ring-blue-500\/30,
+  .sperrlisten-overview .ring-blue-400\/30,
+  .sperrlisten-overview .ring-blue-200\/50 {
+    --tw-ring-color: hsl(var(--ring) / 0.3) !important;
   }
 }
