@@ -105,15 +105,12 @@ export function PageHeader({
           <MembersTopbarQuickActions>{quickActions}</MembersTopbarQuickActions>
         ) : null}
       </MembersTopbar>
-      <MembersContentHeader className={className}>
-        <div className="space-y-2">
-          <Heading level="h1" className="text-3xl sm:text-4xl">
-            {title}
-          </Heading>
-          {descriptionNode}
-        </div>
-        {actions ? <MembersPageActions>{actions}</MembersPageActions> : null}
-      </MembersContentHeader>
+      {(descriptionNode || actions) && (
+        <MembersContentHeader className={className}>
+          {descriptionNode ? <div className="space-y-2">{descriptionNode}</div> : null}
+          {actions ? <MembersPageActions>{actions}</MembersPageActions> : null}
+        </MembersContentHeader>
+      )}
     </>
   );
 }

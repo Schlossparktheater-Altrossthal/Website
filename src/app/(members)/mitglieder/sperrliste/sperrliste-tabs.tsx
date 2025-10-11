@@ -47,35 +47,35 @@ export function SperrlisteTabs({
   }, [freezeDays]);
 
   return (
-    <Tabs defaultValue="personal" className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        {actions ? (
-          <div className="order-1 w-full sm:order-2 sm:w-auto">
-            <div className="flex w-full justify-end sm:justify-end">{actions}</div>
-          </div>
-        ) : null}
-        <TabsList className="order-2 flex w-full gap-2 overflow-hidden rounded-2xl border border-border/60 bg-background/80 p-1.5 shadow-sm ring-1 ring-border/60 backdrop-blur-sm sm:order-1 sm:w-auto sm:flex-1 sm:overflow-visible">
+    <Tabs defaultValue="personal" className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <TabsList className="order-2 flex w-full gap-1.5 bg-muted/50 p-1 sm:order-1 sm:w-auto">
           <TabsTrigger
             value="personal"
-            className="flex-1 justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-wide sm:flex-none sm:justify-center sm:px-5 sm:text-sm"
+            className="flex-1 gap-2 px-3 py-1.5 text-sm sm:flex-none"
           >
-            <CalendarCheck2 className="hidden h-4 w-4 text-muted-foreground/80 sm:block" aria-hidden />
-            <span className="sm:min-w-[10ch]">Meine Sperrtermine</span>
+            <CalendarCheck2 className="h-4 w-4" aria-hidden />
+            <span>Meine Sperrtermine</span>
           </TabsTrigger>
           <TabsTrigger
             value="overview"
-            className="flex-1 justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-wide sm:flex-none sm:justify-center sm:px-5 sm:text-sm"
+            className="flex-1 gap-2 px-3 py-1.5 text-sm sm:flex-none"
           >
-            <UsersRound className="hidden h-4 w-4 text-muted-foreground/80 sm:block" aria-hidden />
+            <UsersRound className="h-4 w-4" aria-hidden />
             <span>Übersicht</span>
           </TabsTrigger>
         </TabsList>
+        {actions ? (
+          <div className="order-1 flex w-full justify-end sm:order-2 sm:w-auto">
+            {actions}
+          </div>
+        ) : null}
       </div>
 
-      <TabsContent value="personal" className="space-y-6">
+      <TabsContent value="personal" className="space-y-4">
         {formattedFreeze ? (
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">
-            Hinweis: Aus Planungsgründen können Sperrtermine erst ab {formattedFreeze} eingetragen werden.
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-200">
+            Sperrtermine können ab {formattedFreeze} eingetragen werden.
           </div>
         ) : null}
         <BlockCalendar
