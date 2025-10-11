@@ -28,7 +28,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
   return (
     <section className="hidden sm:block">
       {/* Horizontal Scrolling Container mit Touch-Support */}
-      <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent touch-pan-x">
+      <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted-foreground scrollbar-track-transparent touch-pan-x">
         <div className="min-w-max">
           {/* Holiday Spans Bar - scrollt MIT den Karten */}
           {(holidaySpans.length > 0 || holidays.some(h => h.type === 'holiday')) && (
@@ -175,7 +175,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                   </div>
 
                   {/* Content with better scrolling */}
-                  <div className="flex-1 overflow-auto p-2 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+                  <div className="flex-1 overflow-auto p-2 space-y-1.5 scrollbar-thin scrollbar-thumb-muted-foreground scrollbar-track-transparent">
                     {bucket.available.length > 0 && (
                       <div className="space-y-1">
                         <h4 className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-success-foreground sticky top-0 bg-gradient-to-b from-card via-card to-transparent pb-1 z-10">
