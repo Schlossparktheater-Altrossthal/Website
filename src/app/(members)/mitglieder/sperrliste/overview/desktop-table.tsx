@@ -119,7 +119,7 @@ export function DesktopTable({
                     {showGroupColumn && (
                       <th className="sticky left-0 z-20 w-3 border-b border-r border-[color:var(--th)] bg-white"></th>
                     )}
-                    <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-right`}>
+                    <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-right`}>
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-600">Ferien</span>
                     </th>
                     {dayCols.map((_, idx) => {
@@ -157,7 +157,7 @@ export function DesktopTable({
                     {showGroupColumn && (
                       <th className="sticky left-0 z-20 w-3 border-b border-r border-[color:var(--th)] bg-white"></th>
                     )}
-                    <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-right`}>
+                    <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-right`}>
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">Feiertage</span>
                     </th>
                     {dayCols.map((_, idx) => {
@@ -190,7 +190,7 @@ export function DesktopTable({
               )}
               <th 
                 scope="col" 
-                className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[220px] sm:w-[260px] min-w-[220px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500`}
+                className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500`}
               >
                 Mitglied
               </th>
@@ -266,7 +266,7 @@ export function DesktopTable({
                 <tr key={p.id} className="border-b border-slate-200/60">
                   <th 
                     scope="row" 
-                    className="sticky left-0 z-10 w-[220px] sm:w-[260px] min-w-[220px] border-r border-slate-200/70 bg-white backdrop-blur shadow-sm px-3 py-2 text-left"
+                    className="sticky left-0 z-10 w-[280px] sm:w-[340px] min-w-[280px] border-r border-slate-200/70 bg-white backdrop-blur shadow-sm px-3 py-2 text-left"
                   >
                     <PersonInfo person={p} />
                   </th>
