@@ -7,9 +7,9 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
-  CalendarStar,
   Clock,
   Sparkles,
+  Sun,
   Umbrella,
   Users2,
 } from "lucide-react";
@@ -772,7 +772,7 @@ function CalendarCards({ dayBuckets }: { dayBuckets: DayBucket[] }) {
             {bucket.holiday && (
               <div className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                 {bucket.holiday.type === "holiday" ? (
-                  <CalendarStar className="h-4 w-4" aria-hidden />
+                  <Sun className="h-4 w-4" aria-hidden />
                 ) : (
                   <Umbrella className="h-4 w-4" aria-hidden />
                 )}
