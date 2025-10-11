@@ -30,51 +30,15 @@ import type {
   PreparedMember,
   VisibleDayInfo,
 } from "./useBlockOverviewData";
-
-type PersonGroup = "actors" | "crew" | "both" | "other";
-
-type OverviewPersonDay = {
-  type: "free" | "limited" | "block" | "preferred";
-  label: string | null;
-  entry: BlockedDay | null;
-  date: Date;
-  dayKey: string;
-  holidayEntries: HolidayRange[];
-};
-
-type OverviewPerson = {
-  id: string;
-  name: string;
-  initials: string;
-  group: PersonGroup;
-  stats: { total: number; upcoming: number; label: string };
-  member: PreparedMember;
-  days: OverviewPersonDay[];
-};
-
-type DayColumn = {
-  key: string;
-  label: string;
-  n: number;
-  date: Date;
-  accent: boolean;
-  weekday: WeekdayValue;
-};
-
-type HolidayIndicator = {
-  dayIndex: number;
-  label?: string;
-  type: "holiday" | "vacation";
-  isPublicHoliday: boolean;
-};
-
-type DayBucket = {
-  column: DayColumn;
-  available: { person: OverviewPerson; cell: OverviewPersonDay }[];
-  limited: { person: OverviewPerson; cell: OverviewPersonDay }[];
-  blocked: { person: OverviewPerson; cell: OverviewPersonDay }[];
-  holiday: HolidayIndicator | null;
-};
+import type {
+  DayBucket,
+  DayColumn,
+  HolidayIndicator,
+  OverviewPerson,
+  OverviewPersonDay,
+  PersonGroup,
+} from "./types";
+import SperrlistenV2 from "./SperrlistenV2";
 
 export type OverviewShellProps = {
   monthLabel: string;
@@ -509,7 +473,12 @@ export function OverviewShell({
         <WeekStrip dayBuckets={dayBuckets} onJump={setHighlightedDay} />
 
         {/* Neue Hauptübersicht: SperrlistenV2 */}
-        <SperrlistenV2 onExportPdf={() => {/* PDF-Export-Logik hier */}} />
+        <SperrlistenV2
+          onExportPdf={() => undefined}
+          people={people}
+          dayCols={dayCols}
+          holidays={holidayIndicators}
+        />
       </main>
     </div>
   );
