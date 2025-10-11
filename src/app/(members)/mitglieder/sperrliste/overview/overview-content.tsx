@@ -275,12 +275,6 @@ export default function OverviewContent({
           </div>
         </header>
 
-        {/* Bevorzugte Tage und Ausnahmen (analog Spielplatz) */}
-        <section className="grid gap-3 lg:grid-cols-2">
-          <Note title="Bevorzugte Tage">Mo & Do</Note>
-          <Note title="Ausnahmen">Mi (Sonderproben möglich)</Note>
-        </section>
-
         {/* Kompakte Mobile-Legende (nur sm:hidden) - analog Spielplatz */}
         <section className="sm:hidden">
           <div className="rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-muted-foreground shadow-sm backdrop-blur">

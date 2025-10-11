@@ -23,7 +23,7 @@ const CellComponent = ({ cell, compact = false }: CellProps) => {
   // Frei
   if (cell.type === "free") {
     return (
-      <div className="flex h-16 items-center justify-center rounded-lg border border-slate-200/70 bg-slate-50 text-[11px] font-medium text-slate-500">
+      <div className="flex h-16 items-center justify-center rounded-lg border border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground">
         frei
       </div>
     );
@@ -34,12 +34,12 @@ const CellComponent = ({ cell, compact = false }: CellProps) => {
     return (
       <button
         type="button"
-        className={`${baseClasses} bg-red-100/80 text-red-700 border border-red-200 hover:bg-red-100 transition-colors`}
+        className={`${baseClasses} bg-destructive/20 text-destructive-foreground border border-destructive/40 hover:bg-destructive/25 transition-colors`}
         title={cell.label ?? "Sperrtermin"}
       >
-        <span className="block truncate text-[10px] uppercase tracking-[0.14em]">Sperrtermin</span>
+        <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.14em]">Sperrtermin</span>
         {cell.label && (
-          <span className="block mt-0.5 text-[11px] text-red-700 truncate" title={cell.label}>
+          <span className="block mt-0.5 text-[11px] text-destructive-foreground/90 truncate" title={cell.label}>
             {cell.label}
           </span>
         )}
@@ -52,12 +52,12 @@ const CellComponent = ({ cell, compact = false }: CellProps) => {
     return (
       <button
         type="button"
-        className={`${baseClasses} border border-orange-200 bg-orange-100/80 text-orange-700 hover:bg-orange-100 transition-colors`}
+        className={`${baseClasses} border border-warning/40 bg-warning/20 text-warning-foreground hover:bg-warning/25 transition-colors`}
         title={cell.label ?? "Eingeschränkt verfügbar"}
       >
-        <span className="block truncate text-[10px] uppercase tracking-[0.14em]">Eingeschränkt</span>
+        <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.14em]">Eingeschränkt</span>
         {cell.label && (
-          <span className="block mt-0.5 text-[11px] text-orange-700 truncate" title={cell.label}>
+          <span className="block mt-0.5 text-[11px] text-warning-foreground/90 truncate" title={cell.label}>
             {cell.label}
           </span>
         )}
@@ -70,12 +70,12 @@ const CellComponent = ({ cell, compact = false }: CellProps) => {
     return (
       <button
         type="button"
-        className={`${baseClasses} border border-green-200 bg-green-100/80 text-green-700 hover:bg-green-100 transition-colors`}
+        className={`${baseClasses} border border-success/40 bg-success/20 text-success-foreground hover:bg-success/25 transition-colors`}
         title={cell.label ?? "Bevorzugter Termin"}
       >
-        <span className="block truncate text-[10px] uppercase tracking-[0.14em]">Bevorzugt</span>
+        <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.14em]">Bevorzugt</span>
         {cell.label && (
-          <span className="block mt-0.5 text-[11px] text-green-700 truncate" title={cell.label}>
+          <span className="block mt-0.5 text-[11px] text-success-foreground/90 truncate" title={cell.label}>
             {cell.label}
           </span>
         )}
