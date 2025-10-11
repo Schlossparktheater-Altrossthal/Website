@@ -18,6 +18,14 @@ import {
   ShieldCheck,
   Trash2,
   Users,
+  User,
+  CreditCard,
+  Utensils,
+  Heart,
+  Eye,
+  Sparkles,
+  Theater,
+  Ruler,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -942,18 +950,18 @@ function ProfileClientInner({
 
   const tabOptions = useMemo(
     () => {
-      const options: Array<{ value: string; label: string }> = [
-        { value: "stammdaten", label: "Stammdaten" },
-        { value: "zahlungen", label: "Zahlungsdaten" },
-        { value: "ernaehrung", label: "Ernährung" },
-        { value: "interessen", label: "Interessen" },
-        { value: "freigaben", label: "Freigaben" },
-        { value: "onboarding", label: "Onboarding" },
-        { value: "rollen", label: "Präferenzen" },
+      const options: Array<{ value: string; label: string; icon: typeof User }> = [
+        { value: "stammdaten", label: "Stammdaten", icon: User },
+        { value: "zahlungen", label: "Zahlungsdaten", icon: CreditCard },
+        { value: "ernaehrung", label: "Ernährung", icon: Utensils },
+        { value: "interessen", label: "Interessen", icon: Heart },
+        { value: "freigaben", label: "Freigaben", icon: Eye },
+        { value: "onboarding", label: "Onboarding", icon: Sparkles },
+        { value: "rollen", label: "Präferenzen", icon: Theater },
       ];
 
       if (canManageMeasurements) {
-        options.splice(3, 0, { value: "masse", label: "Maße" });
+        options.splice(3, 0, { value: "masse", label: "Maße", icon: Ruler });
       }
 
       return options;
@@ -979,20 +987,29 @@ function ProfileClientInner({
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col gap-3">
-          {/* Mobile: Horizontale scrollbare Tabs */}
+          {/* Mobile: Kompakte Navigation mit Icons */}
           <div className="xl:hidden -mx-4 sm:-mx-6">
-            <div className="overflow-x-auto px-4 sm:px-6">
-              <TabsList className="inline-flex h-auto w-auto min-w-full gap-2 rounded-none border-b border-border/60 bg-transparent p-0">
-                {tabOptions.map((option) => (
-                  <TabsTrigger
-                    key={option.value}
-                    value={option.value}
-                    className="relative min-w-[120px] whitespace-nowrap rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                  >
-                    {option.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+            <div className="overflow-x-auto px-4 sm:px-6 pb-px">
+              <div className="inline-flex gap-1 min-w-full rounded-lg bg-muted/50 p-1">
+                {tabOptions.map((option) => {
+                  const Icon = option.icon;
+                  const isActive = activeTab === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => setActiveTab(option.value)}
+                      className={`flex min-w-[80px] flex-col items-center gap-1 rounded-md px-3 py-2 text-xs font-medium transition-all ${
+                        isActive
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden />
+                      <span className="line-clamp-1">{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
