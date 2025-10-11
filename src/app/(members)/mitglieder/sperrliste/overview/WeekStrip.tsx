@@ -94,17 +94,17 @@ export function WeekStrip({ people, dayCols, holidays, onJump }: WeekStripProps)
               {totalCount > 0 && (
                 <div className="flex items-center gap-0.5">
                   {bucket.available.length > 0 && (
-                    <div className="flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-green-100 px-0.5 text-[9px] font-semibold text-green-700 sm:h-4 sm:min-w-[16px] sm:px-1 sm:text-[10px]">
+                    <div className="flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-success/20 px-0.5 text-[9px] font-semibold text-success-foreground sm:h-4 sm:min-w-[16px] sm:px-1 sm:text-[10px]">
                       {bucket.available.length}
                     </div>
                   )}
                   {bucket.limited.length > 0 && (
-                    <div className="flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-orange-100 px-0.5 text-[9px] font-semibold text-orange-700 sm:h-4 sm:min-w-[16px] sm:px-1 sm:text-[10px]">
+                    <div className="flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-warning/20 px-0.5 text-[9px] font-semibold text-warning-foreground sm:h-4 sm:min-w-[16px] sm:px-1 sm:text-[10px]">
                       {bucket.limited.length}
                     </div>
                   )}
                   {bucket.blocked.length > 0 && (
-                    <div className="flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-red-100 px-0.5 text-[9px] font-semibold text-red-700 sm:h-4 sm:min-w-[16px] sm:px-1 sm:text-[10px]">
+                    <div className="flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-destructive/20 px-0.5 text-[9px] font-semibold text-destructive-foreground sm:h-4 sm:min-w-[16px] sm:px-1 sm:text-[10px]">
                       {bucket.blocked.length}
                     </div>
                   )}
@@ -116,9 +116,9 @@ export function WeekStrip({ people, dayCols, holidays, onJump }: WeekStripProps)
                 <div className="absolute bottom-0 left-0 right-0 h-0.5">
                   <div 
                     className={`h-full transition-all ${
-                      availablePercent >= 75 ? 'bg-green-500' :
-                      availablePercent >= 50 ? 'bg-orange-400' :
-                      'bg-red-500'
+                      availablePercent >= 75 ? 'bg-success' :
+                      availablePercent >= 50 ? 'bg-warning' :
+                      'bg-destructive'
                     }`}
                     style={{ width: `${availablePercent}%` }}
                   />

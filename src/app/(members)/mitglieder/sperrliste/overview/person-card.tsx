@@ -22,25 +22,25 @@ type PersonCardProps = {
 const PersonCardComponent = ({ person, cell, tone, compact = false }: PersonCardProps) => {
   const colors = {
     ok: {
-      border: "border-green-200/80",
-      bg: "from-green-50/80 to-white",
-      avatar: "from-green-500 to-green-600",
-      text: "text-green-700/90",
-      badge: "bg-green-600",
+      border: "border-success/40",
+      bg: "from-success/10 to-card",
+      avatar: "from-success to-success",
+      text: "text-success-foreground/90",
+      badge: "bg-success",
     },
     warn: {
-      border: "border-orange-200/80",
-      bg: "from-orange-50/80 to-white",
-      avatar: "from-orange-500 to-orange-600",
-      text: "text-orange-700/90",
-      badge: "bg-orange-600",
+      border: "border-warning/40",
+      bg: "from-warning/10 to-card",
+      avatar: "from-warning to-warning",
+      text: "text-warning-foreground/90",
+      badge: "bg-warning",
     },
     danger: {
-      border: "border-red-200/80",
-      bg: "from-red-50/80 to-white",
-      avatar: "from-red-500 to-red-600",
-      text: "text-red-700/90",
-      badge: "bg-red-600",
+      border: "border-destructive/40",
+      bg: "from-destructive/10 to-card",
+      avatar: "from-destructive to-destructive",
+      text: "text-destructive-foreground/90",
+      badge: "bg-destructive",
     },
   };
 
@@ -57,7 +57,7 @@ const PersonCardComponent = ({ person, cell, tone, compact = false }: PersonCard
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1">
-          <p className="truncate font-semibold text-slate-900 text-[11px]">{person.name}</p>
+          <p className="truncate font-semibold text-foreground text-[11px]">{person.name}</p>
           {cell.type === "preferred" && !compact && (
             <span
               className={`rounded-full ${style.badge} px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white`}

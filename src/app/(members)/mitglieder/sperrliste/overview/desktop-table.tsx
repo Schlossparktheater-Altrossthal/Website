@@ -372,17 +372,17 @@ function PersonInfo({ person, groupColor }: PersonInfoProps) {
 
   const avatarColor = groupColor 
     ? {
-        blue: 'bg-blue-500/15 text-blue-700',
-        green: 'bg-green-500/15 text-green-700',
-        purple: 'bg-purple-500/15 text-purple-700',
+        blue: 'bg-primary/15 text-primary-foreground',
+        green: 'bg-success/15 text-success-foreground',
+        purple: 'bg-accent/15 text-accent-foreground',
       }[groupColor]
     : person.group === 'actors'
-      ? 'bg-blue-500/15 text-blue-700'
+      ? 'bg-primary/15 text-primary-foreground'
       : person.group === 'crew'
-        ? 'bg-green-500/15 text-green-700'
+        ? 'bg-success/15 text-success-foreground'
         : person.group === 'both'
-          ? 'bg-purple-500/15 text-purple-700'
-          : 'bg-slate-500/15 text-slate-700';
+          ? 'bg-accent/15 text-accent-foreground'
+          : 'bg-muted/50 text-muted-foreground';
 
   return (
     <div className="flex items-center gap-2">

@@ -75,49 +75,49 @@ export function TimelineView({
   return (
     <section className="hidden sm:block">
       {/* Kompakte Symbollegende */}
-      <div className="mb-3 flex items-center gap-4 rounded-lg border border-slate-200/70 bg-slate-50/50 px-3 py-2 text-[11px]">
-        <span className="font-semibold uppercase tracking-wide text-slate-500">Legende:</span>
+      <div className="mb-3 flex items-center gap-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-[11px]">
+        <span className="font-semibold uppercase tracking-wide text-muted-foreground">Legende:</span>
         <div className="flex items-center gap-1">
-          <div className="flex h-5 w-5 items-center justify-center rounded border border-green-200 bg-gradient-to-br from-green-50 to-green-100/50">
-            <StarIcon className="h-3 w-3 text-green-600" />
+          <div className="flex h-5 w-5 items-center justify-center rounded border border-success/40 bg-gradient-to-br from-success/15 to-success/25">
+            <StarIcon className="h-3 w-3 text-success-foreground" />
           </div>
-          <span className="text-slate-700">Bevorzugt</span>
+          <span className="text-foreground">Bevorzugt</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-slate-50/50">
-            <CheckIcon className="h-3 w-3 text-slate-400" />
+          <div className="flex h-5 w-5 items-center justify-center rounded border border-border/60 bg-muted/30">
+            <CheckIcon className="h-3 w-3 text-muted-foreground" />
           </div>
-          <span className="text-slate-700">Frei</span>
+          <span className="text-foreground">Frei</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="flex h-5 w-5 items-center justify-center rounded border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/50">
-            <ClockAlertIcon className="h-3 w-3 text-orange-600" />
+          <div className="flex h-5 w-5 items-center justify-center rounded border border-warning/40 bg-gradient-to-br from-warning/15 to-warning/25">
+            <ClockAlertIcon className="h-3 w-3 text-warning-foreground" />
           </div>
-          <span className="text-slate-700">Eingeschränkt</span>
+          <span className="text-foreground">Eingeschränkt</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="flex h-5 w-5 items-center justify-center rounded border border-red-200 bg-gradient-to-br from-red-50 to-red-100/50">
-            <XCircleIcon className="h-3 w-3 text-red-600" />
+          <div className="flex h-5 w-5 items-center justify-center rounded border border-destructive/40 bg-gradient-to-br from-destructive/15 to-destructive/25">
+            <XCircleIcon className="h-3 w-3 text-destructive-foreground" />
           </div>
-          <span className="text-slate-700">Gesperrt</span>
+          <span className="text-foreground">Gesperrt</span>
         </div>
-        <div className="ml-2 h-3 w-px bg-slate-300" />
+        <div className="ml-2 h-3 w-px bg-border" />
         <div className="flex items-center gap-1">
           <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-r from-amber-400 to-amber-500">
             <CalendarStarIcon className="h-3 w-3 text-white" />
           </div>
-          <span className="text-slate-700">Feiertag</span>
+          <span className="text-foreground">Feiertag</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-r from-sky-400 to-sky-500">
             <UmbrellaIcon className="h-3 w-3 text-white" />
           </div>
-          <span className="text-slate-700">Ferien</span>
+          <span className="text-foreground">Ferien</span>
         </div>
       </div>
 
       {/* Timeline mit sticky Header */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/70 bg-slate-50/30 p-3">
+      <div className="overflow-x-auto rounded-2xl border border-border/60 bg-muted/20 p-3">
         {/* Holiday Spans Bar */}
         {(holidaySpans.length > 0 || holidays.some(h => h.type === 'holiday')) && (
           <div className="mb-3 space-y-1.5 min-w-[900px]">
@@ -259,9 +259,9 @@ export function TimelineView({
               {/* Gewerke Gruppe */}
               {groupedPeople.crew.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-green-500 bg-gradient-to-r from-green-50 to-green-100/50 px-4 py-2.5 backdrop-blur-sm shadow-sm">
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-green-900">
-                      Gewerke <span className="ml-2 text-xs font-normal text-green-700">({groupedPeople.crew.length})</span>
+                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-success bg-gradient-to-r from-success/10 to-success/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
+                      Gewerke <span className="ml-2 text-xs font-normal text-success-foreground">({groupedPeople.crew.length})</span>
                     </h3>
                   </div>
                   {groupedPeople.crew.map((p) => (

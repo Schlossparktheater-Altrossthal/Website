@@ -128,10 +128,10 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                         return (
                           <div key="crew-available">
                             <div className="flex items-center gap-2 px-2 py-1">
-                              <div className="h-0.5 w-1 rounded-full bg-gradient-to-b from-green-400 to-green-500" />
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-green-600">Gewerke</span>
+                              <div className="h-0.5 w-1 rounded-full bg-gradient-to-b from-success to-success" />
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-success-foreground">Gewerke</span>
                             </div>
-                            <ul className="divide-y divide-slate-100 rounded-lg border border-green-200/60 bg-[color:var(--spl-ok-bg)]">
+                            <ul className="divide-y divide-border/40 rounded-lg border border-success/40 bg-[color:var(--spl-ok-bg)]">
                               {crewAvailable.map(({ person, cell }, i) => (
                                 <PersonListItem 
                                   key={person.id + i} 
@@ -167,12 +167,12 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                                 'from-green-400 to-green-500'
                               }`} />
                               <span className={`text-[10px] font-semibold uppercase tracking-wider ${
-                                color === 'blue' ? 'text-blue-600' :
-                                color === 'purple' ? 'text-purple-600' :
-                                'text-green-600'
+                                color === 'blue' ? 'text-primary-foreground' :
+                                color === 'purple' ? 'text-accent-foreground' :
+                                'text-success-foreground'
                               }`}>{label}</span>
                             </div>
-                            <ul className="divide-y divide-orange-100 rounded-lg border border-orange-200/70 bg-[color:var(--spl-warn-bg)]">
+                            <ul className="divide-y divide-warning/20 rounded-lg border border-warning/40 bg-[color:var(--spl-warn-bg)]">
                               {filtered.map(({ person, cell }, i) => (
                                 <PersonListItem 
                                   key={person.id + i} 
@@ -208,12 +208,12 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                                 'from-green-400 to-green-500'
                               }`} />
                               <span className={`text-[10px] font-semibold uppercase tracking-wider ${
-                                color === 'blue' ? 'text-blue-600' :
-                                color === 'purple' ? 'text-purple-600' :
-                                'text-green-600'
+                                color === 'blue' ? 'text-primary-foreground' :
+                                color === 'purple' ? 'text-accent-foreground' :
+                                'text-success-foreground'
                               }`}>{label}</span>
                             </div>
-                            <ul className="divide-y divide-red-100 rounded-lg border border-red-200/70 bg-[color:var(--spl-danger-bg)]">
+                            <ul className="divide-y divide-destructive/20 rounded-lg border border-destructive/40 bg-[color:var(--spl-danger-bg)]">
                               {filtered.map(({ person, cell }, i) => (
                                 <PersonListItem 
                                   key={person.id + i} 
@@ -314,10 +314,10 @@ function PersonListItem({ person, cell, tone, groupColor }: PersonListItemProps)
   };
 
   const groupColors = groupColor ? {
-    blue: 'bg-blue-500/20 text-blue-700',
-    green: 'bg-green-500/20 text-green-700',
-    purple: 'bg-purple-500/20 text-purple-700',
-  }[groupColor] : 'bg-white/80 text-[var(--primary)]';
+    blue: 'bg-primary/20 text-primary-foreground',
+    green: 'bg-success/20 text-success-foreground',
+    purple: 'bg-accent/20 text-accent-foreground',
+  }[groupColor] : 'bg-card/80 text-primary';
 
   const statusLabel = 
     cell.type === 'preferred' ? 'Bevorzugt' :
@@ -326,9 +326,9 @@ function PersonListItem({ person, cell, tone, groupColor }: PersonListItemProps)
     'Sperrtermin';
 
   const statusColor = 
-    tone === 'ok' ? 'text-green-700/80' :
-    tone === 'warn' ? 'text-orange-700' :
-    'text-red-700';
+    tone === 'ok' ? 'text-success-foreground/90' :
+    tone === 'warn' ? 'text-warning-foreground' :
+    'text-destructive-foreground';
 
   return (
     <li className={`flex items-start gap-2 px-3 py-2 text-[13px] ${toneColors[tone]}`}>
@@ -336,7 +336,7 @@ function PersonListItem({ person, cell, tone, groupColor }: PersonListItemProps)
         {initials}
       </span>
       <div className="min-w-0">
-        <p className="font-medium text-slate-800">
+        <p className="font-medium text-foreground">
           {person.name} <span className={`ml-1 text-[11px] uppercase tracking-[0.16em] ${statusColor}`}>{statusLabel}</span>
         </p>
         {cell.label && <p className={`text-[12px] ${statusColor}/90`}>{cell.label}</p>}

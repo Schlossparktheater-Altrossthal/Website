@@ -178,8 +178,8 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                   <div className="flex-1 overflow-auto p-2 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
                     {bucket.available.length > 0 && (
                       <div className="space-y-1">
-                        <h4 className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-green-700 sticky top-0 bg-gradient-to-b from-white via-white to-transparent pb-1 z-10">
-                          <StarIcon className="h-3 w-3 fill-green-600" />
+                        <h4 className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-success-foreground sticky top-0 bg-gradient-to-b from-card via-card to-transparent pb-1 z-10">
+                          <StarIcon className="h-3 w-3 fill-success-foreground" />
                           <span className="hidden lg:inline">Verfügbar</span>
                         </h4>
                         <ul className="space-y-1">
@@ -198,7 +198,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
 
                     {bucket.limited.length > 0 && (
                       <div className="space-y-1">
-                        <h4 className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-orange-700 sticky top-0 bg-gradient-to-b from-white via-white to-transparent pb-1 z-10">
+                        <h4 className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground sticky top-0 bg-gradient-to-b from-card via-card to-transparent pb-1 z-10">
                           <ClockAlertIcon className="h-3 w-3" />
                           <span className="hidden lg:inline">Eingeschränkt</span>
                         </h4>
@@ -218,7 +218,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
 
                     {bucket.blocked.length > 0 && (
                       <div className="space-y-1">
-                        <h4 className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-red-700 sticky top-0 bg-gradient-to-b from-white via-white to-transparent pb-1 z-10">
+                        <h4 className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground sticky top-0 bg-gradient-to-b from-card via-card to-transparent pb-1 z-10">
                           <XCircleIcon className="h-3 w-3" />
                           <span className="hidden lg:inline">Gesperrt</span>
                         </h4>
@@ -238,31 +238,31 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
 
                     {totalCount === 0 && (
                       <div className="flex h-full min-h-[8rem] items-center justify-center">
-                        <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-3 py-4 text-center">
-                          <CheckIcon className="h-5 w-5 mx-auto text-slate-400" />
-                          <p className="mt-1 text-[11px] font-medium text-slate-500">Keine Einträge</p>
+                        <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 px-3 py-4 text-center">
+                          <CheckIcon className="h-5 w-5 mx-auto text-muted-foreground" />
+                          <p className="mt-1 text-[11px] font-medium text-muted-foreground">Keine Einträge</p>
                         </div>
                       </div>
                     )}
                   </div>
 
                   {/* Footer mit Stats - kompakter */}
-                  <div className="relative overflow-hidden border-t border-slate-200/50 backdrop-blur-sm shrink-0">
-                    <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-white/40" />
+                  <div className="relative overflow-hidden border-t border-border/50 backdrop-blur-sm shrink-0">
+                    <div className="absolute inset-0 bg-gradient-to-t from-card/80 to-card/40" />
                     <div className="relative flex items-center justify-between px-2.5 py-1.5 text-[10px] font-medium">
-                      <span className="flex items-center gap-1 text-green-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      <span className="flex items-center gap-1 text-success-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full bg-success" />
                         {bucket.available.length}
                       </span>
-                      <span className="flex items-center gap-1 text-orange-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                      <span className="flex items-center gap-1 text-warning-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full bg-warning" />
                         {bucket.limited.length}
                       </span>
-                      <span className="flex items-center gap-1 text-red-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                      <span className="flex items-center gap-1 text-destructive-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
                         {bucket.blocked.length}
                       </span>
-                      <span className="hidden lg:inline text-slate-500">
+                      <span className="hidden lg:inline text-muted-foreground">
                         {availablePercent}%
                       </span>
                     </div>
