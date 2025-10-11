@@ -27,20 +27,66 @@ type SperrlistenV2Props = {
   onPreviousMonth?: () => void;
   onNextMonth?: () => void;
   month?: { label: string; year: number; month: number };
+  personFilter?: PersonFilter;
+  onPersonFilterChange?: (filter: PersonFilter) => void;
+  view?: "table" | "calendar" | "timeline";
+  onViewChange?: (view: "table" | "calendar" | "timeline") => void;
+  highlightedDay?: number | null;
+  onHighlightedDayChange?: (day: number | null) => void;
 };
 
-export default function SperrlistenV2({ 
-  onExportPdf, 
-  people, 
-  dayCols, 
+export default function SperrlistenV2({
+  onExportPdf,
+  people,
+  dayCols,
   holidays,
   onPreviousMonth,
   onNextMonth,
-  month
+  month,
+  personFilter: controlledPersonFilter,
+  onPersonFilterChange,
+  view: controlledView,
+  onViewChange,
+  highlightedDay: controlledHighlightedDay,
+  onHighlightedDayChange,
 }: SperrlistenV2Props) {
-  const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
-  const [view, setView] = useState<"table" | "calendar" | "timeline">("table");
-  const [highlightedDay, setHighlightedDay] = useState<number | null>(null);
+  const [internalPersonFilter, setInternalPersonFilter] = useState<PersonFilter>("all");
+  const [internalView, setInternalView] = useState<"table" | "calendar" | "timeline">("table");
+  const [internalHighlightedDay, setInternalHighlightedDay] = useState<number | null>(null);
+
+  const personFilter = controlledPersonFilter ?? internalPersonFilter;
+  const view = controlledView ?? internalView;
+  const highlightedDay = controlledHighlightedDay ?? internalHighlightedDay;
+
+  const setPersonFilter = useCallback(
+    (next: PersonFilter) => {
+      onPersonFilterChange?.(next);
+      if (controlledPersonFilter === undefined) {
+        setInternalPersonFilter(next);
+      }
+    },
+    [controlledPersonFilter, onPersonFilterChange],
+  );
+
+  const setView = useCallback(
+    (next: "table" | "calendar" | "timeline") => {
+      onViewChange?.(next);
+      if (controlledView === undefined) {
+        setInternalView(next);
+      }
+    },
+    [controlledView, onViewChange],
+  );
+
+  const setHighlightedDay = useCallback(
+    (next: number | null) => {
+      onHighlightedDayChange?.(next);
+      if (controlledHighlightedDay === undefined) {
+        setInternalHighlightedDay(next);
+      }
+    },
+    [controlledHighlightedDay, onHighlightedDayChange],
+  );
 
   const groupedCounts = useMemo(() => {
     return people.reduce(
@@ -76,19 +122,19 @@ export default function SperrlistenV2({
 
   // "Heute"-Button Handler mit useCallback
   const handleJumpToToday = useCallback(() => {
-    const todayDay = dayCols.find(d => d.accent === true);
+    const todayDay = dayCols.find((d) => d.accent === true);
     if (todayDay) {
       setHighlightedDay(todayDay.n);
       const element = document.getElementById(`day-${todayDay.n}`);
-      element?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      element?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
     }
-  }, [dayCols]);
+  }, [dayCols, setHighlightedDay]);
 
   // Keyboard-Navigation für View-Switching (Strg+1/2/3) mit useCallback
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     // Nur wenn Strg/Cmd gedrückt ist
     if (!event.ctrlKey && !event.metaKey) return;
-    
+
     if (event.key === '1') {
       event.preventDefault();
       setView('calendar');
@@ -99,7 +145,7 @@ export default function SperrlistenV2({
       event.preventDefault();
       setView('timeline');
     }
-  }, []);
+  }, [setView]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -304,7 +350,7 @@ export default function SperrlistenV2({
             dayCols={dayCols}
             holidays={holidays}
             highlightedDay={highlightedDay}
-            setHighlightedDay={(day) => setHighlightedDay(day)}
+            setHighlightedDay={setHighlightedDay}
             personFilter={personFilter}
           />
         ) : (

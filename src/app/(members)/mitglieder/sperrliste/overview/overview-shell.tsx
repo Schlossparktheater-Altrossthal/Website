@@ -366,6 +366,12 @@ export function OverviewShell({
           people={people}
           dayCols={dayCols}
           holidays={holidayIndicators}
+          personFilter={personFilter}
+          onPersonFilterChange={(value) => setPersonFilter(value)}
+          view={view}
+          onViewChange={(value) => setView(value)}
+          highlightedDay={highlightedDay}
+          onHighlightedDayChange={(day) => setHighlightedDay(day)}
         />
     </div>
   );
