@@ -23,7 +23,7 @@ import type {
   OverviewPersonDay,
   PersonGroup,
 } from "./types";
-import SperrlistenV2 from "./SperrlistenV2";
+import OverviewContent from "./overview-content";
 
 export type OverviewShellProps = {
   monthLabel: string;
@@ -154,8 +154,8 @@ export function OverviewShell({
         <Note title="Ausnahmen">{exceptionDescription}</Note>
       </section>
 
-      {/* Neue Hauptübersicht: SperrlistenV2 */}
-      <SperrlistenV2
+      {/* Hauptübersicht mit Controls */}
+      <OverviewContent
         onExportPdf={() => undefined}
         people={people}
         dayCols={dayCols}

@@ -19,7 +19,7 @@ import type {
 
 type PersonFilter = PersonGroup | "all";
 
-type SperrlistenV2Props = {
+type OverviewContentProps = {
   onExportPdf: () => void;
   people: OverviewPerson[];
   dayCols: DayColumn[];
@@ -35,7 +35,7 @@ type SperrlistenV2Props = {
   onHighlightedDayChange?: (day: number | null) => void;
 };
 
-export default function SperrlistenV2({
+export default function OverviewContent({
   onExportPdf,
   people,
   dayCols,
@@ -49,6 +49,7 @@ export default function SperrlistenV2({
   onViewChange,
   highlightedDay: controlledHighlightedDay,
   onHighlightedDayChange,
+}: OverviewContentProps) {
 }: SperrlistenV2Props) {
   const [internalPersonFilter, setInternalPersonFilter] = useState<PersonFilter>("all");
   const [internalView, setInternalView] = useState<"table" | "calendar" | "timeline">("table");
