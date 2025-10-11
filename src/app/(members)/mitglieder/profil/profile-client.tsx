@@ -989,8 +989,8 @@ function ProfileClientInner({
         <div className="flex flex-col gap-3">
           {/* Mobile: Kompakte Navigation mit Icons */}
           <div className="xl:hidden -mx-4 sm:-mx-6">
-            <div className="overflow-x-auto px-4 sm:px-6 pb-px">
-              <div className="inline-flex gap-1 min-w-full rounded-lg bg-muted/50 p-1">
+            <div className="overflow-x-auto px-4 sm:px-6 pb-px scrollbar-hide">
+              <div className="inline-flex gap-1 rounded-lg bg-muted/50 p-1">
                 {tabOptions.map((option) => {
                   const Icon = option.icon;
                   const isActive = activeTab === option.value;
@@ -998,14 +998,14 @@ function ProfileClientInner({
                     <button
                       key={option.value}
                       onClick={() => setActiveTab(option.value)}
-                      className={`flex min-w-[80px] flex-col items-center gap-1 rounded-md px-3 py-2 text-xs font-medium transition-all ${
+                      className={`flex min-w-[72px] flex-col items-center gap-1 rounded-md px-2.5 py-2 text-xs font-medium transition-all whitespace-nowrap ${
                         isActive
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <Icon className="h-4 w-4" aria-hidden />
-                      <span className="line-clamp-1">{option.label}</span>
+                      <Icon className="h-4 w-4 flex-shrink-0" aria-hidden />
+                      <span className="truncate max-w-full">{option.label}</span>
                     </button>
                   );
                 })}
