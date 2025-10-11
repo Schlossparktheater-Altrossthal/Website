@@ -109,32 +109,32 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                   id={`day-${bucket.column.n}`}
                   className={`group flex flex-col rounded-2xl border bg-gradient-to-br shadow-md transition-all duration-300 w-72 shrink-0 ${
                     isToday
-                      ? 'border-blue-500 shadow-xl ring-2 ring-blue-500/30'
+                      ? 'border-primary shadow-xl ring-2 ring-primary/30'
                       : isHovered 
-                        ? 'border-blue-300 shadow-xl scale-[1.02] ring-2 ring-blue-200/50' 
-                        : 'border-slate-200/70 hover:border-slate-300 hover:shadow-lg'
+                        ? 'border-primary/60 shadow-xl scale-[1.02] ring-2 ring-primary/20' 
+                        : 'border-border/60 hover:border-border hover:shadow-lg'
                   } ${
                     bucket.holiday 
-                      ? 'from-sky-50 to-white' 
+                      ? 'from-sky-50 to-card' 
                       : availablePercent >= 75 
-                        ? 'from-green-50/30 to-white'
+                        ? 'from-success/10 to-card'
                         : availablePercent <= 25
-                          ? 'from-red-50/30 to-white'
-                          : 'from-white to-slate-50/30'
+                          ? 'from-destructive/10 to-card'
+                          : 'from-card to-muted/30'
                   } ${isCompactMode ? 'min-h-[16rem] max-h-[24rem]' : 'min-h-[20rem] max-h-[32rem]'}`}
                   onMouseEnter={() => setHoveredDay(bucket.column.n)}
                   onMouseLeave={() => setHoveredDay(null)}
                 >
                   {/* Header mit Glassmorphism und verbessertem Layout */}
-                  <div className="relative overflow-hidden border-b border-slate-200/50 backdrop-blur-sm shrink-0">
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-white/40" />
+                  <div className="relative overflow-hidden border-b border-border/50 backdrop-blur-sm shrink-0">
+                    <div className="absolute inset-0 bg-gradient-to-b from-card/80 to-card/40" />
                     <div className="relative px-2.5 py-2">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <div className="flex flex-col min-w-0">
-                          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
+                          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                             {bucket.column.label}
                           </span>
-                          <span className="text-lg font-bold text-slate-900">{bucket.column.n}</span>
+                          <span className="text-lg font-bold text-foreground">{bucket.column.n}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-end gap-0.5">
@@ -161,12 +161,12 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                   
                     {/* Availability Progress Bar */}
                     {totalCount > 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-200/50">
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-border/30">
                         <div 
                           className={`h-full transition-all duration-500 ${
-                            availablePercent >= 75 ? 'bg-gradient-to-r from-green-400 to-green-500' :
-                            availablePercent >= 50 ? 'bg-gradient-to-r from-yellow-400 to-orange-400' :
-                            'bg-gradient-to-r from-orange-500 to-red-500'
+                            availablePercent >= 75 ? 'bg-gradient-to-r from-success to-success' :
+                            availablePercent >= 50 ? 'bg-gradient-to-r from-warning to-warning' :
+                            'bg-gradient-to-r from-destructive to-destructive'
                           }`}
                           style={{ width: `${availablePercent}%` }}
                         />
@@ -275,14 +275,13 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
       </div>
       
       {/* Helper Text */}
-      <p className="mt-3 text-[11px] text-slate-500">
-        {isCompactMode && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-blue-700 font-medium mr-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-            Kompaktmodus aktiv ({totalPeople} Personen)
+      <p className="mt-3 text-[11px] text-muted-foreground">
+        Tipp: Auf
+          <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary font-medium mr-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            Heute
           </span>
-        )}
-        Scroll horizontal für alle Tage · Hover für Details
+        klicken, um die Karte zu fokussieren.
       </p>
     </section>
   );

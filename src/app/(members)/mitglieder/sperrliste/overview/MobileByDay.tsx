@@ -33,16 +33,16 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
         return (
           <article 
             key={bucket.column.key} 
-            className="rounded-2xl border border-slate-200/70 bg-white shadow-sm" 
+            className="rounded-2xl border border-border/60 bg-card shadow-sm" 
             role="region" 
             aria-labelledby={regionId} 
             id={regionId}
           >
-            <header className="sticky top-0 z-10 bg-white/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur-sm border-b border-slate-100">
+            <header className="sticky top-0 z-10 bg-card/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur-sm border-b border-border/40">
               <div className="flex items-center justify-between px-3 py-2">
                 <div className="flex items-baseline gap-2">
                   <h3 id={regionId} className="text-sm font-semibold">
-                    {bucket.column.label} <span className="text-slate-500">{label}</span>
+                    {bucket.column.label} <span className="text-muted-foreground">{label}</span>
                   </h3>
                   {bucket.holidayType === 'holiday' && (
                     <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-500 px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -58,7 +58,7 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                     </span>
                   )}
                 </div>
-                <small className="text-[11px] text-slate-500">
+                <small className="text-[11px] text-muted-foreground">
                   {bucket.available.length} können · {bucket.limited.length} eingeschränkt · {bucket.blocked.length} gesperrt
                 </small>
               </div>
@@ -78,10 +78,10 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                         return (
                           <div key="actors-available">
                             <div className="flex items-center gap-2 px-2 py-1">
-                              <div className="h-0.5 w-1 rounded-full bg-gradient-to-b from-blue-400 to-blue-500" />
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-600">Schauspieler</span>
+                              <div className="h-0.5 w-1 rounded-full bg-gradient-to-b from-primary to-primary" />
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">Schauspieler</span>
                             </div>
-                            <ul className="divide-y divide-slate-100 rounded-lg border border-green-200/60 bg-[color:var(--spl-ok-bg)]">
+                            <ul className="divide-y divide-border/30 rounded-lg border border-success/40 bg-[color:var(--spl-ok-bg)]">
                               {actorsAvailable.map(({ person, cell }, i) => (
                                 <PersonListItem 
                                   key={person.id + i} 
@@ -103,10 +103,10 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                         return (
                           <div key="both-available">
                             <div className="flex items-center gap-2 px-2 py-1">
-                              <div className="h-0.5 w-1 rounded-full bg-gradient-to-b from-purple-400 to-pink-500" />
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">Beides</span>
+                              <div className="h-0.5 w-1 rounded-full bg-gradient-to-b from-accent to-accent" />
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-accent-foreground">Beides</span>
                             </div>
-                            <ul className="divide-y divide-slate-100 rounded-lg border border-green-200/60 bg-[color:var(--spl-ok-bg)]">
+                            <ul className="divide-y divide-border/30 rounded-lg border border-success/40 bg-[color:var(--spl-ok-bg)]">
                               {bothAvailable.map(({ person, cell }, i) => (
                                 <PersonListItem 
                                   key={person.id + i} 
@@ -162,9 +162,9 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                           <div key={group}>
                             <div className="flex items-center gap-2 px-2 py-1">
                               <div className={`h-0.5 w-1 rounded-full bg-gradient-to-b ${
-                                color === 'blue' ? 'from-blue-400 to-blue-500' :
-                                color === 'purple' ? 'from-purple-400 to-pink-500' :
-                                'from-green-400 to-green-500'
+                                color === 'blue' ? 'from-primary to-primary' :
+                                color === 'purple' ? 'from-accent to-accent' :
+                                'from-success to-success'
                               }`} />
                               <span className={`text-[10px] font-semibold uppercase tracking-wider ${
                                 color === 'blue' ? 'text-primary-foreground' :
@@ -203,9 +203,9 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                           <div key={group}>
                             <div className="flex items-center gap-2 px-2 py-1">
                               <div className={`h-0.5 w-1 rounded-full bg-gradient-to-b ${
-                                color === 'blue' ? 'from-blue-400 to-blue-500' :
-                                color === 'purple' ? 'from-purple-400 to-pink-500' :
-                                'from-green-400 to-green-500'
+                                color === 'blue' ? 'from-primary to-primary' :
+                                color === 'purple' ? 'from-accent to-accent' :
+                                'from-success to-success'
                               }`} />
                               <span className={`text-[10px] font-semibold uppercase tracking-wider ${
                                 color === 'blue' ? 'text-primary-foreground' :
@@ -234,7 +234,7 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                 /* Ungefilterte Darstellung ohne Gruppen */
                 <>
                   {bucket.available.length > 0 && (
-                    <ul className="divide-y divide-slate-100 rounded-lg border border-green-200/60 bg-[color:var(--spl-ok-bg)]">
+                    <ul className="divide-y divide-border/30 rounded-lg border border-success/40 bg-[color:var(--spl-ok-bg)]">
                       {bucket.available.map(({ person, cell }, i) => (
                         <PersonListItem 
                           key={person.id + i} 
@@ -247,7 +247,7 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                   )}
 
                   {bucket.limited.length > 0 && (
-                    <ul className="mt-2 divide-y divide-orange-100 rounded-lg border border-orange-200/70 bg-[color:var(--spl-warn-bg)]">
+                    <ul className="mt-2 divide-y divide-warning/20 rounded-lg border border-warning/40 bg-[color:var(--spl-warn-bg)]">
                       {bucket.limited.map(({ person, cell }, i) => (
                         <PersonListItem 
                           key={person.id + i} 
@@ -260,7 +260,7 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                   )}
 
                   {bucket.blocked.length > 0 && (
-                    <ul className="mt-2 divide-y divide-red-100 rounded-lg border border-red-200/70 bg-[color:var(--spl-danger-bg)]">
+                    <ul className="mt-2 divide-y divide-destructive/20 rounded-lg border border-destructive/40 bg-[color:var(--spl-danger-bg)]">
                       {bucket.blocked.map(({ person, cell }, i) => (
                         <PersonListItem 
                           key={person.id + i} 
@@ -275,7 +275,7 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
               )}
 
               {bucket.available.length + bucket.limited.length + bucket.blocked.length === 0 && (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600">
+                <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-[13px] text-muted-foreground">
                   Keine Einträge
                 </div>
               )}

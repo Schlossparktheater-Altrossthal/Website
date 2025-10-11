@@ -69,8 +69,8 @@ export function DesktopTable({
       {/* Monatsnavigation analog Spielplatz */}
       {(month || onPreviousMonth || onNextMonth || onJumpToToday) && (
         <div className="mb-2 flex items-center justify-between gap-2">
-          {month && <div className="text-sm font-semibold text-slate-700">{month.label}</div>}
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200/70 bg-white/80 p-1 shadow-sm">
+          {month && <div className="text-sm font-semibold text-foreground">{month.label}</div>}
+          <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/80 p-1 shadow-sm">
             {onPreviousMonth && (
               <IconButton aria-label="Vorheriger Monat" onClick={onPreviousMonth}>
                 &larr;
@@ -84,7 +84,7 @@ export function DesktopTable({
             {onJumpToToday && (
               <button
                 type="button"
-                className="ml-1 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-2.5 py-1 text-sm font-medium hover:bg-white transition-colors"
+                className="ml-1 inline-flex items-center gap-2 rounded-lg border border-border bg-card/70 px-2.5 py-1 text-sm font-medium hover:bg-card transition-colors"
                 aria-label="Zu heute springen"
                 onClick={onJumpToToday}
               >
@@ -97,19 +97,19 @@ export function DesktopTable({
       
       {/* Tabelle mit sticky Header und Namen - lokaler Scroll-Container */}
       <div 
-        className="relative max-h-[calc(100vh-16rem)] overflow-auto overscroll-y-auto rounded-2xl border border-slate-200/70 bg-white shadow-sm" 
+        className="relative max-h-[calc(100vh-16rem)] overflow-auto overscroll-y-auto rounded-2xl border border-border/60 bg-card shadow-sm" 
         ref={scrollRef}
       >
         {showHint && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-white/75 to-transparent px-3 py-2 text-[11px] text-slate-500">
-            <span className="rounded-md border border-slate-200 bg-white/80 px-2 py-0.5">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-card/75 to-transparent px-3 py-2 text-[11px] text-muted-foreground">
+            <span className="rounded-md border border-border bg-card/80 px-2 py-0.5">
               Tipp: horizontal wischen/scrollen →
             </span>
           </div>
         )}
         
-        <table className={`w-full ${compact ? "text-[12px]" : "text-sm"} table-fixed border-collapse [--th:theme(colors.slate.200/.7)]`}>
-          <thead className="sticky top-0 z-20 bg-white backdrop-blur shadow-sm">
+        <table className={`w-full ${compact ? "text-[12px]" : "text-sm"} table-fixed border-collapse [--th:theme(colors.border/.7)]`}>
+          <thead className="sticky top-0 z-20 bg-card backdrop-blur shadow-sm">
             {/* Ferien-Zeile über den Tagen */}
             {(hasFerien || hasFeiertage) && (
               <>
@@ -190,7 +190,7 @@ export function DesktopTable({
               )}
               <th 
                 scope="col" 
-                className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500`}
+                className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-card px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground`}
               >
                 Mitglied
               </th>
@@ -199,15 +199,15 @@ export function DesktopTable({
                   key={d.key} 
                   scope="col" 
                   className={`border-b border-[color:var(--th)] px-2 py-2 text-center align-bottom min-w-[110px] w-[110px] ${
-                    d.accent ? 'bg-blue-50/80' : 'bg-white'
+                    d.accent ? 'bg-primary/10' : 'bg-card'
                   } ${idx === dayCols.length - 1 ? 'rounded-tr-2xl' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{d.label}</span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{d.label}</span>
                     <span className={`flex h-7 w-7 items-center justify-center rounded-full border text-[13px] font-semibold ${
                       d.accent 
-                        ? 'border-blue-500 bg-blue-500 text-white shadow-md'
-                        : 'border-slate-200 bg-slate-50 text-slate-900'
+                        ? 'border-primary bg-primary text-primary-foreground shadow-md'
+                        : 'border-border bg-muted text-foreground'
                     }`}>
                       {d.n}
                     </span>
@@ -263,10 +263,10 @@ export function DesktopTable({
             ) : (
               /* Gefilterte Liste ohne Gruppierungs-Header */
               filteredPeople.map((p) => (
-                <tr key={p.id} className="border-b border-slate-200/60">
+                <tr key={p.id} className="border-b border-border/50">
                   <th 
                     scope="row" 
-                    className="sticky left-0 z-10 w-[280px] sm:w-[340px] min-w-[280px] border-r border-slate-200/70 bg-white backdrop-blur shadow-sm px-3 py-2 text-left"
+                    className="sticky left-0 z-10 w-[280px] sm:w-[340px] min-w-[280px] border-r border-border/60 bg-card backdrop-blur shadow-sm px-3 py-2 text-left"
                   >
                     <PersonInfo person={p} />
                   </th>
@@ -309,19 +309,19 @@ function PersonRow({
   isLastGroup = false
 }: PersonRowProps) {
   const colorMap = {
-    blue: 'from-blue-400 to-blue-500',
-    green: 'from-green-400 to-green-500',
-    purple: 'from-purple-400 to-pink-500',
+    blue: 'from-primary to-primary',
+    green: 'from-success to-success',
+    purple: 'from-accent to-accent',
   };
 
   return (
-    <tr className="border-b border-slate-200/60 group">
+    <tr className="border-b border-border/50 group">
       {isFirstInGroup && (
         <th 
           rowSpan={groupSize}
           scope="rowgroup"
           aria-label={`${groupLabel} Gruppe`}
-          className={`sticky left-0 z-10 w-3 border-r border-slate-200/70 bg-gradient-to-b ${colorMap[groupColor]} p-0 ${isLastGroup ? 'rounded-bl-2xl' : ''}`}
+          className={`sticky left-0 z-10 w-3 border-r border-border/60 bg-gradient-to-b ${colorMap[groupColor]} p-0 ${isLastGroup ? 'rounded-bl-2xl' : ''}`}
         >
           <div className="flex h-full items-center justify-center">
             <span 
@@ -339,7 +339,7 @@ function PersonRow({
       )}
       <th 
         scope="row" 
-        className="sticky left-3 z-10 w-[280px] sm:w-[340px] min-w-[280px] border-r border-slate-200/70 bg-white backdrop-blur shadow-sm px-3 py-2 text-left"
+        className="sticky left-3 z-10 w-[280px] sm:w-[340px] min-w-[280px] border-r border-border/60 bg-card backdrop-blur shadow-sm px-3 py-2 text-left"
       >
         <PersonInfo person={person} groupColor={groupColor} />
       </th>

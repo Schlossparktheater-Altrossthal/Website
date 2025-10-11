@@ -125,7 +125,7 @@ export function TimelineView({
             {holidaySpans.length > 0 && (
               <div className="relative h-10">
                 <div className="grid grid-cols-[200px_1fr] gap-0">
-                  <div className="flex items-center justify-end border-r border-slate-200/70 px-3">
+                  <div className="flex items-center justify-end border-r border-border/60 px-3">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-600">Ferien</span>
                   </div>
                   <div className="grid grid-cols-7 gap-0 relative">
@@ -154,7 +154,7 @@ export function TimelineView({
             {holidays.some(h => h.type === 'holiday') && (
               <div className="relative h-10">
                 <div className="grid grid-cols-[200px_1fr] gap-0">
-                  <div className="flex items-center justify-end border-r border-slate-200/70 px-3">
+                  <div className="flex items-center justify-end border-r border-border/60 px-3">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">Feiertage</span>
                   </div>
                   <div className="grid grid-cols-7 gap-0 relative">
@@ -185,10 +185,10 @@ export function TimelineView({
 
         <div className="space-y-3 min-w-[900px]">
           {/* Tage-Header */}
-          <div className="sticky top-0 z-20 rounded-2xl border border-slate-200/70 bg-white/95 shadow-sm backdrop-blur">
+          <div className="sticky top-0 z-20 rounded-2xl border border-border/60 bg-card/95 shadow-sm backdrop-blur">
             <div className="grid grid-cols-[200px_1fr] gap-0">
-              <div className="border-r border-slate-200/70 px-4 py-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Mitglied</span>
+              <div className="border-r border-border/60 px-4 py-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Mitglied</span>
               </div>
               <div className="grid grid-cols-7 gap-0">
                 {dayCols.map((d) => (
@@ -196,16 +196,16 @@ export function TimelineView({
                     key={d.key}
                     data-day={d.n}
                     onClick={() => setHighlightedDay(highlightedDay === d.n ? null : d.n)}
-                    className={`group flex flex-col items-center gap-1 border-l border-slate-200/50 px-2 py-2 transition-colors hover:bg-slate-50 ${
-                      highlightedDay === d.n ? 'bg-blue-50/80' : ''
+                    className={`group flex flex-col items-center gap-1 border-l border-border/50 px-2 py-2 transition-colors hover:bg-muted/50 ${
+                      highlightedDay === d.n ? 'bg-primary/10' : ''
                     }`}
                     aria-label={`Tag ${d.n} ${highlightedDay === d.n ? 'hervorgehoben' : 'hervorheben'}`}
                   >
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{d.label}</span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{d.label}</span>
                     <span className={`flex h-7 w-7 items-center justify-center rounded-full border text-[13px] font-semibold transition-all ${
                       highlightedDay === d.n 
-                        ? 'border-blue-500 bg-blue-500 text-white shadow-md' 
-                        : 'border-slate-200 bg-slate-50 text-slate-900 group-hover:border-blue-300'
+                        ? 'border-primary bg-primary text-primary-foreground shadow-md' 
+                        : 'border-border bg-muted text-foreground group-hover:border-primary/60'
                     }`}>{d.n}</span>
                   </button>
                 ))}
@@ -219,9 +219,9 @@ export function TimelineView({
               {/* Schauspieler Gruppe */}
               {groupedPeople.actors.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100/50 px-4 py-2.5 backdrop-blur-sm shadow-sm">
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-blue-900">
-                      Schauspieler <span className="ml-2 text-xs font-normal text-blue-700">({groupedPeople.actors.length})</span>
+                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 to-primary/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
+                      Schauspieler <span className="ml-2 text-xs font-normal text-primary-foreground">({groupedPeople.actors.length})</span>
                     </h3>
                   </div>
                   {groupedPeople.actors.map((p) => (
@@ -239,9 +239,9 @@ export function TimelineView({
               {/* Beides Gruppe (Schauspieler & Gewerke) */}
               {groupedPeople.both.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-purple-500 bg-gradient-to-r from-purple-50 to-pink-100/50 px-4 py-2.5 backdrop-blur-sm shadow-sm">
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-purple-900">
-                      Schauspieler & Gewerke <span className="ml-2 text-xs font-normal text-purple-700">({groupedPeople.both.length})</span>
+                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-accent bg-gradient-to-r from-accent/10 to-accent/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
+                      Schauspieler & Gewerke <span className="ml-2 text-xs font-normal text-accent-foreground">({groupedPeople.both.length})</span>
                     </h3>
                   </div>
                   {groupedPeople.both.map((p) => (
@@ -296,7 +296,7 @@ export function TimelineView({
         </div>
       </div>
 
-      <p className="mt-3 text-[11px] text-slate-500">
+      <p className="mt-3 text-[11px] text-muted-foreground">
         <strong>Tipp:</strong> Klicke auf einen Tag im Header, um alle Einträge für diesen Tag hervorzuheben. Nutze ← → für Navigation, ESC zum Abbrechen.
       </p>
     </section>
@@ -316,10 +316,10 @@ type PersonLaneProps = {
 
 function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneProps) {
   const colorMap = {
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    purple: 'from-purple-500 to-pink-500',
-    slate: 'from-slate-500 to-slate-600',
+    blue: 'from-primary to-primary',
+    green: 'from-success to-success',
+    purple: 'from-accent to-accent',
+    slate: 'from-muted-foreground to-muted-foreground',
   };
 
   // Initialen generieren
@@ -334,16 +334,16 @@ function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneP
   const stats = `${person.days.filter(d => d.type === 'free' || d.type === 'preferred').length}/${person.days.length} frei`;
 
   return (
-    <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm transition-shadow hover:shadow-md mb-3">
+    <div className="rounded-2xl border border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md mb-3">
       <div className="grid grid-cols-[200px_1fr] gap-0">
         {/* Person Info */}
-        <div className="flex items-center gap-3 border-r border-slate-200/70 px-4 py-3">
+        <div className="flex items-center gap-3 border-r border-border/60 px-4 py-3">
           <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colorMap[groupColor]} text-sm font-semibold text-white shadow-sm`}>
             {initials}
           </span>
           <div className="min-w-0">
-            <p className="truncate font-semibold leading-5 text-slate-900">{person.name}</p>
-            <p className="text-[11px] text-slate-500">{stats}</p>
+            <p className="truncate font-semibold leading-5 text-foreground">{person.name}</p>
+            <p className="text-[11px] text-muted-foreground">{stats}</p>
           </div>
         </div>
 
@@ -352,8 +352,8 @@ function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneP
           {person.days.map((cell, i) => (
             <div
               key={`${person.id}-${cell.dayKey}`}
-              className={`relative border-l border-slate-200/50 px-2.5 py-3 transition-all ${
-                highlightedDay === dayCols[i].n ? 'bg-blue-50/40 ring-2 ring-inset ring-blue-200' : ''
+              className={`relative border-l border-border/50 px-2.5 py-3 transition-all ${
+                highlightedDay === dayCols[i].n ? 'bg-primary/10 ring-2 ring-inset ring-primary/30' : ''
               }`}
             >
               <TimelineCell cell={cell} />

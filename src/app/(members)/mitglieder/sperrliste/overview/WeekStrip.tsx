@@ -51,9 +51,9 @@ export function WeekStrip({ people, dayCols, holidays, onJump }: WeekStripProps)
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-gradient-to-b from-white to-slate-50/30 shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-b from-card to-muted/30 shadow-sm">
       {/* Responsive Grid: 3 cols auf xs, 7 cols auf sm+ */}
-      <div className="grid grid-cols-3 gap-px bg-slate-200/50 sm:grid-cols-7">
+      <div className="grid grid-cols-3 gap-px bg-border/40 sm:grid-cols-7">
         {buckets.map((bucket) => {
           const isToday = bucket.column.accent === true;
           const totalCount = bucket.available.length + bucket.limited.length + bucket.blocked.length;
@@ -67,8 +67,8 @@ export function WeekStrip({ people, dayCols, holidays, onJump }: WeekStripProps)
           return (
             <button
               key={bucket.column.key}
-              className={`group relative flex flex-col items-center justify-center gap-1.5 bg-white p-2 transition-all active:scale-95 sm:p-2.5 ${
-                isToday ? 'bg-blue-50 ring-2 ring-inset ring-blue-400/30' : 'active:bg-slate-50'
+              className={`group relative flex flex-col items-center justify-center gap-1.5 bg-card p-2 transition-all active:scale-95 sm:p-2.5 ${
+                isToday ? 'bg-primary/10 ring-2 ring-inset ring-primary/30' : 'active:bg-muted/50'
               }`}
               onClick={() => handleJump(bucket.column.n)}
               aria-label={`${bucket.column.label} ${bucket.column.n}. öffnen`}
@@ -76,15 +76,15 @@ export function WeekStrip({ people, dayCols, holidays, onJump }: WeekStripProps)
             >
               {/* Tag-Nummer und Wochentag */}
               <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[9px] font-medium uppercase tracking-wider text-slate-400 sm:text-[10px]">
+                <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground sm:text-[10px]">
                   {bucket.column.label}
                 </span>
                 <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-colors sm:h-7 sm:w-7 sm:text-sm ${
                   isToday 
-                    ? 'bg-blue-500 text-white shadow-sm' 
+                    ? 'bg-primary text-primary-foreground shadow-sm' 
                     : holidayType
                       ? 'bg-gradient-to-br from-sky-100 to-sky-200 text-sky-700'
-                      : 'text-slate-800 group-active:text-blue-600'
+                      : 'text-foreground group-active:text-primary'
                 }`}>
                   {bucket.column.n}
                 </span>
