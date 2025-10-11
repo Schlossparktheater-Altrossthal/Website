@@ -223,12 +223,19 @@ export type ReadSperrlisteSettingsMeta = {
   offline: boolean;
 };
 
-type ReadSperrlisteSettingsOptions = { withMeta?: boolean };
+type ReadSperrlisteSettingsOptionsWithMeta = { withMeta: true };
+type ReadSperrlisteSettingsOptionsWithoutMeta = { withMeta?: false };
+type ReadSperrlisteSettingsOptions =
+  | ReadSperrlisteSettingsOptionsWithMeta
+  | ReadSperrlisteSettingsOptionsWithoutMeta;
 
 export async function readSperrlisteSettings(): Promise<SperrlisteSettingsRecord>;
 export async function readSperrlisteSettings(
-  options: { withMeta: true },
+  options: ReadSperrlisteSettingsOptionsWithMeta,
 ): Promise<ReadSperrlisteSettingsMeta>;
+export async function readSperrlisteSettings(
+  options?: ReadSperrlisteSettingsOptionsWithoutMeta,
+): Promise<SperrlisteSettingsRecord>;
 export async function readSperrlisteSettings(
   options?: ReadSperrlisteSettingsOptions,
 ) {
