@@ -23,6 +23,15 @@ const nextConfig: NextConfig = {
   },
   // Next.js 15+: serverComponentsExternalPackages moved to serverExternalPackages
   serverExternalPackages: ["bcryptjs", "pdfkit", "qrcode", "node-ical", "sharp"],
+  async redirects() {
+    return [
+      {
+        source: "/mitglieder/essenplanung",
+        destination: "/mitglieder/endproben-woche/essenplanung",
+        permanent: true,
+      },
+    ];
+  },
   webpack: (config) => {
     config.resolve ??= {};
     config.resolve.alias ??= {};
