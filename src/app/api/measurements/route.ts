@@ -88,8 +88,9 @@ export async function POST(request: NextRequest) {
 
     const isTargetInEnsemble =
       targetUser.role === "cast" || targetUser.roles.some((entry) => entry.role === "cast");
+    const isSelfUpdate = targetUserId === userId;
 
-    if (!isTargetInEnsemble) {
+    if (!isTargetInEnsemble && !isSelfUpdate) {
       return NextResponse.json(
         { error: "Körpermaße können nur für Ensemble-Mitglieder gepflegt werden." },
         { status: 403 },
