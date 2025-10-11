@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -92,16 +92,9 @@ import {
   type SaveRolePreferencesInput,
 } from "./actions";
 import { ProfileCompletionProvider, useProfileCompletion } from "./profile-completion-context";
-import {
-  AvatarCropDialog,
-  type AvatarCropSelection,
-  type AvatarCropState,
-} from "./avatar-crop-dialog";
-// TODO: Refactor avatar crop logic to use useAvatarCrop hook from ./use-avatar-crop.ts
-// This will reduce BasicsSection complexity by ~200 lines
+import { AvatarCropDialog } from "./avatar-crop-dialog";
+import { useAvatarCrop } from "./use-avatar-crop";
 
-const AVATAR_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
 const CURRENT_YEAR = new Date().getFullYear();
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
@@ -1388,147 +1381,17 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
         : "INITIALS",
     removeAvatar: false,
   }));
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
-  const [avatarCropSelection, setAvatarCropSelection] = useState<AvatarCropSelection | null>(null);
-  const [avatarCropState, setAvatarCropState] = useState<AvatarCropState | null>(null);
-  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
-  const [cropDialogOpen, setCropDialogOpen] = useState(false);
-  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
-  const [cropDialogInitialSelection, setCropDialogInitialSelection] =
-    useState<AvatarCropSelection | null>(null);
-  const [cropDialogInitialState, setCropDialogInitialState] = useState<AvatarCropState | null>(null);
-  const [avatarCropLoading, setAvatarCropLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+  const avatarCrop = useAvatarCrop({
+    userId: user.id,
+    onCropComplete: () => {
+      setFormState((prev) => ({ ...prev, avatarSource: "UPLOAD", removeAvatar: false }));
+    },
+  });
+
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-
-  const cleanupCropImage = useCallback(() => {
-    setCropImageUrl((current) => {
-      if (current) {
-        URL.revokeObjectURL(current);
-      }
-      return null;
-    });
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      cleanupCropImage();
-    };
-  }, [cleanupCropImage]);
-
-  const loadImage = useCallback((src: string) => {
-    return new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("Bild konnte nicht geladen werden"));
-      image.src = src;
-    });
-  }, []);
-
-  const createAvatarPreview = useCallback(
-    async (file: File, selection: AvatarCropSelection): Promise<string> => {
-      const objectUrl = URL.createObjectURL(file);
-      try {
-        const image = await loadImage(objectUrl);
-        const sourceWidth = image.naturalWidth || image.width;
-        const sourceHeight = image.naturalHeight || image.height;
-
-        if (!sourceWidth || !sourceHeight) {
-          throw new Error("Ungültige Bildabmessungen");
-        }
-
-        const canvas = document.createElement("canvas");
-        const PREVIEW_SIZE = 256;
-        canvas.width = PREVIEW_SIZE;
-        canvas.height = PREVIEW_SIZE;
-        const context = canvas.getContext("2d");
-
-        if (!context) {
-          throw new Error("Canvas-Kontext nicht verfügbar");
-        }
-
-        const cropWidth = Math.min(sourceWidth, Math.max(1, Math.round(sourceWidth * selection.width)));
-        const cropHeight = Math.min(sourceHeight, Math.max(1, Math.round(sourceHeight * selection.height)));
-        const cropX = Math.min(sourceWidth - 1, Math.max(0, Math.round(sourceWidth * selection.x)));
-        const cropY = Math.min(sourceHeight - 1, Math.max(0, Math.round(sourceHeight * selection.y)));
-        const safeCropWidth = Math.min(cropWidth, sourceWidth - cropX);
-        const safeCropHeight = Math.min(cropHeight, sourceHeight - cropY);
-
-        context.clearRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
-        context.drawImage(
-          image,
-          cropX,
-          cropY,
-          safeCropWidth,
-          safeCropHeight,
-          0,
-          0,
-          PREVIEW_SIZE,
-          PREVIEW_SIZE,
-        );
-
-        return canvas.toDataURL("image/png");
-      } finally {
-        URL.revokeObjectURL(objectUrl);
-      }
-    },
-    [loadImage],
-  );
-
-  const openCropDialogForFile = useCallback(
-    (
-      file: File,
-      options?: { selection?: AvatarCropSelection | null; state?: AvatarCropState | null },
-    ) => {
-      cleanupCropImage();
-      const url = URL.createObjectURL(file);
-      setPendingAvatarFile(file);
-      setCropDialogInitialSelection(options?.selection ?? null);
-      setCropDialogInitialState(options?.state ?? null);
-      setCropImageUrl(url);
-      setCropDialogOpen(true);
-    },
-    [cleanupCropImage],
-  );
-
-  const handleCropDialogClose = useCallback(() => {
-    setCropDialogOpen(false);
-    setPendingAvatarFile(null);
-    cleanupCropImage();
-    setCropDialogInitialSelection(null);
-    setCropDialogInitialState(null);
-    setAvatarCropLoading(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }, [cleanupCropImage]);
-
-  const handleCropDialogConfirm = useCallback(
-    async ({ selection, state }: { selection: AvatarCropSelection; state: AvatarCropState }) => {
-      if (!pendingAvatarFile) {
-        handleCropDialogClose();
-        return;
-      }
-
-      try {
-        const preview = await createAvatarPreview(pendingAvatarFile, selection);
-        setAvatarFile(pendingAvatarFile);
-        setAvatarCropSelection(selection);
-        setAvatarCropState(state);
-        setAvatarPreviewUrl(preview);
-        setFormState((prev) => ({ ...prev, avatarSource: "UPLOAD", removeAvatar: false }));
-      } catch (cropError) {
-        console.error("[profile][avatar-crop]", cropError);
-        toast.error("Bild konnte nicht verarbeitet werden.");
-      } finally {
-        handleCropDialogClose();
-      }
-    },
-    [createAvatarPreview, handleCropDialogClose, pendingAvatarFile],
-  );
 
   useEffect(() => {
     setFormState((prev) => ({
@@ -1554,12 +1417,10 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
   ]);
 
   useEffect(() => {
-    if (!avatarFile) {
-      setAvatarPreviewUrl(null);
-      setAvatarCropSelection(null);
-      setAvatarCropState(null);
+    if (!avatarCrop.avatarFile) {
+      avatarCrop.resetAvatarCrop();
     }
-  }, [avatarFile]);
+  }, [avatarCrop]);
 
   const avatarPreviewState = useMemo(
     () => {
@@ -1572,10 +1433,10 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
       }
 
       if (formState.avatarSource === "UPLOAD") {
-        if (avatarPreviewUrl) {
+        if (avatarCrop.avatarPreviewUrl) {
           return {
             source: "UPLOAD" as const,
-            previewUrl: avatarPreviewUrl,
+            previewUrl: avatarCrop.avatarPreviewUrl,
             description: "Vorschau deines neuen Uploads mit individuellem Ausschnitt (noch nicht gespeichert).",
           };
         }
@@ -1610,7 +1471,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
       };
     },
     [
-      avatarPreviewUrl,
+      avatarCrop.avatarPreviewUrl,
       formState.avatarSource,
       formState.removeAvatar,
       user.avatarSource,
@@ -1628,63 +1489,8 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     setFormState((prev) => ({ ...prev, avatarSource: value, removeAvatar: false }));
   };
 
-  const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) {
-      if (event.target.value) {
-        event.target.value = "";
-      }
-      return;
-    }
-    if (!AVATAR_MIME_TYPES.has(file.type.toLowerCase())) {
-      toast.error("Nur JPG, PNG oder WebP werden unterstützt.");
-      event.target.value = "";
-      return;
-    }
-    if (file.size > MAX_AVATAR_BYTES) {
-      toast.error("Bitte nutze ein Bild bis maximal 8 MB.");
-      event.target.value = "";
-      return;
-    }
-    openCropDialogForFile(file);
-  };
-
-  const handleAvatarCropReopen = async () => {
-    if (avatarFile) {
-      openCropDialogForFile(avatarFile, {
-        selection: avatarCropSelection,
-        state: avatarCropState,
-      });
-      return;
-    }
-
-    if (formState.avatarSource !== "UPLOAD" || user.avatarSource !== "UPLOAD") {
-      return;
-    }
-
-    try {
-      setAvatarCropLoading(true);
-      const response = await fetch(`/api/users/${user.id}/avatar?v=${Date.now()}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        toast.error("Bestehendes Bild konnte nicht geladen werden.");
-        return;
-      }
-      const blob = await response.blob();
-      const mimeType = blob.type || "image/png";
-      const extension = mimeType.split("/").pop() || "png";
-      const restoredFile = new File([blob], `avatar-${user.id}.${extension}`, { type: mimeType });
-      openCropDialogForFile(restoredFile, {
-        selection: avatarCropSelection,
-        state: avatarCropState,
-      });
-    } catch (error) {
-      console.error("[profile][avatar-crop][reload]", error);
-      toast.error("Bildausschnitt konnte nicht vorbereitet werden.");
-    } finally {
-      setAvatarCropLoading(false);
-    }
+  const handleAvatarCropReopenClick = () => {
+    void avatarCrop.handleAvatarCropReopen(formState.avatarSource === "UPLOAD" && user.avatarSource === "UPLOAD" ? "UPLOAD" : null);
   };
 
   const resetPasswordFields = () => {
@@ -1733,10 +1539,10 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     if (data.removeAvatar) {
       formData.append("removeAvatar", "1");
     }
-    if (avatarFile) {
-      formData.append("avatarFile", avatarFile);
-      if (avatarCropSelection) {
-        formData.append("avatarCrop", JSON.stringify(avatarCropSelection));
+    if (avatarCrop.avatarFile) {
+      formData.append("avatarFile", avatarCrop.avatarFile);
+      if (avatarCrop.avatarCropSelection) {
+        formData.append("avatarCrop", JSON.stringify(avatarCrop.avatarCropSelection));
       }
     }
 
@@ -1753,8 +1559,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
       const nextUser = mapUpdatedUserFromPayload(user, payload);
       await onUserUpdated(nextUser);
       resetPasswordFields();
-      setAvatarFile(null);
-      setAvatarCropState(null);
+      avatarCrop.resetAvatarCrop();
       setFormState((prev) => ({ ...prev, removeAvatar: false }));
       toast.success("Stammdaten aktualisiert");
     } finally {
@@ -1876,23 +1681,23 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                 {formState.avatarSource === "UPLOAD" ? (
                   <div className="space-y-2 pt-2">
                     <Input
-                      ref={fileInputRef}
+                      ref={avatarCrop.fileInputRef}
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
-                      onChange={handleAvatarFileChange}
+                      onChange={avatarCrop.handleAvatarFileChange}
                     />
                     <p className="text-xs text-muted-foreground">
                       PNG, JPG oder WebP bis 8 MB. Wir skalieren dein Bild automatisch und speichern es optimiert.
                     </p>
-                    {(avatarPreviewUrl || user.avatarSource === "UPLOAD") && !formState.removeAvatar ? (
+                    {(avatarCrop.avatarPreviewUrl || user.avatarSource === "UPLOAD") && !formState.removeAvatar ? (
                       <div className="space-y-2">
-                        {avatarPreviewUrl ? (
+                        {avatarCrop.avatarPreviewUrl ? (
                           <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
                             <UserAvatar
                               name={user.displayName}
                               size={48}
                               className="h-12 w-12"
-                              previewUrl={avatarPreviewUrl}
+                              previewUrl={avatarCrop.avatarPreviewUrl}
                             />
                             <span className="text-xs text-muted-foreground">Vorschau des neuen Avatars</span>
                           </div>
@@ -1902,10 +1707,10 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                             type="button"
                             variant="outline"
                             size="xs"
-                            onClick={handleAvatarCropReopen}
-                            disabled={avatarCropLoading}
+                            onClick={handleAvatarCropReopenClick}
+                            disabled={avatarCrop.avatarCropLoading}
                           >
-                            {avatarCropLoading ? (
+                            {avatarCrop.avatarCropLoading ? (
                               <>
                                 <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden />
                                 Ausschnitt wird geladen…
@@ -1914,7 +1719,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                               "Bildausschnitt anpassen"
                             )}
                           </Button>
-                          {avatarCropSelection ? (
+                          {avatarCrop.avatarCropSelection ? (
                             <span className="text-[0.7rem] text-muted-foreground">
                               Zuletzt gewählter Ausschnitt bleibt erhalten.
                             </span>
@@ -1922,7 +1727,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                         </div>
                       </div>
                     ) : null}
-                    {user.avatarSource === "UPLOAD" && !avatarFile ? (
+                    {user.avatarSource === "UPLOAD" && !avatarCrop.avatarFile ? (
                       <button
                         type="button"
                         className="text-xs text-muted-foreground underline transition hover:text-foreground"
@@ -1983,12 +1788,12 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
         </CardContent>
       </Card>
       <AvatarCropDialog
-        open={Boolean(cropDialogOpen && cropImageUrl)}
-        imageUrl={cropImageUrl}
-        initialSelection={cropDialogInitialSelection}
-        initialState={cropDialogInitialState}
-        onClose={handleCropDialogClose}
-        onConfirm={handleCropDialogConfirm}
+        open={Boolean(avatarCrop.cropDialogOpen && avatarCrop.cropImageUrl)}
+        imageUrl={avatarCrop.cropImageUrl}
+        initialSelection={avatarCrop.cropDialogInitialSelection}
+        initialState={avatarCrop.cropDialogInitialState}
+        onClose={avatarCrop.handleCropDialogClose}
+        onConfirm={avatarCrop.handleCropDialogConfirm}
       />
     </>
   );
