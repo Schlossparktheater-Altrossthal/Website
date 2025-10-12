@@ -79,7 +79,7 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                           <div key="actors-available">
                             <div className="flex items-center gap-2 px-2 py-1">
                               <div className="h-0.5 w-1 rounded-full bg-gradient-to-b from-primary to-primary" />
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">Schauspieler</span>
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground">Schauspieler</span>
                             </div>
                             <ul className="divide-y divide-border/30 rounded-lg border border-success/40 bg-[color:var(--spl-ok-bg)]">
                               {actorsAvailable.map(({ person, cell }, i) => (
@@ -167,7 +167,7 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                                 'from-success to-success'
                               }`} />
                               <span className={`text-[10px] font-semibold uppercase tracking-wider ${
-                                color === 'blue' ? 'text-primary-foreground' :
+                                color === 'blue' ? 'text-foreground' :
                                 color === 'purple' ? 'text-accent-foreground' :
                                 'text-success-foreground'
                               }`}>{label}</span>
@@ -208,7 +208,7 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                                 'from-success to-success'
                               }`} />
                               <span className={`text-[10px] font-semibold uppercase tracking-wider ${
-                                color === 'blue' ? 'text-primary-foreground' :
+                                color === 'blue' ? 'text-foreground' :
                                 color === 'purple' ? 'text-accent-foreground' :
                                 'text-success-foreground'
                               }`}>{label}</span>
@@ -314,7 +314,7 @@ function PersonListItem({ person, cell, tone, groupColor }: PersonListItemProps)
   };
 
   const groupColors = groupColor ? {
-    blue: 'bg-primary/20 text-primary-foreground',
+    blue: 'bg-primary/20 text-foreground',
     green: 'bg-success/20 text-success-foreground',
     purple: 'bg-accent/20 text-accent-foreground',
   }[groupColor] : 'bg-card/80 text-primary';

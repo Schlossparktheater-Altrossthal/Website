@@ -221,7 +221,7 @@ export function TimelineView({
                 <>
                   <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 to-primary/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
-                      Schauspieler <span className="ml-2 text-xs font-normal text-primary-foreground">({groupedPeople.actors.length})</span>
+                      Schauspieler <span className="ml-2 text-xs font-normal text-muted-foreground">({groupedPeople.actors.length})</span>
                     </h3>
                   </div>
                   {groupedPeople.actors.map((p) => (

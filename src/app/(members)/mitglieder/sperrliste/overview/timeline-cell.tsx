@@ -40,12 +40,12 @@ export function TimelineCell({ cell }: TimelineCellProps) {
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/40 bg-gradient-to-br from-destructive/15 to-destructive/25 shadow-sm transition-all group-hover:shadow-md">
-          <XCircleIcon className="h-5 w-5 text-destructive-foreground" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/50 bg-gradient-to-br from-destructive/15 to-destructive/25 shadow-sm transition-all group-hover:shadow-md">
+          <XCircleIcon className="h-5 w-5 text-destructive" />
         </div>
         {cell.label && showTooltip && (
           <div className="absolute -top-2 left-1/2 z-30 w-48 -translate-x-1/2 -translate-y-full rounded-lg border border-destructive/40 bg-card p-2 shadow-xl">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-destructive-foreground">Sperrtermin</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-destructive">Sperrtermin</p>
             <p className="mt-0.5 text-xs leading-snug text-card-foreground">{cell.label}</p>
           </div>
         )}
@@ -61,12 +61,12 @@ export function TimelineCell({ cell }: TimelineCellProps) {
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-warning/40 bg-gradient-to-br from-warning/15 to-warning/25 shadow-sm transition-all group-hover:shadow-md">
-          <ClockAlertIcon className="h-5 w-5 text-warning-foreground" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-warning/50 bg-gradient-to-br from-warning/15 to-warning/25 shadow-sm transition-all group-hover:shadow-md">
+          <ClockAlertIcon className="h-5 w-5 text-warning" />
         </div>
         {cell.label && showTooltip && (
           <div className="absolute -top-2 left-1/2 z-30 w-48 -translate-x-1/2 -translate-y-full rounded-lg border border-warning/40 bg-card p-2 shadow-xl">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-warning-foreground">Eingeschränkt</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-warning">Eingeschränkt</p>
             <p className="mt-0.5 text-xs leading-snug text-card-foreground">{cell.label}</p>
           </div>
         )}
@@ -82,12 +82,12 @@ export function TimelineCell({ cell }: TimelineCellProps) {
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-success/40 bg-gradient-to-br from-success/15 to-success/25 shadow-sm transition-all group-hover:shadow-md">
-          <StarIcon className="h-5 w-5 text-success-foreground" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-success/50 bg-gradient-to-br from-success/15 to-success/25 shadow-sm transition-all group-hover:shadow-md">
+          <StarIcon className="h-5 w-5 text-success" />
         </div>
         {cell.label && showTooltip && (
           <div className="absolute -top-2 left-1/2 z-30 w-48 -translate-x-1/2 -translate-y-full rounded-lg border border-success/40 bg-card p-2 shadow-xl">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-success-foreground">Bevorzugt</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-success">Bevorzugt</p>
             <p className="mt-0.5 text-xs leading-snug text-card-foreground">{cell.label}</p>
           </div>
         )}

@@ -372,12 +372,12 @@ function PersonInfo({ person, groupColor }: PersonInfoProps) {
 
   const avatarColor = groupColor 
     ? {
-        blue: 'bg-primary/15 text-primary-foreground',
+        blue: 'bg-primary/15 text-foreground',
         green: 'bg-success/15 text-success-foreground',
         purple: 'bg-accent/15 text-accent-foreground',
       }[groupColor]
     : person.group === 'actors'
-      ? 'bg-primary/15 text-primary-foreground'
+      ? 'bg-primary/15 text-foreground'
       : person.group === 'crew'
         ? 'bg-success/15 text-success-foreground'
         : person.group === 'both'
