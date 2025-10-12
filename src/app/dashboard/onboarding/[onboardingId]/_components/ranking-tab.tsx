@@ -310,58 +310,63 @@ function DomainSection({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       {visibleGroups.map((group) => {
         const accentClass = roleAccentStyles[group.roleId] ?? roleAccentStyles.default;
-        const profileLabel = `Profile: ${numberFormatter.format(group.candidates.length)}`;
+        const profileCount = group.candidates.length;
 
         return (
-          <section key={group.roleId}>
-            <div
-              className={cn(
-                "rounded-2xl border px-4 py-5 shadow-sm transition-colors sm:px-6 sm:py-6",
-                accentClass,
-              )}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold text-foreground">{group.label}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {domain === "acting"
-                      ? "Rollengröße im Onboarding"
-                      : "Crew-Schwerpunkt im Onboarding"}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="muted" size="sm" className="bg-background/70 text-foreground/80">
-                    {profileLabel}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    size="sm"
-                    className="border-border/50 bg-background/80 text-foreground/80"
-                  >
-                    Plätze: {group.demand}
-                  </Badge>
+          <section key={group.roleId} id={`role-${group.roleId}`}>
+            {/* Sticky Group Header */}
+            <div className="sticky top-[140px] z-20 -mx-6 px-6 pb-3 bg-gradient-to-b from-background via-background/95 to-transparent backdrop-blur-sm">
+              <div
+                className={cn(
+                  "rounded-xl border shadow-md px-4 py-3 sm:px-5 sm:py-4",
+                  accentClass,
+                )}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground">{group.label}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {domain === "acting"
+                        ? "Rollengröße im Onboarding"
+                        : "Crew-Schwerpunkt im Onboarding"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" size="sm" className="font-semibold">
+                      {numberFormatter.format(profileCount)} {profileCount === 1 ? "Profil" : "Profile"}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      size="sm"
+                      className="border-border/50"
+                    >
+                      {group.demand} {group.demand === 1 ? "Platz" : "Plätze"}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              {group.candidates.length === 0 ? (
-                <p className="mt-4 rounded-lg border border-dashed border-border/60 bg-background/60 p-4 text-sm text-muted-foreground">
-                  Keine Profile für diesen Bereich verfügbar.
-                </p>
-              ) : (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {group.candidates.map(({ candidate, highlight }) => (
-                    <CandidateCard
-                      key={`${group.roleId}-${candidate.userId}`}
-                      candidate={candidate}
-                      highlight={highlight}
-                      onSelectCandidate={onSelectCandidate}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
+            
+            {/* Cards Container */}
+            {group.candidates.length === 0 ? (
+              <div className="mt-3 rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+                Keine Profile für diesen Bereich verfügbar.
+              </div>
+            ) : (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {group.candidates.map(({ candidate, highlight }) => (
+                  <CandidateCard
+                    key={`${group.roleId}-${candidate.userId}`}
+                    candidate={candidate}
+                    highlight={highlight}
+                    onSelectCandidate={onSelectCandidate}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         );
       })}
@@ -459,55 +464,74 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
 
   return (
     <>
-      <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/20 p-4 sm:flex sm:items-center sm:justify-between sm:space-y-0">
-        <div className="space-y-1">
-          <h2 className="text-sm font-semibold text-foreground/90">
-            {domain === "acting" ? "Rollengrößen filtern" : "Gewerke filtern"}
-          </h2>
-          <p className="text-xs text-muted-foreground">{filterDescription}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Label
-            htmlFor="role-filter"
-            className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-          >
-            {filterLabel}
-          </Label>
-          <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value)}>
-            <SelectTrigger
-              id="role-filter"
-              className="w-[240px] border-border/60 bg-background/80 text-sm"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="flex items-center justify-between gap-3">
-                <span>{allLabel}</span>
-                <span className="text-xs text-muted-foreground">
-                  {numberFormatter.format(totalProfiles)} Profile
-                </span>
-              </SelectItem>
-              {activeFilterOptions.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  className="flex items-center justify-between gap-3"
+      {/* Sticky Navigation Layer */}
+      <div className="sticky top-0 z-30 -mx-6 bg-background/95 backdrop-blur-sm px-6 pb-4 pt-1 border-b border-border/40 shadow-sm">
+        <div className="space-y-3">
+          {/* Filter Bar */}
+          <div className="rounded-xl border border-border/60 bg-card/80 p-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
+            <div className="space-y-0.5 mb-3 sm:mb-0">
+              <h2 className="text-sm font-semibold text-foreground">
+                {domain === "acting" ? "Rollengrößen filtern" : "Gewerke filtern"}
+              </h2>
+              <p className="text-xs text-muted-foreground">{filterDescription}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Label
+                htmlFor="role-filter"
+                className="text-xs font-semibold uppercase tracking-wide text-muted-foreground shrink-0"
+              >
+                {filterLabel}
+              </Label>
+              <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value)}>
+                <SelectTrigger
+                  id="role-filter"
+                  className="w-[240px] border-border/60 bg-background text-sm"
                 >
-                  <span>{option.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {numberFormatter.format(option.count)} Profile
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="flex items-center justify-between gap-3">
+                    <span>{allLabel}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {numberFormatter.format(totalProfiles)} Profile
+                    </span>
+                  </SelectItem>
+                  {activeFilterOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span>{option.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {numberFormatter.format(option.count)} Profile
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* Tabs + Context Info */}
+          <div className="flex items-center justify-between gap-4">
+            <TabsList className="bg-muted/50 border border-border/40">
+              <TabsTrigger value="acting">Acting</TabsTrigger>
+              <TabsTrigger value="crew">Crew</TabsTrigger>
+            </TabsList>
+            
+            {/* Current Context Breadcrumb */}
+            <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Zeige:</span>
+              <span className="font-semibold text-foreground">
+                {domain === "acting" ? "Acting" : "Crew"} · {roleFilter === "all" ? allLabel : selectedRoleMeta?.label} · {numberFormatter.format(roleFilter === "all" ? totalProfiles : selectedRoleMeta?.count ?? 0)} Profile
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-      <Tabs value={domain} onValueChange={(value) => setDomain(value as Domain)} className="space-y-6">
-        <TabsList className="w-fit bg-muted/40">
-          <TabsTrigger value="acting">Acting</TabsTrigger>
-          <TabsTrigger value="crew">Crew</TabsTrigger>
-        </TabsList>
+      
+      <Tabs value={domain} onValueChange={(value) => setDomain(value as Domain)} className="space-y-6 mt-6">
         <TabsContent value="acting" className="mt-0 space-y-4">
           {actingRoleSummaries.length === 0 ? (
             <p className="text-sm text-muted-foreground">
