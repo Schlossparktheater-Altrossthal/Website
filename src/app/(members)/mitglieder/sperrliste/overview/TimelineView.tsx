@@ -103,14 +103,14 @@ export function TimelineView({
         </div>
         <div className="ml-2 h-3 w-px bg-border" />
         <div className="flex items-center gap-1">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-r from-amber-400 to-amber-500">
-            <CalendarStarIcon className="h-3 w-3 text-white" />
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-warning border border-warning">
+            <CalendarStarIcon className="h-3 w-3 text-warning-foreground" />
           </div>
           <span className="text-foreground">Feiertag</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-r from-sky-400 to-sky-500">
-            <UmbrellaIcon className="h-3 w-3 text-white" />
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-primary border border-primary">
+            <UmbrellaIcon className="h-3 w-3 text-primary-foreground" />
           </div>
           <span className="text-foreground">Ferien</span>
         </div>
@@ -126,7 +126,7 @@ export function TimelineView({
               <div className="relative h-10">
                 <div className="grid grid-cols-[200px_1fr] gap-0">
                   <div className="flex items-center justify-end border-r border-border/60 px-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-600">Ferien</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">Ferien</span>
                   </div>
                   <div className="grid grid-cols-7 gap-0 relative min-w-0">
                     {holidaySpans.map((span, idx) => {
@@ -134,7 +134,7 @@ export function TimelineView({
                       return (
                         <div
                           key={`span-${idx}`}
-                          className="absolute top-0 h-10 flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-400 to-sky-500 px-3 text-white shadow-md whitespace-nowrap"
+                          className="absolute top-0 h-10 flex items-center justify-center rounded-lg bg-primary/90 border border-primary px-3 text-primary-foreground shadow-md whitespace-nowrap"
                           style={{
                             left: `${(span.start / 7) * 100}%`,
                             width: `${(colSpan / 7) * 100}%`,
@@ -155,7 +155,7 @@ export function TimelineView({
               <div className="relative h-10">
                 <div className="grid grid-cols-[200px_1fr] gap-0">
                   <div className="flex items-center justify-end border-r border-border/60 px-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">Feiertage</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-warning">Feiertage</span>
                   </div>
                   <div className="grid grid-cols-7 gap-0 relative min-w-0">
                     {days.map((day, idx) => {
@@ -163,7 +163,7 @@ export function TimelineView({
                         return (
                           <div
                             key={`holiday-${idx}`}
-                            className="absolute top-0 h-10 flex items-center justify-center rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 px-2 text-white shadow-md whitespace-nowrap"
+                            className="absolute top-0 h-10 flex items-center justify-center rounded-lg bg-warning/90 border border-warning px-2 text-warning-foreground shadow-md whitespace-nowrap"
                             style={{
                               left: `${(idx / 7) * 100}%`,
                               width: `${(1 / 7) * 100}%`,

@@ -49,7 +49,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                       return (
                         <div
                           key={idx}
-                          className="flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-400 to-sky-500 px-3 py-2 text-white shadow-md shrink-0"
+                          className="flex items-center justify-center rounded-lg bg-primary/90 border border-primary px-3 py-2 text-primary-foreground shadow-md shrink-0"
                           style={colSpan > 1 ? {
                             width: `calc(${colSpan} * ${cardWidth} + ${(colSpan - 1) * gapWidth}px)`
                           } : {
@@ -80,7 +80,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                       return (
                         <div
                           key={idx}
-                          className="flex items-center justify-center rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 px-3 py-2 text-white shadow-md shrink-0 w-72"
+                          className="flex items-center justify-center rounded-lg bg-warning/90 border border-warning px-3 py-2 text-warning-foreground shadow-md shrink-0 w-72"
                         >
                           <CalendarStarIcon className="h-4 w-4" />
                           <span className="ml-2 text-sm font-bold truncate">{holiday.label || 'Feiertag'}</span>

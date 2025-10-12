@@ -83,7 +83,7 @@ export function WeekStrip({ people, dayCols, holidays, onJump }: WeekStripProps)
                   isToday 
                     ? 'bg-primary text-primary-foreground shadow-sm' 
                     : holidayType
-                      ? 'bg-gradient-to-br from-sky-100 to-sky-200 text-sky-700'
+                      ? 'bg-primary/20 border border-primary/30 text-primary'
                       : 'text-foreground group-active:text-primary'
                 }`}>
                   {bucket.column.n}

@@ -120,7 +120,7 @@ export function DesktopTable({
                       <th className="sticky left-0 z-20 w-3 border-b border-r border-[color:var(--th)] bg-white"></th>
                     )}
                     <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-right`}>
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-600">Ferien</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">Ferien</span>
                     </th>
                     {dayCols.map((_, idx) => {
                       const span = holidaySpans.find((s) => s.start === idx);
@@ -132,9 +132,9 @@ export function DesktopTable({
                           <th
                             key={idx}
                             colSpan={colSpan}
-                            className="border-b border-[color:var(--th)] bg-gradient-to-r from-sky-400 to-sky-500 px-2 py-2"
+                            className="border-b border-[color:var(--th)] bg-primary/90 border-x border-primary px-2 py-2"
                           >
-                            <div className="flex items-center justify-center gap-2 text-white">
+                            <div className="flex items-center justify-center gap-2 text-primary-foreground">
                               <UmbrellaIcon className="h-4 w-4" />
                               <span className="text-sm font-bold">{span.label || 'Ferien'}</span>
                             </div>
@@ -158,7 +158,7 @@ export function DesktopTable({
                       <th className="sticky left-0 z-20 w-3 border-b border-r border-[color:var(--th)] bg-white"></th>
                     )}
                     <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-right`}>
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">Feiertage</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-warning">Feiertage</span>
                     </th>
                     {dayCols.map((_, idx) => {
                       const day = dayBuckets[idx];
@@ -166,9 +166,9 @@ export function DesktopTable({
                         return (
                           <th 
                             key={idx} 
-                            className="border-b border-[color:var(--th)] bg-gradient-to-r from-amber-400 to-amber-500 px-2 py-2"
+                            className="border-b border-[color:var(--th)] bg-warning/90 border-x border-warning px-2 py-2"
                           >
-                            <div className="flex items-center justify-center gap-1 text-white">
+                            <div className="flex items-center justify-center gap-1 text-warning-foreground">
                               <CalendarStarIcon className="h-4 w-4" />
                               <span className="text-xs font-bold truncate">{day.holidayLabel || 'Feiertag'}</span>
                             </div>
