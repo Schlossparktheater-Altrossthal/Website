@@ -92,18 +92,25 @@ export default function OverviewContent({
     return people.reduce(
       (acc, person) => {
         acc.total += 1;
-        if (person.group === "actors") acc.actors += 1;
-        else if (person.group === "crew") acc.crew += 1;
-        else if (person.group === "both") acc.both += 1;
-        else acc.other += 1;
+        // Personen mit "both" werden sowohl bei actors als auch crew gezählt
+        if (person.group === "actors" || person.group === "both") acc.actors += 1;
+        if (person.group === "crew" || person.group === "both") acc.crew += 1;
         return acc;
       },
-      { total: 0, actors: 0, crew: 0, both: 0, other: 0 },
+      { total: 0, actors: 0, crew: 0 },
     );
   }, [people]);
 
   const filteredPeople = useMemo(() => {
     if (personFilter === "all") return people;
+    if (personFilter === "actors") {
+      // Schauspieler-Filter zeigt actors + both (da beide Schauspieler sind)
+      return people.filter((person) => person.group === "actors" || person.group === "both");
+    }
+    if (personFilter === "crew") {
+      // Gewerke-Filter zeigt crew + both (da beide Gewerke sind)
+      return people.filter((person) => person.group === "crew" || person.group === "both");
+    }
     return people.filter((person) => person.group === personFilter);
   }, [people, personFilter]);
 
@@ -223,24 +230,6 @@ export default function OverviewContent({
                 aria-label={`Gewerke anzeigen (${groupedCounts.crew})`}
               >
                 Gewerke ({groupedCounts.crew})
-              </button>
-              <button
-                type="button"
-                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "both" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
-                onClick={() => setPersonFilter("both")}
-                aria-pressed={personFilter === "both"}
-                aria-label={`Beides anzeigen (${groupedCounts.both})`}
-              >
-                Beides ({groupedCounts.both})
-              </button>
-              <button
-                type="button"
-                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "other" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
-                onClick={() => setPersonFilter("other")}
-                aria-pressed={personFilter === "other"}
-                aria-label={`Sonstige anzeigen (${groupedCounts.other})`}
-              >
-                Sonstige ({groupedCounts.other})
               </button>
             </div>
             <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm sm:flex" role="group" aria-label="Ansichtsauswahl">
