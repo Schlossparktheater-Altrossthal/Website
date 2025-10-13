@@ -45,13 +45,13 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
                     {bucket.column.label} <span className="text-muted-foreground">{label}</span>
                   </h3>
                   {bucket.holidayType === 'holiday' && (
-                    <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+                    <span className="flex items-center gap-1 rounded-full border border-warning bg-warning/90 px-2 py-0.5 text-[11px] font-semibold text-warning-foreground">
                       <CalendarStarIcon className="h-3 w-3" />
                       {bucket.holidayLabel || 'Feiertag'}
                     </span>
                   )}
                   {bucket.holidayType === 'vacation' && (
-                    <span className="flex items-center gap-1 rounded-full border border-sky-200 bg-sky-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+                    <span className="flex items-center gap-1 rounded-full border border-primary bg-primary/90 px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
                       <UmbrellaIcon className="h-3 w-3" />
                       {bucket.holidayLabel || 'Ferien'}
                       {bucket.isPublicHoliday && <CalendarStarIcon className="h-3 w-3" />}
@@ -307,12 +307,6 @@ function PersonListItem({ person, cell, tone, groupColor }: PersonListItemProps)
     .toUpperCase()
     .slice(0, 2);
 
-  const toneColors = {
-    ok: 'text-[color:var(--spl-ok)]',
-    warn: 'text-[color:var(--spl-warn)]',
-    danger: 'text-[color:var(--spl-danger)]',
-  };
-
   const groupColors = groupColor ? {
     blue: 'bg-primary/20 text-foreground',
     green: 'bg-success/20 text-success-foreground',
@@ -323,24 +317,36 @@ function PersonListItem({ person, cell, tone, groupColor }: PersonListItemProps)
     cell.type === 'preferred' ? 'Bevorzugt' :
     cell.type === 'free' ? 'Frei' :
     cell.type === 'limited' ? 'Eingeschränkt' :
-    'Sperrtermin';
+    'Gesperrt';
 
-  const statusColor = 
-    tone === 'ok' ? 'text-success-foreground/90' :
-    tone === 'warn' ? 'text-warning-foreground' :
-    'text-destructive-foreground';
+  const statusIcon = 
+    cell.type === 'preferred' ? '★' :
+    cell.type === 'free' ? '✓' :
+    cell.type === 'limited' ? '⏰' :
+    '✕';
+
+  const statusBadgeColor = 
+    tone === 'ok' ? 'bg-success/90 text-success-foreground border-success' :
+    tone === 'warn' ? 'bg-warning/90 text-warning-foreground border-warning' :
+    'bg-destructive/90 text-destructive-foreground border-destructive';
 
   return (
-    <li className={`flex items-start gap-2 px-3 py-2 text-[13px] ${toneColors[tone]}`}>
-      <span className={`mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${groupColors} text-xs font-semibold`}>
-        {initials}
-      </span>
-      <div className="min-w-0">
-        <p className="font-medium text-foreground">
-          {person.name} <span className={`ml-1 text-[11px] uppercase tracking-[0.16em] ${statusColor}`}>{statusLabel}</span>
-        </p>
-        {cell.label && <p className={`text-[12px] ${statusColor}/90`}>{cell.label}</p>}
+    <li className="flex items-center justify-between gap-3 px-3 py-2.5">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${groupColors} text-xs font-semibold`}>
+          {initials}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-foreground truncate">
+            {person.name}
+          </p>
+          {cell.label && <p className="text-[11px] text-muted-foreground truncate">{cell.label}</p>}
+        </div>
       </div>
+      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${statusBadgeColor}`}>
+        <span aria-hidden="true">{statusIcon}</span>
+        {statusLabel}
+      </span>
     </li>
   );
 }
