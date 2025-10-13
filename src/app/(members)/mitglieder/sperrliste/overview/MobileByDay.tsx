@@ -33,12 +33,12 @@ export function MobileByDay({ people, dayCols, holidays, groupedPeople = null }:
         return (
           <article 
             key={bucket.column.key} 
-            className="rounded-2xl border border-border/60 bg-card shadow-sm" 
+            className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden" 
             role="region" 
             aria-labelledby={regionId} 
             id={regionId}
           >
-            <header className="sticky top-0 z-10 bg-card/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur-sm border-b border-border/40">
+            <header className="sticky top-0 z-10 bg-card backdrop-blur-md border-b border-border/40 shadow-sm">
               <div className="flex items-center justify-between px-3 py-2">
                 <div className="flex items-baseline gap-2">
                   <h3 id={regionId} className="text-sm font-semibold">

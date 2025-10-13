@@ -219,7 +219,7 @@ export function TimelineView({
               {/* Schauspieler Gruppe */}
               {groupedPeople.actors.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 to-primary/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+                  <div className="sticky top-[72px] z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 to-primary/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
                       Schauspieler <span className="ml-2 text-xs font-normal text-muted-foreground">({groupedPeople.actors.length})</span>
                     </h3>
@@ -239,7 +239,7 @@ export function TimelineView({
               {/* Beides Gruppe (Schauspieler & Gewerke) */}
               {groupedPeople.both.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-accent bg-gradient-to-r from-accent/10 to-accent/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+                  <div className="sticky top-[72px] z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-accent bg-gradient-to-r from-accent/10 to-accent/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
                       Schauspieler & Gewerke <span className="ml-2 text-xs font-normal text-accent-foreground">({groupedPeople.both.length})</span>
                     </h3>
@@ -259,7 +259,7 @@ export function TimelineView({
               {/* Gewerke Gruppe */}
               {groupedPeople.crew.length > 0 && (
                 <>
-                  <div className="sticky top-0 z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-success bg-gradient-to-r from-success/10 to-success/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
+                  <div className="sticky top-[72px] z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-success bg-gradient-to-r from-success/10 to-success/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
                       Gewerke <span className="ml-2 text-xs font-normal text-success-foreground">({groupedPeople.crew.length})</span>
                     </h3>
