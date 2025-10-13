@@ -334,16 +334,16 @@ function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneP
   const stats = `${person.days.filter(d => d.type === 'free' || d.type === 'preferred').length}/${person.days.length} frei`;
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md mb-3">
+    <div className="rounded-2xl border border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md mb-2">
       <div className="grid grid-cols-[200px_1fr] gap-0">
         {/* Person Info */}
-        <div className="flex items-center gap-3 border-r border-border/60 px-4 py-3">
-          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colorMap[groupColor]} text-sm font-semibold text-white shadow-sm`}>
+        <div className="flex items-center gap-2.5 border-r border-border/60 px-3 py-2">
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colorMap[groupColor]} text-xs font-semibold text-white shadow-sm`}>
             {initials}
           </span>
           <div className="min-w-0">
-            <p className="truncate font-semibold leading-5 text-foreground">{person.name}</p>
-            <p className="text-[11px] text-muted-foreground">{stats}</p>
+            <p className="truncate font-semibold text-sm leading-tight text-foreground">{person.name}</p>
+            <p className="text-[10px] text-muted-foreground">{stats}</p>
           </div>
         </div>
 
@@ -352,7 +352,7 @@ function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneP
           {person.days.map((cell, i) => (
             <div
               key={`${person.id}-${cell.dayKey}`}
-              className={`relative border-l border-border/50 px-2.5 py-3 transition-all min-w-[90px] ${
+              className={`relative border-l border-border/50 px-2 py-2 transition-all min-w-[90px] ${
                 highlightedDay === dayCols[i].n ? 'bg-primary/10 ring-2 ring-inset ring-primary/30' : ''
               }`}
             >
