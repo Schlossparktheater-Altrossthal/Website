@@ -32,9 +32,9 @@ export function TimelineView({
   const days = useMemo(() => selectDayBuckets(people, dayCols, holidays), [people, dayCols, holidays]);
   const holidaySpans = useMemo(() => getHolidaySpans(dayCols, days), [dayCols, days]);
   
-  // Gruppierung nur wenn gefiltert
+  // Gruppierung nur wenn NICHT gefiltert (also bei "all")
   const groupedPeople = useMemo(() => {
-    if (personFilter === "all") return null;
+    if (personFilter !== "all") return null;
     return groupPeopleByType(people);
   }, [people, personFilter]);
 
