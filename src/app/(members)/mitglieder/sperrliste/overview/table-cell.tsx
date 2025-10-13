@@ -16,14 +16,14 @@ type CellProps = {
  * Cell-Komponente für die Tabellen-Ansicht (memoized für Performance)
  */
 const CellComponent = ({ cell, compact = false }: CellProps) => {
-  const baseClasses = `flex flex-col justify-center h-16 w-full rounded-lg px-2.5 text-left text-[12px] font-medium overflow-hidden ${
+  const baseClasses = `flex flex-col justify-center min-h-12 w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] font-medium overflow-hidden ${
     compact ? "leading-4" : ""
   }`;
 
   // Frei
   if (cell.type === "free") {
     return (
-      <div className="flex h-16 items-center justify-center rounded-lg border border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground">
+      <div className="flex min-h-12 items-center justify-center rounded-lg border border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground py-1.5">
         frei
       </div>
     );

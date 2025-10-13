@@ -271,7 +271,7 @@ export function DesktopTable({
                     <PersonInfo person={p} />
                   </th>
                   {p.days.map((cell) => (
-                    <td key={`${p.id}-${cell.dayKey}`} className="h-20 px-1.5 py-1.5 align-top whitespace-normal break-words">
+                    <td key={`${p.id}-${cell.dayKey}`} className="px-1.5 py-1 align-top whitespace-normal break-words">
                       <Cell cell={cell} compact={compact} />
                     </td>
                   ))}
@@ -344,7 +344,7 @@ function PersonRow({
         <PersonInfo person={person} groupColor={groupColor} />
       </th>
       {person.days.map((cell) => (
-        <td key={`${person.id}-${cell.dayKey}`} className="h-20 px-1.5 py-1.5 align-top whitespace-normal break-words">
+        <td key={`${person.id}-${cell.dayKey}`} className="px-1.5 py-1 align-top whitespace-normal break-words">
           <Cell cell={cell} compact={compact} />
         </td>
       ))}
