@@ -79,7 +79,7 @@ const focusLabels: Record<"acting" | "tech" | "both", string> = {
 const focusDescriptions: Record<"acting" | "tech" | "both", string> = {
   acting: "Du möchtest auf der Bühne wirken und Rollen gestalten.",
   tech: "Du möchtest hinter den Kulissen organisieren, bauen oder für Licht & Ton sorgen.",
-  both: "Du bleibst flexibel zwischen Bühne und Gewerken und entscheidest situativ.",
+  both: "Du bleibst flexibel zwischen Schauspiel und Gewerken.",
 };
 
 const focusBadgeStyles: Record<"acting" | "tech" | "both", string> = {
@@ -2169,6 +2169,11 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                     ? getFocusDescription(derivedFocus, variant)
                     : "Sobald du Bereiche auswählst, berechnen wir automatisch deinen Onboarding-Fokus."}
                 </p>
+                {derivedFocus ? (
+                  <p className="text-xs text-muted-foreground">
+                    Passe deine Rollenpräferenzen an, um den Fokus zu verändern – wir übernehmen die Berechnung automatisch.
+                  </p>
+                ) : null}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(isRegieVariant ? (["crew"] as const) : (["acting", "crew"] as const)).map((domain) => {
                     const entries = preferenceSummary[domain];
