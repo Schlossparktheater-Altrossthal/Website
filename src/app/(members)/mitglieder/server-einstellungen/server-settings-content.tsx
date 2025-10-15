@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import type { ClientServerSettings } from "@/lib/server-settings";
@@ -458,9 +459,8 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
         </div>
         <div className="space-y-2">
           <Label htmlFor="mailPassword">Passwort</Label>
-          <Input
+          <PasswordInput
             id="mailPassword"
-            type="password"
             autoComplete="new-password"
             value={passwordState.mode === "update" ? passwordState.value : ""}
             placeholder={passwordPersisted ? "Passwort unverändert" : "Passwort eingeben"}

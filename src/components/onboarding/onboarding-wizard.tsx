@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -1211,8 +1212,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Passwort</span>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={form.password}
                   onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
                   placeholder="Mindestens 6 Zeichen"
@@ -1224,8 +1224,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
               </label>
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Passwort bestätigen</span>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={form.passwordConfirm}
                   onChange={(event) => setForm((prev) => ({ ...prev, passwordConfirm: event.target.value }))}
                   placeholder="Noch einmal eingeben"
