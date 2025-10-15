@@ -389,6 +389,7 @@ export type SaveRolePreferencesInput = {
 
 export type SaveRolePreferencesResult = {
   preferences: SaveRolePreferencesInput[];
+  focus: OnboardingFocus | null;
 };
 
 export async function saveOnboardingAction(
@@ -545,7 +546,12 @@ export async function saveRolePreferencesAction(
       })
       .filter((entry): entry is SaveRolePreferencesInput => Boolean(entry));
 
-    return { ok: true, data: { preferences: normalized } };
+    const focusValue =
+      typeof data?.focus === "string" && ["acting", "tech", "both"].includes(data.focus)
+        ? (data.focus as OnboardingFocus)
+        : null;
+
+    return { ok: true, data: { preferences: normalized, focus: focusValue } };
   } catch (error) {
     console.error("[profile][onboarding.preferences]", error);
     return { ok: false, error: "Netzwerkfehler: Präferenzen konnten nicht gespeichert werden." };

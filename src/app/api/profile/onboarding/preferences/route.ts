@@ -8,6 +8,7 @@ import {
   isCustomRolePreference,
 } from "@/lib/onboarding/role-preferences";
 import { broadcastOnboardingDashboardForUser } from "@/lib/onboarding/dashboard-events";
+import { deriveOnboardingFocusFromPreferences } from "@/lib/onboarding/role-preference-utils";
 
 const preferenceSchema = z.object({
   code: z
@@ -73,7 +74,7 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const updated = await prisma.$transaction(async (tx) => {
+    const { preferences: updated, focus: nextFocus } = await prisma.$transaction(async (tx) => {
       const existing = await tx.memberRolePreference.findMany({
         where: { userId },
         select: { id: true, code: true, domain: true, weight: true },
@@ -115,11 +116,22 @@ export async function PUT(request: NextRequest) {
         }
       }
 
-      return tx.memberRolePreference.findMany({
+      const preferences = await tx.memberRolePreference.findMany({
         where: { userId },
         select: { code: true, domain: true, weight: true },
         orderBy: [{ domain: "asc" }, { code: "asc" }],
       });
+
+      const focus = deriveOnboardingFocusFromPreferences(preferences);
+      if (focus) {
+        await tx.memberOnboardingProfile.upsert({
+          where: { userId },
+          update: { focus },
+          create: { userId, focus },
+        });
+      }
+
+      return { preferences, focus };
     });
 
     try {
@@ -134,6 +146,7 @@ export async function PUT(request: NextRequest) {
         domain: pref.domain,
         weight: pref.weight,
       })),
+      focus: nextFocus ?? null,
     });
   } catch (error) {
     console.error("[profile.onboarding.preferences]", error);

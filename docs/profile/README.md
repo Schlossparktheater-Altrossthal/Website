@@ -67,7 +67,7 @@
 - `/api/allergies` (POST/DELETE) – Allergienverwaltung.
 - `/api/measurements` (POST) – Körpermaße.
 - `/api/profile/interests` (GET/PUT) – Interessenliste.
-- `/api/profile/onboarding` (PUT) – Onboarding-Fokus & Hintergrund.
+- `/api/profile/onboarding` (PUT) – Hintergrund, Notizen & Mitglied seit Jahr (Fokus wird automatisch berechnet).
 - `/api/onboarding/whatsapp-visit` (POST) – Tracking des WhatsApp-Besuchs.
 - `/api/photo-consent` (vorhandene Server Actions/Routes) – Status & Dokumente.
 
