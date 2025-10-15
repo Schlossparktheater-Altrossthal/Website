@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1762,17 +1763,15 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
             <div className="space-y-2">
               <Label>Passwort zurücksetzen</Label>
               <div className="grid gap-4 md:grid-cols-2">
-                <Input
+                <PasswordInput
                   name="password"
-                  type="password"
                   value={formState.password}
                   onChange={handleInputChange}
                   placeholder="Neues Passwort"
                   autoComplete="new-password"
                 />
-                <Input
+                <PasswordInput
                   name="confirmPassword"
-                  type="password"
                   value={formState.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="Bestätigung"

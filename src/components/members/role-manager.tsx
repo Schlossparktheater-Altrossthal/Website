@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { RolePicker } from "@/components/members/role-picker";
 import { UserAvatar } from "@/components/user-avatar";
 import { combineNameParts } from "@/lib/names";
@@ -404,8 +405,7 @@ export function RoleManager({
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="block text-sm">
                   <span>Passwort</span>
-                  <Input
-                    type="password"
+                  <PasswordInput
                     value={profilePassword}
                     onChange={(event) => setProfilePassword(event.target.value)}
                     placeholder="Leer lassen, um das Passwort zu behalten"
@@ -414,8 +414,7 @@ export function RoleManager({
                 </label>
                 <label className="block text-sm">
                   <span>Passwort bestätigen</span>
-                  <Input
-                    type="password"
+                  <PasswordInput
                     value={profileConfirmPassword}
                     onChange={(event) => setProfileConfirmPassword(event.target.value)}
                     placeholder="Nur bei Änderung erforderlich"

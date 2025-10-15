@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn, type SignInResponse } from "next-auth/react";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
@@ -237,8 +238,7 @@ export function LoginPageClient() {
             </label>
             <label className="block text-sm">
               <span>Passwort</span>
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="••••••••"
                 autoComplete="current-password"
                 {...passwordForm.register("password")}

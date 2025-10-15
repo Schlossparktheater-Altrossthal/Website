@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { describeRoles, ROLE_LABELS, ROLES, sortRoles, type Role } from "@/lib/roles";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -158,8 +159,7 @@ export function AddMemberModal() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Passwort</span>
-                <Input
-                  type="password"
+                <PasswordInput
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -169,8 +169,7 @@ export function AddMemberModal() {
               </label>
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Passwort bestätigen</span>
-                <Input
-                  type="password"
+                <PasswordInput
                   required
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}

@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 interface OwnerSetupFormProps {
   token: string;
@@ -159,9 +160,8 @@ export function OwnerSetupForm({ token }: OwnerSetupFormProps) {
         <label className="text-sm font-medium" htmlFor="owner-password">
           Passwort
         </label>
-        <Input
+        <PasswordInput
           id="owner-password"
-          type="password"
           autoComplete="new-password"
           placeholder="Mindestens 6 Zeichen"
           value={password}
@@ -174,9 +174,8 @@ export function OwnerSetupForm({ token }: OwnerSetupFormProps) {
         <label className="text-sm font-medium" htmlFor="owner-password-confirm">
           Passwort bestätigen
         </label>
-        <Input
+        <PasswordInput
           id="owner-password-confirm"
-          type="password"
           autoComplete="new-password"
           placeholder="Passwort erneut eingeben"
           value={confirmPassword}
