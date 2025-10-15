@@ -43,7 +43,6 @@ const baseProps: OnboardingSectionProps = {
   whatsappVisitedAt: null,
   onWhatsAppVisit: async () => ({ visitedAt: new Date().toISOString(), alreadyVisited: false }),
   dietaryPreference: { label: "Vegetarisch", strictnessLabel: "Flexibel" },
-  onFocusChange: () => undefined,
 };
 
 const meta = { title };

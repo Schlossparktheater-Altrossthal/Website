@@ -72,6 +72,7 @@ import {
   listRolePreferenceDefinitions,
 } from "@/lib/onboarding/role-preferences";
 import {
+  deriveOnboardingFocusFromPreferences,
   getRolePreferenceWeightLabel,
   normalizeRolePreferenceWeight,
 } from "@/lib/onboarding/role-preference-utils";
@@ -124,6 +125,21 @@ const ROLE_PREFERENCE_DEFINITIONS = {
 } as const;
 
 const DEFAULT_ROLE_PREFERENCE_WEIGHT = 60;
+const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
+  acting: "Schauspiel",
+  tech: "Gewerke",
+  both: "Schauspiel & Gewerke",
+};
+const ONBOARDING_FOCUS_DESCRIPTIONS: Record<OnboardingFocus, string> = {
+  acting: "Du konzentrierst dich aktuell auf Rollen vor der Bühne.",
+  tech: "Du unterstützt hinter den Kulissen in Gewerken und Organisation.",
+  both: "Du bleibst flexibel zwischen Schauspiel und Gewerken.",
+};
+const ONBOARDING_FOCUS_BADGE_STYLES: Record<OnboardingFocus, string> = {
+  acting: "border-violet-400/40 bg-violet-500/10 text-violet-600",
+  tech: "border-cyan-400/40 bg-cyan-500/10 text-cyan-600",
+  both: "border-indigo-400/40 bg-indigo-500/10 text-indigo-600",
+};
 const ONBOARDING_STATUS_LABELS: Record<OnboardingSummary["status"], string> = {
   draft: "In Vorbereitung",
   active: "Aktiv",
@@ -395,7 +411,6 @@ type InterestsState = {
 };
 
 type OnboardingFormState = {
-  focus: OnboardingFocus;
   background: string;
   backgroundClass: string;
   notes: string;
@@ -547,7 +562,6 @@ const allergySchema = z.object({
 });
 
 const onboardingSchema = z.object({
-  focus: z.enum(["acting", "tech", "both"] satisfies OnboardingFocus[]),
   background: z
     .string()
     .trim()
@@ -641,9 +655,6 @@ function ProfileClientInner({
   const [onboarding, setOnboarding] = useState<ProfileClientProps["onboarding"]>(initialOnboarding);
   const [rolePreferences, setRolePreferences] = useState<ProfileClientProps["rolePreferences"]>(
     initialRolePreferences,
-  );
-  const [onboardingFocus, setOnboardingFocus] = useState<OnboardingFocus>(
-    (initialOnboarding?.focus as OnboardingFocus) ?? "acting",
   );
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
@@ -754,11 +765,6 @@ function ProfileClientInner({
     ? Math.round((summary.completed / summary.total) * 100)
     : 0;
 
-  useEffect(() => {
-    if (onboarding?.focus) {
-      setOnboardingFocus(onboarding.focus as OnboardingFocus);
-    }
-  }, [onboarding?.focus]);
 
   const handleUserUpdated = useCallback(
     async (nextUser: ProfileUser) => {
@@ -1075,13 +1081,11 @@ function ProfileClientInner({
             onWhatsAppVisit={handleWhatsAppVisit}
             dietaryPreference={dietaryPreference}
             availableOnboardings={availableOnboardings}
-            onFocusChange={setOnboardingFocus}
           />
         </TabsContent>
 
         <TabsContent value="rollen" className="space-y-6">
           <RolePreferencesSection
-            focus={onboardingFocus}
             onboarding={onboarding}
             rolePreferences={rolePreferences}
             onRolePreferencesChange={setRolePreferences}
@@ -2812,7 +2816,6 @@ export type OnboardingSectionProps = {
   whatsappVisitedAt: string | null;
   onWhatsAppVisit?: () => Promise<{ visitedAt: string | null; alreadyVisited: boolean }>;
   dietaryPreference: { label: string | null; strictnessLabel: string | null };
-  onFocusChange?: (focus: OnboardingFocus) => void;
 };
 
 export function OnboardingSection({
@@ -2823,17 +2826,15 @@ export function OnboardingSection({
   whatsappVisitedAt,
   onWhatsAppVisit,
   dietaryPreference,
-  onFocusChange,
 }: OnboardingSectionProps) {
   const whatsappLink = onboarding?.whatsappLink ?? null;
   const currentShow = onboarding?.show ?? null;
   const initialForm = useMemo<OnboardingFormState>(() => ({
-    focus: (onboarding?.focus as OnboardingFocus) ?? "acting",
     background: onboarding?.background ?? "",
     backgroundClass: onboarding?.backgroundClass ?? "",
     notes: onboarding?.notes ?? "",
     memberSinceYear: onboarding?.memberSinceYear ? String(onboarding.memberSinceYear) : "",
-  }), [onboarding?.background, onboarding?.backgroundClass, onboarding?.focus, onboarding?.memberSinceYear, onboarding?.notes]);
+  }), [onboarding?.background, onboarding?.backgroundClass, onboarding?.memberSinceYear, onboarding?.notes]);
 
   const [formState, setFormState] = useState<OnboardingFormState>(initialForm);
   const [error, setError] = useState<string | null>(null);
@@ -2864,6 +2865,22 @@ export function OnboardingSection({
     });
   const [whatsappSubmitting, setWhatsappSubmitting] = useState(false);
   const whatsappVisitedLabel = useMemo(() => formatDate(whatsappVisitedAt), [whatsappVisitedAt]);
+  const preferenceSource = onboarding?.preferences?.length ? onboarding.preferences : rolePreferences;
+  const focusCandidates = useMemo(
+    () =>
+      (preferenceSource ?? []).map((pref) => ({
+        domain: pref.domain,
+        weight: pref.weight,
+      })),
+    [preferenceSource],
+  );
+  const derivedFocus = useMemo(
+    () => deriveOnboardingFocusFromPreferences(focusCandidates) ?? null,
+    [focusCandidates],
+  );
+  const storedFocus = (onboarding?.focus as OnboardingFocus | null) ?? null;
+  const effectiveFocus = derivedFocus ?? storedFocus;
+  const focusForSubmission = effectiveFocus ?? "acting";
 
   useEffect(() => {
     setSelectedShowId(currentShow?.id ?? "");
@@ -2872,10 +2889,6 @@ export function OnboardingSection({
   useEffect(() => {
     setFormState(initialForm);
   }, [initialForm]);
-
-  useEffect(() => {
-    onFocusChange?.(formState.focus);
-  }, [formState.focus, onFocusChange]);
 
   const handleShowAssign = async () => {
     if (!selectedShowId) {
@@ -2907,12 +2920,13 @@ export function OnboardingSection({
       const nextOnboarding: OnboardingProfile = onboarding
         ? {
             ...onboarding,
+            focus: focusForSubmission,
             show: nextShow,
             whatsappLink: payload.whatsappLink,
             whatsappLinkVisitedAt: payload.whatsappLinkVisitedAt,
           }
         : {
-            focus: (formState.focus as OnboardingFocus) ?? "acting",
+            focus: focusForSubmission,
             background: formState.background.trim() ? formState.background.trim() : null,
             backgroundClass: formState.backgroundClass.trim() ? formState.backgroundClass.trim() : null,
             notes: formState.notes.trim() ? formState.notes.trim() : null,
@@ -2956,7 +2970,7 @@ export function OnboardingSection({
     setSubmitting(true);
     try {
       const result = await saveOnboardingAction({
-        focus: parseResult.data.focus,
+        focus: focusForSubmission,
         background: parseResult.data.background,
         backgroundClass: parseResult.data.backgroundClass ?? null,
         notes: parseResult.data.notes ?? null,
@@ -2984,7 +2998,6 @@ export function OnboardingSection({
       };
       onOnboardingChange(next);
       setFormState({
-        focus: payload.focus,
         background: payload.background ?? "",
         backgroundClass: payload.backgroundClass ?? "",
         notes: payload.notes ?? "",
@@ -3114,34 +3127,31 @@ export function OnboardingSection({
         ) : null}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label id="onboarding-focus-label">Onboarding-Fokus</Label>
-            <div className="flex flex-wrap gap-2" role="group" aria-labelledby="onboarding-focus-label">
-              {([
-                { value: "acting", label: "Schauspiel" },
-                { value: "tech", label: "Gewerke" },
-                { value: "both", label: "Beides" },
-              ] satisfies Array<{ value: OnboardingFocus; label: string }>).map((option) => {
-                const active = formState.focus === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    className={cn(
-                      "min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition",
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary hover:text-primary",
-                    )}
-                    onClick={() => setFormState((prev) => ({ ...prev, focus: option.value }))}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="space-y-3">
+            <Label>Onboarding-Fokus</Label>
+            {effectiveFocus ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/15 p-4">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "w-fit rounded-full border px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide",
+                    ONBOARDING_FOCUS_BADGE_STYLES[effectiveFocus],
+                  )}
+                >
+                  {ONBOARDING_FOCUS_LABELS[effectiveFocus]}
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                  {ONBOARDING_FOCUS_DESCRIPTIONS[effectiveFocus]}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
+                Sobald du Rollenpräferenzen auswählst, bestimmen wir automatisch deinen Fokus.
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Passe deine Rollenpräferenzen an, um den Fokus zu verändern – wir übernehmen die Berechnung automatisch.
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -3372,7 +3382,6 @@ export function OnboardingSection({
 }
 
 type RolePreferencesSectionProps = {
-  focus: OnboardingFocus;
   onboarding: ProfileClientProps["onboarding"];
   rolePreferences: ProfileClientProps["rolePreferences"];
   onRolePreferencesChange: (next: ProfileClientProps["rolePreferences"]) => void;
@@ -3380,7 +3389,6 @@ type RolePreferencesSectionProps = {
 };
 
 export function RolePreferencesSection({
-  focus,
   onboarding,
   rolePreferences,
   onRolePreferencesChange,
@@ -3390,13 +3398,25 @@ export function RolePreferencesSection({
   const [preferenceForm, setPreferenceForm] = useState<RolePreferenceFormState>(initialPreferences);
   const [preferenceError, setPreferenceError] = useState<string | null>(null);
   const [preferenceSubmitting, setPreferenceSubmitting] = useState(false);
+  const preferenceSource = onboarding?.preferences?.length ? onboarding.preferences : rolePreferences;
+  const focusCandidates = useMemo(
+    () =>
+      (preferenceSource ?? []).map((pref) => ({
+        domain: pref.domain,
+        weight: pref.weight,
+      })),
+    [preferenceSource],
+  );
+  const derivedFocus = useMemo(
+    () => deriveOnboardingFocusFromPreferences(focusCandidates) ?? null,
+    [focusCandidates],
+  );
+  const storedFocus = (onboarding?.focus as OnboardingFocus | null) ?? null;
+  const effectiveFocus = derivedFocus ?? storedFocus;
 
   useEffect(() => {
     setPreferenceForm(initialPreferences);
   }, [initialPreferences]);
-
-  const includesActing = focus === "acting" || focus === "both";
-  const includesCrew = focus === "tech" || focus === "both";
 
   const toggleRolePreference = useCallback((domain: "acting" | "crew", code: string) => {
     setPreferenceForm((prev) => {
@@ -3467,9 +3487,19 @@ export function RolePreferencesSection({
       }
 
       const saved = result.data.preferences;
+      const serverFocus = result.data.focus;
+      const nextFocus =
+        serverFocus ??
+        deriveOnboardingFocusFromPreferences(saved) ??
+        (onboarding?.focus as OnboardingFocus | null) ??
+        effectiveFocus;
       onRolePreferencesChange(saved);
       if (onboarding) {
-        onOnboardingChange({ ...onboarding, preferences: saved });
+        onOnboardingChange({
+          ...onboarding,
+          focus: (nextFocus ?? onboarding.focus ?? "acting") as OnboardingFocus,
+          preferences: saved,
+        });
       }
       setPreferenceForm(buildPreferenceFormState(saved));
       toast.success("Präferenzen gespeichert");
@@ -3480,15 +3510,27 @@ export function RolePreferencesSection({
 
   const actingPreferences = preferenceForm.acting;
   const crewPreferences = preferenceForm.crew;
-  const actingDisabled = !includesActing;
-  const crewDisabled = !includesCrew;
 
   return (
     <Card className="border border-border/60">
       <CardHeader>
-        <CardTitle className="text-base font-semibold">Rollenpräferenzen</CardTitle>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-base font-semibold">Rollenpräferenzen</CardTitle>
+          {effectiveFocus ? (
+            <Badge
+              variant="outline"
+              className={cn(
+                "w-fit rounded-full border px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide",
+                ONBOARDING_FOCUS_BADGE_STYLES[effectiveFocus],
+              )}
+            >
+              {ONBOARDING_FOCUS_LABELS[effectiveFocus]}
+            </Badge>
+          ) : null}
+        </div>
         <p className="text-sm text-muted-foreground">
-          Markiere, in welchen Bereichen du aktiv sein möchtest und wie intensiv du dich einbringen willst.
+          Markiere, in welchen Bereichen du aktiv sein möchtest und wie intensiv du dich einbringen willst. Dein Fokus ergibt
+          sich automatisch aus deiner Auswahl.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -3497,11 +3539,6 @@ export function RolePreferencesSection({
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold">Schauspiel</h4>
-                {!includesActing ? (
-                  <span className="text-xs text-muted-foreground">
-                    Fokus auf Schauspiel aktivieren, um diese Auswahl zu bearbeiten.
-                  </span>
-                ) : null}
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 {actingPreferences.map((pref) => {
@@ -3533,7 +3570,6 @@ export function RolePreferencesSection({
                           size="sm"
                           variant={pref.enabled ? "default" : "outline"}
                           onClick={() => toggleRolePreference("acting", pref.code)}
-                          disabled={actingDisabled}
                           className="w-full sm:w-auto"
                         >
                           {pref.enabled ? "Ausgewählt" : "Wählen"}
@@ -3567,11 +3603,6 @@ export function RolePreferencesSection({
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold">Gewerke</h4>
-                {!includesCrew ? (
-                  <span className="text-xs text-muted-foreground">
-                    Fokus auf Gewerke aktivieren, um diese Auswahl zu bearbeiten.
-                  </span>
-                ) : null}
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 {crewPreferences.map((pref) => {
@@ -3603,7 +3634,6 @@ export function RolePreferencesSection({
                           size="sm"
                           variant={pref.enabled ? "default" : "outline"}
                           onClick={() => toggleRolePreference("crew", pref.code)}
-                          disabled={crewDisabled}
                           className="w-full sm:w-auto"
                         >
                           {pref.enabled ? "Ausgewählt" : "Wählen"}

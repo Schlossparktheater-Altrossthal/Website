@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 import {
   createCustomRolePreferenceCode,
+  deriveOnboardingFocusFromPreferences,
   getRolePreferenceWeightLabel,
   normalizeRolePreferenceWeight,
 } from "@/lib/onboarding/role-preference-utils";
@@ -92,16 +93,10 @@ const preferenceAccent: Record<"acting" | "crew", string> = {
   crew: "from-cyan-500/70 to-teal-500/70",
 };
 
-const focusDomainMap = {
-  acting: ["acting"],
-  tech: ["crew"],
-  both: ["acting", "crew"],
-} as const satisfies Record<"acting" | "tech" | "both", readonly ("acting" | "crew")[]>;
-
 const steps = [
   { title: "Willkommen" },
   { title: "Profil" },
-  { title: "Fokus" },
+  { title: "Bereiche" },
   { title: "Interessen" },
   { title: "Fotos" },
   { title: "Essen" },
@@ -246,7 +241,6 @@ function createInitialFormState(variant: OnboardingWizardVariant) {
     genderOption: "no_answer" as GenderOption,
     genderCustom: "",
     memberSinceYear: "",
-    focus: (variant === "regie" ? "tech" : "acting") as "acting" | "tech" | "both",
     actingPreferences: createInitialActingPreferences(),
     crewPreferences: createInitialCrewPreferences(variant),
     interests: [] as string[],
@@ -314,13 +308,27 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
-
-  useEffect(() => {
-    if (!isRegieVariant) {
-      return;
+  const derivedFocus = useMemo(() => {
+    if (isRegieVariant) {
+      return "tech" as const;
     }
-    setForm((prev) => (prev.focus === "tech" ? prev : { ...prev, focus: "tech" }));
-  }, [isRegieVariant]);
+    return (
+      deriveOnboardingFocusFromPreferences(
+        [
+          ...form.actingPreferences.map((pref) => ({
+            domain: "acting" as const,
+            weight: pref.weight,
+            enabled: pref.enabled,
+          })),
+          ...form.crewPreferences.map((pref) => ({
+            domain: "crew" as const,
+            weight: pref.weight,
+            enabled: pref.enabled,
+          })),
+        ],
+      ) ?? null
+    );
+  }, [form.actingPreferences, form.crewPreferences, isRegieVariant]);
 
   const [newInterest, setNewInterest] = useState("");
   const [dietaryDraft, setDietaryDraft] = useState({
@@ -557,20 +565,16 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       isCustom: Boolean(entry.isCustom),
       domain,
     });
-    const includesActing = form.focus === "acting" || form.focus === "both";
-    const includesCrew = form.focus === "tech" || form.focus === "both";
-    const acting = includesActing
-      ? form.actingPreferences
+    const acting = isRegieVariant
+      ? []
+      : form.actingPreferences
           .filter((pref) => pref.enabled && pref.weight > 0)
-          .map((pref) => mapEntry(pref, "acting"))
-      : [];
-    const crew = includesCrew
-      ? form.crewPreferences
-          .filter((pref) => pref.enabled && pref.weight > 0)
-          .map((pref) => mapEntry(pref, "crew"))
-      : [];
+          .map((pref) => mapEntry(pref, "acting"));
+    const crew = form.crewPreferences
+      .filter((pref) => pref.enabled && pref.weight > 0)
+      .map((pref) => mapEntry(pref, "crew"));
     return { acting, crew };
-  }, [form.actingPreferences, form.crewPreferences, form.focus]);
+  }, [form.actingPreferences, form.crewPreferences, isRegieVariant]);
 
   const preferenceStats = useMemo(() => {
     const compute = (entries: PreferenceSummaryEntry[]) => {
@@ -825,14 +829,14 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       return;
     }
     if (step === 2) {
-      const wantsActing = form.focus === "acting" || form.focus === "both";
-      const wantsCrew = form.focus === "tech" || form.focus === "both";
-      if (wantsActing && !form.actingPreferences.some((pref) => pref.enabled && pref.weight > 0)) {
-        setError("Wähle mindestens eine Option im Schauspielbereich.");
-        return;
-      }
-      if (wantsCrew && !form.crewPreferences.some((pref) => pref.enabled && pref.weight > 0)) {
-        setError("Wähle mindestens ein Gewerk aus, das dich reizt.");
+      const actingSelected = !isRegieVariant && form.actingPreferences.some((pref) => pref.enabled && pref.weight > 0);
+      const crewSelected = form.crewPreferences.some((pref) => pref.enabled && pref.weight > 0);
+      if (!actingSelected && !crewSelected) {
+        setError(
+          isRegieVariant
+            ? "Wähle mindestens ein Gewerk aus, das dich reizt."
+            : "Wähle mindestens eine Option im Schauspiel oder bei den Gewerken.",
+        );
         return;
       }
       setStep(3);
@@ -890,19 +894,15 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
   const handleSubmit = async () => {
     setError(null);
     if (loading) return;
-    const includeActing = form.focus === "acting" || form.focus === "both";
-    const includeCrew = form.focus === "tech" || form.focus === "both";
     const preferences: { code: string; domain: "acting" | "crew"; weight: number }[] = [
-      ...(includeActing
+      ...(!isRegieVariant
         ? form.actingPreferences
             .filter((pref) => pref.enabled && pref.weight > 0)
             .map((pref) => ({ code: pref.code, domain: "acting" as const, weight: pref.weight }))
         : []),
-      ...(includeCrew
-        ? form.crewPreferences
-            .filter((pref) => pref.enabled && pref.weight > 0)
-            .map((pref) => ({ code: pref.code, domain: "crew" as const, weight: pref.weight }))
-        : []),
+      ...form.crewPreferences
+        .filter((pref) => pref.enabled && pref.weight > 0)
+        .map((pref) => ({ code: pref.code, domain: "crew" as const, weight: pref.weight })),
     ];
     if (!preferences.length) {
       setError("Bitte markiere, wo du dich einbringen möchtest.");
@@ -910,6 +910,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
       return;
     }
     setLoading(true);
+    const focusForSubmission = derivedFocus ?? (isRegieVariant ? "tech" : "acting");
     try {
       const genderCustom = form.genderCustom.trim();
       const nutritionCustom = form.nutritionCustomStyle.trim();
@@ -937,7 +938,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
           custom: genderCustom || null,
         },
         memberSinceYear,
-        focus: form.focus,
+        focus: focusForSubmission,
         preferences,
         interests: form.interests,
         dietaryPreference: {
@@ -1391,12 +1392,12 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
         <Card className="border border-border/70">
           <CardHeader>
             <CardTitle>
-              {isRegieVariant ? "Dein Bereich: Regie & Produktionsleitung" : "Wohin zieht es dich?"}
+              {isRegieVariant ? "Dein Bereich: Regie & Produktionsleitung" : "Bereiche & Schwerpunkte"}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {isRegieVariant
                 ? "Wir bündeln deine Angaben für Regie, Produktionsleitung und Organisation, damit du sofort mit den richtigen Tools starten kannst."
-                : "Wähle aus, ob du dich eher im Schauspiel, hinter den Kulissen oder in beiden Welten siehst. Danach kannst du gewichten, was dich am meisten reizt."}
+                : "Markiere die Bereiche, in denen du dich einbringen möchtest. Deinen Onboarding-Fokus berechnen wir automatisch aus deiner Auswahl."}
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -1411,39 +1412,17 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                     </p>
                   </div>
                   <Badge variant="outline" className="w-fit border-primary/40 bg-primary/5 text-primary">
-                    Festgelegt
+                    Automatisch gesetzt
                   </Badge>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { value: "acting", label: "Schauspiel", description: "Auf der Bühne stehen, Rollen gestalten." },
-                  { value: "tech", label: "Gewerke", description: "Technik, Kostüm, Bühnenbild und Organisation." },
-                  { value: "both", label: "Beides", description: "Ich möchte mich offen halten." },
-                ].map((option) => {
-                  const active = form.focus === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={cn(
-                        "flex min-w-[180px] flex-1 flex-col gap-1 rounded-lg border p-4 text-left transition",
-                        active
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:border-primary/70 hover:text-foreground",
-                      )}
-                      onClick={() => setForm((prev) => ({ ...prev, focus: option.value as typeof prev.focus }))}
-                    >
-                      <span className="text-sm font-semibold">{option.label}</span>
-                      <span className="text-xs">{option.description}</span>
-                    </button>
-                  );
-                })}
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-left text-xs text-muted-foreground sm:text-sm">
+                Wir zeigen dir Schauspiel und Gewerke gleichzeitig. Wähle einfach die Aufgaben aus, die zu dir passen – den Fokus berechnet der Wizard im Hintergrund.
               </div>
             )}
 
-            {(form.focus === "acting" || form.focus === "both") && (
+            {!isRegieVariant && (
               <section className="space-y-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Schauspiel</h3>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -1501,8 +1480,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
               </section>
             )}
 
-            {(form.focus === "tech" || form.focus === "both") && (
-              <section className="space-y-4">
+            <section className="space-y-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   {getCrewSectionHeading(variant)}
                 </h3>
@@ -1622,7 +1600,6 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                   </div>
                 </div>
               </section>
-            )}
           </CardContent>
         </Card>
       )}
@@ -2176,17 +2153,24 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
               <section className="space-y-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Fokus &amp; Intensität</h3>
-                  <span className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium",
-                    focusBadgeStyles[form.focus],
-                  )}
+                  <span
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium",
+                      derivedFocus
+                        ? focusBadgeStyles[derivedFocus]
+                        : "border-border text-muted-foreground",
+                    )}
                   >
-                    {getFocusLabel(form.focus, variant)}
+                    {derivedFocus ? getFocusLabel(derivedFocus, variant) : "Noch offen"}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">{getFocusDescription(form.focus, variant)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {derivedFocus
+                    ? getFocusDescription(derivedFocus, variant)
+                    : "Sobald du Bereiche auswählst, berechnen wir automatisch deinen Onboarding-Fokus."}
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {focusDomainMap[form.focus].map((domain) => {
+                  {(isRegieVariant ? (["crew"] as const) : (["acting", "crew"] as const)).map((domain) => {
                     const entries = preferenceSummary[domain];
                     const stats = preferenceStats[domain];
                     return (

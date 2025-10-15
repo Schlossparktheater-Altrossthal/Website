@@ -1,3 +1,5 @@
+import type { OnboardingFocus } from "@prisma/client";
+
 export const ROLE_PREFERENCE_WEIGHT_LABELS: ReadonlyArray<{
   threshold: number;
   label: string;
@@ -32,4 +34,44 @@ export function createCustomRolePreferenceCode(): string {
     return `custom-${crypto.randomUUID()}`;
   }
   return `custom-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+type FocusPreferenceCandidate = {
+  domain: "acting" | "crew";
+  weight: number;
+  enabled?: boolean;
+};
+
+export function deriveOnboardingFocusFromPreferences(
+  preferences: Iterable<FocusPreferenceCandidate>,
+): OnboardingFocus | null {
+  let actingSelected = false;
+  let crewSelected = false;
+
+  for (const preference of preferences) {
+    if (preference.enabled === false) {
+      continue;
+    }
+    if (!Number.isFinite(preference.weight) || preference.weight <= 0) {
+      continue;
+    }
+
+    if (preference.domain === "acting") {
+      actingSelected = true;
+    } else if (preference.domain === "crew") {
+      crewSelected = true;
+    }
+
+    if (actingSelected && crewSelected) {
+      return "both";
+    }
+  }
+
+  if (crewSelected) {
+    return "tech";
+  }
+  if (actingSelected) {
+    return "acting";
+  }
+  return null;
 }
