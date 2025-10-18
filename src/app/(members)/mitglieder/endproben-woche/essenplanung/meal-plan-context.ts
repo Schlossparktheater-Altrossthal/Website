@@ -75,6 +75,7 @@ export type StyleSummary = {
   dominantStrictnessLabel: string;
   dominantStrictnessShare: number;
   sampleNames: string[];
+  participantNames: string[];
 };
 
 export type AllergenSummary = {
@@ -385,6 +386,7 @@ export async function loadMealPlanningContext(userId?: string | null): Promise<M
       count: number;
       strictness: Map<DietaryStrictnessOption, number>;
       sampleNames: Set<string>;
+      participantNames: Set<string>;
     }
   >();
 
@@ -402,6 +404,7 @@ export async function loadMealPlanningContext(userId?: string | null): Promise<M
         count: 0,
         strictness: new Map<DietaryStrictnessOption, number>(),
         sampleNames: new Set<string>(),
+        participantNames: new Set<string>(),
       };
       styleBuckets.set(identifier, bucket);
     }
@@ -414,6 +417,7 @@ export async function loadMealPlanningContext(userId?: string | null): Promise<M
     if (bucket.sampleNames.size < 3) {
       bucket.sampleNames.add(participant.name);
     }
+    bucket.participantNames.add(participant.name);
   }
 
   const styleSummaries: StyleSummary[] = Array.from(styleBuckets.values())
@@ -424,6 +428,7 @@ export async function loadMealPlanningContext(userId?: string | null): Promise<M
       const dominantStrictnessCount = dominantEntry ? dominantEntry[1] : 0;
       const dominantStrictnessLabel = resolveDietaryStrictnessLabel(bucket.style, dominantStrictnessValue);
       const sampleNames = Array.from(bucket.sampleNames).sort((a, b) => a.localeCompare(b, "de-DE"));
+      const participantNames = Array.from(bucket.participantNames).sort((a, b) => a.localeCompare(b, "de-DE"));
       return {
         key: bucket.key,
         style: bucket.style,
@@ -434,6 +439,7 @@ export async function loadMealPlanningContext(userId?: string | null): Promise<M
         dominantStrictnessLabel,
         dominantStrictnessShare: bucket.count ? Math.round((dominantStrictnessCount / bucket.count) * 100) : 0,
         sampleNames,
+        participantNames,
       } satisfies StyleSummary;
     })
     .sort((a, b) => {
