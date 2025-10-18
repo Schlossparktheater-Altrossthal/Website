@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   ChefHat,
+  ListChecks,
   NotebookPen,
   Palette,
   ShieldAlert,
@@ -17,6 +18,7 @@ import { MealPlanRecipeWorkbench } from "@/components/members/meal-plan-recipe-w
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import {
@@ -127,6 +129,8 @@ export default async function EssensplanungPage() {
   ];
 
   const highlightedAllergens = criticalAllergens.slice(0, 4);
+
+  const insightsDefaultTab = allergenSummaries.length ? "allergies" : "styles";
 
   const quickActions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -314,118 +318,144 @@ export default async function EssensplanungPage() {
           <Card className="rounded-3xl border border-border/70 bg-background/90 shadow-sm">
             <CardHeader className="space-y-3 pb-0">
               <div className="flex items-center gap-2 text-primary">
-                <Palette className="h-5 w-5" />
-                <CardTitle className="text-base font-semibold">Ernährungscluster</CardTitle>
+                <ListChecks className="h-5 w-5" />
+                <CardTitle className="text-base font-semibold">Ernährung &amp; Allergien</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">
-                Verteilung der gemeldeten Ernährungsstile inklusive dominanter Strengegrade. Nutze sie, um Buffet-Linien und Testverkostungen zu priorisieren.
+                Klarer Überblick über alle gemeldeten Unverträglichkeiten und Ernährungstypen inklusive betroffener Personen.
               </p>
             </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              {styleSummaries.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border/60 bg-background/80 p-4 text-sm text-muted-foreground">
-                  Noch keine Angaben vorhanden.
-                </p>
-              ) : (
-                styleSummaries.map((summary) => (
-                  <div
-                    key={summary.key}
-                    className="group relative overflow-hidden rounded-xl border border-border/60 bg-background/95 p-4 shadow-sm"
+            <CardContent className="space-y-4 pt-0">
+              <Tabs defaultValue={insightsDefaultTab} className="space-y-4">
+                <TabsList className="flex w-full flex-wrap justify-start gap-1.5 rounded-full border border-border/60 bg-background/80 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10 backdrop-blur">
+                  <TabsTrigger
+                    value="allergies"
+                    className="flex min-w-[160px] items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive sm:text-sm"
                   >
-                    <div className="absolute inset-y-0 left-0 w-1 rounded-l-xl bg-gradient-to-b from-primary/50 via-primary/20 to-transparent" aria-hidden />
-                    <div className="relative flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{summary.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Strenge: {summary.dominantStrictnessLabel} ({summary.dominantStrictnessShare}%)
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
-                        {summary.count} Personen · {summary.share}%
-                      </Badge>
-                    </div>
-                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted/40">
+                    <ShieldAlert className="h-4 w-4" />
+                    <span>Unverträglichkeiten</span>
+                    <span className="hidden text-[10px] font-normal uppercase tracking-wide text-muted-foreground data-[state=active]:text-destructive/80 sm:inline">
+                      {allergenSummaries.length}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="styles"
+                    className="flex min-w-[160px] items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition data-[state=active]:bg-primary/10 data-[state=active]:text-primary sm:text-sm"
+                  >
+                    <Palette className="h-4 w-4" />
+                    <span>Ernährungstypen</span>
+                    <span className="hidden text-[10px] font-normal uppercase tracking-wide text-muted-foreground data-[state=active]:text-primary/80 sm:inline">
+                      {styleSummaries.length}
+                    </span>
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="allergies" className="space-y-3">
+                  {allergenSummaries.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-border/60 bg-background/80 p-4 text-sm text-muted-foreground">
+                      Keine aktiven Allergiehinweise.
+                    </p>
+                  ) : (
+                    allergenSummaries.map((entry) => (
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary/70 via-primary/45 to-transparent"
-                        style={{ width: `${summary.share}%` }}
-                      />
-                    </div>
-                    {summary.sampleNames.length ? (
-                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                        {summary.sampleNames.map((name) => (
-                          <span
-                            key={name}
-                            className="rounded-full border border-border/50 bg-background/80 px-2 py-0.5"
-                          >
-                            {name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl border border-border/70 bg-background/90 shadow-sm">
-            <CardHeader className="space-y-3 pb-0">
-              <div className="flex items-center gap-2 text-destructive">
-                <ShieldAlert className="h-5 w-5" />
-                <CardTitle className="text-base font-semibold text-foreground">Allergie-Watchlist</CardTitle>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Kritische Allergene mit betroffenen Personen und Schweregrad. Plane getrennte Ausgabestationen oder zusätzliche Kennzeichnungen ein.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              {allergenSummaries.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border/60 bg-background/80 p-4 text-sm text-muted-foreground">
-                  Keine aktiven Allergiehinweise.
-                </p>
-              ) : (
-                allergenSummaries.map((entry) => {
-                  const levelBadges = (Object.keys(entry.levels) as AllergyLevel[])
-                    .filter((level) => entry.levels[level] > 0)
-                    .map((level) => (
-                      <Badge
-                        key={`${entry.key}-${level}`}
-                        variant="outline"
-                        size="sm"
-                        className="border-border/50 bg-background/90 text-[11px] text-muted-foreground"
+                        key={entry.key}
+                        className="relative overflow-hidden rounded-2xl border border-destructive/30 bg-destructive/5 p-4 shadow-sm"
                       >
-                        {ALLERGY_LEVEL_LABELS[level]}: {entry.levels[level]}
-                      </Badge>
-                    ));
-                  return (
-                    <div
-                      key={entry.key}
-                      className="relative overflow-hidden rounded-xl border border-destructive/30 bg-destructive/5 p-4 shadow-sm"
-                    >
-                      <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-destructive/15 via-transparent to-transparent blur-2xl" aria-hidden />
-                      <div className="relative flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{entry.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Betroffen: {entry.affectedNames.join(", ")}
-                          </p>
+                        <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-destructive/15 via-transparent to-transparent blur-2xl" aria-hidden />
+                        <div className="relative flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{entry.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Betroffen: {entry.affectedNames.length} Personen
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "px-3 py-0.5 text-xs",
+                                ALLERGY_LEVEL_STYLES[entry.highestLevel]?.badge ??
+                                  "border-border/60 bg-muted/40 text-muted-foreground",
+                              )}
+                            >
+                              {ALLERGY_LEVEL_LABELS[entry.highestLevel]}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className="border-border/60 bg-background/90 text-[11px] text-muted-foreground"
+                            >
+                              {entry.total} Hinweise
+                            </Badge>
+                          </div>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "px-3 py-0.5 text-xs",
-                            ALLERGY_LEVEL_STYLES[entry.highestLevel]?.badge ??
-                              "border-border/60 bg-muted/40 text-muted-foreground",
-                          )}
-                        >
-                          {ALLERGY_LEVEL_LABELS[entry.highestLevel]}
-                        </Badge>
+                        <div className="relative mt-3 max-h-40 overflow-y-auto rounded-xl border border-border/50 bg-background/80 p-2">
+                          <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+                            {entry.affectedNames.map((name) => (
+                              <span
+                                key={`${entry.key}-${name}`}
+                                className="rounded-full border border-border/50 bg-background/90 px-2 py-0.5"
+                              >
+                                {name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="relative mt-3 flex flex-wrap gap-2">{levelBadges}</div>
-                    </div>
-                  );
-                })
-              )}
+                    ))
+                  )}
+                </TabsContent>
+                <TabsContent value="styles" className="space-y-3">
+                  {styleSummaries.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-border/60 bg-background/80 p-4 text-sm text-muted-foreground">
+                      Noch keine Angaben vorhanden.
+                    </p>
+                  ) : (
+                    styleSummaries.map((summary) => (
+                      <div
+                        key={summary.key}
+                        className="relative overflow-hidden rounded-2xl border border-border/60 bg-background/95 p-4 shadow-sm"
+                      >
+                        <div className="absolute inset-y-0 left-0 w-1 rounded-l-2xl bg-gradient-to-b from-primary/50 via-primary/20 to-transparent" aria-hidden />
+                        <div className="relative flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{summary.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {summary.count} Personen · Strenge {summary.dominantStrictnessLabel} ({summary.dominantStrictnessShare}%)
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "border-transparent text-[11px]",
+                              STYLE_BADGE_VARIANTS[summary.style] ??
+                                "border-border/60 bg-muted/40 text-muted-foreground",
+                            )}
+                          >
+                            {summary.share}% Anteil
+                          </Badge>
+                        </div>
+                        <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-muted/40">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-primary/70 via-primary/45 to-transparent"
+                            style={{ width: `${summary.share}%` }}
+                          />
+                        </div>
+                        <div className="relative mt-3 max-h-40 overflow-y-auto rounded-xl border border-border/50 bg-background/80 p-2">
+                          <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+                            {summary.participantNames.map((name) => (
+                              <span
+                                key={`${summary.key}-${name}`}
+                                className="rounded-full border border-border/50 bg-background/90 px-2 py-0.5"
+                              >
+                                {name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
