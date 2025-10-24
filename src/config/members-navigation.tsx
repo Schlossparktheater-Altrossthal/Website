@@ -395,6 +395,12 @@ export const membersNavigation = [
         icon: BlacklistIcon,
       },
       {
+        href: "/mitglieder/meine-proben",
+        label: "meine Termine",
+        permissionKey: "mitglieder.meine-proben",
+        icon: RehearsalsIcon,
+      },
+      {
         href: "/mitglieder/issues",
         label: "Feedback & Support",
         permissionKey: "mitglieder.issues",
@@ -424,12 +430,6 @@ export const membersNavigation = [
     id: "assignments",
     label: "Proben & Gewerke",
     items: [
-      {
-        href: "/mitglieder/meine-proben",
-        label: "Meine Proben",
-        permissionKey: "mitglieder.meine-proben",
-        icon: RehearsalsIcon,
-      },
       {
         href: "/mitglieder/meine-gewerke",
         label: "Meine Gewerke",
