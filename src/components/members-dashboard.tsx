@@ -126,7 +126,7 @@ const QUICK_ACTION_LINKS = [
   },
   {
     href: "/mitglieder/meine-proben",
-    label: "Meine Proben",
+    label: "meine Termine",
     icon: CalendarCheck,
     permissionKey: "mitglieder.meine-proben",
   },

@@ -215,8 +215,8 @@ export default async function MeineProbenPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Meine Proben"
-        description="Persönliche Übersicht über deine nächsten Probentermine, Fristen und Rückmeldungen."
+        title="meine Termine"
+        description="Persönliche Übersicht über deine nächsten Termine, Fristen und Rückmeldungen."
         breadcrumbs={breadcrumbs}
       />
 

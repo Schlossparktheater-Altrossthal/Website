@@ -145,7 +145,7 @@ export function UserNav({ className }: { className?: string }) {
               className="block px-3 py-2 text-sm hover:bg-accent/30 focus:bg-accent/30 focus:outline-none"
               onClick={() => setOpen(false)}
             >
-              Meine Proben
+              meine Termine
             </Link>
             <div className="mx-3 my-1 h-px bg-border/60" />
             <button
