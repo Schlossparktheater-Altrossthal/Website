@@ -15,16 +15,13 @@ export type AttendanceActionState = {
 
 const RESPOND_SCHEMA = z.object({
   rehearsalId: z.string().min(1, "Termin konnte nicht gefunden werden."),
-  status: z.enum(["yes", "no"], {
-    errorMap: () => ({ message: "Ungültige Auswahl." }),
-  }),
+  status: z.enum(["yes", "no"], { error: "Ungültige Auswahl." }),
 });
 
-const INITIAL_STATE: AttendanceActionState = { ok: false, error: null };
-
-export function getInitialAttendanceState(): AttendanceActionState {
-  return INITIAL_STATE;
-}
+export const INITIAL_ATTENDANCE_STATE: AttendanceActionState = {
+  ok: false,
+  error: null,
+};
 
 export async function respondToRehearsal(
   _prevState: AttendanceActionState,

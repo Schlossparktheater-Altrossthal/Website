@@ -6,7 +6,7 @@ import { useFormState } from "react-dom";
 import { Button } from "@/components/ui/button";
 
 import type { AttendanceActionState } from "./actions";
-import { getInitialAttendanceState, respondToRehearsal } from "./actions";
+import { INITIAL_ATTENDANCE_STATE, respondToRehearsal } from "./actions";
 
 type UpcomingRehearsalResponseFormProps = {
   rehearsalId: string;
@@ -19,7 +19,10 @@ export function UpcomingRehearsalResponseForm({
   currentStatus,
   canDecline,
 }: UpcomingRehearsalResponseFormProps) {
-  const initialState = useMemo(() => getInitialAttendanceState(), []);
+  const initialState = useMemo(
+    () => ({ ...INITIAL_ATTENDANCE_STATE }),
+    [],
+  );
   const [state, formAction] = useFormState<AttendanceActionState, FormData>(
     respondToRehearsal,
     initialState,
