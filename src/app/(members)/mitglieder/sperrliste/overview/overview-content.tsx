@@ -9,7 +9,7 @@ import { MobileByDay } from "./MobileByDay";
 import { TimelineView } from "./TimelineView";
 import { WeekStrip } from "./WeekStrip";
 import { CalendarStarIcon, ClockIcon, UmbrellaIcon } from "./icons";
-import { IconButton, Note } from "./ui-components";
+import { IconButton } from "./ui-components";
 import type {
   DayColumn,
   HolidayIndicator,
@@ -26,6 +26,7 @@ type OverviewContentProps = {
   holidays: HolidayIndicator[];
   onPreviousMonth?: () => void;
   onNextMonth?: () => void;
+  onReset?: () => void;
   month?: { label: string; year: number; month: number };
   personFilter?: PersonFilter;
   onPersonFilterChange?: (filter: PersonFilter) => void;
@@ -42,6 +43,7 @@ export default function OverviewContent({
   holidays,
   onPreviousMonth,
   onNextMonth,
+  onReset,
   month,
   personFilter: controlledPersonFilter,
   onPersonFilterChange,
@@ -129,13 +131,26 @@ export default function OverviewContent({
 
   // "Heute"-Button Handler mit useCallback
   const handleJumpToToday = useCallback(() => {
-    const todayDay = dayCols.find((d) => d.accent === true);
-    if (todayDay) {
-      setHighlightedDay(todayDay.n);
-      const element = document.getElementById(`day-${todayDay.n}`);
+    const highlighted = dayCols.find((d) => d.accent === true)?.n ?? new Date().getDate();
+
+    const scrollToDay = (day: number) => {
+      setHighlightedDay(day);
+      const element = document.getElementById(`day-${day}`);
       element?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    };
+
+    if (onReset) {
+      onReset();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToDay(highlighted);
+        });
+      });
+      return;
     }
-  }, [dayCols, setHighlightedDay]);
+
+    scrollToDay(highlighted);
+  }, [dayCols, onReset, setHighlightedDay]);
 
   // Keyboard-Navigation für View-Switching (Strg+1/2/3) mit useCallback
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
