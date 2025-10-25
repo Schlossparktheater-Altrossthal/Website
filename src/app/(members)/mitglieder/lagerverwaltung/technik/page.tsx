@@ -17,6 +17,7 @@ import { AddTechnikItemDialog } from "./add-item-dialog";
 import { EditTechnikItemDialog } from "./edit-item-dialog";
 import {
   TECH_CATEGORY_LABEL,
+  TECH_CATEGORY_TYPE_OPTIONS,
   TECH_CATEGORY_VALUES,
   TECH_INVENTORY_CATEGORIES,
   type TechnikInventoryCategory,
@@ -183,6 +184,46 @@ export default async function TechnikInventoryPage({
     lastInventoryAt: item.lastInventoryAt ?? null,
   }));
 
+  const typeOptionsByCategory = TECH_CATEGORY_VALUES.reduce(
+    (acc, category) => {
+      const baseOptions = TECH_CATEGORY_TYPE_OPTIONS[category] ?? [];
+      const normalizedBase = baseOptions.map((option) =>
+        option.trim().toLocaleLowerCase("de-DE"),
+      );
+      const dynamicOptions: string[] = [];
+
+      for (const item of items) {
+        if (item.category !== category) {
+          continue;
+        }
+
+        const type = item.itemType?.trim();
+        if (!type) {
+          continue;
+        }
+
+        const normalized = type.toLocaleLowerCase("de-DE");
+        const existsInBase = normalizedBase.includes(normalized);
+        const existsInDynamic = dynamicOptions.some(
+          (entry) =>
+            entry.trim().toLocaleLowerCase("de-DE") === normalized,
+        );
+
+        if (!existsInBase && !existsInDynamic) {
+          dynamicOptions.push(type);
+        }
+      }
+
+      dynamicOptions.sort((a, b) =>
+        a.localeCompare(b, "de-DE", { sensitivity: "base" }),
+      );
+
+      acc[category] = [...baseOptions, ...dynamicOptions];
+      return acc;
+    },
+    {} as Record<TechnikInventoryCategory, string[]>,
+  );
+
   const filteredItems = normalizedQuery.length
     ? items.filter((item) => matchesQuery(item, normalizedQuery))
     : items;
@@ -236,7 +277,10 @@ export default async function TechnikInventoryPage({
               Kombiniere Kategorie-Filter und Stichworte für präzise Ergebnisse.
             </p>
           </div>
-          <AddTechnikItemDialog defaultCategory={defaultDialogCategory} />
+          <AddTechnikItemDialog
+            defaultCategory={defaultDialogCategory}
+            typeOptionsByCategory={typeOptionsByCategory}
+          />
         </CardHeader>
         <CardContent>
           <form
@@ -381,7 +425,10 @@ export default async function TechnikInventoryPage({
                       </div>
                     </TableCell>
                     <TableCell className="align-top text-right">
-                      <EditTechnikItemDialog item={item} />
+                      <EditTechnikItemDialog
+                        item={item}
+                        typeOptions={typeOptionsByCategory[item.category] ?? []}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

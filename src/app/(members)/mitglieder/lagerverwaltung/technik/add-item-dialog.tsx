@@ -31,7 +31,6 @@ import {
 import {
   TECH_CATEGORY_LABEL,
   TECH_CATEGORY_PREFIX,
-  TECH_CATEGORY_TYPE_OPTIONS,
   TECH_CATEGORY_VALUES,
   TECH_INVENTORY_CATEGORIES,
   type TechnikInventoryCategory,
@@ -47,10 +46,15 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("de-DE", {
 
 interface AddTechnikItemDialogProps {
   defaultCategory?: TechnikInventoryCategory;
+  typeOptionsByCategory: Record<
+    TechnikInventoryCategory,
+    readonly string[]
+  >;
 }
 
 export function AddTechnikItemDialog({
   defaultCategory,
+  typeOptionsByCategory,
 }: AddTechnikItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(
@@ -64,9 +68,8 @@ export function AddTechnikItemDialog({
     defaultCategory ?? TECH_CATEGORY_VALUES[0],
   );
   const [selectedType, setSelectedType] = useState<string>(() => {
-    const options = TECH_CATEGORY_TYPE_OPTIONS[
-      defaultCategory ?? TECH_CATEGORY_VALUES[0]
-    ];
+    const fallbackCategory = defaultCategory ?? TECH_CATEGORY_VALUES[0];
+    const options = typeOptionsByCategory[fallbackCategory] ?? [];
 
     return options.at(0) ?? "custom";
   });
@@ -75,7 +78,7 @@ export function AddTechnikItemDialog({
 
   const categoryLabel = TECH_CATEGORY_LABEL[category];
   const prefix = TECH_CATEGORY_PREFIX[category];
-  const typeOptions = TECH_CATEGORY_TYPE_OPTIONS[category];
+  const typeOptions = typeOptionsByCategory[category] ?? [];
 
   const computedTotal = useMemo(() => {
     const parsedQuantity = Number.parseInt(quantity, 10);
@@ -112,21 +115,23 @@ export function AddTechnikItemDialog({
       const fallbackCategory = defaultCategory ?? TECH_CATEGORY_VALUES[0];
       setCategory(fallbackCategory);
       const fallbackType =
-        TECH_CATEGORY_TYPE_OPTIONS[fallbackCategory].at(0) ?? "custom";
+        typeOptionsByCategory[fallbackCategory]?.at(0) ?? "custom";
       setSelectedType(fallbackType);
       setCustomType("");
       setErrorMessage(null);
     }
-  }, [defaultCategory, open]);
+  }, [defaultCategory, open, typeOptionsByCategory]);
 
   useEffect(() => {
-    const options = TECH_CATEGORY_TYPE_OPTIONS[category];
-    const matchesOption = options.some((option) => option === selectedType);
+    const options = typeOptionsByCategory[category] ?? [];
+    const matchesOption = options.some(
+      (option) => option.localeCompare(selectedType, "de-DE", { sensitivity: "base" }) === 0,
+    );
 
     if (selectedType !== "custom" && !matchesOption) {
       setSelectedType(options.at(0) ?? "custom");
     }
-  }, [category, selectedType]);
+  }, [category, selectedType, typeOptionsByCategory]);
 
   useEffect(() => {
     if (selectedType !== "custom") {
