@@ -162,6 +162,7 @@ export function OverviewShell({
         holidays={holidayIndicators}
         onPreviousMonth={onPrev}
         onNextMonth={onNext}
+        onReset={onReset}
         month={{ label: monthLabel, year: dayCols[0]?.date.getFullYear() ?? new Date().getFullYear(), month: dayCols[0]?.date.getMonth() ?? new Date().getMonth() }}
       />
     </div>
