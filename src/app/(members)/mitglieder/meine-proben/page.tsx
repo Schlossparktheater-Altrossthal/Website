@@ -6,6 +6,7 @@ import { DepartmentMembershipRole } from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
@@ -352,6 +353,7 @@ export default async function MeineProbenPage() {
                     }
 
                     const optional = item.membershipRole === DepartmentMembershipRole.guest;
+                    const hasAdditionalDetails = Boolean(item.end || item.description);
                     return (
                       <li key={`department-${item.id}`}>
                         <details className="group rounded-xl border border-border/60 bg-background/60 p-3 shadow-sm transition-shadow [&_summary::-webkit-details-marker]:hidden">
@@ -360,7 +362,9 @@ export default async function MeineProbenPage() {
                               <div className="min-w-0 space-y-1">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-sm font-semibold text-foreground">{item.title}</span>
-                                  <Badge variant="outline" className="text-[0.65rem] uppercase tracking-wide">Gewerk</Badge>
+                                  <Badge variant="outline" className="text-[0.65rem] uppercase tracking-wide">
+                                    {item.departmentName}
+                                  </Badge>
                                   {optional ? (
                                     <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
                                       Optional
@@ -372,9 +376,6 @@ export default async function MeineProbenPage() {
                                   <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
                                 ) : null}
                               </div>
-                              <Badge variant="outline" className="self-start text-xs">
-                                {item.departmentName}
-                              </Badge>
                             </div>
                           </summary>
                           <div className="mt-3 space-y-3 border-t border-border/60 pt-3 text-xs text-muted-foreground sm:text-sm">
@@ -386,12 +387,29 @@ export default async function MeineProbenPage() {
                             {item.description ? (
                               <p className="whitespace-pre-wrap text-sm text-muted-foreground/90">{item.description}</p>
                             ) : null}
-                            <Link
-                              href={`/mitglieder/meine-gewerke/${item.departmentSlug}`}
-                              className="text-xs font-medium text-primary hover:underline"
-                            >
-                              Zum Gewerk
-                            </Link>
+                            {!hasAdditionalDetails ? (
+                              <p className="text-xs text-muted-foreground">
+                                Für dieses Gewerk sind derzeit keine weiteren Details hinterlegt.
+                              </p>
+                            ) : null}
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                asChild
+                                size="sm"
+                                variant="outline"
+                                className="text-xs font-medium"
+                              >
+                                <Link href="/mitglieder/meine-gewerke/todos">Zur To-Do-Liste</Link>
+                              </Button>
+                              <div className="flex flex-wrap gap-2">
+                                <Button type="button" size="sm">
+                                  Zusagen
+                                </Button>
+                                <Button type="button" size="sm" variant="outline">
+                                  Absagen
+                                </Button>
+                              </div>
+                            </div>
                             {optional ? (
                               <p className="text-xs text-muted-foreground">
                                 Als Gast ist deine Teilnahme freiwillig – gib dem Team gerne Bescheid, wenn du unterstützt.

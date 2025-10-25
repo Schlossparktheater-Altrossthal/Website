@@ -396,7 +396,7 @@ export const membersNavigation = [
       },
       {
         href: "/mitglieder/meine-proben",
-        label: "meine Termine",
+        label: "Meine Termine",
         permissionKey: "mitglieder.meine-proben",
         icon: RehearsalsIcon,
       },
