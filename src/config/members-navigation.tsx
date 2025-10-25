@@ -431,6 +431,12 @@ export const membersNavigation = [
     label: "Proben & Gewerke",
     items: [
       {
+        href: "/mitglieder/produktionen/gewerke",
+        label: "Allgemeines",
+        permissionKey: "mitglieder.produktionen",
+        icon: DepartmentsOverviewIcon,
+      },
+      {
         href: "/mitglieder/meine-gewerke",
         label: "Meine Gewerke",
         permissionKey: "mitglieder.meine-gewerke",
@@ -489,12 +495,6 @@ export const membersNavigation = [
         label: "Übersicht",
         permissionKey: "mitglieder.produktionen",
         icon: ProductionIcon,
-      },
-      {
-        href: "/mitglieder/produktionen/gewerke",
-        label: "Gewerke & Teams",
-        permissionKey: "mitglieder.produktionen",
-        icon: DepartmentsOverviewIcon,
       },
       {
         href: "/mitglieder/produktionen/besetzung",

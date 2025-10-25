@@ -3,12 +3,11 @@ import { notFound } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, CheckCircle2, Clock, ListTodo, Ruler, Sparkles, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, ListTodo, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
-import { hasRole, requireAuth } from "@/lib/rbac";
+import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { sortMeasurements, type MeasurementType, type MeasurementUnit } from "@/data/measurements";
 
@@ -20,23 +19,16 @@ import {
   isCastDepartmentUser,
 } from "./utils";
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-card";
-import { joinDepartmentAction } from "./actions";
 
 type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
 
 export default async function MeineGewerkePage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
-  const hasMeasurementPermission = await hasPermission(
-    session.user,
-    "mitglieder.koerpermasse",
-  );
   const canManageDepartments = await hasPermission(
     session.user,
     "mitglieder.produktionen",
   );
-  const isEnsembleMember = hasRole(session.user, "cast");
-  const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
   if (!allowed) {
     return (
       <div className="space-y-6">
@@ -134,22 +126,6 @@ export default async function MeineGewerkePage() {
     .sort((a, b) => a.department.name.localeCompare(b.department.name, "de", { sensitivity: "base" }))
     .map((membership) => membership as DepartmentMembershipWithDepartment);
 
-  const joinableDepartments = await prisma.department.findMany({
-    where: {
-      isCore: true,
-      memberships: { none: { userId } },
-    },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      color: true,
-      slug: true,
-      requiresJoinApproval: true,
-    },
-    orderBy: { name: "asc" },
-  });
-
   let costumeMeasurementsByUser: DepartmentMeasurementsByUser | undefined;
   const costumeMemberships = memberships.filter((membership) => membership.department.slug === "kostuem");
 
@@ -236,26 +212,12 @@ export default async function MeineGewerkePage() {
   const now = new Date();
 
   const summaryStats: SummaryStat[] = [
-    { label: "Gewerke", value: memberships.length, hint: "Aktive Zuordnungen", icon: Users },
     { label: "Aktive Aufgaben", value: openTaskCount, hint: "Offen & in Arbeit in deinen Gewerken", icon: ListTodo },
     { label: "Abgeschlossen", value: taskTotals.done, hint: "Erledigte Gewerke-Aufgaben", icon: CheckCircle2 },
   ];
 
   const headerActions = (
     <>
-      {canManageMeasurements ? (
-        <Button
-          asChild
-          size="sm"
-          variant="outline"
-          className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
-        >
-          <Link href="/mitglieder/koerpermasse" title="Körpermaße verwalten">
-            <Ruler aria-hidden className="h-4 w-4" />
-            <span>Körpermaße</span>
-          </Link>
-        </Button>
-      ) : null}
       <Button
         asChild
         size="sm"
@@ -265,17 +227,6 @@ export default async function MeineGewerkePage() {
         <Link href="/mitglieder/sperrliste" title="Sperrliste öffnen">
           <CalendarDays aria-hidden className="h-4 w-4" />
           <span>Sperrliste</span>
-        </Link>
-      </Button>
-      <Button
-        asChild
-        size="sm"
-        variant="secondary"
-        className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground shadow-[0_18px_40px_-28px_rgba(99,102,241,0.9)] transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
-      >
-        <Link href="/mitglieder/produktionen/gewerke" title="Gewerke &amp; Teams öffnen">
-          <Users aria-hidden className="h-4 w-4" />
-          <span>Gewerke &amp; Teams</span>
         </Link>
       </Button>
     </>
@@ -307,138 +258,38 @@ export default async function MeineGewerkePage() {
           <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div>
         </div>
         {memberships.length ? (
-          <>
-            <dl className="grid gap-4 md:grid-cols-3">
-              {summaryStats.map((stat) => {
-                const Icon = stat.icon;
-                return (
-                  <div
-                    key={stat.label}
-                    className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
-                  >
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
-                    <div className="relative flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Icon aria-hidden className="h-5 w-5" />
-                      </span>
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
-                        <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                        {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
-                      </div>
+          <dl className="grid gap-4 md:grid-cols-3">
+            {summaryStats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={stat.label}
+                  className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
+                >
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+                  <div className="relative flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Icon aria-hidden className="h-5 w-5" />
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
+                      <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
+                      {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
                     </div>
                   </div>
-                );
-              })}
-            </dl>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:text-sm">
-              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
-                <Clock aria-hidden className="h-4 w-4" />
-                Planungsfenster: {freezeUntilLabel} – {planningWindowLabel}
-              </span>
-              <Link
-                href="/mitglieder/sperrliste"
-                className="inline-flex items-center gap-2 font-semibold text-primary transition hover:text-primary/80"
-              >
-                <CalendarDays aria-hidden className="h-4 w-4" />
-                Sperrliste aktualisieren
-              </Link>
-            </div>
-          </>
+                </div>
+              );
+            })}
+          </dl>
         ) : null}
       </div>
     </section>
   );
 
-  const joinSection = joinableDepartments.length ? (
-    <section className="rounded-3xl border border-border/60 bg-background/70 p-6 shadow-inner sm:p-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground sm:text-xl">Weitere Gewerke beitreten</h2>
-          <p className="text-sm text-muted-foreground">
-            Verstärke zusätzliche Teams, um deren Aufgabenlisten, Ansprechpartner und Terminvorschläge freizuschalten.
-          </p>
-        </div>
-      </div>
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {joinableDepartments.map((department) => {
-          const requiresApproval = department.requiresJoinApproval;
-          const cardClassName =
-            "group relative overflow-hidden rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm transition hover:border-primary/40";
-          const badgeRow = (
-            <div className="flex flex-wrap items-center gap-2">
-              {department.slug ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border/50 bg-background/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {department.slug}
-                </span>
-              ) : null}
-              {requiresApproval ? (
-                <Badge
-                  variant="outline"
-                  className="border-primary/40 bg-primary/10 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary"
-                >
-                  Zustimmung nötig
-                </Badge>
-              ) : null}
-            </div>
-          );
-
-          const cardInner = (
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="inline-flex h-2.5 w-2.5 rounded-full border border-border/60"
-                    style={{ backgroundColor: department.color ?? "#94a3b8" }}
-                  />
-                  <h3 className="text-sm font-semibold text-foreground">{department.name}</h3>
-                </div>
-                {department.description ? (
-                  <p className="text-xs text-muted-foreground">{department.description}</p>
-                ) : null}
-                {badgeRow}
-              </div>
-              {requiresApproval ? (
-                <div className="flex flex-col items-end gap-1 text-right text-xs text-muted-foreground">
-                  <span>Beitritt nur nach Freigabe der Leitung.</span>
-                </div>
-              ) : (
-                <Button type="submit" size="sm" className="rounded-full px-3">
-                  Beitreten
-                </Button>
-              )}
-            </div>
-          );
-
-          if (requiresApproval) {
-            return (
-              <div key={department.id} className={cardClassName} aria-disabled="true">
-                {cardInner}
-              </div>
-            );
-          }
-
-          return (
-            <form
-              key={department.id}
-              action={joinDepartmentAction}
-              className={cardClassName}
-            >
-              <input type="hidden" name="departmentId" value={department.id} />
-              {cardInner}
-            </form>
-          );
-        })}
-      </div>
-    </section>
-  ) : null;
-
   if (memberships.length === 0) {
     return (
       <div className="space-y-6">
         {hero}
-        {joinSection}
         <section className="rounded-3xl border border-dashed border-primary/30 bg-background/70 p-6 text-sm text-muted-foreground shadow-inner sm:p-10 sm:text-base">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground sm:text-xl">Noch keine Gewerke</h2>
@@ -470,7 +321,6 @@ export default async function MeineGewerkePage() {
   return (
     <div className="space-y-6">
       {hero}
-      {joinSection}
 
       <div className="space-y-8">
         {memberships.map((membership) => {
