@@ -31,6 +31,7 @@ type ProductionWorkspaceHeaderProps = {
   stats?: ProductionStat[];
   actions?: ReactNode;
   summaryActions?: ReactNode;
+  hideProductionCard?: boolean;
 };
 
 function formatProductionTitle(production?: ProductionSummary | null) {
@@ -49,6 +50,7 @@ export function ProductionWorkspaceHeader({
   stats,
   actions,
   summaryActions,
+  hideProductionCard = false,
 }: ProductionWorkspaceHeaderProps) {
   const hasStats = Boolean(stats && stats.length > 0);
   const formattedTitle = formatProductionTitle(production);
@@ -66,41 +68,43 @@ export function ProductionWorkspaceHeader({
 
       <ProductionWorkspaceNav active={activeWorkspace} />
 
-      <Card className="border-border/70 bg-background/70">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-xl font-semibold text-foreground">{formattedTitle}</CardTitle>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                {production ? `Jahrgang ${production.year}` : "Wähle in der Übersicht eine aktive Produktion aus."}
-              </p>
+      {hideProductionCard ? null : (
+        <Card className="border-border/70 bg-background/70">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-xl font-semibold text-foreground">{formattedTitle}</CardTitle>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {production ? `Jahrgang ${production.year}` : "Wähle in der Übersicht eine aktive Produktion aus."}
+                </p>
+              </div>
+              <Badge variant={production ? "default" : "outline"}>
+                {production ? "Aktiv" : "Auswahl erforderlich"}
+              </Badge>
             </div>
-            <Badge variant={production ? "default" : "outline"}>
-              {production ? "Aktiv" : "Auswahl erforderlich"}
-            </Badge>
-          </div>
-          {production?.synopsis ? (
-            <p className="text-sm text-muted-foreground">{production.synopsis}</p>
-          ) : null}
-        </CardHeader>
-        {production ? (
-          summaryActions ? (
-            <CardContent className="flex flex-wrap gap-2">{summaryActions}</CardContent>
-          ) : null
-        ) : (
-          <CardContent className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-muted-foreground">
-              Ohne aktive Produktion fehlen Rollen, Szenen und Aufgaben. Wähle eine Produktion aus oder lege eine neue an, um loszulegen.
-            </p>
-            <Button asChild size="sm" variant="outline" className="ml-auto">
-              <Link href="/mitglieder/produktionen" title="Produktion auswählen">
-                <Clapperboard aria-hidden className="h-4 w-4" />
-                <span>Produktion auswählen</span>
-              </Link>
-            </Button>
-          </CardContent>
-        )}
-      </Card>
+            {production?.synopsis ? (
+              <p className="text-sm text-muted-foreground">{production.synopsis}</p>
+            ) : null}
+          </CardHeader>
+          {production ? (
+            summaryActions ? (
+              <CardContent className="flex flex-wrap gap-2">{summaryActions}</CardContent>
+            ) : null
+          ) : (
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                Ohne aktive Produktion fehlen Rollen, Szenen und Aufgaben. Wähle eine Produktion aus oder lege eine neue an, um loszulegen.
+              </p>
+              <Button asChild size="sm" variant="outline" className="ml-auto">
+                <Link href="/mitglieder/produktionen" title="Produktion auswählen">
+                  <Clapperboard aria-hidden className="h-4 w-4" />
+                  <span>Produktion auswählen</span>
+                </Link>
+              </Button>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {hasStats ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
