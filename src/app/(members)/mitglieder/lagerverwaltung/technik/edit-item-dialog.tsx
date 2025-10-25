@@ -17,6 +17,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   updateTechnikInventoryItem,
@@ -59,9 +66,13 @@ interface EditTechnikItemDialogProps {
     lastInventoryAt: Date | null;
     details: string | null;
   };
+  typeOptions: readonly string[];
 }
 
-export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
+export function EditTechnikItemDialog({
+  item,
+  typeOptions,
+}: EditTechnikItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(
     updateTechnikInventoryItem,
@@ -72,6 +83,34 @@ export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
   const [acquisitionCost, setAcquisitionCost] = useState(() =>
     item.acquisitionCost !== null ? `${item.acquisitionCost}` : "",
   );
+  const [selectedType, setSelectedType] = useState<string>(() => {
+    if (item.itemType) {
+      const matchesPreset = typeOptions.some(
+        (option) => option.localeCompare(item.itemType!, "de-DE", { sensitivity: "base" }) === 0,
+      );
+
+      if (matchesPreset) {
+        return item.itemType;
+      }
+
+      return "custom";
+    }
+
+    return typeOptions.at(0) ?? "custom";
+  });
+  const [customType, setCustomType] = useState(() => {
+    if (item.itemType) {
+      const matchesPreset = typeOptions.some(
+        (option) => option.localeCompare(item.itemType!, "de-DE", { sensitivity: "base" }) === 0,
+      );
+
+      if (!matchesPreset) {
+        return item.itemType;
+      }
+    }
+
+    return "";
+  });
   const categoryLabel = TECH_CATEGORY_LABEL[item.category];
 
   const computedTotal = useMemo(() => {
@@ -105,8 +144,52 @@ export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
       setErrorMessage(null);
       setQuantity(`${item.quantity}`);
       setAcquisitionCost(item.acquisitionCost !== null ? `${item.acquisitionCost}` : "");
+      const presetOptions = typeOptions ?? [];
+      const matchesPreset =
+        item.itemType &&
+        presetOptions.some(
+          (option) => option.localeCompare(item.itemType!, "de-DE", { sensitivity: "base" }) === 0,
+        );
+      setSelectedType(() => {
+        if (item.itemType && matchesPreset) {
+          return item.itemType;
+        }
+
+        if (item.itemType && !matchesPreset) {
+          return "custom";
+        }
+
+        return presetOptions.at(0) ?? "custom";
+      });
+      setCustomType(() => {
+        if (item.itemType && !matchesPreset) {
+          return item.itemType;
+        }
+
+        return "";
+      });
     }
-  }, [item.acquisitionCost, item.quantity, open]);
+  }, [item.acquisitionCost, item.itemType, item.quantity, open, typeOptions]);
+
+  useEffect(() => {
+    if (selectedType !== "custom") {
+      setCustomType("");
+    }
+  }, [selectedType]);
+
+  useEffect(() => {
+    if (selectedType === "custom") {
+      return;
+    }
+
+    const matchesPreset = typeOptions.some(
+      (option) => option.localeCompare(selectedType, "de-DE", { sensitivity: "base" }) === 0,
+    );
+
+    if (!matchesPreset) {
+      setSelectedType(typeOptions.at(0) ?? "custom");
+    }
+  }, [selectedType, typeOptions]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -159,13 +242,36 @@ export function EditTechnikItemDialog({ item }: EditTechnikItemDialogProps) {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-1.5">
               <Label htmlFor={`technik-type-edit-${item.id}`}>Typ</Label>
-              <Input
-                id={`technik-type-edit-${item.id}`}
-                name="itemType"
-                defaultValue={item.itemType ?? ""}
-                required
-                maxLength={120}
-              />
+              <Select
+                value={selectedType}
+                onValueChange={(value) => setSelectedType(value)}
+              >
+                <SelectTrigger id={`technik-type-edit-${item.id}`}>
+                  <SelectValue placeholder="Typ wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {typeOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Eigener Typ …</SelectItem>
+                </SelectContent>
+              </Select>
+              {selectedType === "custom" ? (
+                <Input
+                  className="mt-2"
+                  id={`technik-type-edit-custom-${item.id}`}
+                  name="itemType"
+                  placeholder="Typ eintragen"
+                  required
+                  maxLength={120}
+                  value={customType}
+                  onChange={(event) => setCustomType(event.target.value)}
+                />
+              ) : (
+                <input type="hidden" name="itemType" value={selectedType} />
+              )}
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor={`technik-quantity-edit-${item.id}`}>
