@@ -448,12 +448,6 @@ export const membersNavigation = [
         permissionKey: "mitglieder.koerpermasse",
         icon: BodyMeasurementsIcon,
       },
-      {
-        href: "/mitglieder/probenplanung",
-        label: "Probenplanung",
-        permissionKey: "mitglieder.probenplanung",
-        icon: RehearsalPlanningIcon,
-      },
     ],
   },
   {
@@ -488,13 +482,19 @@ export const membersNavigation = [
   },
   {
     id: "production",
-    label: "Produktionen & Teams",
+    label: "Proben",
     items: [
       {
         href: "/mitglieder/produktionen",
         label: "Übersicht",
         permissionKey: "mitglieder.produktionen",
         icon: ProductionIcon,
+      },
+      {
+        href: "/mitglieder/probenplanung",
+        label: "Probenplanung",
+        permissionKey: "mitglieder.probenplanung",
+        icon: RehearsalPlanningIcon,
       },
       {
         href: "/mitglieder/produktionen/besetzung",
