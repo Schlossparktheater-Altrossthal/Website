@@ -132,7 +132,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   {
     key: "mitglieder.meine-proben",
     label: "Eigene Probentermine einsehen",
-    description: 'Zugang zum Bereich "meine Termine" mit persönlichen Terminen und Fristen.',
+    description: 'Zugang zum Bereich "Meine Termine" mit persönlichen Terminen und Fristen.',
     category: "self",
   },
   {
