@@ -41,6 +41,8 @@ export type ThemeTokenAdjustment = {
   scaleAlpha?: number;
   value?: string;
   family?: string;
+  minChroma?: number;
+  maxChroma?: number;
 };
 
 export type ThemeSemanticTokenDefinition = {
@@ -101,6 +103,8 @@ function deepClone<T>(value: T): T {
 }
 
 const RESERVED_PARAMETER_KEYS = new Set(["family", "description", "notes", "tags"]);
+
+const MIN_CHROMA = 0.01;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -186,7 +190,17 @@ function applyAdjustments(base: NumericOklch, adjustments: ThemeTokenAdjustment 
   }
 
   colour.l = clamp(colour.l, 0, 1);
-  colour.c = Math.max(colour.c, 0);
+  const maxChromaLimit =
+    typeof adjustments.maxChroma === "number" ? Math.max(adjustments.maxChroma, MIN_CHROMA) : null;
+  const minChromaLimit =
+    typeof adjustments.minChroma === "number" ? Math.max(adjustments.minChroma, 0) : null;
+  if (maxChromaLimit !== null) {
+    colour.c = Math.min(colour.c, maxChromaLimit);
+  }
+  if (minChromaLimit !== null) {
+    colour.c = Math.max(colour.c, Math.max(minChromaLimit, MIN_CHROMA));
+  }
+  colour.c = colour.c <= 0 ? 0 : Math.max(colour.c, MIN_CHROMA);
   colour.alpha = clamp(colour.alpha, 0, 1);
 
   return colour;
@@ -422,13 +436,14 @@ type SanitisedAdjustment = ThemeTokenAdjustment;
 function sanitiseAdjustment(
   value: unknown,
   fallback: Record<string, unknown> | undefined,
+  fallbackBase: ThemeFamilyValue | undefined,
 ): SanitisedAdjustment {
   const result: SanitisedAdjustment = {};
   const candidate = value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
   const base = fallback && typeof fallback === "object" && !Array.isArray(fallback)
-    ? fallback
+    ? (fallback as Record<string, unknown>)
     : {};
 
   const numericKeys = [
@@ -436,7 +451,6 @@ function sanitiseAdjustment(
     "l",
     "scaleL",
     "deltaC",
-    "c",
     "scaleC",
     "h",
     "deltaH",
@@ -450,9 +464,7 @@ function sanitiseAdjustment(
       const valueToSet =
         key === "alpha"
           ? clamp(candidateValue, 0, 1)
-          : key === "c"
-            ? Math.max(candidateValue, 0)
-            : candidateValue;
+          : candidateValue;
       switch (key) {
         case "deltaL":
           result.deltaL = valueToSet;
@@ -465,9 +477,6 @@ function sanitiseAdjustment(
           break;
         case "deltaC":
           result.deltaC = valueToSet;
-          break;
-        case "c":
-          result.c = valueToSet;
           break;
         case "scaleC":
           result.scaleC = valueToSet;
@@ -491,14 +500,12 @@ function sanitiseAdjustment(
       continue;
     }
 
-    const fallbackValue = Number((base as Record<string, unknown>)[key]);
+    const fallbackValue = Number(base[key]);
     if (Number.isFinite(fallbackValue)) {
       const valueToSet =
         key === "alpha"
           ? clamp(fallbackValue, 0, 1)
-          : key === "c"
-            ? Math.max(fallbackValue, 0)
-            : fallbackValue;
+          : fallbackValue;
       switch (key) {
         case "deltaL":
           result.deltaL = valueToSet;
@@ -511,9 +518,6 @@ function sanitiseAdjustment(
           break;
         case "deltaC":
           result.deltaC = valueToSet;
-          break;
-        case "c":
-          result.c = valueToSet;
           break;
         case "scaleC":
           result.scaleC = valueToSet;
@@ -537,12 +541,53 @@ function sanitiseAdjustment(
     }
   }
 
-  const candidateValue = candidate.value ?? (base as Record<string, unknown>).value;
+  const hasCandidateChromaAdjustment = ["c", "deltaC", "scaleC"].some((key) => {
+    const candidateValue = Number(candidate[key]);
+    return Number.isFinite(candidateValue);
+  });
+
+  if (!hasCandidateChromaAdjustment) {
+    const fallbackChroma = Number(base.c);
+    if (Number.isFinite(fallbackChroma)) {
+      if (fallbackBase && Number.isFinite(fallbackBase.c)) {
+        const baseChroma = fallbackBase.c;
+        const delta = fallbackChroma - baseChroma;
+        if (delta !== 0) {
+          result.deltaC = (result.deltaC ?? 0) + delta;
+          const clampTarget = Math.max(fallbackChroma, MIN_CHROMA);
+          if (delta < 0) {
+            result.maxChroma = clampTarget;
+          } else {
+            result.minChroma = clampTarget;
+          }
+        } else {
+          const clampTarget = Math.max(fallbackChroma, MIN_CHROMA);
+          result.minChroma = clampTarget;
+          result.maxChroma = clampTarget;
+        }
+      } else {
+        const chroma = Math.max(fallbackChroma, 0);
+        result.c = chroma;
+        if (chroma > 0) {
+          const clampTarget = Math.max(chroma, MIN_CHROMA);
+          result.minChroma = clampTarget;
+          result.maxChroma = clampTarget;
+        }
+      }
+    }
+  } else {
+    const candidateChroma = Number(candidate.c);
+    if (Number.isFinite(candidateChroma)) {
+      result.c = Math.max(candidateChroma, 0);
+    }
+  }
+
+  const candidateValue = candidate.value ?? base.value;
   if (typeof candidateValue === "string" && candidateValue.trim()) {
     result.value = candidateValue.trim().slice(0, 200);
   }
 
-  const familyOverride = candidate.family ?? (base as Record<string, unknown>).family;
+  const familyOverride = candidate.family ?? base.family;
   if (typeof familyOverride === "string" && familyOverride.trim()) {
     result.family = familyOverride.trim();
   }
@@ -553,6 +598,7 @@ function sanitiseAdjustment(
 function sanitiseTokenDefinition(
   value: unknown,
   fallback: ThemeSemanticTokenDefinition | undefined,
+  fallbackFamilies: ThemeFamilies,
 ): ThemeSemanticTokenDefinition {
   const baseRecord = fallback && typeof fallback === "object" && !Array.isArray(fallback)
     ? (fallback as Record<string, unknown>)
@@ -566,11 +612,11 @@ function sanitiseTokenDefinition(
   const fallbackFamily = typeof baseRecord.family === "string" && baseRecord.family.trim()
     ? baseRecord.family.trim()
     : "neutral";
-  if (typeof candidateRecord.family === "string" && candidateRecord.family.trim()) {
-    result.family = candidateRecord.family.trim();
-  } else {
-    result.family = fallbackFamily;
-  }
+  const resolvedFamily =
+    typeof candidateRecord.family === "string" && candidateRecord.family.trim()
+      ? candidateRecord.family.trim()
+      : fallbackFamily;
+  result.family = resolvedFamily;
 
   const description = candidateRecord.description ?? baseRecord.description;
   if (typeof description === "string" && description.trim()) {
@@ -603,9 +649,25 @@ function sanitiseTokenDefinition(
   }
 
   for (const modeKey of Array.from(modeKeys)) {
+    const fallbackModeRecord =
+      baseRecord[modeKey] && typeof baseRecord[modeKey] === "object" && !Array.isArray(baseRecord[modeKey])
+        ? (baseRecord[modeKey] as Record<string, unknown>)
+        : undefined;
+
+    const fallbackModeFamily =
+      fallbackModeRecord && typeof fallbackModeRecord.family === "string" && fallbackModeRecord.family.trim()
+        ? fallbackModeRecord.family.trim()
+        : fallbackFamily;
+
+    const fallbackFamilyModes = fallbackFamilies[fallbackModeFamily] ?? {};
+    const fallbackBase = fallbackFamilyModes
+      ? (fallbackFamilyModes[modeKey as ThemeModeKey] as ThemeFamilyValue | undefined)
+      : undefined;
+
     const sanitised = sanitiseAdjustment(
       candidateRecord[modeKey],
-      baseRecord[modeKey] as Record<string, unknown> | undefined,
+      fallbackModeRecord,
+      fallbackBase,
     );
     if (Object.keys(sanitised).length > 0) {
       result[modeKey] = sanitised;
@@ -622,6 +684,7 @@ function sanitiseParameters(value: unknown, fallback: ThemeParameters): ThemePar
     ? (value as Record<string, unknown>)
     : {};
 
+  const fallbackFamilies = (fallback.families ?? {}) as ThemeFamilies;
   base.families = sanitiseFamilies(candidate.families, fallback.families);
 
   const fallbackTokensRecord = (fallback.tokens ?? {}) as Record<
@@ -642,6 +705,7 @@ function sanitiseParameters(value: unknown, fallback: ThemeParameters): ThemePar
     resultTokens[tokenName] = sanitiseTokenDefinition(
       candidateTokens[tokenName],
       fallbackTokensRecord[tokenName] as ThemeSemanticTokenDefinition | undefined,
+      fallbackFamilies,
     );
   }
 

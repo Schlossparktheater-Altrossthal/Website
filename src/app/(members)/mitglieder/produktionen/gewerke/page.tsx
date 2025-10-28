@@ -198,22 +198,30 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
     tasksByDepartment.set(entry.departmentId, current);
   }
 
-  const upcomingTasksByDepartment = new Map<string, typeof upcomingTasksRaw>();
+  const upcomingTasksByDepartment = new Map<
+    string,
+    Array<(typeof upcomingTasksRaw)[number]>
+  >();
   for (const task of upcomingTasksRaw) {
-    const existing = upcomingTasksByDepartment.get(task.departmentId) ?? [];
-    if (existing.length < 3) {
-      existing.push(task);
+    const existing = upcomingTasksByDepartment.get(task.departmentId);
+    if (existing && existing.length >= 3) {
+      continue;
     }
-    upcomingTasksByDepartment.set(task.departmentId, existing);
+    const updated = existing ? [...existing, task] : [task];
+    upcomingTasksByDepartment.set(task.departmentId, updated);
   }
 
-  const upcomingEventsByDepartment = new Map<string, typeof upcomingEventsRaw>();
+  const upcomingEventsByDepartment = new Map<
+    string,
+    Array<(typeof upcomingEventsRaw)[number]>
+  >();
   for (const event of upcomingEventsRaw) {
-    const existing = upcomingEventsByDepartment.get(event.departmentId) ?? [];
-    if (existing.length < 3) {
-      existing.push(event);
+    const existing = upcomingEventsByDepartment.get(event.departmentId);
+    if (existing && existing.length >= 3) {
+      continue;
     }
-    upcomingEventsByDepartment.set(event.departmentId, existing);
+    const updated = existing ? [...existing, event] : [event];
+    upcomingEventsByDepartment.set(event.departmentId, updated);
   }
 
   const selectedDepartment = selectedSlug
