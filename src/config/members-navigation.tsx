@@ -427,8 +427,38 @@ export const membersNavigation = [
     ],
   },
   {
+    id: "production",
+    label: "Proben",
+    items: [
+      {
+        href: "/mitglieder/produktionen",
+        label: "Übersicht",
+        permissionKey: "mitglieder.produktionen",
+        icon: ProductionIcon,
+      },
+      {
+        href: "/mitglieder/probenplanung",
+        label: "Probenplanung",
+        permissionKey: "mitglieder.probenplanung",
+        icon: RehearsalPlanningIcon,
+      },
+      {
+        href: "/mitglieder/produktionen/besetzung",
+        label: "Rollen & Besetzung",
+        permissionKey: "mitglieder.produktionen",
+        icon: CastIcon,
+      },
+      {
+        href: "/mitglieder/produktionen/szenen",
+        label: "Szenen & Breakdowns",
+        permissionKey: "mitglieder.produktionen",
+        icon: ScenesIcon,
+      },
+    ],
+  },
+  {
     id: "assignments",
-    label: "Proben & Gewerke",
+    label: "Gewerke",
     items: [
       {
         href: "/mitglieder/produktionen/gewerke",
@@ -477,36 +507,6 @@ export const membersNavigation = [
         label: "Einkaufsliste",
         permissionKey: "mitglieder.essenplanung",
         icon: ShoppingListIcon,
-      },
-    ],
-  },
-  {
-    id: "production",
-    label: "Proben",
-    items: [
-      {
-        href: "/mitglieder/produktionen",
-        label: "Übersicht",
-        permissionKey: "mitglieder.produktionen",
-        icon: ProductionIcon,
-      },
-      {
-        href: "/mitglieder/probenplanung",
-        label: "Probenplanung",
-        permissionKey: "mitglieder.probenplanung",
-        icon: RehearsalPlanningIcon,
-      },
-      {
-        href: "/mitglieder/produktionen/besetzung",
-        label: "Rollen & Besetzung",
-        permissionKey: "mitglieder.produktionen",
-        icon: CastIcon,
-      },
-      {
-        href: "/mitglieder/produktionen/szenen",
-        label: "Szenen & Breakdowns",
-        permissionKey: "mitglieder.produktionen",
-        icon: ScenesIcon,
       },
     ],
   },

@@ -110,7 +110,7 @@ describe("resolveAssignmentsGroupLabel", () => {
   it("infers label from permissions when focus is none", () => {
     expect(
       resolveAssignmentsGroupLabel("none", ["mitglieder.meine-gewerke", "mitglieder.meine-proben"]),
-    ).toBe("Proben & Gewerke");
+    ).toBe("Gewerke");
     expect(resolveAssignmentsGroupLabel("none", ["mitglieder.meine-gewerke"])).toBe("Gewerke");
     expect(resolveAssignmentsGroupLabel("none", ["mitglieder.meine-proben"])).toBe("Proben");
     expect(resolveAssignmentsGroupLabel("none", [])).toBe("Proben");

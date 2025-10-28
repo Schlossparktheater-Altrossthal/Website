@@ -114,7 +114,7 @@ export function resolveAssignmentsGroupLabel(
   focus: AssignmentFocus,
   permissions: readonly string[] | Set<string> | undefined,
 ) {
-  if (focus === "both") return "Proben & Gewerke";
+  if (focus === "both") return "Gewerke";
   if (focus === "departments") return "Gewerke";
   if (focus === "rehearsals") return "Proben";
 
@@ -124,7 +124,7 @@ export function resolveAssignmentsGroupLabel(
     permissionSet.has("mitglieder.meine-proben");
   const canSeeDepartments = permissionSet.has("mitglieder.meine-gewerke");
 
-  if (canSeeRehearsals && canSeeDepartments) return "Proben & Gewerke";
+  if (canSeeRehearsals && canSeeDepartments) return "Gewerke";
   if (canSeeDepartments) return "Gewerke";
   return "Proben";
 }
