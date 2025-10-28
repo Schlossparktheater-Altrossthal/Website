@@ -198,22 +198,20 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
     tasksByDepartment.set(entry.departmentId, current);
   }
 
-  const upcomingTasksByDepartment = new Map<string, typeof upcomingTasksRaw>();
+  type UpcomingTask = (typeof upcomingTasksRaw)[number];
+  const upcomingTasksByDepartment = new Map<string, UpcomingTask[]>();
   for (const task of upcomingTasksRaw) {
     const existing = upcomingTasksByDepartment.get(task.departmentId) ?? [];
-    if (existing.length < 3) {
-      existing.push(task);
-    }
-    upcomingTasksByDepartment.set(task.departmentId, existing);
+    const updated = existing.length < 3 ? [...existing, task] : existing;
+    upcomingTasksByDepartment.set(task.departmentId, updated);
   }
 
-  const upcomingEventsByDepartment = new Map<string, typeof upcomingEventsRaw>();
+  type UpcomingEvent = (typeof upcomingEventsRaw)[number];
+  const upcomingEventsByDepartment = new Map<string, UpcomingEvent[]>();
   for (const event of upcomingEventsRaw) {
     const existing = upcomingEventsByDepartment.get(event.departmentId) ?? [];
-    if (existing.length < 3) {
-      existing.push(event);
-    }
-    upcomingEventsByDepartment.set(event.departmentId, existing);
+    const updated = existing.length < 3 ? [...existing, event] : existing;
+    upcomingEventsByDepartment.set(event.departmentId, updated);
   }
 
   const selectedDepartment = selectedSlug
