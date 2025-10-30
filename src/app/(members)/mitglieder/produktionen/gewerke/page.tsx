@@ -314,50 +314,39 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
         stats={headerStats}
         hideProductionCard
       />
-      <section className="grid gap-4 lg:grid-cols-[2fr,1fr]">
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-primary/15 via-primary/5 to-background/80 p-6 shadow-[0_30px_120px_-60px_rgba(99,102,241,0.45)]">
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="absolute -top-24 -left-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-            <div className="absolute -bottom-20 right-0 h-60 w-60 rounded-full bg-secondary/20 blur-3xl" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),transparent_65%)]" />
-          </div>
-          <div className="relative z-[1] flex flex-col gap-6">
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary">Regie &amp; Vorstand</p>
-              <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">Klarer Überblick für Entscheidungen</h2>
-              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-                Sammle Rollen, Dokumente und Kontaktdaten direkt im Gewerk-Hub. Die Übersicht zeigt Aufgabenstatus, aktive Mitglieder und Termine gebündelt – ideal für schnelle Abstimmungen in Regie und Vorstand.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
+        <Card className="border-border/60 bg-background/80">
+          <CardHeader className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Regie &amp; Vorstand</p>
+            <CardTitle className="text-2xl text-foreground sm:text-3xl">Klarer Überblick für Entscheidungen</CardTitle>
+            <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+              Sammle Rollen, Dokumente und Kontaktdaten direkt im Gewerk-Hub. Die Übersicht zeigt Aufgabenstatus, aktive Mitglieder und Termine gebündelt – ideal für schnelle Abstimmungen in Regie und Vorstand.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <ul className="grid gap-3 sm:grid-cols-2">
               {highlightItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div
-                    key={item.label}
-                    className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
-                  >
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
-                    <div className="relative space-y-2">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Icon aria-hidden className="h-4 w-4" />
+                  <li key={item.label} className="rounded-lg border border-border/60 bg-muted/40 p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Icon aria-hidden className="h-5 w-5" />
                       </span>
-                      <div>
+                      <div className="space-y-1">
                         <p className="text-lg font-semibold text-foreground">{item.value}</p>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{item.label}</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                        <p className="text-xs text-muted-foreground/80">{item.hint}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground/80">{item.hint}</p>
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
+            </ul>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="rounded-full px-4">
-                    Gewerk anlegen
-                  </Button>
+                  <Button size="sm">Gewerk anlegen</Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
@@ -411,76 +400,71 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
                   </form>
                 </DialogContent>
               </Dialog>
-              <div className="text-xs text-muted-foreground">
-                Tipp: Nutze klare Beschreibungen für einheitliche Kommunikation im Team.
-              </div>
+              <span>Tipp: Nutze klare Beschreibungen für einheitliche Kommunikation im Team.</span>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <Card className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80 p-6 shadow-[0_24px_90px_-48px_rgba(148,163,184,0.35)]">
-          <div className="relative z-[1] space-y-3">
+        <Card className="border-border/60 bg-background/80">
+          <CardHeader className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Arbeitsabläufe</p>
-            <h3 className="text-lg font-semibold text-foreground">Wissen bewahren &amp; teilen</h3>
+            <CardTitle className="text-lg text-foreground">Wissen bewahren &amp; teilen</CardTitle>
             <p className="text-sm text-muted-foreground">
               Halte Kontaktdaten, Dokumente und Entscheidungsnotizen direkt beim Gewerk fest. So behalten Leitung und Teammitglieder jederzeit den Überblick über Zuständigkeiten.
             </p>
+          </CardHeader>
+          <CardContent>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/60" aria-hidden />
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/50" aria-hidden />
                 <span>Dokumente lassen sich im Gewerk-Hub ablegen und versionieren.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/60" aria-hidden />
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/50" aria-hidden />
                 <span>Notizen zu Rollen oder Ansprechpersonen bleiben für das gesamte Team sichtbar.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/60" aria-hidden />
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/50" aria-hidden />
                 <span>Moderierte Zugänge sichern sensible Bereiche bei Bedarf zusätzlich ab.</span>
               </li>
             </ul>
-          </div>
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="absolute -bottom-16 right-0 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />
-            <div className="absolute -top-20 left-16 h-32 w-32 rounded-full bg-secondary/15 blur-3xl" />
-          </div>
+          </CardContent>
         </Card>
-      </section>
+      </div>
 
-      <form className="rounded-3xl border border-border/60 bg-background/70 p-4 shadow-sm" method="get">
-        <div className="space-y-3">
-          <label
-            htmlFor="department-filter"
-            className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-          >
-            Gewerk-Fokus
-          </label>
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              id="department-filter"
-              name="department"
-              defaultValue={selectedSlug ?? "all"}
-              className={`${selectClassName} w-full sm:w-64`}
-            >
-              {departmentOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" size="sm">
-              Ansicht aktualisieren
-            </Button>
-            {selectedSlug ? (
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/mitglieder/produktionen/gewerke">Gesamtübersicht</Link>
+      <form method="get">
+        <Card className="border-border/60 bg-background/80">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-base text-foreground">Gewerk-Fokus</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Filtere nach einzelnen Gewerken oder behalte alle Teams gleichzeitig im Blick.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                id="department-filter"
+                name="department"
+                defaultValue={selectedSlug ?? "all"}
+                className={`${selectClassName} w-full sm:w-64`}
+              >
+                {departmentOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <Button type="submit" size="sm">
+                Ansicht aktualisieren
               </Button>
-            ) : null}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Filtere nach einzelnen Gewerken oder behalte alle Teams gleichzeitig im Blick.
-          </p>
-        </div>
+              {selectedSlug ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/mitglieder/produktionen/gewerke">Gesamtübersicht</Link>
+                </Button>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
       </form>
 
       {selectedSlug && !selectedDepartment ? (
@@ -502,12 +486,8 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
           const upcomingEvents = upcomingEventsByDepartment.get(department.id) ?? [];
 
           return (
-            <Card
-              key={department.id}
-              className="relative space-y-6 overflow-hidden rounded-3xl border border-border/60 bg-background/80 shadow-[0_24px_90px_-48px_rgba(59,130,246,0.35)] transition hover:border-primary/40"
-            >
-              <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.1),transparent_70%)]" />
-              <div className="relative space-y-6">
+            <Card key={department.id} className="space-y-6 border-border/60 bg-background/80">
+              <div className="space-y-6">
                 <CardHeader className="space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
