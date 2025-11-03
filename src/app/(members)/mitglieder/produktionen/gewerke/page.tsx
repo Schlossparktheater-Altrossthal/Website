@@ -78,6 +78,7 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
           description="Strukturiere dein Produktionsteam, vergib Verantwortlichkeiten und halte Kontaktdaten zentral fest."
           activeWorkspace="departments"
           production={null}
+          showNavigation={false}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
@@ -313,6 +314,8 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
         production={activeProduction}
         stats={headerStats}
         hideProductionCard
+        showNavigation={false}
+        showDivider
       />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
         <Card className="border-border/60 bg-background/80">
