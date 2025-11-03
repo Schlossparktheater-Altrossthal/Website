@@ -15,7 +15,7 @@ export type AttendanceActionState = {
 
 const RESPOND_SCHEMA = z.object({
   rehearsalId: z.string().min(1, "Termin konnte nicht gefunden werden."),
-  status: z.enum(["yes", "no"], { error: "Ungültige Auswahl." }),
+  status: z.enum(["yes", "no", "emergency"], { error: "Ungültige Auswahl." }),
 });
 
 export const INITIAL_ATTENDANCE_STATE: AttendanceActionState = {
