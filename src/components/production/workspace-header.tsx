@@ -32,6 +32,8 @@ type ProductionWorkspaceHeaderProps = {
   actions?: ReactNode;
   summaryActions?: ReactNode;
   hideProductionCard?: boolean;
+  showNavigation?: boolean;
+  showDivider?: boolean;
 };
 
 function formatProductionTitle(production?: ProductionSummary | null) {
@@ -51,22 +53,26 @@ export function ProductionWorkspaceHeader({
   actions,
   summaryActions,
   hideProductionCard = false,
+  showNavigation = true,
+  showDivider = false,
 }: ProductionWorkspaceHeaderProps) {
   const hasStats = Boolean(stats && stats.length > 0);
   const formattedTitle = formatProductionTitle(production);
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Produktionsbereich</p>
-          <h1 className="text-3xl font-semibold text-foreground md:text-4xl">{title}</h1>
-          <p className="max-w-3xl text-sm text-muted-foreground md:text-base">{description}</p>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold text-foreground md:text-4xl">{title}</h1>
+            <p className="max-w-3xl text-sm text-muted-foreground md:text-base">{description}</p>
+          </div>
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
-        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-      </div>
 
-      <ProductionWorkspaceNav active={activeWorkspace} />
+        {showNavigation ? <ProductionWorkspaceNav active={activeWorkspace} /> : null}
+        {showDivider ? <div className="border-b border-border/60" /> : null}
+      </div>
 
       {hideProductionCard ? null : (
         <Card className="border-border/70 bg-background/70">
