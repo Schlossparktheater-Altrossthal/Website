@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getUserDisplayName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
@@ -57,6 +58,38 @@ function formatDateTime(date: Date) {
   return format(date, "EEEE, dd.MM.yyyy '·' HH:mm 'Uhr'", { locale: de });
 }
 
+type AttendanceParticipant = {
+  id: string;
+  name: string;
+};
+
+function AttendanceResponseGroup({
+  title,
+  entries,
+  emptyLabel,
+}: {
+  title: string;
+  entries: AttendanceParticipant[];
+  emptyLabel: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+      <p className="text-xs font-semibold text-foreground">{title}</p>
+      {entries.length ? (
+        <ul className="mt-2 space-y-1 text-xs text-foreground">
+          {entries.map((entry) => (
+            <li key={entry.id} className="truncate">
+              {entry.name}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-xs text-muted-foreground">{emptyLabel}</p>
+      )}
+    </div>
+  );
+}
+
 type UpcomingWithStats = {
   id: string;
   title: string;
@@ -64,6 +97,7 @@ type UpcomingWithStats = {
   location: string;
   registrationDeadline: Date | null;
   counts: Record<KnownStatus, number>;
+  responses: Record<KnownStatus, AttendanceParticipant[]>;
   myStatus: KnownStatus | null;
   responseCount: number;
 };
@@ -120,7 +154,19 @@ export default async function MeineProbenPage() {
       take: 8,
       include: {
         attendance: {
-          select: { userId: true, status: true },
+          select: {
+            userId: true,
+            status: true,
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
         },
       },
     }),
@@ -178,22 +224,39 @@ export default async function MeineProbenPage() {
     : [];
 
   const upcomingRehearsals: UpcomingRehearsalItem[] = upcomingRaw.map((rehearsal) => {
-    const counts: Record<KnownStatus, number> = {
-      yes: 0,
-      no: 0,
-      emergency: 0,
-      maybe: 0,
+    const responses: Record<KnownStatus, AttendanceParticipant[]> = {
+      yes: [],
+      no: [],
+      emergency: [],
+      maybe: [],
     };
     let myStatus: KnownStatus | null = null;
 
     for (const entry of rehearsal.attendance) {
       const status = entry.status as string;
       if (!isKnownStatus(status)) continue;
-      counts[status] += 1;
+
+      const displayName = getUserDisplayName(entry.user ?? {});
+      responses[status].push({ id: entry.userId, name: displayName });
+
       if (entry.userId === userId) {
         myStatus = status;
       }
     }
+
+    for (const key of STATUS_KEYS) {
+      responses[key].sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
+    }
+
+    const counts = STATUS_KEYS.reduce<Record<KnownStatus, number>>((acc, key) => {
+      acc[key] = responses[key].length;
+      return acc;
+    }, {
+      yes: 0,
+      no: 0,
+      emergency: 0,
+      maybe: 0,
+    });
 
     const responseCount = STATUS_KEYS.reduce((acc, key) => acc + counts[key], 0);
 
@@ -205,6 +268,7 @@ export default async function MeineProbenPage() {
       location: rehearsal.location,
       registrationDeadline: rehearsal.registrationDeadline ?? null,
       counts,
+      responses,
       myStatus,
       responseCount,
     };
@@ -284,13 +348,19 @@ export default async function MeineProbenPage() {
                           )
                         : "text-xs text-muted-foreground";
                       const canDecline = !deadline || deadline.getTime() > now.getTime();
+                      const summaryStatuses =
+                        statusKey === "yes" || statusKey === "no"
+                          ? (["emergency"] as const)
+                          : statusKey === "emergency"
+                            ? (["yes", "no"] as const)
+                            : (["yes", "no"] as const);
 
                       return (
                         <li key={`rehearsal-${item.id}`}>
                           <details className="group rounded-xl border border-border/60 bg-background/60 p-3 shadow-sm transition-shadow [&_summary::-webkit-details-marker]:hidden">
-                            <summary className="flex cursor-pointer flex-col gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                <div className="min-w-0 space-y-1">
+                            <summary className="flex cursor-pointer flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0 space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <Link
                                       href={`/mitglieder/proben/${item.id}`}
@@ -302,14 +372,29 @@ export default async function MeineProbenPage() {
                                   </div>
                                   <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
                                   <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
+                                  <UpcomingRehearsalResponseForm
+                                    key={`summary-${item.id}-${statusKey}`}
+                                    rehearsalId={item.id}
+                                    currentStatus={statusKey}
+                                    canDecline={canDecline}
+                                    statuses={summaryStatuses}
+                                    showMessages={false}
+                                    buttonSize="xs"
+                                    className="space-y-0 text-[11px] sm:text-xs"
+                                  />
                                 </div>
-                                <Badge variant="outline" className={cn("self-start text-xs", STATUS_BADGE_CLASSES[statusKey])}>
-                                  {STATUS_LABELS[statusKey]}
-                                </Badge>
+                                <div className="flex flex-col items-start gap-2 sm:items-end">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn("self-start text-xs", STATUS_BADGE_CLASSES[statusKey])}
+                                  >
+                                    {STATUS_LABELS[statusKey]}
+                                  </Badge>
+                                  <p className="text-[11px] text-muted-foreground sm:text-xs sm:text-right">
+                                    Rückmeldungen insgesamt: {item.responseCount}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-xs text-muted-foreground">
-                                Rückmeldungen insgesamt: {item.responseCount}
-                              </p>
                             </summary>
                             <div className="mt-3 space-y-3 border-t border-border/60 pt-3 text-xs text-muted-foreground sm:text-sm">
                               <p className="text-sm text-foreground">{STATUS_DESCRIPTIONS[statusKey]}</p>
@@ -334,6 +419,32 @@ export default async function MeineProbenPage() {
                                 <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-500/10 px-2 py-0.5 text-sky-700">
                                   ? {item.counts.maybe} Unentschieden
                                 </span>
+                              </div>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <AttendanceResponseGroup
+                                  title="Kommt"
+                                  entries={item.responses.yes}
+                                  emptyLabel="Noch keine Zusagen."
+                                />
+                                <AttendanceResponseGroup
+                                  title="Sagt ab"
+                                  entries={item.responses.no}
+                                  emptyLabel="Noch keine Absagen."
+                                />
+                                {item.responses.emergency.length ? (
+                                  <AttendanceResponseGroup
+                                    title="Notfälle"
+                                    entries={item.responses.emergency}
+                                    emptyLabel="Keine Notfallmeldungen."
+                                  />
+                                ) : null}
+                                {item.responses.maybe.length ? (
+                                  <AttendanceResponseGroup
+                                    title="Unentschieden"
+                                    entries={item.responses.maybe}
+                                    emptyLabel="Keine vorläufigen Rückmeldungen."
+                                  />
+                                ) : null}
                               </div>
                               <UpcomingRehearsalResponseForm
                                 key={`${item.id}-${statusKey}`}
