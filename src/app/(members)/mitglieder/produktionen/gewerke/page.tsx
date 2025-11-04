@@ -6,10 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
+import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
 import { formatUserName, ROLE_LABELS } from "../../meine-gewerke/utils";
@@ -54,6 +56,10 @@ export default async function ProduktionsGewerkePage() {
 
   const activeProduction = await getActiveProduction(session.user?.id);
 
+  const breadcrumbs = [
+    membersNavigationBreadcrumb("/mitglieder/produktionen/gewerke"),
+  ];
+
   const headerActions = (
     <Button asChild variant="outline" size="sm">
       <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
@@ -63,12 +69,11 @@ export default async function ProduktionsGewerkePage() {
   if (!activeProduction) {
     return (
       <div className="space-y-6">
-        <ProductionWorkspaceHeader
+        <PageHeader
           title="Gewerke &amp; Zuständigkeiten"
           description="Strukturiere dein Produktionsteam, vergib Verantwortlichkeiten und halte Kontaktdaten zentral fest."
-          activeWorkspace="departments"
-          production={null}
           actions={headerActions}
+          breadcrumbs={breadcrumbs}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
@@ -118,28 +123,50 @@ export default async function ProduktionsGewerkePage() {
     { label: "Zuordnungen", value: totalMemberships, hint: "Mitglieder mit Rollen" },
   ];
 
-  const summaryActions = activeProduction ? (
-    <>
-      <Button asChild size="sm">
-        <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzung</Link>
-      </Button>
-      <Button asChild size="sm" variant="outline">
-        <Link href="/mitglieder/produktionen/szenen">Szenen &amp; Breakdowns</Link>
-      </Button>
-    </>
-  ) : null;
+  const productionTitle = activeProduction.title && activeProduction.title.trim()
+    ? activeProduction.title
+    : `Produktion ${activeProduction.year}`;
 
   return (
     <div className="space-y-6">
-      <ProductionWorkspaceHeader
+      <PageHeader
         title="Gewerke &amp; Zuständigkeiten"
         description="Strukturiere dein Produktionsteam, vergib Verantwortlichkeiten und halte Kontaktdaten zentral fest."
-        activeWorkspace="departments"
-        production={activeProduction}
-        stats={headerStats}
         actions={headerActions}
-        summaryActions={summaryActions}
+        breadcrumbs={breadcrumbs}
       />
+
+      <Card className="border-border/70 bg-background/70">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-xl font-semibold text-foreground">{productionTitle}</CardTitle>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Jahrgang {activeProduction.year}</p>
+            </div>
+            <Badge variant="default">Aktiv</Badge>
+          </div>
+          {activeProduction.synopsis ? (
+            <p className="text-sm text-muted-foreground">{activeProduction.synopsis}</p>
+          ) : null}
+        </CardHeader>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {headerStats.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-lg border border-border/60 bg-background/60 p-4 shadow-sm"
+          >
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {stat.label}
+            </div>
+            <div className="mt-2 text-2xl font-semibold text-foreground">{stat.value}</div>
+            {stat.hint ? (
+              <p className="text-xs text-muted-foreground">{stat.hint}</p>
+            ) : null}
+          </div>
+        ))}
+      </div>
 
       <div className="flex justify-end">
         <Dialog>
