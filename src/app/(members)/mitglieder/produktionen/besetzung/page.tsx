@@ -76,7 +76,7 @@ export default async function ProduktionsBesetzungPage() {
   const activeProduction = await getActiveProduction(session.user?.id);
   const headerActions = (
     <Button asChild variant="outline" size="sm">
-      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
+      <Link href="/mitglieder/produktionen">Zum Überblick</Link>
     </Button>
   );
 
@@ -84,15 +84,15 @@ export default async function ProduktionsBesetzungPage() {
     return (
       <div className="space-y-6">
         <ProductionWorkspaceHeader
-          title="Rollen &amp; Besetzungen"
-          description="Erstelle neue Figuren, pflege Beschreibungen und ordne Ensemble-Mitglieder als Primär-, Alternate- oder Cover-Besetzung zu."
+          title="Besetzung"
+          description="Erstelle neue Figuren, pflege Beschreibungen und organisiere die vollständige Besetzung deines Ensembles."
           activeWorkspace="casting"
           production={null}
           actions={headerActions}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
-          description="Wähle in der Produktionsübersicht eine aktive Produktion aus, um Rollen und Besetzungen zu bearbeiten."
+          description="Wähle im Produktionsüberblick eine aktive Produktion aus, um die Besetzung zu bearbeiten."
         />
       </div>
     );
@@ -149,7 +149,7 @@ export default async function ProduktionsBesetzungPage() {
   if (!show) {
     return (
       <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte wähle sie erneut in der Übersicht aus.
+        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte wähle sie erneut im Überblick aus.
       </div>
     );
   }
@@ -165,15 +165,15 @@ export default async function ProduktionsBesetzungPage() {
 
   const summaryActions = (
     <Button asChild size="sm" variant="outline">
-      <Link href="/mitglieder/produktionen/szenen">Szenen &amp; Breakdowns</Link>
+      <Link href="/mitglieder/produktionen/szenen">Szenen</Link>
     </Button>
   );
 
   return (
     <div className="space-y-6">
       <ProductionWorkspaceHeader
-        title="Rollen &amp; Besetzungen"
-        description="Erstelle neue Figuren, pflege Beschreibungen und ordne Ensemble-Mitglieder als Primär-, Alternate- oder Cover-Besetzung zu."
+        title="Besetzung"
+        description="Erstelle neue Figuren, pflege Beschreibungen und organisiere die vollständige Besetzung deines Ensembles."
         activeWorkspace="casting"
         production={activeProduction}
         stats={headerStats}

@@ -283,7 +283,7 @@ export const onboardingStatisticsTemplate: PdfTemplate<OnboardingStatisticsPdfDa
       );
     }
 
-    drawSectionHeading(doc, "Rollen & Besetzung");
+    drawSectionHeading(doc, "Besetzung");
     drawKeyValue(doc, "Abdeckung Schauspiel", formatPercentage(data.roleCoverage.acting));
     drawKeyValue(doc, "Abdeckung Crew", formatPercentage(data.roleCoverage.crew));
 

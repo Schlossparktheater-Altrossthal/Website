@@ -8,7 +8,7 @@ import { Clapperboard } from "lucide-react";
 
 import { ProductionWorkspaceNav } from "./workspace-nav";
 
-type WorkspaceKey = "overview" | "departments" | "casting" | "scenes";
+type WorkspaceKey = "overview" | "departments" | "casting" | "scenes" | "feedback";
 
 type ProductionSummary = {
   id: string;

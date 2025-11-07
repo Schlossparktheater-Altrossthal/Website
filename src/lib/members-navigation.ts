@@ -2,7 +2,6 @@ import type { MembersNavGroup, MembersNavItem } from "@/config/members-navigatio
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
-  defaultMembersNavIcon,
   membersAssignmentsTodoItem,
   membersNavigation,
 } from "@/config/members-navigation";
@@ -75,32 +74,15 @@ export function selectMembersNavigation({
     if (group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID) {
       const items = cloneGroupItems(group.items);
       if (activeProduction) {
-        const href = `/mitglieder/produktionen/${activeProduction.id}`;
-        const alreadyIncluded = items.some((item) => item.href === href);
-        if (!alreadyIncluded) {
-          const ariaLabelSuffix =
-            activeProduction.title && activeProduction.title.trim()
-              ? activeProduction.title
-              : String(activeProduction.year);
-          const overviewIcon =
-            items.find((item) => item.href === "/mitglieder/produktionen")?.icon ??
-            defaultMembersNavIcon;
+        const overviewIndex = items.findIndex((item) => item.href === "/mitglieder/produktionen");
+        if (overviewIndex !== -1) {
+          items.splice(overviewIndex, 1);
+        }
 
-          const activeItem: MembersNavItem = {
-            href,
-            label: "Aktive Produktion",
-            permissionKey: "mitglieder.produktionen",
-            icon: overviewIcon,
-            badge: String(activeProduction.year),
-            ariaLabel: `Aktive Produktion ${ariaLabelSuffix}`,
-          };
-
-          const overviewIndex = items.findIndex((item) => item.href === "/mitglieder/produktionen");
-          if (overviewIndex >= 0) {
-            items.splice(overviewIndex + 1, 0, activeItem);
-          } else {
-            items.unshift(activeItem);
-          }
+        const activeHref = `/mitglieder/produktionen/${activeProduction.id}`;
+        const activeIndex = items.findIndex((item) => item.href === activeHref);
+        if (activeIndex !== -1) {
+          items.splice(activeIndex, 1);
         }
       }
       return { ...group, items };

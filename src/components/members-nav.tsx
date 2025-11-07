@@ -113,16 +113,18 @@ function MembersNavProductionSwitcher({
     const items: ProductionAction[] = [
       {
         href: "/mitglieder/produktionen",
-        label: activeProduction ? "Produktion wechseln" : "Produktion auswählen",
-        description: "Öffne die Produktionsübersicht und lege die aktive Saison fest.",
+        label: "Überblick",
+        description: activeProduction
+          ? "Wechsle die aktive Produktion oder verschaffe dir einen schnellen Überblick."
+          : "Wähle eine Produktion aus und verschaffe dir einen Überblick über die Planung.",
       },
     ];
 
     if (activeProduction) {
       items.push({
         href: `/mitglieder/produktionen/${activeProduction.id}`,
-        label: "Aktive Produktion öffnen",
-        description: "Direkter Zugriff auf Rollen, Szenen und Aufgaben dieser Produktion.",
+        label: "Aktive Produktion",
+        description: "Direkter Zugriff auf Besetzung, Szenen und Aufgaben deiner aktuellen Produktion.",
       });
     }
 
