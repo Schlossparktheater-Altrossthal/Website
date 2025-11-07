@@ -374,7 +374,7 @@ export const membersAssignmentsTodoItem: MembersNavItem = {
 export const membersNavigation = [
   {
     id: "general",
-    label: "Start & Service",
+    label: "Allgemeines",
     items: [
       {
         href: "/mitglieder",
@@ -403,26 +403,8 @@ export const membersNavigation = [
     ],
   },
   {
-    id: "media",
-    label: "Dateien & Medien",
-    items: [
-      {
-        href: "/mitglieder/archiv-und-bilder",
-        label: "Archiv und Bilder",
-        permissionKey: "mitglieder.galerie",
-        icon: ArchiveIcon,
-      },
-      {
-        href: "/mitglieder/dateisystem",
-        label: "Dateisystem",
-        permissionKey: "mitglieder.dateisystem",
-        icon: FileLibraryIcon,
-      },
-    ],
-  },
-  {
     id: "assignments",
-    label: "Proben & Gewerke",
+    label: "Proben",
     items: [
       {
         href: "/mitglieder/meine-proben",
@@ -430,6 +412,18 @@ export const membersNavigation = [
         permissionKey: "mitglieder.meine-proben",
         icon: RehearsalsIcon,
       },
+      {
+        href: "/mitglieder/probenplanung",
+        label: "Probenplanung",
+        permissionKey: "mitglieder.probenplanung",
+        icon: RehearsalPlanningIcon,
+      },
+    ],
+  },
+  {
+    id: "production",
+    label: "Gewerke",
+    items: [
       {
         href: "/mitglieder/meine-gewerke",
         label: "Meine Gewerke",
@@ -442,48 +436,6 @@ export const membersNavigation = [
         permissionKey: "mitglieder.koerpermasse",
         icon: BodyMeasurementsIcon,
       },
-      {
-        href: "/mitglieder/probenplanung",
-        label: "Probenplanung",
-        permissionKey: "mitglieder.probenplanung",
-        icon: RehearsalPlanningIcon,
-      },
-    ],
-  },
-  {
-    id: "final-week",
-    label: "Endproben-Woche",
-    items: [
-      {
-        href: "/mitglieder/endproben-woche/dienstplan",
-        label: "Dienstplan",
-        permissionKey: "mitglieder.endprobenwoche",
-        icon: DutyRosterIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/menueplan",
-        label: "Menüplan",
-        permissionKey: "mitglieder.essenplanung",
-        icon: MealPlanIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/essenplanung",
-        label: "Essensplanung",
-        permissionKey: "mitglieder.essenplanung",
-        icon: CateringIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/einkaufsliste",
-        label: "Einkaufsliste",
-        permissionKey: "mitglieder.essenplanung",
-        icon: ShoppingListIcon,
-      },
-    ],
-  },
-  {
-    id: "production",
-    label: "Produktionen & Teams",
-    items: [
       {
         href: "/mitglieder/produktionen",
         label: "Übersicht",
@@ -511,32 +463,32 @@ export const membersNavigation = [
     ],
   },
   {
-    id: "inventory",
-    label: "Lager & Inventar",
+    id: "final-week",
+    label: "Endprobenwoche",
     items: [
       {
-        href: "/mitglieder/lagerverwaltung/technik",
-        label: "Technik-Lager",
-        permissionKey: "mitglieder.lager.technik",
-        icon: TechInventoryIcon,
+        href: "/mitglieder/endproben-woche/dienstplan",
+        label: "Dienstplan",
+        permissionKey: "mitglieder.endprobenwoche",
+        icon: DutyRosterIcon,
       },
       {
-        href: "/mitglieder/lagerverwaltung/kostueme",
-        label: "Kostüm-Lager",
-        permissionKey: "mitglieder.lager.kostueme",
-        icon: CostumeInventoryIcon,
+        href: "/mitglieder/endproben-woche/menueplan",
+        label: "Menüplan",
+        permissionKey: "mitglieder.essenplanung",
+        icon: MealPlanIcon,
       },
       {
-        href: "/mitglieder/inventar-aufkleber",
-        label: "Inventaraufkleber",
-        permissionKey: "mitglieder.inventaraufkleber",
-        icon: InventoryStickersIcon,
+        href: "/mitglieder/endproben-woche/essenplanung",
+        label: "Essensplanung",
+        permissionKey: "mitglieder.essenplanung",
+        icon: CateringIcon,
       },
       {
-        href: "/mitglieder/scan",
-        label: "Scanner",
-        permissionKey: "mitglieder.scan",
-        icon: ScannerIcon,
+        href: "/mitglieder/endproben-woche/einkaufsliste",
+        label: "Einkaufsliste",
+        permissionKey: "mitglieder.essenplanung",
+        icon: ShoppingListIcon,
       },
     ],
   },
@@ -571,8 +523,56 @@ export const membersNavigation = [
     ],
   },
   {
+    id: "media",
+    label: "Dateisystem",
+    items: [
+      {
+        href: "/mitglieder/archiv-und-bilder",
+        label: "Archiv und Bilder",
+        permissionKey: "mitglieder.galerie",
+        icon: ArchiveIcon,
+      },
+      {
+        href: "/mitglieder/dateisystem",
+        label: "Dateisystem",
+        permissionKey: "mitglieder.dateisystem",
+        icon: FileLibraryIcon,
+      },
+    ],
+  },
+  {
+    id: "inventory",
+    label: "Lager & Inventar",
+    items: [
+      {
+        href: "/mitglieder/lagerverwaltung/technik",
+        label: "Technik-Lager",
+        permissionKey: "mitglieder.lager.technik",
+        icon: TechInventoryIcon,
+      },
+      {
+        href: "/mitglieder/lagerverwaltung/kostueme",
+        label: "Kostüm-Lager",
+        permissionKey: "mitglieder.lager.kostueme",
+        icon: CostumeInventoryIcon,
+      },
+      {
+        href: "/mitglieder/inventar-aufkleber",
+        label: "Inventaraufkleber",
+        permissionKey: "mitglieder.inventaraufkleber",
+        icon: InventoryStickersIcon,
+      },
+      {
+        href: "/mitglieder/scan",
+        label: "Scanner",
+        permissionKey: "mitglieder.scan",
+        icon: ScannerIcon,
+      },
+    ],
+  },
+  {
     id: "admin",
-    label: "Verwaltung & Rechte",
+    label: "Verwaltung",
     items: [
       {
         href: "/mitglieder/mitgliederverwaltung",
