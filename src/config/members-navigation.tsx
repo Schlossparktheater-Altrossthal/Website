@@ -374,7 +374,7 @@ export const membersAssignmentsTodoItem: MembersNavItem = {
 export const membersNavigation = [
   {
     id: "general",
-    label: "Start & Service",
+    label: "Allgemeines",
     items: [
       {
         href: "/mitglieder",
@@ -405,24 +405,6 @@ export const membersNavigation = [
         label: "Feedback & Support",
         permissionKey: "mitglieder.issues",
         icon: IssuesIcon,
-      },
-    ],
-  },
-  {
-    id: "media",
-    label: "Dateien & Medien",
-    items: [
-      {
-        href: "/mitglieder/archiv-und-bilder",
-        label: "Archiv und Bilder",
-        permissionKey: "mitglieder.galerie",
-        icon: ArchiveIcon,
-      },
-      {
-        href: "/mitglieder/dateisystem",
-        label: "Dateisystem",
-        permissionKey: "mitglieder.dateisystem",
-        icon: FileLibraryIcon,
       },
     ],
   },
@@ -482,7 +464,7 @@ export const membersNavigation = [
   },
   {
     id: "final-week",
-    label: "Endproben-Woche",
+    label: "Endprobenwoche",
     items: [
       {
         href: "/mitglieder/endproben-woche/dienstplan",
@@ -507,36 +489,6 @@ export const membersNavigation = [
         label: "Einkaufsliste",
         permissionKey: "mitglieder.essenplanung",
         icon: ShoppingListIcon,
-      },
-    ],
-  },
-  {
-    id: "inventory",
-    label: "Lager & Inventar",
-    items: [
-      {
-        href: "/mitglieder/lagerverwaltung/technik",
-        label: "Technik-Lager",
-        permissionKey: "mitglieder.lager.technik",
-        icon: TechInventoryIcon,
-      },
-      {
-        href: "/mitglieder/lagerverwaltung/kostueme",
-        label: "Kostüm-Lager",
-        permissionKey: "mitglieder.lager.kostueme",
-        icon: CostumeInventoryIcon,
-      },
-      {
-        href: "/mitglieder/inventar-aufkleber",
-        label: "Inventaraufkleber",
-        permissionKey: "mitglieder.inventaraufkleber",
-        icon: InventoryStickersIcon,
-      },
-      {
-        href: "/mitglieder/scan",
-        label: "Scanner",
-        permissionKey: "mitglieder.scan",
-        icon: ScannerIcon,
       },
     ],
   },
@@ -571,8 +523,56 @@ export const membersNavigation = [
     ],
   },
   {
+    id: "media",
+    label: "Dateisystem",
+    items: [
+      {
+        href: "/mitglieder/archiv-und-bilder",
+        label: "Archiv und Bilder",
+        permissionKey: "mitglieder.galerie",
+        icon: ArchiveIcon,
+      },
+      {
+        href: "/mitglieder/dateisystem",
+        label: "Dateisystem",
+        permissionKey: "mitglieder.dateisystem",
+        icon: FileLibraryIcon,
+      },
+    ],
+  },
+  {
+    id: "inventory",
+    label: "Lager & Inventar",
+    items: [
+      {
+        href: "/mitglieder/lagerverwaltung/technik",
+        label: "Technik-Lager",
+        permissionKey: "mitglieder.lager.technik",
+        icon: TechInventoryIcon,
+      },
+      {
+        href: "/mitglieder/lagerverwaltung/kostueme",
+        label: "Kostüm-Lager",
+        permissionKey: "mitglieder.lager.kostueme",
+        icon: CostumeInventoryIcon,
+      },
+      {
+        href: "/mitglieder/inventar-aufkleber",
+        label: "Inventaraufkleber",
+        permissionKey: "mitglieder.inventaraufkleber",
+        icon: InventoryStickersIcon,
+      },
+      {
+        href: "/mitglieder/scan",
+        label: "Scanner",
+        permissionKey: "mitglieder.scan",
+        icon: ScannerIcon,
+      },
+    ],
+  },
+  {
     id: "admin",
-    label: "Verwaltung & Rechte",
+    label: "Verwaltung",
     items: [
       {
         href: "/mitglieder/mitgliederverwaltung",
