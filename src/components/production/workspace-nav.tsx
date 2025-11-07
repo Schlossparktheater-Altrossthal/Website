@@ -2,13 +2,18 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-type WorkspaceKey = "overview" | "departments" | "casting" | "scenes";
+type WorkspaceKey = "overview" | "departments" | "casting" | "scenes" | "feedback";
 
 const NAVIGATION: { key: WorkspaceKey; label: string; href: string }[] = [
-  { key: "overview", label: "Übersicht", href: "/mitglieder/produktionen" },
+  { key: "overview", label: "Überblick", href: "/mitglieder/produktionen" },
   { key: "departments", label: "Gewerke & Teams", href: "/mitglieder/produktionen/gewerke" },
-  { key: "casting", label: "Rollen & Besetzung", href: "/mitglieder/produktionen/besetzung" },
-  { key: "scenes", label: "Szenen & Breakdowns", href: "/mitglieder/produktionen/szenen" },
+  { key: "casting", label: "Besetzung", href: "/mitglieder/produktionen/besetzung" },
+  { key: "scenes", label: "Szenen", href: "/mitglieder/produktionen/szenen" },
+  {
+    key: "feedback",
+    label: "Rückmeldungen & Auswertung",
+    href: "/mitglieder/produktionen/rueckmeldungen-auswertung",
+  },
 ];
 
 export function ProductionWorkspaceNav({ active }: { active: WorkspaceKey }) {

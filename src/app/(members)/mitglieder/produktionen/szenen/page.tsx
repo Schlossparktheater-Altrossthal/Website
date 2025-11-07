@@ -74,7 +74,7 @@ export default async function ProduktionsSzenenPage() {
   const activeProduction = await getActiveProduction(session.user?.id);
   const headerActions = (
     <Button asChild variant="outline" size="sm">
-      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
+      <Link href="/mitglieder/produktionen">Zum Überblick</Link>
     </Button>
   );
 
@@ -82,15 +82,15 @@ export default async function ProduktionsSzenenPage() {
     return (
       <div className="space-y-6">
         <ProductionWorkspaceHeader
-          title="Szenen &amp; Breakdowns"
-          description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
+          title="Szenen"
+          description="Plane Szenenabläufe, pflege Orte und Zeiten und verknüpfe Aufgaben für alle Gewerke übersichtlich."
           activeWorkspace="scenes"
           production={null}
           actions={headerActions}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
-          description="Wähle in der Produktionsübersicht eine aktive Produktion aus, um Szenen und Breakdowns zu verwalten."
+          description="Wähle im Produktionsüberblick eine aktive Produktion aus, um Szenen und Aufgaben zu verwalten."
         />
       </div>
     );
@@ -173,7 +173,7 @@ export default async function ProduktionsSzenenPage() {
   if (!show) {
     return (
       <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte wähle sie erneut in der Übersicht aus.
+        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte wähle sie erneut im Überblick aus.
       </div>
     );
   }
@@ -192,7 +192,7 @@ export default async function ProduktionsSzenenPage() {
   const summaryActions = (
     <>
       <Button asChild size="sm" variant="outline">
-        <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzungen</Link>
+      <Link href="/mitglieder/produktionen/besetzung">Besetzung</Link>
       </Button>
       <Button asChild size="sm" variant="outline">
         <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams</Link>
@@ -203,8 +203,8 @@ export default async function ProduktionsSzenenPage() {
   return (
     <div className="space-y-6">
       <ProductionWorkspaceHeader
-        title="Szenen &amp; Breakdowns"
-        description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
+        title="Szenen"
+        description="Plane Szenenabläufe, pflege Orte und Zeiten und verknüpfe Aufgaben für alle Gewerke übersichtlich."
         activeWorkspace="scenes"
         production={activeProduction}
         stats={headerStats}

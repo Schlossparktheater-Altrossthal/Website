@@ -149,10 +149,10 @@ export default async function ProduktionDetailPage({
 
           <div className="flex flex-wrap items-center gap-2">
             <Button asChild>
-              <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzung</Link>
+              <Link href="/mitglieder/produktionen/besetzung">Besetzung</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/mitglieder/produktionen/szenen">Szenen &amp; Breakdowns</Link>
+              <Link href="/mitglieder/produktionen/szenen">Szenen</Link>
             </Button>
             <Button asChild variant="outline">
               <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams</Link>
@@ -271,18 +271,18 @@ export default async function ProduktionDetailPage({
         <CardHeader className="space-y-2">
           <CardTitle className="text-lg font-semibold">Nächste Schritte</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Nutze die neuen Navigationspunkte, um die Produktion in klar getrennten Arbeitsbereichen zu pflegen. Alle Änderungen aktualisieren die Statistik oben automatisch, sobald du zur Übersicht zurückkehrst.
+            Nutze die neuen Navigationspunkte, um die Produktion in klar getrennten Arbeitsbereichen zu pflegen. Alle Änderungen aktualisieren die Statistik oben automatisch, sobald du zum Überblick zurückkehrst.
           </p>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Button asChild size="sm" variant="outline">
-            <Link href="/mitglieder/produktionen">Zur Übersicht zurückkehren</Link>
+            <Link href="/mitglieder/produktionen">Zum Überblick zurückkehren</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href="/mitglieder/produktionen/besetzung">Zum Rollenbereich</Link>
+            <Link href="/mitglieder/produktionen/besetzung">Zur Besetzung</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href="/mitglieder/produktionen/szenen">Zum Szenenbereich</Link>
+            <Link href="/mitglieder/produktionen/szenen">Zu den Szenen</Link>
           </Button>
         </CardContent>
       </Card>

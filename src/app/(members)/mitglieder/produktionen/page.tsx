@@ -91,10 +91,10 @@ export default async function ProduktionenPage() {
   const summaryActions = activeProduction ? (
     <>
       <Button asChild>
-        <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzung öffnen</Link>
+        <Link href="/mitglieder/produktionen/besetzung">Besetzung öffnen</Link>
       </Button>
       <Button asChild variant="outline">
-        <Link href="/mitglieder/produktionen/szenen">Szenen &amp; Breakdowns öffnen</Link>
+        <Link href="/mitglieder/produktionen/szenen">Szenen öffnen</Link>
       </Button>
       <Button asChild variant="outline">
         <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams verwalten</Link>
@@ -142,12 +142,12 @@ export default async function ProduktionenPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-lg font-semibold">Strukturierte Arbeitsabläufe</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Nutze die Navigation für Rollen sowie Szenen &amp; Breakdowns, um fokussiert an deiner Produktion zu arbeiten.
+              Nutze die Navigation für Rollen sowie Szenen, um fokussiert an deiner Produktion zu arbeiten.
             </p>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline">
-              <Link href="/mitglieder/produktionen/besetzung">Rollenbereich öffnen</Link>
+              <Link href="/mitglieder/produktionen/besetzung">Besetzung öffnen</Link>
             </Button>
             <Button asChild size="sm" variant="outline">
               <Link href="/mitglieder/produktionen/szenen">Szenenbereich öffnen</Link>

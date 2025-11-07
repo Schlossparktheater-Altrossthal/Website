@@ -86,6 +86,32 @@ const FileLibraryIcon = createMembersNavIcon(
   </>,
 );
 
+const GalleryIcon = createMembersNavIcon(
+  <>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <circle cx="9" cy="10" r="2" />
+    <path d="m3 17 4-4 3 3 4-4 6 6" />
+  </>,
+);
+
+const TimelineIcon = createMembersNavIcon(
+  <>
+    <path d="M4 6h16" />
+    <path d="M4 12h10" />
+    <path d="M4 18h7" />
+    <circle cx="14" cy="12" r="2" />
+    <circle cx="19" cy="6" r="2" />
+    <circle cx="13" cy="18" r="2" />
+  </>,
+);
+
+const FeedbackIcon = createMembersNavIcon(
+  <>
+    <path d="M20 15.5a4.5 4.5 0 0 0-4.5-4.5H5a2 2 0 0 0-2 2v7l3-3h7" />
+    <path d="m21 11-3 3 3 3" />
+  </>,
+);
+
 const IssuesIcon = createMembersNavIcon(
   <>
     <path d="M21 15a2 2 0 0 1-2 2H9l-4 4v-4H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
@@ -366,7 +392,7 @@ const DefaultIcon = createMembersNavIcon(<circle cx="12" cy="12" r="2" />);
 
 export const membersAssignmentsTodoItem: MembersNavItem = {
   href: "/mitglieder/meine-gewerke/todos",
-  label: "Meine Gewerke-Aufgaben",
+  label: "Aufgaben",
   permissionKey: "mitglieder.meine-gewerke",
   icon: DepartmentTodosIcon,
 };
@@ -414,7 +440,7 @@ export const membersNavigation = [
     items: [
       {
         href: "/mitglieder/produktionen",
-        label: "Übersicht",
+        label: "Überblick",
         permissionKey: "mitglieder.produktionen",
         icon: ProductionIcon,
       },
@@ -426,15 +452,21 @@ export const membersNavigation = [
       },
       {
         href: "/mitglieder/produktionen/besetzung",
-        label: "Rollen & Besetzung",
+        label: "Besetzung",
         permissionKey: "mitglieder.produktionen",
         icon: CastIcon,
       },
       {
         href: "/mitglieder/produktionen/szenen",
-        label: "Szenen & Breakdowns",
+        label: "Szenen",
         permissionKey: "mitglieder.produktionen",
         icon: ScenesIcon,
+      },
+      {
+        href: "/mitglieder/produktionen/rueckmeldungen-auswertung",
+        label: "Rückmeldungen & Auswertung",
+        permissionKey: "mitglieder.produktionen",
+        icon: FeedbackIcon,
       },
     ],
   },
@@ -467,6 +499,12 @@ export const membersNavigation = [
     label: "Endprobenwoche",
     items: [
       {
+        href: "/mitglieder/endproben-woche",
+        label: "Allgemeines",
+        permissionKey: "mitglieder.endprobenwoche",
+        icon: ProductionIcon,
+      },
+      {
         href: "/mitglieder/endproben-woche/dienstplan",
         label: "Dienstplan",
         permissionKey: "mitglieder.endprobenwoche",
@@ -498,7 +536,7 @@ export const membersNavigation = [
     items: [
       {
         href: "/mitglieder/finanzen",
-        label: "Finanz-Dashboard",
+        label: "Übersicht",
         permissionKey: "mitglieder.finanzen",
         icon: FinanceDashboardIcon,
       },
@@ -510,7 +548,7 @@ export const membersNavigation = [
       },
       {
         href: "/mitglieder/finanzen/budgets",
-        label: "Budgets",
+        label: "Budgetverwaltung",
         permissionKey: "mitglieder.finanzen",
         icon: FinanceBudgetsIcon,
       },
@@ -527,14 +565,26 @@ export const membersNavigation = [
     label: "Dateisystem",
     items: [
       {
-        href: "/mitglieder/archiv-und-bilder",
-        label: "Archiv und Bilder",
+        href: "/mitglieder/archiv",
+        label: "Archiv",
         permissionKey: "mitglieder.galerie",
         icon: ArchiveIcon,
       },
       {
-        href: "/mitglieder/dateisystem",
-        label: "Dateisystem",
+        href: "/mitglieder/bilder",
+        label: "Bilder",
+        permissionKey: "mitglieder.galerie",
+        icon: GalleryIcon,
+      },
+      {
+        href: "/mitglieder/chronik",
+        label: "Chronik",
+        permissionKey: "mitglieder.galerie",
+        icon: TimelineIcon,
+      },
+      {
+        href: "/mitglieder/daten",
+        label: "Daten",
         permissionKey: "mitglieder.dateisystem",
         icon: FileLibraryIcon,
       },
@@ -568,6 +618,12 @@ export const membersNavigation = [
         permissionKey: "mitglieder.scan",
         icon: ScannerIcon,
       },
+      {
+        href: "/mitglieder/lagerverwaltung/probleme",
+        label: "Probleme",
+        permissionKey: "mitglieder.lager.technik",
+        icon: IssuesIcon,
+      },
     ],
   },
   {
@@ -600,7 +656,7 @@ export const membersNavigation = [
       },
       {
         href: "/mitglieder/server-einstellungen",
-        label: "Servereinstellungen",
+        label: "E-Mail Server Einstellungen",
         permissionKey: "mitglieder.server.settings",
         icon: ServerSettingsIcon,
       },
