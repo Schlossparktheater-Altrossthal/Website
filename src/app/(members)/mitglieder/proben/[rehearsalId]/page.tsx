@@ -18,22 +18,6 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: "Abgeschlossen",
 };
 
-const RESPONSE_LABELS: Record<string, string> = {
-  yes: "Zusage",
-  no: "Absage",
-  emergency: "Notfall",
-  maybe: "Unentschieden",
-  open: "Keine Rückmeldung",
-};
-
-const RESPONSE_BADGES: Record<string, string> = {
-  yes: "border-emerald-200 bg-emerald-500/10 text-emerald-700",
-  no: "border-rose-200 bg-rose-500/10 text-rose-700",
-  emergency: "border-amber-200 bg-amber-500/10 text-amber-700",
-  maybe: "border-sky-200 bg-sky-500/10 text-sky-700",
-  open: "border-slate-200 bg-muted text-muted-foreground",
-};
-
 function sanitizeDescription(html: string | null | undefined) {
   if (!html) return null;
   return sanitizeHtml(html, {
@@ -95,11 +79,6 @@ export default async function RehearsalDetailPage({
           },
         },
       },
-      attendance: {
-        include: {
-          user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
-        },
-      },
     },
   });
 
@@ -113,16 +92,10 @@ export default async function RehearsalDetailPage({
 
   const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
   const sanitizedDescription = sanitizeDescription(rehearsal.description);
-  const attendanceMap = new Map(rehearsal.attendance.map((entry) => [entry.userId, entry.status ?? "open"]));
-
-  const invitees = rehearsal.invitees.map((invitee) => {
-    const status = attendanceMap.get(invitee.userId) ?? "open";
-    return {
-      id: invitee.userId,
-      user: invitee.user,
-      status,
-    };
-  });
+  const invitees = rehearsal.invitees.map((invitee) => ({
+    id: invitee.userId,
+    user: invitee.user,
+  }));
 
   const breadcrumbs = [
     membersNavigationBreadcrumb("/mitglieder/meine-proben"),
@@ -189,34 +162,33 @@ export default async function RehearsalDetailPage({
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Eingeladene Mitglieder</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {invitees.length ? (
-            <ul className="space-y-2">
-              {invitees.map((entry) => {
-                const status = RESPONSE_LABELS[entry.status] ? entry.status : "open";
-                return (
-                  <li
-                    key={entry.id}
+        <Card>
+          <CardHeader>
+            <CardTitle>Eingeladene Mitglieder</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {invitees.length ? (
+              <ul className="space-y-2">
+                {invitees.map((entry) => {
+                  return (
+                    <li
+                      key={entry.id}
                     className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/70 p-3 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground">{displayName(entry.user)}</p>
-                      {entry.user.email ? (
-                        <p className="text-xs text-muted-foreground">{entry.user.email}</p>
-                      ) : null}
-                    </div>
-                    <Badge variant="outline" className={RESPONSE_BADGES[status] ?? RESPONSE_BADGES.open}>
-                      {RESPONSE_LABELS[status] ?? RESPONSE_LABELS.open}
+                    >
+                      <div>
+                        <p className="font-medium text-foreground">{displayName(entry.user)}</p>
+                        {entry.user.email ? (
+                          <p className="text-xs text-muted-foreground">{entry.user.email}</p>
+                        ) : null}
+                      </div>
+                    <Badge variant="outline" className="bg-muted text-muted-foreground">
+                      Erwartet
                     </Badge>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
             <p className="text-sm text-muted-foreground">Für diese Probe wurden noch keine Einladungen vergeben.</p>
           )}
         </CardContent>

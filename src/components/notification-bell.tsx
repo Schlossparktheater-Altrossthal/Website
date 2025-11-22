@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { AlertTriangle, Bell, Check, X } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,7 +16,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useNotificationRealtime } from "@/hooks/useRealtime";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { EmergencyDialog } from "@/components/dialogs/emergency-dialog";
 import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
@@ -41,8 +40,6 @@ type NotificationItem = {
   attendanceStatus: "yes" | "no" | "emergency" | null;
 };
 
-type AttendanceResponse = "yes" | "no" | "emergency";
-
 type NotificationRealtimeEvent = {
   notification: {
     id: string;
@@ -53,24 +50,12 @@ type NotificationRealtimeEvent = {
   };
 };
 
-type EmergencyTarget = {
-  notificationId: string;
-  label: string;
-};
-
-type RespondOptions = {
-  reason?: string;
-  skipSuccessToast?: boolean;
-  rethrowOnError?: boolean;
-};
 
 export function NotificationBell({ className }: { className?: string }) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [respondingId, setRespondingId] = useState<string | null>(null);
-  const [emergencyTarget, setEmergencyTarget] = useState<EmergencyTarget | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery("(max-width: 640px)");
@@ -285,99 +270,6 @@ export function NotificationBell({ className }: { className?: string }) {
     requestBrowserNotificationPermission,
   ]);
 
-  const respond = useCallback(
-    async (
-      notificationId: string,
-      response: AttendanceResponse,
-      options: RespondOptions = {},
-    ) => {
-      setRespondingId(`${notificationId}:${response}`);
-
-      const payload: Record<string, unknown> = { recipientId: notificationId, response };
-      if (options.reason) {
-        payload.reason = options.reason;
-      }
-
-      try {
-        const result = await fetch("/api/notifications/respond", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        const data: { status?: AttendanceResponse; error?: string } | null = await result
-          .json()
-          .catch(() => null);
-
-        if (!result.ok) {
-          const message =
-            (data?.error && typeof data.error === "string" && data.error.trim()) ||
-            "Antwort konnte nicht gespeichert werden.";
-          throw new Error(message);
-        }
-
-        const nextStatus = (data?.status as AttendanceResponse | undefined) ?? response;
-
-        if (!options.skipSuccessToast) {
-          const successMessage =
-            nextStatus === "yes"
-              ? "Zusage gespeichert."
-              : nextStatus === "no"
-              ? "Absage gespeichert."
-              : "Notfall wurde gemeldet.";
-
-          if (successMessage) {
-            toast.success(successMessage);
-          }
-        }
-
-        setNotifications((prev) =>
-          prev.map((item) =>
-            item.id === notificationId
-              ? { ...item, attendanceStatus: nextStatus, readAt: new Date().toISOString() }
-              : item,
-          ),
-        );
-
-        return nextStatus;
-      } catch (error) {
-        console.error("[NotificationBell] respond failed", error);
-        const message =
-          error instanceof Error && error.message
-            ? error.message
-            : "Antwort konnte nicht gespeichert werden.";
-        toast.error(message);
-        if (options.rethrowOnError) {
-          throw error instanceof Error ? error : new Error(message);
-        }
-        return null;
-      } finally {
-        setRespondingId(null);
-      }
-    },
-    [],
-  );
-
-  const openEmergencyDialog = useCallback(
-    (notificationId: string) => {
-      const target = notifications.find((item) => item.id === notificationId);
-      if (!target) return;
-
-      const rehearsalTitle = target.rehearsal?.title?.trim();
-      let label = rehearsalTitle && rehearsalTitle.length ? rehearsalTitle : target.title;
-
-      if ((!label || label === target.title) && target.rehearsal?.start) {
-        const startDate = new Date(target.rehearsal.start);
-        if (!Number.isNaN(startDate.valueOf())) {
-          label = `Probe am ${dateTimeFormatter.format(startDate)}`;
-        }
-      }
-
-      setEmergencyTarget({ notificationId, label });
-    },
-    [notifications],
-  );
-
   if (status === "loading") {
     return <div className={cn(className, "h-9 w-9 animate-pulse rounded-full bg-foreground/10")} aria-hidden />;
   }
@@ -402,11 +294,8 @@ export function NotificationBell({ className }: { className?: string }) {
     <NotificationContent
       notifications={notifications}
       loading={loading}
-      respondingId={respondingId}
-      onRespond={respond}
       scrollAreaClassName={scrollAreaClassName}
       onClearRead={clearRead}
-      onRequestEmergency={openEmergencyDialog}
       browserNotificationsSupported={browserNotificationsSupported}
       browserPermission={browserNotificationsSupported ? browserNotificationPermission : null}
       onEnableBrowserNotifications={handleEnableBrowserNotifications}
@@ -457,19 +346,6 @@ export function NotificationBell({ className }: { className?: string }) {
           </div>
         )
       )}
-      <EmergencyDialog
-        isOpen={Boolean(emergencyTarget)}
-        rehearsalTitle={emergencyTarget?.label}
-        onClose={() => setEmergencyTarget(null)}
-        onSubmit={async (reason) => {
-          if (!emergencyTarget) return;
-          await respond(emergencyTarget.notificationId, "emergency", {
-            reason,
-            skipSuccessToast: true,
-            rethrowOnError: true,
-          });
-        }}
-      />
     </div>
   );
 }
@@ -477,14 +353,8 @@ export function NotificationBell({ className }: { className?: string }) {
 type NotificationContentProps = {
   notifications: NotificationItem[];
   loading: boolean;
-  respondingId: string | null;
-  onRespond: (
-    notificationId: string,
-    response: AttendanceResponse,
-  ) => Promise<AttendanceResponse | null> | null;
   scrollAreaClassName?: string;
   onClearRead: () => void;
-  onRequestEmergency: (notificationId: string) => void;
   browserNotificationsSupported: boolean;
   browserPermission: NotificationPermission | null;
   onEnableBrowserNotifications: () => void;
@@ -494,11 +364,8 @@ type NotificationContentProps = {
 function NotificationContent({
   notifications,
   loading,
-  respondingId,
-  onRespond,
   scrollAreaClassName,
   onClearRead,
-  onRequestEmergency,
   browserNotificationsSupported,
   browserPermission,
   onEnableBrowserNotifications,
@@ -530,9 +397,6 @@ function NotificationContent({
         <div className={cn("space-y-3 overflow-y-auto pr-1", scrollAreaClassName)}>
           <NotificationList
             notifications={notifications}
-            respondingId={respondingId}
-            onRespond={onRespond}
-            onRequestEmergency={onRequestEmergency}
           />
         </div>
       )}
@@ -573,24 +437,15 @@ function BrowserNotificationCallout({ permission, onEnable, pending }: BrowserNo
 
 type NotificationListProps = {
   notifications: NotificationItem[];
-  respondingId: string | null;
-  onRespond: (
-    notificationId: string,
-    response: AttendanceResponse,
-  ) => Promise<AttendanceResponse | null> | null;
-  onRequestEmergency: (notificationId: string) => void;
 };
 
-function NotificationList({ notifications, respondingId, onRespond, onRequestEmergency }: NotificationListProps) {
+function NotificationList({ notifications }: NotificationListProps) {
   return (
     <ul className="space-y-3">
       {notifications.map((item) => (
         <NotificationEntry
           key={item.id}
           item={item}
-          respondingId={respondingId}
-          onRespond={onRespond}
-          onRequestEmergency={onRequestEmergency}
         />
       ))}
     </ul>
@@ -599,35 +454,22 @@ function NotificationList({ notifications, respondingId, onRespond, onRequestEme
 
 type NotificationEntryProps = {
   item: NotificationItem;
-  respondingId: string | null;
-  onRespond: (
-    notificationId: string,
-    response: AttendanceResponse,
-  ) => Promise<AttendanceResponse | null> | null;
-  onRequestEmergency: (notificationId: string) => void;
 };
 
-function NotificationEntry({ item, respondingId, onRespond, onRequestEmergency }: NotificationEntryProps) {
-  const busy = respondingId?.startsWith(`${item.id}:`) ?? false;
+function NotificationEntry({ item }: NotificationEntryProps) {
   const createdAt = new Date(item.createdAt);
   const startDate = item.rehearsal?.start ? new Date(item.rehearsal.start) : null;
   const rawDeadline = item.rehearsal?.registrationDeadline
     ? new Date(item.rehearsal.registrationDeadline)
     : null;
   const deadlineDate = rawDeadline && !Number.isNaN(rawDeadline.valueOf()) ? rawDeadline : null;
-  const deadlinePassed = deadlineDate ? Date.now() > deadlineDate.getTime() : false;
-
-  const hasResponse =
-    item.attendanceStatus === "yes" ||
-    item.attendanceStatus === "no" ||
-    item.attendanceStatus === "emergency";
 
   const typeKey = item.type ?? "";
   const isUpdate = typeKey === "rehearsal-update";
   const isEmergencyAlert = typeKey === "rehearsal-emergency";
   const isAttendanceAlert = typeKey === "rehearsal-attendance";
 
-  const highlightUpdate = isUpdate && hasResponse && !item.readAt;
+  const highlightUpdate = isUpdate && !item.readAt;
   const highlightEmergency = isEmergencyAlert && !item.readAt;
   const highlightAttendance = isAttendanceAlert && !item.readAt;
 
@@ -642,15 +484,6 @@ function NotificationEntry({ item, respondingId, onRespond, onRequestEmergency }
       : "border-border/40 bg-background/85",
   );
 
-  const statusBadge =
-    item.attendanceStatus === "yes"
-      ? { label: "Zusage", icon: <Check size={12} />, className: "bg-emerald-500/20 text-emerald-200" }
-      : item.attendanceStatus === "no"
-      ? { label: "Absage", icon: <X size={12} />, className: "bg-rose-500/20 text-rose-200" }
-      : item.attendanceStatus === "emergency"
-      ? { label: "Notfall", icon: <AlertTriangle size={12} />, className: "bg-amber-500/20 text-amber-100" }
-      : null;
-
   const badgeConfig = isEmergencyAlert
     ? { label: "Notfall", className: "bg-rose-500/20 text-rose-100" }
     : isUpdate
@@ -660,8 +493,6 @@ function NotificationEntry({ item, respondingId, onRespond, onRequestEmergency }
     : null;
 
   const canRemoveSingle = Boolean(item.readAt);
-  const showActionRow = !hasResponse && Boolean(item.rehearsal);
-  const showStandardCancel = showActionRow && !deadlinePassed;
 
   return (
     <li className={cardClass}>
@@ -709,25 +540,9 @@ function NotificationEntry({ item, respondingId, onRespond, onRequestEmergency }
                 </time>
               )}
             </div>
-            {deadlinePassed && !hasResponse && (
-              <p className="text-xs font-semibold text-amber-600">
-                Rückmeldefrist abgelaufen – bitte Notfall melden, falls du ausfällst.
-              </p>
-            )}
-          </div>
-          <div className="flex shrink-0 items-start gap-2">
-            {statusBadge && (
-              <span
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.7rem] font-medium",
-                  statusBadge.className,
-                )}
-              >
-                {statusBadge.icon}
-                {statusBadge.label}
-              </span>
-            )}
-            {canRemoveSingle && (
+            </div>
+            <div className="flex shrink-0 items-start gap-2">
+              {canRemoveSingle && (
               <button
                 type="button"
                 className="rounded-md border border-border/40 px-2 py-1 text-[0.7rem] text-muted-foreground hover:bg-accent/30"
@@ -752,47 +567,6 @@ function NotificationEntry({ item, respondingId, onRespond, onRequestEmergency }
             )}
           </div>
         </header>
-
-        {showActionRow ? (
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              size="sm"
-              className="w-full sm:w-auto"
-              disabled={busy}
-              onClick={() => {
-                void onRespond(item.id, "yes");
-              }}
-            >
-              Zusagen
-            </Button>
-            {showStandardCancel ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-full sm:w-auto"
-                disabled={busy}
-                onClick={() => {
-                  void onRespond(item.id, "no");
-                }}
-              >
-                Absagen
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                variant="destructive"
-                className="w-full sm:w-auto"
-                disabled={busy}
-                onClick={() => onRequestEmergency(item.id)}
-              >
-                Notfall melden
-              </Button>
-            )}
-          </div>
-        ) : null}
       </article>
     </li>
   );

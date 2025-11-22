@@ -30,24 +30,6 @@ export default async function ProbenplanungPage() {
     prisma.rehearsal.findMany({
       where: { status: { not: "DRAFT" } },
       orderBy: { start: "asc" },
-      include: {
-        attendance: {
-          include: {
-            user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
-          },
-        },
-        notifications: {
-          include: {
-            recipients: {
-              include: {
-                user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
-              },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
     }),
     prisma.blockedDay.findMany({
       orderBy: { date: "asc" },
@@ -202,29 +184,7 @@ export default async function ProbenplanungPage() {
           title: r.title,
           start: r.start.toISOString(),
           location: r.location ?? "",
-          attendance: r.attendance.map((a) => ({
-            status: a.status,
-            userId: a.userId,
-            user: {
-              id: a.user.id,
-              firstName: a.user.firstName ?? null,
-              lastName: a.user.lastName ?? null,
-              name: combineNameParts(a.user.firstName, a.user.lastName) ?? a.user.name ?? null,
-              email: a.user.email ?? null,
-            },
-          })),
-          notifications: r.notifications.map((n) => ({
-            recipients: n.recipients.map((x) => ({
-              userId: x.userId,
-              user: {
-                id: x.user.id,
-                firstName: x.user.firstName ?? null,
-                lastName: x.user.lastName ?? null,
-                name: combineNameParts(x.user.firstName, x.user.lastName) ?? x.user.name ?? null,
-                email: x.user.email ?? null,
-              },
-            })),
-          })),
+          registrationDeadline: r.registrationDeadline ? r.registrationDeadline.toISOString() : null,
         })) as RehearsalLite[]}
       />
       ) : (

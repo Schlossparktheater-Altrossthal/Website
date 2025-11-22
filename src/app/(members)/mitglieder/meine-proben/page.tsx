@@ -1,109 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { differenceInHours, format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { DepartmentMembershipRole } from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getUserDisplayName } from "@/lib/names";
-import { cn } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
-import { UpcomingRehearsalResponseForm } from "./upcoming-response-form";
-
-type AttendanceStatus = "yes" | "no" | "emergency" | "maybe";
-const STATUS_KEYS = ["yes", "no", "emergency", "maybe"] as const satisfies readonly AttendanceStatus[];
-type KnownStatus = (typeof STATUS_KEYS)[number];
-type StatusKey = KnownStatus | "open";
-
-const STATUS_LABELS: Record<StatusKey, string> = {
-  yes: "Zusage",
-  no: "Absage",
-  emergency: "Notfall",
-  maybe: "Unentschieden",
-  open: "Offen",
-};
-
-const STATUS_DESCRIPTIONS: Record<StatusKey, string> = {
-  yes: "Du hast zugesagt und erscheinst bei der Probe.",
-  no: "Du hast abgesagt. Die Planung weiß, dass du nicht dabei bist.",
-  emergency: "Du hast einen Notfall gemeldet. Die Planung weiß Bescheid und kann reagieren.",
-  maybe: "Du hast eine vorläufige Rückmeldung gespeichert. Bitte entscheide dich endgültig, sobald du Klarheit hast.",
-  open: "Du hast dich noch nicht zurückgemeldet. Bitte bestätige, ob du teilnehmen kannst.",
-};
-
-const STATUS_BADGE_CLASSES: Record<StatusKey, string> = {
-  yes: "border-emerald-200 bg-emerald-500/10 text-emerald-700",
-  no: "border-rose-200 bg-rose-500/10 text-rose-700",
-  emergency: "border-amber-200 bg-amber-500/10 text-amber-700",
-  maybe: "border-sky-200 bg-sky-500/10 text-sky-700",
-  open: "border-slate-200 bg-muted text-foreground",
-};
-
-function isKnownStatus(value: string | null | undefined): value is KnownStatus {
-  return value ? (STATUS_KEYS as readonly string[]).includes(value) : false;
-}
-
-function toStatusKey(value: string | null | undefined): StatusKey {
-  return isKnownStatus(value) ? value : "open";
-}
-
-function formatDateTime(date: Date) {
-  return format(date, "EEEE, dd.MM.yyyy '·' HH:mm 'Uhr'", { locale: de });
-}
-
-type AttendanceParticipant = {
-  id: string;
-  name: string;
-};
-
-function AttendanceResponseGroup({
-  title,
-  entries,
-  emptyLabel,
-}: {
-  title: string;
-  entries: AttendanceParticipant[];
-  emptyLabel: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
-      <p className="text-xs font-semibold text-foreground">{title}</p>
-      {entries.length ? (
-        <ul className="mt-2 space-y-1 text-xs text-foreground">
-          {entries.map((entry) => (
-            <li key={entry.id} className="truncate">
-              {entry.name}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 text-xs text-muted-foreground">{emptyLabel}</p>
-      )}
-    </div>
-  );
-}
-
-type UpcomingWithStats = {
+type UpcomingRehearsalItem = {
+  kind: "rehearsal";
   id: string;
   title: string;
   start: Date;
   location: string;
   registrationDeadline: Date | null;
-  counts: Record<KnownStatus, number>;
-  responses: Record<KnownStatus, AttendanceParticipant[]>;
-  myStatus: KnownStatus | null;
-  responseCount: number;
-};
-
-type UpcomingRehearsalItem = UpcomingWithStats & {
-  kind: "rehearsal";
 };
 
 type UpcomingDepartmentEvent = {
@@ -122,16 +37,9 @@ type UpcomingDepartmentEvent = {
 
 type UpcomingItem = UpcomingRehearsalItem | UpcomingDepartmentEvent;
 
-type AttendanceHistoryEntry = {
-  id: string;
-  status: StatusKey;
-  rehearsal: {
-    id: string;
-    title: string;
-    start: Date;
-    location: string;
-  };
-};
+function formatDateTime(date: Date) {
+  return format(date, "EEEE, dd.MM.yyyy '·' HH:mm 'Uhr'", { locale: de });
+}
 
 export default async function MeineProbenPage() {
   const session = await requireAuth();
@@ -147,40 +55,17 @@ export default async function MeineProbenPage() {
 
   const now = new Date();
 
-  const [upcomingRaw, historyRaw, memberships] = await Promise.all([
+  const [upcomingRaw, memberships] = await Promise.all([
     prisma.rehearsal.findMany({
       where: { start: { gte: now }, status: { not: "DRAFT" } },
       orderBy: { start: "asc" },
       take: 8,
-      include: {
-        attendance: {
-          select: {
-            userId: true,
-            status: true,
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-      },
-    }),
-    prisma.rehearsalAttendance.findMany({
-      where: {
-        userId,
-        rehearsal: { start: { lt: now }, status: { not: "DRAFT" } },
-      },
-      orderBy: { rehearsal: { start: "desc" } },
-      take: 5,
-      include: {
-        rehearsal: {
-          select: { id: true, title: true, start: true, location: true },
-        },
+      select: {
+        id: true,
+        title: true,
+        start: true,
+        location: true,
+        registrationDeadline: true,
       },
     }),
     prisma.departmentMembership.findMany({
@@ -223,56 +108,14 @@ export default async function MeineProbenPage() {
       })
     : [];
 
-  const upcomingRehearsals: UpcomingRehearsalItem[] = upcomingRaw.map((rehearsal) => {
-    const responses: Record<KnownStatus, AttendanceParticipant[]> = {
-      yes: [],
-      no: [],
-      emergency: [],
-      maybe: [],
-    };
-    let myStatus: KnownStatus | null = null;
-
-    for (const entry of rehearsal.attendance) {
-      const status = entry.status as string;
-      if (!isKnownStatus(status)) continue;
-
-      const displayName = getUserDisplayName(entry.user ?? {});
-      responses[status].push({ id: entry.userId, name: displayName });
-
-      if (entry.userId === userId) {
-        myStatus = status;
-      }
-    }
-
-    for (const key of STATUS_KEYS) {
-      responses[key].sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
-    }
-
-    const counts = STATUS_KEYS.reduce<Record<KnownStatus, number>>((acc, key) => {
-      acc[key] = responses[key].length;
-      return acc;
-    }, {
-      yes: 0,
-      no: 0,
-      emergency: 0,
-      maybe: 0,
-    });
-
-    const responseCount = STATUS_KEYS.reduce((acc, key) => acc + counts[key], 0);
-
-    return {
-      kind: "rehearsal" as const,
-      id: rehearsal.id,
-      title: rehearsal.title,
-      start: rehearsal.start,
-      location: rehearsal.location,
-      registrationDeadline: rehearsal.registrationDeadline ?? null,
-      counts,
-      responses,
-      myStatus,
-      responseCount,
-    };
-  });
+  const upcomingRehearsals: UpcomingRehearsalItem[] = upcomingRaw.map((rehearsal) => ({
+    kind: "rehearsal" as const,
+    id: rehearsal.id,
+    title: rehearsal.title,
+    start: rehearsal.start,
+    location: rehearsal.location,
+    registrationDeadline: rehearsal.registrationDeadline ?? null,
+  }));
 
   const upcomingDepartmentEvents: UpcomingDepartmentEvent[] = departmentEventsRaw.map(
     (event) => {
@@ -297,27 +140,13 @@ export default async function MeineProbenPage() {
     (a, b) => a.start.getTime() - b.start.getTime(),
   );
 
-  const history: AttendanceHistoryEntry[] = historyRaw
-    .filter((entry) => entry.rehearsal)
-    .map((entry) => ({
-      id: entry.id,
-      status: toStatusKey(entry.status as string),
-      rehearsal: {
-        id: entry.rehearsal!.id,
-        title: entry.rehearsal!.title,
-        start: entry.rehearsal!.start,
-        location: entry.rehearsal!.location,
-      },
-    }));
-  const attendedCount = history.filter((entry) => entry.status === "yes").length;
-  const missedCount = Math.max(history.length - attendedCount, 0);
   const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/meine-proben")];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Meine Termine"
-        description="Persönliche Übersicht über deine nächsten Termine, Fristen und Rückmeldungen."
+        description="Persönliche Übersicht über deine nächsten Termine und wichtige Hinweise zur Planung."
         breadcrumbs={breadcrumbs}
       />
 
@@ -327,7 +156,8 @@ export default async function MeineProbenPage() {
             <CardHeader>
               <CardTitle>Anstehende Termine</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Alle bestätigten Proben und Gewerke-Termine der nächsten Wochen – inklusive Rückmeldefristen und optionaler Teilnahmehinweise.
+                Alle bestätigten Proben und Gewerke-Termine der nächsten Wochen. Die Teilnahme gilt automatisch als
+                zugesagt, solange du nicht in der Sperrliste eingetragen bist.
               </p>
             </CardHeader>
             <CardContent>
@@ -335,160 +165,69 @@ export default async function MeineProbenPage() {
                 <ul className="space-y-3">
                   {upcomingItems.map((item) => {
                     if (item.kind === "rehearsal") {
-                      const statusKey = toStatusKey(item.myStatus);
-                      const deadline = item.registrationDeadline;
-                      const deadlineClass = deadline
-                        ? cn(
-                            "text-xs sm:text-sm",
-                            !item.myStatus && deadline <= now
-                              ? "text-rose-600"
-                              : !item.myStatus && differenceInHours(deadline, now) <= 72
-                                ? "text-amber-700"
-                                : "text-muted-foreground",
-                          )
-                        : "text-xs text-muted-foreground";
-                      const canDecline = !deadline || deadline.getTime() > now.getTime();
-                      const summaryStatuses =
-                        statusKey === "yes" || statusKey === "no"
-                          ? (["emergency"] as const)
-                          : statusKey === "emergency"
-                            ? (["yes", "no"] as const)
-                            : (["yes", "no"] as const);
-
                       return (
                         <li key={`rehearsal-${item.id}`}>
-                          <details className="group rounded-xl border border-border/60 bg-background/60 p-3 shadow-sm transition-shadow [&_summary::-webkit-details-marker]:hidden">
-                            <summary className="flex cursor-pointer flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                <div className="min-w-0 space-y-2">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <Link
-                                      href={`/mitglieder/proben/${item.id}`}
-                                      className="text-sm font-semibold text-primary hover:underline"
-                                    >
-                                      {item.title}
-                                    </Link>
-                                    <Badge variant="outline" className="text-[0.65rem] uppercase tracking-wide">Probe</Badge>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
-                                  <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
-                                  <UpcomingRehearsalResponseForm
-                                    key={`summary-${item.id}-${statusKey}`}
-                                    rehearsalId={item.id}
-                                    currentStatus={statusKey}
-                                    canDecline={canDecline}
-                                    statuses={summaryStatuses}
-                                    showMessages={false}
-                                    buttonSize="xs"
-                                    className="space-y-0 text-[11px] sm:text-xs"
-                                  />
-                                </div>
-                                <div className="flex flex-col items-start gap-2 sm:items-end">
-                                  <Badge
-                                    variant="outline"
-                                    className={cn("self-start text-xs", STATUS_BADGE_CLASSES[statusKey])}
+                          <div className="rounded-xl border border-border/60 bg-background/60 p-3 shadow-sm">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0 space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Link
+                                    href={`/mitglieder/proben/${item.id}`}
+                                    className="text-sm font-semibold text-primary hover:underline"
                                   >
-                                    {STATUS_LABELS[statusKey]}
+                                    {item.title}
+                                  </Link>
+                                  <Badge variant="outline" className="text-[0.65rem] uppercase tracking-wide">
+                                    Probe
                                   </Badge>
-                                  <p className="text-[11px] text-muted-foreground sm:text-xs sm:text-right">
-                                    Rückmeldungen insgesamt: {item.responseCount}
-                                  </p>
                                 </div>
-                              </div>
-                            </summary>
-                            <div className="mt-3 space-y-3 border-t border-border/60 pt-3 text-xs text-muted-foreground sm:text-sm">
-                              <p className="text-sm text-foreground">{STATUS_DESCRIPTIONS[statusKey]}</p>
-                              {deadline ? (
-                                <p className={deadlineClass}>
-                                  Rückmeldefrist: {format(deadline, "dd.MM.yyyy HH:mm 'Uhr'", { locale: de })}
-                                  {" "}({formatDistanceToNow(deadline, { locale: de, addSuffix: true })})
-                                </p>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">Keine Rückmeldefrist hinterlegt.</p>
-                              )}
-                              <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs">
-                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-500/10 px-2 py-0.5 text-emerald-700">
-                                  ✔ {item.counts.yes} Zusagen
-                                </span>
-                                <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-500/10 px-2 py-0.5 text-rose-700">
-                                  ✖ {item.counts.no} Absagen
-                                </span>
-                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-500/10 px-2 py-0.5 text-amber-700">
-                                  ⚠ {item.counts.emergency} Notfälle
-                                </span>
-                                <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-500/10 px-2 py-0.5 text-sky-700">
-                                  ? {item.counts.maybe} Unentschieden
-                                </span>
-                              </div>
-                              <div className="grid gap-3 sm:grid-cols-2">
-                                <AttendanceResponseGroup
-                                  title="Kommt"
-                                  entries={item.responses.yes}
-                                  emptyLabel="Noch keine Zusagen."
-                                />
-                                <AttendanceResponseGroup
-                                  title="Sagt ab"
-                                  entries={item.responses.no}
-                                  emptyLabel="Noch keine Absagen."
-                                />
-                                {item.responses.emergency.length ? (
-                                  <AttendanceResponseGroup
-                                    title="Notfälle"
-                                    entries={item.responses.emergency}
-                                    emptyLabel="Keine Notfallmeldungen."
-                                  />
+                                <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
+                                <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
+                                {item.registrationDeadline ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    Sperrlisten-Eintrag bis {format(item.registrationDeadline, "dd.MM.yyyy HH:mm 'Uhr'", { locale: de })}
+                                    , falls du verhindert bist.
+                                  </p>
                                 ) : null}
-                                {item.responses.maybe.length ? (
-                                  <AttendanceResponseGroup
-                                    title="Unentschieden"
-                                    entries={item.responses.maybe}
-                                    emptyLabel="Keine vorläufigen Rückmeldungen."
-                                  />
-                                ) : null}
-                              </div>
-                              <UpcomingRehearsalResponseForm
-                                key={`${item.id}-${statusKey}`}
-                                rehearsalId={item.id}
-                                currentStatus={statusKey}
-                                canDecline={canDecline}
-                              />
-                              {!canDecline ? (
-                                <p className="text-xs text-amber-700">
-                                  Die Rückmeldefrist ist abgelaufen. Bitte informiere die Planung bei kurzfristigen Änderungen.
+                                <p className="text-xs text-muted-foreground">
+                                  Rückmeldungen sind nicht nötig – alle Nicht-Gesperrten werden erwartet.
                                 </p>
-                              ) : null}
+                              </div>
                             </div>
-                          </details>
+                          </div>
                         </li>
                       );
                     }
 
                     const optional = item.membershipRole === DepartmentMembershipRole.guest;
                     const hasAdditionalDetails = Boolean(item.end || item.description);
+
                     return (
                       <li key={`department-${item.id}`}>
-                        <details className="group rounded-xl border border-border/60 bg-background/60 p-3 shadow-sm transition-shadow [&_summary::-webkit-details-marker]:hidden">
-                          <summary className="flex cursor-pointer flex-col gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                              <div className="min-w-0 space-y-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-sm font-semibold text-foreground">{item.title}</span>
-                                  <Badge variant="outline" className="text-[0.65rem] uppercase tracking-wide">
-                                    {item.departmentName}
+                        <div className="rounded-xl border border-border/60 bg-background/60 p-3 shadow-sm">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground">{item.title}</span>
+                                <Badge variant="outline" className="text-[0.65rem] uppercase tracking-wide">
+                                  {item.departmentName}
+                                </Badge>
+                                {optional ? (
+                                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                                    Optional
                                   </Badge>
-                                  {optional ? (
-                                    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
-                                      Optional
-                                    </Badge>
-                                  ) : null}
-                                </div>
-                                <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
-                                {item.location ? (
-                                  <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
                                 ) : null}
                               </div>
+                              <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
+                              {item.location ? (
+                                <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
+                              ) : null}
+                              <p className="text-xs text-muted-foreground">
+                                Rückmeldungen entfallen. Falls du nicht kannst, blocke den Zeitraum in der Sperrliste oder melde dich
+                                direkt beim Team.
+                              </p>
                             </div>
-                          </summary>
+                          </div>
                           <div className="mt-3 space-y-3 border-t border-border/60 pt-3 text-xs text-muted-foreground sm:text-sm">
                             {item.end ? (
                               <p className="text-xs text-muted-foreground">
@@ -503,31 +242,13 @@ export default async function MeineProbenPage() {
                                 Für dieses Gewerk sind derzeit keine weiteren Details hinterlegt.
                               </p>
                             ) : null}
-                            <div className="flex flex-wrap gap-2">
-                              <Button
-                                asChild
-                                size="sm"
-                                variant="outline"
-                                className="text-xs font-medium"
-                              >
-                                <Link href="/mitglieder/meine-gewerke/todos">Zur To-Do-Liste</Link>
-                              </Button>
-                              <div className="flex flex-wrap gap-2">
-                                <Button type="button" size="sm">
-                                  Zusagen
-                                </Button>
-                                <Button type="button" size="sm" variant="outline">
-                                  Absagen
-                                </Button>
-                              </div>
-                            </div>
                             {optional ? (
                               <p className="text-xs text-muted-foreground">
-                                Als Gast ist deine Teilnahme freiwillig – gib dem Team gerne Bescheid, wenn du unterstützt.
+                                Als Gast ist deine Teilnahme freiwillig – informiere das Team, falls du unterstützen möchtest.
                               </p>
                             ) : null}
                           </div>
-                        </details>
+                        </div>
                       </li>
                     );
                   })}
@@ -539,93 +260,20 @@ export default async function MeineProbenPage() {
               )}
             </CardContent>
           </Card>
-
-          <div className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm">
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-foreground">Teilnahmebilanz</h3>
-              <p className="text-xs text-muted-foreground">
-                Du hast bisher an {attendedCount} {attendedCount === 1 ? "Termin" : "Terminen"} teilgenommen und {missedCount} {missedCount === 1 ? "Termin" : "Terminen"} verpasst.
-              </p>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-emerald-200 bg-emerald-500/10 p-3 text-emerald-700 shadow-sm">
-                <p className="text-xs uppercase tracking-wide">Teilgenommen</p>
-                <p className="text-2xl font-semibold text-emerald-700">{attendedCount}</p>
-              </div>
-              <div className="rounded-lg border border-rose-200 bg-rose-500/10 p-3 text-rose-700 shadow-sm">
-                <p className="text-xs uppercase tracking-wide">Verpasst</p>
-                <p className="text-2xl font-semibold text-rose-700">{missedCount}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border/60 bg-background/60 shadow-sm">
-            <details className="group [&_summary::-webkit-details-marker]:hidden">
-              <summary className="flex cursor-pointer items-start justify-between gap-2 rounded-xl px-4 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Vergangene Teilnahme</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Kurzer Rückblick auf deine letzten Rückmeldungen für bereits stattgefundene Termine.
-                  </p>
-                </div>
-                <span
-                  aria-hidden
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-xs text-muted-foreground transition-transform group-open:rotate-180"
-                >
-                  ▾
-                </span>
-              </summary>
-              <div className="border-t border-border/60 px-4 py-4">
-                {history.length ? (
-                  <ul className="space-y-3">
-                    {history.map((entry) => (
-                      <li key={entry.id} className="rounded-lg border border-border/60 bg-background/60 p-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <Link
-                              href={`/mitglieder/proben/${entry.rehearsal.id}`}
-                              className="text-sm font-medium text-primary hover:underline"
-                            >
-                              {entry.rehearsal.title}
-                            </Link>
-                            <p className="text-xs text-muted-foreground">{formatDateTime(entry.rehearsal.start)}</p>
-                            {entry.rehearsal.location ? (
-                              <p className="text-xs text-muted-foreground/80">Ort: {entry.rehearsal.location}</p>
-                            ) : null}
-                          </div>
-                          <Badge variant="outline" className={cn("self-start text-xs", STATUS_BADGE_CLASSES[entry.status])}>
-                            {STATUS_LABELS[entry.status]}
-                          </Badge>
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground">{STATUS_DESCRIPTIONS[entry.status]}</p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Es liegen noch keine Rückmeldungen vor. Sobald du Zusagen oder Absagen erfasst, erscheint hier eine kurze Historie.
-                  </p>
-                )}
-              </div>
-            </details>
-          </div>
         </div>
 
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>So meldest du dich schnell zurück</CardTitle>
+              <CardTitle>Sperrliste zuerst nutzen</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                <li>Nutze die Glocke oben rechts: Dort findest du jede Proben-Benachrichtigung und kannst mit einem Klick zusagen oder absagen.</li>
-                <li>Du findest die Nachricht nicht? Schau in deinem E-Mail-Postfach nach oder bitte die Regie um eine erneute Einladung.</li>
-                <li>Bei kurzfristigen Änderungen (&lt;24 Stunden) informiere die Regie zusätzlich telefonisch oder per Chat, damit Ersatz organisiert werden kann.</li>
-                <li>Trage Termine direkt nach der Zusage in deinen Kalender ein, um Doppelbuchungen zu vermeiden.</li>
+                <li>Trage bekannte Abwesenheiten direkt in die Sperrliste ein – dadurch weiß die Planung, dass du fehlst.</li>
+                <li>Bei kurzfristigen Änderungen informiere zusätzlich telefonisch oder per Chat, damit Ersatz organisiert werden kann.</li>
+                <li>Neue Termine gelten als zugesagt. Du musst keine Zusage- oder Absage-Buttons mehr verwenden.</li>
+                <li>Nach dem Eintrag in die Sperrliste kannst du den Termin aus deinem Kalender entfernen.</li>
               </ul>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Tipp: Wenn du im Voraus weißt, dass du länger ausfällst, blocke die Zeiträume in der Sperrliste. So wird die Planung automatisch informiert.
-              </p>
             </CardContent>
           </Card>
         </div>
@@ -633,4 +281,3 @@ export default async function MeineProbenPage() {
     </div>
   );
 }
-
