@@ -8,7 +8,6 @@ import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { deleteRehearsalAction } from "./actions";
 import type { RehearsalLite } from "./rehearsal-list";
-import { combineNameParts, getUserDisplayName } from "@/lib/names";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "full",
@@ -20,68 +19,13 @@ const timeFormatter = new Intl.DateTimeFormat("de-DE", {
   timeZone: "Europe/Berlin",
 });
 
-type DisplayUser = {
-  firstName?: string | null;
-  lastName?: string | null;
-  name?: string | null;
-  email?: string | null;
-};
-
-function displayName(user?: DisplayUser | null) {
-  if (!user) return "Unbekannt";
-  return getUserDisplayName(user, "Unbekannt");
-}
-
-function ResponseColumn({
-  title,
-  people,
-  emptyText,
-}: {
-  title: string;
-  people: Array<{ id: string; firstName: string | null; lastName: string | null; name: string | null; email: string | null }>;
-  emptyText: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="text-sm font-semibold text-foreground/90">{title}</div>
-      {people.length ? (
-        <ul className="space-y-1 text-sm">
-          {people.map((person) => (
-            <li
-              key={person.id}
-              className="rounded border border-border/50 bg-background/80 px-2 py-1"
-            >
-              {displayName(person)}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-xs text-muted-foreground">{emptyText}</p>
-      )}
-    </div>
-  );
-}
-
 export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: RehearsalLite; forceOpen?: boolean }) {
   const router = useRouter();
   const [isDeletingTransition, startDeletingTransition] = useTransition();
 
   const startDate = useMemo(() => new Date(rehearsal.start), [rehearsal.start]);
-  const notification = rehearsal.notifications[0];
-  const yes = rehearsal.attendance.filter((entry) => entry.status === "yes");
-  const no = rehearsal.attendance.filter((entry) => entry.status !== "yes");
-  const respondedIds = useMemo(
-    () => new Set(rehearsal.attendance.map((entry) => entry.userId)),
-    [rehearsal.attendance]
-  );
-  type RecipientLite = RehearsalLite["notifications"][number]["recipients"][number];
-  const pending: RecipientLite[] = notification
-    ? notification.recipients.filter((recipient) => !respondedIds.has(recipient.userId))
-    : [];
 
   const handleEdit = () => {
-    // Directly navigate to the rehearsal editor page
-    // Both drafts and published rehearsals can now be edited directly
     router.push(`/mitglieder/probenplanung/proben/${rehearsal.id}`);
   };
 
@@ -89,12 +33,12 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
     if (!confirm(`Probe "${rehearsal.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) {
       return;
     }
-    
+
     startDeletingTransition(() => {
       deleteRehearsalAction({ id: rehearsal.id })
         .then((result) => {
           if (result?.success) {
-            toast.success("Probe gelöscht. Alle Beteiligten wurden benachrichtigt.");
+            toast.success("Probe gelöscht. Alle Beteiligten wurden informiert.");
             router.refresh();
           } else {
             toast.error(result?.error ?? "Löschen fehlgeschlagen.");
@@ -124,89 +68,45 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
   ];
 
   return (
-    <>
-      <details className="overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-sm transition hover:shadow" open={forceOpen ? true : undefined}>
-        <summary className="list-none cursor-pointer px-5 py-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex-1">
-              <Link
-                href={`/mitglieder/proben/${rehearsal.id}`}
-                className="text-lg font-semibold text-primary hover:underline"
-              >
-                {rehearsal.title}
-              </Link>
-              <p className="text-sm text-muted-foreground">
-                {dateFormatter.format(startDate)}
-                {" · "}
-                {timeFormatter.format(startDate)}
-              </p>
-              <p className="text-xs text-muted-foreground/80">Ort: {rehearsal.location}</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="inline-flex items-center gap-1 rounded-full border border-success/45 bg-success/15 px-2 py-1 text-success">
-                  <span className="inline-block h-2 w-2 rounded-full bg-success" /> {yes.length}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-destructive/45 bg-destructive/15 px-2 py-1 text-destructive">
-                  <span className="inline-block h-2 w-2 rounded-full bg-destructive" /> {no.length}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/60 px-2 py-1 text-muted-foreground">
-                  <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/70" /> {pending.length}
-                </span>
-              </div>
-              <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenu items={menuItems} align="right" />
-              </div>
+    <details
+      className="overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-sm transition hover:shadow"
+      open={forceOpen ? true : undefined}
+    >
+      <summary className="list-none cursor-pointer px-5 py-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex-1">
+            <Link
+              href={`/mitglieder/proben/${rehearsal.id}`}
+              className="text-lg font-semibold text-primary hover:underline"
+            >
+              {rehearsal.title}
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              {dateFormatter.format(startDate)}
+              {" · "}
+              {timeFormatter.format(startDate)}
+            </p>
+            <p className="text-xs text-muted-foreground/80">Ort: {rehearsal.location}</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu items={menuItems} align="right" />
             </div>
           </div>
-        </summary>
-        <div className="grid gap-6 border-t border-border/60 px-5 py-5 sm:grid-cols-3">
-          <ResponseColumn
-            title="Zusagen"
-            people={yes.map((entry) => ({
-              id: entry.user.id,
-              firstName: entry.user.firstName ?? null,
-              lastName: entry.user.lastName ?? null,
-              name:
-                combineNameParts(entry.user.firstName, entry.user.lastName) ??
-                entry.user.name ??
-                null,
-              email: entry.user.email ?? null,
-            }))}
-            emptyText="Noch keine Zusagen."
-          />
-          <ResponseColumn
-            title="Absagen"
-            people={no.map((entry) => ({
-              id: entry.user.id,
-              firstName: entry.user.firstName ?? null,
-              lastName: entry.user.lastName ?? null,
-              name:
-                combineNameParts(entry.user.firstName, entry.user.lastName) ??
-                entry.user.name ??
-                null,
-              email: entry.user.email ?? null,
-            }))}
-            emptyText="Noch keine Absagen."
-          />
-          <ResponseColumn
-            title="Offen"
-            people={pending.map((recipient) => ({
-              id: recipient.user.id,
-              firstName: recipient.user.firstName ?? null,
-              lastName: recipient.user.lastName ?? null,
-              name:
-                combineNameParts(recipient.user.firstName, recipient.user.lastName) ??
-                recipient.user.name ??
-                null,
-              email: recipient.user.email ?? null,
-            }))}
-            emptyText={notification ? "Alle haben reagiert." : "Es wurde noch keine Benachrichtigung verschickt."}
-          />
         </div>
-      </details>
-
-      {/* Migration completed: All actions now use draft-based system */}
-    </>
+      </summary>
+      <div className="grid gap-4 border-t border-border/60 px-5 py-5">
+        {rehearsal.registrationDeadline ? (
+          <p className="text-sm text-muted-foreground">
+            Sperrlisten-Einträge bitte bis {dateFormatter.format(new Date(rehearsal.registrationDeadline))} setzen, falls
+            jemand ausfällt.
+          </p>
+        ) : null}
+        <p className="text-sm text-muted-foreground">
+          Rückmeldungen zu Zusagen und Absagen sind deaktiviert. Alle eingeladenen Mitglieder gelten als anwesend, solange sie
+          nicht auf der Sperrliste stehen.
+        </p>
+      </div>
+    </details>
   );
 }
