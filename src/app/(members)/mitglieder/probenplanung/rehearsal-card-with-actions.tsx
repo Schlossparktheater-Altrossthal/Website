@@ -95,12 +95,6 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
           </div>
         </div>
       </summary>
-      <div className="grid gap-4 border-t border-border/60 px-5 py-5">
-        <p className="text-sm text-muted-foreground">
-          Rückmeldungen zu Zusagen und Absagen sind deaktiviert. Alle eingeladenen Mitglieder gelten als anwesend, solange sie
-          nicht auf der Sperrliste stehen.
-        </p>
-      </div>
     </details>
   );
 }
