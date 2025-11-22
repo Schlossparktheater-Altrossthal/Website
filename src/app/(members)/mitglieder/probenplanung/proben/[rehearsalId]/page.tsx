@@ -116,9 +116,6 @@ export default async function RehearsalEditorPage({
           location: rehearsal.location,
           description: rehearsal.description,
           inviteeIds: rehearsal.invitees.map((entry) => entry.userId),
-          registrationDeadline: rehearsal.registrationDeadline
-            ? rehearsal.registrationDeadline.toISOString()
-            : null,
         }}
         members={members}
         initialBlockedUserIds={blocked.map((entry) => entry.userId)}

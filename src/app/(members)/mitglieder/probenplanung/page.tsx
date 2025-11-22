@@ -184,7 +184,6 @@ export default async function ProbenplanungPage() {
           title: r.title,
           start: r.start.toISOString(),
           location: r.location ?? "",
-          registrationDeadline: r.registrationDeadline ? r.registrationDeadline.toISOString() : null,
         })) as RehearsalLite[]}
       />
       ) : (

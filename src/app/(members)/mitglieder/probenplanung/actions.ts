@@ -19,11 +19,6 @@ import {
   formatIsoTimeInTimeZone,
   parseDateTimeInTimeZone,
 } from "@/lib/date-time";
-import {
-  computeRegistrationDeadline,
-  registrationDeadlineOptionSchema,
-  type RegistrationDeadlineOption,
-} from "./registration-deadline-options";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIME = /^\d{2}:\d{2}$/;
@@ -37,7 +32,6 @@ const baseSchema = z.object({
   location: z.string().trim().min(2, "Ort ist zu kurz").max(120, "Ort ist zu lang").optional(),
   description: z.string().max(10_000).optional(),
   invitees: z.array(z.string().min(1)).optional(),
-  registrationDeadlineOption: registrationDeadlineOptionSchema.default("1w"),
 });
 
 const draftUpdateSchema = baseSchema.partial().extend({ id: z.string().min(1) });
@@ -219,7 +213,7 @@ export async function createRehearsalDraftAction(input?: {
       end,
       description: null,
       requiredRoles: [],
-      registrationDeadline: computeRegistrationDeadline(start, "1w"),
+      registrationDeadline: null,
       createdBy: auth.userId,
       status: "DRAFT",
     },
@@ -237,7 +231,6 @@ export async function updateRehearsalDraftAction(input: {
   location?: string;
   description?: string;
   invitees?: string[];
-  registrationDeadlineOption?: RegistrationDeadlineOption;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -258,7 +251,6 @@ export async function updateRehearsalDraftAction(input: {
     location,
     description,
     invitees,
-    registrationDeadlineOption,
   } = parsed.data;
 
   try {
@@ -313,10 +305,7 @@ export async function updateRehearsalDraftAction(input: {
         updateData.end = nextEnd;
       }
 
-      if (registrationDeadlineOption !== undefined) {
-        const deadline = computeRegistrationDeadline(nextStart, registrationDeadlineOption);
-        updateData.registrationDeadline = deadline;
-      }
+      updateData.registrationDeadline = null;
 
       if (invitees) {
         const synced = await syncInvitees(tx, id, invitees);
@@ -359,7 +348,6 @@ export async function publishRehearsalAction(input: {
   location?: string;
   description?: string;
   invitees?: string[];
-  registrationDeadlineOption: RegistrationDeadlineOption;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -380,7 +368,6 @@ export async function publishRehearsalAction(input: {
     location,
     description,
     invitees,
-    registrationDeadlineOption,
   } = parsed.data;
 
   try {
@@ -426,7 +413,7 @@ export async function publishRehearsalAction(input: {
           description: safeDescription,
           status: "PLANNED",
           requiredRoles: roles as unknown as Prisma.InputJsonValue,
-          registrationDeadline: computeRegistrationDeadline(start, registrationDeadlineOption),
+          registrationDeadline: null,
           createdBy: existing.createdBy ?? auth.userId,
         },
         select: { id: true, title: true, start: true, end: true, location: true },
@@ -535,7 +522,6 @@ export async function createRehearsalAction(input: {
   location?: string;
   description?: string;
   invitees?: string[];
-  registrationDeadlineOption: RegistrationDeadlineOption;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -555,7 +541,6 @@ export async function createRehearsalAction(input: {
     location,
     description,
     invitees,
-    registrationDeadlineOption,
   } = parsed.data;
   const start = parseStart(date, time);
   const end = endTime ? parseEnd(date, endTime, start) : computeEnd(start);
@@ -589,7 +574,7 @@ export async function createRehearsalAction(input: {
           description: safeDescription,
           status: "PLANNED",
           requiredRoles: roles as unknown as Prisma.InputJsonValue,
-          registrationDeadline: computeRegistrationDeadline(start, registrationDeadlineOption),
+          registrationDeadline: null,
           createdBy: auth.userId,
         },
         select: { id: true, title: true, start: true, end: true, location: true },
@@ -663,7 +648,6 @@ export async function updateRehearsalAction(input: {
   location?: string;
   description?: string;
   invitees?: string[];
-  registrationDeadlineOption: RegistrationDeadlineOption;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -684,7 +668,6 @@ export async function updateRehearsalAction(input: {
     location,
     description,
     invitees,
-    registrationDeadlineOption,
   } = parsed.data;
 
   try {
@@ -698,7 +681,6 @@ export async function updateRehearsalAction(input: {
           location: true,
           description: true,
           status: true,
-          registrationDeadline: true,
         },
       });
       if (!existing) {
@@ -719,16 +701,12 @@ export async function updateRehearsalAction(input: {
         start,
         end,
         location: normalizedLocation,
+        registrationDeadline: null,
       };
 
       if (description !== undefined) {
         sanitizedDescription = sanitizeDescription(description);
         updateData.description = sanitizedDescription;
-      }
-
-      if (registrationDeadlineOption) {
-        const deadline = computeRegistrationDeadline(start, registrationDeadlineOption);
-        updateData.registrationDeadline = deadline;
       }
 
       let targetInvitees: string[];
@@ -750,7 +728,6 @@ export async function updateRehearsalAction(input: {
           start: true,
           end: true,
           location: true,
-          registrationDeadline: true,
         },
       });
 
@@ -804,22 +781,6 @@ export async function updateRehearsalAction(input: {
 
     if (descriptionChanged) {
       updates.push("Beschreibung aktualisiert.");
-    }
-
-    const previousDeadline = previous.registrationDeadline;
-    const newDeadline = rehearsal.registrationDeadline;
-    const previousDeadlineMs = previousDeadline?.getTime();
-    const newDeadlineMs = newDeadline?.getTime();
-    if ((previousDeadlineMs ?? null) !== (newDeadlineMs ?? null)) {
-      if (previousDeadline && newDeadline) {
-        updates.push(
-          `Rückmeldefrist: ${formatter.format(previousDeadline)} → ${formatter.format(newDeadline)}`,
-        );
-      } else if (!previousDeadline && newDeadline) {
-        updates.push(`Neue Rückmeldefrist: ${formatter.format(newDeadline)}`);
-      } else if (previousDeadline && !newDeadline) {
-        updates.push("Rückmeldefrist entfernt.");
-      }
     }
 
     const updatedBody = updates.length

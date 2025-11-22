@@ -11,7 +11,6 @@ export type RehearsalLite = {
   title: string;
   start: string; // ISO
   location: string;
-  registrationDeadline: string | null;
 };
 
 export function RehearsalList({ initial }: { initial: RehearsalLite[] }) {

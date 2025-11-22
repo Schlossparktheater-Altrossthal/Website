@@ -16,7 +16,6 @@ type NotificationResponse = {
     id: string;
     title: string;
     start: string;
-    registrationDeadline: string | null;
   } | null;
   attendanceStatus: AttendanceStatus | null;
 };
@@ -44,7 +43,6 @@ export async function GET() {
               id: string;
               title: string;
               start: Date;
-              registrationDeadline: Date | null;
             }
           | null;
       };
@@ -55,7 +53,7 @@ export async function GET() {
       include: {
         notification: {
           include: {
-            rehearsal: { select: { id: true, title: true, start: true, registrationDeadline: true } },
+            rehearsal: { select: { id: true, title: true, start: true } },
           },
         },
       },
@@ -90,9 +88,6 @@ export async function GET() {
             id: record.notification.rehearsal.id,
             title: record.notification.rehearsal.title,
             start: record.notification.rehearsal.start.toISOString(),
-            registrationDeadline: record.notification.rehearsal.registrationDeadline
-              ? record.notification.rehearsal.registrationDeadline.toISOString()
-              : null,
           }
         : null,
       attendanceStatus: record.notification.rehearsalId

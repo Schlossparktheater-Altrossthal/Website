@@ -96,12 +96,6 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
         </div>
       </summary>
       <div className="grid gap-4 border-t border-border/60 px-5 py-5">
-        {rehearsal.registrationDeadline ? (
-          <p className="text-sm text-muted-foreground">
-            Sperrlisten-Einträge bitte bis {dateFormatter.format(new Date(rehearsal.registrationDeadline))} setzen, falls
-            jemand ausfällt.
-          </p>
-        ) : null}
         <p className="text-sm text-muted-foreground">
           Rückmeldungen zu Zusagen und Absagen sind deaktiviert. Alle eingeladenen Mitglieder gelten als anwesend, solange sie
           nicht auf der Sperrliste stehen.

@@ -139,12 +139,6 @@ export default async function RehearsalDetailPage({
             <span className="font-medium text-foreground">Ort:&nbsp;</span>
             {rehearsal.location}
           </p>
-          {rehearsal.registrationDeadline ? (
-            <p>
-              <span className="font-medium text-foreground">Rückmeldefrist:&nbsp;</span>
-              {formatter.format(rehearsal.registrationDeadline)}
-            </p>
-          ) : null}
         </CardContent>
       </Card>
 
