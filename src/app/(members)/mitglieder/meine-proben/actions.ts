@@ -53,7 +53,6 @@ export async function respondToRehearsal(
       select: {
         id: true,
         status: true,
-        registrationDeadline: true,
         invitees: {
           where: { userId },
           select: { userId: true },
@@ -67,18 +66,6 @@ export async function respondToRehearsal(
 
     if (!rehearsal.invitees.length) {
       return { ok: false, error: "Du bist für diesen Termin nicht eingeladen." };
-    }
-
-    const now = new Date();
-    if (
-      status === "no" &&
-      rehearsal.registrationDeadline &&
-      rehearsal.registrationDeadline.getTime() <= now.getTime()
-    ) {
-      return {
-        ok: false,
-        error: "Die Rückmeldefrist ist bereits verstrichen. Bitte melde dich direkt beim Planungsteam.",
-      };
     }
 
     await updateAttendanceWithLog({

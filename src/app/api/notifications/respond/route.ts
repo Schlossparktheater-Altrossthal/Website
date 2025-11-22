@@ -47,7 +47,6 @@ export async function POST(request: Request) {
                 title: true,
                 start: true,
                 location: true,
-                registrationDeadline: true,
                 createdBy: true,
               },
             },
@@ -64,18 +63,6 @@ export async function POST(request: Request) {
     const rehearsal = recipient.notification.rehearsal;
     if (!rehearsalId || !rehearsal) {
       return NextResponse.json({ error: "Rehearsal not linked" }, { status: 400 });
-    }
-
-    const now = new Date();
-    const deadline = rehearsal.registrationDeadline;
-    if (response === "no" && deadline && now > deadline) {
-      return NextResponse.json(
-        {
-          error: "Die Rückmeldefrist ist bereits abgelaufen. Bitte nutze den Notfall-Button.",
-          code: "DEADLINE_PASSED",
-        },
-        { status: 422 },
-      );
     }
 
     const nextStatus = response === "emergency" ? "emergency" : response;

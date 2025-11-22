@@ -18,7 +18,6 @@ type UpcomingRehearsalItem = {
   title: string;
   start: Date;
   location: string;
-  registrationDeadline: Date | null;
 };
 
 type UpcomingDepartmentEvent = {
@@ -65,7 +64,6 @@ export default async function MeineProbenPage() {
         title: true,
         start: true,
         location: true,
-        registrationDeadline: true,
       },
     }),
     prisma.departmentMembership.findMany({
@@ -114,7 +112,6 @@ export default async function MeineProbenPage() {
     title: rehearsal.title,
     start: rehearsal.start,
     location: rehearsal.location,
-    registrationDeadline: rehearsal.registrationDeadline ?? null,
   }));
 
   const upcomingDepartmentEvents: UpcomingDepartmentEvent[] = departmentEventsRaw.map(
@@ -183,12 +180,6 @@ export default async function MeineProbenPage() {
                                 </div>
                                 <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
                                 <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
-                                {item.registrationDeadline ? (
-                                  <p className="text-xs text-muted-foreground">
-                                    Sperrlisten-Eintrag bis {format(item.registrationDeadline, "dd.MM.yyyy HH:mm 'Uhr'", { locale: de })}
-                                    , falls du verhindert bist.
-                                  </p>
-                                ) : null}
                                 <p className="text-xs text-muted-foreground">
                                   Rückmeldungen sind nicht nötig – alle Nicht-Gesperrten werden erwartet.
                                 </p>

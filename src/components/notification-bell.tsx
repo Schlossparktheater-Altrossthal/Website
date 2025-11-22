@@ -35,7 +35,6 @@ type NotificationItem = {
     id: string;
     title: string;
     start: string;
-    registrationDeadline: string | null;
   } | null;
   attendanceStatus: "yes" | "no" | "emergency" | null;
 };
@@ -459,10 +458,6 @@ type NotificationEntryProps = {
 function NotificationEntry({ item }: NotificationEntryProps) {
   const createdAt = new Date(item.createdAt);
   const startDate = item.rehearsal?.start ? new Date(item.rehearsal.start) : null;
-  const rawDeadline = item.rehearsal?.registrationDeadline
-    ? new Date(item.rehearsal.registrationDeadline)
-    : null;
-  const deadlineDate = rawDeadline && !Number.isNaN(rawDeadline.valueOf()) ? rawDeadline : null;
 
   const typeKey = item.type ?? "";
   const isUpdate = typeKey === "rehearsal-update";
@@ -533,11 +528,6 @@ function NotificationEntry({ item }: NotificationEntryProps) {
                     Probe: {dateTimeFormatter.format(startDate)}
                   </time>
                 </Link>
-              )}
-              {deadlineDate && (
-                <time dateTime={deadlineDate.toISOString()} className="block">
-                  Rückmeldefrist: {dateTimeFormatter.format(deadlineDate)}
-                </time>
               )}
             </div>
             </div>
