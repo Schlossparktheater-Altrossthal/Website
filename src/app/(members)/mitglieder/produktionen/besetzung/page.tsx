@@ -76,11 +76,6 @@ export default async function ProduktionsBesetzungPage() {
   }
 
   const activeProduction = await getActiveProduction(session.user?.id);
-  const headerActions = (
-    <Button asChild variant="outline" size="sm">
-      <Link href="/mitglieder/produktionen">Zum Überblick</Link>
-    </Button>
-  );
   const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/produktionen/besetzung")];
 
   if (!activeProduction) {
@@ -90,7 +85,6 @@ export default async function ProduktionsBesetzungPage() {
           title="Besetzung"
           description="Erstelle neue Figuren, pflege Beschreibungen und organisiere die vollständige Besetzung deines Ensembles."
           breadcrumbs={breadcrumbs}
-          actions={headerActions}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
@@ -171,7 +165,6 @@ export default async function ProduktionsBesetzungPage() {
         title="Besetzung"
         description="Erstelle neue Figuren, pflege Beschreibungen und organisiere die vollständige Besetzung deines Ensembles."
         breadcrumbs={breadcrumbs}
-        actions={headerActions}
       />
 
       <div className="rounded-xl border border-border/70 bg-card/60 p-4 shadow-sm">
