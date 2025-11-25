@@ -21,7 +21,6 @@ import {
   MonthCalendar,
   type CalendarDay,
 } from "@/components/calendar/month-calendar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/names";
 import { toast } from "sonner";
@@ -37,6 +37,8 @@ import { toast } from "sonner";
 import { createRehearsalDraftAction, deleteRehearsalAction } from "./actions";
 
 const DEFAULT_NEW_REHEARSAL_TIME = "19:00";
+
+type RehearsalCalendarView = "calendar" | "weekend";
 
 const WEEKEND_DAY_INDICES = new Set<number>([5, 6, 0]);
 
@@ -112,6 +114,7 @@ export function RehearsalCalendar({
   const [currentMonth, setCurrentMonth] = useState<Date>(() =>
     startOfMonth(initialSelection.date)
   );
+  const [viewMode, setViewMode] = useState<RehearsalCalendarView>("calendar");
   const currentMonthLabel = useMemo(
     () => format(currentMonth, "MMMM yyyy", { locale: de }),
     [currentMonth]
@@ -174,15 +177,6 @@ export function RehearsalCalendar({
 
   const selectedDayBlocked = dayDetail?.blocked ?? [];
   const selectedDayRehearsals = dayDetail?.rehearsals ?? [];
-  const selectedIsWeekend =
-    selectedDate ? WEEKEND_DAY_INDICES.has(selectedDate.getDay()) : false;
-  const selectedBlockedLabel =
-    memberCount > 0
-      ? `${selectedDayBlocked.length} / ${memberCount} blockiert`
-      : `${selectedDayBlocked.length} blockiert`;
-  const selectedBlockedPercent = memberCount > 0
-    ? Math.round((selectedDayBlocked.length / memberCount) * 100)
-    : 0;
   const selectedAvailableCount = Math.max(0, memberCount - selectedDayBlocked.length);
   const selectedAvailableRatio = memberCount > 0 ? selectedAvailableCount / memberCount : 0;
   const selectedAvailablePercent = Math.round(
@@ -506,172 +500,30 @@ export function RehearsalCalendar({
         </DialogContent>
       </Dialog>
 
-      <div className="space-y-8">
-        {false && (
-        <div className="order-2 space-y-8 lg:order-1">
-          <div className="rounded-3xl border border-border/60 bg-card/90 p-6 shadow-sm">
-            <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Tagesplan
-                </span>
-                <h3 className="text-xl font-semibold text-foreground">
-                  {selectedDate
-                    ? format(selectedDate as Date, "EEEE, d. MMMM yyyy", { locale: de })
-                    : "Kein Tag ausgewählt"}
-                </h3>
-                {selectedSummary ? (
-                  <p className="text-sm text-muted-foreground">{selectedSummary}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Wähle im Kalender einen Tag aus, um die Tagesplanung zu sehen.
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {selectedIsWeekend ? (
-                  <Badge className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-                    Wochenende
-                  </Badge>
-                ) : null}
-                <Badge
-                  variant="outline"
-                  className="rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground"
-                >
-                  {selectedBlockedPercent}% blockiert
-                </Badge>
-              </div>
-            </header>
-
-            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex w-full flex-col gap-3 sm:max-w-sm">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Verfügbarkeit</span>
-                <span>{selectedAvailableLabel}</span>
-              </div>
-              <div className="relative h-3 overflow-hidden rounded-full bg-muted">
-                <span
-                  className={cn(
-                    "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
-                    selectedAvailableRatio <= 0.5
-                      ? "bg-destructive/80"
-                      : selectedAvailableRatio <= 0.75
-                      ? "bg-amber-400"
-                      : "bg-primary/70",
-                  )}
-                  style={{ width: `${selectedAvailablePercent}%` }}
-                  aria-hidden
-                />
-              </div>
-              </div>
-              <Button
-                onClick={handlePlanRehearsalForSelectedDay}
-                disabled={!selectedDayKey}
-                className="w-full sm:w-auto px-5 py-2.5"
-              >
-                Probe planen
-              </Button>
-            </div>
-
-            <div className="mt-7">
-              {selectedDayRehearsals.length ? (
-                <ul className="space-y-7 border-l border-border/60 pl-8">
-                  {selectedDayRehearsals.map((entry) => {
-                    const startDate = parseISO(entry.start);
-                    const endDate = entry.end ? parseISO(entry.end) : null;
-                    const startLabel = fmtTime(startDate);
-                    const endLabel = endDate ? fmtTime(endDate) : null;
-                    const timeChip = endLabel
-                      ? `${startLabel} – ${endLabel}`
-                      : `Start ${startLabel}`;
-                    return (
-                      <li
-                        key={entry.id}
-                        className="relative grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4"
-                      >
-                        <span
-                          className="absolute -left-6 top-2 flex h-3 w-3 -translate-x-1/2 items-center justify-center rounded-full border-2 border-background bg-primary shadow-[0_0_0_3px_rgba(129,140,248,0.15)]"
-                          aria-hidden
-                        />
-                        <time className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {startLabel}
-                        </time>
-                        <article className="rounded-2xl border border-border/60 bg-background/90 p-5 shadow-sm">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <h4 className="text-sm font-semibold text-foreground">{entry.title}</h4>
-                            {entry.location ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
-                                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                                {entry.location}
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                            {timeChip}
-                          </div>
-                        </article>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-6 text-sm text-muted-foreground">
-                  Für diesen Tag sind noch keine Proben geplant. Nutze die Schaltfläche oben, um eine Probe anzulegen.
-                  {selectedIsWeekend
-                    ? " Wochenenden sind besonders beliebt – sichere dir frühzeitig einen Slot."
-                    : ""}
-                </div>
-              )}
-            </div>
+      <Tabs
+        value={viewMode}
+        onValueChange={(value) => setViewMode(value as RehearsalCalendarView)}
+        className="space-y-6"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold">Planungssicht wählen</h3>
+            <p className="text-xs text-muted-foreground">
+              Wechsle zwischen Monatskalender und fokussiertem Wochenende-Überblick.
+            </p>
           </div>
-
-          <div className="rounded-3xl border border-border/60 bg-background/90 p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h4 className="text-sm font-semibold text-foreground">Blockierte Mitglieder</h4>
-                <p className="text-xs text-muted-foreground">
-                  {selectedDate
-                    ? `Für ${format(selectedDate as Date, "EEEE, d. MMMM yyyy", { locale: de })}`
-                    : "Wähle einen Tag, um Sperrungen zu sehen."}
-                </p>
-              </div>
-              <Badge
-                variant="outline"
-                className="rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground"
-              >
-                {selectedBlockedLabel}
-              </Badge>
-            </div>
-            {selectedDayBlocked.length ? (
-              <ul className="mt-4 space-y-3">
-                {selectedDayBlocked.map((entry) => {
-                  const displayName = getUserDisplayName(entry.user, "Mitglied");
-                  return (
-                    <li
-                      key={entry.id}
-                      className="rounded-2xl border border-border/60 bg-card/70 px-3 py-2"
-                    >
-                      <div className="text-sm font-medium text-foreground">{displayName}</div>
-                      {entry.reason ? (
-                        <p className="text-xs text-muted-foreground">{entry.reason}</p>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">Es sind keine Sperrungen eingetragen.</p>
-            )}
-          </div>
+          <TabsList className="self-start">
+            <TabsTrigger value="calendar">Kalenderansicht</TabsTrigger>
+            <TabsTrigger value="weekend">Wochenend-Fokus</TabsTrigger>
+          </TabsList>
         </div>
-        )}
 
-        <div className="order-1 space-y-8 lg:order-2">
+        <TabsContent value="calendar" className="space-y-6">
           <MonthCalendar
             month={currentMonth}
             onMonthChange={setCurrentMonth}
             title={currentMonthLabel}
-            subtitle="Monatsansicht · Split-Ansicht mit Wochenendfokus"
+            subtitle="Monatsansicht · Umschalter für Wochenend-Fokus oben nutzen"
             className="rounded-3xl border border-border/60 bg-card/80 p-2 shadow-sm sm:p-3"
             headerActions={
               <Button
@@ -793,7 +645,7 @@ export function RehearsalCalendar({
                               ? "bg-destructive/80"
                               : availRatio <= 0.75
                               ? "bg-amber-400"
-                              : "bg-primary/70"
+                              : "bg-primary/70",
                           )}
                           style={{ width: `${availClamped * 100}%` }}
                           aria-hidden
@@ -831,13 +683,15 @@ export function RehearsalCalendar({
               </div>
             }
           />
+        </TabsContent>
 
+        <TabsContent value="weekend">
           {weekendFocusGroups.length ? (
             <div className="rounded-3xl border border-border/60 bg-background/90 p-5 shadow-sm">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold">Wochenend-Fokus</h3>
                 <p className="text-xs text-muted-foreground">
-                  Freitag bis Sonntag immer im Blick. Tippe auf eine Karte, um den Tagesplan links zu öffnen.
+                  Freitag bis Sonntag immer im Blick. Tippe auf eine Karte, um den Tagesplan zu öffnen.
                 </p>
               </div>
               <div className="mt-4 space-y-5">
@@ -914,7 +768,7 @@ export function RehearsalCalendar({
                                       ? "bg-destructive/80"
                                       : availRatio <= 0.75
                                       ? "bg-amber-400"
-                                      : "bg-primary/70"
+                                      : "bg-primary/70",
                                   )}
                                   style={{ width: `${availClamped * 100}%` }}
                                   aria-hidden
@@ -939,9 +793,13 @@ export function RehearsalCalendar({
                 ))}
               </div>
             </div>
-          ) : null}
-        </div>
-      </div>
+          ) : (
+            <div className="rounded-3xl border border-border/60 bg-card/70 p-6 text-sm text-muted-foreground shadow-sm">
+              Aktuell gibt es keine Wochenendtermine im gewählten Zeitraum. Nutze die Kalenderansicht, um andere Tage zu planen.
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Migration completed: All calendar interactions now use draft-based system */}
     </section>
