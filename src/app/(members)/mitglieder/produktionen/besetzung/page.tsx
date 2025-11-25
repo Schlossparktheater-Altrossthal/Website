@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
+import { Pencil, Trash2 } from "lucide-react";
 
 import {
   createCharacterAction,
@@ -359,11 +360,11 @@ export default async function ProduktionsBesetzungPage() {
                         <p className="text-sm text-muted-foreground">Noch keine Besetzung zugeordnet.</p>
                       ) : (
                         sortedCastings.map((casting) => (
-                          <div
+                          <details
                             key={casting.id}
-                            className="rounded-lg border border-border/60 bg-background/80 p-3 text-sm shadow-sm"
+                            className="rounded-lg border border-border/60 bg-background/80 p-3 text-sm shadow-sm [&_summary::-webkit-details-marker]:hidden"
                           >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
+                            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3">
                               <div>
                                 <p className="font-medium">{formatUserName(casting.user)}</p>
                                 <p className="text-xs text-muted-foreground">{CASTING_LABELS[casting.type]}</p>
@@ -371,52 +372,62 @@ export default async function ProduktionsBesetzungPage() {
                                   <p className="text-xs text-muted-foreground">Notiz: {casting.notes}</p>
                                 ) : null}
                               </div>
-                              <form action={removeCharacterCastingAction} method="post">
-                                <input type="hidden" name="castingId" value={casting.id} />
-                                <input type="hidden" name="redirectPath" value={currentPath} />
-                                <Button type="submit" variant="ghost" size="sm">
-                                  Entfernen
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  aria-label="Besetzung bearbeiten"
+                                >
+                                  <Pencil className="h-4 w-4" />
                                 </Button>
-                              </form>
-                            </div>
-
-                            <details className="group mt-3 rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden">
-                              <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                <span>Besetzung anpassen</span>
-                                <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
-                                <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
-                              </summary>
-                              <form
-                                action={updateCharacterCastingAction}
-                                method="post"
-                                className="mt-3 grid gap-2 md:grid-cols-3"
-                              >
-                                <input type="hidden" name="castingId" value={casting.id} />
-                                <input type="hidden" name="redirectPath" value={currentPath} />
-                                <div className="space-y-1">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                    Besetzungsart
-                                  </label>
-                                  <select name="type" defaultValue={casting.type} className={selectSmallClassName}>
-                                    {CASTING_ORDER.map((type) => (
-                                      <option key={type} value={type}>
-                                        {CASTING_LABELS[type]}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="space-y-1 md:col-span-2">
-                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                                  <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
-                                </div>
-                                <div className="md:col-span-3 flex justify-end">
-                                  <Button type="submit" variant="outline" size="sm">
-                                    Änderungen speichern
+                                <form action={removeCharacterCastingAction} method="post">
+                                  <input type="hidden" name="castingId" value={casting.id} />
+                                  <input type="hidden" name="redirectPath" value={currentPath} />
+                                  <Button
+                                    type="submit"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    aria-label="Besetzung entfernen"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
-                                </div>
-                              </form>
-                            </details>
-                          </div>
+                                </form>
+                              </div>
+                            </summary>
+
+                            <form
+                              action={updateCharacterCastingAction}
+                              method="post"
+                              className="mt-3 grid gap-2 border-t border-border/60 pt-3 md:grid-cols-3"
+                            >
+                              <input type="hidden" name="castingId" value={casting.id} />
+                              <input type="hidden" name="redirectPath" value={currentPath} />
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Besetzungsart
+                                </label>
+                                <select name="type" defaultValue={casting.type} className={selectSmallClassName}>
+                                  {CASTING_ORDER.map((type) => (
+                                    <option key={type} value={type}>
+                                      {CASTING_LABELS[type]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="space-y-1 md:col-span-2">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
+                                <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
+                              </div>
+                              <div className="md:col-span-3 flex justify-end">
+                                <Button type="submit" variant="outline" size="sm">
+                                  Änderungen speichern
+                                </Button>
+                              </div>
+                            </form>
+                          </details>
                         ))
                       )}
                     </div>
