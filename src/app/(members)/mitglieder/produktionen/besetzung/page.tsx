@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
 import { getUserDisplayName } from "@/lib/names";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
+import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
 import {
@@ -79,15 +80,15 @@ export default async function ProduktionsBesetzungPage() {
       <Link href="/mitglieder/produktionen">Zum Überblick</Link>
     </Button>
   );
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/produktionen/besetzung")];
 
   if (!activeProduction) {
     return (
       <div className="space-y-6">
-        <ProductionWorkspaceHeader
+        <PageHeader
           title="Besetzung"
           description="Erstelle neue Figuren, pflege Beschreibungen und organisiere die vollständige Besetzung deines Ensembles."
-          activeWorkspace="casting"
-          production={null}
+          breadcrumbs={breadcrumbs}
           actions={headerActions}
         />
         <ProductionWorkspaceEmptyState
@@ -163,23 +164,40 @@ export default async function ProduktionsBesetzungPage() {
     { label: "Mitglieder", value: users.length, hint: "Verfügbare Personen" },
   ];
 
-  const summaryActions = (
-    <Button asChild size="sm" variant="outline">
-      <Link href="/mitglieder/produktionen/szenen">Szenen</Link>
-    </Button>
-  );
-
   return (
     <div className="space-y-6">
-      <ProductionWorkspaceHeader
+      <PageHeader
         title="Besetzung"
         description="Erstelle neue Figuren, pflege Beschreibungen und organisiere die vollständige Besetzung deines Ensembles."
-        activeWorkspace="casting"
-        production={activeProduction}
-        stats={headerStats}
+        breadcrumbs={breadcrumbs}
         actions={headerActions}
-        summaryActions={summaryActions}
       />
+
+      <div className="rounded-xl border border-border/70 bg-card/60 p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2 text-sm">
+            {headerStats.map((stat) => (
+              <span
+                key={stat.label}
+                className="inline-flex min-w-[200px] flex-1 items-start justify-between gap-3 rounded-md border border-border/60 bg-background/80 px-3 py-2"
+              >
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</span>
+                <div className="text-right">
+                  <p className="text-base font-semibold text-foreground">{stat.value}</p>
+                  {stat.hint ? (
+                    <p className="text-[11px] text-muted-foreground">{stat.hint}</p>
+                  ) : null}
+                </div>
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/mitglieder/produktionen/szenen">Zu den Szenen</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <div className="flex justify-end">
         <Dialog>
