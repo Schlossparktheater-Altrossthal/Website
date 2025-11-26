@@ -8,11 +8,12 @@ import { getActiveProduction } from "@/lib/active-production";
 import { getUserDisplayName } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -285,67 +286,95 @@ export default async function ProduktionsBesetzungPage() {
                         <p className="text-xs text-muted-foreground">Notiz: {character.notes}</p>
                       ) : null}
                     </div>
-                    <form action={deleteCharacterAction} method="post">
-                      <input type="hidden" name="characterId" value={character.id} />
-                      <input type="hidden" name="redirectPath" value={currentPath} />
-                      <Button type="submit" variant="ghost" size="sm">
-                        Entfernen
-                      </Button>
-                    </form>
+                    <div className="flex items-center gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
+                            aria-label="Rolle bearbeiten"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>Rolle bearbeiten</DialogTitle>
+                            <DialogDescription>
+                              Aktualisiere die Stammdaten der Rolle und speichere deine Änderungen.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <form
+                            action={updateCharacterAction}
+                            method="post"
+                            className="grid gap-3"
+                          >
+                            <input type="hidden" name="characterId" value={character.id} />
+                            <input type="hidden" name="redirectPath" value={currentPath} />
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
+                                <Input name="name" defaultValue={character.name} minLength={2} maxLength={120} required />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kurzname</label>
+                                <Input name="shortName" defaultValue={character.shortName ?? ""} maxLength={40} />
+                              </div>
+                              <div className="space-y-1 md:col-span-2">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
+                                <Textarea name="description" rows={2} maxLength={500} defaultValue={character.description ?? ""} />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sortierung</label>
+                                <Input type="number" name="order" defaultValue={character.order ?? 0} min={0} max={9999} />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Farbe</label>
+                                <input
+                                  type="color"
+                                  name="color"
+                                  defaultValue={character.color ?? "#7c3aed"}
+                                  className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
+                                />
+                              </div>
+                              <div className="space-y-1 md:col-span-2">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
+                                <Textarea name="notes" rows={2} maxLength={500} defaultValue={character.notes ?? ""} />
+                              </div>
+                            </div>
+                            <DialogFooter className="gap-2 sm:justify-between">
+                              <DialogClose asChild>
+                                <Button type="button" variant="ghost">
+                                  Schließen
+                                </Button>
+                              </DialogClose>
+                              <Button type="submit" variant="outline">
+                                Rolle aktualisieren
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                      <form action={deleteCharacterAction} method="post">
+                        <input type="hidden" name="characterId" value={character.id} />
+                        <input type="hidden" name="redirectPath" value={currentPath} />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9"
+                          aria-label="Rolle entfernen"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </form>
+                    </div>
                   </div>
                 </CardHeader>
 
                 <CardContent className="space-y-5">
-                  <details className="group rounded-lg border border-border/60 bg-background/70 p-4 [&_summary::-webkit-details-marker]:hidden">
-                    <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
-                      <span>Rolle bearbeiten</span>
-                      <span className="text-xs text-muted-foreground group-open:hidden">Öffnen</span>
-                      <span className="hidden text-xs text-muted-foreground group-open:inline">Schließen</span>
-                    </summary>
-                    <form
-                      action={updateCharacterAction}
-                      method="post"
-                      className="mt-4 grid gap-3 rounded-md border border-border/50 bg-background/80 p-4 md:grid-cols-2"
-                    >
-                      <input type="hidden" name="characterId" value={character.id} />
-                      <input type="hidden" name="redirectPath" value={currentPath} />
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
-                        <Input name="name" defaultValue={character.name} minLength={2} maxLength={120} required />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kurzname</label>
-                        <Input name="shortName" defaultValue={character.shortName ?? ""} maxLength={40} />
-                      </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
-                        <Textarea name="description" rows={2} maxLength={500} defaultValue={character.description ?? ""} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sortierung</label>
-                        <Input type="number" name="order" defaultValue={character.order ?? 0} min={0} max={9999} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Farbe</label>
-                        <input
-                          type="color"
-                          name="color"
-                          defaultValue={character.color ?? "#7c3aed"}
-                          className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-                        />
-                      </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                        <Textarea name="notes" rows={2} maxLength={500} defaultValue={character.notes ?? ""} />
-                      </div>
-                      <div className="md:col-span-2 flex justify-end">
-                        <Button type="submit" variant="outline" size="sm">
-                          Rolle aktualisieren
-                        </Button>
-                      </div>
-                    </form>
-                  </details>
-
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold">Besetzung</h3>
                     <div className="space-y-3">
