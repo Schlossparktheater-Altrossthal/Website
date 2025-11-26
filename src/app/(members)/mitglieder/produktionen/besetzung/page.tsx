@@ -297,6 +297,74 @@ export default async function ProduktionsBesetzungPage() {
                             variant="ghost"
                             size="icon"
                             className="h-9 w-9"
+                            aria-label="Besetzung hinzufügen"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Mitglied zuordnen</DialogTitle>
+                            <DialogDescription>
+                              Weise dieser Rolle ein Mitglied zu und lege Besetzungsart sowie optionale Notizen fest.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <form className="grid gap-3" action={assignCharacterCastingAction} method="post">
+                            <input type="hidden" name="characterId" value={character.id} />
+                            <input type="hidden" name="redirectPath" value={currentPath} />
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Mitglied
+                              </label>
+                              <select name="userId" className={selectSmallClassName} required>
+                                <option value="">Mitglied auswählen</option>
+                                {users.map((user) => (
+                                  <option key={user.id} value={user.id}>
+                                    {formatUserName(user)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Besetzungsart
+                              </label>
+                              <select
+                                name="type"
+                                className={selectSmallClassName}
+                                defaultValue={CharacterCastingType.primary}
+                              >
+                                {CASTING_ORDER.map((type) => (
+                                  <option key={type} value={type}>
+                                    {CASTING_LABELS[type]}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Notiz
+                              </label>
+                              <Input name="notes" maxLength={200} placeholder="optional" />
+                            </div>
+                            <DialogFooter className="sm:justify-end">
+                              <DialogClose asChild>
+                                <Button type="button" variant="ghost">
+                                  Abbrechen
+                                </Button>
+                              </DialogClose>
+                              <Button type="submit">Mitglied besetzen</Button>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9"
                             aria-label="Rolle bearbeiten"
                           >
                             <Pencil className="h-4 w-4" />
@@ -457,50 +525,6 @@ export default async function ProduktionsBesetzungPage() {
                       )}
                     </div>
 
-                    <div className="rounded-lg border border-dashed border-border/70 bg-background/50 p-4">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Mitglied zuordnen
-                      </h4>
-                      <form className="mt-3 grid gap-2 md:grid-cols-4" action={assignCharacterCastingAction} method="post">
-                        <input type="hidden" name="characterId" value={character.id} />
-                        <input type="hidden" name="redirectPath" value={currentPath} />
-                        <div className="space-y-1 md:col-span-2">
-                          <label className="text-xs font-medium text-muted-foreground">Mitglied</label>
-                          <select name="userId" className={selectSmallClassName} required>
-                            <option value="">Mitglied auswählen</option>
-                            {users.map((user) => (
-                              <option key={user.id} value={user.id}>
-                                {formatUserName(user)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">Besetzungsart</label>
-                          <select
-                            name="type"
-                            className={selectSmallClassName}
-                            defaultValue={CharacterCastingType.primary}
-                          >
-                            {CASTING_ORDER.map((type) => (
-                              <option key={type} value={type}>
-                                {CASTING_LABELS[type]}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">Notiz</label>
-                          <Input name="notes" maxLength={200} placeholder="optional" />
-                        </div>
-                        <div className="md:col-span-4 flex justify-end">
-                          <Button type="submit" size="sm">
-                            <Plus className="mr-2 h-4 w-4" aria-hidden />
-                            Mitglied besetzen
-                          </Button>
-                        </div>
-                      </form>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
