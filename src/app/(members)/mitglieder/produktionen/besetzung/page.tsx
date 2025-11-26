@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -347,12 +346,7 @@ export default async function ProduktionsBesetzungPage() {
                                 <Textarea name="notes" rows={2} maxLength={500} defaultValue={character.notes ?? ""} />
                               </div>
                             </div>
-                            <DialogFooter className="gap-2 sm:justify-between">
-                              <DialogClose asChild>
-                                <Button type="button" variant="ghost">
-                                  Schließen
-                                </Button>
-                              </DialogClose>
+                            <DialogFooter>
                               <Button type="submit" variant="outline">
                                 Rolle aktualisieren
                               </Button>
