@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createCharacterAction,
@@ -196,7 +196,10 @@ export default async function ProduktionsBesetzungPage() {
       <div className="flex justify-end">
         <Dialog>
           <DialogTrigger asChild>
-            <Button size="sm">Rolle anlegen</Button>
+            <Button size="sm">
+              <Plus className="mr-2 h-4 w-4" aria-hidden />
+              Rolle anlegen
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -463,6 +466,7 @@ export default async function ProduktionsBesetzungPage() {
                         </div>
                         <div className="md:col-span-4 flex justify-end">
                           <Button type="submit" size="sm">
+                            <Plus className="mr-2 h-4 w-4" aria-hidden />
                             Mitglied besetzen
                           </Button>
                         </div>
