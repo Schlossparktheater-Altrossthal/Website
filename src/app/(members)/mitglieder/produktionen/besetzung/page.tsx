@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -447,11 +448,11 @@ export default async function ProduktionsBesetzungPage() {
                         <p className="text-sm text-muted-foreground">Noch keine Besetzung zugeordnet.</p>
                       ) : (
                         sortedCastings.map((casting) => (
-                          <details
+                          <div
                             key={casting.id}
-                            className="rounded-lg border border-border/60 bg-background/80 p-3 text-sm shadow-sm [&_summary::-webkit-details-marker]:hidden"
+                            className="rounded-lg border border-border/60 bg-background/80 p-3 text-sm shadow-sm"
                           >
-                            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
                               <div>
                                 <p className="font-medium">{formatUserName(casting.user)}</p>
                                 <p className="text-xs text-muted-foreground">{CASTING_LABELS[casting.type]}</p>
@@ -460,15 +461,59 @@ export default async function ProduktionsBesetzungPage() {
                                 ) : null}
                               </div>
                               <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  aria-label="Besetzung bearbeiten"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      aria-label="Besetzung bearbeiten"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="sm:max-w-md">
+                                    <DialogHeader>
+                                      <DialogTitle>Besetzung bearbeiten</DialogTitle>
+                                      <DialogDescription>
+                                        Passe Besetzungsart und optionale Notizen für {formatUserName(casting.user)} an.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <form action={updateCharacterCastingAction} method="post" className="grid gap-3">
+                                      <input type="hidden" name="castingId" value={casting.id} />
+                                      <input type="hidden" name="redirectPath" value={currentPath} />
+                                      <div className="space-y-1">
+                                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                          Besetzungsart
+                                        </label>
+                                        <select name="type" defaultValue={casting.type} className={selectSmallClassName}>
+                                          {CASTING_ORDER.map((type) => (
+                                            <option key={type} value={type}>
+                                              {CASTING_LABELS[type]}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                          Notiz
+                                        </label>
+                                        <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
+                                      </div>
+                                      <DialogFooter className="sm:justify-end">
+                                        <DialogClose asChild>
+                                          <Button type="button" variant="ghost">
+                                            Abbrechen
+                                          </Button>
+                                        </DialogClose>
+                                        <Button type="submit" variant="outline">
+                                          Änderungen speichern
+                                        </Button>
+                                      </DialogFooter>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
                                 <form action={removeCharacterCastingAction} method="post">
                                   <input type="hidden" name="castingId" value={casting.id} />
                                   <input type="hidden" name="redirectPath" value={currentPath} />
@@ -483,38 +528,8 @@ export default async function ProduktionsBesetzungPage() {
                                   </Button>
                                 </form>
                               </div>
-                            </summary>
-
-                            <form
-                              action={updateCharacterCastingAction}
-                              method="post"
-                              className="mt-3 grid gap-2 border-t border-border/60 pt-3 md:grid-cols-3"
-                            >
-                              <input type="hidden" name="castingId" value={casting.id} />
-                              <input type="hidden" name="redirectPath" value={currentPath} />
-                              <div className="space-y-1">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                  Besetzungsart
-                                </label>
-                                <select name="type" defaultValue={casting.type} className={selectSmallClassName}>
-                                  {CASTING_ORDER.map((type) => (
-                                    <option key={type} value={type}>
-                                      {CASTING_LABELS[type]}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="space-y-1 md:col-span-2">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                                <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
-                              </div>
-                              <div className="md:col-span-3 flex justify-end">
-                                <Button type="submit" variant="outline" size="sm">
-                                  Änderungen speichern
-                                </Button>
-                              </div>
-                            </form>
-                          </details>
+                            </div>
+                          </div>
                         ))
                       )}
                     </div>
