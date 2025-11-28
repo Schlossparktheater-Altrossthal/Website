@@ -8,7 +8,7 @@ import { EyeOff, Sparkles, Trash2, Undo2, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { ActionDropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -471,7 +471,9 @@ export function DennisDieterEncountersSection() {
                           </span>
 
                           <Card className="group relative space-y-3 rounded-2xl border border-border/50 bg-background/75 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl sm:p-5">
-                            {canModerate ? <DropdownMenu items={moderationItems} className="absolute right-4 top-4" /> : null}
+                            {canModerate ? (
+                              <ActionDropdownMenu items={moderationItems} className="absolute right-4 top-4" />
+                            ) : null}
 
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                               <div className="flex flex-wrap items-center gap-3">

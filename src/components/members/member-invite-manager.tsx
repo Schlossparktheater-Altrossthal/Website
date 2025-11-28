@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { ActionDropdownMenu } from "@/components/ui/dropdown-menu";
 import { ROLE_LABELS, ROLES, sortRoles } from "@/lib/roles";
 import {
   onboardingPathForToken,
@@ -1183,7 +1183,7 @@ export function MemberInviteManager() {
                             </>
                           )}
                         </Button>
-                        <DropdownMenu items={menuItems} className="h-8" />
+                        <ActionDropdownMenu items={menuItems} className="h-8" />
                       </div>
                     </div>
                     {isExpanded && (

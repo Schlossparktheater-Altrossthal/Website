@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { ActionDropdownMenu } from "@/components/ui/dropdown-menu";
 import { EditIcon, TrashIcon } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { deleteRehearsalAction } from "./actions";
@@ -88,11 +88,11 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
             </p>
             <p className="text-xs text-muted-foreground/80">Ort: {rehearsal.location}</p>
           </div>
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenu items={menuItems} align="right" />
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                <ActionDropdownMenu items={menuItems} align="end" />
+              </div>
             </div>
-          </div>
         </div>
       </summary>
     </details>

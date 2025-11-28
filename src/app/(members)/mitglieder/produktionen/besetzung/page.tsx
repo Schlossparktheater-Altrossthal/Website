@@ -74,8 +74,9 @@ type BesetzungSearchParams = {
 export default async function ProduktionsBesetzungPage({
   searchParams,
 }: {
-  searchParams?: BesetzungSearchParams;
+  searchParams?: Promise<BesetzungSearchParams>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
@@ -175,10 +176,10 @@ export default async function ProduktionsBesetzungPage({
   const currentPath = "/mitglieder/produktionen/besetzung";
   const characterCount = show.characters.length;
   const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
-  const searchQuery = (searchParams?.q ?? "").trim();
-  const personFilter = searchParams?.person ?? "";
-  const sceneFilter = searchParams?.scene ?? "";
-  const sortOrder = searchParams?.sort ?? "order";
+  const searchQuery = (resolvedSearchParams?.q ?? "").trim();
+  const personFilter = resolvedSearchParams?.person ?? "";
+  const sceneFilter = resolvedSearchParams?.scene ?? "";
+  const sortOrder = resolvedSearchParams?.sort ?? "order";
   const characterSceneCounts = new Map<string, number>();
 
   show.scenes?.forEach((scene) => {
