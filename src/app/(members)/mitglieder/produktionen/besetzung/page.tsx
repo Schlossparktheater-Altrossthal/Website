@@ -267,7 +267,7 @@ export default async function ProduktionsBesetzungPage({
             {headerStats.map((stat) => (
               <div
                 key={stat.label}
-                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-card/70 px-4 py-3 shadow-sm"
+                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-card/60 px-4 py-3 shadow-sm"
               >
                 <div className="space-y-1">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
@@ -282,13 +282,13 @@ export default async function ProduktionsBesetzungPage({
               </div>
             ))}
           </div>
-          <div className="flex flex-col items-stretch gap-2 sm:items-end">
-            <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
+          <div className="flex w-full flex-col items-stretch gap-2">
+            <Button asChild size="sm" variant="outline" className="w-full">
               <Link href="/mitglieder/produktionen/szenen">Zu den Szenen</Link>
             </Button>
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="sm" className="w-full sm:w-auto">
+                <Button size="sm" className="w-full">
                   Neue Rolle
                 </Button>
               </DialogTrigger>
