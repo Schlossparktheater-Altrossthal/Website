@@ -472,7 +472,7 @@ export default async function ProduktionsBesetzungPage() {
                   </CardHeader>
 
                   <CardContent className="space-y-3 bg-card/40 px-3 py-3">
-                    <details className="group rounded-lg border border-border/60 bg-muted/40">
+                    <details className="group rounded-lg border border-border/60 bg-background/50">
                       <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-foreground">
                         <span>Besetzung</span>
                         <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
