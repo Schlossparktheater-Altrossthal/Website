@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { BadgeCheck, ChevronDown, Sparkles, UserRoundCheck, Users, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createCharacterAction,
@@ -155,9 +155,24 @@ export default async function ProduktionsBesetzungPage() {
   const characterCount = show.characters.length;
   const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
   const headerStats = [
-    { label: "Rollen", value: characterCount, hint: "Angelegte Figuren" },
-    { label: "Besetzungen", value: castingCount, hint: "Zuordnungen im Ensemble" },
-    { label: "Mitglieder", value: users.length, hint: "Verfügbare Personen" },
+    {
+      label: "Rollen",
+      value: characterCount,
+      hint: "Angelegte Figuren",
+      icon: <Sparkles className="h-4 w-4" aria-hidden />,
+    },
+    {
+      label: "Besetzungen",
+      value: castingCount,
+      hint: "Zuordnungen im Ensemble",
+      icon: <BadgeCheck className="h-4 w-4" aria-hidden />,
+    },
+    {
+      label: "Mitglieder",
+      value: users.length,
+      hint: "Verfügbare Personen",
+      icon: <Users className="h-4 w-4" aria-hidden />,
+    },
   ];
 
   return (
@@ -168,22 +183,25 @@ export default async function ProduktionsBesetzungPage() {
         breadcrumbs={breadcrumbs}
       />
 
-      <div className="rounded-xl border border-border/70 bg-card/60 p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-2 text-sm">
+      <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {headerStats.map((stat) => (
-              <span
+              <div
                 key={stat.label}
-                className="inline-flex min-w-[200px] flex-1 items-start justify-between gap-3 rounded-md border border-border/60 bg-background/80 px-3 py-2"
+                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
               >
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</span>
-                <div className="text-right">
-                  <p className="text-base font-semibold text-foreground">{stat.value}</p>
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+                  <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
                   {stat.hint ? (
-                    <p className="text-[11px] text-muted-foreground">{stat.hint}</p>
+                    <p className="text-xs text-muted-foreground">{stat.hint}</p>
                   ) : null}
                 </div>
-              </span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-background/70 text-muted-foreground">
+                  {stat.icon}
+                </span>
+              </div>
             ))}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
@@ -256,7 +274,7 @@ export default async function ProduktionsBesetzungPage() {
         </Dialog>
       </div>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <section className="grid gap-4 xl:grid-cols-2">
         {show.characters.length === 0 ? (
           <Card>
             <CardContent>
@@ -274,273 +292,300 @@ export default async function ProduktionsBesetzungPage() {
             });
 
             return (
-              <Card key={character.id} className="space-y-5">
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <CardTitle className="text-xl font-semibold">{character.name}</CardTitle>
-                      {character.shortName ? (
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{character.shortName}</p>
-                      ) : null}
-                      {character.description ? (
-                        <p className="text-sm text-muted-foreground">{character.description}</p>
-                      ) : null}
-                      {character.notes ? (
-                        <p className="text-xs text-muted-foreground">Notiz: {character.notes}</p>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9"
-                            aria-label="Besetzung hinzufügen"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Mitglied zuordnen</DialogTitle>
-                            <DialogDescription>
-                              Weise dieser Rolle ein Mitglied zu und lege Besetzungsart sowie optionale Notizen fest.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form className="grid gap-3" action={assignCharacterCastingAction} method="post">
-                            <input type="hidden" name="characterId" value={character.id} />
-                            <input type="hidden" name="redirectPath" value={currentPath} />
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Mitglied
-                              </label>
-                              <select name="userId" className={selectSmallClassName} required>
-                                <option value="">Mitglied auswählen</option>
-                                {users.map((user) => (
-                                  <option key={user.id} value={user.id}>
-                                    {formatUserName(user)}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Besetzungsart
-                              </label>
-                              <select
-                                name="type"
-                                className={selectSmallClassName}
-                                defaultValue={CharacterCastingType.primary}
-                              >
-                                {CASTING_ORDER.map((type) => (
-                                  <option key={type} value={type}>
-                                    {CASTING_LABELS[type]}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Notiz
-                              </label>
-                              <Input name="notes" maxLength={200} placeholder="optional" />
-                            </div>
-                            <DialogFooter className="sm:justify-end">
-                              <DialogClose asChild>
-                                <Button type="button" variant="ghost">
-                                  Abbrechen
+                <Card
+                  key={character.id}
+                  className="overflow-hidden border border-border/70 bg-card/70 shadow-sm"
+                >
+                  <CardHeader className="space-y-3 border-b border-border/60 bg-background/50 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-1 items-start gap-3">
+                        <span
+                          className="mt-1 h-10 w-1.5 rounded-full"
+                          style={{ backgroundColor: character.color ?? "#8b5cf6" }}
+                          aria-hidden
+                        />
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <CardTitle className="text-lg font-semibold">{character.name}</CardTitle>
+                            {character.shortName ? (
+                              <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                {character.shortName}
+                              </span>
+                            ) : null}
+                          </div>
+                          {character.description ? (
+                            <p className="text-sm text-muted-foreground">{character.description}</p>
+                          ) : null}
+                          {character.notes ? (
+                            <p className="text-xs text-muted-foreground">Notiz: {character.notes}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9"
+                              aria-label="Besetzung hinzufügen"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Mitglied zuordnen</DialogTitle>
+                              <DialogDescription>
+                                Weise dieser Rolle ein Mitglied zu und lege Besetzungsart sowie optionale Notizen fest.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form className="grid gap-3" action={assignCharacterCastingAction} method="post">
+                              <input type="hidden" name="characterId" value={character.id} />
+                              <input type="hidden" name="redirectPath" value={currentPath} />
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Mitglied
+                                </label>
+                                <select name="userId" className={selectSmallClassName} required>
+                                  <option value="">Mitglied auswählen</option>
+                                  {users.map((user) => (
+                                    <option key={user.id} value={user.id}>
+                                      {formatUserName(user)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Besetzungsart
+                                </label>
+                                <select
+                                  name="type"
+                                  className={selectSmallClassName}
+                                  defaultValue={CharacterCastingType.primary}
+                                >
+                                  {CASTING_ORDER.map((type) => (
+                                    <option key={type} value={type}>
+                                      {CASTING_LABELS[type]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Notiz
+                                </label>
+                                <Input name="notes" maxLength={200} placeholder="optional" />
+                              </div>
+                              <DialogFooter className="sm:justify-end">
+                                <DialogClose asChild>
+                                  <Button type="button" variant="ghost">
+                                    Abbrechen
+                                  </Button>
+                                </DialogClose>
+                                <Button type="submit">Mitglied besetzen</Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9"
+                              aria-label="Rolle bearbeiten"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>Rolle bearbeiten</DialogTitle>
+                              <DialogDescription>
+                                Aktualisiere die Stammdaten der Rolle und speichere deine Änderungen.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form
+                              action={updateCharacterAction}
+                              method="post"
+                              className="grid gap-3"
+                            >
+                              <input type="hidden" name="characterId" value={character.id} />
+                              <input type="hidden" name="redirectPath" value={currentPath} />
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
+                                  <Input name="name" defaultValue={character.name} minLength={2} maxLength={120} required />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kurzname</label>
+                                  <Input name="shortName" defaultValue={character.shortName ?? ""} maxLength={40} />
+                                </div>
+                                <div className="space-y-1 md:col-span-2">
+                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
+                                  <Textarea name="description" rows={2} maxLength={500} defaultValue={character.description ?? ""} />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sortierung</label>
+                                  <Input type="number" name="order" defaultValue={character.order ?? 0} min={0} max={9999} />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Farbe</label>
+                                  <input
+                                    type="color"
+                                    name="color"
+                                    defaultValue={character.color ?? "#7c3aed"}
+                                    className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
+                                  />
+                                </div>
+                                <div className="space-y-1 md:col-span-2">
+                                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
+                                  <Textarea name="notes" rows={2} maxLength={500} defaultValue={character.notes ?? ""} />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button type="submit" variant="outline">
+                                  Rolle aktualisieren
                                 </Button>
-                              </DialogClose>
-                              <Button type="submit">Mitglied besetzen</Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                      <Dialog>
-                        <DialogTrigger asChild>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                        <form action={deleteCharacterAction} method="post">
+                          <input type="hidden" name="characterId" value={character.id} />
+                          <input type="hidden" name="redirectPath" value={currentPath} />
                           <Button
-                            type="button"
+                            type="submit"
                             variant="ghost"
                             size="icon"
                             className="h-9 w-9"
-                            aria-label="Rolle bearbeiten"
+                            aria-label="Rolle entfernen"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>Rolle bearbeiten</DialogTitle>
-                            <DialogDescription>
-                              Aktualisiere die Stammdaten der Rolle und speichere deine Änderungen.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form
-                            action={updateCharacterAction}
-                            method="post"
-                            className="grid gap-3"
-                          >
-                            <input type="hidden" name="characterId" value={character.id} />
-                            <input type="hidden" name="redirectPath" value={currentPath} />
-                            <div className="grid gap-3 md:grid-cols-2">
-                              <div className="space-y-1">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
-                                <Input name="name" defaultValue={character.name} minLength={2} maxLength={120} required />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kurzname</label>
-                                <Input name="shortName" defaultValue={character.shortName ?? ""} maxLength={40} />
-                              </div>
-                              <div className="space-y-1 md:col-span-2">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
-                                <Textarea name="description" rows={2} maxLength={500} defaultValue={character.description ?? ""} />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sortierung</label>
-                                <Input type="number" name="order" defaultValue={character.order ?? 0} min={0} max={9999} />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Farbe</label>
-                                <input
-                                  type="color"
-                                  name="color"
-                                  defaultValue={character.color ?? "#7c3aed"}
-                                  className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-                                />
-                              </div>
-                              <div className="space-y-1 md:col-span-2">
-                                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                                <Textarea name="notes" rows={2} maxLength={500} defaultValue={character.notes ?? ""} />
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button type="submit" variant="outline">
-                                Rolle aktualisieren
-                              </Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                      <form action={deleteCharacterAction} method="post">
-                        <input type="hidden" name="characterId" value={character.id} />
-                        <input type="hidden" name="redirectPath" value={currentPath} />
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9"
-                          aria-label="Rolle entfernen"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </form>
+                        </form>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-1">
+                        <UserRoundCheck className="h-3.5 w-3.5" aria-hidden /> {sortedCastings.length} Besetzungen
+                      </span>
+                      {character.description ? null : (
+                        <span className="rounded-full bg-muted/50 px-2 py-1">Ohne Beschreibung</span>
+                      )}
+                    </div>
+                  </CardHeader>
 
-                <CardContent className="space-y-5">
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold">Besetzung</h3>
-                    <div className="space-y-3">
-                      {sortedCastings.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Noch keine Besetzung zugeordnet.</p>
-                      ) : (
-                        sortedCastings.map((casting) => (
-                          <div
-                            key={casting.id}
-                            className="rounded-lg border border-border/60 bg-background/80 p-3 text-sm shadow-sm"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <div>
-                                <p className="font-medium">{formatUserName(casting.user)}</p>
-                                <p className="text-xs text-muted-foreground">{CASTING_LABELS[casting.type]}</p>
-                                {casting.notes ? (
-                                  <p className="text-xs text-muted-foreground">Notiz: {casting.notes}</p>
-                                ) : null}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Dialog>
-                                  <DialogTrigger asChild>
+                  <CardContent className="space-y-4 bg-card/40 px-4 py-4">
+                    <details className="group rounded-lg border border-border/60 bg-muted/40">
+                      <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-foreground">
+                        <span>Besetzung</span>
+                        <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+                          {sortedCastings.length > 0 ? `${sortedCastings.length} Zuordnungen` : "Noch keine Zuordnungen"}
+                          <ChevronDown className="h-4 w-4 transition duration-200 group-open:rotate-180" aria-hidden />
+                        </span>
+                      </summary>
+                      <div className="space-y-3 border-t border-border/60 px-3 py-3">
+                        {sortedCastings.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Noch keine Besetzung zugeordnet.</p>
+                        ) : (
+                          sortedCastings.map((casting) => (
+                            <div
+                              key={casting.id}
+                              className="rounded-lg border border-border/70 bg-background/80 p-3 text-sm shadow-sm"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                  <p className="font-medium">{formatUserName(casting.user)}</p>
+                                  <p className="text-xs text-muted-foreground">{CASTING_LABELS[casting.type]}</p>
+                                  {casting.notes ? (
+                                    <p className="text-xs text-muted-foreground">Notiz: {casting.notes}</p>
+                                  ) : null}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        aria-label="Besetzung bearbeiten"
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-md">
+                                      <DialogHeader>
+                                        <DialogTitle>Besetzung bearbeiten</DialogTitle>
+                                        <DialogDescription>
+                                          Passe Besetzungsart und optionale Notizen für {formatUserName(casting.user)} an.
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <form action={updateCharacterCastingAction} method="post" className="grid gap-3">
+                                        <input type="hidden" name="castingId" value={casting.id} />
+                                        <input type="hidden" name="redirectPath" value={currentPath} />
+                                        <div className="space-y-1">
+                                          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                            Besetzungsart
+                                          </label>
+                                          <select name="type" defaultValue={casting.type} className={selectSmallClassName}>
+                                            {CASTING_ORDER.map((type) => (
+                                              <option key={type} value={type}>
+                                                {CASTING_LABELS[type]}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                            Notiz
+                                          </label>
+                                          <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
+                                        </div>
+                                        <DialogFooter className="sm:justify-end">
+                                          <DialogClose asChild>
+                                            <Button type="button" variant="ghost">
+                                              Abbrechen
+                                            </Button>
+                                          </DialogClose>
+                                          <Button type="submit" variant="outline">
+                                            Änderungen speichern
+                                          </Button>
+                                        </DialogFooter>
+                                      </form>
+                                    </DialogContent>
+                                  </Dialog>
+                                  <form action={removeCharacterCastingAction} method="post">
+                                    <input type="hidden" name="castingId" value={casting.id} />
+                                    <input type="hidden" name="redirectPath" value={currentPath} />
                                     <Button
-                                      type="button"
+                                      type="submit"
                                       variant="ghost"
                                       size="icon"
                                       className="h-8 w-8"
-                                      aria-label="Besetzung bearbeiten"
+                                      aria-label="Besetzung entfernen"
                                     >
-                                      <Pencil className="h-4 w-4" />
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="sm:max-w-md">
-                                    <DialogHeader>
-                                      <DialogTitle>Besetzung bearbeiten</DialogTitle>
-                                      <DialogDescription>
-                                        Passe Besetzungsart und optionale Notizen für {formatUserName(casting.user)} an.
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <form action={updateCharacterCastingAction} method="post" className="grid gap-3">
-                                      <input type="hidden" name="castingId" value={casting.id} />
-                                      <input type="hidden" name="redirectPath" value={currentPath} />
-                                      <div className="space-y-1">
-                                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                          Besetzungsart
-                                        </label>
-                                        <select name="type" defaultValue={casting.type} className={selectSmallClassName}>
-                                          {CASTING_ORDER.map((type) => (
-                                            <option key={type} value={type}>
-                                              {CASTING_LABELS[type]}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                          Notiz
-                                        </label>
-                                        <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
-                                      </div>
-                                      <DialogFooter className="sm:justify-end">
-                                        <DialogClose asChild>
-                                          <Button type="button" variant="ghost">
-                                            Abbrechen
-                                          </Button>
-                                        </DialogClose>
-                                        <Button type="submit" variant="outline">
-                                          Änderungen speichern
-                                        </Button>
-                                      </DialogFooter>
-                                    </form>
-                                  </DialogContent>
-                                </Dialog>
-                                <form action={removeCharacterCastingAction} method="post">
-                                  <input type="hidden" name="castingId" value={casting.id} />
-                                  <input type="hidden" name="redirectPath" value={currentPath} />
-                                  <Button
-                                    type="submit"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    aria-label="Besetzung entfernen"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </form>
+                                  </form>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </section>
+                            ))
+                          )}
+                        </div>
+                      </details>
+                    </CardContent>
+                  </Card>
+                );
+              })
+          )}
+        </section>
     </div>
   );
 }
