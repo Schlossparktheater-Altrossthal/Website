@@ -208,73 +208,67 @@ export default async function ProduktionsBesetzungPage() {
             <Button asChild size="sm" variant="outline">
               <Link href="/mitglieder/produktionen/szenen">Zu den Szenen</Link>
             </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm">Rolle anlegen</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Neue Rolle anlegen</DialogTitle>
+                  <DialogDescription>
+                    Füge Figuren hinzu und definiere Reihenfolge, Farbe sowie optionale Notizen.
+                  </DialogDescription>
+                </DialogHeader>
+                <form action={createCharacterAction} method="post" className="grid gap-6">
+                  <input type="hidden" name="showId" value={show.id} />
+                  <input type="hidden" name="redirectPath" value={currentPath} />
+                  <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-2">
+                    <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Basisdaten
+                    </legend>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Name</label>
+                      <Input name="name" placeholder="z.B. Protagonist" minLength={2} maxLength={120} required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Kurzname</label>
+                      <Input name="shortName" placeholder="Kurzlabel" maxLength={40} />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-sm font-medium">Beschreibung</label>
+                      <Textarea name="description" rows={2} maxLength={500} placeholder="Charakterbeschreibung" />
+                    </div>
+                  </fieldset>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Farbe</label>
+                      <input
+                        type="color"
+                        name="color"
+                        defaultValue="#7c3aed"
+                        className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Sortierung</label>
+                      <Input type="number" name="order" min={0} max={9999} placeholder="0" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Notiz</label>
+                    <Textarea name="notes" rows={2} maxLength={500} placeholder="Interne Notiz" />
+                  </div>
+                  <DialogFooter className="pt-2 sm:justify-end">
+                    <Button type="submit">Rolle speichern</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" aria-hidden />
-              Rolle anlegen
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Neue Rolle anlegen</DialogTitle>
-              <DialogDescription>
-                Füge Figuren hinzu und definiere Reihenfolge, Farbe sowie optionale Notizen.
-              </DialogDescription>
-            </DialogHeader>
-            <form action={createCharacterAction} method="post" className="grid gap-6">
-              <input type="hidden" name="showId" value={show.id} />
-              <input type="hidden" name="redirectPath" value={currentPath} />
-              <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-2">
-                <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Basisdaten
-                </legend>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Name</label>
-                  <Input name="name" placeholder="z.B. Protagonist" minLength={2} maxLength={120} required />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Kurzname</label>
-                  <Input name="shortName" placeholder="Kurzlabel" maxLength={40} />
-                </div>
-                <div className="space-y-1 md:col-span-2">
-                  <label className="text-sm font-medium">Beschreibung</label>
-                  <Textarea name="description" rows={2} maxLength={500} placeholder="Charakterbeschreibung" />
-                </div>
-              </fieldset>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Farbe</label>
-                  <input
-                    type="color"
-                    name="color"
-                    defaultValue="#7c3aed"
-                    className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Sortierung</label>
-                  <Input type="number" name="order" min={0} max={9999} placeholder="0" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Notiz</label>
-                <Textarea name="notes" rows={2} maxLength={500} placeholder="Interne Notiz" />
-              </div>
-              <DialogFooter className="pt-2 sm:justify-end">
-                <Button type="submit">Rolle speichern</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         {show.characters.length === 0 ? (
           <Card>
             <CardContent>
@@ -292,11 +286,8 @@ export default async function ProduktionsBesetzungPage() {
             });
 
             return (
-                <Card
-                  key={character.id}
-                  className="overflow-hidden border border-border/70 bg-card/70 shadow-sm"
-                >
-                  <CardHeader className="space-y-3 border-b border-border/60 bg-background/50 px-4 py-3">
+                <Card key={character.id} className="overflow-hidden border border-border/70 bg-card/70 shadow-sm">
+                  <CardHeader className="space-y-2 border-b border-border/60 bg-background/50 px-3 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex flex-1 items-start gap-3">
                         <span
@@ -480,7 +471,7 @@ export default async function ProduktionsBesetzungPage() {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="space-y-4 bg-card/40 px-4 py-4">
+                  <CardContent className="space-y-3 bg-card/40 px-3 py-3">
                     <details className="group rounded-lg border border-border/60 bg-muted/40">
                       <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-foreground">
                         <span>Besetzung</span>
