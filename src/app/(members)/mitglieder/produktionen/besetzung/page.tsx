@@ -98,53 +98,79 @@ export default async function ProduktionsBesetzungPage() {
     );
   }
 
-  const [users, show] = await Promise.all([
-    prisma.user.findMany({
-      where: {
-        deactivatedAt: null,
-        productionMemberships: {
-          some: {
-            showId: activeProduction.id,
-            OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+  let users;
+  let show;
+
+  try {
+    [users, show] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          deactivatedAt: null,
+          productionMemberships: {
+            some: {
+              showId: activeProduction.id,
+              OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+            },
           },
         },
-      },
-      orderBy: [
-        { name: "asc" },
-        { email: "asc" },
-      ],
-      select: { id: true, firstName: true, lastName: true, name: true, email: true },
-    }),
-    prisma.show.findUnique({
-      where: { id: activeProduction.id },
-      select: {
-        id: true,
-        title: true,
-        year: true,
-        synopsis: true,
-        characters: {
-          orderBy: { order: "asc" },
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-            description: true,
-            notes: true,
-            color: true,
-            order: true,
-            castings: {
-              select: {
-                id: true,
-                type: true,
-                notes: true,
-                user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
+        orderBy: [
+          { name: "asc" },
+          { email: "asc" },
+        ],
+        select: { id: true, firstName: true, lastName: true, name: true, email: true },
+      }),
+      prisma.show.findUnique({
+        where: { id: activeProduction.id },
+        select: {
+          id: true,
+          title: true,
+          year: true,
+          synopsis: true,
+          characters: {
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              name: true,
+              shortName: true,
+              description: true,
+              notes: true,
+              color: true,
+              order: true,
+              castings: {
+                select: {
+                  id: true,
+                  type: true,
+                  notes: true,
+                  user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
+                },
               },
             },
           },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
+  } catch (error) {
+    console.error("Failed to load casting workspace", error);
+    return (
+      <div className="space-y-6">
+        <ProductionWorkspaceHeader
+          title="Rollen &amp; Besetzungen"
+          description="Erstelle neue Figuren, pflege Beschreibungen und ordne Ensemble-Mitglieder als Primär-, Alternate- oder Cover-Besetzung zu."
+          activeWorkspace="casting"
+          production={activeProduction}
+          actions={headerActions}
+        />
+        <Card className="border-destructive/60 bg-destructive/5">
+          <CardContent className="space-y-2 p-4 text-sm">
+            <p className="font-medium text-destructive">Die Besetzungen konnten nicht geladen werden.</p>
+            <p className="text-muted-foreground">
+              Bitte aktualisiere die Seite oder wähle die aktive Produktion in der Übersicht neu aus.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!show) {
     return (
