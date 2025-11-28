@@ -9,6 +9,7 @@ import { getUserDisplayName } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
-import { BadgeCheck, ChevronDown, Sparkles, UserRoundCheck, Users, Pencil, Plus, Trash2 } from "lucide-react";
+import { BadgeCheck, Check, ChevronDown, Filter, Pencil, Plus, Search, Sparkles, Trash2, UserRoundCheck, Users, ArrowUpDown } from "lucide-react";
 
 import {
   createCharacterAction,
@@ -63,7 +64,18 @@ function formatUserName(user?: DisplayUser | null) {
   return getUserDisplayName(user, "Unbekannt");
 }
 
-export default async function ProduktionsBesetzungPage() {
+type BesetzungSearchParams = {
+  q?: string;
+  person?: string;
+  scene?: string;
+  sort?: "order" | "name" | "scene";
+};
+
+export default async function ProduktionsBesetzungPage({
+  searchParams,
+}: {
+  searchParams?: BesetzungSearchParams;
+}) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
@@ -139,6 +151,15 @@ export default async function ProduktionsBesetzungPage() {
             },
           },
         },
+        scenes: {
+          orderBy: { sequence: "asc" },
+          select: {
+            id: true,
+            identifier: true,
+            title: true,
+            characters: { select: { characterId: true } },
+          },
+        },
       },
     }),
   ]);
@@ -154,6 +175,62 @@ export default async function ProduktionsBesetzungPage() {
   const currentPath = "/mitglieder/produktionen/besetzung";
   const characterCount = show.characters.length;
   const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
+  const searchQuery = (searchParams?.q ?? "").trim();
+  const personFilter = searchParams?.person ?? "";
+  const sceneFilter = searchParams?.scene ?? "";
+  const sortOrder = searchParams?.sort ?? "order";
+  const characterSceneCounts = new Map<string, number>();
+
+  show.scenes?.forEach((scene) => {
+    scene.characters.forEach((sceneCharacter) => {
+      characterSceneCounts.set(
+        sceneCharacter.characterId,
+        (characterSceneCounts.get(sceneCharacter.characterId) ?? 0) + 1,
+      );
+    });
+  });
+
+  const filteredCharacters = show.characters.filter((character) => {
+    const matchesQuery = searchQuery
+      ? [character.name, character.shortName]
+          .filter(Boolean)
+          .some((value) => value?.toLowerCase().includes(searchQuery.toLowerCase()))
+      : true;
+
+    const matchesPerson = personFilter
+      ? character.castings.some((casting) => casting.user?.id === personFilter)
+      : true;
+
+    const matchesScene = sceneFilter
+      ? show.scenes?.some((scene) =>
+          scene.id === sceneFilter && scene.characters.some((sceneCharacter) => sceneCharacter.characterId === character.id),
+        ) ?? false
+      : true;
+
+    return matchesQuery && matchesPerson && matchesScene;
+  });
+
+  const sortedCharacters = [...filteredCharacters].sort((a, b) => {
+    if (sortOrder === "name") {
+      return a.name.localeCompare(b.name, "de");
+    }
+
+    if (sortOrder === "scene") {
+      const scenesA = characterSceneCounts.get(a.id) ?? 0;
+      const scenesB = characterSceneCounts.get(b.id) ?? 0;
+      if (scenesA === scenesB) {
+        return a.name.localeCompare(b.name, "de");
+      }
+      return scenesB - scenesA;
+    }
+
+    return (a.order ?? 0) - (b.order ?? 0);
+  });
+
+  const sceneOptions = show.scenes?.map((scene) => ({
+    id: scene.id,
+    label: scene.title ?? scene.identifier ?? "Szene", 
+  }));
   const headerStats = [
     {
       label: "Rollen",
@@ -268,6 +345,118 @@ export default async function ProduktionsBesetzungPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm">
+        <form className="flex flex-1 flex-wrap items-center gap-2" method="get">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input
+              name="q"
+              defaultValue={searchQuery}
+              placeholder="Rollen durchsuchen"
+              className="pl-9"
+              type="search"
+              aria-label="Rollen suchen"
+            />
+          </div>
+          <input type="hidden" name="person" value={personFilter} />
+          <input type="hidden" name="scene" value={sceneFilter} />
+          <input type="hidden" name="sort" value={sortOrder} />
+          <Button type="submit" size="sm" variant="outline">
+            Suchen
+          </Button>
+        </form>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-10 w-10" aria-label="Sortierung anpassen">
+              <ArrowUpDown className="h-4 w-4" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuLabel>Sortierung</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {[
+              { label: "Standard (Reihenfolge)", value: "order" },
+              { label: "Rollennamen A-Z", value: "name" },
+              { label: "Szenenanzahl (absteigend)", value: "scene" },
+            ].map((option) => (
+              <form key={option.value} method="get" className="w-full">
+                <input type="hidden" name="q" value={searchQuery} />
+                <input type="hidden" name="person" value={personFilter} />
+                <input type="hidden" name="scene" value={sceneFilter} />
+                <DropdownMenuItem asChild>
+                  <button type="submit" name="sort" value={option.value} className="flex w-full items-center justify-between">
+                    <span>{option.label}</span>
+                    {sortOrder === option.value ? <Check className="h-4 w-4" aria-hidden /> : null}
+                  </button>
+                </DropdownMenuItem>
+              </form>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-10 w-10" aria-label="Filter öffnen">
+              <Filter className="h-4 w-4" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuLabel>Nach Personen filtern</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <form method="get" className="w-full">
+              <input type="hidden" name="q" value={searchQuery} />
+              <input type="hidden" name="scene" value={sceneFilter} />
+              <input type="hidden" name="sort" value={sortOrder} />
+              <DropdownMenuItem asChild>
+                <button type="submit" name="person" value="" className="flex w-full items-center justify-between">
+                  <span>Alle Personen</span>
+                  {personFilter === "" ? <Check className="h-4 w-4" aria-hidden /> : null}
+                </button>
+              </DropdownMenuItem>
+            </form>
+            {users.map((user) => (
+              <form key={user.id} method="get" className="w-full">
+                <input type="hidden" name="q" value={searchQuery} />
+                <input type="hidden" name="scene" value={sceneFilter} />
+                <input type="hidden" name="sort" value={sortOrder} />
+                <DropdownMenuItem asChild>
+                  <button type="submit" name="person" value={user.id} className="flex w-full items-center justify-between">
+                    <span>{formatUserName(user)}</span>
+                    {personFilter === user.id ? <Check className="h-4 w-4" aria-hidden /> : null}
+                  </button>
+                </DropdownMenuItem>
+              </form>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Nach Szenen filtern</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <form method="get" className="w-full">
+              <input type="hidden" name="q" value={searchQuery} />
+              <input type="hidden" name="person" value={personFilter} />
+              <input type="hidden" name="sort" value={sortOrder} />
+              <DropdownMenuItem asChild>
+                <button type="submit" name="scene" value="" className="flex w-full items-center justify-between">
+                  <span>Alle Szenen</span>
+                  {sceneFilter === "" ? <Check className="h-4 w-4" aria-hidden /> : null}
+                </button>
+              </DropdownMenuItem>
+            </form>
+            {sceneOptions?.map((scene) => (
+              <form key={scene.id} method="get" className="w-full">
+                <input type="hidden" name="q" value={searchQuery} />
+                <input type="hidden" name="person" value={personFilter} />
+                <input type="hidden" name="sort" value={sortOrder} />
+                <DropdownMenuItem asChild>
+                  <button type="submit" name="scene" value={scene.id} className="flex w-full items-center justify-between">
+                    <span>{scene.label}</span>
+                    {sceneFilter === scene.id ? <Check className="h-4 w-4" aria-hidden /> : null}
+                  </button>
+                </DropdownMenuItem>
+              </form>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <section className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         {show.characters.length === 0 ? (
           <Card>
@@ -277,8 +466,16 @@ export default async function ProduktionsBesetzungPage() {
               </p>
             </CardContent>
           </Card>
+        ) : sortedCharacters.length === 0 ? (
+          <Card>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Keine Rollen entsprechen derzeit den Such- und Filtereinstellungen.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          show.characters.map((character) => {
+          sortedCharacters.map((character) => {
             const sortedCastings = [...character.castings].sort((a, b) => {
               const orderA = CASTING_ORDER.indexOf(a.type);
               const orderB = CASTING_ORDER.indexOf(b.type);
@@ -286,8 +483,8 @@ export default async function ProduktionsBesetzungPage() {
             });
 
             return (
-                <Card key={character.id} className="overflow-hidden border border-border/70 bg-card/70 shadow-sm">
-                  <CardHeader className="space-y-2 border-b border-border/60 bg-background/50 px-3 py-3">
+              <Card key={character.id} className="overflow-hidden border border-border/70 bg-card/70 shadow-sm">
+                <CardHeader className="space-y-2 border-b border-border/60 bg-background/50 px-3 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex flex-1 items-start gap-3">
                         <span
