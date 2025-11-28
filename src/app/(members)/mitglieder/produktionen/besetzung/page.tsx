@@ -346,17 +346,126 @@ export default async function ProduktionsBesetzungPage({
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm">
-        <form className="flex flex-1 flex-wrap items-center gap-2" method="get">
-          <div className="relative min-w-[240px] flex-1">
+        <form className="flex w-full flex-wrap items-center gap-2" method="get">
+          <div className="relative min-w-[260px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
               name="q"
               defaultValue={searchQuery}
               placeholder="Rollen durchsuchen"
-              className="pl-9"
+              className="pl-9 pr-24"
               type="search"
               aria-label="Rollen suchen"
             />
+            <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="Sortierung anpassen"
+                  >
+                    <ArrowUpDown className="h-4 w-4" aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-60">
+                  <DropdownMenuLabel>Sortierung</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {[
+                    { label: "Standard (Reihenfolge)", value: "order" },
+                    { label: "Rollennamen A-Z", value: "name" },
+                    { label: "Szenenanzahl (absteigend)", value: "scene" },
+                  ].map((option) => (
+                    <form key={option.value} method="get" className="w-full">
+                      <input type="hidden" name="q" value={searchQuery} />
+                      <input type="hidden" name="person" value={personFilter} />
+                      <input type="hidden" name="scene" value={sceneFilter} />
+                      <DropdownMenuItem asChild>
+                        <button
+                          type="submit"
+                          name="sort"
+                          value={option.value}
+                          className="flex w-full items-center justify-between"
+                        >
+                          <span>{option.label}</span>
+                          {sortOrder === option.value ? <Check className="h-4 w-4" aria-hidden /> : null}
+                        </button>
+                      </DropdownMenuItem>
+                    </form>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="Filter öffnen"
+                  >
+                    <Filter className="h-4 w-4" aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72">
+                  <DropdownMenuLabel>Nach Personen filtern</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <form method="get" className="w-full">
+                    <input type="hidden" name="q" value={searchQuery} />
+                    <input type="hidden" name="scene" value={sceneFilter} />
+                    <input type="hidden" name="sort" value={sortOrder} />
+                    <DropdownMenuItem asChild>
+                      <button type="submit" name="person" value="" className="flex w-full items-center justify-between">
+                        <span>Alle Personen</span>
+                        {personFilter === "" ? <Check className="h-4 w-4" aria-hidden /> : null}
+                      </button>
+                    </DropdownMenuItem>
+                  </form>
+                  {users.map((user) => (
+                    <form key={user.id} method="get" className="w-full">
+                      <input type="hidden" name="q" value={searchQuery} />
+                      <input type="hidden" name="scene" value={sceneFilter} />
+                      <input type="hidden" name="sort" value={sortOrder} />
+                      <DropdownMenuItem asChild>
+                        <button type="submit" name="person" value={user.id} className="flex w-full items-center justify-between">
+                          <span>{formatUserName(user)}</span>
+                          {personFilter === user.id ? <Check className="h-4 w-4" aria-hidden /> : null}
+                        </button>
+                      </DropdownMenuItem>
+                    </form>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Nach Szenen filtern</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <form method="get" className="w-full">
+                    <input type="hidden" name="q" value={searchQuery} />
+                    <input type="hidden" name="person" value={personFilter} />
+                    <input type="hidden" name="sort" value={sortOrder} />
+                    <DropdownMenuItem asChild>
+                      <button type="submit" name="scene" value="" className="flex w-full items-center justify-between">
+                        <span>Alle Szenen</span>
+                        {sceneFilter === "" ? <Check className="h-4 w-4" aria-hidden /> : null}
+                      </button>
+                    </DropdownMenuItem>
+                  </form>
+                  {sceneOptions?.map((scene) => (
+                    <form key={scene.id} method="get" className="w-full">
+                      <input type="hidden" name="q" value={searchQuery} />
+                      <input type="hidden" name="person" value={personFilter} />
+                      <input type="hidden" name="sort" value={sortOrder} />
+                      <DropdownMenuItem asChild>
+                        <button type="submit" name="scene" value={scene.id} className="flex w-full items-center justify-between">
+                          <span>{scene.label}</span>
+                          {sceneFilter === scene.id ? <Check className="h-4 w-4" aria-hidden /> : null}
+                        </button>
+                      </DropdownMenuItem>
+                    </form>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           <input type="hidden" name="person" value={personFilter} />
           <input type="hidden" name="scene" value={sceneFilter} />
@@ -365,96 +474,6 @@ export default async function ProduktionsBesetzungPage({
             Suchen
           </Button>
         </form>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="h-10 w-10" aria-label="Sortierung anpassen">
-              <ArrowUpDown className="h-4 w-4" aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
-            <DropdownMenuLabel>Sortierung</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {[
-              { label: "Standard (Reihenfolge)", value: "order" },
-              { label: "Rollennamen A-Z", value: "name" },
-              { label: "Szenenanzahl (absteigend)", value: "scene" },
-            ].map((option) => (
-              <form key={option.value} method="get" className="w-full">
-                <input type="hidden" name="q" value={searchQuery} />
-                <input type="hidden" name="person" value={personFilter} />
-                <input type="hidden" name="scene" value={sceneFilter} />
-                <DropdownMenuItem asChild>
-                  <button type="submit" name="sort" value={option.value} className="flex w-full items-center justify-between">
-                    <span>{option.label}</span>
-                    {sortOrder === option.value ? <Check className="h-4 w-4" aria-hidden /> : null}
-                  </button>
-                </DropdownMenuItem>
-              </form>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="h-10 w-10" aria-label="Filter öffnen">
-              <Filter className="h-4 w-4" aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72">
-            <DropdownMenuLabel>Nach Personen filtern</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <form method="get" className="w-full">
-              <input type="hidden" name="q" value={searchQuery} />
-              <input type="hidden" name="scene" value={sceneFilter} />
-              <input type="hidden" name="sort" value={sortOrder} />
-              <DropdownMenuItem asChild>
-                <button type="submit" name="person" value="" className="flex w-full items-center justify-between">
-                  <span>Alle Personen</span>
-                  {personFilter === "" ? <Check className="h-4 w-4" aria-hidden /> : null}
-                </button>
-              </DropdownMenuItem>
-            </form>
-            {users.map((user) => (
-              <form key={user.id} method="get" className="w-full">
-                <input type="hidden" name="q" value={searchQuery} />
-                <input type="hidden" name="scene" value={sceneFilter} />
-                <input type="hidden" name="sort" value={sortOrder} />
-                <DropdownMenuItem asChild>
-                  <button type="submit" name="person" value={user.id} className="flex w-full items-center justify-between">
-                    <span>{formatUserName(user)}</span>
-                    {personFilter === user.id ? <Check className="h-4 w-4" aria-hidden /> : null}
-                  </button>
-                </DropdownMenuItem>
-              </form>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Nach Szenen filtern</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <form method="get" className="w-full">
-              <input type="hidden" name="q" value={searchQuery} />
-              <input type="hidden" name="person" value={personFilter} />
-              <input type="hidden" name="sort" value={sortOrder} />
-              <DropdownMenuItem asChild>
-                <button type="submit" name="scene" value="" className="flex w-full items-center justify-between">
-                  <span>Alle Szenen</span>
-                  {sceneFilter === "" ? <Check className="h-4 w-4" aria-hidden /> : null}
-                </button>
-              </DropdownMenuItem>
-            </form>
-            {sceneOptions?.map((scene) => (
-              <form key={scene.id} method="get" className="w-full">
-                <input type="hidden" name="q" value={searchQuery} />
-                <input type="hidden" name="person" value={personFilter} />
-                <input type="hidden" name="sort" value={sortOrder} />
-                <DropdownMenuItem asChild>
-                  <button type="submit" name="scene" value={scene.id} className="flex w-full items-center justify-between">
-                    <span>{scene.label}</span>
-                    {sceneFilter === scene.id ? <Check className="h-4 w-4" aria-hidden /> : null}
-                  </button>
-                </DropdownMenuItem>
-              </form>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
