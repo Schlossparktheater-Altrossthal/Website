@@ -365,13 +365,6 @@ export function RehearsalCalendar({
 
   return (
     <section className="space-y-8">
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold">Kalenderübersicht</h2>
-        <p className="text-sm text-muted-foreground">
-          Die Split-Ansicht verbindet Tagesplan und Monatskalender. Auf kleineren Bildschirmen stapeln
-          sich die Bereiche automatisch, während auf großen Displays ein zweispaltiges Layout entsteht.
-        </p>
-      </div>
 
       {/* Planungs-Dialog: Tagesplan + Blockierte Mitglieder zum ausgewählten Tag */}
       <Dialog
@@ -505,13 +498,7 @@ export function RehearsalCalendar({
         onValueChange={(value) => setViewMode(value as RehearsalCalendarView)}
         className="space-y-6"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold">Planungssicht wählen</h3>
-            <p className="text-xs text-muted-foreground">
-              Wechsle zwischen Monatskalender und fokussiertem Wochenende-Überblick.
-            </p>
-          </div>
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-end">
           <TabsList className="self-start">
             <TabsTrigger value="calendar">Kalenderansicht</TabsTrigger>
             <TabsTrigger value="weekend">Wochenend-Fokus</TabsTrigger>
