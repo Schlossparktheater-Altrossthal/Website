@@ -28,6 +28,18 @@ export default async function OnboardingInvitePage({
     notFound();
   }
 
+  if (!process.env.DATABASE_URL) {
+    return (
+      <main id="main" className="mx-auto max-w-3xl space-y-6 py-16 text-center">
+        <h1 className="text-3xl font-semibold">Einladung aktuell nicht verfügbar</h1>
+        <p className="text-muted-foreground">
+          Für die Verarbeitung dieser Einladung ist eine Datenbankverbindung erforderlich. Bitte kontaktiere den Support, um
+          die Verbindung zu prüfen oder es später noch einmal zu versuchen.
+        </p>
+      </main>
+    );
+  }
+
   const isHashedToken = /^[0-9a-f]{64}$/i.test(token);
   const tokenHash = isHashedToken ? token.toLowerCase() : hashInviteToken(token);
   const invite = await prisma.memberInvite.findUnique({
