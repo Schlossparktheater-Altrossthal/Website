@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BreakdownStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -19,8 +18,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
+import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 import {
   createSceneAction,
@@ -72,21 +72,15 @@ export default async function ProduktionsSzenenPage() {
   }
 
   const activeProduction = await getActiveProduction(session.user?.id);
-  const headerActions = (
-    <Button asChild variant="outline" size="sm">
-      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
-    </Button>
-  );
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/produktionen/szenen")];
 
   if (!activeProduction) {
     return (
       <div className="space-y-6">
-        <ProductionWorkspaceHeader
+        <PageHeader
           title="Szenen &amp; Breakdowns"
           description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
-          activeWorkspace="scenes"
-          production={null}
-          actions={headerActions}
+          breadcrumbs={breadcrumbs}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
@@ -180,36 +174,13 @@ export default async function ProduktionsSzenenPage() {
 
   const currentPath = "/mitglieder/produktionen/szenen";
   const statusOptions = Object.values(BreakdownStatus);
-  const sceneCount = show.scenes.length;
-  const breakdownCount = show.scenes.reduce((acc, scene) => acc + scene.breakdownItems.length, 0);
-  const characterCount = show.characters.length;
-  const headerStats = [
-    { label: "Szenen", value: sceneCount, hint: "Erfasste Abläufe" },
-    { label: "Breakdowns", value: breakdownCount, hint: "Aufgaben über alle Gewerke" },
-    { label: "Rollen", value: characterCount, hint: "Verfügbare Figuren" },
-  ];
-
-  const summaryActions = (
-    <>
-      <Button asChild size="sm" variant="outline">
-        <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzungen</Link>
-      </Button>
-      <Button asChild size="sm" variant="outline">
-        <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams</Link>
-      </Button>
-    </>
-  );
 
   return (
     <div className="space-y-6">
-      <ProductionWorkspaceHeader
+      <PageHeader
         title="Szenen &amp; Breakdowns"
         description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
-        activeWorkspace="scenes"
-        production={activeProduction}
-        stats={headerStats}
-        actions={headerActions}
-        summaryActions={summaryActions}
+        breadcrumbs={breadcrumbs}
       />
 
       <div className="flex justify-end">
