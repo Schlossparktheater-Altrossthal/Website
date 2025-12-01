@@ -86,7 +86,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.55.1",
-    "@prisma/adapter-pg": "^6.16.2",
+    "@prisma/adapter-pg": "^7.0.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
@@ -102,7 +102,7 @@
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.0",
     "eslint": "^9",
-    "eslint-config-next": "15.5.3",
+    "eslint-config-next": "16.0.6",
     "fake-indexeddb": "^6.2.2",
     "jsdom": "^27.0.0",
     "pg-mem": "^3.0.5",
@@ -110,7 +110,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.3.8",
     "typescript": "^5",
-    "vitest": "^3.2.4",
-    "workbox-cli": "7.1.0"
+    "vitest": "^4.0.14",
+    "workbox-cli": "7.4.0"
   }
 }
