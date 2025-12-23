@@ -110,6 +110,17 @@ const historyEntrySchema = z.object({
   focusBothShare: z.number().nullable(),
 });
 
+const participantEntrySchema = z.object({
+  name: z.string(),
+  classLabel: z.string().nullable(),
+  age: z.number().nullable(),
+  focus: z.string(),
+  actingRole: z.string().nullable(),
+  crewRoles: z.array(z.string()),
+  interests: z.array(z.string()),
+  dietary: z.array(z.string()),
+});
+
 const onboardingStatisticsSchema = z.object({
   generatedAt: z.string(),
   onboarding: z.object({
@@ -159,6 +170,10 @@ const onboardingStatisticsSchema = z.object({
   }),
   history: z.array(historyEntrySchema),
   photoConsentRate: z.number().nullable(),
+  participants: z.array(participantEntrySchema),
+  filters: z
+    .object({ summary: z.string(), activeCount: z.number(), totalCount: z.number() })
+    .nullable(),
 });
 
 export type OnboardingStatisticsPdfData = z.infer<typeof onboardingStatisticsSchema>;
@@ -312,6 +327,42 @@ export const onboardingStatisticsTemplate: PdfTemplate<OnboardingStatisticsPdfDa
           formatPercentage(entry.normalizedShare),
         ]),
         [3, 1, 1, 1],
+      );
+    }
+
+    if (data.participants.length) {
+      drawSectionHeading(doc, "Teilnehmende");
+      if (data.filters) {
+        drawKeyValue(
+          doc,
+          "Aktive Ansicht",
+          `${data.filters.summary} · ${formatNumber(data.filters.activeCount)} von ${formatNumber(data.filters.totalCount)}`,
+        );
+      }
+
+      drawTable(
+        doc,
+        ["Name", "Klasse", "Alter", "Bereich", "Gewerke / Interessen", "Ernährung"],
+        data.participants.map((entry) => {
+          const focusLabel =
+            entry.focus === "acting"
+              ? "Schauspiel"
+              : entry.focus === "tech"
+                ? "Technik"
+                : "Act & Tech";
+          const areaLabel = entry.actingRole ? `${entry.actingRole} · ${focusLabel}` : focusLabel;
+          const rolesAndInterests = [...entry.crewRoles, ...entry.interests].filter(Boolean).join(", ");
+
+          return [
+            entry.name,
+            entry.classLabel ?? "–",
+            formatNumber(entry.age),
+            areaLabel,
+            rolesAndInterests || "–",
+            entry.dietary.join(", ") || "–",
+          ];
+        }),
+        [2, 1, 1, 1.4, 2, 1.6],
       );
     }
 

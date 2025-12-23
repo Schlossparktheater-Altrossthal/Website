@@ -9,6 +9,38 @@ export const onboardingSummarySchema = z.object({
   status: onboardingStatusSchema,
 });
 
+export const onboardingStatisticsActingRoleSchema = z.enum([
+  "lead",
+  "supporting",
+  "ensemble",
+]);
+
+export const onboardingStatisticsParticipantSchema = z.object({
+  userId: z.string(),
+  name: z.string(),
+  classLabel: z.string().nullable(),
+  age: z.number().nullable(),
+  focus: z.enum(["acting", "tech", "both"]),
+  actingRoleSize: onboardingStatisticsActingRoleSchema.nullable(),
+  actingRoleLabel: z.string().nullable(),
+  crewRoles: z.array(z.string()),
+  interests: z.array(z.string()),
+  dietary: z.array(z.string()),
+  joinedAt: z.string().nullable(),
+});
+
+export const onboardingStatisticsFiltersSchema = z.object({
+  classes: z.array(z.string()),
+  focuses: z.array(z.enum(["acting", "tech", "both"])),
+  actingRoles: z.array(onboardingStatisticsActingRoleSchema),
+  crewRoles: z.array(z.string()),
+});
+
+export const onboardingStatisticsSectionSchema = z.object({
+  participants: z.array(onboardingStatisticsParticipantSchema),
+  filters: onboardingStatisticsFiltersSchema,
+});
+
 export const kpiCardSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -258,6 +290,7 @@ export const onboardingDashboardSchema = z.object({
   global: onboardingGlobalSectionSchema,
   allocation: onboardingAllocationSectionSchema,
   ranking: onboardingRankingSectionSchema,
+  statistics: onboardingStatisticsSectionSchema,
   history: z.array(historySnapshotSchema).optional(),
 });
 
@@ -268,3 +301,5 @@ export type AllocationCandidate = z.infer<typeof allocationCandidateSchema>;
 export type AllocationSlot = z.infer<typeof allocationSlotSchema>;
 export type OnboardingRankingRole = z.infer<typeof rankingRoleSchema>;
 export type OnboardingRankingCandidate = z.infer<typeof rankingCandidateSchema>;
+export type OnboardingStatisticsActingRole = z.infer<typeof onboardingStatisticsActingRoleSchema>;
+export type OnboardingStatisticsParticipant = z.infer<typeof onboardingStatisticsParticipantSchema>;

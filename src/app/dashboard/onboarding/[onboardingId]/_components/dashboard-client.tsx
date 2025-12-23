@@ -9,12 +9,15 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OnboardingDashboardData, OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
 import { useRealtime } from "@/hooks/useRealtime";
+import type { OnboardingStatisticsFilters } from "@/lib/onboarding/dashboard-statistics";
+import { filtersToSearchParams } from "@/lib/onboarding/dashboard-statistics";
 
 import { AllocationTab } from "./allocation-tab";
 import { GlobalOverviewTab } from "./global-tab";
 import { HeaderBar } from "./header-bar";
 import { HistoryTab } from "./history-tab";
 import { RankingTab } from "./ranking-tab";
+import { StatisticsTab } from "./statistics-tab";
 
 function dashboardQueryKey(onboardingId: string) {
   return ["onboarding-dashboard", onboardingId] as const;
@@ -111,54 +114,62 @@ export function DashboardClient({
     });
   };
 
-  const handleExportPdf = useCallback(async () => {
-    if (!selectedOnboarding || isExportingPdf || offline) {
-      return;
-    }
-    setIsExportingPdf(true);
-    try {
-      const response = await fetch(`/dashboard/onboarding/${selectedOnboarding}/statistics`, {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        throw new Error(`Export failed (${response.status})`);
+  const handleExportPdf = useCallback(
+    async (filters?: OnboardingStatisticsFilters) => {
+      if (!selectedOnboarding || isExportingPdf || offline) {
+        return;
       }
-      const blob = await response.blob();
-      const fallbackName = `onboarding-statistik-${selectedOnboarding}.pdf`;
-      const disposition = response.headers.get("Content-Disposition");
-      let filename = fallbackName;
-      if (disposition) {
-        const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-        if (utfMatch?.[1]) {
-          try {
-            filename = decodeURIComponent(utfMatch[1]);
-          } catch {
-            filename = utfMatch[1];
-          }
-        } else {
-          const simpleMatch = disposition.match(/filename="?([^";]+)"?/i);
-          if (simpleMatch?.[1]) {
-            filename = simpleMatch[1];
+      setIsExportingPdf(true);
+      try {
+        const search = filters ? filtersToSearchParams(filters).toString() : "";
+        const target = search
+          ? `/dashboard/onboarding/${selectedOnboarding}/statistics?${search}`
+          : `/dashboard/onboarding/${selectedOnboarding}/statistics`;
+
+        const response = await fetch(target, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(`Export failed (${response.status})`);
+        }
+        const blob = await response.blob();
+        const fallbackName = `onboarding-statistik-${selectedOnboarding}.pdf`;
+        const disposition = response.headers.get("Content-Disposition");
+        let filename = fallbackName;
+        if (disposition) {
+          const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+          if (utfMatch?.[1]) {
+            try {
+              filename = decodeURIComponent(utfMatch[1]);
+            } catch {
+              filename = utfMatch[1];
+            }
+          } else {
+            const simpleMatch = disposition.match(/filename="?([^";]+)"?/i);
+            if (simpleMatch?.[1]) {
+              filename = simpleMatch[1];
+            }
           }
         }
-      }
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success("Onboarding-Statistik exportiert.");
-    } catch (error) {
-      console.error("Failed to export onboarding statistics", error);
-      toast.error("PDF konnte nicht erstellt werden.");
-    } finally {
-      setIsExportingPdf(false);
-    }
-  }, [isExportingPdf, offline, selectedOnboarding]);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("Onboarding-Statistik exportiert.");
+      } catch (error) {
+        console.error("Failed to export onboarding statistics", error);
+        toast.error("PDF konnte nicht erstellt werden.");
+      } finally {
+        setIsExportingPdf(false);
+      }
+    },
+    [isExportingPdf, offline, selectedOnboarding],
+  );
 
   const historyAvailable = (currentData.history?.length ?? 0) > 0;
 
@@ -214,9 +225,12 @@ export function DashboardClient({
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <div className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-                Hier entsteht neues
-              </div>
+              <StatisticsTab
+                statistics={currentData.statistics}
+                onExportPdf={!offline ? handleExportPdf : undefined}
+                isExportingPdf={isExportingPdf}
+                isOffline={offline}
+              />
             </motion.div>
           </TabsContent>
           <TabsContent key="global" value="global" className="space-y-6">
