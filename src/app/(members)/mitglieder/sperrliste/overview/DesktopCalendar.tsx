@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useMemo, useState } from "react";
 
 import { CalendarStarIcon, CheckIcon, ClockAlertIcon, StarIcon, UmbrellaIcon, XCircleIcon } from "./icons";
