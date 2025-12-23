@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Desktop-Tabellen-Ansicht für Sperrlistenübersicht
  * Sticky Header & Name-Spalte, Ferien/Feiertags-Zeilen, Gruppierungs-Spalte
