@@ -1,6 +1,5 @@
 import type { MembersNavGroup, MembersNavItem } from "@/config/members-navigation";
 import {
-  MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
   defaultMembersNavIcon,
   membersAssignmentsTodoItem,
@@ -62,18 +61,13 @@ export function selectMembersNavigation({
   activeProduction = null,
 }: MembersNavigationSelectorOptions = {}): MembersNavGroup[] {
   return groups.map((group) => {
-    if (group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID) {
+    if (group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID) {
       const items = cloneGroupItems(group.items);
       if (hasDepartmentMemberships) {
         ensureTodoItem(items);
       } else {
         removeTodoItem(items);
       }
-      return { ...group, items };
-    }
-
-    if (group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID) {
-      const items = cloneGroupItems(group.items);
       if (activeProduction) {
         const href = `/mitglieder/produktionen/${activeProduction.id}`;
         const alreadyIncluded = items.some((item) => item.href === href);

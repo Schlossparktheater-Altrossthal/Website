@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
   membersAssignmentsTodoItem,
 } from "@/config/members-navigation";
@@ -32,7 +31,7 @@ const BASE_PERMISSIONS = [
 describe("selectMembersNavigation", () => {
   it("injects department todo item when memberships are present", () => {
     const groups = selectMembersNavigation({ hasDepartmentMemberships: true });
-    const assignments = groups.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
+    const assignments = groups.find((group) => group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID);
 
     expect(assignments).toBeDefined();
     const todoIndex = assignments!.items.findIndex(
@@ -48,7 +47,7 @@ describe("selectMembersNavigation", () => {
 
   it("omits the department todo item without memberships", () => {
     const groups = selectMembersNavigation({ hasDepartmentMemberships: false });
-    const assignments = groups.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
+    const assignments = groups.find((group) => group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID);
 
     expect(assignments).toBeDefined();
     const todoIndex = assignments!.items.findIndex(
@@ -91,7 +90,7 @@ describe("filterMembersNavigationByPermissions", () => {
     const groups = selectMembersNavigation({ hasDepartmentMemberships: true });
     const permissions = ["mitglieder.meine-gewerke"] as const;
     const { groups: filtered } = filterMembersNavigationByPermissions(groups, permissions);
-    const assignments = filtered.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
+    const assignments = filtered.find((group) => group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID);
 
     expect(assignments).toBeDefined();
     const hrefs = assignments!.items.map((item) => item.href);

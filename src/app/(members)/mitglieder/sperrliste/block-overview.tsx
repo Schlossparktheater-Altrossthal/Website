@@ -188,8 +188,6 @@ export function BlockOverview({
 
   const handlePrev = () => setCurrentMonth((prev) => addMonths(prev, -1));
   const handleNext = () => setCurrentMonth((prev) => addMonths(prev, 1));
-  const handleReset = () => setCurrentMonth(startOfMonth(new Date()));
-
   const handleSelectBlockedDay = (selection: SelectedBlockedDay) => {
     setSelectedBlockedDay(selection);
     setDetailsOpen(true);
@@ -382,7 +380,6 @@ export function BlockOverview({
         holidayMap={data.holidayMap}
         onPrev={handlePrev}
         onNext={handleNext}
-        onReset={handleReset}
         onSelectBlockedDay={handleSelectBlockedDay}
       />
       <Dialog
@@ -450,4 +447,3 @@ export function BlockOverview({
     </div>
   );
 }
-
