@@ -1,4 +1,14 @@
+import Link from "next/link";
 import { BreakdownStatus } from "@prisma/client";
+import {
+  ListChecks,
+  MapPin,
+  Plus,
+  SunMedium,
+  Timer,
+  Trash2,
+  UsersRound,
+} from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -6,6 +16,7 @@ import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
 import { getUserDisplayName } from "@/lib/names";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +29,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PageHeader } from "@/components/members/page-header";
+import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
-import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 import {
   createSceneAction,
@@ -72,15 +82,21 @@ export default async function ProduktionsSzenenPage() {
   }
 
   const activeProduction = await getActiveProduction(session.user?.id);
-  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/produktionen/szenen")];
-
   if (!activeProduction) {
+    const headerActions = (
+      <Button asChild variant="outline" size="sm">
+        <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
+      </Button>
+    );
+
     return (
       <div className="space-y-6">
-        <PageHeader
+        <ProductionWorkspaceHeader
           title="Szenen &amp; Breakdowns"
           description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
-          breadcrumbs={breadcrumbs}
+          activeWorkspace="scenes"
+          production={null}
+          actions={headerActions}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
@@ -174,19 +190,45 @@ export default async function ProduktionsSzenenPage() {
 
   const currentPath = "/mitglieder/produktionen/szenen";
   const statusOptions = Object.values(BreakdownStatus);
+  const breakdownCount = show.scenes.reduce(
+    (acc, scene) => acc + (scene.breakdownItems?.length ?? 0),
+    0,
+  );
+  const headerActions = (
+    <Button asChild variant="outline" size="sm">
+      <Link href="/mitglieder/produktionen">Zur Übersicht</Link>
+    </Button>
+  );
+  const headerStats = [
+    { label: "Szenen", value: show.scenes.length, hint: "Angelegte Ablaufpunkte" },
+    { label: "Breakdowns", value: breakdownCount, hint: "Aufgaben je Gewerk" },
+    { label: "Figuren", value: show.characters.length, hint: "Zuordnungen zur Szene" },
+  ];
+  const summaryActions = (
+    <Button asChild size="sm" variant="outline">
+      <Link href="/mitglieder/produktionen/besetzung">Rollen &amp; Besetzungen</Link>
+    </Button>
+  );
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <ProductionWorkspaceHeader
         title="Szenen &amp; Breakdowns"
         description="Plane Szenenabläufe, pflege Orte und Zeiten und behalte Aufgaben je Gewerk inklusive Status und Zuständigkeit im Blick."
-        breadcrumbs={breadcrumbs}
+        activeWorkspace="scenes"
+        production={activeProduction}
+        stats={headerStats}
+        actions={headerActions}
+        summaryActions={summaryActions}
       />
 
       <div className="flex justify-end">
         <Dialog>
           <DialogTrigger asChild>
-            <Button size="sm">Szene anlegen</Button>
+            <Button size="sm">
+              <Plus aria-hidden className="mr-2 h-4 w-4" />
+              Szene anlegen
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -249,9 +291,9 @@ export default async function ProduktionsSzenenPage() {
         </Dialog>
       </div>
 
-      <section className="space-y-6">
+      <section className="grid gap-6 xl:grid-cols-2">
         {show.scenes.length === 0 ? (
-          <Card>
+          <Card className="xl:col-span-2">
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Noch keine Szenen erfasst. Nutze den Button &bdquo;Szene anlegen&ldquo;, um den Ablaufplan zu starten.
@@ -264,29 +306,51 @@ export default async function ProduktionsSzenenPage() {
             const availableCharacters = show.characters.filter((character) => !assignedCharacterIds.has(character.id));
 
             return (
-              <Card key={scene.id} className="space-y-5">
+              <Card key={scene.id} className="space-y-5 shadow-sm">
                 <CardHeader className="space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="uppercase tracking-wide">Szene {scene.identifier ?? "?"}</span>
-                        <span>#{scene.sequence ?? 0}</span>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <Badge variant="outline" className="gap-2 text-[11px]">
+                          <MapPin aria-hidden className="h-3 w-3" />
+                          Szene {scene.identifier ?? "?"}
+                        </Badge>
+                        <Badge variant="outline" className="text-[11px]">#{scene.sequence ?? 0}</Badge>
+                        <Badge variant="outline" className="gap-1 text-[11px]">
+                          <UsersRound aria-hidden className="h-3 w-3" />
+                          {scene.characters.length}
+                        </Badge>
                       </div>
                       <CardTitle className="text-xl font-semibold">{scene.title ?? "(ohne Titel)"}</CardTitle>
                       {scene.summary ? (
                         <p className="text-sm text-muted-foreground">{scene.summary}</p>
                       ) : null}
-                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                        {scene.location ? <span>Ort: {scene.location}</span> : null}
-                        {scene.timeOfDay ? <span>Tageszeit: {scene.timeOfDay}</span> : null}
-                        {scene.durationMinutes ? <span>Dauer: {scene.durationMinutes} min</span> : null}
+                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        {scene.location ? (
+                          <Badge variant="secondary" className="gap-1 text-[11px]">
+                            <MapPin aria-hidden className="h-3 w-3" />
+                            {scene.location}
+                          </Badge>
+                        ) : null}
+                        {scene.timeOfDay ? (
+                          <Badge variant="secondary" className="gap-1 text-[11px]">
+                            <SunMedium aria-hidden className="h-3 w-3" />
+                            {scene.timeOfDay}
+                          </Badge>
+                        ) : null}
+                        {scene.durationMinutes ? (
+                          <Badge variant="secondary" className="gap-1 text-[11px]">
+                            <Timer aria-hidden className="h-3 w-3" />
+                            {scene.durationMinutes} min
+                          </Badge>
+                        ) : null}
                       </div>
                     </div>
                     <form action={deleteSceneAction} method="post">
                       <input type="hidden" name="sceneId" value={scene.id} />
                       <input type="hidden" name="redirectPath" value={currentPath} />
-                      <Button type="submit" variant="ghost" size="sm">
-                        Entfernen
+                      <Button type="submit" variant="ghost" size="icon" aria-label="Szene entfernen">
+                        <Trash2 aria-hidden className="h-4 w-4" />
                       </Button>
                     </form>
                   </div>
@@ -352,7 +416,15 @@ export default async function ProduktionsSzenenPage() {
 
                   <div className="space-y-4">
                     <div className="rounded-lg border border-border/60 bg-background/70 p-4">
-                      <h3 className="text-sm font-semibold">Mitwirkende Figuren</h3>
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="flex items-center gap-2 text-sm font-semibold">
+                          <UsersRound aria-hidden className="h-4 w-4 text-muted-foreground" />
+                          Mitwirkende Figuren
+                        </h3>
+                        <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                          {scene.characters.length} Figuren
+                        </Badge>
+                      </div>
                       <div className="mt-3 space-y-2">
                         {scene.characters.length === 0 ? (
                           <p className="text-sm text-muted-foreground">Noch keine Figuren zugeordnet.</p>
@@ -380,8 +452,13 @@ export default async function ProduktionsSzenenPage() {
                               <form action={removeSceneCharacterAction} method="post">
                                 <input type="hidden" name="assignmentId" value={entry.id} />
                                 <input type="hidden" name="redirectPath" value={currentPath} />
-                                <Button type="submit" variant="ghost" size="sm">
-                                  Entfernen
+                                <Button
+                                  type="submit"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Figur ${entry.character.name} entfernen`}
+                                >
+                                  <Trash2 aria-hidden className="h-4 w-4" />
                                 </Button>
                               </form>
                             </div>
@@ -389,9 +466,11 @@ export default async function ProduktionsSzenenPage() {
                         )}
                       </div>
 
-                      <div className="mt-4 rounded-md border border-dashed border-border/60 bg-background/50 p-3">
-                        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Figur hinzufügen</h4>
-                        <form className="mt-3 grid gap-3 md:grid-cols-3" action={addSceneCharacterAction} method="post">
+                      <div className="rounded-lg border border-dashed border-border/70 bg-background/50 p-4">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Figur hinzufügen
+                        </h4>
+                        <form className="mt-3 grid gap-2 md:grid-cols-4" action={addSceneCharacterAction} method="post">
                           <input type="hidden" name="sceneId" value={scene.id} />
                           <input type="hidden" name="redirectPath" value={currentPath} />
                           <div className="space-y-1 md:col-span-2">
@@ -401,18 +480,23 @@ export default async function ProduktionsSzenenPage() {
                               {availableCharacters.map((character) => (
                                 <option key={character.id} value={character.id}>
                                   {character.name}
+                                  {character.shortName ? ` (${character.shortName})` : ""}
                                 </option>
                               ))}
                             </select>
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Hervorgehoben?</label>
+                            <label className="text-xs font-medium text-muted-foreground">Sortierung</label>
+                            <Input type="number" name="order" min={0} max={9999} defaultValue={availableCharacters.length + 1} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Hervorgehoben</label>
                             <select name="isFeatured" className={selectClassName} defaultValue="false">
-                              <option value="false">Standard</option>
-                              <option value="true">Hervorgehoben</option>
+                              <option value="false">Nein</option>
+                              <option value="true">Ja</option>
                             </select>
                           </div>
-                          <div className="md:col-span-3 flex justify-end">
+                          <div className="md:col-span-4 flex justify-end">
                             <Button type="submit" size="sm">
                               Figur zuordnen
                             </Button>
@@ -422,7 +506,15 @@ export default async function ProduktionsSzenenPage() {
                     </div>
 
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold">Breakdown-Aufgaben</h3>
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="flex items-center gap-2 text-sm font-semibold">
+                          <ListChecks aria-hidden className="h-4 w-4 text-muted-foreground" />
+                          Breakdown &amp; Aufgaben
+                        </h3>
+                        <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                          {scene.breakdownItems.length} Einträge
+                        </Badge>
+                      </div>
                       <div className="space-y-3">
                         {scene.breakdownItems.length === 0 ? (
                           <p className="text-sm text-muted-foreground">Noch keine Aufgaben hinterlegt.</p>
@@ -434,15 +526,19 @@ export default async function ProduktionsSzenenPage() {
                             >
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="space-y-1">
-                                  <p className="font-semibold">{item.title}</p>
-                                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                    <span>{STATUS_LABELS[item.status]}</span>
-                                    {item.department ? <span>{item.department.name}</span> : null}
-                                    {item.assignedTo ? (
-                                      <span>Zuständig: {formatUserName(item.assignedTo)}</span>
-                                    ) : null}
-                                    {item.neededBy ? (
-                                      <span>Fällig: {item.neededBy.toISOString().slice(0, 10)}</span>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="font-medium">{item.title}</p>
+                                    <Badge variant="secondary" className="text-[11px]">
+                                      {STATUS_LABELS[item.status]}
+                                    </Badge>
+                                    {item.department ? (
+                                      <Badge variant="outline" className="gap-1 text-[11px]">
+                                        <span
+                                          className="inline-block h-2.5 w-2.5 rounded-full border border-border/70"
+                                          style={{ backgroundColor: item.department.color ?? "#7c3aed" }}
+                                        />
+                                        {item.department.name}
+                                      </Badge>
                                     ) : null}
                                   </div>
                                   {item.description ? (
@@ -451,19 +547,30 @@ export default async function ProduktionsSzenenPage() {
                                   {item.note ? (
                                     <p className="text-xs text-muted-foreground">Notiz: {item.note}</p>
                                   ) : null}
+                                  {item.neededBy ? (
+                                    <p className="text-xs text-muted-foreground">Benötigt bis {item.neededBy.toLocaleDateString()}</p>
+                                  ) : null}
+                                  {item.assignedTo ? (
+                                    <p className="text-xs text-muted-foreground">Zuständig: {formatUserName(item.assignedTo)}</p>
+                                  ) : null}
                                 </div>
                                 <form action={removeBreakdownItemAction} method="post">
                                   <input type="hidden" name="itemId" value={item.id} />
                                   <input type="hidden" name="redirectPath" value={currentPath} />
-                                  <Button type="submit" variant="ghost" size="sm">
-                                    Entfernen
+                                  <Button
+                                    type="submit"
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label={`Breakdown-Eintrag ${item.title} entfernen`}
+                                  >
+                                    <Trash2 aria-hidden className="h-4 w-4" />
                                   </Button>
                                 </form>
                               </div>
 
                               <details className="group mt-3 rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden">
                                 <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                  <span>Aufgabe aktualisieren</span>
+                                  <span>Aufgabe bearbeiten</span>
                                   <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
                                   <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
                                 </summary>
@@ -477,7 +584,7 @@ export default async function ProduktionsSzenenPage() {
                                   <div className="space-y-1">
                                     <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Gewerk</label>
                                     <select name="departmentId" defaultValue={item.department?.id ?? ""} className={selectSmallClassName}>
-                                      <option value="">Gewerk wählen</option>
+                                      <option value="">(kein Gewerk)</option>
                                       {departments.map((departmentOption) => (
                                         <option key={departmentOption.id} value={departmentOption.id}>
                                           {departmentOption.name}
