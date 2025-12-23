@@ -184,9 +184,9 @@ export default async function ProduktionsSzenenPage() {
   const breakdownCount = show.scenes.reduce((acc, scene) => acc + scene.breakdownItems.length, 0);
   const characterCount = show.characters.length;
   const summaryBadges = [
-    { label: "Szenen", value: sceneCount },
-    { label: "Breakdowns", value: breakdownCount },
-    { label: "Rollen", value: characterCount },
+    { label: "Szenen", value: sceneCount, dotClass: "bg-primary" },
+    { label: "Breakdowns", value: breakdownCount, dotClass: "bg-emerald-500" },
+    { label: "Rollen", value: characterCount, dotClass: "bg-sky-500" },
   ];
 
   return (
@@ -208,7 +208,7 @@ export default async function ProduktionsSzenenPage() {
                 key={badge.label}
                 className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background/80 px-3 py-1.5"
               >
-                <span className="h-2 w-2 rounded-full bg-primary" />
+                <span className={`h-2 w-2 rounded-full ${badge.dotClass}`} />
                 {badge.label}: {badge.value}
               </span>
             ))}
