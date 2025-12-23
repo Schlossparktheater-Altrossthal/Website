@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * TimelineCell-Komponente für Timeline-Ansicht
  * Zeigt Status mit Icons und Tooltips
