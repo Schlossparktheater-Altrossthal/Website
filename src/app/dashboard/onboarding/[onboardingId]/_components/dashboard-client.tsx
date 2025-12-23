@@ -49,7 +49,9 @@ export function DashboardClient({
   const queryClient = useQueryClient();
   const { socket, joinRoom, leaveRoom } = useRealtime();
   const [selectedOnboarding, setSelectedOnboarding] = useState(initialData.onboarding.id);
-  const [tabValue, setTabValue] = useState<"global" | "ranking" | "allocation" | "history">("global");
+  const [tabValue, setTabValue] = useState<
+    "statistics" | "global" | "ranking" | "allocation" | "history"
+  >("global");
   const [isPending, startTransition] = useTransition();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const offline = isOffline;
@@ -185,6 +187,9 @@ export function DashboardClient({
         className="space-y-6"
       >
         <TabsList>
+          <TabsTrigger value="statistics" disabled={offline}>
+            Statistik
+          </TabsTrigger>
           <TabsTrigger value="global" disabled={offline}>
             Global
           </TabsTrigger>
@@ -201,6 +206,19 @@ export function DashboardClient({
           ) : null}
         </TabsList>
         <AnimatePresence mode="wait">
+          <TabsContent key="statistics" value="statistics" className="space-y-6">
+            <motion.div
+              key={`${currentData.onboarding.id}-statistics`}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <div className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+                Hier entsteht neues
+              </div>
+            </motion.div>
+          </TabsContent>
           <TabsContent key="global" value="global" className="space-y-6">
             <motion.div
               key={`${currentData.onboarding.id}-global`}
