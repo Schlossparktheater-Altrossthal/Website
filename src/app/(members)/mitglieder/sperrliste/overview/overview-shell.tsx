@@ -37,7 +37,6 @@ export type OverviewShellProps = {
   holidayMap: Map<string, HolidayRange[]>;
   onPrev: () => void;
   onNext: () => void;
-  onReset: () => void;
   onSelectBlockedDay: (payload: {
     member: PreparedMember;
     entry: BlockedDay;
@@ -71,7 +70,6 @@ export function OverviewShell({
   holidayMap,
   onPrev,
   onNext,
-  onReset,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onSelectBlockedDay,
 }: OverviewShellProps) {

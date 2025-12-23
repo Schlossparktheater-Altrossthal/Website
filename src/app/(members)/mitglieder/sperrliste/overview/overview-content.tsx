@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./sperrliste-styles.css";
@@ -9,7 +11,7 @@ import { MobileByDay } from "./MobileByDay";
 import { TimelineView } from "./TimelineView";
 import { WeekStrip } from "./WeekStrip";
 import { CalendarStarIcon, ClockIcon, UmbrellaIcon } from "./icons";
-import { IconButton, Note } from "./ui-components";
+import { IconButton } from "./ui-components";
 import type {
   DayColumn,
   HolidayIndicator,
