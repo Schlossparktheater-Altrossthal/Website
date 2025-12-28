@@ -12,14 +12,16 @@ import { CastingWorkspace } from "./casting-workspace";
 export default async function ProduktionsBesetzungPage() {
   const session = await requireAuth();
   let activeProduction = null;
+  const permissionKey = "mitglieder.produktionen" as const;
 
   try {
-    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    const allowed = await hasPermission(session.user, permissionKey);
     if (!allowed) {
       return (
         <div className="space-y-6">
           <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-            Du hast keinen Zugriff auf die Produktionsplanung.
+            Du hast keinen Zugriff auf die Produktionsplanung. Das Recht „MITGLIEDER.PRODUKTIONEN“ wird benötigt, um die
+            Besetzungsseite zu öffnen.
           </div>
         </div>
       );
