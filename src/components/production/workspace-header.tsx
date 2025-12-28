@@ -32,6 +32,7 @@ type ProductionWorkspaceHeaderProps = {
   actions?: ReactNode;
   summaryActions?: ReactNode;
   hideProductionCard?: boolean;
+  hideTitle?: boolean;
   showNavigation?: boolean;
   showDivider?: boolean;
 };
@@ -53,6 +54,7 @@ export function ProductionWorkspaceHeader({
   actions,
   summaryActions,
   hideProductionCard = false,
+  hideTitle = false,
   showNavigation = true,
   showDivider = false,
 }: ProductionWorkspaceHeaderProps) {
@@ -64,7 +66,9 @@ export function ProductionWorkspaceHeader({
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold text-foreground md:text-4xl">{title}</h1>
+            {hideTitle ? null : (
+              <h1 className="text-3xl font-semibold text-foreground md:text-4xl">{title}</h1>
+            )}
             <p className="max-w-3xl text-sm text-muted-foreground md:text-base">{description}</p>
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
