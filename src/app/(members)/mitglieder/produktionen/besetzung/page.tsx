@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CharacterCastingType } from "@prisma/client";
+import { BadgeCheck, ChevronDown, Filter, Pencil, Plus, Search, Sparkles, Trash2, UserRoundCheck, Users, X } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -23,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
-import { BadgeCheck, ChevronDown, Sparkles, UserRoundCheck, Users, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createCharacterAction,
@@ -52,10 +52,19 @@ const selectSmallClassName =
   "h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 type DisplayUser = {
+  id: string;
   firstName?: string | null;
   lastName?: string | null;
   name: string | null;
   email: string | null;
+};
+
+type PageProps = {
+  searchParams?: Promise<{
+    q?: string | string[] | null;
+    castingStatus?: string | string[] | null;
+    castingType?: string | string[] | null;
+  }>;
 };
 
 function formatUserName(user?: DisplayUser | null) {
@@ -63,7 +72,7 @@ function formatUserName(user?: DisplayUser | null) {
   return getUserDisplayName(user, "Unbekannt");
 }
 
-export default async function ProduktionsBesetzungPage() {
+export default async function ProduktionsBesetzungPage({ searchParams }: PageProps) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
@@ -154,6 +163,46 @@ export default async function ProduktionsBesetzungPage() {
   const currentPath = "/mitglieder/produktionen/besetzung";
   const characterCount = show.characters.length;
   const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const searchTermRaw = resolvedSearchParams?.q;
+  const castingStatusRaw = resolvedSearchParams?.castingStatus;
+  const castingTypeRaw = resolvedSearchParams?.castingType;
+  const searchTerm = Array.isArray(searchTermRaw) ? searchTermRaw[0] ?? "" : searchTermRaw ?? "";
+  const castingStatus = Array.isArray(castingStatusRaw)
+    ? castingStatusRaw[0] ?? "all"
+    : castingStatusRaw ?? "all";
+  const castingType = Array.isArray(castingTypeRaw) ? castingTypeRaw[0] ?? "all" : castingTypeRaw ?? "all";
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const activeCastingType = castingType in CASTING_LABELS ? (castingType as CharacterCastingType) : null;
+  const isFiltered = Boolean(normalizedSearch) || castingStatus !== "all" || Boolean(activeCastingType);
+
+  const filteredCharacters = show.characters.filter((character) => {
+    const matchesSearch = normalizedSearch
+      ? [
+          character.name,
+          character.shortName,
+          character.description,
+          character.notes,
+          ...character.castings.map((casting) => formatUserName(casting.user)),
+        ].some((value) => value?.toLowerCase().includes(normalizedSearch))
+      : true;
+
+    const hasCastings = character.castings.length > 0;
+    const matchesStatus =
+      castingStatus === "all"
+        ? true
+        : castingStatus === "with"
+          ? hasCastings
+          : castingStatus === "without"
+            ? !hasCastings
+            : true;
+
+    const matchesType = activeCastingType
+      ? character.castings.some((casting) => casting.type === activeCastingType)
+      : true;
+
+    return matchesSearch && matchesStatus && matchesType;
+  });
   const headerStats = [
     {
       label: "Rollen",
@@ -268,6 +317,80 @@ export default async function ProduktionsBesetzungPage() {
         </div>
       </div>
 
+      <form
+        className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm"
+        method="get"
+        action={currentPath}
+      >
+        <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-end">
+          <div className="space-y-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-search">
+              Suche
+            </label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                id="casting-search"
+                name="q"
+                placeholder="Nach Rollen oder Personen suchen"
+                defaultValue={searchTerm}
+                className="pl-9"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-status">
+              Besetzungsstatus
+            </label>
+            <select
+              id="casting-status"
+              name="castingStatus"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              defaultValue={castingStatus}
+            >
+              <option value="all">Alle Besetzungen</option>
+              <option value="with">Mit Zuordnung</option>
+              <option value="without">Ohne Zuordnung</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-type">
+              Besetzungsart
+            </label>
+            <select
+              id="casting-type"
+              name="castingType"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              defaultValue={castingType}
+            >
+              <option value="all">Alle Arten</option>
+              {CASTING_ORDER.map((type) => (
+                <option key={type} value={type}>
+                  {CASTING_LABELS[type]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            <Button type="submit" className="h-10" variant="outline">
+              <Filter className="mr-2 h-4 w-4" aria-hidden />
+              Filtern
+            </Button>
+            {isFiltered ? (
+              <Button type="button" asChild variant="ghost" className="h-10">
+                <Link href={currentPath} className="inline-flex items-center gap-2">
+                  <X className="h-4 w-4" aria-hidden />
+                  Zurücksetzen
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </form>
+
       <section className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         {show.characters.length === 0 ? (
           <Card>
@@ -277,8 +400,16 @@ export default async function ProduktionsBesetzungPage() {
               </p>
             </CardContent>
           </Card>
+        ) : filteredCharacters.length === 0 ? (
+          <Card>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Keine Rollen erfüllen aktuell die ausgewählten Filter oder Suchbegriffe.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          show.characters.map((character) => {
+          filteredCharacters.map((character) => {
             const sortedCastings = [...character.castings].sort((a, b) => {
               const orderA = CASTING_ORDER.indexOf(a.type);
               const orderB = CASTING_ORDER.indexOf(b.type);
