@@ -80,6 +80,8 @@ export default async function ProduktionsSzenenPage() {
           description="Plane Szenenabläufe, pflege Orte und Zeiten und verknüpfe Aufgaben für alle Gewerke übersichtlich."
           activeWorkspace="scenes"
           production={null}
+          hideTitle
+          showDivider
           showNavigation={false}
         />
         <ProductionWorkspaceEmptyState
@@ -190,7 +192,9 @@ export default async function ProduktionsSzenenPage() {
         description="Plane Szenenabläufe, pflege Orte und Zeiten und verknüpfe Aufgaben für alle Gewerke übersichtlich."
         activeWorkspace="scenes"
         production={activeProduction}
+        hideTitle
         hideProductionCard
+        showDivider
         showNavigation={false}
       />
 
