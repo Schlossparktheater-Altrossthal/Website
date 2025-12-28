@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BreakdownStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -72,11 +71,6 @@ export default async function ProduktionsSzenenPage() {
   }
 
   const activeProduction = await getActiveProduction(session.user?.id);
-  const headerActions = (
-    <Button asChild variant="outline" size="sm">
-      <Link href="/mitglieder/produktionen">Zum Überblick</Link>
-    </Button>
-  );
 
   if (!activeProduction) {
     return (
@@ -86,7 +80,7 @@ export default async function ProduktionsSzenenPage() {
           description="Plane Szenenabläufe, pflege Orte und Zeiten und verknüpfe Aufgaben für alle Gewerke übersichtlich."
           activeWorkspace="scenes"
           production={null}
-          actions={headerActions}
+          showNavigation={false}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
@@ -196,8 +190,8 @@ export default async function ProduktionsSzenenPage() {
         description="Plane Szenenabläufe, pflege Orte und Zeiten und verknüpfe Aufgaben für alle Gewerke übersichtlich."
         activeWorkspace="scenes"
         production={activeProduction}
-        actions={headerActions}
         hideProductionCard
+        showNavigation={false}
       />
 
       <div className="rounded-xl border bg-card/60 p-4 shadow-sm">
