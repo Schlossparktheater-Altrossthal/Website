@@ -9,9 +9,7 @@ import { getUserDisplayName } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -25,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
-import { BadgeCheck, Check, ChevronDown, Filter, Pencil, Plus, Search, Sparkles, Trash2, UserRoundCheck, Users, ArrowUpDown, X } from "lucide-react";
+import { BadgeCheck, ChevronDown, Sparkles, UserRoundCheck, Users, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createCharacterAction,
@@ -65,19 +63,7 @@ function formatUserName(user?: DisplayUser | null) {
   return getUserDisplayName(user, "Unbekannt");
 }
 
-type BesetzungSearchParams = {
-  q?: string;
-  person?: string;
-  scene?: string;
-  sort?: "order" | "name" | "scene";
-};
-
-export default async function ProduktionsBesetzungPage({
-  searchParams,
-}: {
-  searchParams?: Promise<BesetzungSearchParams>;
-}) {
-  const resolvedSearchParams = await searchParams;
+export default async function ProduktionsBesetzungPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.produktionen");
   if (!allowed) {
@@ -153,15 +139,6 @@ export default async function ProduktionsBesetzungPage({
             },
           },
         },
-        scenes: {
-          orderBy: { sequence: "asc" },
-          select: {
-            id: true,
-            identifier: true,
-            title: true,
-            characters: { select: { characterId: true } },
-          },
-        },
       },
     }),
   ]);
@@ -177,62 +154,6 @@ export default async function ProduktionsBesetzungPage({
   const currentPath = "/mitglieder/produktionen/besetzung";
   const characterCount = show.characters.length;
   const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
-  const searchQuery = (resolvedSearchParams?.q ?? "").trim();
-  const personFilter = resolvedSearchParams?.person ?? "";
-  const sceneFilter = resolvedSearchParams?.scene ?? "";
-  const sortOrder = resolvedSearchParams?.sort ?? "order";
-  const characterSceneCounts = new Map<string, number>();
-
-  show.scenes?.forEach((scene) => {
-    scene.characters.forEach((sceneCharacter) => {
-      characterSceneCounts.set(
-        sceneCharacter.characterId,
-        (characterSceneCounts.get(sceneCharacter.characterId) ?? 0) + 1,
-      );
-    });
-  });
-
-  const filteredCharacters = show.characters.filter((character) => {
-    const matchesQuery = searchQuery
-      ? [character.name, character.shortName]
-          .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(searchQuery.toLowerCase()))
-      : true;
-
-    const matchesPerson = personFilter
-      ? character.castings.some((casting) => casting.user?.id === personFilter)
-      : true;
-
-    const matchesScene = sceneFilter
-      ? show.scenes?.some((scene) =>
-          scene.id === sceneFilter && scene.characters.some((sceneCharacter) => sceneCharacter.characterId === character.id),
-        ) ?? false
-      : true;
-
-    return matchesQuery && matchesPerson && matchesScene;
-  });
-
-  const sortedCharacters = [...filteredCharacters].sort((a, b) => {
-    if (sortOrder === "name") {
-      return a.name.localeCompare(b.name, "de");
-    }
-
-    if (sortOrder === "scene") {
-      const scenesA = characterSceneCounts.get(a.id) ?? 0;
-      const scenesB = characterSceneCounts.get(b.id) ?? 0;
-      if (scenesA === scenesB) {
-        return a.name.localeCompare(b.name, "de");
-      }
-      return scenesB - scenesA;
-    }
-
-    return (a.order ?? 0) - (b.order ?? 0);
-  });
-
-  const sceneOptions = show.scenes?.map((scene) => ({
-    id: scene.id,
-    label: scene.title ?? scene.identifier ?? "Szene", 
-  }));
   const headerStats = [
     {
       label: "Rollen",
@@ -268,7 +189,7 @@ export default async function ProduktionsBesetzungPage({
             {headerStats.map((stat) => (
               <div
                 key={stat.label}
-                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-card/60 px-4 py-3 shadow-sm"
+                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
               >
                 <div className="space-y-1">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
@@ -283,15 +204,13 @@ export default async function ProduktionsBesetzungPage({
               </div>
             ))}
           </div>
-          <div className="flex w-full flex-col items-stretch gap-2">
-            <Button asChild size="sm" variant="outline" className="w-full">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button asChild size="sm" variant="outline">
               <Link href="/mitglieder/produktionen/szenen">Zu den Szenen</Link>
             </Button>
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="sm" className="w-full">
-                  Neue Rolle
-                </Button>
+                <Button size="sm">Rolle anlegen</Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
@@ -349,152 +268,7 @@ export default async function ProduktionsBesetzungPage({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm">
-        <form className="flex w-full flex-wrap items-center gap-2" method="get">
-          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-border/60 bg-background/70 px-1 py-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="Sortierung anpassen"
-                >
-                  <ArrowUpDown className="h-4 w-4" aria-hidden />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-60">
-                <DropdownMenuLabel>Sortierung</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {[
-                  { label: "Standard (Reihenfolge)", value: "order" },
-                  { label: "Rollennamen A-Z", value: "name" },
-                  { label: "Szenenanzahl (absteigend)", value: "scene" },
-                ].map((option) => (
-                  <form key={option.value} method="get" className="w-full">
-                    <input type="hidden" name="q" value={searchQuery} />
-                    <input type="hidden" name="person" value={personFilter} />
-                    <input type="hidden" name="scene" value={sceneFilter} />
-                    <DropdownMenuItem asChild>
-                      <button
-                        type="submit"
-                        name="sort"
-                        value={option.value}
-                        className="flex w-full items-center justify-between"
-                      >
-                        <span>{option.label}</span>
-                        {sortOrder === option.value ? <Check className="h-4 w-4" aria-hidden /> : null}
-                      </button>
-                    </DropdownMenuItem>
-                  </form>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="Filter öffnen"
-                >
-                  <Filter className="h-4 w-4" aria-hidden />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-[420px] space-y-3">
-                <div className="grid gap-3">
-                  <form className="grid gap-3" method="get">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div className="space-y-1 rounded-lg border border-border/60 bg-card/60 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Schauspieler
-                        </label>
-                        <select name="person" defaultValue={personFilter} className={selectSmallClassName}>
-                          <option value="">Alle Schauspieler</option>
-                          {users.map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {formatUserName(user)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1 rounded-lg border border-border/60 bg-card/60 p-3">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Szenen
-                        </label>
-                        <select name="scene" defaultValue={sceneFilter} className={selectSmallClassName}>
-                          <option value="">Alle Szenen</option>
-                          {sceneOptions?.map((scene) => (
-                            <option key={scene.id} value={scene.id}>
-                              {scene.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <input type="hidden" name="q" value={searchQuery} />
-                    <input type="hidden" name="sort" value={sortOrder} />
-                    <Button type="submit" variant="outline" size="sm" className="justify-self-start">
-                      Filter anwenden
-                    </Button>
-                  </form>
-                  <form method="get" className="flex items-center justify-between gap-2">
-                    <div className="flex flex-wrap gap-2">
-                      <input type="hidden" name="q" value={searchQuery} />
-                      <input type="hidden" name="sort" value={sortOrder} />
-                      <input type="hidden" name="person" value="" />
-                      <input type="hidden" name="scene" value="" />
-                    </div>
-                    <Button type="submit" variant="ghost" size="sm" aria-label="Filter zurücksetzen">
-                      Zurücksetzen
-                    </Button>
-                  </form>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="relative min-w-[240px] flex-1 lg:ml-auto lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              name="q"
-              defaultValue={searchQuery}
-              placeholder="Rollen durchsuchen"
-              className="pl-9 pr-24"
-              type="search"
-              aria-label="Rollen suchen"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-1.5 top-1/2 h-7 w-7 -translate-y-1/2"
-              aria-label="Suchfeld leeren"
-              onClick={(event) => {
-                const form = (event.currentTarget as HTMLButtonElement).form;
-                if (form) {
-                  const input = form.querySelector<HTMLInputElement>("input[name='q']");
-                  if (input) {
-                    input.value = "";
-                  }
-                  form.submit();
-                }
-              }}
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </Button>
-          </div>
-          <input type="hidden" name="person" value={personFilter} />
-          <input type="hidden" name="scene" value={sceneFilter} />
-          <input type="hidden" name="sort" value={sortOrder} />
-          <Button type="submit" size="sm" variant="outline">
-            Suchen
-          </Button>
-        </form>
-      </div>
-
-      <section className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+      <section className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         {show.characters.length === 0 ? (
           <Card>
             <CardContent>
@@ -503,16 +277,8 @@ export default async function ProduktionsBesetzungPage({
               </p>
             </CardContent>
           </Card>
-        ) : sortedCharacters.length === 0 ? (
-          <Card>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Keine Rollen entsprechen derzeit den Such- und Filtereinstellungen.
-              </p>
-            </CardContent>
-          </Card>
         ) : (
-          sortedCharacters.map((character) => {
+          show.characters.map((character) => {
             const sortedCastings = [...character.castings].sort((a, b) => {
               const orderA = CASTING_ORDER.indexOf(a.type);
               const orderB = CASTING_ORDER.indexOf(b.type);
@@ -520,8 +286,8 @@ export default async function ProduktionsBesetzungPage({
             });
 
             return (
-              <Card key={character.id} className="overflow-hidden border border-border/70 bg-card/70 shadow-sm">
-                <CardHeader className="space-y-2 border-b border-border/60 bg-background/50 px-3 py-3">
+                <Card key={character.id} className="overflow-hidden border border-border/70 bg-card/70 shadow-sm">
+                  <CardHeader className="space-y-2 border-b border-border/60 bg-background/50 px-3 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex flex-1 items-start gap-3">
                         <span
