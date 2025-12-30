@@ -72,8 +72,8 @@ type PageProps = {
 type HeaderStat = {
   label: string;
   value: number;
-  hint: string;
   icon: ReactNode;
+  hint?: string;
 };
 
 const CASTING_LABELS: Record<CharacterCastingType, string> = {
@@ -133,7 +133,7 @@ function HeaderStats({ stats, showId }: { stats: HeaderStat[]; showId: string })
               <div className="space-y-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
                 <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.hint}</p>
+                {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
               </div>
               <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-background/70 text-muted-foreground">
                 {stat.icon}
@@ -674,9 +674,9 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
   });
 
   const headerStats: HeaderStat[] = [
-    { label: "Rollen", value: characterCount, hint: "Angelegte Figuren", icon: <BadgeCheck className="h-4 w-4" aria-hidden /> },
-    { label: "Besetzungen", value: castingCount, hint: "Zuordnungen im Ensemble", icon: <Users className="h-4 w-4" aria-hidden /> },
-    { label: "Mitglieder", value: users.length, hint: "Verfügbare Personen", icon: <UserRoundCheck className="h-4 w-4" aria-hidden /> },
+    { label: "Rollen", value: characterCount, icon: <BadgeCheck className="h-4 w-4" aria-hidden /> },
+    { label: "Besetzungen", value: castingCount, icon: <Users className="h-4 w-4" aria-hidden /> },
+    { label: "Schauspieler", value: users.length, icon: <UserRoundCheck className="h-4 w-4" aria-hidden /> },
   ];
 
   return (
