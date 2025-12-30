@@ -62,11 +62,11 @@ type Character = {
 };
 
 type PageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     q?: string | string[] | null;
     castingStatus?: string | string[] | null;
     castingType?: string | string[] | null;
-  };
+  }>;
 };
 
 type HeaderStat = {
@@ -635,9 +635,11 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
   const characterCount = show.characters.length;
   const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
 
-  const searchTermRaw = searchParams?.q;
-  const castingStatusRaw = searchParams?.castingStatus;
-  const castingTypeRaw = searchParams?.castingType;
+  const resolvedSearchParams = (await searchParams) ?? {};
+
+  const searchTermRaw = resolvedSearchParams.q;
+  const castingStatusRaw = resolvedSearchParams.castingStatus;
+  const castingTypeRaw = resolvedSearchParams.castingType;
 
   const searchTerm = Array.isArray(searchTermRaw) ? searchTermRaw[0] ?? "" : searchTermRaw ?? "";
   const castingStatus = Array.isArray(castingStatusRaw) ? castingStatusRaw[0] ?? "all" : castingStatusRaw ?? "all";
