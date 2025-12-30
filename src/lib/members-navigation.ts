@@ -75,6 +75,7 @@ export function selectMembersNavigation({
       const items = cloneGroupItems(group.items);
       if (activeProduction) {
         const overviewIndex = items.findIndex((item) => item.href === "/mitglieder/produktionen");
+        const overviewItem = overviewIndex !== -1 ? items[overviewIndex] : null;
         if (overviewIndex !== -1) {
           items.splice(overviewIndex, 1);
         }
@@ -84,6 +85,19 @@ export function selectMembersNavigation({
         if (activeIndex !== -1) {
           items.splice(activeIndex, 1);
         }
+
+        const activeItem: MembersNavItem = {
+          ...(overviewItem ?? {}),
+          href: activeHref,
+          label: overviewItem?.label ?? activeProduction.title ?? "Aktive Produktion",
+          badge: String(activeProduction.year),
+          ariaLabel:
+            activeProduction.title
+              ? `Aktive Produktion: ${activeProduction.title}`
+              : "Aktive Produktion",
+        };
+
+        items.unshift(activeItem);
       }
       return { ...group, items };
     }

@@ -1,7 +1,5 @@
 import type { OnboardingDashboardData } from "./dashboard-schemas";
-import { filterStatisticsParticipants, normalizeStatisticsFilters } from "./dashboard-statistics";
 import type { OnboardingStatisticsPdfData } from "../pdf/templates/onboarding-statistics";
-import type { OnboardingStatisticsFilters } from "./dashboard-statistics";
 
 const numberFormatter = new Intl.NumberFormat("de-DE");
 
@@ -48,45 +46,12 @@ function diversityLabel(status: "ok" | "warning" | "critical") {
   }
 }
 
-function summarizeFilters(filters: OnboardingStatisticsFilters): string | null {
-  const normalized = normalizeStatisticsFilters(filters);
-  const parts: string[] = [];
-
-  if (normalized.classes.length) {
-    parts.push(`Klasse: ${normalized.classes.join(", ")}`);
-  }
-  if (normalized.focuses.length) {
-    parts.push(`Fokus: ${normalized.focuses.join(", ")}`);
-  }
-  if (normalized.actingRoles.length) {
-    parts.push(
-      `Rollengröße: ${normalized.actingRoles
-        .map((entry) => (entry === "lead" ? "Hauptrolle" : entry === "supporting" ? "Nebenrolle" : "Ensemble"))
-        .join(", ")}`,
-    );
-  }
-  if (normalized.crewRoles.length) {
-    parts.push(`Gewerke: ${normalized.crewRoles.join(", ")}`);
-  }
-  if (normalized.search) {
-    parts.push(`Suche: ${normalized.search}`);
-  }
-
-  return parts.length ? parts.join(" · ") : null;
-}
-
 export function buildOnboardingStatisticsPdfData(
   dashboard: OnboardingDashboardData,
-  options?: { filters?: OnboardingStatisticsFilters },
 ): OnboardingStatisticsPdfData {
   const participants = dashboard.onboarding.participants;
   const generatedAt = new Date();
   const safeParticipants = Number.isFinite(participants) ? participants : 0;
-  const normalizedFilters = normalizeStatisticsFilters(options?.filters ?? {});
-  const filteredParticipants = filterStatisticsParticipants(
-    dashboard.statistics.participants,
-    normalizedFilters,
-  );
 
   const actingRoles = dashboard.global.rolesActing
     .slice()
@@ -138,19 +103,6 @@ export function buildOnboardingStatisticsPdfData(
       createdAt: entry.createdAt,
       focusBothShare: entry.focusBothShare ?? null,
     }));
-
-  const participantRows = filteredParticipants.map((participant) => ({
-    name: participant.name,
-    classLabel: participant.classLabel ?? null,
-    age: participant.age ?? null,
-    focus: participant.focus,
-    actingRole: participant.actingRoleLabel ?? null,
-    crewRoles: participant.crewRoles.slice(0, 4),
-    interests: participant.interests.slice(0, 4),
-    dietary: participant.dietary.slice(0, 4),
-  }));
-
-  const filterSummary = summarizeFilters(normalizedFilters);
 
   return {
     generatedAt: generatedAt.toISOString(),
@@ -207,13 +159,5 @@ export function buildOnboardingStatisticsPdfData(
         ? dashboard.global.photoConsentRate * 100
         : null,
     ),
-    participants: participantRows,
-    filters: filterSummary
-      ? {
-          summary: filterSummary,
-          activeCount: participantRows.length,
-          totalCount: dashboard.statistics.participants.length,
-        }
-      : null,
   };
 }

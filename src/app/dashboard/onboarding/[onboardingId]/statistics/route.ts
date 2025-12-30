@@ -2,18 +2,16 @@ import { NextResponse } from "next/server";
 
 import { buildOnboardingStatisticsPdfData } from "@/lib/onboarding/dashboard-pdf";
 import { loadOnboardingDashboardSnapshot } from "@/lib/onboarding/dashboard-service";
-import { parseFiltersFromSearchParams } from "@/lib/onboarding/dashboard-statistics";
 import { PdfRenderError, PdfTemplateNotFoundError, renderPdfTemplate } from "@/lib/pdf/engine";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   context: { params: Promise<{ onboardingId: string }> },
 ) {
   const params = await context.params;
   const onboardingId = params?.onboardingId;
-  const filters = parseFiltersFromSearchParams(new URL(request.url).searchParams);
 
   if (!onboardingId || typeof onboardingId !== "string") {
     return NextResponse.json({ error: "Missing onboarding id" }, { status: 400 });
@@ -25,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: "Onboarding not found" }, { status: 404 });
     }
 
-    const payload = buildOnboardingStatisticsPdfData(dashboard, { filters });
+    const payload = buildOnboardingStatisticsPdfData(dashboard);
     const result = await renderPdfTemplate("onboarding-statistics", payload);
     const body = new Uint8Array(result.buffer);
 

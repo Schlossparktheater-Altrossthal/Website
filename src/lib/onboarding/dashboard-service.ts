@@ -12,8 +12,6 @@ import {
   type AllocationRole,
   type OnboardingDashboardData,
   type OnboardingSummary,
-  type OnboardingStatisticsActingRole,
-  type OnboardingStatisticsParticipant,
 } from "./dashboard-schemas";
 import {
   optimizeRoleAllocation,
@@ -241,68 +239,6 @@ function normalizeOptionalText(value: string | null | undefined): string | null 
   return trimmed.length > 0 ? trimmed : null;
 }
 
-const ACTING_ROLE_TO_SIZE: Record<string, OnboardingStatisticsActingRole> = {
-  acting_lead: "lead",
-  acting_medium: "supporting",
-  acting_scout: "ensemble",
-  acting_statist: "ensemble",
-};
-
-const ACTING_ROLE_LABELS: Record<OnboardingStatisticsActingRole, string> = {
-  lead: "Hauptrolle",
-  supporting: "Nebenrolle",
-  ensemble: "Ensemble",
-};
-
-function deriveActingRole(
-  preferences: Array<{ code: string; weight: number }>,
-): { size: OnboardingStatisticsActingRole | null; label: string | null } {
-  if (!preferences.length) {
-    return { size: null, label: null };
-  }
-  const sorted = preferences
-    .filter((entry) => entry.weight > 0)
-    .sort((a, b) => b.weight - a.weight);
-
-  for (const preference of sorted) {
-    const size = ACTING_ROLE_TO_SIZE[preference.code];
-    if (size) {
-      return { size, label: ACTING_ROLE_LABELS[size] };
-    }
-  }
-
-  return { size: null, label: null };
-}
-
-function formatMemberName(user: {
-  firstName: string | null;
-  lastName: string | null;
-  name: string | null;
-}): string {
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
-  return fullName || user.name || "Unbekannt";
-}
-
-function buildDietarySummary(
-  preference: string | null,
-  strictness: string | null,
-  restrictions: Array<{ allergen: string; level: AllergyLevel; isActive: boolean }>,
-): string[] {
-  const entries: string[] = [];
-
-  if (preference) {
-    entries.push(strictness ? `${preference} (${strictness})` : preference);
-  }
-
-  restrictions
-    .filter((restriction) => restriction.isActive && restriction.allergen)
-    .forEach((restriction) => {
-      entries.push(`${restriction.allergen} (${severityLabel(restriction.level)})`);
-    });
-
-  return entries;
-}
-
 function buildPreferenceSummary(
   shares: Map<string, number>,
   domain: "acting" | "crew",
@@ -516,7 +452,6 @@ async function computeOnboardingDashboardData(
           gender: true,
           focus: true,
           background: true,
-          backgroundClass: true,
           notes: true,
           dietaryPreference: true,
           dietaryPreferenceStrictness: true,
@@ -634,17 +569,6 @@ async function computeOnboardingDashboardData(
   const actingTotals = new Map<string, { shareSum: number; userCount: number }>();
   const crewTotals = new Map<string, { shareSum: number; userCount: number }>();
   const userDomainTotals = new Map<string, { acting: number; crew: number }>();
-  const preferencesByUser = new Map<string, { acting: Array<{ code: string; weight: number }>; crew: Array<{ code: string; weight: number }> }>();
-
-  rolePreferences.forEach((preference) => {
-    const entry = preferencesByUser.get(preference.userId) ?? { acting: [], crew: [] };
-    if (preference.domain === "acting") {
-      entry.acting.push({ code: preference.code, weight: preference.weight });
-    } else {
-      entry.crew.push({ code: preference.code, weight: preference.weight });
-    }
-    preferencesByUser.set(preference.userId, entry);
-  });
 
   rolePreferences.forEach((preference) => {
     const totals = userDomainTotals.get(preference.userId) ?? { acting: 0, crew: 0 };
@@ -744,70 +668,6 @@ async function computeOnboardingDashboardData(
     }
     interestClusters.set(cluster, (interestClusters.get(cluster) ?? 0) + count);
   });
-
-  const membershipByUser = new Map<string, Date>();
-  memberships.forEach((membership) => {
-    membershipByUser.set(membership.userId, membership.joinedAt);
-  });
-
-  const classOptions = new Set<string>();
-  const focusOptions = new Set<OnboardingFocus>();
-  const actingRoleOptions = new Set<OnboardingStatisticsActingRole>();
-  const crewRoleOptions = new Set<string>();
-
-  const statisticsParticipants: OnboardingStatisticsParticipant[] = show.onboardingProfiles.map((profile) => {
-    const preferenceEntry = preferencesByUser.get(profile.user.id) ?? { acting: [], crew: [] };
-    const actingRole = deriveActingRole(preferenceEntry.acting);
-    const crewRoles = preferenceEntry.crew
-      .filter((entry) => entry.weight > 0)
-      .sort((a, b) => b.weight - a.weight)
-      .map((entry) => getRolePreferenceTitle(entry.code));
-
-    const uniqueCrewRoles = Array.from(new Set(crewRoles));
-    const classLabel = normalizeOptionalText(profile.backgroundClass);
-    const focus = profile.focus ?? "acting";
-    const joinedAt = membershipByUser.get(profile.user.id);
-
-    if (classLabel) {
-      classOptions.add(classLabel);
-    }
-    focusOptions.add(focus);
-    uniqueCrewRoles.forEach((role) => crewRoleOptions.add(role));
-    if (actingRole.size) {
-      actingRoleOptions.add(actingRole.size);
-    }
-
-    const dietary = buildDietarySummary(
-      normalizeOptionalText(profile.dietaryPreference),
-      normalizeOptionalText(profile.dietaryPreferenceStrictness),
-      profile.user.dietaryRestrictions,
-    );
-
-    return {
-      userId: profile.user.id,
-      name: formatMemberName(profile.user),
-      classLabel,
-      age: computeAge(profile.user.dateOfBirth),
-      focus,
-      actingRoleSize: actingRole.size,
-      actingRoleLabel: actingRole.label,
-      crewRoles: uniqueCrewRoles,
-      interests: (userInterestMap.get(profile.user.id) ?? []).slice(0, 5),
-      dietary,
-      joinedAt: joinedAt ? joinedAt.toISOString() : null,
-    } satisfies OnboardingStatisticsParticipant;
-  });
-
-  statisticsParticipants.sort((a, b) =>
-    a.name.localeCompare(b.name, "de-DE", { sensitivity: "base", numeric: true }),
-  );
-
-  const statisticsFilters = {
-    classes: Array.from(classOptions).sort((a, b) => a.localeCompare(b, "de-DE")),
-    focuses: Array.from(focusOptions),
-    actingRoles: Array.from(actingRoleOptions),
-    crewRoles: Array.from(crewRoleOptions).sort((a, b) => a.localeCompare(b, "de-DE")),
-  } as const;
 
   const diversityCounts = Array.from(interestCounts.values());
   const shannon = shannonIndex(diversityCounts);
@@ -1272,10 +1132,6 @@ async function computeOnboardingDashboardData(
     },
     ranking: {
       roles: rankingRoles,
-    },
-    statistics: {
-      participants: statisticsParticipants,
-      filters: statisticsFilters,
     },
     history: historySnapshots,
   });
