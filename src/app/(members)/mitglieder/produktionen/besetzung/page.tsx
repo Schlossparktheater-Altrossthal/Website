@@ -9,7 +9,16 @@ import { ProductionWorkspaceHeader } from "@/components/production/workspace-hea
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 import { CastingWorkspace } from "./casting-workspace";
 
-export default async function ProduktionsBesetzungPage() {
+type PageProps = {
+  searchParams?: Promise<{
+    q?: string | string[] | null;
+    castingStatus?: string | string[] | null;
+    castingType?: string | string[] | null;
+  }>;
+};
+
+export default async function ProduktionsBesetzungPage({ searchParams }: PageProps) {
+  await searchParams;
   const session = await requireAuth();
   let activeProduction = null;
   const permissionKey = "mitglieder.produktionen" as const;
