@@ -668,7 +668,7 @@ export const membersNavigation = [
       },
       {
         href: "/mitglieder",
-        label: "Mitgliederübersicht",
+        label: "Onboarding-Statistik",
         permissionKey: "mitglieder.onboarding.analytics",
         icon: DashboardIcon,
       },
