@@ -718,7 +718,11 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
             </CardContent>
           </Card>
         ) : (
-          filteredCharacters.map((character) => <CharacterCard key={character.id} character={character} users={users} />)
+          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(max-content,1fr))]">
+            {filteredCharacters.map((character) => (
+              <CharacterCard key={character.id} character={character} users={users} />
+            ))}
+          </div>
         )}
       </section>
     </div>
