@@ -142,7 +142,7 @@ export function CastingWorkspace({ showId, characters, users, currentPath }: Cas
         </Dialog>
       </div>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <section className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(max-content,1fr))]">
         {characters.length === 0 ? (
           <Card>
             <CardContent>
