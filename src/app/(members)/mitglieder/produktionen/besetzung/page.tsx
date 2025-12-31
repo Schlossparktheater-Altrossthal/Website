@@ -647,7 +647,6 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const activeCastingType = castingType in CASTING_LABELS ? (castingType as CharacterCastingType) : null;
-  const isFiltered = Boolean(normalizedSearch) || castingStatus !== "all" || Boolean(activeCastingType);
 
   const filteredCharacters = show.characters.filter((character) => {
     const matchesSearch = normalizedSearch
@@ -694,13 +693,6 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
       <CastingFilters searchTerm={searchTerm} castingStatus={castingStatus} castingType={castingType} />
 
       <section className="space-y-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Übersicht
-          </span>
-          {isFiltered ? <span>Gefiltert nach aktueller Eingabe.</span> : <span>Alle Rollen der aktiven Produktion.</span>}
-        </div>
-
         {show.characters.length === 0 ? (
           <Card>
             <CardContent>
