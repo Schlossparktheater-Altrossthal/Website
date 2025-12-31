@@ -50,7 +50,7 @@ export function DashboardClient({
   const { socket, joinRoom, leaveRoom } = useRealtime();
   const [selectedOnboarding, setSelectedOnboarding] = useState(initialData.onboarding.id);
   const [tabValue, setTabValue] = useState<
-    "statistics" | "global" | "ranking" | "allocation" | "history"
+    "members-overview" | "global" | "ranking" | "allocation" | "history"
   >("global");
   const [isPending, startTransition] = useTransition();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -161,23 +161,26 @@ export function DashboardClient({
   }, [isExportingPdf, offline, selectedOnboarding]);
 
   const historyAvailable = (currentData.history?.length ?? 0) > 0;
+  const showHeaderBar = tabValue !== "members-overview";
 
   return (
     <div className="space-y-6">
-      <HeaderBar
-        onboardings={onboardings}
-        selectedId={selectedOnboarding}
-        statusLabel={currentData.onboarding.statusLabel}
-        status={currentData.onboarding.status}
-        timeSpan={currentData.onboarding.timeSpan}
-        participants={currentData.onboarding.participants}
-        isRefreshing={offline ? false : isFetching || isPending}
-        onSelect={handleSelect}
-        onRefresh={!offline ? () => void refetch() : undefined}
-        onExportPdf={!offline ? handleExportPdf : undefined}
-        isExportingPdf={isExportingPdf}
-        isOffline={offline}
-      />
+      {showHeaderBar ? (
+        <HeaderBar
+          onboardings={onboardings}
+          selectedId={selectedOnboarding}
+          statusLabel={currentData.onboarding.statusLabel}
+          status={currentData.onboarding.status}
+          timeSpan={currentData.onboarding.timeSpan}
+          participants={currentData.onboarding.participants}
+          isRefreshing={offline ? false : isFetching || isPending}
+          onSelect={handleSelect}
+          onRefresh={!offline ? () => void refetch() : undefined}
+          onExportPdf={!offline ? handleExportPdf : undefined}
+          isExportingPdf={isExportingPdf}
+          isOffline={offline}
+        />
+      ) : null}
       <Tabs
         value={tabValue}
         onValueChange={(value) => {
@@ -187,8 +190,8 @@ export function DashboardClient({
         className="space-y-6"
       >
         <TabsList>
-          <TabsTrigger value="statistics" disabled={offline}>
-            Statistik
+          <TabsTrigger value="members-overview" disabled={offline}>
+            Mitgliederübersicht
           </TabsTrigger>
           <TabsTrigger value="global" disabled={offline}>
             Global
@@ -205,18 +208,21 @@ export function DashboardClient({
             </TabsTrigger>
           ) : null}
         </TabsList>
+        <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          Such- und Filterleiste (Platzhalter)
+        </div>
         <AnimatePresence mode="wait">
-          <TabsContent key="statistics" value="statistics" className="space-y-6">
+          <TabsContent key="members-overview" value="members-overview" className="space-y-6">
             <motion.div
-              key={`${currentData.onboarding.id}-statistics`}
+              key={`${currentData.onboarding.id}-members-overview`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <div className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-                Hier entsteht neues
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Mitgliederübersicht in Vorbereitung.
+              </p>
             </motion.div>
           </TabsContent>
           <TabsContent key="global" value="global" className="space-y-6">
