@@ -453,6 +453,7 @@ async function computeOnboardingDashboardData(
           gender: true,
           focus: true,
           background: true,
+          backgroundClass: true,
           notes: true,
           dietaryPreference: true,
           dietaryPreferenceStrictness: true,
@@ -747,139 +748,98 @@ async function computeOnboardingDashboardData(
     pending: show.onboardingProfiles.filter((profile) => !profile.user.photoConsent).length,
   };
 
-  const membershipByUserId = new Map<string, Date>();
-  memberships.forEach((membership) => {
-    membershipByUserId.set(membership.userId, membership.joinedAt);
-  });
-
   const membersColumns: OnboardingMembersOverview["columns"] = [
     {
-      id: "profile",
-      label: "Mitglied",
+      id: "avatar",
+      label: "Profilbild",
       type: "avatar",
-      width: 260,
-      minWidth: 220,
+      minWidth: 120,
+      sortable: false,
+    },
+    {
+      id: "firstName",
+      label: "Vorname",
+      type: "text",
+      minWidth: 140,
       sortable: true,
-      filterable: true,
-      visible: true,
-      priority: 1,
+    },
+    {
+      id: "lastName",
+      label: "Nachname",
+      type: "text",
+      minWidth: 140,
+      sortable: true,
+    },
+    {
+      id: "dateOfBirth",
+      label: "Geburtsdatum",
+      type: "date",
+      minWidth: 140,
+      sortable: true,
       renderRule: {
-        subtext: "email",
-        helper: "background",
+        format: "full",
       },
     },
     {
-      id: "focus",
-      label: "Fokus",
-      type: "badge-list",
-      width: 140,
-      minWidth: 120,
+      id: "age",
+      label: "Alter",
+      type: "number",
+      minWidth: 80,
       sortable: true,
-      priority: 2,
-      renderRule: {
-        intentMap: {
-          acting: "default",
-          tech: "warning",
-          both: "success",
-        },
-      },
+    },
+    {
+      id: "email",
+      label: "E-Mail-Adresse",
+      type: "text",
+      minWidth: 220,
+    },
+    {
+      id: "background",
+      label: "Schule oder Beschäftigung",
+      type: "text",
+      minWidth: 220,
+    },
+    {
+      id: "backgroundClass",
+      label: "Klasse",
+      type: "text",
+      minWidth: 140,
     },
     {
       id: "rolesActing",
-      label: "Rollen Acting",
-      type: "badge-list",
-      width: 240,
+      label: "Rollen",
+      type: "list",
       minWidth: 200,
-      filterable: true,
-      priority: 3,
       renderRule: {
-        maxBadges: 3,
+        maxItems: 6,
       },
     },
     {
       id: "rolesCrew",
-      label: "Rollen Crew",
-      type: "badge-list",
-      width: 240,
+      label: "Gewerke",
+      type: "list",
       minWidth: 200,
-      filterable: true,
-      priority: 4,
       renderRule: {
-        maxBadges: 3,
-        tone: "muted",
-      },
-    },
-    {
-      id: "experience",
-      label: "Erfahrung",
-      type: "number",
-      width: 120,
-      sortable: true,
-      priority: 5,
-      renderRule: {
-        suffix: "Jahre",
-      },
-    },
-    {
-      id: "memberSince",
-      label: "Mitglied seit",
-      type: "date",
-      width: 140,
-      sortable: true,
-      priority: 6,
-      renderRule: {
-        format: "year",
-      },
-    },
-    {
-      id: "photoConsent",
-      label: "Foto",
-      type: "icon-status",
-      width: 120,
-      priority: 7,
-      renderRule: {
-        legend: {
-          approved: "Erteilt",
-          pending: "Ausstehend",
-          rejected: "Abgelehnt",
-        },
+        maxItems: 6,
       },
     },
     {
       id: "diet",
       label: "Ernährung",
       type: "text",
-      width: 160,
-      minWidth: 140,
-      filterable: true,
-      priority: 8,
-      renderRule: {
-        helperKey: "dietaryPreferenceStrictness",
-      },
+      minWidth: 160,
     },
     {
       id: "allergies",
       label: "Allergien",
-      type: "badge-list",
-      width: 220,
-      minWidth: 180,
-      filterable: true,
-      priority: 9,
-      renderRule: {
-        wrap: true,
-      },
+      type: "list",
+      minWidth: 220,
     },
     {
-      id: "interests",
-      label: "Interessen",
-      type: "list",
-      width: 240,
-      minWidth: 200,
-      filterable: true,
-      priority: 10,
-      renderRule: {
-        maxItems: 4,
-      },
+      id: "photoConsent",
+      label: "Fotoeinverständnis",
+      type: "text",
+      minWidth: 180,
     },
   ];
 
@@ -889,8 +849,6 @@ async function computeOnboardingDashboardData(
       [profile.user.firstName, profile.user.lastName].filter(Boolean).join(" ") ||
       "Unbekannt";
     const age = computeAge(profile.user.dateOfBirth);
-    const experienceYears = profile.memberSinceYear ? now.getFullYear() - profile.memberSinceYear : null;
-    const memberSince = membershipByUserId.get(profile.user.id);
     const consent = profile.user.photoConsent;
     const consentState = consent
       ? consent.status === "approved"
@@ -918,32 +876,26 @@ async function computeOnboardingDashboardData(
     return {
       id: profile.user.id,
       values: {
-        profile: {
+        avatar: {
           name: fullName,
           email: profile.user.email,
-          initials: `${profile.user.firstName?.[0] ?? ""}${profile.user.lastName?.[0] ?? ""}`.trim(),
-          background: profile.background ?? undefined,
         },
-        focus: [profile.focus],
+        firstName: profile.user.firstName ?? null,
+        lastName: profile.user.lastName ?? null,
+        dateOfBirth: profile.user.dateOfBirth ?? null,
+        age,
+        email: profile.user.email ?? null,
+        background: profile.background ?? null,
+        backgroundClass: profile.backgroundClass ?? null,
         rolesActing: actingRoles,
         rolesCrew: crewRoles,
-        experience: experienceYears,
-        memberSince: memberSince ?? (profile.memberSinceYear ? new Date(profile.memberSinceYear, 0, 1) : null),
+        diet: profile.dietaryPreference ?? null,
+        allergies: allergiesList,
         photoConsent: {
           status: consentState,
-          tooltip:
-            consentState === "approved"
-              ? "Freigabe liegt vor"
-              : consentState === "rejected"
-                ? "Freigabe abgelehnt"
-                : "Dokument fehlt",
+          consentGiven: consent?.consentGiven ?? null,
+          documentUploadedAt: consent?.documentUploadedAt ?? null,
         },
-        diet: profile.dietaryPreference
-          ? { label: profile.dietaryPreference, helper: profile.dietaryPreferenceStrictness ?? undefined }
-          : null,
-        allergies: allergiesList,
-        interests: userInterestMap.get(profile.user.id) ?? [],
-        age,
       },
     } satisfies OnboardingMembersOverview["rows"][number];
   });
