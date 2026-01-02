@@ -11,6 +11,7 @@ import {
   type AllocationCandidate,
   type AllocationRole,
   type OnboardingDashboardData,
+  type OnboardingMembersOverview,
   type OnboardingSummary,
 } from "./dashboard-schemas";
 import {
@@ -746,6 +747,207 @@ async function computeOnboardingDashboardData(
     pending: show.onboardingProfiles.filter((profile) => !profile.user.photoConsent).length,
   };
 
+  const membershipByUserId = new Map<string, Date>();
+  memberships.forEach((membership) => {
+    membershipByUserId.set(membership.userId, membership.joinedAt);
+  });
+
+  const membersColumns: OnboardingMembersOverview["columns"] = [
+    {
+      id: "profile",
+      label: "Mitglied",
+      type: "avatar",
+      width: 260,
+      minWidth: 220,
+      sortable: true,
+      filterable: true,
+      visible: true,
+      priority: 1,
+      renderRule: {
+        subtext: "email",
+        helper: "background",
+      },
+    },
+    {
+      id: "focus",
+      label: "Fokus",
+      type: "badge-list",
+      width: 140,
+      minWidth: 120,
+      sortable: true,
+      priority: 2,
+      renderRule: {
+        intentMap: {
+          acting: "default",
+          tech: "warning",
+          both: "success",
+        },
+      },
+    },
+    {
+      id: "rolesActing",
+      label: "Rollen Acting",
+      type: "badge-list",
+      width: 240,
+      minWidth: 200,
+      filterable: true,
+      priority: 3,
+      renderRule: {
+        maxBadges: 3,
+      },
+    },
+    {
+      id: "rolesCrew",
+      label: "Rollen Crew",
+      type: "badge-list",
+      width: 240,
+      minWidth: 200,
+      filterable: true,
+      priority: 4,
+      renderRule: {
+        maxBadges: 3,
+        tone: "muted",
+      },
+    },
+    {
+      id: "experience",
+      label: "Erfahrung",
+      type: "number",
+      width: 120,
+      sortable: true,
+      priority: 5,
+      renderRule: {
+        suffix: "Jahre",
+      },
+    },
+    {
+      id: "memberSince",
+      label: "Mitglied seit",
+      type: "date",
+      width: 140,
+      sortable: true,
+      priority: 6,
+      renderRule: {
+        format: "year",
+      },
+    },
+    {
+      id: "photoConsent",
+      label: "Foto",
+      type: "icon-status",
+      width: 120,
+      priority: 7,
+      renderRule: {
+        legend: {
+          approved: "Erteilt",
+          pending: "Ausstehend",
+          rejected: "Abgelehnt",
+        },
+      },
+    },
+    {
+      id: "diet",
+      label: "Ernährung",
+      type: "text",
+      width: 160,
+      minWidth: 140,
+      filterable: true,
+      priority: 8,
+      renderRule: {
+        helperKey: "dietaryPreferenceStrictness",
+      },
+    },
+    {
+      id: "allergies",
+      label: "Allergien",
+      type: "badge-list",
+      width: 220,
+      minWidth: 180,
+      filterable: true,
+      priority: 9,
+      renderRule: {
+        wrap: true,
+      },
+    },
+    {
+      id: "interests",
+      label: "Interessen",
+      type: "list",
+      width: 240,
+      minWidth: 200,
+      filterable: true,
+      priority: 10,
+      renderRule: {
+        maxItems: 4,
+      },
+    },
+  ];
+
+  const membersRows: OnboardingMembersOverview["rows"] = show.onboardingProfiles.map((profile) => {
+    const fullName =
+      profile.user.name ||
+      [profile.user.firstName, profile.user.lastName].filter(Boolean).join(" ") ||
+      "Unbekannt";
+    const age = computeAge(profile.user.dateOfBirth);
+    const experienceYears = profile.memberSinceYear ? now.getFullYear() - profile.memberSinceYear : null;
+    const memberSince = membershipByUserId.get(profile.user.id);
+    const consent = profile.user.photoConsent;
+    const consentState = consent
+      ? consent.status === "approved"
+        ? "approved"
+        : "rejected"
+      : "pending";
+
+    const actingRoles = Array.from(actingSharesByUser.get(profile.user.id)?.entries() ?? [])
+      .filter(([, weight]) => weight > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([roleId, weight]) => ({ label: getRolePreferenceTitle(roleId), value: weight }));
+
+    const crewRoles = Array.from(crewSharesByUser.get(profile.user.id)?.entries() ?? [])
+      .filter(([, weight]) => weight > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([roleId, weight]) => ({ label: getRolePreferenceTitle(roleId), value: weight }));
+
+    const allergiesList = profile.user.dietaryRestrictions
+      .filter((restriction) => restriction.isActive)
+      .map((restriction) => ({
+        allergen: restriction.allergen,
+        level: severityLabel(restriction.level),
+      }));
+
+    return {
+      id: profile.user.id,
+      values: {
+        profile: {
+          name: fullName,
+          email: profile.user.email,
+          initials: `${profile.user.firstName?.[0] ?? ""}${profile.user.lastName?.[0] ?? ""}`.trim(),
+          background: profile.background ?? undefined,
+        },
+        focus: [profile.focus],
+        rolesActing: actingRoles,
+        rolesCrew: crewRoles,
+        experience: experienceYears,
+        memberSince: memberSince ?? (profile.memberSinceYear ? new Date(profile.memberSinceYear, 0, 1) : null),
+        photoConsent: {
+          status: consentState,
+          tooltip:
+            consentState === "approved"
+              ? "Freigabe liegt vor"
+              : consentState === "rejected"
+                ? "Freigabe abgelehnt"
+                : "Dokument fehlt",
+        },
+        diet: profile.dietaryPreference
+          ? { label: profile.dietaryPreference, helper: profile.dietaryPreferenceStrictness ?? undefined }
+          : null,
+        allergies: allergiesList,
+        interests: userInterestMap.get(profile.user.id) ?? [],
+        age,
+      },
+    } satisfies OnboardingMembersOverview["rows"][number];
+  });
+
   const candidateInputs: CandidateInput[] = show.onboardingProfiles.map((profile) => {
     const fullName =
       profile.user.name ||
@@ -984,6 +1186,10 @@ async function computeOnboardingDashboardData(
       statusLabel: status.label,
       timeSpan,
       participants,
+    },
+    members: {
+      columns: membersColumns,
+      rows: membersRows,
     },
     global: {
       kpis: [

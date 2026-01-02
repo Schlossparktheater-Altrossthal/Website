@@ -37,6 +37,29 @@ export const heatmapCellSchema = z.object({
   value: z.number(),
 });
 
+export const onboardingMembersColumnSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: z.enum(["avatar", "text", "number", "date", "badge-list", "icon-status", "list"]),
+  width: z.number().nullable().optional(),
+  minWidth: z.number().optional(),
+  sortable: z.boolean().optional(),
+  filterable: z.boolean().optional(),
+  visible: z.boolean().optional(),
+  priority: z.number().optional(),
+  renderRule: z.record(z.string(), z.any()).optional(),
+});
+
+export const onboardingMembersRowSchema = z.object({
+  id: z.string(),
+  values: z.record(z.string(), z.unknown()),
+});
+
+export const onboardingMembersOverviewSchema = z.object({
+  columns: z.array(onboardingMembersColumnSchema),
+  rows: z.array(onboardingMembersRowSchema),
+});
+
 export const coOccurrenceEdgeSchema = z.object({
   source: z.string(),
   target: z.string(),
@@ -255,6 +278,7 @@ export const onboardingDashboardSchema = z.object({
     timeSpan: z.string().nullable(),
     participants: z.number(),
   }),
+  members: onboardingMembersOverviewSchema,
   global: onboardingGlobalSectionSchema,
   allocation: onboardingAllocationSectionSchema,
   ranking: onboardingRankingSectionSchema,
@@ -268,3 +292,5 @@ export type AllocationCandidate = z.infer<typeof allocationCandidateSchema>;
 export type AllocationSlot = z.infer<typeof allocationSlotSchema>;
 export type OnboardingRankingRole = z.infer<typeof rankingRoleSchema>;
 export type OnboardingRankingCandidate = z.infer<typeof rankingCandidateSchema>;
+export type OnboardingMembersOverview = z.infer<typeof onboardingMembersOverviewSchema>;
+export type OnboardingMembersColumn = z.infer<typeof onboardingMembersColumnSchema>;

@@ -14,6 +14,65 @@ export const DEV_ONBOARDING_DASHBOARD = {
     timeSpan: "11. März – 28. April 2024",
     participants: 12,
   },
+  members: {
+    columns: [
+      {
+        id: "profile",
+        label: "Mitglied",
+        type: "avatar",
+        width: 260,
+        sortable: true,
+        filterable: true,
+        visible: true,
+        priority: 1,
+        renderRule: { subtext: "email" },
+      },
+      { id: "focus", label: "Fokus", type: "badge-list", width: 140, sortable: true, priority: 2 },
+      { id: "rolesActing", label: "Rollen Acting", type: "badge-list", width: 220, priority: 3 },
+      { id: "rolesCrew", label: "Rollen Crew", type: "badge-list", width: 220, priority: 4 },
+      { id: "experience", label: "Erfahrung", type: "number", width: 120, priority: 5, renderRule: { suffix: "Jahre" } },
+      { id: "photoConsent", label: "Foto", type: "icon-status", width: 120, priority: 6 },
+      { id: "diet", label: "Ernährung", type: "text", width: 160, priority: 7 },
+      { id: "allergies", label: "Allergien", type: "badge-list", width: 200, priority: 8 },
+      { id: "interests", label: "Interessen", type: "list", width: 240, priority: 9 },
+    ],
+    rows: [
+      {
+        id: "demo-1",
+        values: {
+          profile: { name: "Alex Becker", email: "alex@example.com", initials: "AB" },
+          focus: ["acting"],
+          rolesActing: [
+            { label: "Lead", value: 0.8 },
+            { label: "Support", value: 0.6 },
+          ],
+          rolesCrew: [{ label: "Regieassistenz", value: 0.4 }],
+          experience: 3,
+          photoConsent: { status: "approved", tooltip: "Vorhanden" },
+          diet: { label: "Vegan", helper: "Streng" },
+          allergies: [{ allergen: "Erdnuss", level: "schwer" }],
+          interests: ["Bewegung", "Lichtdesign", "Impro"],
+        },
+      },
+      {
+        id: "demo-2",
+        values: {
+          profile: { name: "Chris Sommer", email: "chris@example.com", initials: "CS" },
+          focus: ["tech"],
+          rolesActing: [{ label: "Statist", value: 0.3 }],
+          rolesCrew: [
+            { label: "Bühne", value: 0.7 },
+            { label: "Kostüm", value: 0.4 },
+          ],
+          experience: 5,
+          photoConsent: { status: "pending", tooltip: "Ausstehend" },
+          diet: { label: "Vegetarisch" },
+          allergies: [],
+          interests: ["Technik", "Musik", "Orga", "Community", "Workshops"],
+        },
+      },
+    ],
+  },
   global: {
     kpis: [
       {

@@ -14,6 +14,7 @@ import { AllocationTab } from "./allocation-tab";
 import { GlobalOverviewTab } from "./global-tab";
 import { HeaderBar } from "./header-bar";
 import { HistoryTab } from "./history-tab";
+import { MembersOverviewTab } from "./members-overview-tab";
 import { RankingTab } from "./ranking-tab";
 
 function dashboardQueryKey(onboardingId: string) {
@@ -220,9 +221,10 @@ export function DashboardClient({
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <p className="text-sm text-muted-foreground">
-                Mitgliederübersicht in Vorbereitung.
-              </p>
+              <MembersOverviewTab
+                onboardingId={currentData.onboarding.id}
+                data={currentData.members}
+              />
             </motion.div>
           </TabsContent>
           <TabsContent key="global" value="global" className="space-y-6">
