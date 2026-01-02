@@ -14,6 +14,48 @@ export const DEV_ONBOARDING_DASHBOARD = {
     timeSpan: "11. März – 28. April 2024",
     participants: 12,
   },
+  members: {
+    rows: [
+      {
+        id: "demo-1",
+        avatar: { name: "Alex Becker", email: "alex@example.com" },
+        firstName: "Alex",
+        lastName: "Becker",
+        birthdate: "2001-03-11T00:00:00.000Z",
+        age: 23,
+        email: "alex@example.com",
+        schoolOrEmployment: "Theaterschule Stuttgart",
+        className: "2B",
+        actingRoles: [
+          { label: "Lead", percentage: 80 },
+          { label: "Support", percentage: 60 },
+        ],
+        crewRoles: [{ label: "Regieassistenz", percentage: 40 }],
+        nutrition: "Vegan (streng)",
+        allergies: ["Erdnuss (schwer)", "Haselnuss"],
+        photoConsent: "approved",
+      },
+      {
+        id: "demo-2",
+        avatar: { name: "Chris Sommer", email: "chris@example.com" },
+        firstName: "Chris",
+        lastName: "Sommer",
+        birthdate: "1999-11-05T00:00:00.000Z",
+        age: 25,
+        email: "chris@example.com",
+        schoolOrEmployment: "FSJ Bühne",
+        className: null,
+        actingRoles: [{ label: "Statist", percentage: 30 }],
+        crewRoles: [
+          { label: "Bühne", percentage: 70 },
+          { label: "Kostüm", percentage: 40 },
+        ],
+        nutrition: "Vegetarisch",
+        allergies: [],
+        photoConsent: "pending",
+      },
+    ],
+  },
   global: {
     kpis: [
       {

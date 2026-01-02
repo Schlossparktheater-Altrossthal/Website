@@ -11,6 +11,7 @@ import {
   type AllocationCandidate,
   type AllocationRole,
   type OnboardingDashboardData,
+  type OnboardingMembersOverview,
   type OnboardingSummary,
 } from "./dashboard-schemas";
 import {
@@ -452,6 +453,7 @@ async function computeOnboardingDashboardData(
           gender: true,
           focus: true,
           background: true,
+          backgroundClass: true,
           notes: true,
           dietaryPreference: true,
           dietaryPreferenceStrictness: true,
@@ -746,6 +748,70 @@ async function computeOnboardingDashboardData(
     pending: show.onboardingProfiles.filter((profile) => !profile.user.photoConsent).length,
   };
 
+  const membersRows: OnboardingMembersOverview["rows"] = show.onboardingProfiles.map((profile) => {
+    const fullName =
+      profile.user.name ||
+      [profile.user.firstName, profile.user.lastName].filter(Boolean).join(" ") ||
+      "Unbekannt";
+    const age = computeAge(profile.user.dateOfBirth);
+    const consent = profile.user.photoConsent;
+    const consentState = consent
+      ? consent.status === "approved"
+        ? "approved"
+        : "rejected"
+      : "pending";
+
+    const actingRoles = Array.from(actingSharesByUser.get(profile.user.id)?.entries() ?? [])
+      .filter(([, weight]) => weight > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([roleId, weight]) => ({ label: getRolePreferenceTitle(roleId), value: weight }));
+
+    const crewRoles = Array.from(crewSharesByUser.get(profile.user.id)?.entries() ?? [])
+      .filter(([, weight]) => weight > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([roleId, weight]) => ({ label: getRolePreferenceTitle(roleId), value: weight }));
+
+    const allergiesList = profile.user.dietaryRestrictions
+      .filter((restriction) => restriction.isActive)
+      .map((restriction) => ({
+        allergen: restriction.allergen,
+        level: severityLabel(restriction.level),
+      }));
+
+    return {
+      id: profile.user.id,
+      avatar: {
+        name: fullName,
+        email: profile.user.email ?? undefined,
+        image: null,
+      },
+      firstName: profile.user.firstName ?? null,
+      lastName: profile.user.lastName ?? null,
+      birthdate: profile.user.dateOfBirth ? profile.user.dateOfBirth.toISOString() : null,
+      age,
+      email: profile.user.email ?? null,
+      schoolOrEmployment: profile.background ?? null,
+      className: profile.backgroundClass ?? null,
+      actingRoles: actingRoles.map((role) => ({
+        label: role.label,
+        percentage: role.value ? Math.round(role.value * 100) : undefined,
+      })),
+      crewRoles: crewRoles.map((role) => ({
+        label: role.label,
+        percentage: role.value ? Math.round(role.value * 100) : undefined,
+      })),
+      nutrition: profile.dietaryPreference
+        ? profile.dietaryPreferenceStrictness
+          ? `${profile.dietaryPreference} (${profile.dietaryPreferenceStrictness})`
+          : profile.dietaryPreference
+        : null,
+      allergies: allergiesList.map((entry) =>
+        entry.level ? `${entry.allergen} (${entry.level})` : entry.allergen,
+      ),
+      photoConsent: consentState,
+    } satisfies OnboardingMembersOverview["rows"][number];
+  });
+
   const candidateInputs: CandidateInput[] = show.onboardingProfiles.map((profile) => {
     const fullName =
       profile.user.name ||
@@ -984,6 +1050,9 @@ async function computeOnboardingDashboardData(
       statusLabel: status.label,
       timeSpan,
       participants,
+    },
+    members: {
+      rows: membersRows,
     },
     global: {
       kpis: [
