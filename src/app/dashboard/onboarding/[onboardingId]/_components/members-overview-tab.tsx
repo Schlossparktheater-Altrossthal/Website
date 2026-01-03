@@ -79,6 +79,22 @@ function formatAge(value: number | null): string {
   return value.toString();
 }
 
+function calculateAge(dateOfBirth: Date | null): number | null {
+  if (!dateOfBirth) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - dateOfBirth.getFullYear();
+  const hasBirthdayPassedThisYear =
+    today.getMonth() > dateOfBirth.getMonth() ||
+    (today.getMonth() === dateOfBirth.getMonth() && today.getDate() >= dateOfBirth.getDate());
+
+  if (!hasBirthdayPassedThisYear) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 function parseRoles(value: unknown): { label: string; percentage?: number }[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -120,7 +136,7 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
   const firstName = typeof values.firstName === "string" ? values.firstName : null;
   const lastName = typeof values.lastName === "string" ? values.lastName : null;
   const dateOfBirth = parseDate(values.dateOfBirth);
-  const age = typeof values.age === "number" && Number.isFinite(values.age) ? values.age : null;
+  const ageFromData = typeof values.age === "number" && Number.isFinite(values.age) ? values.age : null;
   const email = typeof values.email === "string" ? values.email : null;
   const background = typeof values.background === "string" ? values.background : null;
   const backgroundClass = typeof values.backgroundClass === "string" ? values.backgroundClass : null;
@@ -138,7 +154,7 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
     firstName,
     lastName,
     dateOfBirth,
-    age,
+    age: calculateAge(dateOfBirth) ?? ageFromData,
     email,
     background,
     backgroundClass,
