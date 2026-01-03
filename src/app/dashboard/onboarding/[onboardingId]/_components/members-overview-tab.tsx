@@ -1,11 +1,12 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
-import { Check, Minus, X } from "lucide-react";
+import { Check, Filter, Minus, Search, Settings, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -42,7 +43,7 @@ type MemberRow = {
 const TABLE_COLUMNS: { id: keyof MemberRow; label: string }[] = [
   { id: "lastName", label: "Nachname" },
   { id: "firstName", label: "Vorname" },
-  { id: "dateOfBirth", label: "Alter & Geburtstag" },
+  { id: "dateOfBirth", label: "Geburtsdatum" },
   { id: "email", label: "E-Mail" },
   { id: "background", label: "Schule" },
   { id: "backgroundClass", label: "Klasse" },
@@ -69,13 +70,6 @@ function formatDate(value: Date | null): string {
   return value.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function formatAge(value: number | null): string {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return "–";
-  }
-  return value.toString();
-}
-
 function calculateAge(dateOfBirth: Date | null): number | null {
   if (!dateOfBirth) return null;
 
@@ -92,16 +86,10 @@ function calculateAge(dateOfBirth: Date | null): number | null {
   return age >= 0 ? age : null;
 }
 
-function renderBirthdayWithAge(dateOfBirth: Date | null, age: number | null): ReactNode {
+function renderBirthday(dateOfBirth: Date | null): ReactNode {
   const formattedDate = formatDate(dateOfBirth);
-  const formattedAge = formatAge(age);
 
-  return (
-    <div className="flex flex-col text-sm text-foreground">
-      <span className="font-semibold">{formattedAge !== "–" ? `${formattedAge} Jahre` : "–"}</span>
-      <span className="text-xs text-muted-foreground">{formattedDate}</span>
-    </div>
-  );
+  return <span className="text-sm font-medium text-foreground">{formattedDate}</span>;
 }
 
 function parseRoles(value: unknown): { label: string; percentage?: number }[] {
@@ -264,25 +252,38 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
     <div className="space-y-6">
       <div className="hidden md:block">
         <Card className="border-border/70 bg-card shadow-sm">
-          <CardHeader className="flex flex-col gap-2 border-b border-border/70 pb-4">
-            <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
+          <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-4">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Button variant="ghost" size="icon" aria-label="Suche öffnen">
+                  <Search className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" aria-label="Filter anpassen">
+                  <Filter className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" aria-label="Einstellungen öffnen">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="relative max-h-[70vh] overflow-auto">
-              <Table className="min-w-full">
-                <TableHeader className="sticky top-0 z-10 bg-muted">
+            <div className="relative max-h-[70vh] overflow-x-auto overflow-y-auto">
+              <Table className="w-full table-auto">
+                <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
                   <TableRow className="border-b border-border/80">
                     {TABLE_COLUMNS.map((column) => (
                       <TableHead
                         key={column.id}
-                        className="h-11 whitespace-nowrap px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground"
+                        className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground"
                       >
                         {column.label}
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
-                <TableBody className="divide-y divide-border/70">
+                <TableBody>
                   {filteredMembers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={TABLE_COLUMNS.length} className="h-24 text-center text-sm text-muted-foreground">
@@ -291,30 +292,42 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
                     </TableRow>
                   ) : (
                     filteredMembers.map((member) => (
-                      <TableRow key={member.id} className="transition-colors hover:bg-muted/40">
+                      <TableRow className="border-b border-border/70 transition-colors hover:bg-muted/40 last:border-b-0" key={member.id}>
                         {TABLE_COLUMNS.map((column) => {
                           switch (column.id) {
                             case "lastName":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                >
                                   {member.lastName || "–"}
                                 </TableCell>
                               );
                             case "firstName":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                >
                                   {member.firstName || "–"}
                                 </TableCell>
                               );
                             case "dateOfBirth":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
-                                  {renderBirthdayWithAge(member.dateOfBirth, member.age)}
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                >
+                                  {renderBirthday(member.dateOfBirth)}
                                 </TableCell>
                               );
                             case "email":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                >
                                   {member.email ? (
                                     <a className="underline decoration-border underline-offset-2" href={`mailto:${member.email}`}>
                                       {member.email}
@@ -326,13 +339,19 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
                               );
                             case "background":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                >
                                   {member.background || "–"}
                                 </TableCell>
                               );
                             case "backgroundClass":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                >
                                   {member.backgroundClass || "–"}
                                 </TableCell>
                               );
@@ -350,7 +369,10 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
                               );
                             case "diet":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                >
                                   {member.diet || "–"}
                                 </TableCell>
                               );
