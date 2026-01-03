@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -183,7 +183,7 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
   };
 }
 
-function renderStackedList(items: string[]): JSX.Element {
+function renderStackedList(items: string[]): ReactNode {
   if (items.length === 0) {
     return <span className="text-muted-foreground">–</span>;
   }
@@ -198,7 +198,7 @@ function renderStackedList(items: string[]): JSX.Element {
   );
 }
 
-function renderRoles(list: { label: string; percentage?: number }[]): JSX.Element {
+function renderRoles(list: { label: string; percentage?: number }[]): ReactNode {
   if (list.length === 0) {
     return <span className="text-muted-foreground">–</span>;
   }
