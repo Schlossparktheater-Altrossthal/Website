@@ -164,6 +164,22 @@ function formatDateTime(value: Date | null | undefined) {
   return dateTimeFormatter.format(value);
 }
 
+function calculateAge(dateOfBirth: Date | null | undefined) {
+  if (!dateOfBirth) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - dateOfBirth.getFullYear();
+  const hasBirthdayPassedThisYear =
+    today.getMonth() > dateOfBirth.getMonth() ||
+    (today.getMonth() === dateOfBirth.getMonth() && today.getDate() >= dateOfBirth.getDate());
+
+  if (!hasBirthdayPassedThisYear) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 function resolvePhotoConsent(consent: PhotoConsentSelection | null): PhotoConsentInfo {
   if (!consent) {
     return {
@@ -751,6 +767,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
 
   const email = member.email?.trim() ?? null;
   const dateOfBirthLabel = formatDate(member.dateOfBirth);
+  const dateOfBirthAge = calculateAge(member.dateOfBirth);
   const createdAtLabel = formatDateTime(member.createdAt);
   const deactivatedAt = member.deactivatedAt ?? null;
   const isDeactivated = Boolean(deactivatedAt);
@@ -936,7 +953,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                   <div className="rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <ShieldCheck className="h-4 w-4" aria-hidden />
-                      Fotoeinverständnis
+                      Fotoe.
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Badge
@@ -992,7 +1009,12 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                     </div>
                     <div className="space-y-1">
                       <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Geburtsdatum</dt>
-                      <dd className="text-sm font-medium text-foreground">{dateOfBirthLabel}</dd>
+                      <dd className="space-y-0.5">
+                        <div className="text-sm font-semibold text-foreground">
+                          {dateOfBirthAge != null ? `${dateOfBirthAge} Jahre` : "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{dateOfBirthLabel}</div>
+                      </dd>
                     </div>
                     <div className="space-y-1">
                       <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Konto erstellt</dt>
