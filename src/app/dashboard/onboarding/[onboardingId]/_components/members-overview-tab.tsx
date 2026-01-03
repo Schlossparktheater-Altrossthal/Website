@@ -1,13 +1,11 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { Check, Minus, X } from "lucide-react";
 
-import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -44,7 +42,7 @@ type MemberRow = {
 const TABLE_COLUMNS: { id: keyof MemberRow; label: string }[] = [
   { id: "lastName", label: "Nachname" },
   { id: "firstName", label: "Vorname" },
-  { id: "dateOfBirth", label: "Geburtstag & Alter" },
+  { id: "dateOfBirth", label: "Alter & Geburtstag" },
   { id: "email", label: "E-Mail" },
   { id: "background", label: "Schule" },
   { id: "backgroundClass", label: "Klasse" },
@@ -100,10 +98,8 @@ function renderBirthdayWithAge(dateOfBirth: Date | null, age: number | null): Re
 
   return (
     <div className="flex flex-col text-sm text-foreground">
-      <span>{formattedDate}</span>
-      <div className="mt-1 border-t border-border/60 pt-1 text-xs text-muted-foreground">
-        {formattedAge !== "–" ? `${formattedAge} Jahre` : "–"}
-      </div>
+      <span className="font-semibold">{formattedAge !== "–" ? `${formattedAge} Jahre` : "–"}</span>
+      <span className="text-xs text-muted-foreground">{formattedDate}</span>
     </div>
   );
 }
@@ -217,17 +213,17 @@ function renderPhotoConsent(status: MemberRow["photoConsentStatus"]): ReactNode 
   const iconMap = {
     approved: {
       icon: Check,
-      className: "border-success/60 bg-success/10 text-success",
+      className: "text-success",
       label: "Ja",
     },
     declined: {
       icon: X,
-      className: "border-destructive/60 bg-destructive/10 text-destructive",
+      className: "text-destructive",
       label: "Nein",
     },
     pending: {
       icon: Minus,
-      className: "border-warning/60 bg-warning/10 text-warning",
+      className: "text-muted-foreground",
       label: "Ausstehend",
     },
   } as const;
@@ -235,78 +231,25 @@ function renderPhotoConsent(status: MemberRow["photoConsentStatus"]): ReactNode 
   const Icon = iconMap[status].icon;
 
   return (
-    <Badge variant="outline" className={cn("inline-flex items-center gap-2 px-2 py-1 text-xs font-semibold", iconMap[status].className)}>
-      <Icon className="h-4 w-4" aria-hidden />
-      {iconMap[status].label}
+    <Badge
+      variant="outline"
+      className={cn(
+        "inline-flex items-center justify-center border-border/70 bg-card/80 p-1",
+        iconMap[status].className,
+      )}
+      aria-label={iconMap[status].label}
+    >
+      <Icon className="h-6 w-6 stroke-[3]" aria-hidden />
     </Badge>
   );
 }
 
-function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <Label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</Label>
-      <div className="text-sm text-foreground">{value}</div>
-    </div>
-  );
-}
-
-function MemberDetailCard({ member }: { member: MemberRow | null }) {
-  if (!member) {
-    return (
-      <Card className="border-border/70 bg-card shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Detailansicht</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Keine Person ausgewählt.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="border-border/70 bg-card shadow-sm">
-      <CardHeader className="gap-3 border-b border-border/70 pb-4">
-        <CardTitle className="text-base">Detailansicht</CardTitle>
-        <div className="flex items-center gap-3">
-          <UserAvatar
-            name={member.avatar.name}
-            email={member.avatar.email ?? undefined}
-            size={56}
-            className="text-sm font-semibold"
-          />
-          <div className="space-y-0.5">
-            <p className="text-sm font-semibold text-foreground">
-              {[member.firstName, member.lastName].filter(Boolean).join(" ") || member.avatar.name}
-            </p>
-            {member.email ? <p className="text-xs text-muted-foreground">{member.email}</p> : null}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <DetailField label="Nachname" value={member.lastName || "–"} />
-        <DetailField label="Vorname" value={member.firstName || "–"} />
-        <DetailField label="Geburtstag & Alter" value={renderBirthdayWithAge(member.dateOfBirth, member.age)} />
-        <DetailField label="E-Mail" value={member.email ? member.email : "–"} />
-        <DetailField label="Schule" value={member.background || "–"} />
-        <DetailField label="Klasse" value={member.backgroundClass || "–"} />
-        <DetailField label="Rollen" value={renderRoles(member.rolesActing)} />
-        <DetailField label="Gewerke" value={renderRoles(member.rolesCrew)} />
-        <DetailField label="Ernährung" value={member.diet || "–"} />
-        <DetailField label="Allergien" value={renderStackedList(member.allergies)} />
-        <DetailField
-          label="Fotoeinverständnis"
-          value={renderPhotoConsent(member.photoConsentStatus)}
-        />
-      </CardContent>
-    </Card>
-  );
-}
-
 export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
-  const members = useMemo(() => data.rows.map(parseMemberRow), [data.rows]);
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(members[0]?.id ?? null);
+  const members = useMemo(() => {
+    return data.rows
+      .map(parseMemberRow)
+      .sort((a, b) => (a.lastName || "").localeCompare(b.lastName || "", "de", { sensitivity: "base" }));
+  }, [data.rows]);
   const [query, setQuery] = useState("");
 
   const filteredMembers = useMemo(() => {
@@ -317,21 +260,9 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
     );
   }, [members, query]);
 
-  useEffect(() => {
-    if (!selectedMemberId || !filteredMembers.some((member) => member.id === selectedMemberId)) {
-      setSelectedMemberId(filteredMembers[0]?.id ?? null);
-    }
-  }, [filteredMembers, selectedMemberId]);
-
-  const selectedMember =
-    filteredMembers.find((member) => member.id === selectedMemberId) ??
-    members.find((member) => member.id === selectedMemberId) ??
-    filteredMembers[0] ??
-    null;
-
   return (
     <div className="space-y-6">
-      <div className="hidden md:grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(360px,1fr)]">
+      <div className="hidden md:block">
         <Card className="border-border/70 bg-card shadow-sm">
           <CardHeader className="flex flex-col gap-2 border-b border-border/70 pb-4">
             <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
@@ -339,19 +270,19 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
           <CardContent className="p-0">
             <div className="relative max-h-[70vh] overflow-auto">
               <Table className="min-w-full">
-                <TableHeader className="sticky top-0 z-10 bg-card">
-                  <TableRow className="border-b border-border/70">
+                <TableHeader className="sticky top-0 z-10 bg-muted">
+                  <TableRow className="border-b border-border/80">
                     {TABLE_COLUMNS.map((column) => (
                       <TableHead
                         key={column.id}
-                        className="h-11 whitespace-nowrap px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+                        className="h-11 whitespace-nowrap px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground"
                       >
                         {column.label}
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="divide-y divide-border/70">
                   {filteredMembers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={TABLE_COLUMNS.length} className="h-24 text-center text-sm text-muted-foreground">
@@ -360,22 +291,7 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
                     </TableRow>
                   ) : (
                     filteredMembers.map((member) => (
-                      <TableRow
-                        key={member.id}
-                        className={cn(
-                          "cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/40",
-                          selectedMemberId === member.id ? "bg-muted/40" : "",
-                        )}
-                        onClick={() => setSelectedMemberId(member.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedMemberId(member.id);
-                          }
-                        }}
-                        tabIndex={0}
-                        aria-selected={selectedMemberId === member.id}
-                      >
+                      <TableRow key={member.id} className="transition-colors hover:bg-muted/40">
                         {TABLE_COLUMNS.map((column) => {
                           switch (column.id) {
                             case "lastName":
@@ -462,16 +378,13 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
             </div>
           </CardContent>
         </Card>
-        <MemberDetailCard member={selectedMember} />
       </div>
 
       <div className="space-y-4 md:hidden">
         <Card className="border-border/70 bg-card shadow-sm">
           <CardHeader className="gap-2 border-b border-border/70 pb-4">
             <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Suchliste nach Vor- und Nachname, die eine detailreiche Einzelansicht öffnet.
-            </p>
+            <p className="text-sm text-muted-foreground">Suchliste nach Vor- und Nachname.</p>
             <Input
               placeholder="Person suchen"
               value={query}
@@ -485,26 +398,16 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
             ) : (
               <div className="divide-y divide-border rounded-md border border-border/70">
                 {filteredMembers.map((member) => (
-                  <button
-                    key={member.id}
-                    type="button"
-                    className={cn(
-                      "flex w-full items-center justify-between px-3 py-2 text-left text-sm",
-                      selectedMemberId === member.id ? "bg-muted/60" : "hover:bg-muted/40",
-                    )}
-                    onClick={() => setSelectedMemberId(member.id)}
-                  >
+                  <div key={member.id} className="flex w-full items-center justify-between px-3 py-2 text-left text-sm">
                     <span className="font-medium text-foreground">
                       {[member.firstName, member.lastName].filter(Boolean).join(" ") || member.avatar.name}
                     </span>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
-
-        <MemberDetailCard member={selectedMember} />
       </div>
     </div>
   );
