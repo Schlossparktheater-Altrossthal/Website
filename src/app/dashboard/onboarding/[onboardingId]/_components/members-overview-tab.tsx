@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ type MemberRow = {
   lastName: string | null;
   dateOfBirth: Date | null;
   age: number | null;
+  address: string | null;
   email: string | null;
   background: string | null;
   backgroundClass: string | null;
@@ -41,13 +42,12 @@ type MemberRow = {
 };
 
 const TABLE_COLUMNS: { id: keyof MemberRow; label: string }[] = [
-  { id: "avatar", label: "Profilbild" },
-  { id: "firstName", label: "Vorname" },
   { id: "lastName", label: "Nachname" },
-  { id: "dateOfBirth", label: "Geburtsdatum" },
-  { id: "age", label: "Alter" },
-  { id: "email", label: "E-Mail-Adresse" },
-  { id: "background", label: "Schule oder Beschäftigung" },
+  { id: "firstName", label: "Vorname" },
+  { id: "dateOfBirth", label: "Geburtstag & Alter" },
+  { id: "address", label: "Adresse" },
+  { id: "email", label: "E-Mail" },
+  { id: "background", label: "Schule" },
   { id: "backgroundClass", label: "Klasse" },
   { id: "rolesActing", label: "Rollen" },
   { id: "rolesCrew", label: "Gewerke" },
@@ -70,6 +70,21 @@ function parseDate(value: unknown): Date | null {
 function formatDate(value: Date | null): string {
   if (!value) return "–";
   return value.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function formatBirthdayWithAge(dateOfBirth: Date | null, age: number | null): string {
+  const formattedDate = formatDate(dateOfBirth);
+  const formattedAge = formatAge(age);
+
+  if (formattedDate === "–" && formattedAge === "–") {
+    return "–";
+  }
+
+  if (formattedAge === "–") {
+    return formattedDate;
+  }
+
+  return `${formattedDate} (${formattedAge})`;
 }
 
 function formatAge(value: number | null): string {
@@ -137,6 +152,7 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
   const lastName = typeof values.lastName === "string" ? values.lastName : null;
   const dateOfBirth = parseDate(values.dateOfBirth);
   const ageFromData = typeof values.age === "number" && Number.isFinite(values.age) ? values.age : null;
+  const address = typeof values.address === "string" ? values.address : null;
   const email = typeof values.email === "string" ? values.email : null;
   const background = typeof values.background === "string" ? values.background : null;
   const backgroundClass = typeof values.backgroundClass === "string" ? values.backgroundClass : null;
@@ -155,6 +171,7 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
     lastName,
     dateOfBirth,
     age: calculateAge(dateOfBirth) ?? ageFromData,
+    address,
     email,
     background,
     backgroundClass,
@@ -166,7 +183,7 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
   };
 }
 
-function renderStackedList(items: string[]): JSX.Element {
+function renderStackedList(items: string[]): ReactNode {
   if (items.length === 0) {
     return <span className="text-muted-foreground">–</span>;
   }
@@ -181,7 +198,7 @@ function renderStackedList(items: string[]): JSX.Element {
   );
 }
 
-function renderRoles(list: { label: string; percentage?: number }[]): JSX.Element {
+function renderRoles(list: { label: string; percentage?: number }[]): ReactNode {
   if (list.length === 0) {
     return <span className="text-muted-foreground">–</span>;
   }
@@ -240,12 +257,12 @@ function MemberDetailCard({ member }: { member: MemberRow | null }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <DetailField label="Vorname" value={member.firstName || "–"} />
         <DetailField label="Nachname" value={member.lastName || "–"} />
-        <DetailField label="Geburtsdatum" value={formatDate(member.dateOfBirth)} />
-        <DetailField label="Alter" value={formatAge(member.age)} />
-        <DetailField label="E-Mail-Adresse" value={member.email ? member.email : "–"} />
-        <DetailField label="Schule oder Beschäftigung" value={member.background || "–"} />
+        <DetailField label="Vorname" value={member.firstName || "–"} />
+        <DetailField label="Geburtstag & Alter" value={formatBirthdayWithAge(member.dateOfBirth, member.age)} />
+        <DetailField label="Adresse" value={member.address || "–"} />
+        <DetailField label="E-Mail" value={member.email ? member.email : "–"} />
+        <DetailField label="Schule" value={member.background || "–"} />
         <DetailField label="Klasse" value={member.backgroundClass || "–"} />
         <DetailField label="Rollen" value={renderRoles(member.rolesActing)} />
         <DetailField label="Gewerke" value={renderRoles(member.rolesCrew)} />
@@ -349,15 +366,10 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
                       >
                         {TABLE_COLUMNS.map((column) => {
                           switch (column.id) {
-                            case "avatar":
+                            case "lastName":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top">
-                                  <UserAvatar
-                                    name={member.avatar.name}
-                                    email={member.avatar.email ?? undefined}
-                                    size={40}
-                                    className="text-sm font-semibold"
-                                  />
+                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
+                                  {member.lastName || "–"}
                                 </TableCell>
                               );
                             case "firstName":
@@ -366,22 +378,16 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
                                   {member.firstName || "–"}
                                 </TableCell>
                               );
-                            case "lastName":
-                              return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
-                                  {member.lastName || "–"}
-                                </TableCell>
-                              );
                             case "dateOfBirth":
                               return (
                                 <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
-                                  {formatDate(member.dateOfBirth)}
+                                  {formatBirthdayWithAge(member.dateOfBirth, member.age)}
                                 </TableCell>
                               );
-                            case "age":
+                            case "address":
                               return (
                                 <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
-                                  {formatAge(member.age)}
+                                  {member.address || <span className="text-muted-foreground">–</span>}
                                 </TableCell>
                               );
                             case "email":
