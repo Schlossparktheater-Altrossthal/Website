@@ -411,6 +411,12 @@ async function computeOnboardingDashboardData(
     return DEV_ONBOARDING_DASHBOARD;
   }
 
+  const dateFormatter = new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
   const show = await prisma.show.findUnique({
     where: { id: onboardingId },
     select: {
@@ -433,6 +439,8 @@ async function computeOnboardingDashboardData(
               lastName: true,
               email: true,
               dateOfBirth: true,
+              avatarSource: true,
+              avatarImageUpdatedAt: true,
               photoConsent: {
                 select: {
                   status: true,
@@ -452,6 +460,7 @@ async function computeOnboardingDashboardData(
           gender: true,
           focus: true,
           background: true,
+          backgroundClass: true,
           notes: true,
           dietaryPreference: true,
           dietaryPreferenceStrictness: true,
@@ -745,6 +754,55 @@ async function computeOnboardingDashboardData(
     skipped: show.onboardingProfiles.filter((profile) => profile.user.photoConsent?.status === "rejected").length,
     pending: show.onboardingProfiles.filter((profile) => !profile.user.photoConsent).length,
   };
+
+  const membersOverview = show.onboardingProfiles.map((profile) => {
+    const dateOfBirth = profile.user.dateOfBirth ?? null;
+    const age = computeAge(dateOfBirth);
+    const actingRoles = Array.from(actingSharesByUser.get(profile.user.id)?.entries() ?? [])
+      .filter(([, share]) => share > 0)
+      .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+      .map(([roleId, share]) => ({
+        label: getRolePreferenceTitle(roleId),
+        share: Number.isFinite(share) ? roundTo(share * 100, 1) : null,
+      }));
+    const crewRoles = Array.from(crewSharesByUser.get(profile.user.id)?.entries() ?? [])
+      .filter(([, share]) => share > 0)
+      .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+      .map(([roleId, share]) => ({
+        label: getRolePreferenceTitle(roleId),
+        share: Number.isFinite(share) ? roundTo(share * 100, 1) : null,
+      }));
+    const allergies = (profile.user.dietaryRestrictions ?? [])
+      .filter((entry) => entry.isActive)
+      .map((entry) => ({
+        label: entry.allergen,
+        severity: severityLabel(entry.level),
+      }));
+    const diet = normalizeOptionalText(profile.dietaryPreference);
+    const strictness = normalizeOptionalText(profile.dietaryPreferenceStrictness);
+
+    return {
+      userId: profile.user.id,
+      firstName: profile.user.firstName ?? null,
+      lastName: profile.user.lastName ?? null,
+      email: profile.user.email ?? null,
+      dateOfBirth: dateOfBirth ? dateFormatter.format(dateOfBirth) : null,
+      age,
+      schoolOrOccupation: normalizeOptionalText(profile.background),
+      classLabel: normalizeOptionalText(profile.backgroundClass),
+      actingRoles,
+      crewRoles,
+      diet: diet ? (strictness ? `${diet} · ${strictness}` : diet) : null,
+      allergies,
+      photoConsent:
+        profile.user.photoConsent?.consentGiven === true &&
+        profile.user.photoConsent.status === "approved",
+      avatarSource: profile.user.avatarSource ?? null,
+      avatarUpdatedAt: profile.user.avatarImageUpdatedAt
+        ? profile.user.avatarImageUpdatedAt.toISOString()
+        : null,
+    };
+  });
 
   const candidateInputs: CandidateInput[] = show.onboardingProfiles.map((profile) => {
     const fullName =
@@ -1133,6 +1191,7 @@ async function computeOnboardingDashboardData(
     ranking: {
       roles: rankingRoles,
     },
+    membersOverview,
     history: historySnapshots,
   });
 

@@ -14,6 +14,7 @@ import { AllocationTab } from "./allocation-tab";
 import { GlobalOverviewTab } from "./global-tab";
 import { HeaderBar } from "./header-bar";
 import { HistoryTab } from "./history-tab";
+import { MembersOverviewTab } from "./members-overview-tab";
 import { RankingTab } from "./ranking-tab";
 
 function dashboardQueryKey(onboardingId: string) {
@@ -49,7 +50,7 @@ export function DashboardClient({
   const queryClient = useQueryClient();
   const { socket, joinRoom, leaveRoom } = useRealtime();
   const [selectedOnboarding, setSelectedOnboarding] = useState(initialData.onboarding.id);
-  const [tabValue, setTabValue] = useState<"global" | "ranking" | "allocation" | "history">("global");
+  const [tabValue, setTabValue] = useState<"global" | "members" | "ranking" | "allocation" | "history">("global");
   const [isPending, startTransition] = useTransition();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const offline = isOffline;
@@ -188,6 +189,9 @@ export function DashboardClient({
           <TabsTrigger value="global" disabled={offline}>
             Global
           </TabsTrigger>
+          <TabsTrigger value="members" disabled={offline}>
+            Mitglieder
+          </TabsTrigger>
           <TabsTrigger value="ranking" disabled={offline}>
             Ranking
           </TabsTrigger>
@@ -210,6 +214,17 @@ export function DashboardClient({
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
               <GlobalOverviewTab data={currentData.global} participants={currentData.onboarding.participants} />
+            </motion.div>
+          </TabsContent>
+          <TabsContent key="members" value="members" className="space-y-6">
+            <motion.div
+              key={`${currentData.onboarding.id}-members`}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <MembersOverviewTab members={currentData.membersOverview} />
             </motion.div>
           </TabsContent>
           <TabsContent key="ranking" value="ranking" className="space-y-6">

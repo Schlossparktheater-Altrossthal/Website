@@ -50,6 +50,34 @@ export const clusterNodeSchema = z.object({
   intent: z.enum(["default", "success", "warning", "critical"]).optional(),
 });
 
+export const onboardingMemberOverviewRoleSchema = z.object({
+  label: z.string(),
+  share: z.number().nullable(),
+});
+
+export const onboardingMemberOverviewAllergySchema = z.object({
+  label: z.string(),
+  severity: z.string(),
+});
+
+export const onboardingMemberOverviewEntrySchema = z.object({
+  userId: z.string(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  email: z.string().nullable(),
+  dateOfBirth: z.string().nullable(),
+  age: z.number().nullable(),
+  schoolOrOccupation: z.string().nullable(),
+  classLabel: z.string().nullable(),
+  actingRoles: z.array(onboardingMemberOverviewRoleSchema),
+  crewRoles: z.array(onboardingMemberOverviewRoleSchema),
+  diet: z.string().nullable(),
+  allergies: z.array(onboardingMemberOverviewAllergySchema),
+  photoConsent: z.boolean(),
+  avatarSource: z.string().nullable(),
+  avatarUpdatedAt: z.string().nullable(),
+});
+
 export const diversityMetricSchema = z.object({
   shannon: z.number(),
   gini: z.number(),
@@ -258,6 +286,7 @@ export const onboardingDashboardSchema = z.object({
   global: onboardingGlobalSectionSchema,
   allocation: onboardingAllocationSectionSchema,
   ranking: onboardingRankingSectionSchema,
+  membersOverview: z.array(onboardingMemberOverviewEntrySchema),
   history: z.array(historySnapshotSchema).optional(),
 });
 
@@ -268,3 +297,4 @@ export type AllocationCandidate = z.infer<typeof allocationCandidateSchema>;
 export type AllocationSlot = z.infer<typeof allocationSlotSchema>;
 export type OnboardingRankingRole = z.infer<typeof rankingRoleSchema>;
 export type OnboardingRankingCandidate = z.infer<typeof rankingCandidateSchema>;
+export type OnboardingMemberOverviewEntry = z.infer<typeof onboardingMemberOverviewEntrySchema>;
