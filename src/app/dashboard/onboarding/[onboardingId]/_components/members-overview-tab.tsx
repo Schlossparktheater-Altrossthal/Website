@@ -1,12 +1,11 @@
 "use client";
 
-import { type ReactNode, useMemo, useState } from "react";
-import { Check, Filter, Minus, Search, Settings, X } from "lucide-react";
+import { type ReactNode, useMemo } from "react";
+import { Check, Filter, Minus, Search, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -21,6 +20,9 @@ import { cn } from "@/lib/utils";
 type MembersOverviewTabProps = {
   onboardingId: string;
   data: OnboardingMembersOverview;
+  query: string;
+  onQueryChange: (value: string) => void;
+  photoConsentFilter: "all" | "approved" | "pending" | "declined";
 };
 
 type MemberRow = {
@@ -51,8 +53,15 @@ const TABLE_COLUMNS: { id: keyof MemberRow; label: string }[] = [
   { id: "rolesCrew", label: "Gewerke" },
   { id: "diet", label: "Ernährung" },
   { id: "allergies", label: "Allergien" },
-  { id: "photoConsentStatus", label: "Fotoeinverständnis" },
+  { id: "photoConsentStatus", label: "Fotoe." },
 ];
+
+const PHOTO_FILTER_LABELS: Record<MembersOverviewTabProps["photoConsentFilter"], string> = {
+  all: "Alle Fotoe.",
+  approved: "Fotoe. freigegeben",
+  pending: "Fotoe. ausstehend",
+  declined: "Fotoe. abgelehnt",
+};
 
 function parseDate(value: unknown): Date | null {
   if (value instanceof Date) {
@@ -88,8 +97,14 @@ function calculateAge(dateOfBirth: Date | null): number | null {
 
 function renderBirthday(dateOfBirth: Date | null): ReactNode {
   const formattedDate = formatDate(dateOfBirth);
+  const age = calculateAge(dateOfBirth);
 
-  return <span className="text-sm font-medium text-foreground">{formattedDate}</span>;
+  return (
+    <div className="flex flex-col leading-tight">
+      <span className="text-sm font-semibold text-foreground">{age != null ? `${age} Jahre` : "–"}</span>
+      <span className="text-xs text-muted-foreground">{formattedDate}</span>
+    </div>
+  );
 }
 
 function parseRoles(value: unknown): { label: string; percentage?: number }[] {
@@ -232,21 +247,24 @@ function renderPhotoConsent(status: MemberRow["photoConsentStatus"]): ReactNode 
   );
 }
 
-export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
+export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFilter }: MembersOverviewTabProps) {
   const members = useMemo(() => {
     return data.rows
       .map(parseMemberRow)
       .sort((a, b) => (a.lastName || "").localeCompare(b.lastName || "", "de", { sensitivity: "base" }));
   }, [data.rows]);
-  const [query, setQuery] = useState("");
 
   const filteredMembers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return members;
-    return members.filter((member) =>
-      `${member.firstName ?? ""} ${member.lastName ?? ""}`.toLowerCase().includes(normalized),
-    );
-  }, [members, query]);
+    return members.filter((member) => {
+      const matchesQuery = normalized
+        ? `${member.firstName ?? ""} ${member.lastName ?? ""}`.toLowerCase().includes(normalized)
+        : true;
+      const matchesPhotoConsent =
+        photoConsentFilter === "all" || member.photoConsentStatus === photoConsentFilter;
+      return matchesQuery && matchesPhotoConsent;
+    });
+  }, [members, photoConsentFilter, query]);
 
   return (
     <div className="space-y-6">
@@ -255,16 +273,19 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
           <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-4">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Button variant="ghost" size="icon" aria-label="Suche öffnen">
-                  <Search className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" aria-label="Filter anpassen">
-                  <Filter className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" aria-label="Einstellungen öffnen">
-                  <Settings className="h-4 w-4" />
-                </Button>
+              <div className="flex flex-col items-end gap-1 text-right text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Search className="h-4 w-4" aria-hidden />
+                  <span>
+                    {filteredMembers.length} von {members.length} Einträgen
+                  </span>
+                </div>
+                {photoConsentFilter !== "all" ? (
+                  <Badge variant="secondary" className="inline-flex items-center gap-1">
+                    <Filter className="h-3 w-3" aria-hidden />
+                    {PHOTO_FILTER_LABELS[photoConsentFilter]}
+                  </Badge>
+                ) : null}
               </div>
             </div>
           </CardHeader>
@@ -410,7 +431,7 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
             <Input
               placeholder="Person suchen"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => onQueryChange(event.target.value)}
               className="mt-2"
             />
           </CardHeader>
