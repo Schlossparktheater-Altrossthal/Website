@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { Check, Minus, X } from "lucide-react";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,6 @@ type MemberRow = {
   lastName: string | null;
   dateOfBirth: Date | null;
   age: number | null;
-  address: string | null;
   email: string | null;
   background: string | null;
   backgroundClass: string | null;
@@ -38,14 +38,13 @@ type MemberRow = {
   rolesCrew: { label: string; percentage?: number }[];
   diet: string | null;
   allergies: string[];
-  photoConsentApproved: boolean;
+  photoConsentStatus: "approved" | "pending" | "declined";
 };
 
 const TABLE_COLUMNS: { id: keyof MemberRow; label: string }[] = [
   { id: "lastName", label: "Nachname" },
   { id: "firstName", label: "Vorname" },
   { id: "dateOfBirth", label: "Geburtstag & Alter" },
-  { id: "address", label: "Adresse" },
   { id: "email", label: "E-Mail" },
   { id: "background", label: "Schule" },
   { id: "backgroundClass", label: "Klasse" },
@@ -53,7 +52,7 @@ const TABLE_COLUMNS: { id: keyof MemberRow; label: string }[] = [
   { id: "rolesCrew", label: "Gewerke" },
   { id: "diet", label: "Ernährung" },
   { id: "allergies", label: "Allergien" },
-  { id: "photoConsentApproved", label: "Fotoeinverständnis" },
+  { id: "photoConsentStatus", label: "Fotoeinverständnis" },
 ];
 
 function parseDate(value: unknown): Date | null {
@@ -70,21 +69,6 @@ function parseDate(value: unknown): Date | null {
 function formatDate(value: Date | null): string {
   if (!value) return "–";
   return value.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-function formatBirthdayWithAge(dateOfBirth: Date | null, age: number | null): string {
-  const formattedDate = formatDate(dateOfBirth);
-  const formattedAge = formatAge(age);
-
-  if (formattedDate === "–" && formattedAge === "–") {
-    return "–";
-  }
-
-  if (formattedAge === "–") {
-    return formattedDate;
-  }
-
-  return `${formattedDate} (${formattedAge})`;
 }
 
 function formatAge(value: number | null): string {
@@ -108,6 +92,20 @@ function calculateAge(dateOfBirth: Date | null): number | null {
   }
 
   return age >= 0 ? age : null;
+}
+
+function renderBirthdayWithAge(dateOfBirth: Date | null, age: number | null): ReactNode {
+  const formattedDate = formatDate(dateOfBirth);
+  const formattedAge = formatAge(age);
+
+  return (
+    <div className="flex flex-col text-sm text-foreground">
+      <span>{formattedDate}</span>
+      <div className="mt-1 border-t border-border/60 pt-1 text-xs text-muted-foreground">
+        {formattedAge !== "–" ? `${formattedAge} Jahre` : "–"}
+      </div>
+    </div>
+  );
 }
 
 function parseRoles(value: unknown): { label: string; percentage?: number }[] {
@@ -152,14 +150,17 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
   const lastName = typeof values.lastName === "string" ? values.lastName : null;
   const dateOfBirth = parseDate(values.dateOfBirth);
   const ageFromData = typeof values.age === "number" && Number.isFinite(values.age) ? values.age : null;
-  const address = typeof values.address === "string" ? values.address : null;
   const email = typeof values.email === "string" ? values.email : null;
   const background = typeof values.background === "string" ? values.background : null;
   const backgroundClass = typeof values.backgroundClass === "string" ? values.backgroundClass : null;
   const diet = typeof values.diet === "string" ? values.diet : null;
   const photoConsent = values.photoConsent as { status?: string; consentGiven?: boolean | null } | undefined;
-  const photoConsentApproved =
-    (photoConsent?.status === "approved" || photoConsent?.consentGiven === true) ?? false;
+  const photoConsentStatus: MemberRow["photoConsentStatus"] =
+    photoConsent?.status === "approved" || photoConsent?.consentGiven === true
+      ? "approved"
+      : photoConsent?.status === "pending" || photoConsent?.consentGiven == null
+        ? "pending"
+        : "declined";
 
   return {
     id: row.id,
@@ -171,7 +172,6 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
     lastName,
     dateOfBirth,
     age: calculateAge(dateOfBirth) ?? ageFromData,
-    address,
     email,
     background,
     backgroundClass,
@@ -179,7 +179,7 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
     rolesCrew: parseRoles(values.rolesCrew),
     diet,
     allergies: parseAllergies(values.allergies),
-    photoConsentApproved,
+    photoConsentStatus,
   };
 }
 
@@ -204,13 +204,41 @@ function renderRoles(list: { label: string; percentage?: number }[]): ReactNode 
   }
   return (
     <div className="space-y-1">
-      {list.map((entry) => (
-        <p key={`${entry.label}-${entry.percentage ?? "none"}`} className="text-sm text-foreground">
+      {list.map((entry, index) => (
+        <p key={`${entry.label}-${index}`} className="text-sm text-foreground">
           {entry.label}
-          {typeof entry.percentage === "number" ? ` (${entry.percentage}%)` : ""}
         </p>
       ))}
     </div>
+  );
+}
+
+function renderPhotoConsent(status: MemberRow["photoConsentStatus"]): ReactNode {
+  const iconMap = {
+    approved: {
+      icon: Check,
+      className: "border-success/60 bg-success/10 text-success",
+      label: "Ja",
+    },
+    declined: {
+      icon: X,
+      className: "border-destructive/60 bg-destructive/10 text-destructive",
+      label: "Nein",
+    },
+    pending: {
+      icon: Minus,
+      className: "border-warning/60 bg-warning/10 text-warning",
+      label: "Ausstehend",
+    },
+  } as const;
+
+  const Icon = iconMap[status].icon;
+
+  return (
+    <Badge variant="outline" className={cn("inline-flex items-center gap-2 px-2 py-1 text-xs font-semibold", iconMap[status].className)}>
+      <Icon className="h-4 w-4" aria-hidden />
+      {iconMap[status].label}
+    </Badge>
   );
 }
 
@@ -259,8 +287,7 @@ function MemberDetailCard({ member }: { member: MemberRow | null }) {
       <CardContent className="space-y-4">
         <DetailField label="Nachname" value={member.lastName || "–"} />
         <DetailField label="Vorname" value={member.firstName || "–"} />
-        <DetailField label="Geburtstag & Alter" value={formatBirthdayWithAge(member.dateOfBirth, member.age)} />
-        <DetailField label="Adresse" value={member.address || "–"} />
+        <DetailField label="Geburtstag & Alter" value={renderBirthdayWithAge(member.dateOfBirth, member.age)} />
         <DetailField label="E-Mail" value={member.email ? member.email : "–"} />
         <DetailField label="Schule" value={member.background || "–"} />
         <DetailField label="Klasse" value={member.backgroundClass || "–"} />
@@ -270,19 +297,7 @@ function MemberDetailCard({ member }: { member: MemberRow | null }) {
         <DetailField label="Allergien" value={renderStackedList(member.allergies)} />
         <DetailField
           label="Fotoeinverständnis"
-          value={
-            <Badge
-              variant="outline"
-              className={cn(
-                "px-2 py-1 text-xs font-semibold",
-                member.photoConsentApproved
-                  ? "border-success/60 bg-success/10 text-success"
-                  : "border-destructive/60 bg-destructive/10 text-destructive",
-              )}
-            >
-              {member.photoConsentApproved ? "Ja" : "Nein"}
-            </Badge>
-          }
+          value={renderPhotoConsent(member.photoConsentStatus)}
         />
       </CardContent>
     </Card>
@@ -320,9 +335,6 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
         <Card className="border-border/70 bg-card shadow-sm">
           <CardHeader className="flex flex-col gap-2 border-b border-border/70 pb-4">
             <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Strukturierte Tabelle mit festen Spalten und klar getrennten Kategorien.
-            </p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="relative max-h-[70vh] overflow-auto">
@@ -381,13 +393,7 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
                             case "dateOfBirth":
                               return (
                                 <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
-                                  {formatBirthdayWithAge(member.dateOfBirth, member.age)}
-                                </TableCell>
-                              );
-                            case "address":
-                              return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top text-sm text-foreground">
-                                  {member.address || <span className="text-muted-foreground">–</span>}
+                                  {renderBirthdayWithAge(member.dateOfBirth, member.age)}
                                 </TableCell>
                               );
                             case "email":
@@ -438,20 +444,10 @@ export function MembersOverviewTab({ data }: MembersOverviewTabProps) {
                                   {renderStackedList(member.allergies)}
                                 </TableCell>
                               );
-                            case "photoConsentApproved":
+                            case "photoConsentStatus":
                               return (
                                 <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top">
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "px-2 py-1 text-xs font-semibold",
-                                      member.photoConsentApproved
-                                        ? "border-success/60 bg-success/10 text-success"
-                                        : "border-destructive/60 bg-destructive/10 text-destructive",
-                                    )}
-                                  >
-                                    {member.photoConsentApproved ? "Ja" : "Nein"}
-                                  </Badge>
+                                  {renderPhotoConsent(member.photoConsentStatus)}
                                 </TableCell>
                               );
                             default:
