@@ -434,6 +434,7 @@ async function computeOnboardingDashboardData(
               lastName: true,
               email: true,
               dateOfBirth: true,
+              deactivatedAt: true,
               photoConsent: {
                 select: {
                   status: true,
@@ -836,7 +837,9 @@ async function computeOnboardingDashboardData(
     },
   ];
 
-  const membersRows: OnboardingMembersOverview["rows"] = show.onboardingProfiles.map((profile) => {
+  const activeOnboardingProfiles = show.onboardingProfiles.filter((profile) => !profile.user.deactivatedAt);
+
+  const membersRows: OnboardingMembersOverview["rows"] = activeOnboardingProfiles.map((profile) => {
     const fullName =
       profile.user.name ||
       [profile.user.firstName, profile.user.lastName].filter(Boolean).join(" ") ||

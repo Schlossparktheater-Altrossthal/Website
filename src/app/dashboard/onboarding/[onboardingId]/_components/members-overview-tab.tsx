@@ -1,10 +1,10 @@
 "use client";
 
 import { type ReactNode, useMemo } from "react";
-import { Check, Filter, Minus, Search, X } from "lucide-react";
+import { Check, Filter, Minus, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -45,7 +45,7 @@ type MemberRow = {
 const TABLE_COLUMNS: { id: keyof MemberRow; label: string }[] = [
   { id: "lastName", label: "Nachname" },
   { id: "firstName", label: "Vorname" },
-  { id: "dateOfBirth", label: "Geburtsdatum" },
+  { id: "dateOfBirth", label: "Geb." },
   { id: "email", label: "E-Mail" },
   { id: "background", label: "Schule" },
   { id: "backgroundClass", label: "Klasse" },
@@ -270,26 +270,15 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
     <div className="space-y-6">
       <div className="hidden md:block">
         <Card className="border-border/70 bg-card shadow-sm">
-          <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-4">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
-              <div className="flex flex-col items-end gap-1 text-right text-xs text-muted-foreground">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Search className="h-4 w-4" aria-hidden />
-                  <span>
-                    {filteredMembers.length} von {members.length} Einträgen
-                  </span>
-                </div>
-                {photoConsentFilter !== "all" ? (
-                  <Badge variant="secondary" className="inline-flex items-center gap-1">
-                    <Filter className="h-3 w-3" aria-hidden />
-                    {PHOTO_FILTER_LABELS[photoConsentFilter]}
-                  </Badge>
-                ) : null}
-              </div>
-            </div>
-          </CardHeader>
           <CardContent className="p-0">
+            {photoConsentFilter !== "all" ? (
+              <div className="flex justify-end p-4 pb-2">
+                <Badge variant="secondary" className="inline-flex items-center gap-1">
+                  <Filter className="h-3 w-3" aria-hidden />
+                  {PHOTO_FILTER_LABELS[photoConsentFilter]}
+                </Badge>
+              </div>
+            ) : null}
             <div className="relative max-h-[70vh] overflow-x-auto overflow-y-auto">
               <Table className="w-full table-auto">
                 <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
@@ -426,7 +415,6 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
       <div className="space-y-4 md:hidden">
         <Card className="border-border/70 bg-card shadow-sm">
           <CardHeader className="gap-2 border-b border-border/70 pb-4">
-            <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
             <p className="text-sm text-muted-foreground">Suchliste nach Vor- und Nachname.</p>
             <Input
               placeholder="Person suchen"
