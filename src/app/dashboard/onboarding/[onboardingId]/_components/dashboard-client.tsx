@@ -170,6 +170,7 @@ export function DashboardClient({
 
   const historyAvailable = (currentData.history?.length ?? 0) > 0;
   const showHeaderBar = tabValue !== "members-overview";
+  const showMemberFilters = tabValue === "members-overview";
 
   return (
     <div className="space-y-6">
@@ -216,60 +217,62 @@ export function DashboardClient({
             </TabsTrigger>
           ) : null}
         </TabsList>
-        <div className="space-y-3 rounded-xl border border-border bg-muted/30 px-4 py-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="w-full space-y-2 lg:max-w-2xl">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Search className="h-4 w-4" aria-hidden />
-                Suche
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                <Input
-                  value={memberQuery}
-                  onChange={(event) => setMemberQuery(event.target.value)}
-                  placeholder="Nach Namen oder E-Mail suchen"
-                  className="w-full bg-background pl-9"
-                  aria-label="Mitglieder durchsuchen"
-                  disabled={offline}
-                />
-              </div>
-            </div>
-
-            <div className="w-full space-y-2 lg:max-w-sm">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Filter className="h-4 w-4" aria-hidden />
-                Fotoe.-Filter
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    { key: "all", label: "Alle" },
-                    { key: "approved", label: "Freigegeben" },
-                    { key: "pending", label: "Ausstehend" },
-                    { key: "declined", label: "Abgelehnt" },
-                  ] as const
-                ).map((option) => (
-                  <Button
-                    key={option.key}
-                    type="button"
-                    size="sm"
-                    variant={photoConsentFilter === option.key ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() => setPhotoConsentFilter(option.key)}
-                    aria-pressed={photoConsentFilter === option.key}
+        {showMemberFilters ? (
+          <div className="space-y-3 rounded-xl border border-border bg-muted/30 px-4 py-4 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="w-full space-y-2 lg:max-w-2xl">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Search className="h-4 w-4" aria-hidden />
+                  Suche
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <Input
+                    value={memberQuery}
+                    onChange={(event) => setMemberQuery(event.target.value)}
+                    placeholder="Nach Namen oder E-Mail suchen"
+                    className="w-full bg-background pl-9"
+                    aria-label="Mitglieder durchsuchen"
                     disabled={offline}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
+                  />
+                </div>
+              </div>
+
+              <div className="w-full space-y-2 lg:max-w-sm">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Filter className="h-4 w-4" aria-hidden />
+                  Fotoe.-Filter
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { key: "all", label: "Alle" },
+                      { key: "approved", label: "Freigegeben" },
+                      { key: "pending", label: "Ausstehend" },
+                      { key: "declined", label: "Abgelehnt" },
+                    ] as const
+                  ).map((option) => (
+                    <Button
+                      key={option.key}
+                      type="button"
+                      size="sm"
+                      variant={photoConsentFilter === option.key ? "default" : "outline"}
+                      className="rounded-full"
+                      onClick={() => setPhotoConsentFilter(option.key)}
+                      aria-pressed={photoConsentFilter === option.key}
+                      disabled={offline}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Such- und Filterleiste greift auf die Mitgliederübersicht. Andere Tabs bleiben unverändert.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Such- und Filterleiste greift auf die Mitgliederübersicht. Andere Tabs bleiben unverändert.
-          </p>
-        </div>
+        ) : null}
         <AnimatePresence mode="wait">
           <TabsContent key="members-overview" value="members-overview" className="space-y-6">
             <motion.div
