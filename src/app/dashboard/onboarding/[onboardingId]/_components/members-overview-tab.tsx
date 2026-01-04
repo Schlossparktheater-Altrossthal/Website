@@ -290,14 +290,14 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="relative max-h-[70vh] overflow-x-auto overflow-y-auto">
-              <Table className="w-full table-auto">
-                <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
-                  <TableRow className="border-b border-border/80">
+            <div className="overflow-x-auto rounded-md border border-border/70">
+              <Table className="w-full border-collapse text-sm">
+                <TableHeader>
+                  <TableRow className="border-b bg-muted/30 text-left">
                     {TABLE_COLUMNS.map((column) => (
                       <TableHead
                         key={column.id}
-                        className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground"
+                        className="px-3 py-2 text-left text-sm font-medium text-foreground"
                       >
                         {column.label}
                       </TableHead>
@@ -313,14 +313,17 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                     </TableRow>
                   ) : (
                     filteredMembers.map((member) => (
-                      <TableRow className="border-b border-border/70 transition-colors hover:bg-muted/40 last:border-b-0" key={member.id}>
+                      <TableRow
+                        className="border-b transition-colors hover:bg-accent/10 last:border-b-0"
+                        key={member.id}
+                      >
                         {TABLE_COLUMNS.map((column) => {
                           switch (column.id) {
                             case "lastName":
                               return (
                                 <TableCell
                                   key={`${member.id}-${column.id}`}
-                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                  className="whitespace-normal break-words px-3 py-2 align-top text-sm text-foreground"
                                 >
                                   {member.lastName || "–"}
                                 </TableCell>
@@ -329,7 +332,7 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                               return (
                                 <TableCell
                                   key={`${member.id}-${column.id}`}
-                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                  className="whitespace-normal break-words px-3 py-2 align-top text-sm text-foreground"
                                 >
                                   {member.firstName || "–"}
                                 </TableCell>
@@ -338,7 +341,7 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                               return (
                                 <TableCell
                                   key={`${member.id}-${column.id}`}
-                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                  className="whitespace-normal break-words px-3 py-2 align-top text-sm text-foreground"
                                 >
                                   {renderBirthday(member.dateOfBirth)}
                                 </TableCell>
@@ -347,7 +350,7 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                               return (
                                 <TableCell
                                   key={`${member.id}-${column.id}`}
-                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                  className="whitespace-normal break-words px-3 py-2 align-top text-sm text-foreground"
                                 >
                                   {member.email ? (
                                     <a className="underline decoration-border underline-offset-2" href={`mailto:${member.email}`}>
@@ -362,7 +365,7 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                               return (
                                 <TableCell
                                   key={`${member.id}-${column.id}`}
-                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                  className="whitespace-normal break-words px-3 py-2 align-top text-sm text-foreground"
                                 >
                                   {member.background || "–"}
                                 </TableCell>
@@ -371,20 +374,20 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                               return (
                                 <TableCell
                                   key={`${member.id}-${column.id}`}
-                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                  className="whitespace-normal break-words px-3 py-2 align-top text-sm text-foreground"
                                 >
                                   {member.backgroundClass || "–"}
                                 </TableCell>
                               );
                             case "rolesActing":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top">
+                                <TableCell key={`${member.id}-${column.id}`} className="px-3 py-2 align-top">
                                   {renderRoles(member.rolesActing)}
                                 </TableCell>
                               );
                             case "rolesCrew":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top">
+                                <TableCell key={`${member.id}-${column.id}`} className="px-3 py-2 align-top">
                                   {renderRoles(member.rolesCrew)}
                                 </TableCell>
                               );
@@ -392,20 +395,20 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                               return (
                                 <TableCell
                                   key={`${member.id}-${column.id}`}
-                                  className="px-3 align-top text-sm text-foreground whitespace-normal break-words"
+                                  className="whitespace-normal break-words px-3 py-2 align-top text-sm text-foreground"
                                 >
                                   {member.diet || "–"}
                                 </TableCell>
                               );
                             case "allergies":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top">
+                                <TableCell key={`${member.id}-${column.id}`} className="px-3 py-2 align-top">
                                   {renderStackedList(member.allergies)}
                                 </TableCell>
                               );
                             case "photoConsentStatus":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 align-top">
+                                <TableCell key={`${member.id}-${column.id}`} className="px-3 py-2 align-top">
                                   {renderPhotoConsent(member.photoConsentStatus)}
                                 </TableCell>
                               );
