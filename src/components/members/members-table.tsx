@@ -15,14 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, ROLES, sortRoles, type Role } from "@/lib/roles";
 import { RoleManager } from "@/components/members/role-manager";
 import { UserAvatar } from "@/components/user-avatar";
@@ -198,41 +190,25 @@ export function MembersTable({
           </div>
 
           <div className="hidden sm:block">
-            <div className="relative max-h-[70vh] overflow-x-auto overflow-y-auto rounded-lg border border-border/70 bg-card shadow-sm">
-              <Table className="w-full table-auto">
-                <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
-                  <TableRow className="border-b border-border/80">
-                    <TableHead className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      Name
-                    </TableHead>
-                    <TableHead className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      E-Mail
-                    </TableHead>
-                    <TableHead className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      Rollen
-                    </TableHead>
-                    <TableHead className="h-11 px-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      Zusätzliche Rollen
-                    </TableHead>
-                    <TableHead className="h-11 px-3 text-right text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      Aktionen
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/30 text-left">
+                    <th className="px-3 py-2 font-medium">Name</th>
+                    <th className="px-3 py-2 font-medium">E-Mail</th>
+                    <th className="px-3 py-2 font-medium">Rollen</th>
+                    <th className="px-3 py-2 font-medium">Zusätzliche Rollen</th>
+                    <th className="px-3 py-2 font-medium text-right">Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {filteredRows.map((u) => {
                     const sorted = sortRoles(u.roles);
                     const displayName = getDisplayName(u);
                     const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
                     return (
-                      <TableRow
-                        key={u.id}
-                        className={cn(
-                          "border-b border-border/70 transition-colors hover:bg-muted/40",
-                          u.isDeactivated && "bg-muted/40",
-                        )}
-                      >
-                        <TableCell className="px-3 py-3 align-middle">
+                      <tr key={u.id} className={cn("border-b hover:bg-accent/10", u.isDeactivated && "bg-muted/40")}>
+                        <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <UserAvatar
                               userId={u.id}
@@ -246,7 +222,7 @@ export function MembersTable({
                               avatarUpdatedAt={u.avatarUpdatedAt}
                             />
                             <div>
-                              <div className="flex flex-wrap items-center gap-2 font-medium text-foreground">
+                              <div className="flex flex-wrap items-center gap-2 font-medium">
                                 <span>{displayName || "—"}</span>
                                 {u.isDeactivated && (
                                   <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
@@ -256,11 +232,9 @@ export function MembersTable({
                               </div>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="px-3 py-3 align-middle whitespace-nowrap text-sm text-muted-foreground">
-                          {u.email || "—"}
-                        </TableCell>
-                        <TableCell className="px-3 py-3 align-middle">
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{u.email || "—"}</td>
+                        <td className="px-3 py-2">
                           <div className="flex flex-wrap gap-1">
                             {sorted.map((r) => (
                               <span
@@ -271,8 +245,8 @@ export function MembersTable({
                               </span>
                             ))}
                           </div>
-                        </TableCell>
-                        <TableCell className="px-3 py-3 align-middle">
+                        </td>
+                        <td className="px-3 py-2">
                           {u.customRoles.length ? (
                             <div className="flex flex-wrap gap-1">
                               {u.customRoles.map((cr) => (
@@ -284,8 +258,8 @@ export function MembersTable({
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
-                        </TableCell>
-                        <TableCell className="px-3 py-3 align-middle text-right">
+                        </td>
+                        <td className="px-3 py-2 text-right">
                           <MemberActionButtons
                             user={u}
                             profileHref={profileHref}
@@ -355,12 +329,12 @@ export function MembersTable({
                               />
                             </DialogContent>
                           </Dialog>
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           </div>
         </>
