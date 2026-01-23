@@ -2,10 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
-import type { LucideIcon } from "lucide-react";
-import { CalendarDays, CheckCircle2, ListTodo, Sparkles } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -19,8 +17,7 @@ import {
   isCastDepartmentUser,
 } from "./utils";
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-card";
-
-type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
+import { DepartmentSelect } from "./department-select";
 
 export default async function MeineGewerkePage() {
   const session = await requireAuth();
@@ -206,96 +203,39 @@ export default async function MeineGewerkePage() {
     }
   }
 
-  const openTaskCount = taskTotals.todo + taskTotals.doing;
   const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
   const now = new Date();
 
-  const summaryStats: SummaryStat[] = [
-    { label: "Aktive Aufgaben", value: openTaskCount, hint: "Offen & in Arbeit in deinen Gewerken", icon: ListTodo },
-    { label: "Abgeschlossen", value: taskTotals.done, hint: "Erledigte Gewerke-Aufgaben", icon: CheckCircle2 },
-  ];
+  const departmentOptions = memberships
+    .map((membership) => {
+      const href = canManageDepartments
+        ? `/mitglieder/produktionen/gewerke/${membership.department.id}`
+        : membership.department.slug
+          ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
+          : null;
 
-  const headerActions = (
-    <>
-      <Button
-        asChild
-        size="sm"
-        variant="outline"
-        className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
-      >
-        <Link href="/mitglieder/sperrliste" title="Sperrliste öffnen">
-          <CalendarDays aria-hidden className="h-4 w-4" />
-          <span>Sperrliste</span>
-        </Link>
-      </Button>
-    </>
-  );
+      if (!href) {
+        return null;
+      }
 
-  const heroDescription = memberships.length
-    ? "Behalte deine Zuständigkeiten im Blick, choreografiere Aufgaben und sichere kollisionsfreie Zeitfenster für dein Team."
-    : "Sobald du einem Gewerk zugeordnet bist, findest du hier Aufgaben, Ansprechpartner und Terminvorschläge.";
-
-  const hero = (
-    <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/70 p-6 shadow-[0_28px_90px_-50px_rgba(99,102,241,0.8)] sm:p-10">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-24 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
-        <div className="absolute -bottom-32 right-0 h-64 w-64 rounded-full bg-secondary/20 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),transparent_55%)]" />
-      </div>
-      <div className="relative flex flex-col gap-8">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-4">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-              <Sparkles aria-hidden className="h-4 w-4" />
-              <span className="tracking-[0.2em]">Mission Control</span>
-            </span>
-            <div className="space-y-3">
-              <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">Meine Gewerke</h1>
-              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{heroDescription}</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div>
-        </div>
-        {memberships.length ? (
-          <dl className="grid gap-4 md:grid-cols-3">
-            {summaryStats.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div
-                  key={stat.label}
-                  className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
-                >
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
-                  <div className="relative flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Icon aria-hidden className="h-5 w-5" />
-                    </span>
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
-                      <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                      {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </dl>
-        ) : null}
-      </div>
-    </section>
-  );
+      return {
+        label: membership.department.name,
+        value: membership.department.id,
+        href,
+      };
+    })
+    .filter((option): option is NonNullable<typeof option> => Boolean(option));
 
   if (memberships.length === 0) {
     return (
       <div className="space-y-6">
-        {hero}
         <section className="rounded-3xl border border-dashed border-primary/30 bg-background/70 p-6 text-sm text-muted-foreground shadow-inner sm:p-10 sm:text-base">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground sm:text-xl">Noch keine Gewerke</h2>
             <p>
-              Aktuell bist du keinem Gewerk zugeordnet. Wähle oben ein Gewerk aus, um beizutreten und sofort Zugriff auf Aufgaben{" "}
-              und Termine zu erhalten – bei Fragen hilft dir das Produktionsteam weiter.
+              Aktuell bist du keinem Gewerk zugeordnet. In der Gewerkeübersicht kannst du beitreten und sofort Zugriff auf Aufgaben
+              und Termine erhalten – bei Fragen hilft dir das Produktionsteam weiter.
             </p>
             <p>
               Du kannst jederzeit deine{" "}
@@ -320,7 +260,21 @@ export default async function MeineGewerkePage() {
 
   return (
     <div className="space-y-6">
-      {hero}
+      {departmentOptions.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gewerk auswählen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Wähle das Gewerk aus, in dem du Aufgaben hinzufügen oder deine zugewiesenen und erledigten Aufgaben prüfen willst.
+              </p>
+              <DepartmentSelect options={departmentOptions} />
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="space-y-8">
         {memberships.map((membership) => {
