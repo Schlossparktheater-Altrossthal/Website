@@ -6,6 +6,9 @@ export const measurementTypeEnum = z.enum([
   "WAIST",
   "HIPS",
   "INSEAM",
+  "OUTSEAM",
+  "CHEST_DEPTH",
+  "WAIST_LENGTH",
   "SHOULDER",
   "SLEEVE",
   "SHOE_SIZE",
@@ -41,12 +44,15 @@ export type MeasurementUnit = z.infer<typeof measurementUnitEnum>;
 export type MeasurementFormData = z.infer<typeof measurementSchema>;
 
 export const MEASUREMENT_TYPE_LABELS: Record<MeasurementType, string> = {
-  HEIGHT: "Körpergröße",
+  HEIGHT: "Körperlänge",
   CHEST: "Brustumfang",
   WAIST: "Taillenumfang",
-  HIPS: "Hüftumfang",
+  HIPS: "Gesäßumfang",
   INSEAM: "Innenbeinlänge",
-  SHOULDER: "Schulterbreite",
+  OUTSEAM: "Außenbeinlänge",
+  CHEST_DEPTH: "Brusttiefe",
+  WAIST_LENGTH: "Taillenlänge",
+  SHOULDER: "Rückenbreite",
   SLEEVE: "Armlänge",
   SHOE_SIZE: "Schuhgröße",
   HEAD: "Kopfumfang",
@@ -60,11 +66,17 @@ export const MEASUREMENT_TYPE_DESCRIPTIONS: Record<MeasurementType, string> = {
   WAIST:
     "Rund um die schmalste Stelle des Rumpfs auf Höhe des Bauchnabels gemessen.",
   HIPS:
-    "Über die stärkste Stelle des Gesäßes geführt, sorgt diese Messung für eine passende Hüftweite.",
+    "Über die stärkste Stelle des Gesäßes geführt, sorgt diese Messung für eine passende Weite.",
   INSEAM:
     "Vom Schritt bis zum Boden entlang der Beininnenseite gemessen – essenziell für Hosenlängen.",
+  OUTSEAM:
+    "Vom Bund außen am Bein entlang bis zum Boden gemessen – wichtig für die Außenlänge von Hosen.",
+  CHEST_DEPTH:
+    "Von der Brustmitte bis zur Rückenmitte gemessen – zeigt die Tiefe des Oberkörpers.",
+  WAIST_LENGTH:
+    "Von der Taille bis zum gewünschten Saum gemessen – ideal für Oberteile und Kleider.",
   SHOULDER:
-    "Von Schulterpunkt zu Schulterpunkt über den Rücken gemessen, definiert die Breite von Oberteilen.",
+    "Über den Rücken von Schulterpunkt zu Schulterpunkt gemessen – definiert die Rückenbreite.",
   SLEEVE:
     "Vom Schulterpunkt entlang des Arms bis zum Handgelenk – bestimmt die Ärmellänge.",
   SHOE_SIZE:
