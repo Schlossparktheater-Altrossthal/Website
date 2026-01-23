@@ -181,6 +181,8 @@ export async function GET() {
         : Promise.resolve(0),
     ]);
 
+    const measurementCountValue = Number(measurementCount);
+
     const activeProduction = activeProductionPromise ? await activeProductionPromise : null;
 
     const notificationActivities = recentNotifications.flatMap((entry) => {
@@ -229,7 +231,7 @@ export async function GET() {
       hasDietaryPreference: Boolean(
         onboardingProfile?.dietaryPreference?.trim(),
       ),
-      hasMeasurements: canManageMeasurements ? measurementCount > 0 : undefined,
+      hasMeasurements: canManageMeasurements ? measurementCountValue > 0 : undefined,
       photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
     });
 
