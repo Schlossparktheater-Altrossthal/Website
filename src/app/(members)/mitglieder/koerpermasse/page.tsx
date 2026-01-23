@@ -1,5 +1,6 @@
 import { MemberMeasurementsControlCenter } from "@/components/members/measurements/member-measurements-control-center";
 import { PageHeader } from "@/components/members/page-header";
+import { getActiveProductionId } from "@/lib/active-production";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
@@ -21,41 +22,43 @@ export default async function MemberMeasurementsPage() {
     );
   }
 
-  const members = await prisma.user.findMany({
-    where: {
-      OR: [
-        { role: "cast" },
-        { roles: { some: { role: "cast" } } },
-      ],
-    },
-    orderBy: [
-      { lastName: "asc" },
-      { firstName: "asc" },
-      { name: "asc" },
-      { email: "asc" },
-    ],
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      name: true,
-      role: true,
-      roles: { select: { role: true } },
-      avatarSource: true,
-      avatarImageUpdatedAt: true,
-      measurements: {
-        orderBy: { type: "asc" },
+  const activeProductionId = await getActiveProductionId(session.user?.id);
+  const members = activeProductionId
+    ? await prisma.user.findMany({
+        where: {
+          characterCastings: {
+            some: { character: { showId: activeProductionId } },
+          },
+        },
+        orderBy: [
+          { lastName: "asc" },
+          { firstName: "asc" },
+          { name: "asc" },
+          { email: "asc" },
+        ],
         select: {
           id: true,
-          type: true,
-          value: true,
-          unit: true,
-          note: true,
-          updatedAt: true,
+          firstName: true,
+          lastName: true,
+          name: true,
+          role: true,
+          roles: { select: { role: true } },
+          avatarSource: true,
+          avatarImageUpdatedAt: true,
+          measurements: {
+            orderBy: { type: "asc" },
+            select: {
+              id: true,
+              type: true,
+              value: true,
+              unit: true,
+              note: true,
+              updatedAt: true,
+            },
+          },
         },
-      },
-    },
-  });
+      })
+    : [];
 
   const normalizedMembers = members.map((member) => ({
     id: member.id,

@@ -13,7 +13,6 @@ import {
   Loader2,
   Mail,
   Pencil,
-  Plus,
   MessageCircle,
   ShieldCheck,
   Trash2,
@@ -25,7 +24,6 @@ import {
   Eye,
   Sparkles,
   Theater,
-  Ruler,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -39,15 +37,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
-import { MeasurementForm } from "@/components/forms/measurement-form";
-import type { MeasurementFormData } from "@/data/measurements";
-import {
-  MEASUREMENT_TYPE_LABELS,
-  MEASUREMENT_UNIT_LABELS,
-  sortMeasurements,
-  type MeasurementType,
-  type MeasurementUnit,
-} from "@/data/measurements";
 import {
   DEFAULT_STRICTNESS_FOR_NONE,
   DIETARY_STRICTNESS_OPTIONS,
@@ -92,7 +81,6 @@ import {
   deleteAllergyAction,
   saveDietaryPreferenceAction,
   saveInterestsAction,
-  saveMeasurementAction,
   saveOnboardingAction,
   startOnboardingAction,
   saveRolePreferencesAction,
@@ -111,7 +99,6 @@ const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
   "stammdaten",
   "zahlungen",
   "ernaehrung",
-  "masse",
   "interessen",
   "freigaben",
   "onboarding",
@@ -303,25 +290,12 @@ type ProfileClientProps = {
     note: string | null;
     updatedAt: string | null;
   }>;
-  measurements: Array<{
-    id: string;
-    type: string;
-    value: number;
-    unit: string;
-    note: string | null;
-    updatedAt: string | null;
-  }>;
-  canManageMeasurements: boolean;
   checklist: ProfileCompletionSummary;
   availableOnboardings: OnboardingSummary[];
 };
 
 type ProfileUser = ProfileClientProps["user"];
 type Allergy = ProfileClientProps["allergies"][number];
-type Measurement = Omit<ProfileClientProps["measurements"][number], "type" | "unit"> & {
-  type: MeasurementType;
-  unit: MeasurementUnit;
-};
 type OnboardingProfile = NonNullable<ProfileClientProps["onboarding"]>;
 
 function isProfilePaymentComplete(user: ProfileUser): boolean {
@@ -422,7 +396,6 @@ type ChecklistState = {
   hasBirthdate: boolean;
   hasPaymentDetails: boolean;
   hasDietaryPreference: boolean;
-  hasMeasurements?: boolean;
   photoConsentGiven?: boolean;
   hasWhatsappVisit?: boolean;
 };
@@ -606,8 +579,6 @@ export function ProfileClient({
   onboarding,
   interests,
   allergies,
-  measurements,
-  canManageMeasurements,
   checklist,
   availableOnboardings,
 }: ProfileClientProps) {
@@ -619,8 +590,6 @@ export function ProfileClient({
         initialOnboarding={onboarding}
         initialInterests={interests}
         initialAllergies={allergies}
-        initialMeasurements={measurements}
-        canManageMeasurements={canManageMeasurements}
         availableOnboardings={availableOnboardings}
       />
     </ProfileCompletionProvider>
@@ -633,8 +602,6 @@ type ProfileClientInnerProps = {
   initialOnboarding: ProfileClientProps["onboarding"];
   initialInterests: string[];
   initialAllergies: ProfileClientProps["allergies"];
-  initialMeasurements: ProfileClientProps["measurements"];
-  canManageMeasurements: boolean;
   availableOnboardings: OnboardingSummary[];
 };
 
@@ -644,8 +611,6 @@ function ProfileClientInner({
   initialOnboarding,
   initialInterests,
   initialAllergies,
-  initialMeasurements,
-  canManageMeasurements,
   availableOnboardings,
 }: ProfileClientInnerProps) {
   const { summary, replaceSummary } = useProfileCompletion();
@@ -658,15 +623,6 @@ function ProfileClientInner({
   );
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
-  const [measurements, setMeasurements] = useState<Measurement[]>(() =>
-    initialMeasurements.map((entry) => ({
-      ...entry,
-      type: entry.type as MeasurementType,
-      unit: entry.unit as MeasurementUnit,
-    })),
-  );
-  const [measurementDialogOpen, setMeasurementDialogOpen] = useState(false);
-  const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
   const [activeTab, setActiveTab] = useState<string>("stammdaten");
   const whatsappLink = onboarding?.whatsappLink ?? null;
   const activeChecklistTarget = useMemo<ProfileChecklistTarget | undefined>(() => {
@@ -679,7 +635,6 @@ function ProfileClientInner({
     hasBirthdate: Boolean(initialUser.dateOfBirth),
     hasPaymentDetails: isProfilePaymentComplete(initialUser),
     hasDietaryPreference: Boolean(initialOnboarding?.dietaryPreference?.trim()),
-    hasMeasurements: canManageMeasurements ? initialMeasurements.length > 0 : undefined,
     photoConsentGiven: summary.items.find((item) => item.id === "photo-consent")?.complete ?? undefined,
     hasWhatsappVisit: initialOnboarding?.whatsappLink
       ? Boolean(initialOnboarding.whatsappLinkVisitedAt)
@@ -693,14 +648,13 @@ function ProfileClientInner({
         hasBirthdate: state.hasBirthdate,
         hasPaymentDetails: state.hasPaymentDetails,
         hasDietaryPreference: state.hasDietaryPreference,
-        hasMeasurements: canManageMeasurements ? Boolean(state.hasMeasurements) : undefined,
         photoConsent:
           state.photoConsentGiven === undefined
             ? undefined
             : { consentGiven: Boolean(state.photoConsentGiven) },
         hasWhatsappVisit: whatsappLink ? state.hasWhatsappVisit : undefined,
       }),
-    [canManageMeasurements, whatsappLink],
+    [whatsappLink],
   );
 
   const updateChecklist = useCallback(
@@ -822,16 +776,6 @@ function ProfileClientInner({
       updateChecklist({ hasDietaryPreference: Boolean(preference.label?.trim()) });
     },
     [updateChecklist],
-  );
-
-  const handleMeasurementsUpdated = useCallback(
-    (nextMeasurements: Measurement[]) => {
-      setMeasurements(nextMeasurements);
-      if (canManageMeasurements) {
-        updateChecklist({ hasMeasurements: nextMeasurements.length > 0 });
-      }
-    },
-    [canManageMeasurements, updateChecklist],
   );
 
   const handlePhotoConsentSummary = useCallback(
@@ -967,13 +911,9 @@ function ProfileClientInner({
         { value: "rollen", label: "Präferenzen", icon: Theater },
       ];
 
-      if (canManageMeasurements) {
-        options.splice(3, 0, { value: "masse", label: "Maße", icon: Ruler });
-      }
-
       return options;
     },
-    [canManageMeasurements],
+    [],
   );
 
   return (
@@ -1050,19 +990,6 @@ function ProfileClientInner({
             onDietaryUpdated={handleDietaryUpdated}
           />
         </TabsContent>
-
-        {canManageMeasurements ? (
-          <TabsContent value="masse" className="space-y-6">
-            <MeasurementsSection
-              measurements={measurements}
-              onMeasurementsChange={handleMeasurementsUpdated}
-              dialogOpen={measurementDialogOpen}
-              onDialogOpenChange={setMeasurementDialogOpen}
-              editingMeasurement={editingMeasurement}
-              onEditingChange={setEditingMeasurement}
-            />
-          </TabsContent>
-        ) : null}
 
         <TabsContent value="interessen" className="space-y-6">
           <InterestsSection interests={interests} onInterestsChange={setInterests} />
@@ -2465,140 +2392,6 @@ function getAllergyLevelLabel(level: AllergyLevel): string {
   return labels[level] ?? level;
 }
 
-type MeasurementsSectionProps = {
-  measurements: Measurement[];
-  onMeasurementsChange: (next: Measurement[]) => void;
-  dialogOpen: boolean;
-  onDialogOpenChange: (open: boolean) => void;
-  editingMeasurement: Measurement | null;
-  onEditingChange: (measurement: Measurement | null) => void;
-};
-
-function MeasurementsSection({
-  measurements,
-  onMeasurementsChange,
-  dialogOpen,
-  onDialogOpenChange,
-  editingMeasurement,
-  onEditingChange,
-}: MeasurementsSectionProps) {
-  const sorted = useMemo(() => sortMeasurements(measurements), [measurements]);
-
-  const handleSubmit = async (data: MeasurementFormData) => {
-    const result = await saveMeasurementAction({
-      type: data.type,
-      value: data.value,
-      unit: data.unit,
-      note: data.note ?? null,
-    });
-    if (!result.ok) {
-      throw new Error(result.error);
-    }
-    const payload = result.data.measurement;
-    const next: Measurement[] = [...measurements];
-    const index = next.findIndex((entry) => entry.type === payload.type);
-    const entry: Measurement = {
-      id: payload.id,
-      type: payload.type as MeasurementType,
-      value: payload.value,
-      unit: payload.unit as MeasurementUnit,
-      note: payload.note,
-      updatedAt: payload.updatedAt,
-    };
-    if (index >= 0) {
-      next[index] = entry;
-    } else {
-      next.push(entry);
-    }
-    onMeasurementsChange(sortMeasurements(next));
-    onDialogOpenChange(false);
-    onEditingChange(null);
-  };
-
-  const handleEdit = (measurement: Measurement) => {
-    onEditingChange(measurement);
-    onDialogOpenChange(true);
-  };
-
-  const handleCreate = () => {
-    onEditingChange(null);
-    onDialogOpenChange(true);
-  };
-
-  return (
-    <Card className="border border-border/60">
-      <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <CardTitle className="text-base font-semibold">Maße</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Sichtbar für dich und das Kostüm-Team. Bitte halte die Angaben aktuell.
-          </p>
-        </div>
-        <Button onClick={handleCreate} size="sm" className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> Neues Maß
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {sorted.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Noch keine Maße erfasst.</p>
-        ) : (
-          <div className="grid gap-3">
-            {sorted.map((measurement) => (
-              <div key={measurement.id} className="rounded-lg border border-border/60 bg-muted/10 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {MEASUREMENT_TYPE_LABELS[measurement.type as MeasurementType] ?? measurement.type}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {measurement.value} {MEASUREMENT_UNIT_LABELS[measurement.unit as MeasurementUnit] ?? measurement.unit}
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(measurement)} className="w-full sm:w-auto">
-                    <Pencil className="mr-2 h-4 w-4" aria-hidden="true" /> Bearbeiten
-                  </Button>
-                </div>
-                {measurement.note ? (
-                  <p className="mt-2 text-xs text-muted-foreground">{measurement.note}</p>
-                ) : null}
-                <p className="mt-2 flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground/70">
-                  <ShieldCheck className="h-3 w-3" aria-hidden="true" /> Aktualisiert am {formatDate(measurement.updatedAt) ?? "unbekannt"}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            onEditingChange(null);
-          }
-          onDialogOpenChange(open);
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingMeasurement ? "Maß bearbeiten" : "Neues Maß"}</DialogTitle>
-          </DialogHeader>
-          <MeasurementForm
-            initialData={editingMeasurement ? {
-              type: editingMeasurement.type as MeasurementType,
-              value: editingMeasurement.value,
-              unit: editingMeasurement.unit as MeasurementUnit,
-              note: editingMeasurement.note ?? undefined,
-            } : undefined}
-            disableTypeSelection={Boolean(editingMeasurement)}
-            onSubmit={handleSubmit}
-          />
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-}
-
 type InterestsSectionProps = {
   interests: string[];
   onInterestsChange: (next: string[]) => void;
@@ -3684,5 +3477,3 @@ export function RolePreferencesSection({
     </Card>
   );
 }
-
-

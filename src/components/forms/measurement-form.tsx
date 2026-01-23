@@ -25,6 +25,7 @@ import { toast } from "sonner";
 
 import {
   MEASUREMENT_TYPE_LABELS,
+  MEASUREMENT_UNIT_LABELS,
   measurementSchema,
   measurementTypeEnum,
   measurementUnitEnum,
@@ -133,14 +134,14 @@ export function MeasurementForm({
                       <SelectValue placeholder="Wählen Sie eine Einheit" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
-                    {measurementUnitEnum.options.map((unit) => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectContent>
+                      {measurementUnitEnum.options.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {MEASUREMENT_UNIT_LABELS[unit] ?? unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 <FormMessage />
               </FormItem>
             )}
