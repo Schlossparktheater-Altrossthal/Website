@@ -9,6 +9,7 @@ import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
 import { getUserDisplayName } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -373,7 +374,14 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
   const sortedCastings = [...character.castings].sort((a, b) => CASTING_ORDER.indexOf(a.type) - CASTING_ORDER.indexOf(b.type));
 
   return (
-    <Card key={character.id} className="min-w-0 w-full overflow-hidden border border-border/70 bg-card/70 shadow-sm">
+    <Card
+      id={`role-${character.id}`}
+      key={character.id}
+      className={cn(
+        "min-w-0 w-full overflow-hidden border border-border/70 bg-card/70 shadow-sm",
+        !hasCastings && "border-destructive/60 bg-destructive/5",
+      )}
+    >
       <CardHeader className="space-y-2 border-b border-border/60 bg-background/50 px-3 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-1 items-start gap-3">
@@ -418,7 +426,9 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
             <UserRoundCheck className="h-3.5 w-3.5" aria-hidden /> {sortedCastings.length} Besetzungen
           </span>
           {character.description ? null : <span className="rounded-full bg-muted/50 px-2 py-1">Ohne Beschreibung</span>}
-          {hasCastings ? null : <span className="rounded-full bg-muted/50 px-2 py-1">Ohne Zuordnung</span>}
+          {hasCastings ? null : (
+            <span className="rounded-full bg-destructive/10 px-2 py-1 text-destructive">Nicht besetzt</span>
+          )}
         </div>
       </CardHeader>
 
@@ -586,14 +596,8 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
     prisma.user.findMany({
       where: {
         deactivatedAt: null,
-        productionMemberships: {
-          some: {
-            showId: activeProduction.id,
-            OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
-          },
-        },
       },
-      orderBy: [{ name: "asc" }, { email: "asc" }],
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
       select: { id: true, firstName: true, lastName: true, name: true, email: true },
     }),
     prisma.show.findUnique({
@@ -674,6 +678,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
     return matchesSearch && matchesStatus && matchesType;
   });
 
+  const unassignedCharacters = filteredCharacters.filter((character) => character.castings.length === 0);
   const headerStats: HeaderStat[] = [
     { label: "Rollen", value: characterCount, icon: <BadgeCheck className="h-4 w-4" aria-hidden /> },
     { label: "Besetzungen", value: castingCount, icon: <Users className="h-4 w-4" aria-hidden /> },
@@ -691,6 +696,33 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
       <HeaderStats stats={headerStats} showId={show.id} />
 
       <CastingFilters searchTerm={searchTerm} castingStatus={castingStatus} castingType={castingType} />
+
+      {unassignedCharacters.length > 0 ? (
+        <div
+          className="rounded-2xl border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive shadow-sm"
+          role="status"
+        >
+          <p className="font-semibold">
+            {unassignedCharacters.length === 1 ? "Diese Rolle ist noch nicht besetzt." : "Mehrere Rollen sind noch nicht besetzt."}
+          </p>
+          <p className="text-xs text-destructive/80">
+            Klicke auf eine Rolle, um direkt zur Karte zu springen und ein Mitglied zuzuordnen.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {unassignedCharacters.map((character) => (
+              <Button
+                key={character.id}
+                asChild
+                variant="outline"
+                size="sm"
+                className="border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <a href={`#role-${character.id}`}>{character.name}</a>
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <section className="space-y-3">
         {show.characters.length === 0 ? (

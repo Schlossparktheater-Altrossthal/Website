@@ -104,10 +104,7 @@ export default async function ProduktionsSzenenPage() {
           },
         },
       },
-      orderBy: [
-        { name: "asc" },
-        { email: "asc" },
-      ],
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
       select: { id: true, firstName: true, lastName: true, name: true, email: true },
     }),
     prisma.department.findMany({

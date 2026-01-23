@@ -53,7 +53,7 @@ export default async function RehearsalEditorPage({
   // Drafts use updateRehearsalDraftAction, published use updateRehearsalAction
 
   const membersRaw = await prisma.user.findMany({
-    orderBy: [{ name: "asc" }, { email: "asc" }],
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
     select: {
       id: true,
       name: true,

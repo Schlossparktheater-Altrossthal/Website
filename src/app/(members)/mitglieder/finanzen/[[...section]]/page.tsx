@@ -182,7 +182,7 @@ export default async function FinancePage({ params, searchParams }: PageProps) {
     budgetsPromise,
     summaryPromise,
     prisma.user.findMany({
-      orderBy: [{ name: "asc" }, { email: "asc" }],
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
       select: { id: true, name: true, email: true },
     }),
   ]);

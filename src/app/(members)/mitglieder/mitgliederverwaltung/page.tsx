@@ -19,7 +19,7 @@ export default async function MitgliederVerwaltungPage() {
 
   const [users, customRoles] = await Promise.all([
     prisma.user.findMany({
-      orderBy: { email: "asc" },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
       select: {
         id: true,
         email: true,
@@ -80,4 +80,3 @@ export default async function MitgliederVerwaltungPage() {
     </div>
   );
 }
-

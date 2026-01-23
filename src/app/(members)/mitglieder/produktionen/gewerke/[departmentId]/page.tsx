@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { compareMembersByLastName } from "@/lib/names";
 import { DepartmentDocumentsSection } from "@/app/(members)/mitglieder/meine-gewerke/department-documents-section";
 
 import {
@@ -156,9 +157,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
   const canManageDocuments =
     viewerMembership?.role === "lead" || viewerMembership?.role === "deputy" || allowed;
 
-  const sortedMembers = [...department.memberships].sort((a, b) =>
-    formatUserName(a.user).localeCompare(formatUserName(b.user), "de", { sensitivity: "base" }),
-  );
+  const sortedMembers = [...department.memberships].sort((a, b) => compareMembersByLastName(a.user, b.user));
 
   const sortedTasks = [...department.tasks].sort((a, b) => {
     const statusDiff = TASK_STATUS_ORDER[a.status] - TASK_STATUS_ORDER[b.status];
