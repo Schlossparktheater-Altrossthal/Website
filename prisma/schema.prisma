@@ -149,15 +149,18 @@ enum MeasurementUnit {
 
 // Arten von Maßen
 enum MeasurementType {
-  HEIGHT        // Körpergröße
-  CHEST        // Brustumfang
-  WAIST        // Taillenumfang
-  HIPS         // Hüftumfang
-  INSEAM       // Innenbeinlänge
-  SHOULDER     // Schulterbreite
-  SLEEVE       // Armlänge
-  SHOE_SIZE    // Schuhgröße
-  HEAD         // Kopfumfang
+  HEIGHT        // Körperlänge
+  CHEST         // Brustumfang
+  WAIST         // Taillenumfang
+  HIPS          // Gesäßumfang
+  INSEAM        // Innenbeinlänge
+  OUTSEAM       // Außenbeinlänge
+  CHEST_DEPTH   // Brusttiefe
+  WAIST_LENGTH  // Taillenlänge
+  SHOULDER      // Rückenbreite
+  SLEEVE        // Armlänge
+  SHOE_SIZE     // Schuhgröße
+  HEAD          // Kopfumfang
 }
 
 // Schweregrad von Unverträglichkeiten
