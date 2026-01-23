@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -214,7 +215,9 @@ export default async function ProduktionsSzenenPage() {
           <div className="flex justify-end">
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="sm">Szene anlegen</Button>
+                <Button size="icon" aria-label="Szene anlegen">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
