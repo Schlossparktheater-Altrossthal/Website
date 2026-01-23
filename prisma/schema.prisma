@@ -141,10 +141,10 @@ enum BlockedDayKind {
 
 // Einheiten für Maße
 enum MeasurementUnit {
+  M     // Meter
   CM    // Zentimeter
-  INCH  // Zoll
+  MM    // Millimeter
   EU    // EU-Größe
-  DE    // Deutsche Größe
 }
 
 // Arten von Maßen

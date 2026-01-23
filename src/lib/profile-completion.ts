@@ -3,7 +3,6 @@ export type ProfileChecklistItemId =
   | "birthdate"
   | "payments"
   | "dietary"
-  | "measurements"
   | "photo-consent"
   | "whatsapp";
 
@@ -11,7 +10,6 @@ export type ProfileChecklistTarget =
   | "stammdaten"
   | "zahlungen"
   | "ernaehrung"
-  | "masse"
   | "interessen"
   | "freigaben"
   | "onboarding";
@@ -36,7 +34,6 @@ type ChecklistInput = {
   hasBirthdate: boolean;
   hasPaymentDetails?: boolean;
   hasDietaryPreference: boolean;
-  hasMeasurements?: boolean;
   photoConsent?: { consentGiven: boolean };
   hasWhatsappVisit?: boolean;
 };
@@ -108,16 +105,6 @@ export function buildProfileChecklist(
       targetSection: "ernaehrung",
     },
   ];
-
-  if (input.hasMeasurements !== undefined) {
-    items.push({
-      id: "measurements",
-      label: "Körpermaße hinterlegt",
-      description: "Ermöglicht dem Kostüm-Team passgenaue Planung.",
-      complete: Boolean(input.hasMeasurements),
-      targetSection: "masse",
-    });
-  }
 
   if (input.hasWhatsappVisit !== undefined) {
     items.push({

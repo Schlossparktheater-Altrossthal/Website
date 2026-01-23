@@ -17,10 +17,7 @@ const membersBreadcrumb = membersNavigationBreadcrumb("/mitglieder/profil");
 
 export default async function ProfilePage() {
   const session = await requireAuth();
-  const [allowed, canManageMeasurements] = await Promise.all([
-    hasPermission(session.user, "mitglieder.profil"),
-    hasPermission(session.user, "mitglieder.koerpermasse"),
-  ]);
+  const allowed = await hasPermission(session.user, "mitglieder.profil");
 
   if (!allowed) {
     return (
@@ -103,7 +100,7 @@ export default async function ProfilePage() {
     notFound();
   }
 
-  const [allergiesRaw, measurementsRaw, availableOnboardings] = await Promise.all([
+  const [allergiesRaw, availableOnboardings] = await Promise.all([
     prisma.dietaryRestriction.findMany({
       where: { userId, isActive: true },
       orderBy: { allergen: "asc" },
@@ -117,20 +114,6 @@ export default async function ProfilePage() {
         updatedAt: true,
       },
     }),
-    canManageMeasurements
-      ? prisma.memberMeasurement.findMany({
-          where: { userId },
-          orderBy: { type: "asc" },
-          select: {
-            id: true,
-            type: true,
-            value: true,
-            unit: true,
-            note: true,
-            updatedAt: true,
-          },
-        })
-      : Promise.resolve([]),
     getAvailableOnboardings(),
   ]);
 
@@ -187,15 +170,6 @@ export default async function ProfilePage() {
       : null,
   });
 
-  const measurementSummaries = measurementsRaw.map((measurement) => ({
-    id: measurement.id,
-    type: measurement.type,
-    value: measurement.value,
-    unit: measurement.unit,
-    note: measurement.note ?? null,
-    updatedAt: measurement.updatedAt?.toISOString() ?? null,
-  }));
-
   const allergies = allergiesRaw.map((allergy) => ({
     id: allergy.id,
     allergen: allergy.allergen,
@@ -206,7 +180,6 @@ export default async function ProfilePage() {
     updatedAt: allergy.updatedAt?.toISOString() ?? null,
   }));
 
-  const hasMeasurements = canManageMeasurements ? measurementSummaries.length > 0 : undefined;
   const hasBasicData = Boolean(user.firstName?.trim() && user.email?.trim());
   const hasBirthdate = Boolean(user.dateOfBirth);
   const hasDietaryPreference = Boolean(user.onboardingProfile?.dietaryPreference?.trim());
@@ -232,7 +205,6 @@ export default async function ProfilePage() {
     hasBirthdate,
     hasPaymentDetails,
     hasDietaryPreference,
-    hasMeasurements,
     photoConsent: { consentGiven: photoConsentSummary.status === "approved" },
     hasWhatsappVisit: whatsappLink ? Boolean(onboardingProfile?.whatsappLinkVisitedAt) : undefined,
   });
@@ -291,8 +263,6 @@ export default async function ProfilePage() {
         rolePreferences={preferenceSummaries}
         interests={interestNames}
         allergies={allergies}
-        measurements={measurementSummaries}
-        canManageMeasurements={canManageMeasurements}
         checklist={checklist}
         availableOnboardings={availableOnboardings}
       />

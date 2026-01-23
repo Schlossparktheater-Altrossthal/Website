@@ -546,7 +546,7 @@ export function MemberMeasurementsControlCenter({
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
             <AlertTriangle className="h-5 w-5" />
-            <p>Keine Mitglieder mit Körpermaßen gefunden. Lege neue Profile an oder entferne Filter.</p>
+            <p>Keine Mitglieder mit Besetzung gefunden. Lege eine Besetzung an oder entferne Filter.</p>
           </div>
         )}
       </div>

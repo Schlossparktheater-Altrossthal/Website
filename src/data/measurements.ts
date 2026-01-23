@@ -16,10 +16,10 @@ export const measurementTypeEnum = z.enum([
 ] as const);
 
 export const measurementUnitEnum = z.enum([
+  "M",
   "CM",
-  "INCH",
+  "MM",
   "EU",
-  "DE",
 ] as const);
 
 const measurementNoteSchema = z.string().max(500, "Notizen dürfen höchstens 500 Zeichen haben.");
@@ -86,10 +86,10 @@ export const MEASUREMENT_TYPE_DESCRIPTIONS: Record<MeasurementType, string> = {
 };
 
 export const MEASUREMENT_UNIT_LABELS: Record<MeasurementUnit, string> = {
+  M: "m",
   CM: "cm",
-  INCH: "Zoll",
+  MM: "mm",
   EU: "EU",
-  DE: "DE",
 };
 
 export const MEASUREMENT_TYPE_ORDER = measurementTypeEnum.options.reduce<
