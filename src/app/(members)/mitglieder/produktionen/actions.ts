@@ -1001,9 +1001,6 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
     const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 500 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 500 });
     const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
-    const orderValue = readOptionalInt(formData, "order", { label: "Sortierung", min: 0, max: 9999 });
-    const order =
-      orderValue ?? (await prisma.character.count({ where: { showId } })) ?? 0;
 
     await prisma.character.create({
       data: {
@@ -1013,7 +1010,6 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
         description: description ?? null,
         notes: notes ?? null,
         color: color ?? null,
-        order,
       },
     });
 
@@ -1042,7 +1038,6 @@ export async function updateCharacterAction(formData: FormData): Promise<void> {
     const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 500 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 500 });
     const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
-    const orderValue = readOptionalInt(formData, "order", { label: "Sortierung", min: 0, max: 9999 });
 
     await prisma.character.update({
       where: { id: characterId },
@@ -1052,7 +1047,6 @@ export async function updateCharacterAction(formData: FormData): Promise<void> {
         description: description ?? null,
         notes: notes ?? null,
         color: color ?? null,
-        ...(orderValue !== undefined ? { order: orderValue } : {}),
       },
     });
 
