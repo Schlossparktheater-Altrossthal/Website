@@ -373,7 +373,7 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
   const sortedCastings = [...character.castings].sort((a, b) => CASTING_ORDER.indexOf(a.type) - CASTING_ORDER.indexOf(b.type));
 
   return (
-    <Card key={character.id} className="overflow-hidden border border-border/70 bg-card/70 shadow-sm">
+    <Card key={character.id} className="min-w-0 w-full overflow-hidden border border-border/70 bg-card/70 shadow-sm">
       <CardHeader className="space-y-2 border-b border-border/60 bg-background/50 px-3 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-1 items-start gap-3">
@@ -710,7 +710,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(max-content,1fr))]">
+          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]">
             {filteredCharacters.map((character) => (
               <CharacterCard key={character.id} character={character} users={users} />
             ))}
