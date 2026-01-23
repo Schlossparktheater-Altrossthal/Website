@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClipboardCheck, ListTodo, Sparkles, Users } from "lucide-react";
+import { ClipboardCheck, ListTodo, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
@@ -158,81 +159,39 @@ export default async function DepartmentTodosPage() {
     { label: "Eigene Todos", value: myOpenTaskCount, hint: "Dir zugewiesen", icon: ClipboardCheck },
   ];
 
-  const heroDescription = memberships.length
-    ? "Alle Aufgaben, Zuständigkeiten und Leitungen deiner Gewerke gebündelt an einem Ort."
-    : "Sobald du einem Gewerk beitrittst, erscheinen hier deine Todos und Ansprechpartner.";
-
-  const headerActions = (
-    <>
-      <Button
-        asChild
-        size="sm"
-        variant="outline"
-        className="rounded-full border-border/60 bg-background/80 px-4 backdrop-blur hover:border-primary/40"
-      >
-        <Link href={TEAM_OVERVIEW_LINK}>Zur Gewerke-Übersicht</Link>
-      </Button>
-      {canManageDepartments ? (
-        <Button
-          asChild
-          size="sm"
-          variant="secondary"
-          className="rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground shadow-[0_18px_40px_-28px_rgba(99,102,241,0.9)] hover:from-primary/90 hover:via-primary/80 hover:to-primary"
-        >
-          <Link href="/mitglieder/produktionen/gewerke">Gewerk-Hub öffnen</Link>
-        </Button>
-      ) : null}
-    </>
-  );
+  const headerDescription =
+    "Erstelle neue Figuren, pflege Beschreibungen und organisiere die vollständige Besetzung deines Ensembles.";
 
   const hero = (
-    <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/70 p-6 shadow-[0_28px_90px_-50px_rgba(99,102,241,0.8)] sm:p-10">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-24 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
-        <div className="absolute -bottom-32 right-0 h-64 w-64 rounded-full bg-secondary/20 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),transparent_55%)]" />
-      </div>
-      <div className="relative flex flex-col gap-8">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-4">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-              <Sparkles aria-hidden className="h-4 w-4" />
-              <span className="tracking-[0.2em]">Mission Control</span>
-            </span>
-            <div className="space-y-3">
-              <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">Gewerk-Todos</h1>
-              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{heroDescription}</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div>
-        </div>
-        {memberships.length ? (
-          <dl className="grid gap-4 md:grid-cols-3">
-            {summaryStats.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div
-                  key={stat.label}
-                  className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
-                >
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
-                  <div className="relative flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Icon aria-hidden className="h-5 w-5" />
-                    </span>
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
-                      <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                      {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
-                    </div>
+    <div className="space-y-6">
+      <PageHeader title="Aufgaben" description={headerDescription} />
+      <div className="border-b border-border/60" />
+      {memberships.length ? (
+        <dl className="grid gap-4 md:grid-cols-3">
+          {summaryStats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div
+                key={stat.label}
+                className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
+              >
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+                <div className="relative flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon aria-hidden className="h-5 w-5" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
+                    <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
+                    {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
                   </div>
                 </div>
-              );
-            })}
-          </dl>
-        ) : null}
-      </div>
-    </section>
+              </div>
+            );
+          })}
+        </dl>
+      ) : null}
+    </div>
   );
 
   if (memberships.length === 0) {
