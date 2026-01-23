@@ -32,6 +32,44 @@ export function getUserDisplayName(
   return getUserFullName(user) ?? trimToNull(user.email) ?? fallback;
 }
 
+export function compareMembersByLastName(
+  a: {
+    firstName?: MaybeString;
+    lastName?: MaybeString;
+    name?: MaybeString;
+    email?: MaybeString;
+  },
+  b: {
+    firstName?: MaybeString;
+    lastName?: MaybeString;
+    name?: MaybeString;
+    email?: MaybeString;
+  },
+  locale: string = "de-DE",
+): number {
+  const aLast = trimToNull(a.lastName);
+  const bLast = trimToNull(b.lastName);
+  if (aLast && bLast) {
+    const lastCompare = aLast.localeCompare(bLast, locale, { sensitivity: "base" });
+    if (lastCompare !== 0) return lastCompare;
+    const aFirst = trimToNull(a.firstName) ?? "";
+    const bFirst = trimToNull(b.firstName) ?? "";
+    const firstCompare = aFirst.localeCompare(bFirst, locale, { sensitivity: "base" });
+    if (firstCompare !== 0) return firstCompare;
+  } else if (aLast || bLast) {
+    return aLast ? -1 : 1;
+  }
+
+  const aName = trimToNull(a.name) ?? trimToNull(a.email) ?? "";
+  const bName = trimToNull(b.name) ?? trimToNull(b.email) ?? "";
+  const nameCompare = aName.localeCompare(bName, locale, { sensitivity: "base" });
+  if (nameCompare !== 0) return nameCompare;
+
+  const aEmail = trimToNull(a.email) ?? "";
+  const bEmail = trimToNull(b.email) ?? "";
+  return aEmail.localeCompare(bEmail, locale, { sensitivity: "base" });
+}
+
 function initialsFromSegments(segments: string[]): string | null {
   if (segments.length === 0) return null;
   if (segments.length >= 2) {

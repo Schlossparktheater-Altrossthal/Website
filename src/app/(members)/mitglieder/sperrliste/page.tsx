@@ -114,10 +114,7 @@ export default async function SperrlistePage() {
     }),
     getSaxonySchoolHolidayRanges(resolvedSettingsBefore.cacheKey),
     prisma.user.findMany({
-      orderBy: [
-        { firstName: "asc" },
-        { lastName: "asc" },
-      ],
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
       select: {
         id: true,
         firstName: true,

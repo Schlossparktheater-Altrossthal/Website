@@ -320,8 +320,8 @@ export default async function FinalRehearsalDutyPlanPage() {
               : {}),
           },
           orderBy: [
-            { firstName: "asc" },
             { lastName: "asc" },
+            { firstName: "asc" },
             { name: "asc" },
             { email: "asc" },
           ],

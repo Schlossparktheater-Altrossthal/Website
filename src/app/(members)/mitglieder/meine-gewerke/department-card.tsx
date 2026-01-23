@@ -7,6 +7,7 @@ import { BellRing, CalendarDays, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { compareMembersByLastName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import {
   MEASUREMENT_TYPE_LABELS,
@@ -79,9 +80,7 @@ export function DepartmentCard({
 
   const isCostumeDepartment = department.slug === "kostuem";
 
-  const sortedMembers = [...department.memberships].sort((a, b) =>
-    formatUserName(a.user).localeCompare(formatUserName(b.user), "de", { sensitivity: "base" }),
-  );
+  const sortedMembers = [...department.memberships].sort((a, b) => compareMembersByLastName(a.user, b.user));
 
   const measurementEligibleMembers = isCostumeDepartment
     ? sortedMembers.filter((member) => isCastDepartmentUser(member.user))

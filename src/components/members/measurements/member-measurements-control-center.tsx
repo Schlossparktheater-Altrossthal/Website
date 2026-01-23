@@ -36,6 +36,7 @@ import {
   type MeasurementUnit,
 } from "@/data/measurements";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, type Role } from "@/lib/roles";
+import { compareMembersByLastName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import { formatRelativeWithAbsolute } from "@/lib/datetime";
 
@@ -189,16 +190,13 @@ export function MemberMeasurementsControlCenter({
       if (a.stats.missing !== b.stats.missing) {
         return b.stats.missing - a.stats.missing;
       }
-      if (a.displayName && b.displayName) {
-        return a.displayName.localeCompare(b.displayName, "de-DE");
-      }
-      return 0;
+      return compareMembersByLastName(a, b);
     });
   }, [filteredMembers]);
 
   const memberSelectOptions = useMemo(() => {
     return [...preparedMembers]
-      .sort((a, b) => a.displayName.localeCompare(b.displayName, "de-DE"))
+      .sort((a, b) => compareMembersByLastName(a, b))
       .map((member) => ({
         value: member.id,
         label: member.displayName,
@@ -846,4 +844,3 @@ function formatLastUpdated(value: string | null) {
   const date = new Date(timestamp);
   return formatRelativeWithAbsolute(date, { absoluteFormatter: ABSOLUTE_DATE_FORMATTER }).combined;
 }
-

@@ -121,10 +121,7 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
             }
           : {}),
       },
-      orderBy: [
-        { name: "asc" },
-        { email: "asc" },
-      ],
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
       select: { id: true, firstName: true, lastName: true, name: true, email: true },
     }),
   ]);

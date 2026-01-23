@@ -31,6 +31,8 @@ export default async function MemberMeasurementsPage() {
     orderBy: [
       { lastName: "asc" },
       { firstName: "asc" },
+      { name: "asc" },
+      { email: "asc" },
     ],
     select: {
       id: true,
