@@ -11,10 +11,8 @@ import {
   Megaphone,
   Music3,
   Package,
-  Paintbrush,
   Shirt,
   Sparkles,
-  Spotlight,
   Trees,
   Users,
   UtensilsCrossed,
@@ -188,16 +186,14 @@ const trades: Trade[] = [
       "Wir entwickeln Szenen gemeinsam und finden für jede Person die passende Herausforderung – vom leisen Spiel bis zur großen Hauptrolle.",
   },
   {
-    icon: Spotlight,
-    title: "Technik",
-    description:
-      "Scheinwerfer, Funkmikros und Klangflächen sorgen für Atmosphäre. Unser Technikteam mischt, programmiert und begleitet jede Vorstellung live.",
+    icon: Sparkles,
+    title: "Hier entsteht neues",
+    description: "Hier entsteht neues",
   },
   {
-    icon: Paintbrush,
-    title: "Bühnenbau & -malerei",
-    description:
-      "Holz, Stoffe und frische Floristik verschmelzen zu verwunschenen Parklandschaften. Hier entstehen Wege, Kulissen und Farbräume.",
+    icon: Sparkles,
+    title: "Hier entsteht neues",
+    description: "Hier entsteht neues",
   },
   {
     icon: Package,
