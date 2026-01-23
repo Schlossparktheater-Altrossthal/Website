@@ -65,7 +65,6 @@ type Character = {
 type PageProps = {
   searchParams?: Promise<{
     q?: string | string[] | null;
-    castingStatus?: string | string[] | null;
     castingType?: string | string[] | null;
   }>;
 };
@@ -141,7 +140,7 @@ function HeaderStats({ stats, showId }: { stats: HeaderStat[]; showId: string })
                 <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
                 {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
               </div>
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-background/70 text-muted-foreground">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
                 {stat.icon}
               </span>
             </div>
@@ -158,18 +157,10 @@ function HeaderStats({ stats, showId }: { stats: HeaderStat[]; showId: string })
   );
 }
 
-function CastingFilters({
-  searchTerm,
-  castingStatus,
-  castingType,
-}: {
-  searchTerm: string;
-  castingStatus: string;
-  castingType: string;
-}) {
+function CastingFilters({ searchTerm, castingType }: { searchTerm: string; castingType: string }) {
   return (
     <form className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm" method="get" action={currentPath}>
-      <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto_auto] lg:items-end">
+      <div className="grid gap-3 lg:grid-cols-[2fr_1fr_auto_auto] lg:items-end">
         <div className="space-y-1">
           <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-search">
             Suche
@@ -187,21 +178,6 @@ function CastingFilters({
               className="pl-9"
             />
           </div>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-status">
-            Besetzungsstatus
-          </label>
-          <select
-            id="casting-status"
-            name="castingStatus"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            defaultValue={castingStatus}
-          >
-            <option value="all">Alle Besetzungen</option>
-            <option value="with">Mit Zuordnung</option>
-            <option value="without">Ohne Zuordnung</option>
-          </select>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-type">
@@ -650,11 +626,9 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
   const resolvedSearchParams = (await searchParams) ?? {};
 
   const searchTermRaw = resolvedSearchParams.q;
-  const castingStatusRaw = resolvedSearchParams.castingStatus;
   const castingTypeRaw = resolvedSearchParams.castingType;
 
   const searchTerm = Array.isArray(searchTermRaw) ? searchTermRaw[0] ?? "" : searchTermRaw ?? "";
-  const castingStatus = Array.isArray(castingStatusRaw) ? castingStatusRaw[0] ?? "all" : castingStatusRaw ?? "all";
   const castingType = Array.isArray(castingTypeRaw) ? castingTypeRaw[0] ?? "all" : castingTypeRaw ?? "all";
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -671,19 +645,9 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
         ].some((value) => value?.toLowerCase().includes(normalizedSearch))
       : true;
 
-    const hasCastings = character.castings.length > 0;
-    const matchesStatus =
-      castingStatus === "all"
-        ? true
-        : castingStatus === "with"
-          ? hasCastings
-          : castingStatus === "without"
-            ? !hasCastings
-            : true;
-
     const matchesType = activeCastingType ? character.castings.some((casting) => casting.type === activeCastingType) : true;
 
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesType;
   });
 
   const unassignedCharacters = filteredCharacters.filter((character) => character.castings.length === 0);
@@ -703,7 +667,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
 
       <HeaderStats stats={headerStats} showId={show.id} />
 
-      <CastingFilters searchTerm={searchTerm} castingStatus={castingStatus} castingType={castingType} />
+      <CastingFilters searchTerm={searchTerm} castingType={castingType} />
 
       {unassignedCharacters.length > 0 ? (
         <div
