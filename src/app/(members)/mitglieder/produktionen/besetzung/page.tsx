@@ -77,18 +77,14 @@ type HeaderStat = {
   hint?: string;
 };
 
-const CASTING_LABELS: Record<CharacterCastingType, string> = {
+const CASTING_LABELS: Partial<Record<CharacterCastingType, string>> = {
   primary: "Primär",
-  alternate: "Alternate",
-  cover: "Cover",
-  cameo: "Cameo",
+  alternate: "Sekundär",
 };
 
 const CASTING_ORDER: CharacterCastingType[] = [
   CharacterCastingType.primary,
   CharacterCastingType.alternate,
-  CharacterCastingType.cover,
-  CharacterCastingType.cameo,
 ];
 
 const selectSmallClassName =
@@ -99,6 +95,15 @@ const currentPath = "/mitglieder/produktionen/besetzung";
 function formatUserName(user?: DisplayUser | null) {
   if (!user) return "Unbekannt";
   return getUserDisplayName(user, "Unbekannt");
+}
+
+function getCastingLabel(type: CharacterCastingType) {
+  return CASTING_LABELS[type] ?? "Weitere";
+}
+
+function getCastingOrderIndex(type: CharacterCastingType) {
+  const index = CASTING_ORDER.indexOf(type);
+  return index === -1 ? CASTING_ORDER.length : index;
 }
 
 function CastingTypeSelect({
@@ -114,7 +119,7 @@ function CastingTypeSelect({
     <select name={name} defaultValue={defaultValue} className={className}>
       {CASTING_ORDER.map((type) => (
         <option key={type} value={type}>
-          {CASTING_LABELS[type]}
+          {getCastingLabel(type)}
         </option>
       ))}
     </select>
@@ -164,7 +169,7 @@ function CastingFilters({
 }) {
   return (
     <form className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm" method="get" action={currentPath}>
-      <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-end">
+      <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto_auto] lg:items-end">
         <div className="space-y-1">
           <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-search">
             Suche
@@ -211,13 +216,16 @@ function CastingFilters({
             <option value="all">Alle Besetzungen</option>
             {CASTING_ORDER.map((type) => (
               <option key={type} value={type}>
-                {CASTING_LABELS[type]}
+                {getCastingLabel(type)}
               </option>
             ))}
           </select>
         </div>
         <Button type="submit" className="w-full">
           Filter anwenden
+        </Button>
+        <Button type="button" variant="outline" className="w-full" asChild>
+          <Link href={currentPath}>Filter löschen</Link>
         </Button>
       </div>
     </form>
@@ -234,7 +242,7 @@ function CreateCharacterDialog({ showId }: { showId: string }) {
         <DialogHeader>
           <DialogTitle>Neue Rolle anlegen</DialogTitle>
           <DialogDescription>
-            Füge Figuren hinzu und definiere Reihenfolge, Farbe sowie optionale Notizen.
+            Füge Figuren hinzu und definiere Farbe sowie optionale Notizen.
           </DialogDescription>
         </DialogHeader>
         <form action={createCharacterAction} method="post" className="grid gap-6">
@@ -255,27 +263,23 @@ function CreateCharacterDialog({ showId }: { showId: string }) {
               <Textarea name="description" rows={2} maxLength={500} placeholder="Charakterbeschreibung" />
             </div>
           </fieldset>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Farbe</label>
-              <input
-                type="color"
-                name="color"
-                defaultValue="#7c3aed"
-                className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Sortierung</label>
-              <Input type="number" name="order" min={0} max={9999} placeholder="0" />
-            </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Farbe</label>
+            <input
+              type="color"
+              name="color"
+              defaultValue="#7c3aed"
+              className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
+            />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Notiz</label>
             <Textarea name="notes" rows={2} maxLength={500} placeholder="Interne Notiz" />
           </div>
           <DialogFooter className="pt-2 sm:justify-end">
-            <Button type="submit">Rolle speichern</Button>
+            <DialogClose asChild>
+              <Button type="submit">Rolle speichern</Button>
+            </DialogClose>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -288,7 +292,7 @@ function CastingAssignments({
 }: {
   castings: CharacterCasting[];
 }) {
-  const sortedCastings = [...castings].sort((a, b) => CASTING_ORDER.indexOf(a.type) - CASTING_ORDER.indexOf(b.type));
+  const sortedCastings = [...castings].sort((a, b) => getCastingOrderIndex(a.type) - getCastingOrderIndex(b.type));
 
   if (sortedCastings.length === 0) {
     return <p className="text-sm text-muted-foreground">Noch keine Besetzung zugeordnet.</p>;
@@ -301,7 +305,7 @@ function CastingAssignments({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-medium">{formatUserName(casting.user)}</p>
-              <p className="text-xs text-muted-foreground">{CASTING_LABELS[casting.type]}</p>
+              <p className="text-xs text-muted-foreground">{getCastingLabel(casting.type)}</p>
               {casting.notes ? <p className="text-xs text-muted-foreground">Notiz: {casting.notes}</p> : null}
             </div>
             <div className="flex items-center gap-1">
@@ -341,9 +345,11 @@ function CastingAssignments({
                           Abbrechen
                         </Button>
                       </DialogClose>
-                      <Button type="submit" variant="outline">
-                        Änderungen speichern
-                      </Button>
+                      <DialogClose asChild>
+                        <Button type="submit" variant="outline">
+                          Änderungen speichern
+                        </Button>
+                      </DialogClose>
                     </DialogFooter>
                   </form>
                 </DialogContent>
@@ -371,7 +377,9 @@ function CastingAssignments({
 
 function CharacterCard({ character, users }: { character: Character; users: DisplayUser[] }) {
   const hasCastings = character.castings.length > 0;
-  const sortedCastings = [...character.castings].sort((a, b) => CASTING_ORDER.indexOf(a.type) - CASTING_ORDER.indexOf(b.type));
+  const sortedCastings = [...character.castings].sort(
+    (a, b) => getCastingOrderIndex(a.type) - getCastingOrderIndex(b.type),
+  );
 
   return (
     <Card
@@ -493,7 +501,9 @@ function AssignCastingDialog({ characterId, users }: { characterId: string; user
                 Abbrechen
               </Button>
             </DialogClose>
-            <Button type="submit">Mitglied besetzen</Button>
+            <DialogClose asChild>
+              <Button type="submit">Mitglied besetzen</Button>
+            </DialogClose>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -531,10 +541,6 @@ function UpdateCharacterDialog({ character }: { character: Character }) {
               <Textarea name="description" rows={2} maxLength={500} defaultValue={character.description ?? ""} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sortierung</label>
-              <Input type="number" name="order" defaultValue={character.order ?? 0} min={0} max={9999} />
-            </div>
-            <div className="space-y-1">
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Farbe</label>
               <input
                 type="color"
@@ -549,9 +555,11 @@ function UpdateCharacterDialog({ character }: { character: Character }) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" variant="outline">
-              Rolle aktualisieren
-            </Button>
+            <DialogClose asChild>
+              <Button type="submit" variant="outline">
+                Rolle aktualisieren
+              </Button>
+            </DialogClose>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -605,7 +613,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
       select: {
         id: true,
         characters: {
-          orderBy: { order: "asc" },
+          orderBy: { name: "asc" },
           select: {
             id: true,
             name: true,
