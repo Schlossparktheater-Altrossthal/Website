@@ -31,11 +31,12 @@ export type ProfileCompletionSummary = {
   complete: boolean;
 };
 
-type ChecklistInput = {
+export type ChecklistInput = {
   hasBasicData: boolean;
   hasBirthdate: boolean;
   hasPaymentDetails?: boolean;
   hasDietaryPreference: boolean;
+  /** Ob bereits Körpermaße hinterlegt sind. */
   hasMeasurements?: boolean;
   photoConsent?: { consentGiven: boolean };
   hasWhatsappVisit?: boolean;
