@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
-import { Sparkles, Users, ListTodo, ShieldCheck, CalendarDays } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Sparkles, Trash2, Pencil } from "lucide-react";
 import { addDays, startOfToday, format } from "date-fns";
 import { de } from "date-fns/locale/de";
 
@@ -74,7 +73,7 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
     return (
       <div className="space-y-6">
         <ProductionWorkspaceHeader
-          title="Gewerke &amp; Zuständigkeiten"
+          title="Gewerke"
           description="Strukturiere dein Produktionsteam, vergib Verantwortlichkeiten und halte Kontaktdaten zentral fest."
           activeWorkspace="departments"
           production={null}
@@ -230,19 +229,14 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
       acc.done += counts.done;
       acc.members += department.memberships.length;
       acc.events += upcomingEventsByDepartment.get(department.id)?.length ?? 0;
-      if (department.requiresJoinApproval) {
-        acc.moderated += 1;
-      }
       return acc;
     },
-    { todo: 0, doing: 0, done: 0, members: 0, events: 0, moderated: 0 },
+    { todo: 0, doing: 0, done: 0, members: 0, events: 0 },
   );
 
   const formattedOpenTasks = numberFormatter.format(selectionSummary.todo + selectionSummary.doing);
   const formattedMemberCount = numberFormatter.format(selectionSummary.members);
   const formattedEventCount = numberFormatter.format(selectionSummary.events);
-  const formattedModeratedCount = numberFormatter.format(selectionSummary.moderated);
-
   const headerStats = [
     {
       label: selectedDepartment ? "Ausgewähltes Gewerk" : "Gewerke insgesamt",
@@ -266,37 +260,6 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
     },
   ];
 
-  type HighlightStat = { label: string; value: string; hint: string; icon: LucideIcon };
-  const highlightItems: HighlightStat[] = [
-    {
-      label: "Offene Aufgaben",
-      value: formattedOpenTasks,
-      hint: "Todo & in Arbeit",
-      icon: ListTodo,
-    },
-    {
-      label: "Aktive Mitglieder",
-      value: formattedMemberCount,
-      hint: selectedDepartment ? selectedDepartment.name : "Zugeordnete Personen",
-      icon: Users,
-    },
-    {
-      label: `Termine (${EVENT_WINDOW_DAYS} Tage)`,
-      value: formattedEventCount,
-      hint: "Planungssicherheit",
-      icon: CalendarDays,
-    },
-  ];
-
-  if (!selectedDepartment && selectionSummary.moderated > 0) {
-    highlightItems.push({
-      label: "Moderierte Zugänge",
-      value: formattedModeratedCount,
-      hint: "Gewerke mit Freigabe",
-      icon: ShieldCheck,
-    });
-  }
-
   const departmentOptions = [
     { value: "all", label: "Alle Gewerke" },
     ...departments.map((department) => ({ value: department.slug, label: department.name })),
@@ -305,7 +268,7 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
   return (
     <div className="space-y-6">
       <ProductionWorkspaceHeader
-        title="Gewerke &amp; Zuständigkeiten"
+        title="Gewerke"
         description="Verwalte Verantwortlichkeiten, Wissen und Kommunikation in einem eigenständigen Gewerk-Hub."
         activeWorkspace="departments"
         production={activeProduction}
@@ -314,131 +277,64 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
         showNavigation={false}
         showDivider
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
-        <Card className="border-border/60 bg-background/80">
-          <CardHeader className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Regie &amp; Vorstand</p>
-            <CardTitle className="text-2xl text-foreground sm:text-3xl">Klarer Überblick für Entscheidungen</CardTitle>
-            <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-              Sammle Rollen, Dokumente und Kontaktdaten direkt im Gewerk-Hub. Die Übersicht zeigt Aufgabenstatus, aktive Mitglieder und Termine gebündelt – ideal für schnelle Abstimmungen in Regie und Vorstand.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {highlightItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.label} className="rounded-lg border border-border/60 bg-muted/40 p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <Icon aria-hidden className="h-5 w-5" />
-                      </span>
-                      <div className="space-y-1">
-                        <p className="text-lg font-semibold text-foreground">{item.value}</p>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                        <p className="text-xs text-muted-foreground/80">{item.hint}</p>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm">Gewerk anlegen</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Neues Gewerk anlegen</DialogTitle>
-                    <DialogDescription>
-                      Definiere Verantwortungsbereiche mit Farben, Beschreibungen und optionalem Slug für eine bessere Orientierung.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form action={createDepartmentAction} className="grid gap-6">
-                    <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
-                    <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 sm:grid-cols-2">
-                      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Basisdaten
-                      </legend>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Name</label>
-                        <Input name="name" placeholder="z.B. Maske" required minLength={2} maxLength={80} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Slug (optional)</label>
-                        <Input name="slug" placeholder="maske" maxLength={80} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Farbe</label>
-                        <input
-                          type="color"
-                          name="color"
-                          defaultValue="#9333ea"
-                          className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
-                        />
-                      </div>
-                      <div className="space-y-1 sm:col-span-2">
-                        <span className="text-sm font-medium">Beitritt</span>
-                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            name="requiresApproval"
-                            className="h-4 w-4 rounded border border-border"
-                          />
-                          Leitung muss neue Mitglieder bestätigen, bevor sie beitreten.
-                        </label>
-                      </div>
-                    </fieldset>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Beschreibung</label>
-                      <Textarea name="description" rows={2} maxLength={2000} placeholder="Kurzbeschreibung für das Gewerk" />
-                    </div>
-                    <DialogFooter className="pt-2 sm:justify-end">
-                      <Button type="submit">Gewerk speichern</Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              <span>Tipp: Nutze klare Beschreibungen für einheitliche Kommunikation im Team.</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 bg-background/80">
-          <CardHeader className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Arbeitsabläufe</p>
-            <CardTitle className="text-lg text-foreground">Wissen bewahren &amp; teilen</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Halte Kontaktdaten, Dokumente und Entscheidungsnotizen direkt beim Gewerk fest. So behalten Leitung und Teammitglieder jederzeit den Überblick über Zuständigkeiten.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/50" aria-hidden />
-                <span>Dokumente lassen sich im Gewerk-Hub ablegen und versionieren.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/50" aria-hidden />
-                <span>Notizen zu Rollen oder Ansprechpersonen bleiben für das gesamte Team sichtbar.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/50" aria-hidden />
-                <span>Moderierte Zugänge sichern sensible Bereiche bei Bedarf zusätzlich ab.</span>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm">Gewerk anlegen</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Neues Gewerk anlegen</DialogTitle>
+              <DialogDescription>
+                Definiere Verantwortungsbereiche mit Farben, Beschreibungen und optionalem Slug für eine bessere Orientierung.
+              </DialogDescription>
+            </DialogHeader>
+            <form action={createDepartmentAction} className="grid gap-6">
+              <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
+              <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 sm:grid-cols-2">
+                <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Basisdaten</legend>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Name</label>
+                  <Input name="name" placeholder="z.B. Maske" required minLength={2} maxLength={80} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Slug (optional)</label>
+                  <Input name="slug" placeholder="maske" maxLength={80} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Farbe</label>
+                  <input
+                    type="color"
+                    name="color"
+                    defaultValue="#9333ea"
+                    className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <span className="text-sm font-medium">Beitritt</span>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input type="checkbox" name="requiresApproval" className="h-4 w-4 rounded border border-border" />
+                    Leitung muss neue Mitglieder bestätigen, bevor sie beitreten.
+                  </label>
+                </div>
+              </fieldset>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Beschreibung</label>
+                <Textarea name="description" rows={2} maxLength={2000} placeholder="Kurzbeschreibung für das Gewerk" />
+              </div>
+              <DialogFooter className="pt-2 sm:justify-end">
+                <Button type="submit">Gewerk speichern</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+        <span>Tipp: Nutze klare Beschreibungen für einheitliche Kommunikation im Team.</span>
       </div>
 
       <form method="get">
         <Card className="border-border/60 bg-background/80">
           <CardHeader className="space-y-2">
             <CardTitle className="text-base text-foreground">Gewerk-Fokus</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Filtere nach einzelnen Gewerken oder behalte alle Teams gleichzeitig im Blick.
-            </p>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -513,8 +409,8 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
                     <form action={deleteDepartmentAction}>
                       <input type="hidden" name="id" value={department.id} />
                       <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
-                      <Button type="submit" variant="ghost" size="sm">
-                        Entfernen
+                      <Button type="submit" variant="ghost" size="icon" aria-label={`Gewerk ${department.name} entfernen`}>
+                        <Trash2 aria-hidden className="h-4 w-4" />
                       </Button>
                     </form>
                   </div>
@@ -629,15 +525,16 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
                     </section>
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold">Aktive Mitglieder</h3>
+                  <details className={collapsibleClassName}>
+                    <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+                      <span>Aktive Mitglieder</span>
+                      <span className="text-xs text-muted-foreground group-open:hidden">Öffnen</span>
+                      <span className="hidden text-xs text-muted-foreground group-open:inline">Schließen</span>
+                    </summary>
+                    <div className="mt-4 space-y-3">
                       <p className="text-xs text-muted-foreground">
                         Verknüpfe Personen mit klaren Rollen und zusätzlichen Notizen.
                       </p>
-                    </div>
-
-                    <div className="space-y-3">
                       {department.memberships.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Noch keine Mitglieder zugeordnet.</p>
                       ) : (
@@ -660,17 +557,23 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
                               <form action={removeDepartmentMemberAction}>
                                 <input type="hidden" name="membershipId" value={membership.id} />
                                 <input type="hidden" name="redirectPath" value="/mitglieder/produktionen/gewerke" />
-                                <Button type="submit" variant="ghost" size="sm">
-                                  Entfernen
+                                <Button
+                                  type="submit"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`${formatUserName(membership.user)} entfernen`}
+                                >
+                                  <Trash2 aria-hidden className="h-4 w-4" />
                                 </Button>
                               </form>
                             </div>
 
-                            <details
-                              className="group mt-3 rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden"
-                            >
+                            <details className="group mt-3 rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden">
                               <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                <span>Zuweisung anpassen</span>
+                                <span className="inline-flex items-center gap-2">
+                                  <Pencil aria-hidden className="h-3.5 w-3.5" />
+                                  <span className="sr-only">Zuweisung anpassen</span>
+                                </span>
                                 <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
                                 <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
                               </summary>
@@ -715,7 +618,7 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
                         ))
                       )}
                     </div>
-                  </div>
+                  </details>
 
                   <details className={collapsibleClassName}>
                     <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
