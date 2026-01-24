@@ -335,8 +335,8 @@ export function MemberMeasurementsControlCenter({
           );
         },
         meta: {
-          headerClassName: "min-w-[180px] border-l border-border/60 align-bottom",
-          cellClassName: "min-w-[180px] border-l border-border/60 px-2 py-1.5",
+          headerClassName: "min-w-[140px] border-l border-border/60 align-bottom",
+          cellClassName: "min-w-[140px] border-l border-border/60 px-2 py-1.5",
         },
       });
     });
@@ -536,7 +536,7 @@ export function MemberMeasurementsControlCenter({
       <div className="rounded-xl border border-border/60 bg-background p-2 shadow-sm">
         {sortedMembers.length ? (
           measurementRows.length ? (
-            <DataTable columns={columns} data={measurementRows} tableClassName="min-w-[720px] text-xs" />
+            <DataTable columns={columns} data={measurementRows} tableClassName="min-w-[560px] text-xs" />
           ) : (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
               <AlertTriangle className="h-5 w-5" />
