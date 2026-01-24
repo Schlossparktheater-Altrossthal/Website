@@ -231,7 +231,7 @@ export async function GET() {
       hasDietaryPreference: Boolean(
         onboardingProfile?.dietaryPreference?.trim(),
       ),
-      hasMeasurements: canManageMeasurements ? measurementCountValue > 0 : undefined,
+      ...(canManageMeasurements ? { hasMeasurements: measurementCountValue > 0 } : {}),
       photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
     });
 
