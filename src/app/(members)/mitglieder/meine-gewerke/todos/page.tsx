@@ -22,8 +22,6 @@ import {
   getDueMeta,
 } from "../utils";
 
-const TEAM_OVERVIEW_LINK = "/mitglieder/meine-gewerke";
-
 type AssignmentEntry = {
   task: DepartmentMembershipWithDepartment["department"]["tasks"][number];
   department: DepartmentMembershipWithDepartment["department"];
@@ -204,11 +202,6 @@ export default async function DepartmentTodosPage() {
             <p>
               Tritt einem Gewerk bei, um hier Aufgaben, Zuständigkeiten und Ansprechpartner zu sehen.
             </p>
-            <div>
-              <Button asChild>
-                <Link href={TEAM_OVERVIEW_LINK}>Zu &bdquo;Meine Gewerke&ldquo;</Link>
-              </Button>
-            </div>
           </div>
         </section>
       </div>
