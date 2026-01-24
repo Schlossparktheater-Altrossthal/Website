@@ -86,9 +86,9 @@ export const MEASUREMENT_TYPE_DESCRIPTIONS: Record<MeasurementType, string> = {
 };
 
 export const MEASUREMENT_UNIT_LABELS: Record<MeasurementUnit, string> = {
-  M: "m",
-  CM: "cm",
-  MM: "mm",
+  M: "M",
+  CM: "CM",
+  MM: "MM",
   EU: "EU",
 };
 

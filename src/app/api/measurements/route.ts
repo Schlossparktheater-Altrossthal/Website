@@ -70,8 +70,11 @@ export async function POST(request: NextRequest) {
     }
 
     const canManageAll = await hasPermission(session.user, "mitglieder.koerpermasse");
-    if (targetUserId !== userId && !canManageAll) {
-      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
+    if (!canManageAll) {
+      return NextResponse.json(
+        { error: "Körpermaße können nur im Bereich Körpermaße gepflegt werden." },
+        { status: 403 },
+      );
     }
 
     const targetUser = await prisma.user.findUnique({
@@ -88,9 +91,8 @@ export async function POST(request: NextRequest) {
 
     const isTargetInEnsemble =
       targetUser.role === "cast" || targetUser.roles.some((entry) => entry.role === "cast");
-    const isSelfUpdate = targetUserId === userId;
 
-    if (!isTargetInEnsemble && !isSelfUpdate) {
+    if (!isTargetInEnsemble) {
       return NextResponse.json(
         { error: "Körpermaße können nur für Ensemble-Mitglieder gepflegt werden." },
         { status: 403 },
