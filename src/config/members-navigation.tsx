@@ -486,6 +486,7 @@ export const membersNavigation = [
         permissionKey: "mitglieder.meine-gewerke",
         icon: DepartmentsIcon,
       },
+      membersAssignmentsTodoItem,
       {
         href: "/mitglieder/koerpermasse",
         label: "Körpermaße",

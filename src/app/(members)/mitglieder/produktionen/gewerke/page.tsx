@@ -53,6 +53,11 @@ type PageProps = {
 
 const EVENT_WINDOW_DAYS = 30;
 const UPCOMING_TASK_WINDOW_DAYS = 21;
+const EXCLUDED_DEPARTMENT_NAMES = new Set([
+  "gewerke & zuständigkeiten",
+  "regie & vorstand",
+  "arbeitsabläufe",
+]);
 
 export default async function ProduktionsGewerkePage({ searchParams }: PageProps) {
   const session = await requireAuth();
@@ -94,7 +99,7 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
     : departmentFilterRaw;
   const selectedSlug = departmentFilter && departmentFilter !== "all" ? departmentFilter : null;
 
-  const [departments, users] = await Promise.all([
+  const [departmentsRaw, users] = await Promise.all([
     prisma.department.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -125,6 +130,9 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
     }),
   ]);
 
+  const departments = departmentsRaw.filter(
+    (department) => !EXCLUDED_DEPARTMENT_NAMES.has(department.name.trim().toLowerCase()),
+  );
   const departmentIds = departments.map((department) => department.id);
   const today = startOfToday();
   const eventWindowEnd = addDays(today, EVENT_WINDOW_DAYS);
@@ -574,8 +582,6 @@ export default async function ProduktionsGewerkePage({ searchParams }: PageProps
                                   <Pencil aria-hidden className="h-3.5 w-3.5" />
                                   <span className="sr-only">Zuweisung anpassen</span>
                                 </span>
-                                <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
-                                <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
                               </summary>
                               <form
                                 action={updateDepartmentMemberAction}

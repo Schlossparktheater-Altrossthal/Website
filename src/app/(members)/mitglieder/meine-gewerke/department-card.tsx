@@ -213,13 +213,20 @@ export function DepartmentCard({
 
       <CardContent className="relative z-[1] space-y-6">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <section className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
-            <div className="flex items-center justify-between gap-2">
+          <details
+            open
+            className="group rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner [&_summary::-webkit-details-marker]:hidden"
+          >
+            <summary className="flex cursor-pointer items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">Teamübersicht</h3>
-              <Badge variant="muted" size="sm">
-                {sortedMembers.length} Personen
-              </Badge>
-            </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="muted" size="sm">
+                  {sortedMembers.length} Personen
+                </Badge>
+                <span className="text-xs text-muted-foreground group-open:hidden">Öffnen</span>
+                <span className="hidden text-xs text-muted-foreground group-open:inline">Schließen</span>
+              </div>
+            </summary>
             <ul className="mt-4 space-y-3">
               {sortedMembers.map((member) => {
                 const isCurrentUser = member.userId === userId;
@@ -248,7 +255,7 @@ export function DepartmentCard({
                 );
               })}
             </ul>
-          </section>
+          </details>
 
           <div className="space-y-4">
             <section className="space-y-4 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">

@@ -30,8 +30,8 @@ const BASE_PERMISSIONS = [
 ];
 
 describe("selectMembersNavigation", () => {
-  it("injects department todo item when memberships are present", () => {
-    const groups = selectMembersNavigation({ hasDepartmentMemberships: true });
+  it("keeps the department todo item next to the Gewerke overview", () => {
+    const groups = selectMembersNavigation();
     const assignments = groups.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
 
     expect(assignments).toBeDefined();
@@ -44,18 +44,6 @@ describe("selectMembersNavigation", () => {
 
     expect(todoIndex).toBeGreaterThan(-1);
     expect(todoIndex).toBe(departmentsIndex + 1);
-  });
-
-  it("omits the department todo item without memberships", () => {
-    const groups = selectMembersNavigation({ hasDepartmentMemberships: false });
-    const assignments = groups.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
-
-    expect(assignments).toBeDefined();
-    const todoIndex = assignments!.items.findIndex(
-      (item) => item.href === membersAssignmentsTodoItem.href,
-    );
-
-    expect(todoIndex).toBe(-1);
   });
 
   it("adds an active production shortcut with badge and aria label", () => {
@@ -88,7 +76,7 @@ describe("filterMembersNavigationByPermissions", () => {
   });
 
   it("keeps only department related assignments for department-focused members", () => {
-    const groups = selectMembersNavigation({ hasDepartmentMemberships: true });
+    const groups = selectMembersNavigation();
     const permissions = ["mitglieder.meine-gewerke"] as const;
     const { groups: filtered } = filterMembersNavigationByPermissions(groups, permissions);
     const assignments = filtered.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);

@@ -4,7 +4,7 @@ import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, CheckCircle2, Clock, ListTodo, Sparkles, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, ListTodo, Sparkles, Trash2, Users } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -347,8 +347,13 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                         <form action={deleteDepartmentTaskAction}>
                           <input type="hidden" name="taskId" value={task.id} />
                           <input type="hidden" name="redirectPath" value={detailPath} />
-                          <Button type="submit" variant="ghost" size="sm">
-                            Entfernen
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Aufgabe ${task.title} entfernen`}
+                          >
+                            <Trash2 aria-hidden className="h-4 w-4" />
                           </Button>
                         </form>
                       </div>
