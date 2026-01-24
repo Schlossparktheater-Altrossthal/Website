@@ -222,6 +222,10 @@ export async function GET() {
       payoutNote: userRecord?.payoutNote,
     });
 
+    const hasMeasurements = canManageMeasurements
+      ? measurementCountValue > 0
+      : undefined;
+
     const profileChecklist = buildProfileChecklist({
       hasBasicData: Boolean(
         userRecord?.firstName && userRecord?.lastName && userRecord?.email,
@@ -231,7 +235,7 @@ export async function GET() {
       hasDietaryPreference: Boolean(
         onboardingProfile?.dietaryPreference?.trim(),
       ),
-      ...(canManageMeasurements ? { hasMeasurements: measurementCountValue > 0 } : {}),
+      ...(hasMeasurements !== undefined ? { hasMeasurements } : {}),
       photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
     });
 
