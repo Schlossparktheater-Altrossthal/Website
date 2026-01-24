@@ -1,5 +1,7 @@
+import tailwindcssAnimate from "tailwindcss-animate"
+
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+const config = {
   darkMode: ["class"],
   content: [
     "./pages/**/*.{ts,tsx}",
@@ -106,6 +108,7 @@ module.exports = {
       },
     },
   },
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 }
+
+export default config
