@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { endOfWeek, startOfWeek } from "date-fns";
 
-import { hasRole, requireAuth } from "@/lib/rbac";
+import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
@@ -35,13 +35,6 @@ export async function GET() {
     if (!(await hasPermission(session.user, "mitglieder.dashboard"))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-
-    const hasMeasurementPermission = await hasPermission(
-      session.user,
-      "mitglieder.koerpermasse",
-    );
-    const isEnsembleMember = hasRole(session.user, "cast");
-    const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
 
     const now = new Date();
     const startOfCurrentWeek = startOfWeek(now, { weekStartsOn: 1 });
@@ -78,7 +71,6 @@ export async function GET() {
       photoConsent,
       userRecord,
       membershipRecords,
-      measurementCount,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.rehearsal.count({
@@ -176,9 +168,6 @@ export async function GET() {
           },
         },
       }),
-      canManageMeasurements
-        ? prisma.memberMeasurement.count({ where: { userId } })
-        : Promise.resolve(0),
     ]);
 
     const activeProduction = activeProductionPromise ? await activeProductionPromise : null;
@@ -229,7 +218,6 @@ export async function GET() {
       hasDietaryPreference: Boolean(
         onboardingProfile?.dietaryPreference?.trim(),
       ),
-      hasMeasurements: canManageMeasurements ? measurementCount > 0 : undefined,
       photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
     });
 
