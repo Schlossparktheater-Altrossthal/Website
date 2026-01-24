@@ -2,7 +2,6 @@ import type { MembersNavGroup, MembersNavItem } from "@/config/members-navigatio
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
-  membersAssignmentsTodoItem,
   membersNavigation,
 } from "@/config/members-navigation";
 
@@ -29,45 +28,13 @@ function cloneGroupItems(items: readonly MembersNavItem[]) {
   return items.map((item) => ({ ...item }));
 }
 
-function ensureTodoItem(items: MembersNavItem[]) {
-  const todoHref = membersAssignmentsTodoItem.href;
-  const existingIndex = items.findIndex((item) => item.href === todoHref);
-  if (existingIndex !== -1) {
-    return items;
-  }
-
-  const baseIndex = items.findIndex((item) => item.href === "/mitglieder/meine-gewerke");
-  const todoItem: MembersNavItem = { ...membersAssignmentsTodoItem };
-  if (baseIndex >= 0) {
-    items.splice(baseIndex + 1, 0, todoItem);
-  } else {
-    items.push(todoItem);
-  }
-  return items;
-}
-
-function removeTodoItem(items: MembersNavItem[]) {
-  const todoHref = membersAssignmentsTodoItem.href;
-  const existingIndex = items.findIndex((item) => item.href === todoHref);
-  if (existingIndex !== -1) {
-    items.splice(existingIndex, 1);
-  }
-  return items;
-}
-
 export function selectMembersNavigation({
   groups = membersNavigation,
-  hasDepartmentMemberships = false,
   activeProduction = null,
 }: MembersNavigationSelectorOptions = {}): MembersNavGroup[] {
   return groups.map((group) => {
     if (group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID) {
       const items = cloneGroupItems(group.items);
-      if (hasDepartmentMemberships) {
-        ensureTodoItem(items);
-      } else {
-        removeTodoItem(items);
-      }
       return { ...group, items };
     }
 
