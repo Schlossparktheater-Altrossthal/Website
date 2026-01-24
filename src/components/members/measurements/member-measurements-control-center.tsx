@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Clock3, Filter, Search } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Clock3, Filter, Search } from "lucide-react";
 
 import { MeasurementForm } from "@/components/forms/measurement-form";
 import { Badge } from "@/components/ui/badge";
@@ -276,7 +276,7 @@ export function MemberMeasurementsControlCenter({
         meta: {
           headerClassName: "sticky left-0 z-20 bg-muted/30",
           cellClassName:
-            "sticky left-0 z-10 border-r border-border/60 bg-background px-4 py-3 text-sm font-medium text-foreground",
+            "sticky left-0 z-10 border-r border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground sm:px-4 sm:py-3",
         },
       },
     ];
@@ -335,8 +335,8 @@ export function MemberMeasurementsControlCenter({
           );
         },
         meta: {
-          headerClassName: "min-w-[140px] border-l border-border/60 align-bottom",
-          cellClassName: "min-w-[140px] border-l border-border/60 px-2 py-1.5",
+          headerClassName: "min-w-[120px] border-l border-border/60 align-bottom sm:min-w-[140px]",
+          cellClassName: "min-w-[120px] border-l border-border/60 px-2 py-1.5 sm:min-w-[140px]",
         },
       });
     });
@@ -446,7 +446,7 @@ export function MemberMeasurementsControlCenter({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-border/60 bg-background p-4 shadow-sm">
+      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground/70">Anprobe Control Center</p>
@@ -475,11 +475,11 @@ export function MemberMeasurementsControlCenter({
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/60 bg-background p-4 shadow-sm">
+      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/70">Mitglieder</p>
-            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-3 py-2">
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 sm:px-3 sm:py-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 value={memberSearch}
@@ -506,7 +506,7 @@ export function MemberMeasurementsControlCenter({
 
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/70">Maßarten</p>
-            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-3 py-2">
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 sm:px-3 sm:py-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 value={measurementSearch}
@@ -533,7 +533,11 @@ export function MemberMeasurementsControlCenter({
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/60 bg-background p-2 shadow-sm">
+      <div className="rounded-xl border border-border/60 bg-background p-2 shadow-sm sm:p-3">
+        <div className="flex items-center gap-2 px-1 pb-2 text-[11px] text-muted-foreground sm:hidden">
+          <ArrowLeftRight className="h-3.5 w-3.5" />
+          <span>Wische horizontal, um weitere Profile zu sehen.</span>
+        </div>
         {sortedMembers.length ? (
           measurementRows.length ? (
             <DataTable columns={columns} data={measurementRows} tableClassName="min-w-[560px] text-xs" />
