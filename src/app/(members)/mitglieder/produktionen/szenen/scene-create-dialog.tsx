@@ -25,7 +25,7 @@ export function SceneCreateDialog({ showId, currentPath }: Props) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="primary" size="sm">
+        <Button size="sm">
           Szene erstellen
         </Button>
       </DialogTrigger>
@@ -39,7 +39,7 @@ export function SceneCreateDialog({ showId, currentPath }: Props) {
         <form action={createSceneAction} method="post" className="grid gap-6">
           <input type="hidden" name="showId" value={showId} />
           <input type="hidden" name="redirectPath" value={currentPath} />
-          <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-3">
+          <fieldset className="grid gap-3 md:grid-cols-3">
             <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Basisdaten
             </legend>
