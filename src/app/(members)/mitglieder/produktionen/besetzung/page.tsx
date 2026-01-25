@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { CharacterCastingType } from "@prisma/client";
-import { BadgeCheck, ChevronDown, Filter, FilterX, Pencil, Plus, Search, Trash2, UserRoundCheck, Users } from "lucide-react";
+import { BadgeCheck, ChevronDown, Filter, FilterX, Pencil, Plus, Trash2, UserRoundCheck, Users } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -12,7 +12,7 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { getRolePreferenceTitle, listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -191,8 +191,10 @@ function HeaderStats({
           <Button asChild size="sm" variant="outline">
             <Link href="/mitglieder/produktionen/szenen">Zu den Szenen</Link>
           </Button>
-          <CastingExportDialog characters={characters} showTitle={showTitle} />
-          <CreateCharacterDialog showId={showId} users={users} />
+          <div className="flex flex-col items-end gap-2">
+            <CreateCharacterDialog showId={showId} users={users} />
+            <CastingExportDialog characters={characters} showTitle={showTitle} />
+          </div>
         </div>
       </div>
     </div>
@@ -207,19 +209,13 @@ function CastingFilters({ searchTerm, castingType }: { searchTerm: string; casti
           <label className="sr-only" htmlFor="casting-search">
             Suche
           </label>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              id="casting-search"
-              name="q"
-              placeholder="Nach Rollen oder Personen suchen"
-              defaultValue={searchTerm}
-              className="h-9 pl-9 text-sm"
-            />
-          </div>
+          <Input
+            id="casting-search"
+            name="q"
+            placeholder="Nach Rollen oder Personen suchen"
+            defaultValue={searchTerm}
+            className="h-9 text-sm"
+          />
         </div>
         <div className="space-y-1">
           <label className="sr-only" htmlFor="casting-type">
@@ -240,8 +236,8 @@ function CastingFilters({ searchTerm, castingType }: { searchTerm: string; casti
           </select>
         </div>
         <div className="flex items-center justify-end gap-2">
-          <Button type="submit" size="icon" aria-label="Suche anwenden">
-            <Search className="h-4 w-4" aria-hidden />
+          <Button type="submit" size="sm">
+            Suche
           </Button>
           <Button type="submit" variant="outline" size="icon" aria-label="Filter anwenden">
             <Filter className="h-4 w-4" aria-hidden />
@@ -395,14 +391,13 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
       id={`role-${character.id}`}
       key={character.id}
       className={cn(
-        "min-w-0 w-full overflow-hidden border border-border/70 bg-transparent p-2 shadow-sm",
+        "min-w-0 w-full overflow-hidden border border-border/70",
         !hasCastings && "border-destructive/60",
       )}
-      style={{ backgroundColor: character.color ?? "hsl(var(--card))" }}
     >
-      <CardHeader className="space-y-2 rounded-lg border border-border/60 bg-background/80 px-3 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-1 items-start gap-3">
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
             <span
               className="mt-1 h-10 w-1.5 rounded-full"
               style={{ backgroundColor: character.color ?? "#8b5cf6" }}
@@ -410,9 +405,9 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
             />
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-lg font-semibold">{character.name}</CardTitle>
+                <CardTitle className="break-words text-lg font-semibold">{character.name}</CardTitle>
                 {character.rolePreferenceCode ? (
-                  <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span className="max-w-full rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {getRolePreferenceTitle(character.rolePreferenceCode)}
                   </span>
                 ) : null}
@@ -425,7 +420,7 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
               {character.notes ? <p className="text-xs text-muted-foreground">Notiz: {character.notes}</p> : null}
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <AssignCastingDialog characterId={character.id} users={users} />
             <UpdateCharacterDialog character={character} />
             <form action={deleteCharacterAction} method="post">
@@ -452,10 +447,7 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
             <span className="rounded-full bg-destructive/10 px-2 py-1 text-destructive">Nicht besetzt</span>
           )}
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2 rounded-lg border border-border/60 bg-card/50 px-3 py-3">
-        <details className="group rounded-lg border border-border/60 bg-background/60">
+        <details className="group rounded-lg border border-border/60 bg-muted/40">
           <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-xs font-semibold text-foreground">
             <span className="flex items-center gap-2">
               <span>Besetzung</span>
