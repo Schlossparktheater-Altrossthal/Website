@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
+import { CheckCircle2, ListTodo, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
+import { PageHeader } from "@/components/members/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -18,6 +21,8 @@ import {
 } from "./utils";
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-card";
 import { DepartmentSelect } from "./department-select";
+
+type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
 
 export default async function MeineGewerkePage() {
   const session = await requireAuth();
@@ -206,6 +211,48 @@ export default async function MeineGewerkePage() {
   const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
   const now = new Date();
+  const openTaskCount = taskTotals.todo + taskTotals.doing;
+
+  const summaryStats: SummaryStat[] = [
+    { label: "Teams", value: memberships.length, hint: "Aktive Gewerke", icon: Users },
+    { label: "Offene Aufgaben", value: openTaskCount, hint: "Über alle Gewerke", icon: ListTodo },
+    { label: "Erledigt", value: taskTotals.done, hint: "Abgeschlossen", icon: CheckCircle2 },
+  ];
+
+  const headerDescription =
+    "Deine zentrale Übersicht für Teams, Aufgaben, Termine und Ansprechpartner in deinen Gewerken.";
+
+  const hero = (
+    <div className="space-y-6">
+      <PageHeader title="Meine Gewerke" description={headerDescription} />
+      <div className="border-b border-border/60" />
+      {memberships.length ? (
+        <dl className="grid gap-4 md:grid-cols-3">
+          {summaryStats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div
+                key={stat.label}
+                className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
+              >
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+                <div className="relative flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon aria-hidden className="h-5 w-5" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
+                    <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
+                    {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </dl>
+      ) : null}
+    </div>
+  );
 
   const departmentOptions = memberships
     .map((membership) => {
@@ -229,7 +276,8 @@ export default async function MeineGewerkePage() {
 
   if (memberships.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-10">
+        {hero}
         <section className="rounded-3xl border border-dashed border-primary/30 bg-background/70 p-6 text-sm text-muted-foreground shadow-inner sm:p-10 sm:text-base">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground sm:text-xl">Noch keine Gewerke</h2>
@@ -260,6 +308,7 @@ export default async function MeineGewerkePage() {
 
   return (
     <div className="space-y-6">
+      {hero}
       {departmentOptions.length ? (
         <Card>
           <CardHeader>
