@@ -1,4 +1,3 @@
-import type PDFDocument from "pdfkit";
 import { z } from "zod";
 
 import type { PdfTemplate } from "../types";
@@ -49,6 +48,8 @@ const castingExportSchema = z.object({
 
 type CastingExportData = z.infer<typeof castingExportSchema>;
 
+type PdfDocumentInstance = import("pdfkit");
+
 const TYPE_LABELS: Record<string, string> = {
   primary: "Primär",
   alternate: "Sekundär",
@@ -74,7 +75,7 @@ function formatType(type: string | null | undefined, label?: string | null) {
   return TYPE_LABELS[type] ?? "Weitere";
 }
 
-function ensureSpace(doc: PDFDocument, height: number) {
+function ensureSpace(doc: PdfDocumentInstance, height: number) {
   const pageBottom = doc.page.height - doc.page.margins.bottom;
   if (doc.y + height > pageBottom) {
     doc.addPage();
