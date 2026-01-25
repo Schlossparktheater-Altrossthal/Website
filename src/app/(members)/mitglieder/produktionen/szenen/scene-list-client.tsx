@@ -33,6 +33,7 @@ import {
 } from "../actions";
 
 type DisplayUser = {
+  id: string;
   firstName?: string | null;
   lastName?: string | null;
   name: string | null;
