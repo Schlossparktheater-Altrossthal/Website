@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CharacterCastingType } from "@prisma/client";
-import { ArrowDownAZ, ArrowUpAZ, ChevronDown, FilterX, Pencil, Plus, Trash2, UserRoundCheck } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, ChevronDown, Eye, FilterX, Pencil, Plus, Trash2, UserRoundCheck } from "lucide-react";
 
 import { getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,6 @@ import {
 } from "../actions";
 import {
   CASTING_ORDER,
-  DESCRIPTION_PREVIEW_LENGTH,
   ROLE_PREFERENCE_OPTIONS,
   type Character,
   type CharacterCasting,
@@ -39,7 +38,6 @@ import {
   getCastingOrderIndex,
   resolveRoleSizeLabel,
   selectSmallClassName,
-  truncateText,
 } from "./casting-utils";
 
 type Props = {
@@ -215,12 +213,54 @@ function UpdateCharacterDialog({ character, currentPath }: { character: Characte
   );
 }
 
+function CharacterDetailsDialog({ character }: { character: Character }) {
+  if (!character.description) {
+    return null;
+  }
+
+  const roleSizeLabel = resolveRoleSizeLabel(character.rolePreferenceCode);
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9" aria-label="Details anzeigen">
+          <Eye className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{character.name}</DialogTitle>
+          <DialogDescription>Zusätzliche Details zur Rolle.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-xs text-muted-foreground">
+          {roleSizeLabel ? (
+            <div className="space-y-1">
+              <p className="font-semibold uppercase tracking-wide text-foreground/80">Rollengröße</p>
+              <p>{roleSizeLabel}</p>
+            </div>
+          ) : null}
+          <div className="space-y-1">
+            <p className="font-semibold uppercase tracking-wide text-foreground/80">Beschreibung</p>
+            <p>{character.description}</p>
+          </div>
+          {character.notes ? (
+            <div className="space-y-1">
+              <p className="font-semibold uppercase tracking-wide text-foreground/80">Notiz</p>
+              <p>{character.notes}</p>
+            </div>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CharacterCard({ character, users, currentPath }: { character: Character; users: DisplayUser[]; currentPath: string }) {
   const hasCastings = character.castings.length > 0;
   const sortedCastings = [...character.castings].sort(
     (a, b) => getCastingOrderIndex(a.type) - getCastingOrderIndex(b.type),
   );
-  const roleSizeLabel = resolveRoleSizeLabel(character.rolePreferenceCode);
+  const infoItems = [character.shortName, character.notes].filter((value): value is string => Boolean(value));
 
   return (
     <Card
@@ -239,42 +279,30 @@ function CharacterCard({ character, users, currentPath }: { character: Character
               style={{ backgroundColor: character.color ?? "#8b5cf6" }}
               aria-hidden
             />
-            <div className="min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="break-words text-lg font-semibold">{character.name}</CardTitle>
-              </div>
-              <dl className="grid gap-1 text-xs text-muted-foreground">
-                <div className="flex flex-wrap gap-2">
-                  <dt className="font-semibold text-foreground/80">Rollengröße</dt>
-                  <dd>{roleSizeLabel}</dd>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <dt className="font-semibold text-foreground/80">Beschreibung</dt>
-                  <dd>
-                    {character.description
-                      ? truncateText(character.description, DESCRIPTION_PREVIEW_LENGTH)
-                      : "Ohne Beschreibung"}
-                  </dd>
-                </div>
-                {character.notes ? (
-                  <div className="flex flex-wrap gap-2">
-                    <dt className="font-semibold text-foreground/80">Notiz</dt>
-                    <dd>{character.notes}</dd>
-                  </div>
-                ) : null}
-              </dl>
+            <div className="min-w-0 space-y-2 pt-10">
+              <CardTitle className="break-words text-lg font-semibold">{character.name}</CardTitle>
+              {infoItems.length > 0 ? (
+                <p className="text-xs text-muted-foreground">{infoItems.join(", ")}</p>
+              ) : null}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <AssignCastingDialog characterId={character.id} users={users} currentPath={currentPath} />
-            <UpdateCharacterDialog character={character} currentPath={currentPath} />
-            <form action={deleteCharacterAction} method="post">
-              <input type="hidden" name="characterId" value={character.id} />
-              <input type="hidden" name="redirectPath" value={currentPath} />
-              <Button type="submit" variant="ghost" size="icon" className="h-9 w-9" aria-label="Rolle entfernen">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </form>
+          <div className="grid shrink-0 grid-cols-2 grid-rows-2 gap-1">
+            <div className="col-start-1 row-start-1">
+              <AssignCastingDialog characterId={character.id} users={users} currentPath={currentPath} />
+            </div>
+            <div className="col-start-2 row-start-1">{character.description ? <CharacterDetailsDialog character={character} /> : null}</div>
+            <div className="col-start-1 row-start-2">
+              <UpdateCharacterDialog character={character} currentPath={currentPath} />
+            </div>
+            <div className="col-start-2 row-start-2">
+              <form action={deleteCharacterAction} method="post">
+                <input type="hidden" name="characterId" value={character.id} />
+                <input type="hidden" name="redirectPath" value={currentPath} />
+                <Button type="submit" variant="ghost" size="icon" className="h-9 w-9" aria-label="Rolle entfernen">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </form>
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -351,6 +379,8 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
   }, [characters, castingType, roleSizeFilter, searchTerm, sortDirection]);
 
   const unassignedCharacters = filteredCharacters.filter((character) => character.castings.length === 0);
+  const hasFilters =
+    searchTerm.trim().length > 0 || castingType !== "all" || roleSizeFilter !== "all" || sortDirection !== "asc";
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -425,15 +455,17 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
             >
               {sortDirection === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Filter und Suche entfernen"
-              onClick={clearFilters}
-            >
-              <FilterX className="h-4 w-4" aria-hidden />
-            </Button>
+            {hasFilters ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Filter und Suche entfernen"
+                onClick={clearFilters}
+              >
+                <FilterX className="h-4 w-4" aria-hidden />
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>

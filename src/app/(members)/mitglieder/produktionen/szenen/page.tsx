@@ -190,7 +190,7 @@ export default async function ProduktionsSzenenPage() {
       />
 
       <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-stretch">
           {summaryStats.map((stat) => (
             <div
               key={stat.label}
@@ -205,9 +205,9 @@ export default async function ProduktionsSzenenPage() {
               </span>
             </div>
           ))}
-        </div>
-        <div className="mt-4 flex justify-end">
-          <SceneCreateDialog showId={show.id} currentPath={currentPath} />
+          <div className="flex items-center justify-end rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm">
+            <SceneCreateDialog showId={show.id} currentPath={currentPath} />
+          </div>
         </div>
       </div>
 

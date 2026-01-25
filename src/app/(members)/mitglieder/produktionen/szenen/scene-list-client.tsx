@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BreakdownStatus } from "@prisma/client";
-import { ChevronDown, LayoutGrid, List, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, ChevronDown, FilterX, LayoutGrid, List, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { getUserDisplayName } from "@/lib/names";
 import { Button } from "@/components/ui/button";
@@ -195,13 +195,21 @@ export function SceneListClient({
     return results;
   }, [sceneFilter, sceneSort, scenes, searchTerm]);
 
+  const hasFilters = searchTerm.trim().length > 0 || sceneFilter !== "all" || sceneSort !== "asc";
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSceneFilter("all");
+    setSceneSort("asc");
+  };
+
   const listClassName = viewMode === "tiles" ? "grid gap-6 lg:grid-cols-2" : "space-y-6";
   const detailLayoutClassName = viewMode === "tiles" ? "grid gap-4" : "grid gap-4 lg:grid-cols-2";
 
   return (
     <>
       <div className="rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-end">
+        <div className="grid gap-3 lg:grid-cols-[2fr_1fr_auto] lg:items-end">
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground" htmlFor="scene-search">
               Suche
@@ -231,21 +239,27 @@ export function SceneListClient({
               <option value="without-breakdowns">Ohne Breakdowns</option>
             </select>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="scene-sort">
-              Sortierung
-            </label>
-            <select
-              id="scene-sort"
-              className={selectSmallClassName}
-              value={sceneSort}
-              onChange={(event) => setSceneSort(event.target.value as SceneSort)}
-            >
-              <option value="asc">Nummer A-Z</option>
-              <option value="desc">Nummer Z-A</option>
-            </select>
-          </div>
           <div className="flex items-center gap-2 justify-self-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={sceneSort === "asc" ? "Nummern A bis Z sortieren" : "Nummern Z bis A sortieren"}
+              onClick={() => setSceneSort((prev) => (prev === "asc" ? "desc" : "asc"))}
+            >
+              {sceneSort === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
+            </Button>
+            {hasFilters ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Filter und Suche entfernen"
+                onClick={clearFilters}
+              >
+                <FilterX className="h-4 w-4" aria-hidden />
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant={viewMode === "list" ? "secondary" : "outline"}
