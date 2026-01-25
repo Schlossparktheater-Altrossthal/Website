@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { isInviteUsable } from "@/lib/member-invites";
-import { sortRoles, ROLES, type Role } from "@/lib/roles";
+import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
   }
 
   const rolesFromInvite = invite.roles?.filter((role): role is Role => (ROLES as readonly string[]).includes(role)) ?? [];
-  const roles = sortRoles(rolesFromInvite.length ? rolesFromInvite : ["member"]);
+  const roles = withAutoCast(sortRoles(rolesFromInvite.length ? rolesFromInvite : ["member"]));
   const primaryRole = roles[roles.length - 1];
 
   const storedPayload = {

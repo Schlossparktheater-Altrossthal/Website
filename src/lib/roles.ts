@@ -45,6 +45,15 @@ export function sortRoles(roles: Role[]) {
   return [...new Set(roles)].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
 }
 
+export function withAutoCast(roles: Role[]) {
+  const unique = new Set(roles);
+  const hasAssignedRole = Array.from(unique).some((role) => role !== "member");
+  if (hasAssignedRole) {
+    unique.add("cast");
+  }
+  return sortRoles(Array.from(unique));
+}
+
 export function describeRoles(roles: Role[]) {
   if (!roles.length) return "Keine Rollen";
   return sortRoles(roles)
