@@ -1001,8 +1001,13 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
     const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 500 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 500 });
     const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
+    const castingUserId = readOptionalString(formData, "castingUserId", { label: "Schauspieler" });
+    const castingType =
+      parseEnumValue(CharacterCastingType, formData.get("castingType"), "Besetzungsart", { optional: true }) ??
+      CharacterCastingType.primary;
+    const castingNotes = readOptionalString(formData, "castingNotes", { label: "Notiz", maxLength: 200 });
 
-    await prisma.character.create({
+    const character = await prisma.character.create({
       data: {
         showId,
         name,
@@ -1012,6 +1017,22 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
         color: color ?? null,
       },
     });
+
+    if (castingUserId) {
+      const user = await prisma.user.findUnique({ where: { id: castingUserId }, select: { id: true } });
+      if (!user) {
+        throw new Error("Mitglied wurde nicht gefunden.");
+      }
+
+      await prisma.characterCasting.create({
+        data: {
+          characterId: character.id,
+          userId: castingUserId,
+          type: castingType,
+          notes: castingNotes ?? null,
+        },
+      });
+    }
 
     revalidateShow(showId, redirectPath);
   } catch (error) {

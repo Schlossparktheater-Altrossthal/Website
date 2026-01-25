@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { CharacterCastingType } from "@prisma/client";
-import { BadgeCheck, ChevronDown, Pencil, Plus, Search, Trash2, UserRoundCheck, Users } from "lucide-react";
+import { BadgeCheck, ChevronDown, Filter, FilterX, Pencil, Plus, Search, Trash2, UserRoundCheck, Users } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
+import { CastingExportDialog } from "@/components/production/casting-export-dialog";
 
 import {
   assignCharacterCastingAction,
@@ -33,7 +34,6 @@ import {
   deleteCharacterAction,
   removeCharacterCastingAction,
   updateCharacterAction,
-  updateCharacterCastingAction,
 } from "../actions";
 
 type DisplayUser = {
@@ -60,6 +60,21 @@ type Character = {
   color: string | null;
   order: number | null;
   castings: CharacterCasting[];
+};
+
+type ExportCharacter = {
+  id: string;
+  name: string;
+  shortName: string | null;
+  description: string | null;
+  notes: string | null;
+  color: string | null;
+  castings: Array<{
+    id: string;
+    type: CharacterCastingType;
+    notes: string | null;
+    userName: string;
+  }>;
 };
 
 type PageProps = {
@@ -134,7 +149,19 @@ function CastingTypeSelect({
   );
 }
 
-function HeaderStats({ stats, showId }: { stats: HeaderStat[]; showId: string }) {
+function HeaderStats({
+  stats,
+  showId,
+  users,
+  characters,
+  showTitle,
+}: {
+  stats: HeaderStat[];
+  showId: string;
+  users: DisplayUser[];
+  characters: ExportCharacter[];
+  showTitle: string;
+}) {
   return (
     <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
       <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -159,7 +186,8 @@ function HeaderStats({ stats, showId }: { stats: HeaderStat[]; showId: string })
           <Button asChild size="sm" variant="outline">
             <Link href="/mitglieder/produktionen/szenen">Zu den Szenen</Link>
           </Button>
-          <CreateCharacterDialog showId={showId} />
+          <CastingExportDialog characters={characters} showTitle={showTitle} />
+          <CreateCharacterDialog showId={showId} users={users} />
         </div>
       </div>
     </div>
@@ -168,10 +196,10 @@ function HeaderStats({ stats, showId }: { stats: HeaderStat[]; showId: string })
 
 function CastingFilters({ searchTerm, castingType }: { searchTerm: string; castingType: string }) {
   return (
-    <form className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm" method="get" action={currentPath}>
-      <div className="grid gap-3 lg:grid-cols-[2fr_1fr_auto_auto] lg:items-end">
+    <form className="rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm" method="get" action={currentPath}>
+      <div className="grid gap-3 lg:grid-cols-[2fr_1fr_auto] lg:items-center">
         <div className="space-y-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-search">
+          <label className="sr-only" htmlFor="casting-search">
             Suche
           </label>
           <div className="relative">
@@ -184,18 +212,18 @@ function CastingFilters({ searchTerm, castingType }: { searchTerm: string; casti
               name="q"
               placeholder="Nach Rollen oder Personen suchen"
               defaultValue={searchTerm}
-              className="pl-9"
+              className="h-9 pl-9 text-sm"
             />
           </div>
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="casting-type">
+          <label className="sr-only" htmlFor="casting-type">
             Besetzungsart
           </label>
           <select
             id="casting-type"
             name="castingType"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={selectSmallClassName}
             defaultValue={castingType}
           >
             <option value="all">Alle Besetzungen</option>
@@ -206,18 +234,25 @@ function CastingFilters({ searchTerm, castingType }: { searchTerm: string; casti
             ))}
           </select>
         </div>
-        <Button type="submit" className="w-full">
-          Filter anwenden
-        </Button>
-        <Button type="button" variant="outline" className="w-full" asChild>
-          <Link href={currentPath}>Filter löschen</Link>
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button type="submit" size="icon" aria-label="Suche anwenden">
+            <Search className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button type="submit" variant="outline" size="icon" aria-label="Filter anwenden">
+            <Filter className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button type="button" variant="ghost" size="icon" asChild aria-label="Filter und Suche entfernen">
+            <Link href={currentPath}>
+              <FilterX className="h-4 w-4" aria-hidden />
+            </Link>
+          </Button>
+        </div>
       </div>
     </form>
   );
 }
 
-function CreateCharacterDialog({ showId }: { showId: string }) {
+function CreateCharacterDialog({ showId, users }: { showId: string; users: DisplayUser[] }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -257,6 +292,30 @@ function CreateCharacterDialog({ showId }: { showId: string }) {
               className="h-10 w-full cursor-pointer rounded-md border border-input bg-background"
             />
           </div>
+          <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-2">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Besetzung
+            </legend>
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-sm font-medium">Schauspieler</label>
+              <select name="castingUserId" className={selectSmallClassName}>
+                <option value="">Optional auswählen</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {formatUserName(user)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Besetzungsart</label>
+              <CastingTypeSelect name="castingType" defaultValue={CharacterCastingType.primary} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Notiz</label>
+              <Input name="castingNotes" maxLength={200} placeholder="optional" />
+            </div>
+          </fieldset>
           <div className="space-y-1">
             <label className="text-sm font-medium">Notiz</label>
             <Textarea name="notes" rows={2} maxLength={500} placeholder="Interne Notiz" />
@@ -284,75 +343,28 @@ function CastingAssignments({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {sortedCastings.map((casting) => (
-        <div key={casting.id} className="rounded-lg border border-border/70 bg-background/80 p-3 text-sm shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div key={casting.id} className="rounded-lg border border-border/70 bg-background/80 p-2 text-sm shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="font-medium">{formatUserName(casting.user)}</p>
               <p className="text-xs text-muted-foreground">{getCastingLabel(casting.type)}</p>
               {casting.notes ? <p className="text-xs text-muted-foreground">Notiz: {casting.notes}</p> : null}
             </div>
-            <div className="flex items-center gap-1">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    aria-label="Besetzung bearbeiten"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Besetzung bearbeiten</DialogTitle>
-                    <DialogDescription>
-                      Passe Besetzungsart und optionale Notizen für {formatUserName(casting.user)} an.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form action={updateCharacterCastingAction} method="post" className="grid gap-3">
-                    <input type="hidden" name="castingId" value={casting.id} />
-                    <input type="hidden" name="redirectPath" value={currentPath} />
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Besetzungsart</label>
-                      <CastingTypeSelect defaultValue={casting.type} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                      <Input name="notes" defaultValue={casting.notes ?? ""} maxLength={200} />
-                    </div>
-                    <DialogFooter className="sm:justify-end">
-                      <DialogClose asChild>
-                        <Button type="button" variant="ghost">
-                          Abbrechen
-                        </Button>
-                      </DialogClose>
-                      <DialogClose asChild>
-                        <Button type="submit" variant="outline">
-                          Änderungen speichern
-                        </Button>
-                      </DialogClose>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              <form action={removeCharacterCastingAction} method="post">
-                <input type="hidden" name="castingId" value={casting.id} />
-                <input type="hidden" name="redirectPath" value={currentPath} />
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="Besetzung entfernen"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </form>
-            </div>
+            <form action={removeCharacterCastingAction} method="post">
+              <input type="hidden" name="castingId" value={casting.id} />
+              <input type="hidden" name="redirectPath" value={currentPath} />
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Besetzung entfernen"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </form>
           </div>
         </div>
       ))}
@@ -371,11 +383,12 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
       id={`role-${character.id}`}
       key={character.id}
       className={cn(
-        "min-w-0 w-full overflow-hidden border border-border/70 bg-card/70 shadow-sm",
-        !hasCastings && "border-destructive/60 bg-destructive/5",
+        "min-w-0 w-full overflow-hidden border border-border/70 bg-transparent p-2 shadow-sm",
+        !hasCastings && "border-destructive/60",
       )}
+      style={{ backgroundColor: character.color ?? "hsl(var(--card))" }}
     >
-      <CardHeader className="space-y-2 border-b border-border/60 bg-background/50 px-3 py-3">
+      <CardHeader className="space-y-2 rounded-lg border border-border/60 bg-background/80 px-3 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-1 items-start gap-3">
             <span
@@ -419,9 +432,6 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-1">
-            <UserRoundCheck className="h-3.5 w-3.5" aria-hidden /> {sortedCastings.length} Besetzungen
-          </span>
           {character.description ? null : <span className="rounded-full bg-muted/50 px-2 py-1">Ohne Beschreibung</span>}
           {hasCastings ? null : (
             <span className="rounded-full bg-destructive/10 px-2 py-1 text-destructive">Nicht besetzt</span>
@@ -429,16 +439,19 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3 bg-card/40 px-3 py-3">
-        <details className="group rounded-lg border border-border/60 bg-background/50">
-          <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-foreground">
-            <span>Besetzung</span>
-            <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
-              {sortedCastings.length > 0 ? `${sortedCastings.length} Zuordnungen` : "Noch keine Zuordnungen"}
-              <ChevronDown className="h-4 w-4 transition duration-200 group-open:rotate-180" aria-hidden />
+      <CardContent className="space-y-2 rounded-lg border border-border/60 bg-card/50 px-3 py-3">
+        <details className="group rounded-lg border border-border/60 bg-background/60">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-xs font-semibold text-foreground">
+            <span className="flex items-center gap-2">
+              <span>Besetzung</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                <UserRoundCheck className="h-3 w-3" aria-hidden />
+                {sortedCastings.length}
+              </span>
             </span>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition duration-200 group-open:rotate-180" aria-hidden />
           </summary>
-          <div className="space-y-3 border-t border-border/60 px-3 py-3">
+          <div className="space-y-2 border-t border-border/60 px-3 py-3">
             <CastingAssignments castings={sortedCastings} />
           </div>
         </details>
@@ -601,6 +614,8 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
       where: { id: activeProduction.id },
       select: {
         id: true,
+        title: true,
+        year: true,
         characters: {
           orderBy: { name: "asc" },
           select: {
@@ -635,6 +650,11 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
 
   const characterCount = show.characters.length;
   const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
+  const assignedActorCount = new Set(
+    show.characters.flatMap((character) =>
+      character.castings.map((casting) => casting.user?.id).filter((id): id is string => Boolean(id)),
+    ),
+  ).size;
 
   const resolvedSearchParams = (await searchParams) ?? {};
 
@@ -664,10 +684,25 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
   });
 
   const unassignedCharacters = filteredCharacters.filter((character) => character.castings.length === 0);
+  const showTitle = show.title ?? `Produktion ${show.year}`;
+  const exportCharacters: ExportCharacter[] = show.characters.map((character) => ({
+    id: character.id,
+    name: character.name,
+    shortName: character.shortName,
+    description: character.description,
+    notes: character.notes,
+    color: character.color,
+    castings: character.castings.map((casting) => ({
+      id: casting.id,
+      type: casting.type,
+      notes: casting.notes,
+      userName: formatUserName(casting.user),
+    })),
+  }));
   const headerStats: HeaderStat[] = [
     { label: "Rollen", value: characterCount, icon: <BadgeCheck className="h-4 w-4" aria-hidden /> },
     { label: "Besetzungen", value: castingCount, icon: <Users className="h-4 w-4" aria-hidden /> },
-    { label: "Schauspieler", value: users.length, icon: <UserRoundCheck className="h-4 w-4" aria-hidden /> },
+    { label: "Schauspieler", value: assignedActorCount, icon: <UserRoundCheck className="h-4 w-4" aria-hidden /> },
   ];
 
   return (
@@ -678,7 +713,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
         breadcrumbs={breadcrumbs}
       />
 
-      <HeaderStats stats={headerStats} showId={show.id} />
+      <HeaderStats stats={headerStats} showId={show.id} users={users} characters={exportCharacters} showTitle={showTitle} />
 
       <CastingFilters searchTerm={searchTerm} castingType={castingType} />
 
@@ -727,7 +762,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]">
+          <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]">
             {filteredCharacters.map((character) => (
               <CharacterCard key={character.id} character={character} users={users} />
             ))}
