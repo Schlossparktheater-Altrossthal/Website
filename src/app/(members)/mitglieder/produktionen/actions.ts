@@ -415,6 +415,36 @@ function readString(formData: FormData, key: string, options?: ReadOptions): str
   return value;
 }
 
+const sceneIdentifierPattern = /^\d+(?:\.\d+)?$/;
+
+function ensureValidSceneIdentifier(identifier: string): void {
+  if (!sceneIdentifierPattern.test(identifier)) {
+    throw new Error("Nummern dürfen nur Ziffern enthalten und maximal eine Unterteilung wie 1.1 besitzen.");
+  }
+  const parts = identifier.split(".").map((part) => Number.parseInt(part, 10));
+  if (parts.some((part) => Number.isNaN(part) || part < 1)) {
+    throw new Error("Nummern müssen positive Zahlen sein.");
+  }
+}
+
+async function ensureUniqueSceneIdentifier(
+  showId: string,
+  identifier: string,
+  sceneId?: string,
+): Promise<void> {
+  const existing = await prisma.scene.findFirst({
+    where: {
+      showId,
+      identifier,
+      ...(sceneId ? { NOT: { id: sceneId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (existing) {
+    throw new Error("Diese Nummer ist bereits vergeben.");
+  }
+}
+
 function readOptionalInt(
   formData: FormData,
   key: string,
@@ -1241,36 +1271,25 @@ export async function createSceneAction(formData: FormData): Promise<void> {
       throw new Error("Produktion wurde nicht gefunden.");
     }
 
-    const identifier = readOptionalString(formData, "identifier", { label: "Nummer", maxLength: 40 });
+    const identifier = readString(formData, "identifier", { label: "Nummer", maxLength: 40 });
+    ensureValidSceneIdentifier(identifier);
+    await ensureUniqueSceneIdentifier(showId, identifier);
     const title = readOptionalString(formData, "title", { label: "Titel", maxLength: 160 });
     const summary = readOptionalString(formData, "summary", { label: "Zusammenfassung", maxLength: 600 });
     const location = readOptionalString(formData, "location", { label: "Ort", maxLength: 120 });
-    const timeOfDay = readOptionalString(formData, "timeOfDay", { label: "Tageszeit", maxLength: 60 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 400 });
-    const sequenceValue = readOptionalInt(formData, "sequence", { label: "Reihenfolge", min: 0, max: 9999 });
-    const duration = readOptionalInt(formData, "duration", { label: "Dauer", min: 0, max: 600 });
-    const slugInput = readOptionalString(formData, "slug", { label: "Slug", maxLength: 80 });
-    if (slugInput && !/^[a-z0-9-]+$/i.test(slugInput)) {
-      throw new Error("Slug darf nur Buchstaben, Zahlen und Bindestriche enthalten.");
-    }
-
-    const baseSlugSource = slugInput ?? identifier ?? title ?? `szene-${Date.now()}`;
+    const baseSlugSource = identifier ?? title ?? `szene-${Date.now()}`;
     const baseSlug = slugify(baseSlugSource);
     const slug = await ensureUniqueSceneSlug(showId, baseSlug);
-    const sequence =
-      sequenceValue ?? (await prisma.scene.count({ where: { showId } })) ?? 0;
 
     await prisma.scene.create({
       data: {
         showId,
-        identifier: identifier ?? null,
+        identifier,
         title: title ?? null,
         summary: summary ?? null,
         location: location ?? null,
-        timeOfDay: timeOfDay ?? null,
         notes: notes ?? null,
-        sequence,
-        durationMinutes: duration ?? null,
         slug,
       },
     });
@@ -1299,37 +1318,22 @@ export async function updateSceneAction(formData: FormData): Promise<void> {
       throw new Error("Szene wurde nicht gefunden.");
     }
 
-    const identifier = readOptionalString(formData, "identifier", { label: "Nummer", maxLength: 40 });
+    const identifier = readString(formData, "identifier", { label: "Nummer", maxLength: 40 });
+    ensureValidSceneIdentifier(identifier);
+    await ensureUniqueSceneIdentifier(scene.showId, identifier, sceneId);
     const title = readOptionalString(formData, "title", { label: "Titel", maxLength: 160 });
     const summary = readOptionalString(formData, "summary", { label: "Zusammenfassung", maxLength: 600 });
     const location = readOptionalString(formData, "location", { label: "Ort", maxLength: 120 });
-    const timeOfDay = readOptionalString(formData, "timeOfDay", { label: "Tageszeit", maxLength: 60 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 400 });
-    const sequenceValue = readOptionalInt(formData, "sequence", { label: "Reihenfolge", min: 0, max: 9999 });
-    const duration = readOptionalInt(formData, "duration", { label: "Dauer", min: 0, max: 600 });
-    const slugInput = readOptionalString(formData, "slug", { label: "Slug", maxLength: 80 });
-    if (slugInput && !/^[a-z0-9-]+$/i.test(slugInput)) {
-      throw new Error("Slug darf nur Buchstaben, Zahlen und Bindestriche enthalten.");
-    }
-
-    let slug = scene.slug;
-    if (slugInput) {
-      const baseSlug = slugify(slugInput);
-      slug = await ensureUniqueSceneSlug(scene.showId, baseSlug, sceneId);
-    }
-
     await prisma.scene.update({
       where: { id: sceneId },
       data: {
-        identifier: identifier ?? null,
+        identifier,
         title: title ?? null,
         summary: summary ?? null,
         location: location ?? null,
-        timeOfDay: timeOfDay ?? null,
         notes: notes ?? null,
-        ...(sequenceValue !== undefined ? { sequence: sequenceValue } : {}),
-        durationMinutes: duration ?? null,
-        slug,
+        slug: scene.slug,
       },
     });
 
