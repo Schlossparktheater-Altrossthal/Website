@@ -9,6 +9,7 @@ import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
 import { getUserDisplayName } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import { getRolePreferenceTitle, listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +56,7 @@ type Character = {
   id: string;
   name: string;
   shortName: string | null;
+  rolePreferenceCode: string | null;
   description: string | null;
   notes: string | null;
   color: string | null;
@@ -66,6 +68,7 @@ type ExportCharacter = {
   id: string;
   name: string;
   shortName: string | null;
+  rolePreferenceCode: string | null;
   description: string | null;
   notes: string | null;
   color: string | null;
@@ -100,6 +103,8 @@ const CASTING_ORDER: CharacterCastingType[] = [
   CharacterCastingType.primary,
   CharacterCastingType.alternate,
 ];
+
+const ROLE_PREFERENCE_OPTIONS = listRolePreferenceDefinitions("acting");
 
 const DESCRIPTION_PREVIEW_LENGTH = 100;
 
@@ -275,8 +280,15 @@ function CreateCharacterDialog({ showId, users }: { showId: string; users: Displ
               <Input name="name" placeholder="z.B. Protagonist" minLength={2} maxLength={120} required />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Kurzname</label>
-              <Input name="shortName" placeholder="Kurzlabel" maxLength={40} />
+              <label className="text-sm font-medium">Rollengröße</label>
+              <select name="rolePreferenceCode" className={selectSmallClassName} defaultValue="">
+                <option value="">Keine Rollengröße</option>
+                {ROLE_PREFERENCE_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.title}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1 md:col-span-2">
               <label className="text-sm font-medium">Beschreibung</label>
@@ -399,9 +411,9 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="text-lg font-semibold">{character.name}</CardTitle>
-                {character.shortName ? (
+                {character.rolePreferenceCode ? (
                   <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {character.shortName}
+                    {getRolePreferenceTitle(character.rolePreferenceCode)}
                   </span>
                 ) : null}
               </div>
@@ -432,6 +444,9 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {character.rolePreferenceCode ? null : (
+            <span className="rounded-full bg-muted/50 px-2 py-1">Keine Rollengröße</span>
+          )}
           {character.description ? null : <span className="rounded-full bg-muted/50 px-2 py-1">Ohne Beschreibung</span>}
           {hasCastings ? null : (
             <span className="rounded-full bg-destructive/10 px-2 py-1 text-destructive">Nicht besetzt</span>
@@ -535,8 +550,19 @@ function UpdateCharacterDialog({ character }: { character: Character }) {
               <Input name="name" defaultValue={character.name} minLength={2} maxLength={120} required />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kurzname</label>
-              <Input name="shortName" defaultValue={character.shortName ?? ""} maxLength={40} />
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rollengröße</label>
+              <select
+                name="rolePreferenceCode"
+                className={selectSmallClassName}
+                defaultValue={character.rolePreferenceCode ?? ""}
+              >
+                <option value="">Keine Rollengröße</option>
+                {ROLE_PREFERENCE_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.title}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1 md:col-span-2">
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
@@ -622,6 +648,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
             id: true,
             name: true,
             shortName: true,
+            rolePreferenceCode: true,
             description: true,
             notes: true,
             color: true,
@@ -672,6 +699,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
       ? [
           character.name,
           character.shortName,
+          character.rolePreferenceCode ? getRolePreferenceTitle(character.rolePreferenceCode) : null,
           character.description,
           character.notes,
           ...character.castings.map((casting) => formatUserName(casting.user)),
@@ -689,6 +717,7 @@ export default async function ProduktionsBesetzungPage({ searchParams }: PagePro
     id: character.id,
     name: character.name,
     shortName: character.shortName,
+    rolePreferenceCode: character.rolePreferenceCode,
     description: character.description,
     notes: character.notes,
     color: character.color,
