@@ -529,6 +529,7 @@ model Character {
   showId         String
   name           String
   shortName      String?
+  rolePreferenceCode String?
   description    String?
   notes          String?
   color          String?

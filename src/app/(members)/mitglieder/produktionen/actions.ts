@@ -15,6 +15,7 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { ACTIVE_PRODUCTION_COOKIE, getActiveProduction } from "@/lib/active-production";
 import { setOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
+import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 
 export type ProductionActionResult =
   | { ok: true; message?: string }
@@ -34,6 +35,10 @@ type ReadOptions = {
   maxLength?: number;
   label?: string;
 };
+
+const ACTING_ROLE_PREFERENCE_CODES = new Set(
+  listRolePreferenceDefinitions("acting").map((definition) => definition.code),
+);
 
 function isString(value: FormDataEntryValue | null | undefined): value is string {
   return typeof value === "string";
@@ -55,6 +60,19 @@ function readOptionalString(formData: FormData, key: string, options?: ReadOptio
     );
   }
   return trimmed;
+}
+
+function readOptionalRolePreferenceCode(
+  formData: FormData,
+  key: string,
+  options?: ReadOptions,
+): string | undefined {
+  const value = readOptionalString(formData, key, options);
+  if (!value) return undefined;
+  if (!ACTING_ROLE_PREFERENCE_CODES.has(value)) {
+    throw new Error(`${options?.label ?? key} ist ungültig.`);
+  }
+  return value;
 }
 
 export async function setActiveProductionAction(formData: FormData): Promise<ProductionActionResult> {
@@ -1027,7 +1045,9 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
     if (!show) throw new Error("Produktion wurde nicht gefunden.");
 
     const name = readString(formData, "name", { label: "Name", minLength: 2, maxLength: 120 });
-    const shortName = readOptionalString(formData, "shortName", { label: "Kurzname", maxLength: 40 });
+    const rolePreferenceCode = readOptionalRolePreferenceCode(formData, "rolePreferenceCode", {
+      label: "Rollengröße",
+    });
     const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 500 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 500 });
     const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
@@ -1041,7 +1061,7 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
       data: {
         showId,
         name,
-        shortName: shortName ?? null,
+        rolePreferenceCode: rolePreferenceCode ?? null,
         description: description ?? null,
         notes: notes ?? null,
         color: color ?? null,
@@ -1085,7 +1105,9 @@ export async function updateCharacterAction(formData: FormData): Promise<void> {
     if (!character) throw new Error("Rolle wurde nicht gefunden.");
 
     const name = readString(formData, "name", { label: "Name", minLength: 2, maxLength: 120 });
-    const shortName = readOptionalString(formData, "shortName", { label: "Kurzname", maxLength: 40 });
+    const rolePreferenceCode = readOptionalRolePreferenceCode(formData, "rolePreferenceCode", {
+      label: "Rollengröße",
+    });
     const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 500 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 500 });
     const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
@@ -1094,7 +1116,7 @@ export async function updateCharacterAction(formData: FormData): Promise<void> {
       where: { id: characterId },
       data: {
         name,
-        shortName: shortName ?? null,
+        rolePreferenceCode: rolePreferenceCode ?? null,
         description: description ?? null,
         notes: notes ?? null,
         color: color ?? null,
