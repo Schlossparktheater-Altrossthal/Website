@@ -9,6 +9,7 @@ import { ProductionWorkspaceHeader } from "@/components/production/workspace-hea
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
 import { SceneListClient } from "./scene-list-client";
+import { SceneCreateDialog } from "./scene-create-dialog";
 
 type SceneIdentifier = string | null;
 
@@ -205,10 +206,12 @@ export default async function ProduktionsSzenenPage() {
             </div>
           ))}
         </div>
+        <div className="mt-4 flex justify-end">
+          <SceneCreateDialog showId={show.id} currentPath={currentPath} />
+        </div>
       </div>
 
       <SceneListClient
-        showId={show.id}
         scenes={scenes}
         characters={show.characters}
         departments={departments}

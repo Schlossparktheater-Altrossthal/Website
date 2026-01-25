@@ -12,7 +12,6 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -24,7 +23,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   addSceneCharacterAction,
   createBreakdownItemAction,
-  createSceneAction,
   deleteSceneAction,
   removeBreakdownItemAction,
   removeSceneCharacterAction,
@@ -79,7 +77,6 @@ type Department = { id: string; name: string; slug: string; color: string | null
 type Character = { id: string; name: string; shortName: string | null; color: string | null };
 
 type Props = {
-  showId: string;
   scenes: SceneData[];
   characters: Character[];
   departments: Department[];
@@ -119,8 +116,32 @@ function formatIsoDate(value: string | null) {
   return value.slice(0, 10);
 }
 
+type SceneFilter = "all" | "with-roles" | "without-roles" | "with-breakdowns" | "without-breakdowns";
+type SceneSort = "asc" | "desc";
+
+function parseSceneIdentifier(value: string | null): number[] {
+  if (!value) return [Number.POSITIVE_INFINITY];
+  return value
+    .split(".")
+    .map((segment) => Number.parseInt(segment, 10))
+    .filter((segment) => !Number.isNaN(segment));
+}
+
+function compareSceneIdentifiers(a: string | null, b: string | null): number {
+  const aParts = parseSceneIdentifier(a);
+  const bParts = parseSceneIdentifier(b);
+  const maxLength = Math.max(aParts.length, bParts.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const aPart = aParts[index] ?? 0;
+    const bPart = bParts[index] ?? 0;
+    if (aPart !== bPart) {
+      return aPart - bPart;
+    }
+  }
+  return 0;
+}
+
 export function SceneListClient({
-  showId,
   scenes,
   characters,
   departments,
@@ -129,86 +150,121 @@ export function SceneListClient({
   statusOptions,
 }: Props) {
   const [viewMode, setViewMode] = useState<"list" | "tiles">("list");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sceneFilter, setSceneFilter] = useState<SceneFilter>("all");
+  const [sceneSort, setSceneSort] = useState<SceneSort>("asc");
   const sortedCharacters = useMemo(
     () => [...characters].sort((a, b) => a.name.localeCompare(b.name, "de")),
     [characters],
   );
+  const filteredScenes = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    const matchesSearch = (scene: SceneData) => {
+      if (!normalizedSearch) return true;
+      return [
+        scene.identifier,
+        scene.title,
+        scene.summary,
+        scene.location,
+        scene.notes,
+        ...scene.characters.map((entry) => entry.character.name),
+      ].some((value) => value?.toLowerCase().includes(normalizedSearch));
+    };
+
+    const matchesFilter = (scene: SceneData) => {
+      switch (sceneFilter) {
+        case "with-roles":
+          return scene.characters.length > 0;
+        case "without-roles":
+          return scene.characters.length === 0;
+        case "with-breakdowns":
+          return scene.breakdownItems.length > 0;
+        case "without-breakdowns":
+          return scene.breakdownItems.length === 0;
+        default:
+          return true;
+      }
+    };
+
+    const results = scenes.filter((scene) => matchesSearch(scene) && matchesFilter(scene));
+    results.sort((a, b) => compareSceneIdentifiers(a.identifier, b.identifier));
+    if (sceneSort === "desc") {
+      results.reverse();
+    }
+    return results;
+  }, [sceneFilter, sceneSort, scenes, searchTerm]);
 
   const listClassName = viewMode === "tiles" ? "grid gap-6 lg:grid-cols-2" : "space-y-6";
   const detailLayoutClassName = viewMode === "tiles" ? "grid gap-4" : "grid gap-4 lg:grid-cols-2";
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/90">
-              Szenen erstellen
+      <div className="rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_auto] lg:items-end">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="scene-search">
+              Suche
+            </label>
+            <Input
+              id="scene-search"
+              placeholder="Szenen oder Orte suchen"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="h-9 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="scene-filter">
+              Filter
+            </label>
+            <select
+              id="scene-filter"
+              className={selectSmallClassName}
+              value={sceneFilter}
+              onChange={(event) => setSceneFilter(event.target.value as SceneFilter)}
+            >
+              <option value="all">Alle Szenen</option>
+              <option value="with-roles">Mit Figuren</option>
+              <option value="without-roles">Ohne Figuren</option>
+              <option value="with-breakdowns">Mit Breakdowns</option>
+              <option value="without-breakdowns">Ohne Breakdowns</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="scene-sort">
+              Sortierung
+            </label>
+            <select
+              id="scene-sort"
+              className={selectSmallClassName}
+              value={sceneSort}
+              onChange={(event) => setSceneSort(event.target.value as SceneSort)}
+            >
+              <option value="asc">Nummer A-Z</option>
+              <option value="desc">Nummer Z-A</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 justify-self-end">
+            <Button
+              type="button"
+              variant={viewMode === "list" ? "secondary" : "outline"}
+              size="icon"
+              aria-label="Listenansicht"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" aria-hidden="true" />
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Neue Szene anlegen</DialogTitle>
-              <DialogDescription>
-                Erfasse Orte, Zusammenfassungen und Notizen, um den Szenenplan aktuell zu halten.
-              </DialogDescription>
-            </DialogHeader>
-            <form action={createSceneAction} method="post" className="grid gap-6">
-              <input type="hidden" name="showId" value={showId} />
-              <input type="hidden" name="redirectPath" value={currentPath} />
-              <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-3">
-                <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Basisdaten
-                </legend>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Nummer</label>
-                  <Input name="identifier" maxLength={40} placeholder="z.B. 1" required />
-                </div>
-                <div className="space-y-1 md:col-span-2">
-                  <label className="text-sm font-medium">Titel</label>
-                  <Input name="title" maxLength={160} placeholder="z.B. Ankunft im Park" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Ort</label>
-                  <Input name="location" maxLength={120} />
-                </div>
-              </fieldset>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Zusammenfassung</label>
-                <Textarea name="summary" rows={2} maxLength={600} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Notizen</label>
-                <Textarea name="notes" rows={2} maxLength={400} />
-              </div>
-              <DialogFooter className="pt-2 sm:justify-end">
-                <DialogClose asChild>
-                  <Button type="submit">Szene speichern</Button>
-                </DialogClose>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant={viewMode === "list" ? "secondary" : "outline"}
-            size="icon"
-            aria-label="Listenansicht"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-4 w-4" aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            variant={viewMode === "tiles" ? "secondary" : "outline"}
-            size="icon"
-            aria-label="Kachelansicht"
-            onClick={() => setViewMode("tiles")}
-          >
-            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-          </Button>
+            <Button
+              type="button"
+              variant={viewMode === "tiles" ? "secondary" : "outline"}
+              size="icon"
+              aria-label="Kachelansicht"
+              onClick={() => setViewMode("tiles")}
+            >
+              <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -221,8 +277,16 @@ export function SceneListClient({
               </p>
             </CardContent>
           </Card>
+        ) : filteredScenes.length === 0 ? (
+          <Card className="lg:col-span-2">
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Keine Szenen erfüllen aktuell die ausgewählten Filter oder Suchbegriffe.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          scenes.map((scene) => {
+          filteredScenes.map((scene) => {
             const assignedCharacterIds = new Set(scene.characters.map((entry) => entry.character.id));
             const availableCharacters = sortedCharacters.filter(
               (character) => !assignedCharacterIds.has(character.id),
