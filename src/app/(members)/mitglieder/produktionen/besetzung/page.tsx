@@ -86,6 +86,8 @@ const CASTING_ORDER: CharacterCastingType[] = [
   CharacterCastingType.alternate,
 ];
 
+const DESCRIPTION_PREVIEW_LENGTH = 100;
+
 const selectSmallClassName =
   "h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -103,6 +105,13 @@ function getCastingLabel(type: CharacterCastingType) {
 function getCastingOrderIndex(type: CharacterCastingType) {
   const index = CASTING_ORDER.indexOf(type);
   return index === -1 ? CASTING_ORDER.length : index;
+}
+
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength).trimEnd()}…`;
 }
 
 function CastingTypeSelect({
@@ -383,7 +392,11 @@ function CharacterCard({ character, users }: { character: Character; users: Disp
                   </span>
                 ) : null}
               </div>
-              {character.description ? <p className="text-sm text-muted-foreground">{character.description}</p> : null}
+              {character.description ? (
+                <p className="text-sm text-muted-foreground">
+                  {truncateText(character.description, DESCRIPTION_PREVIEW_LENGTH)}
+                </p>
+              ) : null}
               {character.notes ? <p className="text-xs text-muted-foreground">Notiz: {character.notes}</p> : null}
             </div>
           </div>
