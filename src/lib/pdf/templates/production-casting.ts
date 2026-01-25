@@ -102,40 +102,87 @@ export const productionCastingTemplate: PdfTemplate<CastingExportData> = {
     doc.font("Helvetica").fontSize(10).fillColor("#6b7280").text(`Exportiert: ${formatDateTime(createdAt)}`);
     doc.moveDown(1);
 
-    data.roles.forEach((role, index) => {
-      ensureSpace(doc, 80);
-      if (index > 0) {
-        doc.moveDown(0.3);
-        doc.strokeColor("#e5e7eb").lineWidth(1).moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y).stroke();
-        doc.moveDown(0.4);
+    const tableX = doc.page.margins.left;
+    const tableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const roleColumnWidth = Math.floor(tableWidth * 0.4);
+    const castingColumnWidth = tableWidth - roleColumnWidth;
+    const cellPadding = 6;
+
+    const drawTableHeader = () => {
+      const headerFontSize = 10;
+      doc.font("Helvetica-Bold").fontSize(headerFontSize);
+      const headerHeight =
+        Math.max(
+          doc.heightOfString("Rolle", { width: roleColumnWidth - cellPadding * 2 }),
+          doc.heightOfString("Schauspieler", { width: castingColumnWidth - cellPadding * 2 }),
+        ) +
+        cellPadding * 2;
+
+      ensureSpace(doc, headerHeight);
+
+      const y = doc.y;
+      doc.save();
+      doc.rect(tableX, y, tableWidth, headerHeight).fill("#f3f4f6");
+      doc.restore();
+      doc.fillColor("#111827");
+      doc.text("Rolle", tableX + cellPadding, y + cellPadding, { width: roleColumnWidth - cellPadding * 2 });
+      doc.text("Schauspieler", tableX + roleColumnWidth + cellPadding, y + cellPadding, {
+        width: castingColumnWidth - cellPadding * 2,
+      });
+      doc.strokeColor("#e5e7eb").lineWidth(1).rect(tableX, y, tableWidth, headerHeight).stroke();
+      doc.moveTo(tableX + roleColumnWidth, y).lineTo(tableX + roleColumnWidth, y + headerHeight).stroke();
+      doc.y = y + headerHeight;
+    };
+
+    const drawRow = (roleText: string, castingText: string) => {
+      doc.font("Helvetica").fontSize(10).fillColor("#111827");
+      const leftHeight = doc.heightOfString(roleText, { width: roleColumnWidth - cellPadding * 2 });
+      const rightHeight = doc.heightOfString(castingText, { width: castingColumnWidth - cellPadding * 2 });
+      const rowHeight = Math.max(leftHeight, rightHeight) + cellPadding * 2;
+      const pageBottom = doc.page.height - doc.page.margins.bottom;
+
+      if (doc.y + rowHeight > pageBottom) {
+        doc.addPage();
+        drawTableHeader();
       }
 
-      doc.font("Helvetica-Bold").fontSize(13).fillColor("#111827").text(role.name, { continued: false });
+      const y = doc.y;
+      doc.strokeColor("#e5e7eb").lineWidth(1).rect(tableX, y, tableWidth, rowHeight).stroke();
+      doc.moveTo(tableX + roleColumnWidth, y).lineTo(tableX + roleColumnWidth, y + rowHeight).stroke();
+      doc.fillColor("#111827");
+      doc.text(roleText, tableX + cellPadding, y + cellPadding, { width: roleColumnWidth - cellPadding * 2 });
+      doc.text(castingText, tableX + roleColumnWidth + cellPadding, y + cellPadding, {
+        width: castingColumnWidth - cellPadding * 2,
+      });
+      doc.y = y + rowHeight;
+    };
+
+    drawTableHeader();
+
+    data.roles.forEach((role) => {
+      const roleLines = [role.name];
       if (role.shortName) {
-        doc.font("Helvetica").fontSize(10).fillColor("#6b7280").text(`Kurzname: ${role.shortName}`);
+        roleLines.push(`Kurzname: ${role.shortName}`);
       }
       if (role.description) {
-        doc.font("Helvetica").fontSize(10).fillColor("#374151").text(role.description);
+        roleLines.push(role.description);
       }
       if (role.notes) {
-        doc.font("Helvetica-Oblique").fontSize(9).fillColor("#6b7280").text(`Notiz: ${role.notes}`);
+        roleLines.push(`Notiz: ${role.notes}`);
       }
+      const roleText = roleLines.join("\n");
 
-      doc.moveDown(0.3);
-      if (role.castings.length === 0) {
-        doc.font("Helvetica").fontSize(10).fillColor("#6b7280").text("Keine Besetzung hinterlegt.");
-        return;
-      }
+      const castingLines =
+        role.castings.length === 0
+          ? ["Keine Besetzung"]
+          : role.castings.map((casting) => {
+              const label = formatType(casting.type, casting.typeLabel);
+              const baseLine = `${casting.name} (${label})`;
+              return casting.notes ? `${baseLine} – Notiz: ${casting.notes}` : baseLine;
+            });
+      const castingText = castingLines.join("\n");
 
-      role.castings.forEach((casting) => {
-        ensureSpace(doc, 32);
-        const label = formatType(casting.type, casting.typeLabel);
-        const line = `• ${casting.name} (${label})`;
-        doc.font("Helvetica").fontSize(10).fillColor("#111827").text(line);
-        if (casting.notes) {
-          doc.font("Helvetica-Oblique").fontSize(9).fillColor("#6b7280").text(`  Notiz: ${casting.notes}`);
-        }
-      });
+      drawRow(roleText, castingText);
     });
   },
 };
