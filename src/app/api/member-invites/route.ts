@@ -7,7 +7,7 @@ import { getActiveProductionId } from "@/lib/active-production";
 import { describeInvite, generateInviteToken, hashInviteToken, calculateInviteStatus } from "@/lib/member-invites";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { onboardingPathForHash, onboardingPathForToken } from "@/lib/member-invite-links";
-import { sortRoles, ROLES, type Role } from "@/lib/roles";
+import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
 
 const DATE_LIMIT_YEARS = 5;
 
@@ -57,7 +57,7 @@ function filterRoles(value: unknown): Role[] {
       set.add(entry as Role);
     }
   }
-  const result = sortRoles(set.size ? Array.from(set) : ["member"]);
+  const result = withAutoCast(sortRoles(set.size ? Array.from(set) : ["member"]));
   return result.length ? result : ["member"];
 }
 

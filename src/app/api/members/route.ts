@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { sortRoles, type Role } from "@/lib/roles";
+import { sortRoles, type Role, withAutoCast } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
 import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
   const filteredRoles = Array.from(new Set(requestedRoles)).filter(
     (role): role is Role => typeof role === "string" && (ROLES as readonly string[]).includes(role),
   );
-  const roles = sortRoles(filteredRoles.length > 0 ? filteredRoles : ["member"]);
+  const roles = withAutoCast(sortRoles(filteredRoles.length > 0 ? filteredRoles : ["member"]));
 
   // Only owners may assign the owner role
   const actorRoles = new Set(session.user?.roles ?? (session.user?.role ? [session.user.role] : []));

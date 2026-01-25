@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { calculateInviteStatus, describeInvite } from "@/lib/member-invites";
-import { sortRoles, ROLES, type Role } from "@/lib/roles";
+import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
 
 const DATE_LIMIT_YEARS = 5;
 
@@ -182,7 +182,7 @@ function parseRoles(value: unknown): Role[] | undefined {
   const allowed = value.filter((entry): entry is Role =>
     typeof entry === "string" && (ROLES as readonly string[]).includes(entry),
   );
-  const normalized = sortRoles(allowed.length ? allowed : ["member"]);
+  const normalized = withAutoCast(sortRoles(allowed.length ? allowed : ["member"]));
   return normalized.length ? normalized : ["member"];
 }
 

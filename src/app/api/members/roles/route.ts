@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { sortRoles, type Role } from "@/lib/roles";
+import { sortRoles, type Role, withAutoCast } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
 
@@ -34,7 +34,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Mindestens eine Rolle erforderlich" }, { status: 400 });
   }
 
-  const orderedRoles = sortRoles(provided);
+  const orderedRoles = withAutoCast(sortRoles(provided));
 
   // Guard: Admins cannot assign or remove the owner role
   const actorRoles = new Set(session.user?.roles ?? (session.user?.role ? [session.user.role] : []));
