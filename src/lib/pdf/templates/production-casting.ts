@@ -48,7 +48,7 @@ const castingExportSchema = z.object({
 
 type CastingExportData = z.infer<typeof castingExportSchema>;
 
-type PdfDocumentInstance = import("pdfkit");
+type PdfDocumentInstance = PDFKit.PDFDocument;
 
 const TYPE_LABELS: Record<string, string> = {
   primary: "Primär",
