@@ -485,27 +485,26 @@ export function MemberMeasurementsControlCenter({
     if (!exportWindow) {
       return;
     }
+    exportWindow.document.open();
     exportWindow.document.write(html);
     exportWindow.document.close();
-    exportWindow.focus();
-    exportWindow.print();
+    const triggerPrint = () => {
+      exportWindow.focus();
+      exportWindow.print();
+    };
+    exportWindow.addEventListener("load", triggerPrint, { once: true });
+    window.setTimeout(triggerPrint, 250);
   };
 
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground/70">Anprobe Control Center</p>
-            <h2 className="text-lg font-semibold text-foreground">Körpermaße im Überblick</h2>
-          </div>
-          <Badge className="border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary" variant="outline">
-            Live Sync aktiv
-          </Badge>
+          <h2 className="text-lg font-semibold text-foreground">Körpermaße im Überblick</h2>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <StatBlock label="Ensemble" value={NUMBER_FORMATTER.format(globalStats.totalMembers)} />
-            <StatBlock label="Erfasste Maße" value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)} />
+          <StatBlock label="Erfasste Maße" value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)} />
           <div className="space-y-3">
             <StatBlock label="Abdeckung" value={PERCENT_FORMATTER.format(globalStats.averageCompletion)} />
           </div>
@@ -617,11 +616,11 @@ export function MemberMeasurementsControlCenter({
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/60 bg-background p-2 shadow-sm sm:p-3">
+      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
         <div className="hidden sm:block">
           {sortedMembers.length ? (
             measurementRows.length ? (
-              <DataTable columns={columns} data={measurementRows} tableClassName="w-full min-w-[520px] text-xs" />
+              <DataTable columns={columns} data={measurementRows} tableClassName="w-full min-w-[480px] text-xs" />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
                 <AlertTriangle className="h-5 w-5" />

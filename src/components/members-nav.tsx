@@ -41,6 +41,9 @@ export type { AssignmentFocus } from "@/lib/members-navigation";
 function isActive(pathname: string, href: string) {
   if (pathname === href) return true;
   if (href === "/mitglieder") return false;
+  if (href === "/mitglieder/meine-gewerke" && pathname.startsWith("/mitglieder/meine-gewerke/todos")) {
+    return false;
+  }
   return pathname.startsWith(`${href}/`);
 }
 
