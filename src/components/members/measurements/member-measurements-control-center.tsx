@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, ArrowLeftRight, Clock3, Filter, Search } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Clock3, Download, Search } from "lucide-react";
 
 import { MeasurementForm } from "@/components/forms/measurement-form";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/ui/data-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -114,9 +120,6 @@ export function MemberMeasurementsControlCenter({
     })),
   );
   const [memberSearch, setMemberSearch] = useState("");
-  const [memberFilter, setMemberFilter] = useState<"all" | "complete" | "missing">("all");
-  const [measurementSearch, setMeasurementSearch] = useState("");
-  const [measurementFilter, setMeasurementFilter] = useState<"all" | "complete" | "missing">("all");
   const [memberDialogId, setMemberDialogId] = useState<string | null>(null);
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -172,18 +175,15 @@ export function MemberMeasurementsControlCenter({
   }, [memberItems]);
 
   const normalizedMemberSearch = memberSearch.trim().toLowerCase();
-  const normalizedMeasurementSearch = measurementSearch.trim().toLowerCase();
 
   const filteredMembers = useMemo(() => {
     return preparedMembers.filter((member) => {
-      if (memberFilter === "complete" && member.stats.missing > 0) return false;
-      if (memberFilter === "missing" && member.stats.missing === 0) return false;
       if (normalizedMemberSearch && !member.searchText.includes(normalizedMemberSearch)) {
         return false;
       }
       return true;
     });
-  }, [preparedMembers, memberFilter, normalizedMemberSearch]);
+  }, [preparedMembers, normalizedMemberSearch]);
 
   const sortedMembers = useMemo(() => {
     return [...filteredMembers].sort((a, b) => {
@@ -219,9 +219,6 @@ export function MemberMeasurementsControlCenter({
     return measurementTypeEnum.options
       .map<MeasurementRow | null>((type) => {
         const label = MEASUREMENT_TYPE_LABELS[type] ?? type;
-        if (normalizedMeasurementSearch && !label.toLowerCase().includes(normalizedMeasurementSearch)) {
-          return null;
-        }
         const entryMap = new Map<string, MeasurementEntry | null>();
         let missingCount = 0;
         for (const member of sortedMembers) {
@@ -233,17 +230,10 @@ export function MemberMeasurementsControlCenter({
         }
         const isComplete = sortedMembers.length > 0 && missingCount === 0;
 
-        if (measurementFilter === "complete" && !isComplete) {
-          return null;
-        }
-        if (measurementFilter === "missing" && missingCount === 0) {
-          return null;
-        }
-
         return { type, label, entryMap, missingCount, isComplete };
       })
       .filter((row): row is MeasurementRow => row !== null);
-  }, [measurementFilter, normalizedMeasurementSearch, sortedMembers]);
+  }, [sortedMembers]);
 
   const columns = useMemo<ColumnDef<MeasurementRow>[]>(() => {
     const base: ColumnDef<MeasurementRow>[] = [
@@ -444,6 +434,39 @@ export function MemberMeasurementsControlCenter({
     };
   }, [memberItems]);
 
+  const handleExportCsv = () => {
+    const headers = ["Mitglied", ...measurementTypeEnum.options.map((type) => MEASUREMENT_TYPE_LABELS[type])];
+    const rows = preparedMembers.map((member) => {
+      const values = measurementTypeEnum.options.map((type) =>
+        formatMeasurementValue(member.measurementMap.get(type) ?? null),
+      );
+      return [member.displayName, ...values];
+    });
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((value) => `"${String(value).replaceAll("\"", "\"\"")}"`).join(";"))
+      .join("\n");
+    downloadFile(new Blob([csvContent], { type: "text/csv;charset=utf-8;" }), "koerpermasse-export.csv");
+  };
+
+  const handleExportPdf = () => {
+    const tableHeaders = ["Mitglied", ...measurementTypeEnum.options.map((type) => MEASUREMENT_TYPE_LABELS[type])];
+    const rows = preparedMembers.map((member) => {
+      const values = measurementTypeEnum.options.map((type) =>
+        formatMeasurementValue(member.measurementMap.get(type) ?? null),
+      );
+      return [member.displayName, ...values];
+    });
+    const html = buildExportHtml(tableHeaders, rows);
+    const exportWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!exportWindow) {
+      return;
+    }
+    exportWindow.document.write(html);
+    exportWindow.document.close();
+    exportWindow.focus();
+    exportWindow.print();
+  };
+
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
@@ -457,78 +480,36 @@ export function MemberMeasurementsControlCenter({
           </Badge>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <StatBlock label="Ensemble" value={NUMBER_FORMATTER.format(globalStats.totalMembers)} hint="Mitglieder" />
-          <StatBlock
-            label="Erfasste Maße"
-            value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)}
-            hint="Datensätze"
-          />
-          <StatBlock
-            label="Abdeckung"
-            value={PERCENT_FORMATTER.format(globalStats.averageCompletion)}
-            hint={
-              globalStats.missingMembers > 0
-                ? `${globalStats.missingMembers} Profile offen`
-                : "Vollständig"
-            }
-          />
+          <StatBlock label="Ensemble" value={NUMBER_FORMATTER.format(globalStats.totalMembers)} />
+          <StatBlock label="Erfasste Maße" value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)} />
+          <div className="space-y-3">
+            <StatBlock label="Abdeckung" value={PERCENT_FORMATTER.format(globalStats.averageCompletion)} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full justify-between">
+                  Exportieren
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={handleExportCsv}>Als CSV exportieren</DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleExportPdf}>Als PDF exportieren</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/70">Mitglieder</p>
-            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 sm:px-3 sm:py-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                value={memberSearch}
-                onChange={(event) => setMemberSearch(event.target.value)}
-                placeholder="Mitglieder oder Rollen suchen"
-                className="h-8 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-              <FilterButton label="Alle" active={memberFilter === "all"} onClick={() => setMemberFilter("all")} />
-              <FilterButton
-                label="Vollständig"
-                active={memberFilter === "complete"}
-                onClick={() => setMemberFilter("complete")}
-              />
-              <FilterButton
-                label="Fehlend"
-                active={memberFilter === "missing"}
-                onClick={() => setMemberFilter("missing")}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/70">Maßarten</p>
-            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 sm:px-3 sm:py-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                value={measurementSearch}
-                onChange={(event) => setMeasurementSearch(event.target.value)}
-                placeholder="Maßart filtern"
-                className="h-8 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-              <FilterButton label="Alle" active={measurementFilter === "all"} onClick={() => setMeasurementFilter("all")} />
-              <FilterButton
-                label="Vollständig"
-                active={measurementFilter === "complete"}
-                onClick={() => setMeasurementFilter("complete")}
-              />
-              <FilterButton
-                label="Fehlend"
-                active={measurementFilter === "missing"}
-                onClick={() => setMeasurementFilter("missing")}
-              />
-            </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 sm:px-3 sm:py-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              value={memberSearch}
+              onChange={(event) => setMemberSearch(event.target.value)}
+              placeholder="Mitglieder oder Rollen suchen"
+              className="h-8 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+            />
           </div>
         </div>
       </div>
@@ -773,47 +754,72 @@ export function MemberMeasurementsControlCenter({
   );
 }
 
-function FilterButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs transition",
-        active
-          ? "border-primary/60 bg-primary/15 text-primary"
-          : "border-border/60 bg-background/80 text-muted-foreground hover:border-primary/40 hover:text-foreground",
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
 function StatBlock({
   label,
   value,
-  hint,
 }: {
   label: string;
   value: string;
-  hint: string;
 }) {
   return (
     <div className="rounded-lg border border-border/60 bg-muted/15 p-3 text-sm text-muted-foreground">
       <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground/80">{label}</p>
       <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
-      <p className="text-[11px] text-muted-foreground/70">{hint}</p>
     </div>
   );
+}
+
+function formatMeasurementValue(entry: MeasurementEntry | null) {
+  if (!entry) return "—";
+  const unitLabel = MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit;
+  return `${formatValue(entry.value)} ${unitLabel}`;
+}
+
+function downloadFile(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(url);
+}
+
+function buildExportHtml(headers: string[], rows: string[][]) {
+  const tableHeader = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
+  const tableRows = rows
+    .map((row) => `<tr>${row.map((value) => `<td>${escapeHtml(value)}</td>`).join("")}</tr>`)
+    .join("");
+  return `
+    <html lang="de">
+      <head>
+        <meta charset="utf-8" />
+        <title>Körpermaße Export</title>
+        <style>
+          body { font-family: "Inter", sans-serif; margin: 24px; color: #111; }
+          h1 { font-size: 18px; margin-bottom: 16px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
+          th { background: #f4f4f5; }
+        </style>
+      </head>
+      <body>
+        <h1>Körpermaße Export</h1>
+        <table>
+          <thead><tr>${tableHeader}</tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function buildDisplayName(member: {
