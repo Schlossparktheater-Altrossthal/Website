@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
       select: {
         role: true,
         roles: { select: { role: true } },
+        _count: { select: { characterCastings: true } },
       },
     });
 
@@ -90,7 +91,9 @@ export async function POST(request: NextRequest) {
     }
 
     const isTargetInEnsemble =
-      targetUser.role === "cast" || targetUser.roles.some((entry) => entry.role === "cast");
+      targetUser.role === "cast" ||
+      targetUser.roles.some((entry) => entry.role === "cast") ||
+      targetUser._count.characterCastings > 0;
 
     if (!isTargetInEnsemble) {
       return NextResponse.json(
