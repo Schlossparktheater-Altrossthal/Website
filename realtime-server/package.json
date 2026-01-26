@@ -8,6 +8,6 @@
     "test": "node --test"
   },
   "dependencies": {
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.3"
   }
 }
