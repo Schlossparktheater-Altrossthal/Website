@@ -482,7 +482,7 @@ export const membersNavigation = [
       },
       {
         href: "/mitglieder/meine-gewerke",
-        label: "Meine Gewerke",
+        label: "Gewerkeplanung",
         permissionKey: "mitglieder.meine-gewerke",
         icon: DepartmentsIcon,
       },

@@ -132,7 +132,7 @@ const QUICK_ACTION_LINKS = [
   },
   {
     href: "/mitglieder/meine-gewerke",
-    label: "Meine Gewerke",
+    label: "Gewerkeplanung",
     icon: Hammer,
     permissionKey: "mitglieder.meine-gewerke",
   },

@@ -137,9 +137,9 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   },
   {
     key: "mitglieder.meine-gewerke",
-    label: "Eigene Gewerke einsehen",
+    label: "Gewerkeplanung einsehen",
     description:
-      'Zugang zum Bereich "Meine Gewerke" mit Aufgabenübersicht und Terminvorschlägen.',
+      'Zugang zum Bereich "Gewerkeplanung" mit Aufgabenübersicht und Terminvorschlägen.',
     category: "self",
   },
   {

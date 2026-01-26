@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/rbac";
 import { sortRoles, type Role } from "@/lib/roles";
 import type { MeasurementType, MeasurementUnit } from "@/data/measurements";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import type { Prisma } from "@prisma/client";
 
 export default async function MemberMeasurementsPage() {
   const session = await requireAuth();
@@ -23,42 +24,52 @@ export default async function MemberMeasurementsPage() {
   }
 
   const activeProductionId = await getActiveProductionId(session.user?.id);
-  const members = activeProductionId
-    ? await prisma.user.findMany({
-        where: {
-          characterCastings: {
-            some: { character: { showId: activeProductionId } },
-          },
-        },
-        orderBy: [
-          { lastName: "asc" },
-          { firstName: "asc" },
-          { name: "asc" },
-          { email: "asc" },
-        ],
+  const memberFilters: Prisma.UserWhereInput[] = [
+    { role: "cast" },
+    { roles: { some: { role: "cast" } } },
+    { measurements: { some: {} } },
+  ];
+
+  if (activeProductionId) {
+    memberFilters.push({
+      characterCastings: {
+        some: { character: { showId: activeProductionId } },
+      },
+    });
+  }
+
+  const members = await prisma.user.findMany({
+    where: {
+      OR: memberFilters,
+    },
+    orderBy: [
+      { lastName: "asc" },
+      { firstName: "asc" },
+      { name: "asc" },
+      { email: "asc" },
+    ],
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      name: true,
+      role: true,
+      roles: { select: { role: true } },
+      avatarSource: true,
+      avatarImageUpdatedAt: true,
+      measurements: {
+        orderBy: { type: "asc" },
         select: {
           id: true,
-          firstName: true,
-          lastName: true,
-          name: true,
-          role: true,
-          roles: { select: { role: true } },
-          avatarSource: true,
-          avatarImageUpdatedAt: true,
-          measurements: {
-            orderBy: { type: "asc" },
-            select: {
-              id: true,
-              type: true,
-              value: true,
-              unit: true,
-              note: true,
-              updatedAt: true,
-            },
-          },
+          type: true,
+          value: true,
+          unit: true,
+          note: true,
+          updatedAt: true,
         },
-      })
-    : [];
+      },
+    },
+  });
 
   const normalizedMembers = members.map((member) => ({
     id: member.id,
