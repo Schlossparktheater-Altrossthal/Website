@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
-import { ClipboardList, Clapperboard, Users } from "lucide-react";
 import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
@@ -162,17 +161,14 @@ export default async function ProduktionsSzenenPage() {
     {
       label: "Szenen",
       value: sceneCount,
-      icon: <Clapperboard className="h-4 w-4" aria-hidden />,
     },
     {
       label: "Breakdowns",
       value: breakdownCount,
-      icon: <ClipboardList className="h-4 w-4" aria-hidden />,
     },
     {
       label: "Rollen",
       value: characterCount,
-      icon: <Users className="h-4 w-4" aria-hidden />,
     },
   ];
 
@@ -189,23 +185,20 @@ export default async function ProduktionsSzenenPage() {
         showNavigation={false}
       />
 
-      <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-stretch">
           {summaryStats.map((stat) => (
             <div
               key={stat.label}
-              className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
+              className="rounded-lg border border-border/60 bg-muted/15 p-3 text-sm text-muted-foreground"
             >
-              <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
-                <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
-              </div>
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
-                {stat.icon}
-              </span>
+              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground/80">
+                {stat.label}
+              </p>
+              <p className="mt-1 text-xl font-semibold text-foreground">{stat.value}</p>
             </div>
           ))}
-          <div className="flex items-center justify-end rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-end rounded-lg border border-border/60 bg-muted/15 p-3 text-sm text-muted-foreground">
             <SceneCreateDialog showId={show.id} currentPath={currentPath} />
           </div>
         </div>

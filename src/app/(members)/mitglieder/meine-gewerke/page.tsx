@@ -225,7 +225,6 @@ export default async function MeineGewerkePage() {
   const hero = (
     <div className="space-y-6">
       <PageHeader title="Gewerkeplanung" description={headerDescription} />
-      <div className="border-b border-border/60" />
       {memberships.length ? (
         <dl className="grid gap-4 md:grid-cols-3">
           {summaryStats.map((stat) => {
