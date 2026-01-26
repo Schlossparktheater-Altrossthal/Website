@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, ArrowLeftRight, Clock3, Download, Search } from "lucide-react";
+import { AlertTriangle, Clock3, Download, Search } from "lucide-react";
 
 import { MeasurementForm } from "@/components/forms/measurement-form";
 import { Badge } from "@/components/ui/badge";
@@ -123,6 +123,7 @@ export function MemberMeasurementsControlCenter({
   const [memberDialogId, setMemberDialogId] = useState<string | null>(null);
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mobileMemberId, setMobileMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     setMemberItems(
@@ -202,6 +203,25 @@ export function MemberMeasurementsControlCenter({
         label: member.displayName,
       }));
   }, [preparedMembers]);
+
+  const mobileMemberOptions = useMemo(() => {
+    return [...filteredMembers]
+      .sort((a, b) => compareMembersByLastName(a, b))
+      .map((member) => ({
+        value: member.id,
+        label: member.displayName,
+      }));
+  }, [filteredMembers]);
+
+  useEffect(() => {
+    if (!mobileMemberOptions.length) {
+      setMobileMemberId(null);
+      return;
+    }
+    if (!mobileMemberId || !mobileMemberOptions.some((option) => option.value === mobileMemberId)) {
+      setMobileMemberId(mobileMemberOptions[0].value);
+    }
+  }, [mobileMemberOptions, mobileMemberId]);
 
   useEffect(() => {
     if (memberDialogId && !sortedMembers.some((member) => member.id === memberDialogId)) {
@@ -340,6 +360,10 @@ export function MemberMeasurementsControlCenter({
 
   const memberModalMember = memberDialogId
     ? preparedMembers.find((member) => member.id === memberDialogId) ?? null
+    : null;
+
+  const mobileMember = mobileMemberId
+    ? preparedMembers.find((member) => member.id === mobileMemberId) ?? null
     : null;
 
   const handleDialogClose = () => {
@@ -481,14 +505,34 @@ export function MemberMeasurementsControlCenter({
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <StatBlock label="Ensemble" value={NUMBER_FORMATTER.format(globalStats.totalMembers)} />
-          <StatBlock label="Erfasste Maße" value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)} />
+            <StatBlock label="Erfasste Maße" value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)} />
           <div className="space-y-3">
             <StatBlock label="Abdeckung" value={PERCENT_FORMATTER.format(globalStats.averageCompletion)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex flex-1 items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 sm:px-3 sm:py-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                value={memberSearch}
+                onChange={(event) => setMemberSearch(event.target.value)}
+                placeholder="Mitglieder oder Rollen suchen"
+                className="h-8 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+              />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="w-full justify-between">
-                  Exportieren
-                  <Download className="h-4 w-4 text-muted-foreground" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-between border-warning/60 text-warning hover:border-warning/80 hover:text-warning sm:w-auto"
+                >
+                  Export
+                  <Download className="h-4 w-4 text-warning" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -497,43 +541,100 @@ export function MemberMeasurementsControlCenter({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 sm:px-3 sm:py-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              value={memberSearch}
-              onChange={(event) => setMemberSearch(event.target.value)}
-              placeholder="Mitglieder oder Rollen suchen"
-              className="h-8 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
-            />
+          <div className="space-y-4 sm:hidden">
+            <div className="space-y-2">
+              <Label htmlFor="mobile-measurement-member">Mitglied auswählen</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select
+                  value={mobileMemberId ?? ""}
+                  onValueChange={(value) => setMobileMemberId(value)}
+                  disabled={saving || mobileMemberOptions.length === 0}
+                >
+                  <SelectTrigger id="mobile-measurement-member" className="w-full">
+                    <SelectValue placeholder="Mitglied wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mobileMemberOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  disabled={!mobileMemberId}
+                  onClick={() =>
+                    mobileMemberId ? setDialogState({ mode: "create", memberId: mobileMemberId }) : null
+                  }
+                >
+                  Maß hinzufügen
+                </Button>
+              </div>
+            </div>
+            {mobileMember ? (
+              <div className="grid gap-3">
+                {measurementTypeEnum.options.map((type) => {
+                  const entry = mobileMember.measurementMap.get(type) ?? null;
+                  const unitLabel = entry ? MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit : undefined;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() =>
+                        entry
+                          ? setDialogState({ mode: "edit", memberId: mobileMember.id, entry })
+                          : setDialogState({ mode: "create", memberId: mobileMember.id, initialType: type })
+                      }
+                      className={cn(
+                        "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-background px-4 py-3 text-left text-sm text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        entry ? "hover:border-primary/40 hover:bg-primary/5" : "border-dashed border-destructive/60",
+                      )}
+                    >
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/80">
+                        {MEASUREMENT_TYPE_LABELS[type]}
+                      </span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-semibold">
+                          {entry ? formatValue(entry.value) : "—"}
+                        </span>
+                        <span className={cn("text-xs", entry ? "text-muted-foreground" : "text-destructive")}>
+                          {entry ? unitLabel ?? entry.unit : "Fehlt"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border/60 bg-muted/15 p-4 text-sm text-muted-foreground">
+                Keine Mitglieder verfügbar.
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-border/60 bg-background p-2 shadow-sm sm:p-3">
-        <div className="flex items-center gap-2 px-1 pb-2 text-[11px] text-muted-foreground sm:hidden">
-          <ArrowLeftRight className="h-3.5 w-3.5" />
-          <span>Wische horizontal, um weitere Profile zu sehen.</span>
-        </div>
-        {sortedMembers.length ? (
-          measurementRows.length ? (
-            <DataTable columns={columns} data={measurementRows} tableClassName="w-full min-w-[520px] text-xs" />
+        <div className="hidden sm:block">
+          {sortedMembers.length ? (
+            measurementRows.length ? (
+              <DataTable columns={columns} data={measurementRows} tableClassName="w-full min-w-[520px] text-xs" />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
+                <AlertTriangle className="h-5 w-5" />
+                <p>Keine Maße entsprechen den aktuellen Filtern. Passe die Auswahl an.</p>
+              </div>
+            )
           ) : (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
               <AlertTriangle className="h-5 w-5" />
-              <p>Keine Maße entsprechen den aktuellen Filtern. Passe die Auswahl an.</p>
+              <p>Keine Mitglieder mit Besetzung gefunden. Lege eine Besetzung an oder entferne Filter.</p>
             </div>
-          )
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
-            <AlertTriangle className="h-5 w-5" />
-            <p>Keine Mitglieder mit Besetzung gefunden. Lege eine Besetzung an oder entferne Filter.</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <Dialog open={memberDialogId !== null} onOpenChange={(open) => (!open ? handleMemberDialogClose() : null)}>
