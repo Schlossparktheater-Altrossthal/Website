@@ -1,8 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Clock3, Download, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  BarChart3,
+  Clock3,
+  Download,
+  Ruler,
+  Settings,
+  Users,
+} from "lucide-react";
 
 import { MeasurementForm } from "@/components/forms/measurement-form";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +23,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,6 +79,7 @@ type MeasurementMember = {
 
 type MemberMeasurementsControlCenterProps = {
   members: MeasurementMember[];
+  canConfigureMeasurements?: boolean;
 };
 
 type DialogState =
@@ -98,7 +110,8 @@ type MeasurementRow = {
   isComplete: boolean;
 };
 
-const TOTAL_TYPES = measurementTypeEnum.options.length;
+type SortDirection = "asc" | "desc";
+
 const NUMBER_FORMATTER = new Intl.NumberFormat("de-DE");
 const PERCENT_FORMATTER = new Intl.NumberFormat("de-DE", {
   style: "percent",
@@ -112,6 +125,7 @@ const ABSOLUTE_DATE_FORMATTER = new Intl.DateTimeFormat("de-DE", {
 
 export function MemberMeasurementsControlCenter({
   members,
+  canConfigureMeasurements = false,
 }: MemberMeasurementsControlCenterProps) {
   const [memberItems, setMemberItems] = useState(() =>
     members.map((member) => ({
@@ -120,10 +134,14 @@ export function MemberMeasurementsControlCenter({
     })),
   );
   const [memberSearch, setMemberSearch] = useState("");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [memberDialogId, setMemberDialogId] = useState<string | null>(null);
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [saving, setSaving] = useState(false);
   const [mobileMemberId, setMobileMemberId] = useState<string | null>(null);
+  const [activeMeasurementTypes, setActiveMeasurementTypes] = useState<MeasurementType[]>(() => [
+    ...measurementTypeEnum.options,
+  ]);
 
   useEffect(() => {
     setMemberItems(
@@ -146,8 +164,9 @@ export function MemberMeasurementsControlCenter({
       const measurementMap = new Map<MeasurementType, MeasurementEntry>(
         member.measurements.map((entry) => [entry.type, entry]),
       );
-      const missingTypes = measurementTypeEnum.options.filter((type) => !measurementMap.has(type));
-      const captured = member.measurements.length;
+      const missingTypes = activeMeasurementTypes.filter((type) => !measurementMap.has(type));
+      const captured = activeMeasurementTypes.filter((type) => measurementMap.has(type)).length;
+      const totalTypes = activeMeasurementTypes.length;
       const lastUpdated = member.measurements.reduce<string | null>((latest, entry) => {
         if (!entry.updatedAt) return latest;
         if (!latest || entry.updatedAt > latest) {
@@ -156,10 +175,10 @@ export function MemberMeasurementsControlCenter({
         return latest;
       }, null);
       const stats: MemberStats = {
-        total: TOTAL_TYPES,
+        total: totalTypes,
         captured,
-        missing: Math.max(0, TOTAL_TYPES - captured),
-        completion: TOTAL_TYPES > 0 ? captured / TOTAL_TYPES : 0,
+        missing: Math.max(0, totalTypes - captured),
+        completion: totalTypes > 0 ? captured / totalTypes : 0,
         missingTypes,
         lastUpdated,
       };
@@ -173,7 +192,7 @@ export function MemberMeasurementsControlCenter({
 
       return { ...member, displayName, stats, searchText, measurementMap };
     });
-  }, [memberItems]);
+  }, [memberItems, activeMeasurementTypes]);
 
   const normalizedMemberSearch = memberSearch.trim().toLowerCase();
 
@@ -188,30 +207,34 @@ export function MemberMeasurementsControlCenter({
 
   const sortedMembers = useMemo(() => {
     return [...filteredMembers].sort((a, b) => {
-      if (a.stats.missing !== b.stats.missing) {
-        return b.stats.missing - a.stats.missing;
-      }
-      return compareMembersByLastName(a, b);
+      const comparison = compareMembersByLastName(a, b);
+      return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [filteredMembers]);
+  }, [filteredMembers, sortDirection]);
 
   const memberSelectOptions = useMemo(() => {
     return [...preparedMembers]
-      .sort((a, b) => compareMembersByLastName(a, b))
+      .sort((a, b) => {
+        const comparison = compareMembersByLastName(a, b);
+        return sortDirection === "asc" ? comparison : -comparison;
+      })
       .map((member) => ({
         value: member.id,
         label: member.displayName,
       }));
-  }, [preparedMembers]);
+  }, [preparedMembers, sortDirection]);
 
   const mobileMemberOptions = useMemo(() => {
     return [...filteredMembers]
-      .sort((a, b) => compareMembersByLastName(a, b))
+      .sort((a, b) => {
+        const comparison = compareMembersByLastName(a, b);
+        return sortDirection === "asc" ? comparison : -comparison;
+      })
       .map((member) => ({
         value: member.id,
         label: member.displayName,
       }));
-  }, [filteredMembers]);
+  }, [filteredMembers, sortDirection]);
 
   useEffect(() => {
     if (!mobileMemberOptions.length) {
@@ -236,7 +259,7 @@ export function MemberMeasurementsControlCenter({
   }, [dialogState, preparedMembers]);
 
   const measurementRows = useMemo<MeasurementRow[]>(() => {
-    return measurementTypeEnum.options
+    return activeMeasurementTypes
       .map<MeasurementRow | null>((type) => {
         const label = MEASUREMENT_TYPE_LABELS[type] ?? type;
         const entryMap = new Map<string, MeasurementEntry | null>();
@@ -253,7 +276,7 @@ export function MemberMeasurementsControlCenter({
         return { type, label, entryMap, missingCount, isComplete };
       })
       .filter((row): row is MeasurementRow => row !== null);
-  }, [sortedMembers]);
+  }, [sortedMembers, activeMeasurementTypes]);
 
   const columns = useMemo<ColumnDef<MeasurementRow>[]>(() => {
     const base: ColumnDef<MeasurementRow>[] = [
@@ -440,14 +463,21 @@ export function MemberMeasurementsControlCenter({
     const totalMembers = memberItems.length;
     const totalMeasurements = memberItems.reduce((sum, member) => sum + member.measurements.length, 0);
     const completedMembers = memberItems.reduce(
-      (count, member) => (member.measurements.length === TOTAL_TYPES ? count + 1 : count),
+      (count, member) =>
+        activeMeasurementTypes.every((type) => member.measurements.some((entry) => entry.type === type))
+          ? count + 1
+          : count,
       0,
     );
     const averageCompletion =
-      totalMembers === 0
+      totalMembers === 0 || activeMeasurementTypes.length === 0
         ? 0
-        : memberItems.reduce((sum, member) => sum + member.measurements.length / Math.max(1, TOTAL_TYPES), 0) /
-          totalMembers;
+        : memberItems.reduce((sum, member) => {
+            const captured = activeMeasurementTypes.filter((type) =>
+              member.measurements.some((entry) => entry.type === type),
+            ).length;
+            return sum + captured / Math.max(1, activeMeasurementTypes.length);
+          }, 0) / totalMembers;
 
     return {
       totalMembers,
@@ -456,12 +486,25 @@ export function MemberMeasurementsControlCenter({
       missingMembers: Math.max(0, totalMembers - completedMembers),
       averageCompletion,
     };
-  }, [memberItems]);
+  }, [memberItems, activeMeasurementTypes]);
+
+  const toggleMeasurementType = (type: MeasurementType) => {
+    setActiveMeasurementTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        if (next.size === 1) return prev;
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return measurementTypeEnum.options.filter((option) => next.has(option));
+    });
+  };
 
   const handleExportCsv = () => {
-    const headers = ["Mitglied", ...measurementTypeEnum.options.map((type) => MEASUREMENT_TYPE_LABELS[type])];
+    const headers = ["Mitglied", ...activeMeasurementTypes.map((type) => MEASUREMENT_TYPE_LABELS[type])];
     const rows = preparedMembers.map((member) => {
-      const values = measurementTypeEnum.options.map((type) =>
+      const values = activeMeasurementTypes.map((type) =>
         formatMeasurementValue(member.measurementMap.get(type) ?? null),
       );
       return [member.displayName, ...values];
@@ -473,24 +516,25 @@ export function MemberMeasurementsControlCenter({
   };
 
   const handleExportPdf = () => {
-    const tableHeaders = ["Mitglied", ...measurementTypeEnum.options.map((type) => MEASUREMENT_TYPE_LABELS[type])];
+    const tableHeaders = ["Mitglied", ...activeMeasurementTypes.map((type) => MEASUREMENT_TYPE_LABELS[type])];
     const rows = preparedMembers.map((member) => {
-      const values = measurementTypeEnum.options.map((type) =>
+      const values = activeMeasurementTypes.map((type) =>
         formatMeasurementValue(member.measurementMap.get(type) ?? null),
       );
       return [member.displayName, ...values];
     });
     const html = buildExportHtml(tableHeaders, rows);
-    const exportWindow = window.open("", "_blank", "noopener,noreferrer");
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const exportUrl = window.URL.createObjectURL(blob);
+    const exportWindow = window.open(exportUrl, "_blank", "noopener,noreferrer");
     if (!exportWindow) {
+      window.URL.revokeObjectURL(exportUrl);
       return;
     }
-    exportWindow.document.open();
-    exportWindow.document.write(html);
-    exportWindow.document.close();
     const triggerPrint = () => {
       exportWindow.focus();
       exportWindow.print();
+      window.URL.revokeObjectURL(exportUrl);
     };
     exportWindow.addEventListener("load", triggerPrint, { once: true });
     window.setTimeout(triggerPrint, 250);
@@ -498,47 +542,120 @@ export function MemberMeasurementsControlCenter({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-foreground">Körpermaße im Überblick</h2>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <StatBlock label="Ensemble" value={NUMBER_FORMATTER.format(globalStats.totalMembers)} />
-          <StatBlock label="Erfasste Maße" value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)} />
-          <div className="space-y-3">
-            <StatBlock label="Abdeckung" value={PERCENT_FORMATTER.format(globalStats.averageCompletion)} />
-          </div>
+      <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <StatBlock
+            label="Ensemble"
+            value={NUMBER_FORMATTER.format(globalStats.totalMembers)}
+            icon={<Users className="h-4 w-4" aria-hidden />}
+          />
+          <StatBlock
+            label="Erfasste Maße"
+            value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)}
+            icon={<Ruler className="h-4 w-4" aria-hidden />}
+          />
+          <StatBlock
+            label="Abdeckung"
+            value={PERCENT_FORMATTER.format(globalStats.averageCompletion)}
+            icon={<BarChart3 className="h-4 w-4" aria-hidden />}
+          />
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
+      <div className="rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm">
         <div className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex flex-1 items-center gap-2 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 sm:px-3 sm:py-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
+          <div className="grid gap-3 lg:grid-cols-[2fr_auto] lg:items-center">
+            <div className="space-y-1">
+              <Label htmlFor="measurement-search" className="sr-only">
+                Suche
+              </Label>
               <Input
+                id="measurement-search"
                 value={memberSearch}
                 onChange={(event) => setMemberSearch(event.target.value)}
                 placeholder="Mitglieder oder Rollen suchen"
-                className="h-8 flex-1 border-0 bg-transparent p-0 text-sm focus-visible:ring-0"
+                className="h-9 text-sm"
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-between border-warning/60 text-warning hover:border-warning/80 hover:text-warning sm:w-auto"
-                >
-                  Export
-                  <Download className="h-4 w-4 text-warning" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={handleExportCsv}>Als CSV exportieren</DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleExportPdf}>Als PDF exportieren</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={
+                  sortDirection === "asc" ? "Schauspieler A bis Z sortieren" : "Schauspieler Z bis A sortieren"
+                }
+                onClick={() => setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
+              >
+                {sortDirection === "asc" ? (
+                  <ArrowDownAZ className="h-4 w-4" aria-hidden />
+                ) : (
+                  <ArrowUpAZ className="h-4 w-4" aria-hidden />
+                )}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-between border-warning/60 text-warning hover:border-warning/80 hover:text-warning sm:w-auto"
+                  >
+                    Export
+                    <Download className="h-4 w-4 text-warning" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={handleExportCsv}>Als CSV exportieren</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleExportPdf}>Als PDF exportieren</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {canConfigureMeasurements ? (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="Benötigte Maße festlegen"
+                    >
+                      <Settings className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Benötigte Maße auswählen</DialogTitle>
+                      <DialogDescription>
+                        Lege fest, welche Maße für diese Produktion relevant sind. Mindestens ein Maß bleibt aktiv.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                      {measurementTypeEnum.options.map((type) => {
+                        const checked = activeMeasurementTypes.includes(type);
+                        return (
+                          <label
+                            key={type}
+                            className={cn(
+                              "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2 text-sm",
+                              checked ? "bg-muted/60" : "bg-background/70",
+                            )}
+                          >
+                            <span className="text-sm font-medium text-foreground">
+                              {MEASUREMENT_TYPE_LABELS[type] ?? type}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleMeasurementType(type)}
+                              className="h-4 w-4 accent-foreground"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ) : null}
+            </div>
           </div>
           <div className="space-y-4 sm:hidden">
             <div className="space-y-2">
@@ -575,7 +692,7 @@ export function MemberMeasurementsControlCenter({
             </div>
             {mobileMember ? (
               <div className="grid gap-3">
-                {measurementTypeEnum.options.map((type) => {
+                {activeMeasurementTypes.map((type) => {
                   const entry = mobileMember.measurementMap.get(type) ?? null;
                   const unitLabel = entry ? MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit : undefined;
                   return (
@@ -857,14 +974,21 @@ export function MemberMeasurementsControlCenter({
 function StatBlock({
   label,
   value,
+  icon,
 }: {
   label: string;
   value: string;
+  icon: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/15 p-3 text-sm text-muted-foreground">
-      <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground/80">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm">
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
+      </div>
+      <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+        {icon}
+      </span>
     </div>
   );
 }
