@@ -101,7 +101,7 @@ export default async function MemberMeasurementsPage() {
         description="Futuristisches Control Center für das Kostüm-Team: Synchronisiere, vergleiche und aktualisiere die Körpermaße des gesamten Ensembles in einem Blick."
         breadcrumbs={breadcrumbs}
       />
-      <MemberMeasurementsControlCenter members={normalizedMembers} />
+      <MemberMeasurementsControlCenter members={normalizedMembers} canConfigureMeasurements={allowed} />
     </div>
   );
 }
