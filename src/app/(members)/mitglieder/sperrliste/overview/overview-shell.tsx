@@ -30,6 +30,8 @@ export type OverviewShellProps = {
   busiestMember: { name: string; total: number } | null;
   preparedMembers: PreparedMember[];
   visibleDayInfo: VisibleDayInfo[];
+  preferredWeekdaySet: Set<number>;
+  exceptionWeekdaySet: Set<number>;
   holidayMap: Map<string, HolidayRange[]>;
   onPrev: () => void;
   onNext: () => void;
@@ -62,6 +64,8 @@ export function OverviewShell({
   busiestMember: _busiestMember,
   preparedMembers,
   visibleDayInfo,
+  preferredWeekdaySet,
+  exceptionWeekdaySet,
   holidayMap,
   onPrev,
   onNext,
@@ -74,10 +78,12 @@ export function OverviewShell({
   void _holidaysInRangeCount;
   void _busiestMember;
 
-  const visibleDayInfoForView = useMemo(
-    () => (showWeekendsOnly ? visibleDayInfo.filter((info) => info.isWeekend) : visibleDayInfo),
-    [showWeekendsOnly, visibleDayInfo],
-  );
+  const visibleDayInfoForView = useMemo(() => {
+    if (!showWeekendsOnly) return visibleDayInfo;
+    return visibleDayInfo.filter(
+      (info) => info.isWeekend || preferredWeekdaySet.has(info.weekday) || exceptionWeekdaySet.has(info.weekday),
+    );
+  }, [exceptionWeekdaySet, preferredWeekdaySet, showWeekendsOnly, visibleDayInfo]);
 
   const dayCols = useMemo<DayColumn[]>(() => {
     return visibleDayInfoForView.map((info) => {
