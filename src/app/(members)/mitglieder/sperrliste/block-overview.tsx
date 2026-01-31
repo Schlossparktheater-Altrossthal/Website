@@ -377,6 +377,8 @@ export function BlockOverview({
         busiestMember={data.busiestMember}
         preparedMembers={data.preparedMembers}
         visibleDayInfo={data.visibleDayInfo}
+        preferredWeekdaySet={data.preferredWeekdaySet}
+        exceptionWeekdaySet={data.exceptionWeekdaySet}
         holidayMap={data.holidayMap}
         onPrev={handlePrev}
         onNext={handleNext}
