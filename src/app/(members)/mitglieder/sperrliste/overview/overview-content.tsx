@@ -34,6 +34,8 @@ type OverviewContentProps = {
   onViewChange?: (view: "table" | "calendar" | "timeline") => void;
   highlightedDay?: number | null;
   onHighlightedDayChange?: (day: number | null) => void;
+  showWeekendsOnly?: boolean;
+  onShowWeekendsOnlyChange?: (showWeekendsOnly: boolean) => void;
 };
 
 export default function OverviewContent({
@@ -51,14 +53,18 @@ export default function OverviewContent({
   onViewChange,
   highlightedDay: controlledHighlightedDay,
   onHighlightedDayChange,
+  showWeekendsOnly: controlledShowWeekendsOnly,
+  onShowWeekendsOnlyChange,
 }: OverviewContentProps) {
   const [internalPersonFilter, setInternalPersonFilter] = useState<PersonFilter>("all");
   const [internalView, setInternalView] = useState<"table" | "calendar" | "timeline">("table");
   const [internalHighlightedDay, setInternalHighlightedDay] = useState<number | null>(null);
+  const [internalShowWeekendsOnly, setInternalShowWeekendsOnly] = useState(false);
 
   const personFilter = controlledPersonFilter ?? internalPersonFilter;
   const view = controlledView ?? internalView;
   const highlightedDay = controlledHighlightedDay ?? internalHighlightedDay;
+  const showWeekendsOnly = controlledShowWeekendsOnly ?? internalShowWeekendsOnly;
 
   const setPersonFilter = useCallback(
     (next: PersonFilter) => {
@@ -88,6 +94,16 @@ export default function OverviewContent({
       }
     },
     [controlledHighlightedDay, onHighlightedDayChange],
+  );
+
+  const setShowWeekendsOnly = useCallback(
+    (next: boolean) => {
+      onShowWeekendsOnlyChange?.(next);
+      if (controlledShowWeekendsOnly === undefined) {
+        setInternalShowWeekendsOnly(next);
+      }
+    },
+    [controlledShowWeekendsOnly, onShowWeekendsOnlyChange],
   );
 
   const groupedCounts = useMemo(() => {
@@ -179,19 +195,6 @@ export default function OverviewContent({
       <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
             <h1 className="text-lg font-semibold sm:text-xl" id="page-title">Sperrlistenübersicht</h1>
-            <div className="flex flex-wrap gap-2 text-xs" role="status" aria-live="polite">
-              {month && (
-                <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/15 px-2.5 py-1 font-medium text-primary">
-                  {month.label}
-                </span>
-              )}
-              <span className="inline-flex items-center rounded-full border border-info/40 bg-info/18 px-2.5 py-1 font-medium text-info">
-                Zeitraum
-              </span>
-              <span className="inline-flex items-center rounded-full border border-muted/60 bg-muted/40 px-2.5 py-1 font-medium text-muted-foreground">
-                {dayCols.length} Tage
-              </span>
-            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {/* Monatswechsel-Handler (nur wenn verfügbar) */}
@@ -274,6 +277,28 @@ export default function OverviewContent({
                 aria-label="Timeline-Ansicht (Tastenkombination: Strg+3)"
               >
                 Timeline
+              </button>
+            </div>
+            <div
+              className="flex w-full overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm sm:w-auto"
+              role="group"
+              aria-label="Wochentage filtern"
+            >
+              <button
+                type="button"
+                className={`flex-1 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:flex-none ${showWeekendsOnly ? "text-muted-foreground hover:bg-muted/40" : "bg-muted text-foreground"}`}
+                onClick={() => setShowWeekendsOnly(false)}
+                aria-pressed={!showWeekendsOnly}
+              >
+                Ganze Woche
+              </button>
+              <button
+                type="button"
+                className={`flex-1 border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:flex-none ${showWeekendsOnly ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                onClick={() => setShowWeekendsOnly(true)}
+                aria-pressed={showWeekendsOnly}
+              >
+                Nur Wochenende
               </button>
             </div>
           </div>

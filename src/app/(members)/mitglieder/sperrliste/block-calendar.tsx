@@ -1031,12 +1031,6 @@ export function BlockCalendar({
     </button>
   );
 
-  const holidayDescription = (
-    <p className="text-xs leading-5 text-muted-foreground">
-      Schulferien und gesetzliche Feiertage werden im Kalender hervorgehoben. Über den Schalter oben blendest du sie bei Bedarf aus.
-    </p>
-  );
-
   const holidayPanelContent = upcomingHolidays.length
     ? (
         <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-sky-500/40 dark:bg-sky-500/10">
@@ -1304,7 +1298,6 @@ export function BlockCalendar({
             {mobileScrollHint}
             {rehearsalHint}
             {selectionPanel}
-            {holidayDescription}
             {holidayPanel}
           </>
         }
