@@ -375,8 +375,6 @@ export function BlockOverview({
         summary={data.summary}
         holidaysInRangeCount={data.holidaysInRange.length}
         busiestMember={data.busiestMember}
-        preferredDescription={data.preferredDescription}
-        exceptionDescription={data.exceptionDescription}
         preparedMembers={data.preparedMembers}
         visibleDayInfo={data.visibleDayInfo}
         holidayMap={data.holidayMap}
@@ -450,4 +448,3 @@ export function BlockOverview({
     </div>
   );
 }
-

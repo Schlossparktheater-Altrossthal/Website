@@ -17,7 +17,7 @@ import {
 import { de } from 'date-fns/locale/de';
 
 import { combineNameParts } from '@/lib/names';
-import { formatWeekdayList, sortWeekdays } from '@/lib/weekdays';
+import { sortWeekdays } from '@/lib/weekdays';
 import type { HolidayRange } from '@/types/holidays';
 
 import type { BlockedDay } from '../block-calendar';
@@ -184,31 +184,6 @@ export function useBlockOverviewData({
   const preferredWeekdaySet = useMemo(() => new Set(preferredWeekdays), [preferredWeekdays]);
   const exceptionWeekdaySet = useMemo(() => new Set(exceptionWeekdays), [exceptionWeekdays]);
   const sortedPreferredWeekdays = useMemo(() => sortWeekdays(preferredWeekdays), [preferredWeekdays]);
-  const preferredSummary = useMemo(
-    () => formatWeekdayList(preferredWeekdays, { fallback: 'keine bevorzugten Probentage' }),
-    [preferredWeekdays],
-  );
-  const exceptionSummary = useMemo(
-    () => formatWeekdayList(exceptionWeekdays, { fallback: 'keine Ausnahmeproben' }),
-    [exceptionWeekdays],
-  );
-
-  const preferredDescription = useMemo(
-    () =>
-      preferredWeekdays.length > 0
-        ? `Standardmäßig heben wir ${preferredSummary} leicht hervor.`
-        : 'Aktuell sind keine bevorzugten Probentage hinterlegt – zusätzliche Tage erscheinen nur bei ausdrücklich markierten Wunschterminen.',
-    [preferredWeekdays.length, preferredSummary],
-  );
-
-  const exceptionDescription = useMemo(
-    () =>
-      exceptionWeekdays.length > 0
-        ? `Ausnahmeproben markieren wir dezent für ${exceptionSummary}.`
-        : 'Es sind keine Ausnahmeproben hinterlegt.',
-    [exceptionWeekdays.length, exceptionSummary],
-  );
-
   const preferredDayKeys = useMemo(() => {
     const set = new Set<string>();
 
@@ -241,24 +216,9 @@ export function useBlockOverviewData({
             isCurrentMonth: isSameMonth(day, currentMonth),
           } satisfies VisibleDayInfo;
         })
-        .filter((info) => {
-          if (info.day < today) {
-            return false;
-          }
-
-          const isPreferredDay = preferredWeekdaySet.has(info.weekday);
-          const isExceptionDay = exceptionWeekdaySet.has(info.weekday);
-
-          return isPreferredDay || isExceptionDay || preferredDayKeys.has(info.key);
-        });
+        .filter((info) => info.day >= today);
     },
-    [
-      daysInView,
-      preferredDayKeys,
-      preferredWeekdaySet,
-      exceptionWeekdaySet,
-      currentMonth,
-    ],
+    [daysInView, currentMonth],
   );
 
   const dayKeys = useMemo(() => visibleDayInfo.map((item) => item.key), [visibleDayInfo]);
@@ -364,8 +324,6 @@ export function useBlockOverviewData({
     preferredWeekdaySet,
     exceptionWeekdaySet,
     sortedPreferredWeekdays,
-    preferredDescription,
-    exceptionDescription,
     preferredDayKeys,
     visibleDayInfo,
     holidaySegments,
@@ -376,4 +334,3 @@ export function useBlockOverviewData({
     busiestMember,
   };
 }
-

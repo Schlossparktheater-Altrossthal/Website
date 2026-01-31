@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { de } from "date-fns/locale/de";
 
-import { Card } from "@/components/ui/card";
-import { Text } from "@/components/ui/typography";
 import { getNameInitials } from "@/lib/names";
 import type { WeekdayValue } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";
@@ -30,8 +28,6 @@ export type OverviewShellProps = {
   summary: BlockOverviewSummary;
   holidaysInRangeCount: number;
   busiestMember: { name: string; total: number } | null;
-  preferredDescription: string;
-  exceptionDescription: string;
   preparedMembers: PreparedMember[];
   visibleDayInfo: VisibleDayInfo[];
   holidayMap: Map<string, HolidayRange[]>;
@@ -64,8 +60,6 @@ export function OverviewShell({
   summary,
   holidaysInRangeCount: _holidaysInRangeCount,
   busiestMember: _busiestMember,
-  preferredDescription,
-  exceptionDescription,
   preparedMembers,
   visibleDayInfo,
   holidayMap,
@@ -76,11 +70,17 @@ export function OverviewShell({
   onSelectBlockedDay,
 }: OverviewShellProps) {
   const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE"), []);
+  const [showWeekendsOnly, setShowWeekendsOnly] = useState(false);
   void _holidaysInRangeCount;
   void _busiestMember;
 
+  const visibleDayInfoForView = useMemo(
+    () => (showWeekendsOnly ? visibleDayInfo.filter((info) => info.isWeekend) : visibleDayInfo),
+    [showWeekendsOnly, visibleDayInfo],
+  );
+
   const dayCols = useMemo<DayColumn[]>(() => {
-    return visibleDayInfo.map((info) => {
+    return visibleDayInfoForView.map((info) => {
       const label = format(info.day, "EE", { locale: de }).replace(".", "");
       return {
         key: info.key,
@@ -91,7 +91,7 @@ export function OverviewShell({
         weekday: info.weekday as WeekdayValue,
       } satisfies DayColumn;
     });
-  }, [visibleDayInfo]);
+  }, [visibleDayInfoForView]);
 
   const holidayIndicators = useMemo<HolidayIndicator[]>(() => {
     const result: HolidayIndicator[] = [];
@@ -149,11 +149,6 @@ export function OverviewShell({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-3 lg:grid-cols-2">
-        <Note title="Bevorzugte Tage">{preferredDescription}</Note>
-        <Note title="Ausnahmen">{exceptionDescription}</Note>
-      </section>
-
       {/* Hauptübersicht mit Controls */}
       <OverviewContent
         onExportPdf={() => undefined}
@@ -164,22 +159,9 @@ export function OverviewShell({
         onNextMonth={onNext}
         onReset={onReset}
         month={{ label: monthLabel, year: dayCols[0]?.date.getFullYear() ?? new Date().getFullYear(), month: dayCols[0]?.date.getMonth() ?? new Date().getMonth() }}
+        showWeekendsOnly={showWeekendsOnly}
+        onShowWeekendsOnlyChange={setShowWeekendsOnly}
       />
     </div>
-  );
-}
-
-// ============================================================================
-// Helper Components
-// ============================================================================
-
-function Note({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card className="rounded-2xl p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
-      <Text variant="body" className="mt-1 text-sm leading-6 text-muted-foreground">
-        {children}
-      </Text>
-    </Card>
   );
 }
