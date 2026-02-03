@@ -152,10 +152,6 @@ export default async function MeineProbenPage() {
           <Card>
             <CardHeader>
               <CardTitle>Anstehende Termine</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Alle bestätigten Proben und Gewerke-Termine der nächsten Wochen. Die Teilnahme gilt automatisch als
-                zugesagt, solange du nicht in der Sperrliste eingetragen bist.
-              </p>
             </CardHeader>
             <CardContent>
               {upcomingItems.length ? (
@@ -213,10 +209,6 @@ export default async function MeineProbenPage() {
                               {item.location ? (
                                 <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
                               ) : null}
-                              <p className="text-xs text-muted-foreground">
-                                Rückmeldungen entfallen. Falls du nicht kannst, blocke den Zeitraum in der Sperrliste oder melde dich
-                                direkt beim Team.
-                              </p>
                             </div>
                           </div>
                           <div className="mt-3 space-y-3 border-t border-border/60 pt-3 text-xs text-muted-foreground sm:text-sm">
