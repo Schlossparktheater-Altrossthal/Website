@@ -7,7 +7,6 @@ import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 import { X } from "lucide-react";
@@ -73,12 +72,8 @@ export default async function ProduktionDetailPage({
     ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(show.finalRehearsalWeekEnd)
     : null;
   const finalRehearsalWeekRangeLabel = finalRehearsalWeekStartLabel && finalRehearsalWeekEndLabel
-    ? `Aktueller Zeitraum: ${finalRehearsalWeekStartLabel} – ${finalRehearsalWeekEndLabel}`
-    : finalRehearsalWeekStartLabel
-      ? `Aktueller Start: ${finalRehearsalWeekStartLabel}`
-      : finalRehearsalWeekEndLabel
-        ? `Aktuelles Ende: ${finalRehearsalWeekEndLabel}`
-        : null;
+    ? `${finalRehearsalWeekStartLabel} – ${finalRehearsalWeekEndLabel}`
+    : finalRehearsalWeekStartLabel ?? finalRehearsalWeekEndLabel;
   const whatsappLink = getOnboardingWhatsAppLink(show.meta);
   const onboardingRedirect = `/mitglieder/produktionen/${show.id}`;
   const updateDialogShow = {
@@ -120,30 +115,21 @@ export default async function ProduktionDetailPage({
 
       <Card>
         <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-lg font-semibold">Status &amp; Kennzahlen</CardTitle>
-            <Badge variant={isActive ? "default" : "outline"}>{isActive ? "Aktiv" : "Inaktiv"}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Überblick über Rollen, Szenen und Breakdown-Aufgaben dieser Produktion sowie schnelle Aktionen für die neuen Arbeitsbereiche.
-          </p>
+          <CardTitle className="text-lg font-semibold">Status &amp; Kennzahlen</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-background/70 p-4">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Rollen</div>
               <div className="mt-2 text-2xl font-semibold text-foreground">{show._count.characters}</div>
-              <p className="text-xs text-muted-foreground">Angelegte Figuren in dieser Produktion</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/70 p-4">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Szenen</div>
               <div className="mt-2 text-2xl font-semibold text-foreground">{show._count.scenes}</div>
-              <p className="text-xs text-muted-foreground">Erfasste Szenen inklusive Reihenfolge</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/70 p-4">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Breakdowns</div>
               <div className="mt-2 text-2xl font-semibold text-foreground">{breakdownCount}</div>
-              <p className="text-xs text-muted-foreground">Aufgaben über alle Gewerke hinweg</p>
             </div>
           </div>
 
@@ -173,10 +159,6 @@ export default async function ProduktionDetailPage({
       <Card>
         <CardHeader className="space-y-2">
           <CardTitle className="text-lg font-semibold">Endprobenwoche</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Hinterlege den Zeitraum der großen Endprobenwoche. Mitglieder sehen darauf basierend einen Countdown
-            im Dashboard.
-          </p>
         </CardHeader>
         <CardContent>
           <form action={updateProductionTimelineAction} className="flex flex-col gap-4 sm:flex-row sm:items-end">
@@ -221,10 +203,6 @@ export default async function ProduktionDetailPage({
       <Card>
         <CardHeader className="space-y-2">
           <CardTitle className="text-lg font-semibold">Onboarding-Einstellungen</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Hinterlege optional den WhatsApp-Beitrittslink für neue Mitglieder. Der Link erscheint in der
-            Onboarding-Zusammenfassung und auf dem Mitglieder-Dashboard.
-          </p>
         </CardHeader>
         <CardContent>
           <form action={updateOnboardingSettingsAction} className="space-y-4">
@@ -259,31 +237,8 @@ export default async function ProduktionDetailPage({
                   ) : null}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Nur offizielle WhatsApp-Beitrittslinks werden akzeptiert. Lass das Feld leer, um den Link zu entfernen.
-              </p>
             </div>
           </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-lg font-semibold">Nächste Schritte</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Nutze die neuen Navigationspunkte, um die Produktion in klar getrennten Arbeitsbereichen zu pflegen. Alle Änderungen aktualisieren die Statistik oben automatisch, sobald du zum Überblick zurückkehrst.
-          </p>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Button asChild size="sm" variant="outline">
-            <Link href="/mitglieder/produktionen">Zum Überblick zurückkehren</Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/mitglieder/produktionen/besetzung">Zur Besetzung</Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/mitglieder/produktionen/szenen">Zu den Szenen</Link>
-          </Button>
         </CardContent>
       </Card>
     </div>
