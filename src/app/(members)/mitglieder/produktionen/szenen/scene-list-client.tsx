@@ -211,7 +211,7 @@ export function SceneListClient({
       <div className="rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm">
         <div className="grid gap-3 lg:grid-cols-[2fr_1fr_auto] lg:items-end">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="scene-search">
+            <label className="sr-only" htmlFor="scene-search">
               Suche
             </label>
             <Input
@@ -223,7 +223,7 @@ export function SceneListClient({
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="scene-filter">
+            <label className="sr-only" htmlFor="scene-filter">
               Filter
             </label>
             <select
