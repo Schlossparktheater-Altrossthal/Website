@@ -379,40 +379,39 @@ export default async function ProduktionsGewerkePage({
                 Wähle „Allgemeines“ für den Gesamtüberblick oder fokussiere ein einzelnes Gewerk.
               </p>
             </div>
-            <nav
-              aria-label="Gewerkefilter"
-              className="flex flex-wrap items-center gap-2"
-            >
-              <Link
-                href="/mitglieder/produktionen/gewerke"
-                aria-current={hasSelection ? undefined : "page"}
-                className={[
-                  "inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  hasSelection
-                    ? "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
-                    : "border-primary/40 bg-primary/10 text-foreground",
-                ].join(" ")}
-              >
-                Allgemeines
-              </Link>
-              {departments.map((department) => {
-                const isSelected = department.slug === selectedSlug;
-                return (
-                  <Link
-                    key={department.id}
-                    href={`/mitglieder/produktionen/gewerke?department=${department.slug}`}
-                    aria-current={isSelected ? "page" : undefined}
-                    className={[
-                      "inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      isSelected
-                        ? "border-primary/40 bg-primary/10 text-foreground"
-                        : "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
-                    ].join(" ")}
-                  >
-                    {department.name}
-                  </Link>
-                );
-              })}
+            <nav aria-label="Gewerkefilter" className="overflow-x-auto pb-px scrollbar-hide">
+              <div className="inline-flex min-w-full flex-nowrap items-center gap-1 rounded-full border border-border/60 bg-background/80 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10 backdrop-blur">
+                <Link
+                  href="/mitglieder/produktionen/gewerke"
+                  aria-current={hasSelection ? undefined : "page"}
+                  className={[
+                    "inline-flex min-w-0 flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-full px-3 py-2 text-center text-[0.7rem] font-semibold uppercase tracking-wide leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background xl:text-[0.75rem]",
+                    hasSelection
+                      ? "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      : "bg-background text-foreground shadow-sm",
+                  ].join(" ")}
+                >
+                  Allgemeines
+                </Link>
+                {departments.map((department) => {
+                  const isSelected = department.slug === selectedSlug;
+                  return (
+                    <Link
+                      key={department.id}
+                      href={`/mitglieder/produktionen/gewerke?department=${department.slug}`}
+                      aria-current={isSelected ? "page" : undefined}
+                      className={[
+                        "inline-flex min-w-0 flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-full px-3 py-2 text-center text-[0.7rem] font-semibold uppercase tracking-wide leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background xl:text-[0.75rem]",
+                        isSelected
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      ].join(" ")}
+                    >
+                      {department.name}
+                    </Link>
+                  );
+                })}
+              </div>
             </nav>
           </CardContent>
         </Card>
