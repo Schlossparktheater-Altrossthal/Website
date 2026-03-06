@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
-import { Sparkles, Trash2, Pencil } from "lucide-react";
+import { Building2, ClipboardList, Sparkles, Trash2, Pencil, Users } from "lucide-react";
 import { addDays, startOfToday, format } from "date-fns";
 import { de } from "date-fns/locale/de";
 
@@ -8,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProduction } from "@/lib/active-production";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
+import { PageHeader } from "@/components/members/page-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 
 import {
@@ -59,6 +61,39 @@ const EXCLUDED_DEPARTMENT_NAMES = new Set([
   "arbeitsabläufe",
 ]);
 
+const currentPath = "/mitglieder/produktionen/gewerke";
+
+type HeaderStat = {
+  label: string;
+  value: string;
+  icon: ReactNode;
+  hint?: string;
+};
+
+function HeaderStats({ stats }: { stats: HeaderStat[] }) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
+          >
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+              <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
+              {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
+            </div>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+              {stat.icon}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default async function ProduktionsGewerkePage({
   searchParams,
 }: PageProps) {
@@ -75,16 +110,15 @@ export default async function ProduktionsGewerkePage({
   }
 
   const activeProduction = await getActiveProduction(session.user?.id);
+  const breadcrumbs = [membersNavigationBreadcrumb(currentPath)];
 
   if (!activeProduction) {
     return (
       <div className="space-y-6">
-        <ProductionWorkspaceHeader
+        <PageHeader
           title="Gewerke"
           description="Strukturiere dein Produktionsteam, vergib Verantwortlichkeiten und halte Kontaktdaten zentral fest."
-          activeWorkspace="departments"
-          production={null}
-          showNavigation={false}
+          breadcrumbs={breadcrumbs}
         />
         <ProductionWorkspaceEmptyState
           title="Keine aktive Produktion ausgewählt"
@@ -267,28 +301,26 @@ export default async function ProduktionsGewerkePage({
     selectionSummary.todo + selectionSummary.doing,
   );
   const formattedMemberCount = numberFormatter.format(selectionSummary.members);
-  const headerStats = [
+  const headerStats: HeaderStat[] = [
     {
       label: selectedDepartment ? "Ausgewähltes Gewerk" : "Gewerke insgesamt",
-      value: selectedDepartment
-        ? selectedDepartment.name
-        : numberFormatter.format(departments.length),
+      value: selectedDepartment ? selectedDepartment.name : numberFormatter.format(departments.length),
+      icon: <Building2 className="h-4 w-4" aria-hidden />,
+      hint: selectedDepartment
+        ? "Aktuell ausgewähltes Gewerk"
+        : "Anzahl aller verfügbaren Gewerke",
     },
     {
       label: "Aktive Mitglieder",
       value: formattedMemberCount,
+      icon: <Users className="h-4 w-4" aria-hidden />,
+      hint: "Mitglieder in der aktuellen Auswahl",
     },
     {
       label: "Offene Aufgaben",
       value: formattedOpenTasks,
-    },
-    {
-      label: "",
-      content: (
-        <DialogTrigger asChild>
-          <Button size="sm">Gewerk anlegen</Button>
-        </DialogTrigger>
-      ),
+      icon: <ClipboardList className="h-4 w-4" aria-hidden />,
+      hint: "Offene Aufgaben in der aktuellen Auswahl",
     },
   ];
   const hasSelection = selectedSlug !== null;
@@ -296,17 +328,18 @@ export default async function ProduktionsGewerkePage({
   return (
     <Dialog>
       <div className="space-y-6">
-        <ProductionWorkspaceHeader
+        <PageHeader
           title="Gewerke"
           description="Verwalte Verantwortlichkeiten, Wissen und Kommunikation in einem eigenständigen Gewerk-Hub."
-          activeWorkspace="departments"
-          production={activeProduction}
-          stats={headerStats}
-          hideProductionCard
-          showNavigation={false}
-          showDivider
-          hideTitle
+          breadcrumbs={breadcrumbs}
         />
+        <HeaderStats stats={headerStats} />
+        <div className="flex justify-end">
+          <DialogTrigger asChild>
+            <Button size="sm">Gewerk anlegen</Button>
+          </DialogTrigger>
+        </div>
+
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Neues Gewerk anlegen</DialogTitle>
@@ -416,7 +449,13 @@ export default async function ProduktionsGewerkePage({
           </CardContent>
         </Card>
 
-        {viewDepartments.length === 0 ? (
+        {hasSelection ? (
+          <Card className="border-border/60 bg-background/80">
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Wenn dein Gewerk ausgewählt ist, werden hier keine weiteren Gewerke angezeigt.
+            </CardContent>
+          </Card>
+        ) : viewDepartments.length === 0 ? (
           <Card className="border-border/60 bg-background/80">
             <CardContent className="p-6 text-sm text-muted-foreground">
               Das ausgewählte Gewerk wurde nicht gefunden.
