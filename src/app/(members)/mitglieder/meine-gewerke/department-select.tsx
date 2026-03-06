@@ -1,19 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 type DepartmentSelectOption = {
   label: string;
-  value: string;
   href: string;
 };
 
@@ -22,33 +15,33 @@ interface DepartmentSelectProps {
 }
 
 export function DepartmentSelect({ options }: DepartmentSelectProps) {
-  const router = useRouter();
-
-  const handleChange = (value: string) => {
-    const target = options.find((option) => option.value === value);
-    if (target) {
-      router.push(target.href);
-    }
-  };
+  const pathname = usePathname();
+  const navOptions = [{ label: "Allgemeines", href: "/mitglieder/meine-gewerke" }, ...options];
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor="department-select">Gewerk</Label>
-      <Select onValueChange={handleChange}>
-        <SelectTrigger id="department-select" className="w-full">
-          <SelectValue placeholder="Gewerk auswählen" />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <p className="text-xs text-muted-foreground">
-        Nach der Auswahl gelangst du direkt zum Gewerk, um Aufgaben anzulegen oder deinen Status zu prüfen.
-      </p>
-    </div>
+    <nav
+      aria-label="Gewerknavigation"
+      className="flex flex-wrap items-center gap-2 overflow-x-auto rounded-full border border-border/60 bg-background/80 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10"
+    >
+      {navOptions.map((option) => {
+        const isActive = pathname === option.href;
+
+        return (
+          <Link
+            key={option.href}
+            href={option.href}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "inline-flex min-w-0 items-center justify-center rounded-full px-3.5 py-2 text-xs font-semibold uppercase tracking-wide transition",
+              isActive
+                ? "bg-primary/15 text-primary shadow-sm"
+                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
+            )}
+          >
+            {option.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
