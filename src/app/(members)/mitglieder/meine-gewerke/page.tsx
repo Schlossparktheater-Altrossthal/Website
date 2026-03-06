@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { CheckCircle2, ListTodo, Users } from "lucide-react";
+import { CalendarClock, ListTodo, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
+import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -21,43 +22,54 @@ import {
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-card";
 import { DepartmentSelect } from "./department-select";
 
-type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
+type SummaryStat = { label: string; value: number; hint: string; icon: LucideIcon };
 
 function HeaderStats({ stats }: { stats: SummaryStat[] }) {
   return (
     <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
+      <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
 
-          return (
-            <div
-              key={stat.label}
-              className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
-            >
-              <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
-                <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
-                {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
+            return (
+              <div
+                key={stat.label}
+                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
+              >
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+                  <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.hint}</p>
+                </div>
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+                  <Icon className="h-4 w-4" aria-hidden />
+                </span>
               </div>
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
-                <Icon className="h-4 w-4" aria-hidden />
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-end gap-2">
+          <Button type="button" variant="outline" className="h-10 min-w-40">
+            Aktion 1
+          </Button>
+          <Button type="button" variant="outline" className="h-10 min-w-40">
+            Aktion 2
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-export default async function MeineGewerkePage() {
+export default async function MeineGewerkePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
-  const canManageDepartments = await hasPermission(
-    session.user,
-    "mitglieder.produktionen",
-  );
   const isBoard = hasRole(session.user, "board");
   if (!allowed) {
     return (
@@ -171,6 +183,12 @@ export default async function MeineGewerkePage() {
     .sort((a, b) => a.department.name.localeCompare(b.department.name, "de", { sensitivity: "base" }))
     .map((membership) => membership as DepartmentMembershipWithDepartment);
 
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const selectedDepartmentParam = resolvedSearchParams.department;
+  const selectedDepartmentId = Array.isArray(selectedDepartmentParam)
+    ? selectedDepartmentParam[0]
+    : selectedDepartmentParam;
+
   let costumeMeasurementsByUser: DepartmentMeasurementsByUser | undefined;
   const costumeMemberships = memberships.filter((membership) => membership.department.slug === "kostuem");
 
@@ -240,57 +258,37 @@ export default async function MeineGewerkePage() {
     }
   }
 
-  const taskTotals: Record<"todo" | "doing" | "done", number> = { todo: 0, doing: 0, done: 0 };
-  for (const membership of memberships) {
-    const isEnsembleDepartment = membership.department.slug?.toLowerCase() === "ensemble";
-    if (isEnsembleDepartment) {
-      continue;
-    }
-    for (const task of membership.department.tasks) {
-      taskTotals[task.status] += 1;
-    }
-  }
-
   const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
   const now = new Date();
-  const openTaskCount = taskTotals.todo + taskTotals.doing;
+  const selectedMembership = selectedDepartmentId
+    ? memberships.find((membership) => membership.department.id === selectedDepartmentId)
+    : undefined;
+
+  const upcomingEventsCount = selectedMembership
+    ? selectedMembership.department.events.filter((event) => event.start >= now).length
+    : 0;
+  const openTaskCount = selectedMembership
+    ? selectedMembership.department.tasks.filter((task) => task.status !== "done").length
+    : 0;
 
   const summaryStats: SummaryStat[] = [
-    { label: "Teams", value: memberships.length, hint: "Aktive Gewerke", icon: Users },
-    { label: "Offene Aufgaben", value: openTaskCount, hint: "Über alle Gewerke", icon: ListTodo },
-    { label: "Erledigt", value: taskTotals.done, hint: "Abgeschlossen", icon: CheckCircle2 },
+    { label: "TEAMS", value: upcomingEventsCount, hint: "Anstehende Termine im Gewerk", icon: CalendarClock },
+    { label: "AUFGABEN", value: openTaskCount, hint: "Offene Aufgaben im Gewerk", icon: ListTodo },
+    { label: "MITGLIEDER", value: selectedMembership?.department.memberships.length ?? 0, hint: "Mitglieder im Gewerk", icon: Users },
   ];
-
-  const headerDescription =
-    "Deine zentrale Übersicht für Teams, Aufgaben, Termine und Ansprechpartner in deinen Gewerken.";
 
   const hero = (
     <div className="space-y-6">
-      <PageHeader title="Gewerkeplanung" description={headerDescription} />
+      <PageHeader title="Gewerkeplanung" />
       {memberships.length ? <HeaderStats stats={summaryStats} /> : null}
     </div>
   );
 
-  const departmentOptions = memberships
-    .map((membership) => {
-      const href = canManageDepartments
-        ? `/mitglieder/produktionen/gewerke/${membership.department.id}`
-        : membership.department.slug
-          ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
-          : null;
-
-      if (!href) {
-        return null;
-      }
-
-      return {
-        label: membership.department.name,
-        value: membership.department.id,
-        href,
-      };
-    })
-    .filter((option): option is NonNullable<typeof option> => Boolean(option));
+  const departmentOptions = memberships.map((membership) => ({
+    label: membership.department.name,
+    value: membership.department.id,
+  }));
 
   if (memberships.length === 0) {
     return (
@@ -328,37 +326,27 @@ export default async function MeineGewerkePage() {
     <div className="space-y-6">
       {hero}
       {departmentOptions.length ? (
-        <DepartmentSelect options={departmentOptions} />
+        <DepartmentSelect options={departmentOptions} selectedDepartmentId={selectedMembership?.department.id} />
       ) : null}
 
-      <div className="space-y-8">
-        {memberships.map((membership) => {
-          const teamLinkHref = canManageDepartments
-            ? `/mitglieder/produktionen/gewerke/${membership.department.id}`
-            : membership.department.slug
-              ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
-              : undefined;
-          const teamLinkLabel = canManageDepartments ? "Gewerk-Hub öffnen" : "Team ansehen";
-
-          return (
-            <DepartmentCard
-              key={membership.id}
-              membership={membership}
-              userId={userId}
-              planningStart={planningStart}
-              planningEnd={planningEnd}
-              blockedByUser={blockedByUser}
-              freezeUntilLabel={freezeUntilLabel}
-              planningWindowLabel={planningWindowLabel}
-              now={now}
-              teamLinkHref={teamLinkHref}
-              teamLinkLabel={teamLinkLabel}
-              measurementsByUser={costumeMeasurementsByUser}
-              refreshPath="/mitglieder/meine-gewerke"
-            />
-          );
-        })}
-      </div>
+      {selectedMembership ? (
+        <div className="space-y-8">
+          <DepartmentCard
+            key={selectedMembership.id}
+            membership={selectedMembership}
+            userId={userId}
+            planningStart={planningStart}
+            planningEnd={planningEnd}
+            blockedByUser={blockedByUser}
+            freezeUntilLabel={freezeUntilLabel}
+            planningWindowLabel={planningWindowLabel}
+            now={now}
+            teamLinkHref={undefined}
+            measurementsByUser={costumeMeasurementsByUser}
+            refreshPath="/mitglieder/meine-gewerke"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
