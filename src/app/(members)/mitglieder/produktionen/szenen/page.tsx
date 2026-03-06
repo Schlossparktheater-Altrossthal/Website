@@ -1,4 +1,5 @@
 import { BreakdownStatus } from "@prisma/client";
+import { Clapperboard, FileStack, Theater } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -20,7 +21,10 @@ function parseSceneIdentifier(value: SceneIdentifier): number[] {
     .filter((segment) => !Number.isNaN(segment));
 }
 
-function compareSceneIdentifiers(a: SceneIdentifier, b: SceneIdentifier): number {
+function compareSceneIdentifiers(
+  a: SceneIdentifier,
+  b: SceneIdentifier,
+): number {
   const aParts = parseSceneIdentifier(a);
   const bParts = parseSceneIdentifier(b);
   const maxLength = Math.max(aParts.length, bParts.length);
@@ -80,8 +84,19 @@ export default async function ProduktionsSzenenPage() {
           },
         },
       },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
-      select: { id: true, firstName: true, lastName: true, name: true, email: true },
+      orderBy: [
+        { lastName: "asc" },
+        { firstName: "asc" },
+        { name: "asc" },
+        { email: "asc" },
+      ],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        email: true,
+      },
     }),
     prisma.department.findMany({
       orderBy: { name: "asc" },
@@ -112,7 +127,14 @@ export default async function ProduktionsSzenenPage() {
               select: {
                 id: true,
                 isFeatured: true,
-                character: { select: { id: true, name: true, shortName: true, color: true } },
+                character: {
+                  select: {
+                    id: true,
+                    name: true,
+                    shortName: true,
+                    color: true,
+                  },
+                },
               },
             },
             breakdownItems: {
@@ -124,9 +146,19 @@ export default async function ProduktionsSzenenPage() {
                 note: true,
                 status: true,
                 neededBy: true,
-                department: { select: { id: true, name: true, slug: true, color: true } },
+                department: {
+                  select: { id: true, name: true, slug: true, color: true },
+                },
                 assignedToId: true,
-                assignedTo: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
+                assignedTo: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    name: true,
+                    email: true,
+                  },
+                },
               },
             },
           },
@@ -138,7 +170,8 @@ export default async function ProduktionsSzenenPage() {
   if (!show) {
     return (
       <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte wähle sie erneut im Überblick aus.
+        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte
+        wähle sie erneut im Überblick aus.
       </div>
     );
   }
@@ -155,20 +188,26 @@ export default async function ProduktionsSzenenPage() {
     }))
     .sort((a, b) => compareSceneIdentifiers(a.identifier, b.identifier));
   const sceneCount = scenes.length;
-  const breakdownCount = scenes.reduce((acc, scene) => acc + scene.breakdownItems.length, 0);
+  const breakdownCount = scenes.reduce(
+    (acc, scene) => acc + scene.breakdownItems.length,
+    0,
+  );
   const characterCount = show.characters.length;
   const summaryStats = [
     {
       label: "Szenen",
       value: sceneCount,
+      icon: <Clapperboard className="h-4 w-4" aria-hidden />,
     },
     {
       label: "Breakdowns",
       value: breakdownCount,
+      icon: <FileStack className="h-4 w-4" aria-hidden />,
     },
     {
       label: "Rollen",
       value: characterCount,
+      icon: <Theater className="h-4 w-4" aria-hidden />,
     },
   ];
 
@@ -185,20 +224,29 @@ export default async function ProduktionsSzenenPage() {
         showNavigation={false}
       />
 
-      <div className="rounded-xl border border-border/60 bg-background p-3 shadow-sm sm:p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-stretch">
-          {summaryStats.map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-lg border border-border/60 bg-muted/15 p-3 text-sm text-muted-foreground"
-            >
-              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground/80">
-                {stat.label}
-              </p>
-              <p className="mt-1 text-xl font-semibold text-foreground">{stat.value}</p>
-            </div>
-          ))}
-          <div className="flex items-center justify-end rounded-lg border border-border/60 bg-muted/15 p-3 text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {summaryStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
+              >
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {stat.label}
+                  </p>
+                  <p className="text-xl font-bold leading-tight text-foreground">
+                    {stat.value}
+                  </p>
+                </div>
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+                  {stat.icon}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-end">
             <SceneCreateDialog showId={show.id} currentPath={currentPath} />
           </div>
         </div>
