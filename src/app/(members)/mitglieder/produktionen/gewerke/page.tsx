@@ -1,45 +1,21 @@
-import type { ReactNode } from "react";
-import { Building2, ClipboardList, Users } from "lucide-react";
+import { Building2, ClipboardList, LayoutTemplate, Users } from "lucide-react";
 
-import { requireAuth } from "@/lib/rbac";
-import { hasPermission } from "@/lib/permissions";
+import { PageHeader } from "@/components/members/page-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveProduction } from "@/lib/active-production";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
-import { PageHeader } from "@/components/members/page-header";
-import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
+import { hasPermission } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/rbac";
 
-type HeaderStat = {
+type OverviewStat = {
   label: string;
   value: string;
-  icon: ReactNode;
-  hint?: string;
+  hint: string;
+  icon: typeof Building2;
 };
 
 const currentPath = "/mitglieder/produktionen/gewerke";
-
-function HeaderStats({ stats }: { stats: HeaderStat[] }) {
-  return (
-    <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
-          >
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
-              <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
-              {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
-            </div>
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
-              {stat.icon}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default async function ProduktionsGewerkePage() {
   const session = await requireAuth();
@@ -58,57 +34,79 @@ export default async function ProduktionsGewerkePage() {
   const activeProduction = await getActiveProduction(session.user?.id);
   const breadcrumbs = [membersNavigationBreadcrumb(currentPath)];
 
-  if (!activeProduction) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Gewerke"
-          description="Der Bereich Gewerke ist derzeit deaktiviert."
-          breadcrumbs={breadcrumbs}
-        />
-        <ProductionWorkspaceEmptyState
-          title="Keine aktive Produktion ausgewählt"
-          description="Wähle in der Produktionsübersicht eine aktive Produktion aus."
-        />
-      </div>
-    );
-  }
+  const departmentCount = activeProduction
+    ? await prisma.department.count({ where: { productionId: activeProduction.id } })
+    : 0;
 
-  const headerStats: HeaderStat[] = [
-    {
-      label: "Gewerke",
-      value: "0",
-      icon: <Building2 className="h-4 w-4" aria-hidden />,
-      hint: "Aktuell werden keine Gewerke angezeigt.",
-    },
-    {
-      label: "Mitglieder",
-      value: "0",
-      icon: <Users className="h-4 w-4" aria-hidden />,
-      hint: "Keine Zuordnungen im deaktivierten Bereich.",
-    },
-    {
-      label: "Aufgaben",
-      value: "0",
-      icon: <ClipboardList className="h-4 w-4" aria-hidden />,
-      hint: "Keine Aufgaben im Bereich Gewerke.",
-    },
+  const openTaskCount = activeProduction
+    ? await prisma.departmentTask.count({
+        where: {
+          department: { productionId: activeProduction.id },
+          status: { in: ["todo", "doing"] },
+        },
+      })
+    : 0;
+
+  const memberCount = activeProduction
+    ? await prisma.departmentMembership.count({
+        where: {
+          department: { productionId: activeProduction.id },
+        },
+      })
+    : 0;
+
+  const stats: OverviewStat[] = [
+    { label: "Gewerke", value: departmentCount.toString(), hint: "Aktive Teams in der Produktion", icon: Building2 },
+    { label: "Mitglieder", value: memberCount.toString(), hint: "Zugeordnete Personen", icon: Users },
+    { label: "Offene Aufgaben", value: openTaskCount.toString(), hint: "Todos in allen Gewerken", icon: ClipboardList },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Gewerke"
-        description="Der Bereich Gewerke ist derzeit deaktiviert."
+        description="Grundlayout ist aktiv. Hier kannst du die neue Ansicht für Allgemeines aufbauen."
         breadcrumbs={breadcrumbs}
       />
 
-      <HeaderStats stats={headerStats} />
+      {!activeProduction ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Keine aktive Produktion</CardTitle>
+            <p className="text-sm text-muted-foreground">Wähle eine aktive Produktion aus. Die Grundstruktur der Seite bleibt dabei erhalten.</p>
+          </CardHeader>
+        </Card>
+      ) : (
+        <>
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {stats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card key={stat.label}>
+                  <CardHeader className="pb-2">
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <CardTitle className="text-2xl">{stat.value}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{stat.hint}</span>
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </section>
 
-      <ProductionWorkspaceEmptyState
-        title="Keine Gewerke verfügbar"
-        description="Auf dieser Seite werden aktuell keine Gewerke angezeigt."
-      />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutTemplate className="h-4 w-4" aria-hidden />
+                Neue Ansicht vorbereiten
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Dieser Bereich enthält absichtlich nur die Grunddaten und ein neutrales Layout als Ausgangspunkt für dein neues Design.</p>
+            </CardHeader>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
