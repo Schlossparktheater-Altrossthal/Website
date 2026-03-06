@@ -215,8 +215,6 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
   const now = new Date();
-  const upcomingEventsCount = departmentEvents.filter((event) => new Date(event.start) >= now).length;
-
   const isEnsembleDepartment = membership.department.slug?.toLowerCase() === "ensemble";
   const tasksForStats = isEnsembleDepartment ? [] : membership.department.tasks;
   const activeTasksCount = tasksForStats.filter((task) => task.status !== "done").length;
@@ -226,7 +224,6 @@ export default async function GewerkDetailPage({ params }: PageProps) {
     { label: "Teammitglieder", value: membership.department.memberships.length, hint: "Aktive Personen", icon: Users },
     { label: "Aktive Aufgaben", value: activeTasksCount, hint: "Offen & in Arbeit im Gewerk", icon: ListTodo },
     { label: "Abgeschlossen", value: completedTasksCount, hint: "Erledigte Gewerke-Aufgaben", icon: CheckCircle2 },
-    { label: "Nächste Termine", value: upcomingEventsCount, hint: "Planung im Gewerk", icon: CalendarDays },
   ];
 
   const headerActions = (
@@ -319,29 +316,28 @@ export default async function GewerkDetailPage({ params }: PageProps) {
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div>
         </div>
-        <dl className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {summaryStats.map((stat) => {
             const Icon = stat.icon;
             return (
               <div
                 key={stat.label}
-                className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
+                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
-                <div className="relative flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon aria-hidden className="h-5 w-5" />
-                  </span>
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
-                    <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                    {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
-                  </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+                  <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
+                  {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
                 </div>
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+                  <Icon aria-hidden className="h-4 w-4" />
+                </span>
               </div>
             );
           })}
-        </dl>
+          </dl>
+        </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:text-sm">
           <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
             <CalendarDays aria-hidden className="h-4 w-4" />
