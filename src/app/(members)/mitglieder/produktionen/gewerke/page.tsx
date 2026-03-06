@@ -291,6 +291,7 @@ export default async function ProduktionsGewerkePage({
       ),
     },
   ];
+  const hasSelection = selectedSlug !== null;
 
   return (
     <Dialog>
@@ -370,8 +371,50 @@ export default async function ProduktionsGewerkePage({
           </form>
         </DialogContent>
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          {viewDepartments.map((department) => {
+        <nav aria-label="Gewerkefilter" className="overflow-x-auto pb-px">
+          <div className="inline-flex min-w-full flex-nowrap items-center gap-1 rounded-full border border-border/60 bg-background/80 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10">
+            <Link
+              href="/mitglieder/produktionen/gewerke"
+              aria-current={hasSelection ? undefined : "page"}
+              className={[
+                "inline-flex min-w-36 flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-full px-3 py-2 text-[0.75rem] font-semibold uppercase tracking-wide transition",
+                hasSelection
+                  ? "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  : "bg-background text-foreground shadow-sm ring-1 ring-border/60",
+              ].join(" ")}
+            >
+              Allgemeines
+            </Link>
+            {departments.map((department) => {
+              const isSelected = department.slug === selectedSlug;
+              return (
+                <Link
+                  key={department.id}
+                  href={`/mitglieder/produktionen/gewerke?department=${department.slug}`}
+                  aria-current={isSelected ? "page" : undefined}
+                  className={[
+                    "inline-flex min-w-36 flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-full px-3 py-2 text-[0.75rem] font-semibold uppercase tracking-wide transition",
+                    isSelected
+                      ? "bg-background text-foreground shadow-sm ring-1 ring-border/60"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  ].join(" ")}
+                >
+                  {department.name}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        {viewDepartments.length === 0 ? (
+          <Card className="border-border/60 bg-background/80">
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Das ausgewählte Gewerk wurde nicht gefunden.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 xl:grid-cols-2">
+            {viewDepartments.map((department) => {
             const departmentMemberIds = department.memberships.map(
               (membership) => membership.user.id,
             );
@@ -929,8 +972,9 @@ export default async function ProduktionsGewerkePage({
                 </div>
               </Card>
             );
-          })}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </Dialog>
   );
