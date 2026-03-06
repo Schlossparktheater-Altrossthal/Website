@@ -24,6 +24,8 @@ export interface MembersNavItem {
   label: string;
   icon?: MembersNavIcon;
   permissionKey?: string;
+  requiresBoardRole?: boolean;
+  requiresDepartmentLead?: boolean;
   ariaLabel?: string;
   badge?: ReactNode;
 }
@@ -478,12 +480,14 @@ export const membersNavigation = [
         href: "/mitglieder/produktionen/gewerke",
         label: "Allgemeines",
         permissionKey: "mitglieder.produktionen",
+        requiresBoardRole: true,
         icon: DepartmentsOverviewIcon,
       },
       {
         href: "/mitglieder/meine-gewerke",
         label: "Gewerkeplanung",
         permissionKey: "mitglieder.meine-gewerke",
+        requiresDepartmentLead: true,
         icon: DepartmentsIcon,
       },
       membersAssignmentsTodoItem,

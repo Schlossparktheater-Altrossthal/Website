@@ -78,7 +78,9 @@ describe("filterMembersNavigationByPermissions", () => {
   it("keeps only department related assignments for department-focused members", () => {
     const groups = selectMembersNavigation();
     const permissions = ["mitglieder.meine-gewerke"] as const;
-    const { groups: filtered } = filterMembersNavigationByPermissions(groups, permissions);
+    const { groups: filtered } = filterMembersNavigationByPermissions(groups, permissions, {
+      isDepartmentLead: true,
+    });
     const assignments = filtered.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
 
     expect(assignments).toBeDefined();
