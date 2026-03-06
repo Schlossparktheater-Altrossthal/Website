@@ -1,12 +1,12 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { CheckCircle2, ListTodo, Users } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { CalendarDays, CheckCircle2, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -22,9 +22,43 @@ import {
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-card";
 import { DepartmentSelect } from "./department-select";
 
-type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
+type SummaryStat = { label: string; value: number; hint?: string; icon: ReactNode };
 
-export default async function MeineGewerkePage() {
+function HeaderStats({ stats }: { stats: SummaryStat[] }) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+      <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
+            >
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+                <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
+                {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
+              </div>
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+                {stat.icon}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button size="sm" variant="outline" type="button" disabled>Aktion 1</Button>
+          <Button size="sm" type="button" disabled>Aktion 2</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default async function MeineGewerkePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
   const canManageDepartments = await hasPermission(
@@ -44,6 +78,12 @@ export default async function MeineGewerkePage() {
   if (!userId) {
     notFound();
   }
+
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const selectedDepartmentParam = resolvedSearchParams?.department;
+  const selectedDepartmentId = Array.isArray(selectedDepartmentParam)
+    ? selectedDepartmentParam[0]
+    : selectedDepartmentParam;
 
   if (!isBoard) {
     const isLead = await prisma.departmentMembership.count({
@@ -213,78 +253,41 @@ export default async function MeineGewerkePage() {
     }
   }
 
-  const taskTotals: Record<"todo" | "doing" | "done", number> = { todo: 0, doing: 0, done: 0 };
-  for (const membership of memberships) {
-    const isEnsembleDepartment = membership.department.slug?.toLowerCase() === "ensemble";
-    if (isEnsembleDepartment) {
-      continue;
-    }
-    for (const task of membership.department.tasks) {
-      taskTotals[task.status] += 1;
-    }
-  }
-
   const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
   const now = new Date();
-  const openTaskCount = taskTotals.todo + taskTotals.doing;
+
+  const selectedMembership = selectedDepartmentId
+    ? memberships.find((membership) => membership.department.id === selectedDepartmentId)
+    : null;
+
+  const selectedDepartmentEventsCount = selectedMembership
+    ? selectedMembership.department.events.filter((event) => event.end >= now).length
+    : 0;
+
+  const selectedDepartmentMemberCount = selectedMembership ? selectedMembership.department.memberships.length : 0;
 
   const summaryStats: SummaryStat[] = [
-    { label: "Teams", value: memberships.length, hint: "Aktive Gewerke", icon: Users },
-    { label: "Offene Aufgaben", value: openTaskCount, hint: "Über alle Gewerke", icon: ListTodo },
-    { label: "Erledigt", value: taskTotals.done, hint: "Abgeschlossen", icon: CheckCircle2 },
+    { label: "Teams", value: memberships.length, hint: "Aktive Gewerke", icon: <Users className="h-4 w-4" aria-hidden /> },
+    {
+      label: "Termine",
+      value: selectedDepartmentEventsCount,
+      hint: "Anstehende Termine im gewählten Gewerk",
+      icon: <CalendarDays className="h-4 w-4" aria-hidden />,
+    },
+    {
+      label: "Mitglieder",
+      value: selectedDepartmentMemberCount,
+      hint: "Mitglieder im gewählten Gewerk",
+      icon: <CheckCircle2 className="h-4 w-4" aria-hidden />,
+    },
   ];
-
-  const headerDescription =
-    "Deine zentrale Übersicht für Teams, Aufgaben, Termine und Ansprechpartner in deinen Gewerken.";
-
-  const hero = (
-    <div className="space-y-6">
-      <PageHeader title="Gewerkeplanung" description={headerDescription} />
-      {memberships.length ? (
-        <dl className="grid gap-4 md:grid-cols-3">
-          {summaryStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={stat.label}
-                className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
-                <div className="relative flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon aria-hidden className="h-5 w-5" />
-                  </span>
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
-                    <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                    {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </dl>
-      ) : null}
-    </div>
-  );
 
   const departmentOptions = memberships
     .map((membership) => {
-      const href = canManageDepartments
-        ? `/mitglieder/produktionen/gewerke/${membership.department.id}`
-        : membership.department.slug
-          ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
-          : null;
-
-      if (!href) {
-        return null;
-      }
-
       return {
         label: membership.department.name,
         value: membership.department.id,
-        href,
       };
     })
     .filter((option): option is NonNullable<typeof option> => Boolean(option));
@@ -292,7 +295,10 @@ export default async function MeineGewerkePage() {
   if (memberships.length === 0) {
     return (
       <div className="space-y-10">
-        {hero}
+        <PageHeader
+          title="Gewerkeplanung"
+          description="Deine zentrale Übersicht für Teams, Aufgaben, Termine und Ansprechpartner in deinen Gewerken."
+        />
         <section className="rounded-3xl border border-dashed border-primary/30 bg-background/70 p-6 text-sm text-muted-foreground shadow-inner sm:p-10 sm:text-base">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground sm:text-xl">Noch keine Gewerke</h2>
@@ -323,51 +329,33 @@ export default async function MeineGewerkePage() {
 
   return (
     <div className="space-y-6">
-      {hero}
-      {departmentOptions.length ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Gewerk auswählen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Wähle das Gewerk aus, in dem du Aufgaben hinzufügen oder deine zugewiesenen und erledigten Aufgaben prüfen willst.
-              </p>
-              <DepartmentSelect options={departmentOptions} />
-            </div>
-          </CardContent>
-        </Card>
+      <PageHeader
+        title="Gewerkeplanung"
+        description="Deine zentrale Übersicht für Teams, Aufgaben, Termine und Ansprechpartner in deinen Gewerken."
+      />
+      {memberships.length ? <HeaderStats stats={summaryStats} /> : null}
+
+      {departmentOptions.length ? <DepartmentSelect options={departmentOptions} selectedValue={selectedDepartmentId} /> : null}
+
+      {selectedMembership ? (
+        <div className="space-y-8">
+          <DepartmentCard
+            key={selectedMembership.id}
+            membership={selectedMembership}
+            userId={userId}
+            planningStart={planningStart}
+            planningEnd={planningEnd}
+            blockedByUser={blockedByUser}
+            freezeUntilLabel={freezeUntilLabel}
+            planningWindowLabel={planningWindowLabel}
+            now={now}
+            teamLinkHref={canManageDepartments ? `/mitglieder/produktionen/gewerke/${selectedMembership.department.id}` : undefined}
+            teamLinkLabel={canManageDepartments ? "Gewerk-Hub öffnen" : "Team ansehen"}
+            measurementsByUser={costumeMeasurementsByUser}
+            refreshPath="/mitglieder/meine-gewerke"
+          />
+        </div>
       ) : null}
-
-      <div className="space-y-8">
-        {memberships.map((membership) => {
-          const teamLinkHref = canManageDepartments
-            ? `/mitglieder/produktionen/gewerke/${membership.department.id}`
-            : membership.department.slug
-              ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
-              : undefined;
-          const teamLinkLabel = canManageDepartments ? "Gewerk-Hub öffnen" : "Team ansehen";
-
-          return (
-            <DepartmentCard
-              key={membership.id}
-              membership={membership}
-              userId={userId}
-              planningStart={planningStart}
-              planningEnd={planningEnd}
-              blockedByUser={blockedByUser}
-              freezeUntilLabel={freezeUntilLabel}
-              planningWindowLabel={planningWindowLabel}
-              now={now}
-              teamLinkHref={teamLinkHref}
-              teamLinkLabel={teamLinkLabel}
-              measurementsByUser={costumeMeasurementsByUser}
-              refreshPath="/mitglieder/meine-gewerke"
-            />
-          );
-        })}
-      </div>
     </div>
   );
 }

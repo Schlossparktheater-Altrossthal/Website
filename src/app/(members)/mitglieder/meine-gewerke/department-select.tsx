@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Label } from "@/components/ui/label";
 import {
@@ -14,31 +14,40 @@ import {
 type DepartmentSelectOption = {
   label: string;
   value: string;
-  href: string;
 };
 
 interface DepartmentSelectProps {
   options: DepartmentSelectOption[];
+  selectedValue?: string;
 }
 
-export function DepartmentSelect({ options }: DepartmentSelectProps) {
+export function DepartmentSelect({ options, selectedValue }: DepartmentSelectProps) {
+  const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleChange = (value: string) => {
-    const target = options.find((option) => option.value === value);
-    if (target) {
-      router.push(target.href);
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (!value || value === "none") {
+      params.delete("department");
+    } else {
+      params.set("department", value);
     }
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
   };
 
   return (
     <div className="space-y-2">
       <Label htmlFor="department-select">Gewerk</Label>
-      <Select onValueChange={handleChange}>
+      <Select onValueChange={handleChange} value={selectedValue ?? "none"}>
         <SelectTrigger id="department-select" className="w-full">
-          <SelectValue placeholder="Gewerk auswählen" />
+          <SelectValue placeholder="Bitte wählen" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="none">Bitte wählen</SelectItem>
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
@@ -46,9 +55,6 @@ export function DepartmentSelect({ options }: DepartmentSelectProps) {
           ))}
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">
-        Nach der Auswahl gelangst du direkt zum Gewerk, um Aufgaben anzulegen oder deinen Status zu prüfen.
-      </p>
     </div>
   );
 }
