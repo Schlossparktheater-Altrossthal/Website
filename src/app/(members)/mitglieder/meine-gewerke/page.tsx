@@ -6,7 +6,6 @@ import { CheckCircle2, ListTodo, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -23,6 +22,34 @@ import { DepartmentCard, type DepartmentMeasurementsByUser } from "./department-
 import { DepartmentSelect } from "./department-select";
 
 type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
+
+function HeaderStats({ stats }: { stats: SummaryStat[] }) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+
+          return (
+            <div
+              key={stat.label}
+              className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
+            >
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+                <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
+                {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
+              </div>
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+                <Icon className="h-4 w-4" aria-hidden />
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default async function MeineGewerkePage() {
   const session = await requireAuth();
@@ -241,31 +268,7 @@ export default async function MeineGewerkePage() {
   const hero = (
     <div className="space-y-6">
       <PageHeader title="Gewerkeplanung" description={headerDescription} />
-      {memberships.length ? (
-        <dl className="grid gap-4 md:grid-cols-3">
-          {summaryStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={stat.label}
-                className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/80 p-4 shadow-inner transition hover:border-primary/40"
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
-                <div className="relative flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon aria-hidden className="h-5 w-5" />
-                  </span>
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
-                    <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                    {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </dl>
-      ) : null}
+      {memberships.length ? <HeaderStats stats={summaryStats} /> : null}
     </div>
   );
 
@@ -325,19 +328,7 @@ export default async function MeineGewerkePage() {
     <div className="space-y-6">
       {hero}
       {departmentOptions.length ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Gewerk auswählen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Wähle das Gewerk aus, in dem du Aufgaben hinzufügen oder deine zugewiesenen und erledigten Aufgaben prüfen willst.
-              </p>
-              <DepartmentSelect options={departmentOptions} />
-            </div>
-          </CardContent>
-        </Card>
+        <DepartmentSelect options={departmentOptions} />
       ) : null}
 
       <div className="space-y-8">
