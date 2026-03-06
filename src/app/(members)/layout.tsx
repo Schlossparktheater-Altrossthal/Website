@@ -12,7 +12,7 @@ import { SidebarProvider, SIDEBAR_COOKIE_NAME } from "@/components/ui/sidebar";
 import { getActiveProduction } from "@/lib/active-production";
 import { prisma } from "@/lib/prisma";
 import { getUserPermissionKeys } from "@/lib/permissions";
-import { requireAuth } from "@/lib/rbac";
+import { hasRole, requireAuth } from "@/lib/rbac";
 import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
 
 type CommitInfo = {
@@ -85,6 +85,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
   const session = await requireAuth();
   const permissions = await getUserPermissionKeys(session.user);
   const activeProduction = await getActiveProduction(session.user?.id);
+  const isBoard = hasRole(session.user, "board");
 
   let resolvedSettings = resolveWebsiteSettings(null);
 
@@ -104,15 +105,18 @@ export default async function MembersLayout({ children }: { children: React.Reac
   let assignmentFocus: AssignmentFocus = "none";
   const userId = session.user?.id;
   let departmentAssignmentCount = 0;
+  let isDepartmentLead = false;
   if (userId) {
-    const [rehearsalAssignments, departmentAssignments] = await Promise.all([
+    const [rehearsalAssignments, departmentAssignments, leadAssignments] = await Promise.all([
       prisma.rehearsalAttendance.count({
         where: { userId, rehearsal: { status: { not: "DRAFT" } } },
       }),
       prisma.departmentMembership.count({ where: { userId } }),
+      prisma.departmentMembership.count({ where: { userId, role: "lead" } }),
     ]);
 
     departmentAssignmentCount = departmentAssignments;
+    isDepartmentLead = leadAssignments > 0;
 
     if (rehearsalAssignments > 0 && departmentAssignments > 0) {
       assignmentFocus = "both";
@@ -145,6 +149,8 @@ export default async function MembersLayout({ children }: { children: React.Reac
               activeProduction={activeProduction ?? undefined}
               assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
+              isBoard={isBoard}
+              isDepartmentLead={isDepartmentLead}
               impersonation={session.impersonation ?? null}
               globalFooter={
                 <SiteFooter
@@ -162,4 +168,3 @@ export default async function MembersLayout({ children }: { children: React.Reac
     </div>
   );
 }
-

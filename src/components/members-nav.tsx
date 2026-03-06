@@ -234,11 +234,15 @@ export function MembersNav({
   activeProduction,
   assignmentFocus = "none",
   hasDepartmentMemberships = false,
+  isBoard = false,
+  isDepartmentLead = false,
 }: {
   permissions?: readonly string[];
   activeProduction?: ActiveProductionNavInfo;
   assignmentFocus?: AssignmentFocus;
   hasDepartmentMemberships?: boolean;
+  isBoard?: boolean;
+  isDepartmentLead?: boolean;
 }) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
@@ -275,8 +279,12 @@ export function MembersNav({
   );
 
   const { groups: permittedGroups, flat: permittedFlat } = useMemo(
-    () => filterMembersNavigationByPermissions(labelledGroups, permissions),
-    [labelledGroups, permissions],
+    () =>
+      filterMembersNavigationByPermissions(labelledGroups, permissions, {
+        isBoard,
+        isDepartmentLead,
+      }),
+    [labelledGroups, permissions, isBoard, isDepartmentLead],
   );
 
   const { groups, flat } = useMemo(() => {

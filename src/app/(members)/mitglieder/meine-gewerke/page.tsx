@@ -8,7 +8,7 @@ import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/members/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
+import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { sortMeasurements, type MeasurementType, type MeasurementUnit } from "@/data/measurements";
 
@@ -31,6 +31,7 @@ export default async function MeineGewerkePage() {
     session.user,
     "mitglieder.produktionen",
   );
+  const isBoard = hasRole(session.user, "board");
   if (!allowed) {
     return (
       <div className="space-y-6">
@@ -42,6 +43,20 @@ export default async function MeineGewerkePage() {
   const userId = session.user?.id;
   if (!userId) {
     notFound();
+  }
+
+  if (!isBoard) {
+    const isLead = await prisma.departmentMembership.count({
+      where: { userId, role: "lead" },
+    });
+
+    if (isLead === 0) {
+      return (
+        <div className="space-y-6">
+          <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>
+        </div>
+      );
+    }
   }
 
   const today = startOfToday();
@@ -125,6 +140,7 @@ export default async function MeineGewerkePage() {
   });
 
   const memberships = membershipsRaw
+    .filter((membership) => isBoard || membership.role === "lead")
     .sort((a, b) => a.department.name.localeCompare(b.department.name, "de", { sensitivity: "base" }))
     .map((membership) => membership as DepartmentMembershipWithDepartment);
 

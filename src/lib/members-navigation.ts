@@ -95,12 +95,17 @@ export function resolveAssignmentsGroupLabel(
 export function filterMembersNavigationByPermissions(
   groups: readonly MembersNavGroup[],
   permissions: readonly string[] | undefined,
+  options?: { isBoard?: boolean; isDepartmentLead?: boolean },
 ): MembersNavigationFilterResult {
   const permissionSet = permissions ? new Set(permissions) : null;
+  const isBoard = Boolean(options?.isBoard);
+  const isDepartmentLead = Boolean(options?.isDepartmentLead);
 
   const filteredGroups = groups
     .map((group) => {
       const items = group.items.filter((item) => {
+        if (item.requiresBoardRole && !isBoard) return false;
+        if (item.requiresDepartmentLead && !isDepartmentLead) return false;
         if (!item.permissionKey || !permissionSet) return true;
         return permissionSet.has(item.permissionKey);
       });

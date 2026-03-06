@@ -181,6 +181,8 @@ interface MembersAppShellProps {
   activeProduction?: { id: string; title: string | null; year: number };
   assignmentFocus: AssignmentFocus;
   hasDepartmentMemberships: boolean;
+  isBoard: boolean;
+  isDepartmentLead: boolean;
   contentLayout?: MembersContentLayoutConfig;
   globalFooter?: React.ReactNode;
   impersonation?: ImpersonationDetails | null;
@@ -352,6 +354,8 @@ export function MembersAppShell({
   activeProduction,
   assignmentFocus,
   hasDepartmentMemberships,
+  isBoard,
+  isDepartmentLead,
   contentLayout,
   globalFooter,
   impersonation,
@@ -444,6 +448,8 @@ export function MembersAppShell({
           activeProduction={activeProduction}
           assignmentFocus={assignmentFocus}
           hasDepartmentMemberships={hasDepartmentMemberships}
+          isBoard={isBoard}
+          isDepartmentLead={isDepartmentLead}
         />
         <SidebarRail />
       </Sidebar>
