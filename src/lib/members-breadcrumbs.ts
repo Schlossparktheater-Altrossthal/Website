@@ -5,7 +5,7 @@ import { findMembersNavigationItem } from "@/lib/members-navigation";
 export interface MembersBreadcrumbItem {
   id?: string;
   label: ReactNode;
-  href?: string | null;
+  href?: string;
   icon?: ReactNode;
   isCurrent?: boolean;
   ariaLabel?: string;
@@ -21,7 +21,10 @@ export function isMembersBreadcrumbItem(
 export function createMembersBreadcrumbItems(
   items: readonly (MembersBreadcrumbItem | null | undefined | false)[],
 ): MembersBreadcrumbItem[] {
-  return items.filter(isMembersBreadcrumbItem);
+  return items.filter(isMembersBreadcrumbItem).map((item) => ({
+    ...item,
+    href: item.href ?? undefined,
+  }));
 }
 
 export function membersNavigationBreadcrumb(
