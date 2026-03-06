@@ -271,7 +271,10 @@ export default async function DepartmentTodosPage() {
       } as const;
     }
 
-    return { href: undefined, label: "Team ansehen" } as const;
+    return {
+      href: TEAM_OVERVIEW_LINK,
+      label: "Zur Gewerke-Übersicht",
+    } as const;
   };
 
   const aggregatedAssignments = (
@@ -332,11 +335,9 @@ export default async function DepartmentTodosPage() {
                       </p>
                     ) : null}
                   </div>
-                  {link.href ? (
-                    <Button asChild size="sm" variant="ghost" className="h-8 self-start rounded-full px-3 text-xs font-semibold">
-                      <Link href={link.href}>{link.label}</Link>
-                    </Button>
-                  ) : null}
+                  <Button asChild size="sm" variant="ghost" className="h-8 self-start rounded-full px-3 text-xs font-semibold">
+                    <Link href={link.href}>{link.label}</Link>
+                  </Button>
                 </div>
               </li>
             );
@@ -364,14 +365,12 @@ export default async function DepartmentTodosPage() {
                       <p className="font-medium text-foreground">{entry.task.title}</p>
                       <p className="text-xs text-muted-foreground">{entry.department.name}</p>
                     </div>
-                    {link.href ? (
-                      <Link
-                        href={link.href}
-                        className="text-xs font-semibold text-primary transition hover:text-primary/80"
-                      >
-                        {link.label}
-                      </Link>
-                    ) : null}
+                    <Link
+                      href={link.href}
+                      className="text-xs font-semibold text-primary transition hover:text-primary/80"
+                    >
+                      {link.label}
+                    </Link>
                   </div>
                 </li>
               );
@@ -436,11 +435,9 @@ export default async function DepartmentTodosPage() {
                     </div>
                   </div>
                 </div>
-                {link.href ? (
-                  <Button asChild size="sm" variant="outline" className="rounded-full border-border/60 bg-background/80 px-4">
-                    <Link href={link.href}>{link.label}</Link>
-                  </Button>
-                ) : null}
+                <Button asChild size="sm" variant="outline" className="rounded-full border-border/60 bg-background/80 px-4">
+                  <Link href={link.href}>{link.label}</Link>
+                </Button>
               </header>
 
               <div className="grid gap-6 lg:grid-cols-2">
