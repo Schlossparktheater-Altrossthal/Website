@@ -291,6 +291,7 @@ export default async function ProduktionsGewerkePage({
       ),
     },
   ];
+  const hasSelection = selectedSlug !== null;
 
   return (
     <Dialog>
@@ -370,8 +371,61 @@ export default async function ProduktionsGewerkePage({
           </form>
         </DialogContent>
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          {viewDepartments.map((department) => {
+        <Card className="border-border/60 bg-background/80">
+          <CardContent className="space-y-4 p-4 sm:p-5">
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold text-foreground">Gewerk auswählen</h2>
+              <p className="text-xs text-muted-foreground">
+                Wähle „Allgemeines“ für den Gesamtüberblick oder fokussiere ein einzelnes Gewerk.
+              </p>
+            </div>
+            <nav
+              aria-label="Gewerkefilter"
+              className="flex flex-wrap items-center gap-2"
+            >
+              <Link
+                href="/mitglieder/produktionen/gewerke"
+                aria-current={hasSelection ? undefined : "page"}
+                className={[
+                  "inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  hasSelection
+                    ? "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+                    : "border-primary/40 bg-primary/10 text-foreground",
+                ].join(" ")}
+              >
+                Allgemeines
+              </Link>
+              {departments.map((department) => {
+                const isSelected = department.slug === selectedSlug;
+                return (
+                  <Link
+                    key={department.id}
+                    href={`/mitglieder/produktionen/gewerke?department=${department.slug}`}
+                    aria-current={isSelected ? "page" : undefined}
+                    className={[
+                      "inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      isSelected
+                        ? "border-primary/40 bg-primary/10 text-foreground"
+                        : "border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+                    ].join(" ")}
+                  >
+                    {department.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </CardContent>
+        </Card>
+
+        {viewDepartments.length === 0 ? (
+          <Card className="border-border/60 bg-background/80">
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Das ausgewählte Gewerk wurde nicht gefunden.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 xl:grid-cols-2">
+            {viewDepartments.map((department) => {
             const departmentMemberIds = department.memberships.map(
               (membership) => membership.user.id,
             );
@@ -929,8 +983,9 @@ export default async function ProduktionsGewerkePage({
                 </div>
               </Card>
             );
-          })}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </Dialog>
   );
