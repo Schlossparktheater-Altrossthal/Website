@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
-import { Sparkles, Trash2, Pencil } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { addDays, startOfToday, format } from "date-fns";
 import { de } from "date-fns/locale/de";
 
@@ -433,7 +433,6 @@ export default async function ProduktionsGewerkePage({
             const availableUsers = users.filter(
               (user) => !memberIdSet.has(user.id),
             );
-            const detailHref = `/mitglieder/produktionen/gewerke/${department.id}`;
             const taskCounts = tasksByDepartment.get(department.id) ?? {
               ...defaultTaskCounts,
             };
@@ -956,30 +955,6 @@ export default async function ProduktionsGewerkePage({
                     </details>
                   </CardContent>
 
-                  <div className="flex flex-col gap-3 border-t border-border/60 bg-background/60 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-foreground">
-                        Mission Control
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Aufgaben &amp; Termine findest du jetzt direkt im
-                        Gewerk-Hub.
-                      </p>
-                    </div>
-                    <Button
-                      asChild
-                      size="sm"
-                      className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground shadow-[0_18px_40px_-28px_rgba(99,102,241,0.9)] transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
-                    >
-                      <Link
-                        href={detailHref}
-                        title={`${department.name} öffnen`}
-                      >
-                        <Sparkles aria-hidden className="h-4 w-4" />
-                        <span>Gewerk-Hub öffnen</span>
-                      </Link>
-                    </Button>
-                  </div>
                 </div>
               </Card>
             );

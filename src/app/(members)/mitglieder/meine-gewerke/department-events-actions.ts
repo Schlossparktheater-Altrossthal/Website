@@ -125,8 +125,7 @@ export async function createDepartmentEventAction(input: {
     select: { id: true },
   });
 
-  revalidatePath(`/mitglieder/meine-gewerke/${parsed.data.departmentSlug}`);
-  revalidatePath("/mitglieder/meine-gewerke");
+    revalidatePath("/mitglieder/meine-gewerke");
 
   return { success: true as const, id: event.id };
 }
@@ -157,10 +156,6 @@ export async function deleteDepartmentEventAction(input: { eventId: string }) {
 
   await prisma.departmentEvent.delete({ where: { id: parsed.data.eventId } });
 
-  const slug = event.department?.slug;
-  if (slug) {
-    revalidatePath(`/mitglieder/meine-gewerke/${slug}`);
-  }
   revalidatePath("/mitglieder/meine-gewerke");
 
   return { success: true as const };

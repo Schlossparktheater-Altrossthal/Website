@@ -211,14 +211,16 @@ export default async function DepartmentTodosPage() {
   const departmentLinkFor = (department: DepartmentMembershipWithDepartment["department"]) => {
     if (canManageDepartments) {
       return {
-        href: `/mitglieder/produktionen/gewerke/${department.id}`,
+        href: department.slug
+          ? `/mitglieder/produktionen/gewerke?department=${encodeURIComponent(department.slug)}`
+          : undefined,
         label: "Gewerk-Hub öffnen",
       } as const;
     }
 
     if (department.slug) {
       return {
-        href: `/mitglieder/meine-gewerke/${encodeURIComponent(department.slug)}`,
+        href: `/mitglieder/meine-gewerke?department=${encodeURIComponent(department.id)}`,
         label: "Team ansehen",
       } as const;
     }
