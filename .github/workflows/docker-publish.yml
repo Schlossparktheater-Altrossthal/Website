@@ -104,7 +104,7 @@ jobs:
       - name: Extract Docker metadata (${{ matrix.environment }})
         if: steps.branch-filter.outputs.should_run == 'true'
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.WEBSITE_IMAGE_NAME }}
           tags: ${{ matrix.metadata_tags }}
@@ -142,7 +142,7 @@ jobs:
 
       - name: Extract Docker metadata (deploy-service)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.WEBSITE_IMAGE_NAME }}
           tags: |
