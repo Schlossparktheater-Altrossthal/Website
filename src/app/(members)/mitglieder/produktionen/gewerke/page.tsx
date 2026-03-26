@@ -1,6 +1,8 @@
-import { Building2, ClipboardList, LayoutTemplate, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Building2, ClipboardList, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getActiveProduction } from "@/lib/active-production";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
@@ -55,6 +57,28 @@ export default async function ProduktionsGewerkePage() {
       })
     : 0;
 
+  const departments = activeProduction
+    ? await prisma.department.findMany({
+        where: { productionId: activeProduction.id },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          _count: { select: { memberships: true, tasks: true } },
+        },
+        orderBy: { name: "asc" },
+      })
+    : [];
+
+  const doneTaskCount = activeProduction
+    ? await prisma.departmentTask.count({
+        where: {
+          department: { productionId: activeProduction.id },
+          status: "done",
+        },
+      })
+    : 0;
+
   const stats: OverviewStat[] = [
     { label: "Gewerke", value: departmentCount.toString(), hint: "Aktive Teams in der Produktion", icon: Building2 },
     { label: "Mitglieder", value: memberCount.toString(), hint: "Zugeordnete Personen", icon: Users },
@@ -65,7 +89,7 @@ export default async function ProduktionsGewerkePage() {
     <div className="space-y-6">
       <PageHeader
         title="Gewerke"
-        description="Grundlayout ist aktiv. Hier kannst du die neue Ansicht für Allgemeines aufbauen."
+        description="Verwalte alle Gewerke der aktiven Produktion inklusive Teamgröße, Aufgaben und direktem Zugriff auf die Detailansicht."
         breadcrumbs={breadcrumbs}
       />
 
@@ -98,12 +122,42 @@ export default async function ProduktionsGewerkePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LayoutTemplate className="h-4 w-4" aria-hidden />
-                Neue Ansicht vorbereiten
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">Dieser Bereich enthält absichtlich nur die Grunddaten und ein neutrales Layout als Ausgangspunkt für dein neues Design.</p>
+              <CardTitle>Gewerke der aktiven Produktion</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Abgeschlossen: {doneTaskCount} · Offen: {openTaskCount}
+              </p>
             </CardHeader>
+            <CardContent>
+              {departments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Für die aktive Produktion sind noch keine Gewerke angelegt.
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {departments.map((department) => (
+                    <li key={department.id} className="rounded-lg border border-border/60 bg-background/70 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1">
+                          <h2 className="text-base font-semibold text-foreground">{department.name}</h2>
+                          <p className="text-sm text-muted-foreground">
+                            {department.description?.trim() || "Keine Beschreibung hinterlegt."}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {department._count.memberships} Mitglieder · {department._count.tasks} Aufgaben
+                          </p>
+                        </div>
+                        <Button asChild variant="outline" size="sm" className="sm:ml-4">
+                          <Link href={`/mitglieder/produktionen/gewerke/${department.id}`}>
+                            Öffnen
+                            <ArrowRight className="h-4 w-4" aria-hidden />
+                          </Link>
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
           </Card>
         </>
       )}
