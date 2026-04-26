@@ -260,6 +260,16 @@ export const authOptions = {
       async sendVerificationRequest({ identifier, url }) {
         if (!process.env.EMAIL_SERVER || process.env.NODE_ENV !== "production") {
           console.log("[DEV Magic Link]", identifier, url);
+        } else {
+          const { createTransport } = await import("nodemailer");
+          const transport = createTransport(process.env.EMAIL_SERVER);
+          await transport.sendMail({
+            to: identifier,
+            from: process.env.EMAIL_FROM,
+            subject: "Dein Login-Link für das Sommertheater",
+            text: `Klicke auf diesen Link um dich einzuloggen:\n\n${url}\n\nDer Link ist nur kurze Zeit gültig.`,
+            html: `<p>Klicke auf diesen Link um dich einzuloggen:</p><p><a href="${url}">${url}</a></p><p>Der Link ist nur kurze Zeit gültig.</p>`,
+          });
         }
       },
     }),
