@@ -258,6 +258,7 @@ export const authOptions = {
       server: process.env.EMAIL_SERVER,
       from: process.env.EMAIL_FROM,
       async sendVerificationRequest({ identifier, url }) {
+        console.log("[MAGIC LINK REQUEST]", identifier, "EMAIL_SERVER set:", !!process.env.EMAIL_SERVER, "NODE_ENV:", process.env.NODE_ENV);
         if (!process.env.EMAIL_SERVER || process.env.NODE_ENV !== "production") {
           console.log("[DEV Magic Link]", identifier, url);
         } else {
