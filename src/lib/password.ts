@@ -31,9 +31,9 @@ async function loadBcrypt(): Promise<BcryptModule> {
   return cachedBcrypt;
 }
 
-export async function hashPassword(password: string) {
+export async function hashPassword(password: string, saltRounds = 10) {
   const bcrypt = await loadBcrypt();
-  return bcrypt.hash(password, 10);
+  return bcrypt.hash(password, saltRounds);
 }
 
 export async function verifyPassword(password: string, hash: string) {
