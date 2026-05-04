@@ -265,6 +265,7 @@ model User {
   lastName  String?
   name      String?
   email     String?  @unique
+  emailVerified DateTime?
   role      Role     @default(member)
   passwordHash String?
   createdAt DateTime @default(now())
