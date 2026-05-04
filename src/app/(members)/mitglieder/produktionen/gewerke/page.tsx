@@ -37,13 +37,12 @@ export default async function ProduktionsGewerkePage() {
   const breadcrumbs = [membersNavigationBreadcrumb(currentPath)];
 
   const departmentCount = activeProduction
-    ? await prisma.department.count({ where: { productionId: activeProduction.id } })
+    ? await prisma.department.count()
     : 0;
 
   const openTaskCount = activeProduction
     ? await prisma.departmentTask.count({
         where: {
-          department: { productionId: activeProduction.id },
           status: { in: ["todo", "doing"] },
         },
       })
@@ -51,15 +50,12 @@ export default async function ProduktionsGewerkePage() {
 
   const memberCount = activeProduction
     ? await prisma.departmentMembership.count({
-        where: {
-          department: { productionId: activeProduction.id },
-        },
+        where: {},
       })
     : 0;
 
   const departments = activeProduction
     ? await prisma.department.findMany({
-        where: { productionId: activeProduction.id },
         select: {
           id: true,
           name: true,
@@ -73,7 +69,6 @@ export default async function ProduktionsGewerkePage() {
   const doneTaskCount = activeProduction
     ? await prisma.departmentTask.count({
         where: {
-          department: { productionId: activeProduction.id },
           status: "done",
         },
       })
