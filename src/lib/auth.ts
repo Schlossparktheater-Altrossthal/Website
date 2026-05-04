@@ -260,7 +260,20 @@ export const authOptions = {
       async sendVerificationRequest({ identifier, url }) {
         if (!process.env.EMAIL_SERVER || process.env.NODE_ENV !== "production") {
           console.log("[DEV Magic Link]", identifier, url);
+          return;
         }
+        console.log("[MAGIC LINK REQUEST]", identifier);
+        // send mail via nodemailer using process.env.EMAIL_SERVER
+        const { createTransport } = await import("nodemailer");
+        const transport = createTransport(process.env.EMAIL_SERVER);
+        await transport.sendMail({
+          to: identifier,
+          from: process.env.EMAIL_FROM,
+          subject: "Dein Magic Link",
+          text: `Hier ist dein Login-Link:\n\n${url}\n\nDer Link ist 24 Stunden gültig.`,
+          html: `<p>Hier ist dein Login-Link:</p><p><a href="${url}">${url}</a></p><p>Der Link ist 24 Stunden gültig.</p>`,
+        });
+        console.log("[MAGIC LINK SENT]", identifier);
       },
     }),
     credentialsProvider,
