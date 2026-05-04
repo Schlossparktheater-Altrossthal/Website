@@ -68,3 +68,5 @@ export async function POST(request: NextRequest, context: NextAuthContext) {
   return safeHandle(request, context);
 }
 
+
+// CI trigger marker: update path under src/** for docker-publish workflow.
