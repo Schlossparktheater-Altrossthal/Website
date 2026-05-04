@@ -27,6 +27,15 @@ on:
       - 'scripts/**'
       - 'deploy-service/**'
   workflow_dispatch:
+    inputs:
+      target_branch:
+        description: Branch for matrix selection
+        required: true
+        type: choice
+        default: main
+        options:
+          - main
+          - production
 
 env:
   REGISTRY: docker.io
@@ -70,7 +79,7 @@ jobs:
       - name: Check branch compatibility
         id: branch-filter
         env:
-          CURRENT_BRANCH: ${{ github.ref_name }}
+          CURRENT_BRANCH: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target_branch || github.ref_name }}
           MATRIX_BRANCH: ${{ matrix.branch }}
         run: |
           if [ "$CURRENT_BRANCH" != "$MATRIX_BRANCH" ]; then
@@ -88,6 +97,8 @@ jobs:
       - name: Checkout repository
         if: steps.branch-filter.outputs.should_run == 'true'
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target_branch || github.ref_name }}
 
       - name: Set up Docker Buildx
         if: steps.branch-filter.outputs.should_run == 'true'
