@@ -25,13 +25,15 @@ export function DepartmentSelect({ options, selectedDepartmentId }: DepartmentSe
       className="flex flex-wrap items-center gap-2 overflow-x-auto rounded-full border border-border/60 bg-background/80 p-1 text-muted-foreground shadow-inner ring-1 ring-primary/10"
     >
       {navOptions.map((option) => {
-        const href = option.value ? `${pathname}?department=${encodeURIComponent(option.value)}` : pathname;
+        const href = option.value
+          ? `${pathname ?? ""}?department=${encodeURIComponent(option.value)}`
+          : (pathname ?? "/");
         const isActive = option.value ? selectedDepartmentId === option.value : !selectedDepartmentId;
 
         return (
           <Link
             key={option.value || "none"}
-            href={href}
+            href={href ?? "/"}
             aria-current={isActive ? "page" : undefined}
             className={cn(
               "inline-flex min-w-0 items-center justify-center rounded-full px-3.5 py-2 text-xs font-semibold uppercase tracking-wide transition",
