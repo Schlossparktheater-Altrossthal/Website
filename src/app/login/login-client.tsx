@@ -117,12 +117,12 @@ export function LoginPageClient() {
       const res: SignInResponse | undefined = await signIn("email", {
         email: values.email,
         redirect: false,
-        callbackUrl: "/mitglieder",
+        callbackUrl: "/reset-password",
       });
       if (res?.error) {
         toast.error(res.error || "E-Mail Versand fehlgeschlagen");
       } else {
-        toast.success("Magic Link gesendet – bitte E-Mail prüfen.");
+        toast.success("Link gesendet – bitte E-Mail prüfen.");
         setMagicDialogOpen(false);
       }
     } catch {
@@ -207,13 +207,13 @@ export function LoginPageClient() {
                 <div className="space-y-1">
                   <p className="text-sm font-semibold">Kein Passwort zur Hand?</p>
                   <p className="text-sm text-muted-foreground">
-                    Lass dir einen einmaligen Login-Link an deine E-Mail senden.
+                    Lass dir einen Link zum Zurücksetzen deines Passworts senden.
                   </p>
                 </div>
               </div>
               <DialogTrigger asChild>
                 <Button type="button" size="sm" variant="secondary" onClick={handleOpenMagic}>
-                  Magic Link
+                  Passwort vergessen
                 </Button>
               </DialogTrigger>
             </div>
@@ -253,9 +253,9 @@ export function LoginPageClient() {
 
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Login-Link anfordern</DialogTitle>
+            <DialogTitle>Passwort zurücksetzen</DialogTitle>
             <DialogDescription>
-              Wir senden dir einen einmaligen Login-Link an deine E-Mail-Adresse. Der Link ist nur kurze Zeit gültig.
+              Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link zum Zurücksetzen deines Passworts.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -275,7 +275,7 @@ export function LoginPageClient() {
                 Abbrechen
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Senden…" : "Login-Link schicken"}
+                {loading ? "Senden…" : "Link senden"}
               </Button>
             </DialogFooter>
           </form>

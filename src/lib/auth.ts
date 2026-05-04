@@ -270,9 +270,19 @@ export const authOptions = {
         await transport.sendMail({
           to: identifier,
           from: process.env.EMAIL_FROM,
-          subject: "Dein Magic Link",
-          text: `Hier ist dein Login-Link:\n\n${url}\n\nDer Link ist 24 Stunden gültig.`,
-          html: `<p>Hier ist dein Login-Link:</p><p><a href="${url}">${url}</a></p><p>Der Link ist 24 Stunden gültig.</p>`,
+          subject: "Passwort zurücksetzen – Sommertheater Altroßthal",
+          text: `Sommertheater Altroßthal\n\nPasswort zurücksetzen\n\nKlicke auf den Link, um ein neues Passwort festzulegen. Der Link ist 24 Stunden gültig.\n\n${url}\n\nFalls du diese E-Mail nicht angefordert hast, kannst du sie ignorieren.`,
+          html: `
+            <div style="background:#0d1117;padding:32px 16px;font-family:Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#ffffff;">
+              <div style="max-width:560px;margin:0 auto;background:#111827;border:1px solid #1f2937;border-radius:16px;padding:32px;">
+                <p style="margin:0 0 20px 0;font-size:24px;line-height:1.3;font-weight:700;color:#f97316;">Sommertheater Altroßthal</p>
+                <h1 style="margin:0 0 16px 0;font-size:28px;line-height:1.2;font-weight:700;color:#ffffff;">Passwort zurücksetzen</h1>
+                <p style="margin:0 0 28px 0;font-size:16px;line-height:1.6;color:#ffffff;">Klicke auf den Button unten, um ein neues Passwort festzulegen. Der Link ist 24 Stunden gültig.</p>
+                <a href="${url}" style="display:inline-block;background:#f97316;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;padding:14px 24px;border-radius:10px;">Neues Passwort festlegen</a>
+                <p style="margin:28px 0 0 0;font-size:13px;line-height:1.5;color:#d1d5db;">Falls du diese E-Mail nicht angefordert hast, kannst du sie ignorieren.</p>
+              </div>
+            </div>
+          `,
         });
         console.log("[MAGIC LINK SENT]", identifier);
       },
