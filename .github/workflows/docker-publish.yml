@@ -21,6 +21,7 @@ on:
       - 'vitest.config.ts'
       - 'components.json'
       - 'src/**'
+      - 'pages/**'
       - 'public/**'
       - 'prisma/**'
       - 'realtime-server/**'
