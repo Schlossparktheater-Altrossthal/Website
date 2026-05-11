@@ -39,20 +39,12 @@ export function SiteFooter({ buildInfo, isDevBuild, siteTitle }: SiteFooterProps
               </p>
             </div>
 
-            <div className="grid gap-4 text-sm text-muted-foreground md:grid-cols-2">
+            <div className="grid gap-4 text-sm text-muted-foreground">
               <address className="not-italic">
                 BSZ für Agrarwirtschaft und Ernährung Dresden
                 <br /> Altroßthal 1
                 <br /> 01169 Dresden
               </address>
-              <div>
-                <p className="font-medium text-foreground">Kontakt</p>
-                <p>
-                  <a className="hover:underline" href="mailto:hallo@sommertheater.de">
-                    hallo@sommertheater.de
-                  </a>
-                </p>
-              </div>
             </div>
 
             <div className="mt-6 flex flex-col gap-6 sm:mt-8 sm:flex-row sm:items-start sm:gap-8">
