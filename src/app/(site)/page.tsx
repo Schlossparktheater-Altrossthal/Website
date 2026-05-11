@@ -1,8 +1,6 @@
-import { Card } from "@/components/ui/card";
 import { Hero } from "@/components/hero";
 import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
-import { TextLink } from "@/components/ui/text-link";
 import { getHeroImages, pickHeroForNow } from "@/lib/hero-images";
 import { HomepageCountdown } from "./_components/homepage-countdown";
 import {
@@ -41,7 +39,7 @@ export default async function Home() {
     {
       question: "Wann startet der Ticketverkauf?",
       answer:
-        "Der genaue Starttermin wird in Kürze bekannt gegeben. Folge uns auf Social Media, damit du den Verkaufsbeginn und mögliche Frühbucheraktionen nicht verpasst.",
+        "Der Ticketverkauf wird über den Instagram-Kanal der Schule bekanntgegeben. Folge uns dort, um nichts zu verpassen.",
     },
     {
       question: "Benötige ich Vorkenntnisse, um das Stück zu genießen?",
@@ -49,14 +47,18 @@ export default async function Home() {
         "Nein – unsere Inszenierungen sind so konzipiert, dass alle Gäste ohne Vorkenntnisse direkt eintauchen können. Dank moderner Regie und einer leicht zugänglichen Handlung finden alle schnell in die Geschichte hinein.",
     },
     {
-      question: "Gibt es Ermäßigungen für Gruppen oder Familien?",
+      question: "Wo findet die Aufführung statt?",
       answer:
-        "Ja, wir planen besondere Konditionen für Gruppen ab zehn Personen sowie familienfreundliche Pakete. Alle Details geben wir rechtzeitig vor dem Vorverkaufsstart bekannt.",
+        "Die Vorstellung findet im Schlosspark Altroßthal statt. Adresse: BSZ für Agrarwirtschaft und Ernährung Dresden, Altroßthal 1, 01169 Dresden.",
     },
     {
-      question: "Wie kann ich mich kreativ einbringen oder ehrenamtlich helfen?",
+      question: "Wie lange dauert die Vorstellung?",
       answer:
-        "Wir freuen uns immer über helfende Hände und kreative Köpfe – ob beim Bühnenbau, in der Öffentlichkeitsarbeit oder als Gastspielpartner. Schreib uns einfach eine Nachricht über das Kontaktformular, und wir melden uns bei dir.",
+        "Die Vorstellung dauert durchschnittlich 1,5 Stunden und beinhaltet eine Pause.",
+    },
+    {
+      question: "Gibt es eine Altersempfehlung?",
+      answer: "Das Stück richtet sich an alle Altersgruppen.",
     },
   ];
 
@@ -85,34 +87,7 @@ export default async function Home() {
                 initialNow={countdownInitialNow}
               />
             </div>
-            <Text
-              variant="bodyLg"
-              align="center"
-              tone="muted"
-              className="max-w-xl text-balance"
-            >
-              Ein einziges Wochenende. Ein Sommer. Ein Stück.
-            </Text>
           </section>
-          <Card className="border-border/60 bg-card/70 p-0 shadow-md backdrop-blur">
-            <div className="space-y-3 px-5 py-6 text-center sm:px-6 sm:text-left">
-              <Text
-                variant="eyebrow"
-                uppercase
-                tone="muted"
-                className="text-[0.65rem] tracking-[0.2em] text-muted-foreground sm:text-[0.7rem] sm:tracking-[0.24em]"
-              >
-                Teaser-Hinweis
-              </Text>
-              <Text
-                variant="bodyLg"
-                align="center"
-                className="text-balance text-muted-foreground sm:text-left"
-              >
-                Folge den Spuren im Nebel…
-              </Text>
-            </div>
-          </Card>
           <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--primary)_35%,transparent),_transparent_60%),radial-gradient(circle_at_bottom,_color-mix(in_oklab,var(--info)_25%,transparent),_transparent_55%)]"
@@ -130,9 +105,6 @@ export default async function Home() {
                 <Heading level="h2" align="center">
                   Häufig gestellte Fragen
                 </Heading>
-                <Text variant="bodyLg" align="center" tone="muted">
-                  Die wichtigsten Antworten rund um das Sommertheater – kompakt und jederzeit nachlesbar.
-                </Text>
               </div>
               <div className="space-y-4">
                 {faqs.map((faq) => (
@@ -164,15 +136,6 @@ export default async function Home() {
                     </Text>
                   </details>
                 ))}
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-background/70 px-6 py-5 text-sm text-muted-foreground backdrop-blur">
-                <Text>
-                  Noch Fragen offen? Schreib uns jederzeit an
-                  <TextLink className="ml-2" href="mailto:hallo@sommertheater.de" variant="accent" weight="semibold">
-                    hallo@sommertheater.de
-                  </TextLink>
-                  – wir freuen uns auf deine Nachricht!
-                </Text>
               </div>
             </div>
           </section>
