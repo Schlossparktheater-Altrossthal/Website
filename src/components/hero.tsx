@@ -81,12 +81,12 @@ export function Hero({ images }: { images: string[] }) {
                       aria-hidden="true"
                       className="pointer-events-none absolute -inset-[4rem] -z-10 bg-[conic-gradient(from_110deg_at_50%_50%,rgba(59,130,246,0.22),rgba(236,72,153,0.18),rgba(16,185,129,0.2),rgba(59,130,246,0.22))] opacity-60 blur-[110px]"
                     />
-                    <span className="relative text-[clamp(2.3rem,5.6vw,4.6rem)] uppercase tracking-[0.12em] leading-[0.94]">
+                    <span className="relative text-[clamp(1.8rem,8vw,5rem)] uppercase tracking-[0.12em] leading-[0.94]">
                       <span className="bg-gradient-to-br from-white via-white/95 to-white/70 bg-clip-text text-transparent drop-shadow-[0_22px_48px_rgba(5,8,22,0.65)]">
                         Das Geheimnis
                       </span>
                     </span>
-                    <span className="relative text-[clamp(2rem,4.8vw,3.8rem)] uppercase tracking-[0.26em] leading-[0.92] text-white/85">
+                    <span className="relative text-[clamp(1.5rem,7vw,4.5rem)] uppercase tracking-[0.26em] leading-[0.92] text-white/85">
                       <span className="bg-gradient-to-r from-white/80 via-white to-white/65 bg-clip-text text-transparent drop-shadow-[0_18px_42px_rgba(5,8,22,0.58)]">
                         im Schlosspark
                       </span>
@@ -107,7 +107,11 @@ export function Hero({ images }: { images: string[] }) {
                 Ein Sommer. Ein Wochenende. Ein einziges Stück – verborgen zwischen Licht und Laub.
               </Text>
               <div className="flex flex-col items-center justify-center gap-4 md:flex-row md:gap-5">
-                <Button asChild size="xl" className="px-8 py-5 text-base font-semibold tracking-wide md:px-10 md:text-lg">
+                <Button
+                  asChild
+                  size="xl"
+                  className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold tracking-wide"
+                >
                   <Link href="/mystery" title="Geheimnis entdecken">
                     <Sparkles aria-hidden className="h-5 w-5" />
                     <span>Das Geheimnis entdecken</span>
@@ -117,7 +121,7 @@ export function Hero({ images }: { images: string[] }) {
                   variant="outline"
                   asChild
                   size="xl"
-                  className="border-white/50 bg-white/10 px-8 py-5 text-base font-semibold text-white shadow-lg backdrop-blur md:px-10 md:text-lg"
+                  className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] border-white/50 bg-white/10 px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold text-white shadow-lg backdrop-blur"
                 >
                   <Link href="/chronik" title="Chronik öffnen">
                     <BookOpen aria-hidden className="h-5 w-5" />

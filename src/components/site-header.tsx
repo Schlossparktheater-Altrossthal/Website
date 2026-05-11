@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
@@ -99,6 +100,8 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
   const isHomePage = pathname === "/";
 
   const navigationItems = useMemo(() => primaryNavigation, []);
@@ -208,7 +211,8 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
             href="/"
             title={siteTitle}
           >
-            {siteTitle}
+            <span className="hidden md:inline">{siteTitle}</span>
+            <span className="md:hidden">Sommertheater</span>
           </Link>
 
           <div className="hidden items-center gap-[var(--space-md)] md:flex">
@@ -315,6 +319,16 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
               </Link>
             );
           })}
+          {!isAuthenticated ? (
+            <Link
+              onClick={() => setOpen(false)}
+              style={drawerLinkPaddingStyles}
+              className="mt-2 block border-t border-border/60 pt-3 font-medium text-foreground/90 transition-colors duration-200 hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              href="/login"
+            >
+              Login
+            </Link>
+          ) : null}
         </div>
 
         <div className="mt-auto text-xs text-muted-foreground">
@@ -326,4 +340,3 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
     </Sheet>
   );
 }
-
