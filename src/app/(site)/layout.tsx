@@ -113,7 +113,12 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         )}
       </main>
       {!showMaintenanceNotice ? (
-        <SiteFooter buildInfo={buildInfo} isDevBuild={isDevBuild} siteTitle={siteTitle} />
+        <SiteFooter
+          buildInfo={buildInfo}
+          isDevBuild={isDevBuild}
+          siteTitle={siteTitle}
+          isAuthenticated={Boolean(session?.user)}
+        />
       ) : null}
     </div>
   );

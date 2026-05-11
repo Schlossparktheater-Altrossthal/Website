@@ -42,11 +42,6 @@ export default async function Home() {
         "Der Ticketverkauf wird über den Instagram-Kanal der Schule bekanntgegeben. Folge uns dort, um nichts zu verpassen.",
     },
     {
-      question: "Benötige ich Vorkenntnisse, um das Stück zu genießen?",
-      answer:
-        "Nein – unsere Inszenierungen sind so konzipiert, dass alle Gäste ohne Vorkenntnisse direkt eintauchen können. Dank moderner Regie und einer leicht zugänglichen Handlung finden alle schnell in die Geschichte hinein.",
-    },
-    {
       question: "Wo findet die Aufführung statt?",
       answer:
         "Die Vorstellung findet im Schlosspark Altroßthal statt. Adresse: BSZ für Agrarwirtschaft und Ernährung Dresden, Altroßthal 1, 01169 Dresden.",
@@ -116,20 +111,18 @@ export default async function Home() {
                       <Text asChild variant="bodyLg" weight="semibold">
                         <span>{faq.question}</span>
                       </Text>
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border/50 bg-background/70 text-primary transition duration-300 group-open:rotate-180">
-                        <svg
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="m6 9 6 6 6-6" />
-                        </svg>
-                      </span>
+                      <svg
+                        className="h-4 w-4 text-orange-500 transition duration-300 group-open:rotate-180"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
                     </summary>
                     <Text tone="muted" className="mt-4 leading-relaxed">
                       {faq.answer}

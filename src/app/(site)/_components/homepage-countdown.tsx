@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 
 import { Countdown } from "@/components/countdown";
 import { useFrontendEditing } from "@/components/frontend-editing/frontend-editing-provider";
@@ -92,7 +93,8 @@ export function HomepageCountdown({
   initialNow,
 }: HomepageCountdownProps) {
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
-  const canEdit = hasFeature("site.countdown");
+  const { status } = useSession();
+  const canEdit = status === "authenticated" && hasFeature("site.countdown");
   const editorOpen = canEdit && activeFeature === "site.countdown";
 
   const [settings, setSettings] = useState<CountdownSettingsState>(() => ({

@@ -105,13 +105,13 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
     { label: "Sekunden", value: state.seconds },
   ];
 
-  const containerClassName = cn("grid w-full grid-cols-2 gap-3 sm:grid-cols-4", className);
+  const containerClassName = cn("grid w-full grid-cols-2 gap-[clamp(0.4rem,1.5vw,1rem)] sm:grid-cols-4", className);
   const cellClassName =
     variant === "highlight"
-      ? "rounded-lg border border-primary/50 bg-primary/10 px-4 py-3 text-center shadow-sm text-primary"
-      : "rounded-lg border border-border bg-card px-4 py-3 text-center shadow-sm";
+      ? "rounded-lg border border-primary/50 bg-primary/10 px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center text-primary shadow-sm"
+      : "rounded-lg border border-border bg-card px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center shadow-sm";
   const numberClassName = cn(
-    "text-3xl font-semibold tabular-nums sm:text-4xl",
+    "text-[clamp(1.5rem,6vw,3.5rem)] font-semibold tabular-nums",
     variant === "highlight" ? "text-primary" : undefined,
   );
   const labelTone = variant === "highlight" ? "primary" : "muted";
@@ -124,7 +124,10 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
           <Text
             variant="small"
             tone={labelTone}
-            className={cn("mt-1 uppercase tracking-[0.2em]", variant === "highlight" ? "text-primary/80" : undefined)}
+            className={cn(
+              "mt-1 text-[clamp(0.6rem,1.5vw,0.85rem)] uppercase tracking-[0.2em]",
+              variant === "highlight" ? "text-primary/80" : undefined,
+            )}
           >
             {part.label}
           </Text>
