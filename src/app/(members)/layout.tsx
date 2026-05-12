@@ -155,6 +155,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               globalFooter={
                 <SiteFooter
                   buildInfo={buildInfo}
+                  isAuthenticated={true}
                   isDevBuild={isDevBuild}
                   siteTitle={siteTitle}
                 />
