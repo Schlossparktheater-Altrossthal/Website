@@ -111,7 +111,7 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
     { label: "Sekunden", value: state.seconds },
   ];
 
-  const containerClassName = cn("mx-auto grid w-full grid-cols-2 gap-[clamp(0.4rem,1.5vw,1rem)] text-center md:grid-cols-2 lg:grid-cols-4", className);
+  const containerClassName = cn("mx-auto grid w-full grid-cols-2 gap-[clamp(0.4rem,1.5vw,1rem)] text-center md:grid-cols-4", className);
   const cellClassName =
     variant === "highlight"
       ? "rounded-lg border border-primary/50 bg-primary/10 px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center text-primary shadow-sm"
@@ -131,7 +131,7 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
             variant="small"
             tone={labelTone}
             className={cn(
-              "mt-1 text-center text-[clamp(0.6rem,1.5vw,0.85rem)] uppercase tracking-[0.2em] text-primary-foreground",
+              "mt-1 w-full text-center text-[clamp(0.6rem,1.5vw,0.85rem)] uppercase tracking-[0.2em] text-primary-foreground",
               variant === "highlight" ? "text-primary/80" : undefined,
             )}
           >

@@ -106,7 +106,7 @@ export default async function Home() {
                 >
                   FAQ
                 </Badge>
-                <Heading level="h2" align="center">
+                <Heading level="h2" align="center" className="text-[clamp(2rem,5.5vw,3.4rem)] font-extrabold">
                   Häufig gestellte Fragen
                 </Heading>
               </div>
