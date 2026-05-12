@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/typography";
@@ -98,6 +98,9 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
     return <Text tone="destructive">Ungültiges Datum</Text>;
   }
 
+  const [loaded, setLoaded] = useState(false);
+  const prevRef = useRef({ days: -1, hours: -1, minutes: -1, seconds: -1 });
+  useEffect(() => { setLoaded(true); }, []);
   const timeParts = [
     { label: "Tage", value: state.days },
     { label: "Stunden", value: state.hours },
@@ -105,19 +108,19 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
     { label: "Sekunden", value: state.seconds },
   ];
 
-  const containerClassName = cn("grid w-full grid-cols-2 gap-[clamp(0.4rem,1.5vw,1rem)] sm:grid-cols-4", className);
+  const containerClassName = cn("mx-auto grid w-full grid-cols-2 gap-[clamp(0.4rem,1.5vw,1rem)] text-center md:grid-cols-2 lg:grid-cols-4", className);
   const cellClassName =
     variant === "highlight"
       ? "rounded-lg border border-primary/50 bg-primary/10 px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center text-primary shadow-sm"
-      : "rounded-lg border border-border bg-card px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center shadow-sm";
+      : "rounded-lg border border-border bg-card px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center shadow-[0_0_12px_rgba(var(--color-orange-rgb),0.25)]";
   const numberClassName = cn(
-    "text-[clamp(1.5rem,6vw,3.5rem)] font-semibold tabular-nums",
+    "text-[clamp(1.5rem,6vw,3.5rem)] font-semibold tabular-nums text-primary transition-transform duration-300",
     variant === "highlight" ? "text-primary" : undefined,
   );
   const labelTone = variant === "highlight" ? "primary" : "muted";
 
   return (
-    <div className={containerClassName} aria-live="polite">
+    <div className={cn(containerClassName, loaded ? "animate-in fade-in slide-in-from-bottom-2 duration-700" : "opacity-0")} aria-live="polite">
       {timeParts.map((part) => (
         <div key={part.label} className={cellClassName}>
           <div className={numberClassName}>{formatNumber(part.value)}</div>
@@ -125,7 +128,7 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
             variant="small"
             tone={labelTone}
             className={cn(
-              "mt-1 text-[clamp(0.6rem,1.5vw,0.85rem)] uppercase tracking-[0.2em]",
+              "mt-1 text-[clamp(0.6rem,1.5vw,0.85rem)] uppercase tracking-[0.2em] text-primary-foreground",
               variant === "highlight" ? "text-primary/80" : undefined,
             )}
           >

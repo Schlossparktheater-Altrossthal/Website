@@ -632,9 +632,22 @@ model Clue {
 model HomepageCountdown {
   id              String   @id @default("public")
   countdownTarget DateTime?
+  termine         Json?
+  nachSommerText  String   @default("Bis zum nächsten Sommer!")
   disabled        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model HomepageFlyer {
+  id           String   @id @default("public")
+  aktiv        Boolean  @default(false)
+  titel        String?
+  beschreibung String?
+  bildData     Bytes?
+  bildMimeType String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model MysterySettings {
