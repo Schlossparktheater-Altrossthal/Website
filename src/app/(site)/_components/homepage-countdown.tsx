@@ -69,13 +69,19 @@ export function HomepageCountdown(props: HomepageCountdownProps) {
   const { status } = useSession();
   const canEdit = status === "authenticated" && hasFeature("site.countdown");
   const editorOpen = canEdit && activeFeature === "site.countdown";
-  const [settings, setSettings] = useState<CountdownSettingsState>(() => ({ ...props }));
+  const [settings, setSettings] = useState<CountdownSettingsState>(() => ({
+    ...props,
+    countdownTarget: props.effectiveCountdownTarget,
+  }));
   const [formDisabled, setFormDisabled] = useState(() => props.disabled);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => { setSettings({ ...props }); setFormDisabled(props.disabled); }, [props]);
+  useEffect(() => {
+    setSettings({ ...props, countdownTarget: props.effectiveCountdownTarget });
+    setFormDisabled(props.disabled);
+  }, [props]);
   const nextTermin = useMemo(() => getNextTermin(settings.termine), [settings.termine]);
   const countdownActive = !settings.disabled;
   const allDone = countdownActive && !nextTermin;
