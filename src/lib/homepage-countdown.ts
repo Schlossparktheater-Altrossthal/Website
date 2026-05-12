@@ -41,7 +41,7 @@ export function resolveHomepageCountdown(record: HomepageCountdownRecord) {
     updatedAt: record?.updatedAt ?? null,
     hasCustomCountdown: storedCountdown !== null,
     disabled,
-    termine: buildFourTermine(record?.termine, storedCountdown),
+    termine: buildFourTermine(record?.termine ?? [], storedCountdown),
     nachSommerText: record?.nachSommerText ?? "Bis zum nächsten Sommer!",
   } as const;
 }
