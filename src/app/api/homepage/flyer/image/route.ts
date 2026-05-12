@@ -8,7 +8,7 @@ const MAX_SIZE = 5 * 1024 * 1024;
 export async function GET() {
   const flyer = await readHomepageFlyer();
   if (!flyer?.bildData || !flyer.bildMimeType) return new NextResponse(null, { status: 404 });
-  return new NextResponse(flyer.bildData, { headers: { "Content-Type": flyer.bildMimeType } });
+  return new NextResponse(Buffer.from(flyer.bildData), { headers: { "Content-Type": flyer.bildMimeType } });
 }
 
 export async function POST(request: Request) {
