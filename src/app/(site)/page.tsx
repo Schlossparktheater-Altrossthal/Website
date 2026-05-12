@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
 import { getHeroImages, pickHeroForNow } from "@/lib/hero-images";
 import { HomepageCountdown } from "./_components/homepage-countdown";
+import { HomepageFlyer } from "@/components/site/homepage-flyer";
+import { readHomepageFlyer } from "@/lib/homepage-flyer";
 import {
   DEFAULT_HOMEPAGE_COUNTDOWN_ISO,
   readHomepageCountdown,
@@ -24,6 +26,8 @@ export default async function Home() {
     }
   }
   const resolvedCountdown = resolveHomepageCountdown(countdownRecord);
+  let flyer = null;
+  if (hasDatabase) { try { flyer = await readHomepageFlyer(); } catch {} }
   const countdownInitialNow = Date.now();
   const effectiveCountdownTargetIso = resolvedCountdown.effectiveCountdownTarget.toISOString();
   const initialCountdownTargetIso = resolvedCountdown.countdownTarget
@@ -83,6 +87,7 @@ export default async function Home() {
               />
             </div>
           </section>
+          <HomepageFlyer aktiv={flyer?.aktiv ?? false} titel={flyer?.titel ?? null} beschreibung={flyer?.beschreibung ?? null} hasBild={Boolean(flyer?.bildData && flyer?.bildMimeType)} />
           <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--primary)_35%,transparent),_transparent_60%),radial-gradient(circle_at_bottom,_color-mix(in_oklab,var(--info)_25%,transparent),_transparent_55%)]"
