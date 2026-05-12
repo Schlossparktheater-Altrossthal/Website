@@ -17,6 +17,18 @@ function parseTermineJson(value: HomepageCountdown["termine"]): HomepageCountdow
   return value.filter((item): item is HomepageCountdownTermin => !!item && typeof item === "object") as HomepageCountdownTermin[];
 }
 
+
+function buildFourTermine(value: HomepageCountdown["termine"], countdownTarget: Date | null): HomepageCountdownTermin[] {
+  const parsed = parseTermineJson(value);
+  const base = Array.from({ length: 4 }).map((_, index) => ({ datum: "", uhrzeit: "", label: `Vorstellung ${index + 1}` }));
+  parsed.slice(0,4).forEach((item, index) => { base[index] = { datum: item.datum ?? "", uhrzeit: item.uhrzeit ?? "", label: item.label ?? `Vorstellung ${index + 1}` }; });
+  if ((!base[0].datum || !base[0].uhrzeit) && countdownTarget) {
+    const iso = countdownTarget.toISOString();
+    base[0] = { datum: iso.slice(0,10), uhrzeit: iso.slice(11,16), label: "Vorstellung 1" };
+  }
+  return base;
+}
+
 export function resolveHomepageCountdown(record: HomepageCountdownRecord) {
   const defaultCountdown = getDefaultCountdownDate();
   const storedCountdown = record?.countdownTarget ?? null;
@@ -29,7 +41,7 @@ export function resolveHomepageCountdown(record: HomepageCountdownRecord) {
     updatedAt: record?.updatedAt ?? null,
     hasCustomCountdown: storedCountdown !== null,
     disabled,
-    termine: record ? parseTermineJson(record.termine) : [],
+    termine: buildFourTermine(record?.termine, storedCountdown),
     nachSommerText: record?.nachSommerText ?? "Bis zum nächsten Sommer!",
   } as const;
 }

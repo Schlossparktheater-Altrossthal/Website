@@ -125,13 +125,13 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
   return (
     <div className={cn(containerClassName, loaded ? "animate-in fade-in slide-in-from-bottom-2 duration-700" : "opacity-0")} aria-live="polite">
       {timeParts.map((part) => (
-        <div key={part.label} className={cellClassName}>
-          <div className={numberClassName}>{formatNumber(part.value)}</div>
+        <div key={part.label} className={cn(cellClassName,"flex flex-col items-center justify-center")}>
+          <div className={cn(numberClassName,"text-center")}>{formatNumber(part.value)}</div>
           <Text
             variant="small"
             tone={labelTone}
             className={cn(
-              "mt-1 text-[clamp(0.6rem,1.5vw,0.85rem)] uppercase tracking-[0.2em] text-primary-foreground",
+              "mt-1 text-center text-[clamp(0.6rem,1.5vw,0.85rem)] uppercase tracking-[0.2em] text-primary-foreground",
               variant === "highlight" ? "text-primary/80" : undefined,
             )}
           >

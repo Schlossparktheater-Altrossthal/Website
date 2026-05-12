@@ -6,7 +6,6 @@ import { HomepageCountdown } from "./_components/homepage-countdown";
 import { HomepageFlyer } from "@/components/site/homepage-flyer";
 import { readHomepageFlyer } from "@/lib/homepage-flyer";
 import {
-  DEFAULT_HOMEPAGE_COUNTDOWN_ISO,
   readHomepageCountdown,
   resolveHomepageCountdown,
 } from "@/lib/homepage-countdown";
@@ -79,11 +78,16 @@ export default async function Home() {
               <HomepageCountdown
                 initialCountdownTarget={initialCountdownTargetIso}
                 effectiveCountdownTarget={effectiveCountdownTargetIso}
-                defaultCountdownTarget={DEFAULT_HOMEPAGE_COUNTDOWN_ISO}
                 updatedAt={updatedAtIso}
                 hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
                 disabled={resolvedCountdown.disabled}
                 initialNow={countdownInitialNow}
+                termine={(resolvedCountdown.termine as { datum: string; uhrzeit: string; label?: string }[]).map((termin, index) => ({
+                  datum: termin.datum ?? "",
+                  uhrzeit: termin.uhrzeit ?? "",
+                  label: termin.label ?? `Vorstellung ${index + 1}`,
+                }))}
+                nachSommerText={resolvedCountdown.nachSommerText}
               />
             </div>
           </section>
