@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/typography";
@@ -94,13 +94,16 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
     return () => window.clearInterval(interval);
   }, [targetTimestamp]);
 
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setLoaded(true);
+  }, []);
+
   if (Number.isNaN(targetTimestamp)) {
     return <Text tone="destructive">Ungültiges Datum</Text>;
   }
 
-  const [loaded, setLoaded] = useState(false);
-  const prevRef = useRef({ days: -1, hours: -1, minutes: -1, seconds: -1 });
-  useEffect(() => { setLoaded(true); }, []);
   const timeParts = [
     { label: "Tage", value: state.days },
     { label: "Stunden", value: state.hours },
