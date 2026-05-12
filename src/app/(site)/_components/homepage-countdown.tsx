@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { Countdown } from "@/components/countdown";
 import { useFrontendEditing } from "@/components/frontend-editing/frontend-editing-provider";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,7 +104,7 @@ export function HomepageCountdown(props: HomepageCountdownProps) {
 
   return <div className="flex w-full flex-col items-center gap-5 text-center">
     <div className="flex flex-col items-center gap-5">
-      <Heading level="h2" align="center" className="text-[clamp(1.8rem,5vw,3.2rem)] font-bold">
+      <Heading level="h2" align="center" className="text-[clamp(2.2rem,7vw,4.1rem)] font-extrabold">
         {!countdownActive ? "Premieren-Countdown" : nextTermin ? (settings.hasCustomCountdown ? "Premiere in" : "Nächste Vorstellung in") : "Vorstellungen beendet"}
       </Heading>
       {countdownActive ? (allDone ? (settings.nachSommerText ? <Text variant="lead">{settings.nachSommerText}</Text> : null) : <Countdown targetDate={localInputToIso(`${nextTermin?.datum}T${nextTermin?.uhrzeit}`) ?? settings.effectiveCountdownTarget} initialNow={props.initialNow} />) : <Text variant="lead" tone="muted" className="font-semibold">Der Countdown ist aktuell deaktiviert.</Text>}
@@ -115,6 +115,11 @@ export function HomepageCountdown(props: HomepageCountdownProps) {
       <DialogContent>
         <DialogHeader><DialogTitle>Premieren-Countdown einstellen</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/60 p-4">
+            <Label htmlFor="homepage-countdown-visible" className="text-sm font-semibold">Countdown auf der Startseite anzeigen</Label>
+            <Toggle id="homepage-countdown-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
+          </div>
+
           <div className="space-y-3">
             {settings.termine.map((termin, index) => {
               const isNext = nextTermin ? nextTermin.label === termin.label : false;
@@ -131,14 +136,9 @@ export function HomepageCountdown(props: HomepageCountdownProps) {
             <Textarea id="after-show-text" value={settings.nachSommerText} onChange={(e) => setSettings((prev) => ({ ...prev, nachSommerText: e.target.value }))} />
           </div>
 
-          <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/60 p-4">
-            <Label htmlFor="homepage-countdown-visible" className="text-sm font-semibold">Countdown auf der Startseite anzeigen</Label>
-            <Toggle id="homepage-countdown-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
-          </div>
-
           {error ? <Text tone="destructive">{error}</Text> : null}
           {success ? <Text tone="success">{success}</Text> : null}
-          <DialogFooter className="gap-2"><Button type="submit" disabled={saving}>{saving ? "Speichern…" : "Einstellungen speichern"}</Button><DialogClose asChild><Button type="button" variant="outline" disabled={saving}>Schließen</Button></DialogClose></DialogFooter>
+          <DialogFooter className="gap-2"><Button type="submit" disabled={saving}>{saving ? "Speichern…" : "Einstellungen speichern"}</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
