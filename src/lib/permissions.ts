@@ -222,7 +222,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
-    key: "mitglieder.website.countdown",
+    key: "mitglieder.website.premiere-countdown",
     label: "Premieren-Countdown verwalten",
     description: "Countdown zur ersten Aufführung auf der öffentlichen Startseite einstellen.",
     category: "membership",
@@ -240,7 +240,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
-    key: "mitglieder.mystery.timer",
+    key: "mitglieder.mystery.launch-countdown",
     label: "Mystery-Timer verwalten",
     description: "Countdown und Hinweistext für das öffentliche Geheimnis pflegen.",
     category: "mystery",

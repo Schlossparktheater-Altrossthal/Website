@@ -69,7 +69,7 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
     setIsLoading(true);
     setListError(null);
     try {
-      const response = await fetch("/api/mystery/tips", { cache: "no-store" });
+      const response = await fetch("/api/mystery/submissions", { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) {
         const message = typeof payload?.error === "string" ? payload.error : "Die Tipps konnten nicht geladen werden.";
@@ -117,7 +117,7 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
       setSubmissionError(null);
 
       try {
-        const response = await fetch("/api/mystery/tips", {
+        const response = await fetch("/api/mystery/submissions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ tip: trimmed, playerName: playerName.trim(), clueId: selectedClueId }),

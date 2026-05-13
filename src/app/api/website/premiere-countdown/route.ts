@@ -45,14 +45,14 @@ function serializeSettings(record: Awaited<ReturnType<typeof readPremiereCountdo
 }
 export async function GET() { /* unchanged auth */
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.website.countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await hasPermission(session.user, "mitglieder.website.premiere-countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try { const record = await readPremiereCountdownSettings(); return NextResponse.json({ settings: serializeSettings(record) }); }
   catch { return NextResponse.json({ error: "Einstellungen konnten nicht geladen werden." }, { status: 500 }); }
 }
 
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.website.countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await hasPermission(session.user, "mitglieder.website.premiere-countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const parsed = updateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." }, { status: 400 });
   if (!isChronological(parsed.data.termine)) return NextResponse.json({ error: "Termine müssen chronologisch sortiert sein." }, { status: 400 });

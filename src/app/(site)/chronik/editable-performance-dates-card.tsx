@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 
-const FEATURE_KEY = "chronik.dates" as const;
+const FEATURE_KEY = "chronik.performance-dates" as const;
 
 type EditablePerformanceDatesCardProps = {
   showId: string;
