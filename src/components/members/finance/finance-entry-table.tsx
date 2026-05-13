@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 
 function formatCurrency(amount: number, currency: string) {
   try {
@@ -315,6 +315,7 @@ export function FinanceEntryTable({
                         onClick={() => handleDelete(entry)}
                         disabled={deletingId === entry.id}
                       >
+                        <Trash2 className="h-4 w-4" aria-hidden />
                         Löschen
                       </Button>
                     </td>

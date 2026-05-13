@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Pencil, Trash2 } from "lucide-react";
 import type { FinanceBudgetDTO } from "@/app/api/finance/utils";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -105,6 +106,7 @@ export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, ca
                   <td className="px-3 py-2 align-top text-right">
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="ghost" size="sm" onClick={() => onRequestEdit(budget)}>
+                        <Pencil className="h-4 w-4" aria-hidden />
                         Bearbeiten
                       </Button>
                       <Button
@@ -114,6 +116,7 @@ export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, ca
                         onClick={() => handleDelete(budget)}
                         disabled={deletingId === budget.id}
                       >
+                        <Trash2 className="h-4 w-4" aria-hidden />
                         Löschen
                       </Button>
                     </div>
