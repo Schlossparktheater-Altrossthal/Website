@@ -1,24 +1,24 @@
 import { prisma } from "@/lib/prisma";
-import type { HomepageCountdown } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
-export const HOMEPAGE_COUNTDOWN_ID = "public";
-export const DEFAULT_HOMEPAGE_COUNTDOWN_ISO = "2026-06-18T17:00:00.000Z";
+export const PREMIERE_COUNTDOWN_SETTINGS_ID = "public";
+export const DEFAULT_PREMIERE_COUNTDOWN_ISO = "2026-06-18T17:00:00.000Z";
 
-export type HomepageCountdownRecord = HomepageCountdown | null;
+export type PremiereCountdownSettingsRecord = Awaited<ReturnType<typeof readPremiereCountdownSettings>>;
 
-export type HomepageCountdownTermin = { datum: string; uhrzeit: string; label?: string };
+export type PremiereCountdownSettingsTermin = { datum: string; uhrzeit: string; label?: string };
 
 function getDefaultCountdownDate() {
-  return new Date(DEFAULT_HOMEPAGE_COUNTDOWN_ISO);
+  return new Date(DEFAULT_PREMIERE_COUNTDOWN_ISO);
 }
 
-function parseTermineJson(value: HomepageCountdown["termine"]): HomepageCountdownTermin[] {
+function parseTermineJson(value: Prisma.JsonValue): PremiereCountdownSettingsTermin[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is HomepageCountdownTermin => !!item && typeof item === "object") as HomepageCountdownTermin[];
+  return value.filter((item): item is PremiereCountdownSettingsTermin => !!item && typeof item === "object") as PremiereCountdownSettingsTermin[];
 }
 
 
-function buildFourTermine(value: HomepageCountdown["termine"], countdownTarget: Date | null): HomepageCountdownTermin[] {
+function buildFourTermine(value: Prisma.JsonValue, countdownTarget: Date | null): PremiereCountdownSettingsTermin[] {
   const parsed = parseTermineJson(value);
   const base = Array.from({ length: 4 }).map((_, index) => ({ datum: "", uhrzeit: "", label: `Vorstellung ${index + 1}` }));
   parsed.slice(0,4).forEach((item, index) => { base[index] = { datum: item.datum ?? "", uhrzeit: item.uhrzeit ?? "", label: item.label ?? `Vorstellung ${index + 1}` }; });
@@ -29,7 +29,7 @@ function buildFourTermine(value: HomepageCountdown["termine"], countdownTarget: 
   return base;
 }
 
-export function resolveHomepageCountdown(record: HomepageCountdownRecord) {
+export function resolvePremiereCountdownSettings(record: PremiereCountdownSettingsRecord) {
   const defaultCountdown = getDefaultCountdownDate();
   const storedCountdown = record?.countdownTarget ?? null;
   const effectiveCountdownTarget = storedCountdown ?? defaultCountdown;
@@ -46,21 +46,21 @@ export function resolveHomepageCountdown(record: HomepageCountdownRecord) {
   } as const;
 }
 
-export async function readHomepageCountdown() {
-  return prisma.homepageCountdown.findUnique({ where: { id: HOMEPAGE_COUNTDOWN_ID } });
+export async function readPremiereCountdownSettings() {
+  return prisma.homepageCountdown.findUnique({ where: { id: PREMIERE_COUNTDOWN_SETTINGS_ID } });
 }
 
-export async function saveHomepageCountdown(data: {
+export async function savePremiereCountdownSettings(data: {
   countdownTarget: Date | null;
   disabled: boolean;
-  termine: HomepageCountdownTermin[];
+  termine: PremiereCountdownSettingsTermin[];
   nachSommerText: string;
 }) {
   return prisma.homepageCountdown.upsert({
-    where: { id: HOMEPAGE_COUNTDOWN_ID },
+    where: { id: PREMIERE_COUNTDOWN_SETTINGS_ID },
     update: data,
     create: {
-      id: HOMEPAGE_COUNTDOWN_ID,
+      id: PREMIERE_COUNTDOWN_SETTINGS_ID,
       ...data,
     },
   });

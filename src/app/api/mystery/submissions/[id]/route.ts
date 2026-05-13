@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
-import { getMysteryScoreboardEntry } from "@/lib/mystery-tips";
+import { getMysteryScoreboardEntry } from "@/lib/mystery-submissions";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { mysterySubmissionWithCountsInclude } from "@/lib/prisma-helpers";

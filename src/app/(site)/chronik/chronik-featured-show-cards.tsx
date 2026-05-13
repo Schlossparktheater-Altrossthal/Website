@@ -14,7 +14,7 @@ function toStringArray(value: ChronikMeta["sources"]) {
   return Array.isArray(value) ? [...value] : [];
 }
 
-function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number }) {
+function ChronikFeaturedShowCardsCard({ item, index }: { item: ChronikItem; index: number }) {
   const router = useRouter();
   const meta: ChronikMeta = item.meta ?? {};
   const sources = toStringArray(meta.sources);
@@ -167,13 +167,13 @@ function ChronikStackedCard({ item, index }: { item: ChronikItem; index: number 
   );
 }
 
-export function ChronikStacked({ items }: { items: ChronikItem[] }) {
+export function ChronikFeaturedShowCards({ items }: { items: ChronikItem[] }) {
   const sorted = [...items].sort((a, b) => b.year - a.year);
 
   return (
     <div className="layout-container space-y-12 pb-24 lg:space-y-16">
       {sorted.map((item, index) => (
-        <ChronikStackedCard key={item.id} item={item} index={index} />
+        <ChronikFeaturedShowCardsCard key={item.id} item={item} index={index} />
       ))}
     </div>
   );

@@ -8,7 +8,7 @@ import { EyeOff, Sparkles, Trash2, Undo2, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ActionDropdownMenu } from "@/components/ui/dropdown-menu";
+import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +19,7 @@ const MODERATION_STORAGE_KEY = "dennis-dieter-hidden-encounters";
 
 const MODERATOR_ROLES = new Set<Role>(["board", "admin", "owner"]);
 
-type Encounter = {
+type CatEncounter = {
   id: string;
   since: string;
   nickname: string;
@@ -29,9 +29,9 @@ type Encounter = {
   source: "curated" | "user";
 };
 
-type StoredEncounter = Omit<Encounter, "source">;
+type StoredCatEncounter = Omit<CatEncounter, "source">;
 
-const curatedEncounters: Encounter[] = [
+const curatedCatEncounters: CatEncounter[] = [
   {
     id: "curated-1",
     since: "Sommer 2024",
@@ -64,7 +64,7 @@ const curatedEncounters: Encounter[] = [
   },
 ];
 
-function generateId() {
+function generateEncounterId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
@@ -72,10 +72,10 @@ function generateId() {
   return `encounter-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function DennisDieterEncountersSection() {
+export function SchoolCatEncountersSection() {
   const { data: session } = useSession();
-  const [userEncounters, setUserEncounters] = useState<Encounter[]>([]);
-  const [hiddenEncounterIds, setHiddenEncounterIds] = useState<string[]>([]);
+  const [userSubmittedCatEncounters, setUserSubmittedCatEncounters] = useState<CatEncounter[]>([]);
+  const [moderatedHiddenEncounterIds, setModeratedHiddenEncounterIds] = useState<string[]>([]);
   const [showModerationDetails, setShowModerationDetails] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -91,7 +91,7 @@ export function DennisDieterEncountersSection() {
     }
 
     try {
-      const parsed = JSON.parse(storedValue) as StoredEncounter[];
+      const parsed = JSON.parse(storedValue) as StoredCatEncounter[];
 
       if (!Array.isArray(parsed)) {
         return;
@@ -99,7 +99,7 @@ export function DennisDieterEncountersSection() {
 
       const sanitized = parsed
         .filter(
-          (entry): entry is StoredEncounter =>
+          (entry): entry is StoredCatEncounter =>
             typeof entry === "object" &&
             entry !== null &&
             typeof entry.since === "string" &&
@@ -107,7 +107,7 @@ export function DennisDieterEncountersSection() {
             typeof entry.story === "string"
         )
         .map((entry) => ({
-          id: entry.id ?? generateId(),
+          id: entry.id ?? generateEncounterId(),
           since: entry.since.trim(),
           nickname: entry.nickname.trim(),
           story: entry.story.trim(),
@@ -117,7 +117,7 @@ export function DennisDieterEncountersSection() {
         }));
 
       if (sanitized.length > 0) {
-        setUserEncounters(sanitized);
+        setUserSubmittedCatEncounters(sanitized);
       }
     } catch {
       // Wenn Parsing fehlschlägt, ignorieren wir den lokalen Speicher und starten frisch.
@@ -129,18 +129,18 @@ export function DennisDieterEncountersSection() {
       return;
     }
 
-    if (userEncounters.length === 0) {
+    if (userSubmittedCatEncounters.length === 0) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;
     }
 
-    const payload: StoredEncounter[] = userEncounters.map((entry) => {
+    const payload: StoredCatEncounter[] = userSubmittedCatEncounters.map((entry) => {
       const { source: _source, ...rest } = entry;
       void _source;
       return rest;
     });
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  }, [userEncounters]);
+  }, [userSubmittedCatEncounters]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -163,7 +163,7 @@ export function DennisDieterEncountersSection() {
       const sanitized = parsed.filter((value): value is string => typeof value === "string" && value.trim().length > 0);
 
       if (sanitized.length > 0) {
-        setHiddenEncounterIds(Array.from(new Set(sanitized)));
+        setModeratedHiddenEncounterIds(Array.from(new Set(sanitized)));
       }
     } catch {
       // Wenn Parsing fehlschlägt, ignorieren wir die Moderationsdaten.
@@ -175,26 +175,26 @@ export function DennisDieterEncountersSection() {
       return;
     }
 
-    if (hiddenEncounterIds.length === 0) {
+    if (moderatedHiddenEncounterIds.length === 0) {
       window.localStorage.removeItem(MODERATION_STORAGE_KEY);
       return;
     }
 
-    window.localStorage.setItem(MODERATION_STORAGE_KEY, JSON.stringify(hiddenEncounterIds));
-  }, [hiddenEncounterIds]);
+    window.localStorage.setItem(MODERATION_STORAGE_KEY, JSON.stringify(moderatedHiddenEncounterIds));
+  }, [moderatedHiddenEncounterIds]);
 
-  const allEncounters = useMemo(() => [...userEncounters, ...curatedEncounters], [userEncounters]);
+  const allCatEncounters = useMemo(() => [...userSubmittedCatEncounters, ...curatedCatEncounters], [userSubmittedCatEncounters]);
 
-  const hiddenEncounterIdSet = useMemo(() => new Set(hiddenEncounterIds), [hiddenEncounterIds]);
+  const hiddenCatEncounterIdSet = useMemo(() => new Set(moderatedHiddenEncounterIds), [moderatedHiddenEncounterIds]);
 
-  const visibleEncounters = useMemo(
-    () => allEncounters.filter((entry) => !hiddenEncounterIdSet.has(entry.id)),
-    [allEncounters, hiddenEncounterIdSet],
+  const visibleCatEncounters = useMemo(
+    () => allCatEncounters.filter((entry) => !hiddenCatEncounterIdSet.has(entry.id)),
+    [allCatEncounters, hiddenCatEncounterIdSet],
   );
 
-  const archivedEncounters = useMemo(
-    () => allEncounters.filter((entry) => hiddenEncounterIdSet.has(entry.id)),
-    [allEncounters, hiddenEncounterIdSet],
+  const archivedCatEncounters = useMemo(
+    () => allCatEncounters.filter((entry) => hiddenCatEncounterIdSet.has(entry.id)),
+    [allCatEncounters, hiddenCatEncounterIdSet],
   );
 
   const userRoles = useMemo(() => {
@@ -223,8 +223,8 @@ export function DennisDieterEncountersSection() {
     }
   }, [canModerate]);
 
-  const handleHideEncounter = useCallback((entryId: string) => {
-    setHiddenEncounterIds((previous) => {
+  const handleHideCatEncounter = useCallback((entryId: string) => {
+    setModeratedHiddenEncounterIds((previous) => {
       if (previous.includes(entryId)) {
         return previous;
       }
@@ -233,13 +233,13 @@ export function DennisDieterEncountersSection() {
     setShowModerationDetails(true);
   }, []);
 
-  const handleRestoreEncounter = useCallback((entryId: string) => {
-    setHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
+  const handleRestoreCatEncounter = useCallback((entryId: string) => {
+    setModeratedHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
   }, []);
 
-  const handleDeleteEncounter = useCallback((entryId: string) => {
-    setUserEncounters((previous) => previous.filter((entry) => entry.id !== entryId));
-    setHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
+  const handleDeleteCatEncounter = useCallback((entryId: string) => {
+    setUserSubmittedCatEncounters((previous) => previous.filter((entry) => entry.id !== entryId));
+    setModeratedHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
   }, []);
 
   const toggleFormVisibility = useCallback(() => {
@@ -266,8 +266,8 @@ export function DennisDieterEncountersSection() {
         ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(new Date())
         : undefined;
 
-    const newEncounter: Encounter = {
-      id: generateId(),
+    const newCatEncounter: CatEncounter = {
+      id: generateEncounterId(),
       since,
       nickname,
       story,
@@ -276,7 +276,7 @@ export function DennisDieterEncountersSection() {
       source: "user",
     };
 
-    setUserEncounters((previous) => [newEncounter, ...previous]);
+    setUserSubmittedCatEncounters((previous) => [newCatEncounter, ...previous]);
     form.reset();
 
     const sinceInput = form.querySelector<HTMLInputElement>("#dennis-dieter-since");
@@ -434,22 +434,22 @@ export function DennisDieterEncountersSection() {
                 />
 
                 <ul className="space-y-5">
-                  {visibleEncounters.length > 0 ? (
-                    visibleEncounters.map((entry) => {
+                  {visibleCatEncounters.length > 0 ? (
+                    visibleCatEncounters.map((entry) => {
                       const isUserEntry = entry.source === "user";
                       const moderationItems = canModerate
                         ? [
                             {
                               label: "Beitrag ausblenden",
                               icon: <EyeOff className="h-4 w-4" aria-hidden />,
-                              onClick: () => handleHideEncounter(entry.id),
+                              onClick: () => handleHideCatEncounter(entry.id),
                             },
                             ...(isUserEntry
                               ? [
                                   {
                                     label: "Beitrag löschen (lokal)",
                                     icon: <Trash2 className="h-4 w-4" aria-hidden />,
-                                    onClick: () => handleDeleteEncounter(entry.id),
+                                    onClick: () => handleDeleteCatEncounter(entry.id),
                                     variant: "destructive" as const,
                                   },
                                 ]
@@ -506,7 +506,7 @@ export function DennisDieterEncountersSection() {
                             {isUserEntry ? (
                               <button
                                 type="button"
-                                onClick={() => handleDeleteEncounter(entry.id)}
+                                onClick={() => handleDeleteCatEncounter(entry.id)}
                                 className="text-[11px] font-medium text-muted-foreground underline-offset-2 transition hover:text-destructive hover:underline focus-visible:outline-none"
                               >
                                 Beitrag auf diesem Gerät entfernen
@@ -531,7 +531,7 @@ export function DennisDieterEncountersSection() {
                 </ul>
               </div>
 
-              {canModerate && archivedEncounters.length > 0 ? (
+              {canModerate && archivedCatEncounters.length > 0 ? (
                 <Card className="rounded-2xl border border-dashed border-primary/35 bg-primary/5 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -548,13 +548,13 @@ export function DennisDieterEncountersSection() {
                     >
                       {showModerationDetails
                         ? "Verbergen"
-                        : `Anzeigen (${archivedEncounters.length})`}
+                        : `Anzeigen (${archivedCatEncounters.length})`}
                     </Button>
                   </div>
 
                   {showModerationDetails ? (
                     <div className="mt-4 space-y-3">
-                      {archivedEncounters.map((entry) => (
+                      {archivedCatEncounters.map((entry) => (
                         <div
                           key={entry.id}
                           className="flex flex-col gap-2 rounded-2xl border border-border/40 bg-background/70 p-4 sm:flex-row sm:items-center sm:justify-between"
@@ -572,7 +572,7 @@ export function DennisDieterEncountersSection() {
                             variant="ghost"
                             size="sm"
                             className="self-start text-primary hover:text-primary focus-visible:ring-primary/30"
-                            onClick={() => handleRestoreEncounter(entry.id)}
+                            onClick={() => handleRestoreCatEncounter(entry.id)}
                           >
                             <Undo2 className="mr-2 h-4 w-4" aria-hidden />
                             Wiederherstellen

@@ -45,7 +45,7 @@ function formatIsoForDisplay(iso: string | null, formatter: Intl.DateTimeFormat)
   return formatter.format(date);
 }
 
-export type MysteryTimerFormSavedSettings = {
+export type MysteryCountdownSettingsFormSavedSettings = {
   countdownTarget: string | null;
   expirationMessage: string | null;
   effectiveCountdownTarget: string;
@@ -55,7 +55,7 @@ export type MysteryTimerFormSavedSettings = {
   hasCustomMessage: boolean;
 };
 
-export type MysteryTimerFormProps = {
+export type MysteryCountdownSettingsFormProps = {
   scope: "public" | "members";
   initialCountdownTarget: string | null;
   initialExpirationMessage: string | null;
@@ -66,10 +66,10 @@ export type MysteryTimerFormProps = {
   updatedAt: string | null;
   hasCustomCountdown: boolean;
   hasCustomMessage: boolean;
-  onSaved?: (settings: MysteryTimerFormSavedSettings) => void;
+  onSaved?: (settings: MysteryCountdownSettingsFormSavedSettings) => void;
 };
 
-export function MysteryTimerForm({
+export function MysteryCountdownSettingsForm({
   scope,
   initialCountdownTarget,
   initialExpirationMessage,
@@ -81,7 +81,7 @@ export function MysteryTimerForm({
   hasCustomCountdown,
   hasCustomMessage,
   onSaved,
-}: MysteryTimerFormProps) {
+}: MysteryCountdownSettingsFormProps) {
   const [countdownValue, setCountdownValue] = useState(() => isoToLocalInputValue(initialCountdownTarget));
   const [messageValue, setMessageValue] = useState(() => initialExpirationMessage ?? "");
   const [saving, setSaving] = useState(false);
@@ -128,7 +128,7 @@ export function MysteryTimerForm({
         body: JSON.stringify(payload),
       });
       const data = (await response.json().catch(() => ({}))) as {
-        settings?: MysteryTimerFormSavedSettings;
+        settings?: MysteryCountdownSettingsFormSavedSettings;
         error?: string;
       };
 

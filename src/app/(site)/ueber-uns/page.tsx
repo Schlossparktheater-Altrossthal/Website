@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
 };
 
-type Highlight = {
+type AboutStatisticHighlight = {
   label: string;
   value: string;
   detail: string;
@@ -47,7 +47,7 @@ type Highlight = {
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("de-DE");
 
-const baseHighlights: Highlight[] = [
+const baseAboutStatisticHighlights: AboutStatisticHighlight[] = [
   {
     label: "Gründung",
     value: "2009",
@@ -70,7 +70,7 @@ const baseHighlights: Highlight[] = [
   },
 ];
 
-const signature = [
+const aboutSignaturePillars = [
   {
     icon: Drama,
     title: "Freiluftbühne im Schlosspark",
@@ -91,7 +91,7 @@ const signature = [
   },
 ];
 
-const values = [
+const associationValueItems = [
   {
     icon: HeartHandshake,
     title: "Gemeinschaft",
@@ -112,7 +112,7 @@ const values = [
   },
 ];
 
-const milestones = [
+const aboutTimelineMilestones = [
   {
     year: "2008",
     title: "Theatergruppe im Kulturpalast",
@@ -151,7 +151,7 @@ const milestones = [
   },
 ];
 
-const engagement = [
+const engagementCallToActions = [
   {
     title: "Mitmachen",
     description:
@@ -172,13 +172,13 @@ const engagement = [
   },
 ];
 
-type Trade = {
+type Department = {
   icon: LucideIcon;
   title: string;
   description: string;
 };
 
-const trades: Trade[] = [
+const departments: Department[] = [
   {
     icon: Drama,
     title: "Schauspiel",
@@ -247,10 +247,10 @@ const trades: Trade[] = [
 
 const CAROUSEL_GROUP_COUNT = 2;
 
-export default async function AboutPage() {
+export default async function PublicAboutPage() {
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const ensembleStats = await getCurrentProductionEnsembleStats();
-  const highlights = baseHighlights.map<Highlight>((item) => {
+  const aboutStatisticHighlights = baseAboutStatisticHighlights.map<AboutStatisticHighlight>((item) => {
     if (item.label !== "Ensemble" || !ensembleStats) {
       return item;
     }
@@ -261,7 +261,7 @@ export default async function AboutPage() {
       detail: "Mitglieder in der aktuellen Produktion – Darstellende, Musiker:innen und helfende Hände",
     };
   });
-  const jsonLd = {
+  const aboutOrganizationJsonLd = {
     "@context": "https://schema.org",
     "@type": "PerformingGroup",
     name: "Sommertheater Altrossthal",
@@ -324,7 +324,7 @@ export default async function AboutPage() {
           </div>
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {highlights.map((item) => (
+            {aboutStatisticHighlights.map((item) => (
               <Card
                 key={item.label}
                 className="border border-primary/20 bg-primary/5 shadow-md shadow-primary/10 backdrop-blur"
@@ -371,7 +371,7 @@ export default async function AboutPage() {
             >
               {Array.from({ length: CAROUSEL_GROUP_COUNT }).map((_, groupIndex) => (
                 <div key={groupIndex} className="flex gap-6" aria-hidden={groupIndex > 0}>
-                  {trades.map(({ icon: Icon, title, description }) => (
+                  {departments.map(({ icon: Icon, title, description }) => (
                     <Card
                       key={`${title}-${groupIndex}`}
                       role={groupIndex === 0 ? "listitem" : "presentation"}
@@ -415,7 +415,7 @@ export default async function AboutPage() {
                 Berufsschulzentrums fließen direkt in Bühnenwelten ein.
               </Text>
               <div className="space-y-5">
-                {signature.map(({ icon: Icon, title, description }) => (
+                {aboutSignaturePillars.map(({ icon: Icon, title, description }) => (
                   <div
                     key={title}
                     className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
@@ -465,7 +465,7 @@ export default async function AboutPage() {
             </Text>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {values.map(({ icon: Icon, title, description }) => (
+            {associationValueItems.map(({ icon: Icon, title, description }) => (
               <Card key={title} className="relative overflow-hidden bg-card/70">
                 <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
                 <CardHeader>
@@ -495,7 +495,7 @@ export default async function AboutPage() {
             <div className="relative">
               <div className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" aria-hidden />
               <ul className="space-y-8">
-                {milestones.map((milestone) => (
+                {aboutTimelineMilestones.map((milestone) => (
                   <li key={milestone.year} className="relative pl-12">
                     <div className="absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-primary/20 text-primary">
                       <span className="text-xs font-semibold">{milestone.year}</span>
@@ -530,7 +530,7 @@ export default async function AboutPage() {
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                {engagement.map((item) => (
+                {engagementCallToActions.map((item) => (
                   <div key={item.title} className="rounded-2xl border border-border/40 bg-background/70 p-5">
                     <Heading level="h4" className="text-lg" weight="bold">
                       {item.title}
@@ -555,7 +555,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutOrganizationJsonLd) }} />
     </div>
   );
 }

@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ActionDropdownMenu } from "@/components/ui/dropdown-menu";
+import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
 import { ROLE_LABELS, ROLES, sortRoles } from "@/lib/roles";
 import {
   onboardingPathForToken,

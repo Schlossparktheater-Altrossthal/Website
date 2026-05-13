@@ -16,7 +16,7 @@ const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat("de-DE", {
 
 const SCOREBOARD_FORMATTER = new Intl.NumberFormat("de-DE");
 
-function sortScoreboard(entries: MysteryTipManagerProps["scoreboard"]) {
+function sortScoreboard(entries: MysterySubmissionReviewManagerProps["scoreboard"]) {
   return [...entries].sort((a, b) => {
     if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
     if (b.correctCount !== a.correctCount) return b.correctCount - a.correctCount;
@@ -55,14 +55,14 @@ type ScoreboardEntry = {
   lastUpdated: string | null;
 };
 
-type MysteryTipManagerProps = {
+type MysterySubmissionReviewManagerProps = {
   clues: ClueOption[];
   selectedClueId: string | null;
   submissions: SubmissionEntry[];
   scoreboard: ScoreboardEntry[];
 };
 
-export function MysteryTipManager({ clues, selectedClueId, submissions, scoreboard }: MysteryTipManagerProps) {
+export function MysterySubmissionReviewManager({ clues, selectedClueId, submissions, scoreboard }: MysterySubmissionReviewManagerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

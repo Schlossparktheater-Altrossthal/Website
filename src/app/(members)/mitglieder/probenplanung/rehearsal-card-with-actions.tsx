@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ActionDropdownMenu } from "@/components/ui/dropdown-menu";
-import { EditIcon, TrashIcon } from "@/components/ui/icons";
+import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
+import { EditIcon, TrashIcon } from "@/components/ui/action-icons";
 import { toast } from "sonner";
 import { deleteRehearsalAction } from "./actions";
 import type { RehearsalLite } from "./rehearsal-list";

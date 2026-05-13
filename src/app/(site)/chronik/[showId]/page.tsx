@@ -8,9 +8,9 @@ import { Heading, Text } from "@/components/ui/typography";
 
 import { PosterSlideshow } from "../poster-slideshow";
 import { getChronikItem } from "../data";
-import { formatChronikPlayerName } from "../formatters";
+import { formatCastMemberDisplayName } from "../cast-name-formatters";
 import type { ChronikCastEntry, ChronikMeta } from "../types";
-import { ChronikPerformanceDatesCard } from "../performance-dates-card";
+import { EditablePerformanceDatesCard } from "../editable-performance-dates-card";
 
 type ChronikDetailPageParams = {
   showId: string;
@@ -148,7 +148,7 @@ export default async function ChronikDetailPage({ params }: ChronikDetailPagePro
                 )}
 
                 <dl className="grid gap-4 sm:grid-cols-2">
-                  <ChronikPerformanceDatesCard
+                  <EditablePerformanceDatesCard
                     showId={item.id}
                     initialDates={item.dates}
                   />
@@ -202,7 +202,7 @@ export default async function ChronikDetailPage({ params }: ChronikDetailPagePro
                   </Heading>
                   <Text className="mt-2 text-sm text-foreground/80 md:text-base">
                     {entry.players
-                      .map((player) => formatChronikPlayerName(player))
+                      .map((player) => formatCastMemberDisplayName(player))
                       .filter(Boolean)
                       .join(", ")}
                   </Text>

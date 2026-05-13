@@ -22,7 +22,7 @@ function formatTimestamp(iso: string) {
   return UPDATED_AT_FORMATTER.format(date);
 }
 
-export function MysteryTipsTable({ tips }: { tips: MysteryTipEntry[] }) {
+export function MysteryAggregatedTipsTable({ tips }: { tips: MysteryTipEntry[] }) {
   return (
     <Card>
       <CardHeader>

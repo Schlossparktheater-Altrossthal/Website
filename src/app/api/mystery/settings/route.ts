@@ -7,7 +7,7 @@ import {
   readMysterySettings,
   resolveMysterySettings,
   saveMysterySettings,
-} from "@/lib/mystery-settings";
+} from "@/lib/mystery-countdown-settings";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 

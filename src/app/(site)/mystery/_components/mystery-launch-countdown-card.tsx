@@ -9,9 +9,9 @@ import { Text } from "@/components/ui/typography";
 import { Countdown } from "@/components/countdown";
 import { useFrontendEditing } from "@/components/frontend-editing/frontend-editing-provider";
 import {
-  type MysteryTimerFormSavedSettings,
-  MysteryTimerForm,
-} from "@/components/mystery/mystery-timer-form";
+  type MysteryCountdownSettingsFormSavedSettings,
+  MysteryCountdownSettingsForm,
+} from "@/components/mystery/mystery-countdown-settings-form";
 
 const COUNTDOWN_LABEL_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "full",
@@ -25,7 +25,7 @@ function formatLabel(iso: string) {
   return COUNTDOWN_LABEL_FORMATTER.format(date);
 }
 
-type MysteryCountdownCardProps = {
+type MysteryLaunchCountdownCardProps = {
   initialCountdownTarget: string | null;
   initialExpirationMessage: string | null;
   effectiveCountdownTarget: string;
@@ -51,7 +51,7 @@ type TimerState = {
 
 const EDITOR_SECTION_ID = "mystery-timer-editor";
 
-export function MysteryCountdownCard({
+export function MysteryLaunchCountdownCard({
   initialCountdownTarget,
   initialExpirationMessage,
   effectiveCountdownTarget,
@@ -63,7 +63,7 @@ export function MysteryCountdownCard({
   hasCustomMessage,
   isFirstRiddleReleased,
   initialNow,
-}: MysteryCountdownCardProps) {
+}: MysteryLaunchCountdownCardProps) {
   const router = useRouter();
   const { hasFeature, toggleFeature, activeFeature } = useFrontendEditing();
   const [state, setState] = useState<TimerState>(() => ({
@@ -112,7 +112,7 @@ export function MysteryCountdownCard({
 
   const showCountdown = !isFirstRiddleReleased && !countdownReached;
 
-  function handleSaved(next: MysteryTimerFormSavedSettings) {
+  function handleSaved(next: MysteryCountdownSettingsFormSavedSettings) {
     setState({
       countdownTarget: next.countdownTarget,
       expirationMessage: next.expirationMessage,
@@ -177,7 +177,7 @@ export function MysteryCountdownCard({
           <Text variant="small" tone="muted">
             Änderungen werden direkt auf der öffentlichen Mystery-Seite sichtbar.
           </Text>
-          <MysteryTimerForm
+          <MysteryCountdownSettingsForm
             scope="public"
             initialCountdownTarget={state.countdownTarget}
             initialExpirationMessage={state.expirationMessage}

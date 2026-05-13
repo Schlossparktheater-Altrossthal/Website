@@ -36,7 +36,7 @@ describe("getMysteryScoreboard", () => {
 
   it("returns an empty scoreboard and logs errors when the query fails", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { getMysteryScoreboard } = await import("../mystery-tips");
+    const { getMysteryScoreboard } = await import("../mystery-submissions");
     const failure = new Error("database unavailable");
 
     mockGroupMysteryTipSubmissionsByPlayer.mockRejectedValueOnce(failure);

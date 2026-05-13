@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
-  DEFAULT_HOMEPAGE_COUNTDOWN_ISO,
-  type HomepageCountdownTermin,
-  readHomepageCountdown,
-  resolveHomepageCountdown,
-  saveHomepageCountdown,
-} from "@/lib/homepage-countdown";
+  DEFAULT_PREMIERE_COUNTDOWN_ISO,
+  type PremiereCountdownSettingsTermin,
+  readPremiereCountdownSettings,
+  resolvePremiereCountdownSettings,
+  savePremiereCountdownSettings,
+} from "@/lib/premiere-countdown-settings";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
@@ -19,19 +19,19 @@ const updateSchema = z.object({
   nachSommerText: z.string().optional().default("Bis zum nächsten Sommer!"),
 });
 
-function toIso(termin: HomepageCountdownTermin) {
+function toIso(termin: PremiereCountdownSettingsTermin) {
   return new Date(`${termin.datum}T${termin.uhrzeit}:00`).toISOString();
 }
 
-function isChronological(termine: HomepageCountdownTermin[]) {
+function isChronological(termine: PremiereCountdownSettingsTermin[]) {
   for (let index = 1; index < termine.length; index += 1) {
     if (new Date(toIso(termine[index - 1])).getTime() > new Date(toIso(termine[index])).getTime()) return false;
   }
   return true;
 }
 
-function serializeSettings(record: Awaited<ReturnType<typeof readHomepageCountdown>>) {
-  const resolved = resolveHomepageCountdown(record);
+function serializeSettings(record: Awaited<ReturnType<typeof readPremiereCountdownSettings>>) {
+  const resolved = resolvePremiereCountdownSettings(record);
   return {
     countdownTarget: record?.countdownTarget ? record.countdownTarget.toISOString() : null,
     effectiveCountdownTarget: resolved.effectiveCountdownTarget.toISOString(),
@@ -40,13 +40,13 @@ function serializeSettings(record: Awaited<ReturnType<typeof readHomepageCountdo
     disabled: resolved.disabled,
     termine: resolved.termine,
     nachSommerText: resolved.nachSommerText,
-    defaultCountdownTarget: DEFAULT_HOMEPAGE_COUNTDOWN_ISO,
+    defaultCountdownTarget: DEFAULT_PREMIERE_COUNTDOWN_ISO,
   } as const;
 }
 export async function GET() { /* unchanged auth */
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "mitglieder.website.countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  try { const record = await readHomepageCountdown(); return NextResponse.json({ settings: serializeSettings(record) }); }
+  try { const record = await readPremiereCountdownSettings(); return NextResponse.json({ settings: serializeSettings(record) }); }
   catch { return NextResponse.json({ error: "Einstellungen konnten nicht geladen werden." }, { status: 500 }); }
 }
 
@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest) {
   if (!isChronological(parsed.data.termine)) return NextResponse.json({ error: "Termine müssen chronologisch sortiert sein." }, { status: 400 });
 
   try {
-    const saved = await saveHomepageCountdown({
+    const saved = await savePremiereCountdownSettings({
       countdownTarget: parsed.data.countdownTarget,
       disabled: parsed.data.disabled,
       termine: parsed.data.termine,
