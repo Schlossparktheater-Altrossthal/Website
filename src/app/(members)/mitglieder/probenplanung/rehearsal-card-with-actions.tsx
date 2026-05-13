@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
 import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
-import { EditIcon, TrashIcon } from "@/components/ui/action-icons";
 import { toast } from "sonner";
 import { deleteRehearsalAction } from "./actions";
 import type { RehearsalLite } from "./rehearsal-list";
@@ -53,14 +53,14 @@ export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: 
   const menuItems = [
     {
       label: "Bearbeiten",
-      icon: <EditIcon className="w-4 h-4" />,
+      icon: <Pencil className="w-4 h-4" />,
       onClick: handleEdit,
       variant: "default" as const,
       disabled: false,
     },
     {
       label: isDeletingTransition ? "Wird gelöscht..." : "Löschen",
-      icon: <TrashIcon className="w-4 h-4" />,
+      icon: <Trash2 className="w-4 h-4" />,
       onClick: handleDelete,
       variant: "destructive" as const,
       disabled: isDeletingTransition,

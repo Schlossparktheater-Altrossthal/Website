@@ -12,10 +12,12 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
 const terminSchema = z.object({ datum: z.string(), uhrzeit: z.string().regex(/^\d{2}:\d{2}$/), label: z.string().optional() });
+const MIN_TERMINE = 1;
+const MAX_TERMINE = 8;
 const updateSchema = z.object({
   countdownTarget: z.union([z.string().datetime({ offset: true }), z.null()]).transform((value) => (value ? new Date(value) : null)),
   disabled: z.boolean().optional().default(false),
-  termine: z.array(terminSchema).optional().default([]),
+  termine: z.array(terminSchema).min(MIN_TERMINE).max(MAX_TERMINE),
   nachSommerText: z.string().optional().default("Bis zum nächsten Sommer!"),
 });
 
@@ -45,14 +47,14 @@ function serializeSettings(record: Awaited<ReturnType<typeof readPremiereCountdo
 }
 export async function GET() { /* unchanged auth */
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.website.premiere-countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await hasPermission(session.user, "mitglieder.website.countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try { const record = await readPremiereCountdownSettings(); return NextResponse.json({ settings: serializeSettings(record) }); }
   catch { return NextResponse.json({ error: "Einstellungen konnten nicht geladen werden." }, { status: 500 }); }
 }
 
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.website.premiere-countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await hasPermission(session.user, "mitglieder.website.countdown"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const parsed = updateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." }, { status: 400 });
   if (!isChronological(parsed.data.termine)) return NextResponse.json({ error: "Termine müssen chronologisch sortiert sein." }, { status: 400 });
