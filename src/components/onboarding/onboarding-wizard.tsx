@@ -12,6 +12,7 @@ import { SignaturePad, type SignatureResult } from "@/components/onboarding/sign
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1236,8 +1237,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
             <div className="grid gap-4 lg:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Geburtsdatum</span>
-                <Input
-                  type="date"
+                <DateInput
                   value={form.dateOfBirth}
                   onChange={(event) => setForm((prev) => ({ ...prev, dateOfBirth: event.target.value }))}
                 />

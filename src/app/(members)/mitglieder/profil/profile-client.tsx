@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
@@ -1573,7 +1574,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="dateOfBirth">Geburtsdatum</Label>
-                <Input id="dateOfBirth" name="dateOfBirth" type="date" value={formState.dateOfBirth} onChange={handleInputChange} />
+                <DateInput id="dateOfBirth" name="dateOfBirth" value={formState.dateOfBirth} onChange={handleInputChange} />
                 {fieldErrors.dateOfBirth ? <p className="text-sm text-destructive">{fieldErrors.dateOfBirth}</p> : null}
                 <p className="text-xs text-muted-foreground">Benötigt für Fotoeinverständnis und Altersfreigaben.</p>
               </div>

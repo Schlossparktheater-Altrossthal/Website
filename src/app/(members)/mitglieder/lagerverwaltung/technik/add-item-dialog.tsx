@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -294,10 +295,9 @@ export function AddTechnikItemDialog({
               <Label htmlFor={`technik-purchase-${category}`}>
                 Kaufdatum
               </Label>
-              <Input
+              <DateInput
                 id={`technik-purchase-${category}`}
                 name="purchaseDate"
-                type="date"
                 required
               />
             </div>
@@ -307,20 +307,18 @@ export function AddTechnikItemDialog({
               <Label htmlFor={`technik-lastUsedAt-${category}`}>
                 Zuletzt benutzt
               </Label>
-              <Input
+              <DateInput
                 id={`technik-lastUsedAt-${category}`}
                 name="lastUsedAt"
-                type="date"
               />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor={`technik-lastInventoryAt-${category}`}>
                 Letzte Inventur
               </Label>
-              <Input
+              <DateInput
                 id={`technik-lastInventoryAt-${category}`}
                 name="lastInventoryAt"
-                type="date"
               />
             </div>
           </div>

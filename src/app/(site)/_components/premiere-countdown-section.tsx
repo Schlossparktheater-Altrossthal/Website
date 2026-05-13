@@ -8,7 +8,9 @@ import { Countdown } from "@/components/countdown";
 import { useFrontendEditing } from "@/components/frontend-editing/frontend-editing-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -113,7 +115,7 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
           <div className="space-y-3">
             {settings.termine.map((termin, index) => {
               const isNext = nextTermin ? nextTermin.label === termin.label : false;
-              return <div key={`${termin.label}-${index}`} className={`grid grid-cols-1 gap-2 rounded-xl border p-3 md:grid-cols-2 md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] ${isNext ? "border-primary" : "border-border"}`}>
+              return <div key={`${termin.label}-${index}`} className={`grid grid-cols-1 gap-2 overflow-hidden rounded-xl border p-3 md:grid-cols-2 md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] ${isNext ? "border-primary" : "border-border"}`}>
                 <div className="min-w-0 md:col-span-2 flex items-center justify-between gap-2">
                   <Label>Vorstellung {index + 1}</Label>
                   <Button
@@ -133,10 +135,10 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
                   </Button>
                 </div>
                 <div className="min-w-0">
-                  <Input className="min-w-0" type="date" value={termin.datum} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, datum: event.target.value } : t) }))} />
+                  <DateInput className="min-w-0" value={termin.datum} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, datum: event.target.value } : t) }))} />
                 </div>
                 <div className="min-w-0">
-                  <Input className="min-w-0" type="time" value={termin.uhrzeit} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, uhrzeit: event.target.value } : t) }))} />
+                  <TimeInput className="min-w-0" value={termin.uhrzeit} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, uhrzeit: event.target.value } : t) }))} />
                 </div>
               </div>;
             })}

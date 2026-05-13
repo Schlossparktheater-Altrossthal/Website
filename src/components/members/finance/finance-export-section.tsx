@@ -10,6 +10,7 @@ import {
   FINANCE_TYPE_LABELS,
 } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -107,8 +108,8 @@ export function FinanceExportSection({ showId }: FinanceExportSectionProps) {
             ))}
           </SelectContent>
         </Select>
-        <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} placeholder="Von" />
-        <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} placeholder="Bis" />
+        <DateInput value={from} onChange={(event) => setFrom(event.target.value)} placeholder="Von" />
+        <DateInput value={to} onChange={(event) => setTo(event.target.value)} placeholder="Bis" />
       </div>
       <div>
         <Button type="button" onClick={handleDownload} disabled={downloading} className="gap-2">

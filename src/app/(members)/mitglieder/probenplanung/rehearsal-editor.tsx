@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ROLE_LABELS, ROLES } from "@/lib/roles";
 import { cn } from "@/lib/utils";
@@ -302,9 +304,8 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
                 <label className="text-sm font-medium" htmlFor="rehearsal-date">
                   Datum
                 </label>
-                <Input
+                <DateInput
                   id="rehearsal-date"
-                  type="date"
                   value={date}
                   onChange={(event) => setDate(event.target.value)}
                   required
@@ -314,9 +315,8 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
                 <label className="text-sm font-medium" htmlFor="rehearsal-time">
                   Uhrzeit
                 </label>
-                <Input
+                <TimeInput
                   id="rehearsal-time"
-                  type="time"
                   value={time}
                   onChange={(event) => setTime(event.target.value)}
                   required
@@ -326,9 +326,8 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
                 <label className="text-sm font-medium" htmlFor="rehearsal-end">
                   Ende
                 </label>
-                <Input
+                <TimeInput
                   id="rehearsal-end"
-                  type="time"
                   value={endTime}
                   onChange={(event) => setEndTime(event.target.value)}
                 />

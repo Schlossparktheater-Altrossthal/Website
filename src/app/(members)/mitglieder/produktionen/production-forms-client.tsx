@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -165,23 +166,23 @@ export function CreateProductionForm({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <label className="text-sm font-medium">Startdatum</label>
-            <Input type="date" name="startDate" />
+            <DateInput name="startDate" />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Enddatum</label>
-            <Input type="date" name="endDate" />
+            <DateInput name="endDate" />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Beginn der Endprobenwoche</label>
-            <Input type="date" name="finalRehearsalWeekStart" />
+            <DateInput name="finalRehearsalWeekStart" />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Ende der Endprobenwoche</label>
-            <Input type="date" name="finalRehearsalWeekEnd" />
+            <DateInput name="finalRehearsalWeekEnd" />
           </div>
           <div className="space-y-1 sm:col-span-2">
             <label className="text-sm font-medium">Premierenankündigung</label>
-            <Input type="date" name="revealDate" />
+            <DateInput name="revealDate" />
           </div>
         </div>
       </details>
@@ -441,19 +442,19 @@ export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdatePr
             <label className="text-sm font-medium" htmlFor={`startDate-${show.id}`}>
               Startdatum
             </label>
-            <Input id={`startDate-${show.id}`} type="date" name="startDate" defaultValue={startDate} />
+            <DateInput id={`startDate-${show.id}`} name="startDate" defaultValue={startDate} />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor={`endDate-${show.id}`}>
               Enddatum
             </label>
-            <Input id={`endDate-${show.id}`} type="date" name="endDate" defaultValue={endDate} />
+            <DateInput id={`endDate-${show.id}`} name="endDate" defaultValue={endDate} />
           </div>
           <div className="space-y-1 sm:col-span-2">
             <label className="text-sm font-medium" htmlFor={`revealDate-${show.id}`}>
               Premierenankündigung
             </label>
-            <Input id={`revealDate-${show.id}`} type="date" name="revealDate" defaultValue={revealDate} />
+            <DateInput id={`revealDate-${show.id}`} name="revealDate" defaultValue={revealDate} />
           </div>
         </div>
       </details>
