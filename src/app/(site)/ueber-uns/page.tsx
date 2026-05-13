@@ -298,13 +298,13 @@ export default async function PublicAboutPage() {
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {statisticItems.map((item) => (
-              <Card key={item.label} className="border-border/60 bg-card/70 p-4 shadow-sm">
-                <CardHeader className="p-0 pb-1.5">
-                  <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{item.label}</p>
+              <Card key={item.label} className="flex flex-col items-center border border-primary/60 bg-card/70 p-4 text-center shadow-sm">
+                <CardHeader className="p-0 pb-2">
+                  <p className="text-center text-xs font-semibold uppercase tracking-widest text-primary">{item.label}</p>
                 </CardHeader>
-                <CardContent className="p-0 pt-0">
-                  <p className="text-lg font-bold text-foreground">{item.value}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
+                <CardContent className="p-0">
+                  <p className="text-center text-[clamp(1.8rem,3vw,2.4rem)] font-bold text-primary">{item.value}</p>
+                  <p className="mt-1 text-center text-sm text-muted-foreground">{item.detail}</p>
                 </CardContent>
               </Card>
             ))}
@@ -407,13 +407,13 @@ export default async function PublicAboutPage() {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-primary/10 via-background to-background p-8 shadow-lg">
+            <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-primary/10 via-background to-background p-[clamp(1rem,2vw,1.5rem)] shadow-lg">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,223,150,0.18),_transparent_60%)]" aria-hidden />
               <div className="relative space-y-4">
                 <Text variant="eyebrow" uppercase tone="primary">
                   Atmosphäre
                 </Text>
-                <Heading level="h3" className="text-2xl">
+                <Heading level="h3" className="text-[clamp(1rem,2vw,1.3rem)] font-bold">
                   Wenn die Sonne hinter den Baumwipfeln verschwindet, beginnt unser Bühnenraum zu leben: leuchtende Pfade, flüsternde Bäume und ein Ensemble, das
                   das Publikum mitnimmt in eine andere Welt.
                 </Heading>

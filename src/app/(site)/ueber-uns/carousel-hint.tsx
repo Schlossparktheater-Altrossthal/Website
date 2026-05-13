@@ -13,11 +13,11 @@ export function CarouselHint() {
         <TooltipTrigger asChild>
           <button
             type="button"
-            className="rounded-full p-1 text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="rounded-full p-1 text-primary transition hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             aria-label="Karussell-Bedienhinweis"
             title={HINT_TEXT}
           >
-            <Info className="h-4 w-4" aria-hidden />
+            <Info className="h-5 w-5" aria-hidden />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" className="max-w-xs text-xs">
