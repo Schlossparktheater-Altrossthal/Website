@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 
-import { DennisDieterEncountersSection } from "./encounters-section";
+import { SchoolCatEncountersSection } from "./encounters-section";
 import { SchulkatzeGallery } from "./schulkatze-gallery";
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
@@ -52,25 +52,25 @@ export const metadata: Metadata = {
   },
 };
 
-type Highlight = {
+type CatProfileHighlight = {
   icon: LucideIcon;
   title: string;
   description: string;
 };
 
-type Memory = {
+type CatMemoryItem = {
   icon: LucideIcon;
   title: string;
   detail: string;
 };
 
-type Supporter = {
+type CatCareSupporter = {
   icon: LucideIcon;
   title: string;
   description: string;
 };
 
-const highlights: Highlight[] = [
+const catProfileHighlights: CatProfileHighlight[] = [
   {
     icon: Cat,
     title: "Porträt",
@@ -91,7 +91,7 @@ const highlights: Highlight[] = [
   },
 ];
 
-const memories: Memory[] = [
+const catMemoryItems: CatMemoryItem[] = [
   {
     icon: Sun,
     title: "Frühe Streifzüge",
@@ -112,7 +112,7 @@ const memories: Memory[] = [
   },
 ];
 
-const careCircle: Supporter[] = [
+const catCareSupporters: CatCareSupporter[] = [
   {
     icon: Users,
     title: "Pflege-AG & Schülerschaft",
@@ -133,14 +133,14 @@ const careCircle: Supporter[] = [
   },
 ];
 
-const lessons: string[] = [
+const catCareLessons: string[] = [
   "Tiere, die unsere Schule begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
   "Gemeinsame Rituale schaffen Vertrauen, besonders wenn ein Vierbeiner über so viele Jahre Teil der Gemeinschaft ist.",
   "In Abschiedsmomenten hilft es, Erinnerungen zu teilen und Orte des Gedenkens zu schaffen.",
   "Wer künftig eine Schulkatze willkommen heißt, sollte an Dieters Bedürfnisse denken: Ruhe, Respekt und Zeit.",
 ];
 
-export default function SchulkatzePage() {
+export default function SchoolCatPage() {
   return (
     <div className="relative isolate">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -190,7 +190,7 @@ export default function SchulkatzePage() {
 
       <section className="layout-container pb-16">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {highlights.map((item) => (
+          {catProfileHighlights.map((item) => (
             <Card key={item.title} className="h-full">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -222,7 +222,7 @@ export default function SchulkatzePage() {
               </Text>
             </div>
             <div className="space-y-4">
-              {memories.map((entry) => (
+              {catMemoryItems.map((entry) => (
                 <div key={entry.title} className="flex gap-3">
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-primary">
                     <entry.icon className="h-5 w-5" aria-hidden />
@@ -248,7 +248,7 @@ export default function SchulkatzePage() {
               </Text>
             </div>
             <div className="space-y-3">
-              {careCircle.map((entry) => (
+              {catCareSupporters.map((entry) => (
                 <div key={entry.title} className="flex gap-3">
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-primary">
                     <entry.icon className="h-5 w-5" aria-hidden />
@@ -281,7 +281,7 @@ export default function SchulkatzePage() {
               Dieter hat uns gezeigt, wie wichtig Achtsamkeit ist. Diese Gedanken begleiten uns auch in Zukunft:
             </Text>
             <ul className="space-y-2">
-              {lessons.map((lesson) => (
+              {catCareLessons.map((lesson) => (
                 <li key={lesson} className="flex items-start gap-3">
                   <span className="mt-2 h-2 w-2 flex-none rounded-full bg-primary" aria-hidden />
                   <Text variant="small" tone="muted" className="leading-relaxed">
@@ -294,7 +294,7 @@ export default function SchulkatzePage() {
         </Card>
       </section>
 
-      <DennisDieterEncountersSection />
+      <SchoolCatEncountersSection />
 
       <section className="layout-container pb-24">
         <div className="mx-auto max-w-3xl space-y-4 text-center">

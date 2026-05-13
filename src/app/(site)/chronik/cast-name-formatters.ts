@@ -1,4 +1,4 @@
-export function formatChronikPlayerName(name: string) {
+export function formatCastMemberDisplayName(name: string) {
   const trimmed = name.trim();
   if (!trimmed) {
     return "";

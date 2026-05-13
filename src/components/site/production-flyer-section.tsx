@@ -27,7 +27,7 @@ function Toggle({ checked, onCheckedChange }: { checked: boolean; onCheckedChang
   );
 }
 
-export function HomepageFlyer({ aktiv, titel, beschreibung, hasBild }: Props) {
+export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: Props) {
   const { status } = useSession();
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
   const canEdit = status === "authenticated" && hasFeature("site.homepage-flyer");

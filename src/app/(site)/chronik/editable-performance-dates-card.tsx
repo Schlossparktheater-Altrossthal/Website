@@ -19,7 +19,7 @@ import { Text } from "@/components/ui/typography";
 
 const FEATURE_KEY = "chronik.dates" as const;
 
-type ChronikPerformanceDatesCardProps = {
+type EditablePerformanceDatesCardProps = {
   showId: string;
   initialDates: string | null;
 };
@@ -40,7 +40,7 @@ function formatDisplayValue(value: string | null) {
   return value;
 }
 
-export function ChronikPerformanceDatesCard({ showId, initialDates }: ChronikPerformanceDatesCardProps) {
+export function EditablePerformanceDatesCard({ showId, initialDates }: EditablePerformanceDatesCardProps) {
   const { hasFeature, activeFeature, openFeature, closeFeature } = useFrontendEditing();
   const canEdit = hasFeature(FEATURE_KEY);
   const editorOpen = canEdit && activeFeature === FEATURE_KEY;

@@ -9,7 +9,7 @@ type ChronikItem = {
   title?: string | null;
 };
 
-export function ChronikTimeline({ items }: { items: ChronikItem[] }) {
+export function ChronikYearNavigation({ items }: { items: ChronikItem[] }) {
   const [activeId, setActiveId] = useState<string | null>(items[0]?.id ?? null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
 

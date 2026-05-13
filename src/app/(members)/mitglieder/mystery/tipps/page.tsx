@@ -1,6 +1,6 @@
-import { MysteryTipManager } from "@/components/members/mystery/mystery-tip-manager";
+import { MysterySubmissionReviewManager } from "@/components/members/mystery/mystery-submission-review-manager";
 import { Heading, Text } from "@/components/ui/typography";
-import { getMysteryClueSummaries, getMysteryScoreboard, getMysterySubmissionsForClue } from "@/lib/mystery-tips";
+import { getMysteryClueSummaries, getMysteryScoreboard, getMysterySubmissionsForClue } from "@/lib/mystery-submissions";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
@@ -84,7 +84,7 @@ export default async function MysteryTipsAdminPage({
         </Text>
       </div>
 
-      <MysteryTipManager
+      <MysterySubmissionReviewManager
         clues={clues}
         selectedClueId={selectedClueId ?? null}
         submissions={submissionEntries}

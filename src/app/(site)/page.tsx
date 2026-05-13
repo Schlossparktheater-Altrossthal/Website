@@ -2,38 +2,38 @@ import { Hero } from "@/components/hero";
 import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
 import { getHeroImages, pickHeroForNow } from "@/lib/hero-images";
-import { HomepageCountdown } from "./_components/homepage-countdown";
-import { HomepageFlyer } from "@/components/site/homepage-flyer";
-import { readHomepageFlyer } from "@/lib/homepage-flyer";
+import { PremiereCountdownSection } from "./_components/premiere-countdown-section";
+import { ProductionFlyerSection } from "@/components/site/production-flyer-section";
+import { readProductionFlyerSettings } from "@/lib/production-flyer-settings";
 import {
-  readHomepageCountdown,
-  resolveHomepageCountdown,
-} from "@/lib/homepage-countdown";
+  readPremiereCountdownSettings,
+  resolvePremiereCountdownSettings,
+} from "@/lib/premiere-countdown-settings";
 import React from "react";
 
-export default async function Home() {
-  const files = getHeroImages();
-  const picked = pickHeroForNow(files) ?? "https://picsum.photos/id/1069/1600/900";
-  const heroImages = files.length > 0 ? files.slice(0, 5) : [picked];
+export default async function PublicHomePage() {
+  const availableHeroImages = getHeroImages();
+  const selectedHeroImage = pickHeroForNow(availableHeroImages) ?? "https://picsum.photos/id/1069/1600/900";
+  const heroImages = availableHeroImages.length > 0 ? availableHeroImages.slice(0, 5) : [selectedHeroImage];
   let countdownRecord = null;
   const hasDatabase = Boolean(process.env.DATABASE_URL);
   if (hasDatabase) {
     try {
-      countdownRecord = await readHomepageCountdown();
+      countdownRecord = await readPremiereCountdownSettings();
     } catch (error) {
-      console.error("Failed to load homepage countdown settings", error);
+      console.error("Failed to load premiere countdown settings", error);
     }
   }
-  const resolvedCountdown = resolveHomepageCountdown(countdownRecord);
-  let flyer = null;
-  if (hasDatabase) { try { flyer = await readHomepageFlyer(); } catch {} }
+  const resolvedCountdown = resolvePremiereCountdownSettings(countdownRecord);
+  let productionFlyer = null;
+  if (hasDatabase) { try { productionFlyer = await readProductionFlyerSettings(); } catch {} }
   const countdownInitialNow = Date.now();
   const effectiveCountdownTargetIso = resolvedCountdown.effectiveCountdownTarget.toISOString();
   const initialCountdownTargetIso = resolvedCountdown.countdownTarget
     ? resolvedCountdown.countdownTarget.toISOString()
     : null;
   const updatedAtIso = resolvedCountdown.updatedAt ? resolvedCountdown.updatedAt.toISOString() : null;
-  const faqs = [
+  const homepageFaqItems = [
     {
       question: "Was ist das Sommertheater im Schlosspark?",
       answer:
@@ -75,7 +75,7 @@ export default async function Home() {
               Sommertheater Altrossthal
             </Text>
             <div className="w-full max-w-3xl">
-              <HomepageCountdown
+              <PremiereCountdownSection
                 initialCountdownTarget={initialCountdownTargetIso}
                 effectiveCountdownTarget={effectiveCountdownTargetIso}
                 updatedAt={updatedAtIso}
@@ -91,7 +91,7 @@ export default async function Home() {
               />
             </div>
           </section>
-          <HomepageFlyer aktiv={flyer?.aktiv ?? false} titel={flyer?.titel ?? null} beschreibung={flyer?.beschreibung ?? null} hasBild={Boolean(flyer?.bildData && flyer?.bildMimeType)} />
+          <ProductionFlyerSection aktiv={productionFlyer?.aktiv ?? false} titel={productionFlyer?.titel ?? null} beschreibung={productionFlyer?.beschreibung ?? null} hasBild={Boolean(productionFlyer?.bildData && productionFlyer?.bildMimeType)} />
           <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--primary)_35%,transparent),_transparent_60%),radial-gradient(circle_at_bottom,_color-mix(in_oklab,var(--info)_25%,transparent),_transparent_55%)]"
@@ -111,7 +111,7 @@ export default async function Home() {
                 </Heading>
               </div>
               <div className="space-y-4">
-                {faqs.map((faq) => (
+                {homepageFaqItems.map((faq) => (
                   <details
                     key={faq.question}
                     className="group rounded-2xl border border-border/60 bg-background/60 p-6 text-left shadow-lg backdrop-blur transition duration-300 open:border-primary/40 open:bg-background/80"

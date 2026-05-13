@@ -14,7 +14,7 @@ import { Heading, Text } from "@/components/ui/typography";
 
 type TerminInput = { datum: string; uhrzeit: string; label: string };
 
-type HomepageCountdownProps = {
+type PremiereCountdownSectionProps = {
   initialCountdownTarget: string | null;
   effectiveCountdownTarget: string;
   updatedAt: string | null;
@@ -64,7 +64,7 @@ function Toggle({ checked, onCheckedChange, id }: { checked: boolean; onCheckedC
   );
 }
 
-export function HomepageCountdown(props: HomepageCountdownProps) {
+export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
   const { status } = useSession();
   const canEdit = status === "authenticated" && hasFeature("site.countdown");
@@ -116,8 +116,8 @@ export function HomepageCountdown(props: HomepageCountdownProps) {
         <DialogHeader><DialogTitle>Premieren-Countdown einstellen</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/60 p-4">
-            <Label htmlFor="homepage-countdown-visible" className="text-sm font-semibold">Countdown auf der Startseite anzeigen</Label>
-            <Toggle id="homepage-countdown-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
+            <Label htmlFor="premiere-countdown-section-visible" className="text-sm font-semibold">Countdown auf der Startseite anzeigen</Label>
+            <Toggle id="premiere-countdown-section-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
           </div>
 
           <div className="space-y-3">

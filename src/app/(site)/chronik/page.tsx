@@ -3,8 +3,8 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { Heading, Text } from "@/components/ui/typography";
 
-import { ChronikStacked } from "./stacked";
-import { ChronikTimeline } from "./timeline";
+import { ChronikFeaturedShowCards } from "./chronik-featured-show-cards";
+import { ChronikYearNavigation } from "./chronik-year-navigation";
 import { getChronikItems } from "./data";
 
 export const metadata: Metadata = {
@@ -71,8 +71,8 @@ export default async function ChronikPage() {
         </Text>
       </div>
 
-      <ChronikStacked items={items} />
-      <ChronikTimeline items={items.map((item) => ({ id: item.id, year: item.year, title: item.title }))} />
+      <ChronikFeaturedShowCards items={items} />
+      <ChronikYearNavigation items={items.map((item) => ({ id: item.id, year: item.year, title: item.title }))} />
     </div>
   );
 }

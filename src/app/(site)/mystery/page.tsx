@@ -8,14 +8,14 @@ import {
   DEFAULT_MYSTERY_EXPIRATION_MESSAGE,
   readMysterySettings,
   resolveMysterySettings,
-} from "@/lib/mystery-settings";
+} from "@/lib/mystery-countdown-settings";
 import { prisma } from "@/lib/prisma";
 import type { Clue, MysteryTip as MysteryTipModel, Prisma } from "@prisma/client";
-import { getMysteryClueSummaries, getMysteryScoreboard } from "@/lib/mystery-tips";
+import { getMysteryClueSummaries, getMysteryScoreboard } from "@/lib/mystery-submissions";
 
-import { MysteryTipsBoard } from "./_components/mystery-tips-board";
+import { MysteryGuessBoard } from "./_components/mystery-guess-board";
 import { MysteryScoreboard } from "./_components/mystery-scoreboard";
-import { MysteryCountdownCard } from "./_components/mystery-countdown-card";
+import { MysteryLaunchCountdownCard } from "./_components/mystery-launch-countdown-card";
 
 export const metadata: Metadata = {
   title: "Das Geheimnis des Sommertheaters",
@@ -166,7 +166,7 @@ export default async function MysteryPage() {
           </Text>
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <MysteryCountdownCard
+          <MysteryLaunchCountdownCard
             initialCountdownTarget={initialCountdownTargetIso}
             initialExpirationMessage={resolvedSettings.expirationMessage}
             effectiveCountdownTarget={countdownTargetIso}
@@ -202,7 +202,7 @@ export default async function MysteryPage() {
           </Card>
         </div>
       </section>
-      <MysteryTipsBoard
+      <MysteryGuessBoard
         initialTips={initialTips}
         clueOptions={clueOptions}
         defaultClueId={clueOptions[0]?.id}

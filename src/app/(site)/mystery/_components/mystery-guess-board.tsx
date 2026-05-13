@@ -45,13 +45,13 @@ type ClueOption = {
   points: number;
 };
 
-type MysteryTipsBoardProps = {
+type MysteryGuessBoardProps = {
   initialTips?: MysteryTip[];
   clueOptions: ClueOption[];
   defaultClueId?: string | null;
 };
 
-export function MysteryTipsBoard({ initialTips = [], clueOptions, defaultClueId }: MysteryTipsBoardProps) {
+export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId }: MysteryGuessBoardProps) {
   const [tips, setTips] = useState<MysteryTip[]>(() => sortTips(initialTips));
   const [tipText, setTipText] = useState("");
   const [playerName, setPlayerName] = useState("");
