@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
@@ -22,6 +22,7 @@ export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: 
 
   const [form, setForm] = useState({ aktiv, titel: titel ?? "", beschreibung: beschreibung ?? "" });
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function removeImage() {
     const res = await fetch("/api/website/production-flyer/image", { method: "DELETE" });
@@ -86,9 +87,15 @@ export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: 
             </div>
             <Input placeholder="Stücktitel 2026" value={form.titel} onChange={(e) => setForm((s) => ({ ...s, titel: e.target.value }))} />
             <Textarea placeholder="Beschreibung" value={form.beschreibung} onChange={(e) => setForm((s) => ({ ...s, beschreibung: e.target.value }))} />
-            <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}>
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
                 Datei ändern
               </Button>
               <Button type="button" variant="outline" onClick={removeImage}>
