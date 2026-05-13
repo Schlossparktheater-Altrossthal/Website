@@ -10,7 +10,6 @@ import {
   Music3,
   Package,
   Shirt,
-  Info,
   Sparkles,
   Trees,
   Users,
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CarouselHint } from "@/app/(site)/ueber-uns/carousel-hint";
 import { Heading, Text } from "@/components/ui/typography";
 import { getCurrentProductionEnsembleStats } from "@/lib/ensemble";
 
@@ -221,7 +221,7 @@ const tradeItems: TradeItem[] = [
 ];
 
 const CAROUSEL_GROUP_COUNT = 2;
-const SECTION_HEADING_CLASS = "text-[clamp(1.6rem,4vw,2.8rem)] font-bold text-foreground";
+const SECTION_HEADING_CLASS = "text-[clamp(1.2rem,2.5vw,1.8rem)] font-bold text-foreground";
 
 export default async function PublicAboutPage() {
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -275,10 +275,7 @@ export default async function PublicAboutPage() {
       <section className="layout-container pb-12 pt-16 sm:pt-24">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
-            <Text variant="eyebrow" uppercase tone="primary">
-              Sommertheater Altrossthal
-            </Text>
-            <Heading level="h1" className="mt-4 text-[clamp(1.6rem,4vw,2.8rem)] font-bold text-foreground">
+            <Heading level="h1" className="text-[clamp(1.2rem,2.5vw,1.8rem)] font-bold text-foreground">
               Über uns
             </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-6">
@@ -300,20 +297,14 @@ export default async function PublicAboutPage() {
           </div>
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {statisticItems.map((item, itemIndex) => (
-              <Card
-                key={item.label}
-                className="relative border border-border bg-card/60 p-[clamp(1rem,3vw,2rem)] shadow-md backdrop-blur"
-              >
-                {itemIndex < statisticItems.length - 1 && (
-                  <span className="absolute right-0 top-1/2 hidden h-3/5 w-px -translate-y-1/2 bg-border lg:block" aria-hidden />
-                )}
-                <CardHeader className="p-0 pb-3">
-                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>
+            {statisticItems.map((item) => (
+              <Card key={item.label} className="border-border/60 bg-card/70 p-4 shadow-sm">
+                <CardHeader className="p-0 pb-1.5">
+                  <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{item.label}</p>
                 </CardHeader>
                 <CardContent className="p-0 pt-0">
-                  <p className="text-[clamp(2rem,5vw,3.5rem)] font-bold text-primary">{item.value}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">{item.detail}</p>
+                  <p className="text-lg font-bold text-foreground">{item.value}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
                 </CardContent>
               </Card>
             ))}
@@ -331,9 +322,9 @@ export default async function PublicAboutPage() {
               Jeder Sommer entsteht aus vielen Händen und Talenten. Unser Ensemble arbeitet bereichsübergreifend – von der ersten Textprobe bis zur letzten
               Vorstellungsnacht.
             </Text>
-            <Text tone="muted" className="mt-2">
-              Lass das Karussell auf dich wirken oder halte es an, indem du mit der Maus über die Karten fährst.
-            </Text>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <CarouselHint />
           </div>
           <div className="group relative mt-8 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-hidden sm:px-0">
             <div
@@ -358,10 +349,10 @@ export default async function PublicAboutPage() {
                       role={groupIndex === 0 ? "listitem" : "presentation"}
                       aria-hidden={groupIndex > 0}
                       tabIndex={groupIndex === 0 ? 0 : -1}
-                      className="flex w-[min(18.5rem,80vw)] shrink-0 snap-center flex-col justify-between gap-4 rounded-2xl border-border/40 bg-card/70 p-6 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:w-[22rem] sm:snap-start"
+                      className="flex w-[min(18.5rem,80vw)] shrink-0 snap-center flex-col justify-between gap-4 rounded-2xl border border-primary/50 bg-card/70 p-6 shadow-[0_0_16px_2px_hsl(var(--primary)/0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:w-[22rem] sm:snap-start"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
                           <TradeIcon className="h-6 w-6" aria-hidden />
                         </div>
                         <Heading level="h3" className="text-xl" weight="bold">
@@ -378,16 +369,6 @@ export default async function PublicAboutPage() {
                 </div>
               ))}
             </div>
-          </div>
-          <div className="mt-4 flex justify-center sm:justify-end">
-            <button
-              type="button"
-              className="text-muted-foreground transition hover:text-foreground"
-              title="Auf dem Handy wischen · Maus über Karte hält Rotation an"
-              aria-label="Karussell-Bedienhinweis"
-            >
-              <Info className="h-4 w-4" aria-hidden />
-            </button>
           </div>
         </div>
       </section>
