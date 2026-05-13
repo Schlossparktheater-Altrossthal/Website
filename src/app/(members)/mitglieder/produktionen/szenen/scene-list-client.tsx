@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
@@ -424,7 +425,7 @@ export function SceneListClient({
                                 </div>
                                 <div className="space-y-1">
                                   <label className="text-xs font-medium text-muted-foreground">Benötigt bis</label>
-                                  <Input type="date" name="neededBy" />
+                                  <DateInput name="neededBy" />
                                 </div>
                                 <div className="space-y-1 md:col-span-4">
                                   <label className="text-xs font-medium text-muted-foreground">Titel</label>
@@ -674,7 +675,7 @@ export function SceneListClient({
                                     </div>
                                     <div className="space-y-1">
                                       <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Benötigt bis</label>
-                                      <Input type="date" name="neededBy" defaultValue={formatIsoDate(item.neededBy)} />
+                                      <DateInput name="neededBy" defaultValue={formatIsoDate(item.neededBy)} />
                                     </div>
                                     <div className="space-y-1 md:col-span-4">
                                       <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>

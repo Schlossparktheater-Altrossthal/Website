@@ -13,6 +13,7 @@ import { hasPermission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -387,7 +388,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                           </div>
                           <div className="space-y-1">
                             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Fällig bis</label>
-                            <Input type="date" name="dueAt" defaultValue={dueDateValue} />
+                            <DateInput name="dueAt" defaultValue={dueDateValue} />
                           </div>
                           <div className="space-y-1">
                             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -492,7 +493,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Fällig bis</label>
-                  <Input type="date" name="dueAt" />
+                  <DateInput name="dueAt" />
                 </div>
                 <div className="space-y-1 md:col-span-2">
                   <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

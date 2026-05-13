@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp, Copy, ExternalLink, FileDown, MessageCircle, Pe
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1490,8 +1491,7 @@ export function MemberInviteManager() {
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Gültig bis</span>
-                <Input
-                  type="date"
+                <DateInput
                   value={editForm.expiresAt}
                   onChange={(event) => setEditForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
                   disabled={isUpdatingCurrentInvite}
@@ -1633,8 +1633,7 @@ export function MemberInviteManager() {
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Gültig bis</span>
-                <Input
-                  type="date"
+                <DateInput
                   value={form.expiresAt}
                   onChange={(event) => setForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
                 />

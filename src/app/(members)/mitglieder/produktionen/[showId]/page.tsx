@@ -7,6 +7,7 @@ import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 
 import { X } from "lucide-react";
@@ -169,9 +170,8 @@ export default async function ProduktionDetailPage({
                 <label className="text-sm font-medium" htmlFor="finalRehearsalWeekStart">
                   Beginn der Endprobenwoche
                 </label>
-                <Input
+                <DateInput
                   id="finalRehearsalWeekStart"
-                  type="date"
                   name="finalRehearsalWeekStart"
                   defaultValue={finalRehearsalWeekStartValue}
                 />
@@ -185,9 +185,8 @@ export default async function ProduktionDetailPage({
                 <label className="text-sm font-medium" htmlFor="finalRehearsalWeekEnd">
                   Ende der Endprobenwoche
                 </label>
-                <Input
+                <DateInput
                   id="finalRehearsalWeekEnd"
-                  type="date"
                   name="finalRehearsalWeekEnd"
                   defaultValue={finalRehearsalWeekEndValue}
                 />

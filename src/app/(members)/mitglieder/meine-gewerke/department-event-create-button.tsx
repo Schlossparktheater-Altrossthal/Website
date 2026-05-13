@@ -17,7 +17,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -146,20 +148,18 @@ export function CreateDepartmentEventButton({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="department-event-date">Datum</Label>
-              <Input
+              <DateInput
                 id="department-event-date"
                 name="date"
-                type="date"
                 required
                 defaultValue={resolvedDefaults.date}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="department-event-start">Start</Label>
-              <Input
+              <TimeInput
                 id="department-event-start"
                 name="startTime"
-                type="time"
                 required
                 defaultValue={resolvedDefaults.startTime}
               />
@@ -168,10 +168,9 @@ export function CreateDepartmentEventButton({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="department-event-end">Ende (optional)</Label>
-              <Input
+              <TimeInput
                 id="department-event-end"
                 name="endTime"
-                type="time"
                 defaultValue={resolvedDefaults.endTime}
               />
             </div>

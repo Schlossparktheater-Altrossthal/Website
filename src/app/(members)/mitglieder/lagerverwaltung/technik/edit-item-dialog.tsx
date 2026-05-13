@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -328,10 +329,9 @@ export function EditTechnikItemDialog({
               <Label htmlFor={`technik-purchase-edit-${item.id}`}>
                 Kaufdatum
               </Label>
-              <Input
+              <DateInput
                 id={`technik-purchase-edit-${item.id}`}
                 name="purchaseDate"
-                type="date"
                 defaultValue={formatDateInput(item.purchaseDate)}
                 required
               />
@@ -342,10 +342,9 @@ export function EditTechnikItemDialog({
               <Label htmlFor={`technik-lastUsed-edit-${item.id}`}>
                 Zuletzt benutzt
               </Label>
-              <Input
+              <DateInput
                 id={`technik-lastUsed-edit-${item.id}`}
                 name="lastUsedAt"
-                type="date"
                 defaultValue={formatDateInput(item.lastUsedAt)}
               />
             </div>
@@ -353,10 +352,9 @@ export function EditTechnikItemDialog({
               <Label htmlFor={`technik-lastInventory-edit-${item.id}`}>
                 Letzte Inventur
               </Label>
-              <Input
+              <DateInput
                 id={`technik-lastInventory-edit-${item.id}`}
                 name="lastInventoryAt"
-                type="date"
                 defaultValue={formatDateInput(item.lastInventoryAt)}
               />
             </div>
