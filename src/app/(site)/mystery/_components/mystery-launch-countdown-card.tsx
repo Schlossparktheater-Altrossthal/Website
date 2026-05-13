@@ -96,8 +96,8 @@ export function MysteryLaunchCountdownCard({
     updatedAt,
   ]);
 
-  const canEdit = hasFeature("mystery.timer");
-  const editorOpen = canEdit && activeFeature === "mystery.timer";
+  const canEdit = hasFeature("mystery.launch-countdown");
+  const editorOpen = canEdit && activeFeature === "mystery.launch-countdown";
 
   const countdownLabel = useMemo(
     () => formatLabel(state.effectiveCountdownTarget),
@@ -134,7 +134,7 @@ export function MysteryLaunchCountdownCard({
             size="sm"
             variant={editorOpen ? "secondary" : "outline"}
             className="sm:self-start"
-            onClick={() => toggleFeature("mystery.timer")}
+            onClick={() => toggleFeature("mystery.launch-countdown")}
             aria-pressed={editorOpen}
             aria-controls={EDITOR_SECTION_ID}
           >

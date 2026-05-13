@@ -67,8 +67,8 @@ function Toggle({ checked, onCheckedChange, id }: { checked: boolean; onCheckedC
 export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
   const { status } = useSession();
-  const canEdit = status === "authenticated" && hasFeature("site.countdown");
-  const editorOpen = canEdit && activeFeature === "site.countdown";
+  const canEdit = status === "authenticated" && hasFeature("website.premiere-countdown");
+  const editorOpen = canEdit && activeFeature === "website.premiere-countdown";
   const [settings, setSettings] = useState<CountdownSettingsState>(() => ({
     ...props,
     countdownTarget: props.effectiveCountdownTarget,
@@ -91,7 +91,7 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
     setSaving(true); setError(null); setSuccess(null);
     try {
       const countdownTarget = nextTermin ? localInputToIso(`${nextTermin.datum}T${nextTermin.uhrzeit}`) : null;
-      const response = await fetch("/api/homepage/countdown", {
+      const response = await fetch("/api/website/premiere-countdown", {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ countdownTarget, disabled: formDisabled, termine: settings.termine, nachSommerText: settings.nachSommerText }),
       });
@@ -108,10 +108,10 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
         {!countdownActive ? "Premieren-Countdown" : nextTermin ? (settings.hasCustomCountdown ? "Premiere in" : "Nächste Vorstellung in") : "Vorstellungen beendet"}
       </Heading>
       {countdownActive ? (allDone ? (settings.nachSommerText ? <Text variant="lead">{settings.nachSommerText}</Text> : null) : <Countdown targetDate={localInputToIso(`${nextTermin?.datum}T${nextTermin?.uhrzeit}`) ?? settings.effectiveCountdownTarget} initialNow={props.initialNow} />) : <Text variant="lead" tone="muted" className="font-semibold">Der Countdown ist aktuell deaktiviert.</Text>}
-      {canEdit ? <Button size="sm" variant={editorOpen ? "secondary" : "outline"} onClick={() => (editorOpen ? closeFeature() : openFeature("site.countdown"))}>{editorOpen ? "Einstellungen schließen" : "Countdown bearbeiten"}</Button> : null}
+      {canEdit ? <Button size="sm" variant={editorOpen ? "secondary" : "outline"} onClick={() => (editorOpen ? closeFeature() : openFeature("website.premiere-countdown"))}>{editorOpen ? "Einstellungen schließen" : "Countdown bearbeiten"}</Button> : null}
     </div>
 
-    <Dialog open={editorOpen} onOpenChange={(open) => (open ? openFeature("site.countdown") : closeFeature())}>
+    <Dialog open={editorOpen} onOpenChange={(open) => (open ? openFeature("website.premiere-countdown") : closeFeature())}>
       <DialogContent>
         <DialogHeader><DialogTitle>Premieren-Countdown einstellen</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">

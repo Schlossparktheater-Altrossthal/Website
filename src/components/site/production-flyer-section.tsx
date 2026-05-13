@@ -30,21 +30,21 @@ function Toggle({ checked, onCheckedChange }: { checked: boolean; onCheckedChang
 export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: Props) {
   const { status } = useSession();
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
-  const canEdit = status === "authenticated" && hasFeature("site.homepage-flyer");
-  const open = canEdit && activeFeature === "site.homepage-flyer";
+  const canEdit = status === "authenticated" && hasFeature("website.production-flyer");
+  const open = canEdit && activeFeature === "website.production-flyer";
 
   const [form, setForm] = useState({ aktiv, titel: titel ?? "", beschreibung: beschreibung ?? "" });
   const [file, setFile] = useState<File | null>(null);
 
   async function removeImage() {
-    const res = await fetch("/api/homepage/flyer/image", { method: "DELETE" });
+    const res = await fetch("/api/website/production-flyer/image", { method: "DELETE" });
     if (!res.ok) return toast.error("Bild konnte nicht entfernt werden.");
     toast.success("Gespeichert ✓", { duration: 3000 });
     window.location.reload();
   }
 
   async function save() {
-    const meta = await fetch("/api/homepage/flyer", {
+    const meta = await fetch("/api/website/production-flyer", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ aktiv: form.aktiv, titel: form.titel || null, beschreibung: form.beschreibung || null }),
@@ -53,7 +53,7 @@ export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: 
     if (file) {
       const fd = new FormData();
       fd.append("image", file);
-      const up = await fetch("/api/homepage/flyer/image", { method: "POST", body: fd });
+      const up = await fetch("/api/website/production-flyer/image", { method: "POST", body: fd });
       if (!up.ok) return toast.error("Bild konnte nicht gespeichert werden.");
     }
     toast.success("Gespeichert ✓", { duration: 3000 });
@@ -68,7 +68,7 @@ export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: 
           {titel ? <h2 className="text-[clamp(1.4rem,4vw,2.2rem)] font-semibold">{titel}</h2> : null}
           {hasBild ? (
             <Image
-              src="/api/homepage/flyer/image"
+              src="/api/website/production-flyer/image"
               alt={titel ?? "Flyer"}
               width={800}
               height={450}
@@ -81,13 +81,13 @@ export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: 
 
       {canEdit ? (
         <div className="mt-4">
-          <Button size="sm" variant={open ? "secondary" : "outline"} onClick={() => (open ? closeFeature() : openFeature("site.homepage-flyer"))}>
+          <Button size="sm" variant={open ? "secondary" : "outline"} onClick={() => (open ? closeFeature() : openFeature("website.production-flyer"))}>
             {open ? "Einstellungen schließen" : "Flyer bearbeiten"}
           </Button>
         </div>
       ) : null}
 
-      <Dialog open={open} onOpenChange={(v) => (v ? openFeature("site.homepage-flyer") : closeFeature())}>
+      <Dialog open={open} onOpenChange={(v) => (v ? openFeature("website.production-flyer") : closeFeature())}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Flyer bearbeiten</DialogTitle>

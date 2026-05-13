@@ -43,7 +43,7 @@ function serializeSettings(record: Awaited<ReturnType<typeof readMysterySettings
 
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.mystery.timer"))) {
+  if (!(await hasPermission(session.user, "mitglieder.mystery.launch-countdown"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.mystery.timer"))) {
+  if (!(await hasPermission(session.user, "mitglieder.mystery.launch-countdown"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
