@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   AudioLines,
@@ -7,16 +6,17 @@ import {
   ClipboardList,
   Drama,
   HeartHandshake,
-  MapPin,
   Megaphone,
   Music3,
   Package,
   Shirt,
+  Info,
   Sparkles,
   Trees,
   Users,
   UtensilsCrossed,
   WandSparkles,
+  Zap,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
 };
 
-type AboutStatisticHighlight = {
+type StatisticItem = {
   label: string;
   value: string;
   detail: string;
@@ -47,7 +47,7 @@ type AboutStatisticHighlight = {
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("de-DE");
 
-const baseAboutStatisticHighlights: AboutStatisticHighlight[] = [
+const baseStatisticItems: StatisticItem[] = [
   {
     label: "Gründung",
     value: "2009",
@@ -70,7 +70,7 @@ const baseAboutStatisticHighlights: AboutStatisticHighlight[] = [
   },
 ];
 
-const aboutSignaturePillars = [
+const signatureSectionItems = [
   {
     icon: Drama,
     title: "Freiluftbühne im Schlosspark",
@@ -91,7 +91,7 @@ const aboutSignaturePillars = [
   },
 ];
 
-const associationValueItems = [
+const valuesItems = [
   {
     icon: HeartHandshake,
     title: "Gemeinschaft",
@@ -112,7 +112,7 @@ const associationValueItems = [
   },
 ];
 
-const aboutTimelineMilestones = [
+const milestoneItems = [
   {
     year: "2008",
     title: "Theatergruppe im Kulturpalast",
@@ -151,49 +151,18 @@ const aboutTimelineMilestones = [
   },
 ];
 
-const engagementCallToActions = [
-  {
-    title: "Mitmachen",
-    description:
-      "Ob Schauspiel, Kostüm, Floristik, Metallwerkstatt, Werbung & Social Media oder Gästebetreuung – wir freuen uns über neue Gesichter, die mit uns die Sommertheater-Momente gestalten.",
-    action: {
-      label: "Schreib uns",
-      href: "mailto:ensemble@sommertheater-altrossthal.de",
-    },
-  },
-  {
-    title: "Fördern",
-    description:
-      "Als Partner:in oder Sponsor:in stärkst du kulturelle Angebote in der Region und ermöglichst faire Gagen für unser Kreativteam.",
-    action: {
-      label: "Kontakt aufnehmen",
-      href: "mailto:foerderkreis@sommertheater-altrossthal.de",
-    },
-  },
-];
-
-type Department = {
+type TradeItem = {
   icon: LucideIcon;
   title: string;
   description: string;
 };
 
-const departments: Department[] = [
+const tradeItems: TradeItem[] = [
   {
     icon: Drama,
     title: "Schauspiel",
     description:
       "Wir entwickeln Szenen gemeinsam und finden für jede Person die passende Herausforderung – vom leisen Spiel bis zur großen Hauptrolle.",
-  },
-  {
-    icon: Sparkles,
-    title: "Hier entsteht neues",
-    description: "Hier entsteht neues",
-  },
-  {
-    icon: Sparkles,
-    title: "Hier entsteht neues",
-    description: "Hier entsteht neues",
   },
   {
     icon: Package,
@@ -243,14 +212,21 @@ const departments: Department[] = [
     description:
       "Spielpläne, Probenprotokolle und Kontaktlisten laufen hier zusammen – damit jede Premiere punktgenau gelingt.",
   },
+  {
+    icon: Zap,
+    title: "Technik & Licht",
+    description:
+      "Von der ersten Probe bis zur Premiere: Unser Technikteam steuert Licht und Ton – damit jeder Moment auf der Bühne sitzt.",
+  },
 ];
 
 const CAROUSEL_GROUP_COUNT = 2;
+const SECTION_HEADING_CLASS = "text-[clamp(1.6rem,4vw,2.8rem)] font-bold text-foreground";
 
 export default async function PublicAboutPage() {
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const ensembleStats = await getCurrentProductionEnsembleStats();
-  const aboutStatisticHighlights = baseAboutStatisticHighlights.map<AboutStatisticHighlight>((item) => {
+  const statisticItems = baseStatisticItems.map<StatisticItem>((item) => {
     if (item.label !== "Ensemble" || !ensembleStats) {
       return item;
     }
@@ -302,7 +278,7 @@ export default async function PublicAboutPage() {
             <Text variant="eyebrow" uppercase tone="primary">
               Sommertheater Altrossthal
             </Text>
-            <Heading level="h1" className="mt-4">
+            <Heading level="h1" className="mt-4 text-[clamp(1.6rem,4vw,2.8rem)] font-bold text-foreground">
               Über uns
             </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-6">
@@ -324,16 +300,19 @@ export default async function PublicAboutPage() {
           </div>
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {aboutStatisticHighlights.map((item) => (
+            {statisticItems.map((item, itemIndex) => (
               <Card
                 key={item.label}
-                className="border border-primary/20 bg-primary/5 shadow-md shadow-primary/10 backdrop-blur"
+                className="relative border border-border bg-card/60 p-[clamp(1rem,3vw,2rem)] shadow-md backdrop-blur"
               >
-                <CardHeader className="pb-3">
-                  <p className="text-xs uppercase tracking-[0.18em] text-primary/80">{item.label}</p>
+                {itemIndex < statisticItems.length - 1 && (
+                  <span className="absolute right-0 top-1/2 hidden h-3/5 w-px -translate-y-1/2 bg-border lg:block" aria-hidden />
+                )}
+                <CardHeader className="p-0 pb-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-2xl font-semibold text-primary">{item.value}</p>
+                <CardContent className="p-0 pt-0">
+                  <p className="text-[clamp(2rem,5vw,3.5rem)] font-bold text-primary">{item.value}</p>
                   <p className="mt-2 text-xs text-muted-foreground">{item.detail}</p>
                 </CardContent>
               </Card>
@@ -345,7 +324,9 @@ export default async function PublicAboutPage() {
       <section className="layout-container pb-16 sm:pb-24">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
-            <Heading level="h2">Gewerke, die eine Produktion tragen</Heading>
+            <Heading level="h2" className={SECTION_HEADING_CLASS}>
+              Gewerke, die eine Produktion tragen
+            </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
               Jeder Sommer entsteht aus vielen Händen und Talenten. Unser Ensemble arbeitet bereichsübergreifend – von der ersten Textprobe bis zur letzten
               Vorstellungsnacht.
@@ -371,7 +352,7 @@ export default async function PublicAboutPage() {
             >
               {Array.from({ length: CAROUSEL_GROUP_COUNT }).map((_, groupIndex) => (
                 <div key={groupIndex} className="flex gap-6" aria-hidden={groupIndex > 0}>
-                  {departments.map(({ icon: Icon, title, description }) => (
+                  {tradeItems.map(({ icon: TradeIcon, title, description }) => (
                     <Card
                       key={`${title}-${groupIndex}`}
                       role={groupIndex === 0 ? "listitem" : "presentation"}
@@ -381,7 +362,7 @@ export default async function PublicAboutPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
-                          <Icon className="h-6 w-6" aria-hidden />
+                          <TradeIcon className="h-6 w-6" aria-hidden />
                         </div>
                         <Heading level="h3" className="text-xl" weight="bold">
                           {title}
@@ -398,9 +379,16 @@ export default async function PublicAboutPage() {
               ))}
             </div>
           </div>
-          <Text variant="small" tone="muted" className="mt-4">
-            Tipp: Auf dem Handy kannst du die Karten seitlich wischen und in Ruhe lesen. Auf größeren Bildschirmen hält ein Mauszeiger die Rotation an.
-          </Text>
+          <div className="mt-4 flex justify-center sm:justify-end">
+            <button
+              type="button"
+              className="text-muted-foreground transition hover:text-foreground"
+              title="Auf dem Handy wischen · Maus über Karte hält Rotation an"
+              aria-label="Karussell-Bedienhinweis"
+            >
+              <Info className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -408,20 +396,22 @@ export default async function PublicAboutPage() {
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div className="space-y-6">
-              <Heading level="h2">Unsere Handschrift</Heading>
+              <Heading level="h2" className={SECTION_HEADING_CLASS}>
+                Unsere Handschrift
+              </Heading>
               <Text variant="bodyLg" tone="muted">
                 Die Sommerproduktionen entstehen über Monate hinweg – von der ersten Idee bis zur letzten Generalprobe. Dabei verbinden wir poetische Stoffe mit
                 immersiven Erlebnissen, die nur unter freiem Himmel möglich sind. Werkstätten für Floristik, Holz- und Metallgestaltung sowie Maskenbild des
                 Berufsschulzentrums fließen direkt in Bühnenwelten ein.
               </Text>
               <div className="space-y-5">
-                {aboutSignaturePillars.map(({ icon: Icon, title, description }) => (
+                {signatureSectionItems.map(({ icon: SignatureIcon, title, description }) => (
                   <div
                     key={title}
                     className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
                   >
                     <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                      <Icon className="h-6 w-6" aria-hidden />
+                      <SignatureIcon className="h-6 w-6" aria-hidden />
                     </div>
                     <div>
                       <Heading level="h4" className="text-lg" weight="bold">
@@ -459,17 +449,19 @@ export default async function PublicAboutPage() {
       <section className="layout-container pb-16 sm:pb-24">
         <div className="mx-auto max-w-6xl">
           <div className="mx-auto max-w-2xl">
-            <Heading level="h2">Werte, die wir leben</Heading>
+            <Heading level="h2" className={SECTION_HEADING_CLASS}>
+              Werte, die wir leben
+            </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
               Ensemblearbeit bedeutet Vertrauen. Unsere Werte spiegeln sich in jeder Probe, jedem Ehrenamt und jedem Gast wider, der den Weg nach Altrossthal findet.
             </Text>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {associationValueItems.map(({ icon: Icon, title, description }) => (
+            {valuesItems.map(({ icon: ValueIcon, title, description }) => (
               <Card key={title} className="relative overflow-hidden bg-card/70">
                 <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
                 <CardHeader>
-                  <Icon className="h-8 w-8 text-primary" aria-hidden />
+                  <ValueIcon className="h-8 w-8 text-primary" aria-hidden />
                 </CardHeader>
                 <CardContent>
                   <CardTitle className="text-xl">{title}</CardTitle>
@@ -487,7 +479,9 @@ export default async function PublicAboutPage() {
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-2">
             <div>
-              <Heading level="h2">Meilensteine</Heading>
+              <Heading level="h2" className={SECTION_HEADING_CLASS}>
+                Meilensteine
+              </Heading>
               <Text variant="bodyLg" tone="muted" className="mt-4">
                 Wir wachsen organisch und mit viel Leidenschaft. Ein paar Stationen auf unserem Weg:
               </Text>
@@ -495,7 +489,7 @@ export default async function PublicAboutPage() {
             <div className="relative">
               <div className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" aria-hidden />
               <ul className="space-y-8">
-                {aboutTimelineMilestones.map((milestone) => (
+                {milestoneItems.map((milestone) => (
                   <li key={milestone.year} className="relative pl-12">
                     <div className="absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-primary/20 text-primary">
                       <span className="text-xs font-semibold">{milestone.year}</span>
@@ -509,47 +503,6 @@ export default async function PublicAboutPage() {
                   </li>
                 ))}
               </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="layout-container pb-20 sm:pb-28">
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-3xl border border-border/40 bg-card/60 p-8 sm:p-12">
-            <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-              <div className="space-y-5">
-                <Heading level="h2">Engagement rund um das Ensemble</Heading>
-                <Text variant="bodyLg" tone="muted">
-                  Unser Sommertheater lebt von Menschen, die ihre Zeit und ihr Können einbringen. Wir begleiten neue Mitglieder mit Mentoring-Formaten, öffnen die
-                  Werkstätten des BSZ Altroßthal für Floristik, Holz und Metall und bieten Fortbildungen für Licht, Ton und Bühnenbild an.
-                </Text>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <MapPin className="h-5 w-5 text-primary" aria-hidden />
-                  <span>Schlosspark Altrossthal · Probenscheune im Alten Forsthaus</span>
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {engagementCallToActions.map((item) => (
-                  <div key={item.title} className="rounded-2xl border border-border/40 bg-background/70 p-5">
-                    <Heading level="h4" className="text-lg" weight="bold">
-                      {item.title}
-                    </Heading>
-                    <Text variant="small" tone="muted" className="mt-2">
-                      {item.description}
-                    </Text>
-                    <Link
-                      href={item.action.href}
-                      className="mt-4 inline-flex items-center text-sm font-medium text-primary hover:text-primary/80"
-                    >
-                      {item.action.label}
-                      <span className="ml-2 text-lg" aria-hidden>
-                        →
-                      </span>
-                    </Link>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
