@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { RefreshCw } from "lucide-react";
 
 function formatCurrency(amount: number, currency: string) {
   try {
@@ -190,7 +191,8 @@ export function FinanceEntryTable({
           <div className="text-xs text-muted-foreground">
             {filteredEntries.length} von {entries.length} Buchungen · Ausgaben {formatCurrency(totalExpenses, dominantCurrency)} · Einnahmen {formatCurrency(totalIncome, dominantCurrency)}
           </div>
-          <Button type="button" variant="secondary" size="sm" onClick={onRefresh} disabled={refreshing}>
+          <Button type="button" variant="secondary" size="sm" onClick={onRefresh} disabled={refreshing} className="gap-2">
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} aria-hidden />
             {refreshing ? "Aktualisiere…" : "Aktualisieren"}
           </Button>
         </div>

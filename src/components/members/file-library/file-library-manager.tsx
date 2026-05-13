@@ -353,7 +353,9 @@ export function FileLibraryManager({ folderId, canUpload, canDownload, canManage
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Upload läuft…
                         </>
                       ) : (
-                        "Upload starten"
+                        <>
+                          <UploadCloud className="mr-2 h-4 w-4" aria-hidden /> Upload starten
+                        </>
                       )}
                     </Button>
                   </div>

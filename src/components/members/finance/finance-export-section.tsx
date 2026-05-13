@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { FileDown, Loader2 } from "lucide-react";
 
 type FinanceExportSectionProps = {
   showId: string;
@@ -110,7 +111,12 @@ export function FinanceExportSection({ showId }: FinanceExportSectionProps) {
         <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} placeholder="Bis" />
       </div>
       <div>
-        <Button type="button" onClick={handleDownload} disabled={downloading}>
+        <Button type="button" onClick={handleDownload} disabled={downloading} className="gap-2">
+          {downloading ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <FileDown className="h-4 w-4" aria-hidden />
+          )}
           {downloading ? "Export wird erstellt…" : "CSV-Export herunterladen"}
         </Button>
       </div>

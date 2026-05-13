@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 
 const MAX_TIP_LENGTH = 280;
 
@@ -226,7 +228,8 @@ export function MysteryTipsBoard({ initialTips = [], clueOptions, defaultClueId 
                 <Button type="submit" disabled={!canSubmit}>
                   {isSubmitting ? "Wird gesendet…" : "Tipp abschicken"}
                 </Button>
-                <Button type="button" variant="ghost" onClick={refreshTips} disabled={isLoading}>
+                <Button type="button" variant="ghost" onClick={refreshTips} disabled={isLoading} className="gap-2">
+                  <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden />
                   Aktualisieren
                 </Button>
               </div>

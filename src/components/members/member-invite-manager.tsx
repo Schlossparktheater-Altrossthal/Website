@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 import type { Role } from "@prisma/client";
-import { ChevronDown, ChevronUp, Copy, Download, ExternalLink, MessageCircle, Pencil, Power, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, ExternalLink, FileDown, MessageCircle, Pencil, Power, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -997,7 +997,7 @@ export function MemberInviteManager() {
                     "PDF wird erstellt …"
                   ) : (
                     <>
-                      <Download className="h-4 w-4" />
+                      <FileDown className="h-4 w-4" />
                       PDF generieren
                     </>
                   )}
@@ -1088,7 +1088,7 @@ export function MemberInviteManager() {
                         },
                         {
                           label: isDownloading ? "PDF wird erstellt …" : "PDF generieren",
-                          icon: <Download className="h-4 w-4" />,
+                          icon: <FileDown className="h-4 w-4" />,
                           onClick: () => {
                             if (isDownloading) return;
                             void requestInvitePdf({
@@ -1301,7 +1301,7 @@ export function MemberInviteManager() {
                                       "PDF wird erstellt …"
                                     ) : (
                                       <>
-                                        <Download className="h-4 w-4" />
+                                        <FileDown className="h-4 w-4" />
                                         PDF generieren
                                       </>
                                     )}

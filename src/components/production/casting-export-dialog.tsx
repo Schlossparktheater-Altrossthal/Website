@@ -256,6 +256,7 @@ export function CastingExportDialog({ showTitle, characters }: CastingExportDial
             </Button>
           </DialogClose>
           <Button type="button" onClick={handleExport} disabled={isPending}>
+            <FileDown className="h-4 w-4" aria-hidden />
             {isPending ? "Exportiert…" : "PDF exportieren"}
           </Button>
         </DialogFooter>

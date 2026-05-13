@@ -8,7 +8,7 @@ import {
   ArrowUpAZ,
   BarChart3,
   Clock3,
-  Download,
+  FileDown,
   Ruler,
   Settings,
   Users,
@@ -601,7 +601,7 @@ export function MemberMeasurementsControlCenter({
                     className="w-full justify-between border-warning/60 text-warning hover:border-warning/80 hover:text-warning sm:w-auto"
                   >
                     Export
-                    <Download className="h-4 w-4 text-warning" />
+                    <FileDown className="h-4 w-4 text-warning" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

@@ -33,6 +33,7 @@ import {
   isIssueVisibility,
 } from "@/lib/issues";
 import { cn } from "@/lib/utils";
+import { RefreshCw } from "lucide-react";
 import type { IssueDetail as IssueDetailType, IssueSummary } from "./types";
 
 function formatDateTime(value: string | null | undefined) {
@@ -294,6 +295,7 @@ export function IssueDetail({ issueId, canManage, currentUserId, onIssueUpdated,
               size="sm"
               onClick={() => loadIssue(true, { showLoading: false })}
             >
+              <RefreshCw className="h-4 w-4" aria-hidden />
               Aktualisieren
             </Button>
           </CardHeader>
