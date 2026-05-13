@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type ChronikItem = {
@@ -92,9 +93,10 @@ export function ChronikYearNavigation({ items }: { items: ChronikItem[] }) {
               const isPast = activeIndex !== -1 && originalIndex > activeIndex;
 
               return (
-                <button
+                <Button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
+                  variant="ghost"
                   className={cn(
                     "group relative m-1 flex min-w-fit flex-col items-center gap-2 rounded-lg p-3 transition-all duration-300 hover:scale-105 focus:outline-none",
                     isActive ? "ring-2 ring-primary/70" : "ring-1 ring-border/50",
@@ -129,7 +131,7 @@ export function ChronikYearNavigation({ items }: { items: ChronikItem[] }) {
                   >
                     {item.year}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>

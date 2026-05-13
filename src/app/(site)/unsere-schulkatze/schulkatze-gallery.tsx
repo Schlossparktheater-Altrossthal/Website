@@ -117,9 +117,10 @@ export function SchulkatzeGallery({
         )}
       >
         <DialogTrigger asChild>
-          <button
+          <Button
             type="button"
-            className="group relative block w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            variant="ghost"
+            className="group relative block h-auto w-full p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
             aria-label="Galerie mit Erinnerungsfotos unserer Schulkatze öffnen"
           >
             <SchulkatzeImageRotator
@@ -133,7 +134,7 @@ export function SchulkatzeGallery({
               <Images className="h-4 w-4" aria-hidden="true" />
               Galerie ansehen
             </span>
-          </button>
+          </Button>
         </DialogTrigger>
         <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">
           {caption}
