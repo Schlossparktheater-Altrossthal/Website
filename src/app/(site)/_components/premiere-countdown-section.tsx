@@ -98,9 +98,10 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
     </div>
 
     <Dialog open={editorOpen} onOpenChange={(open) => (open ? openFeature("website.premiere-countdown") : closeFeature())}>
-      <DialogContent>
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-h-[85dvh]">
         <DialogHeader><DialogTitle>Premieren-Countdown einstellen</DialogTitle></DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="space-y-6 overflow-y-auto pr-1">
           <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/60 p-4">
             <Label htmlFor="premiere-countdown-section-visible" className="text-sm font-semibold">Countdown auf der Startseite anzeigen</Label>
             <Switch id="premiere-countdown-section-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
@@ -124,7 +125,8 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
 
           {error ? <Text tone="destructive">{error}</Text> : null}
           {success ? <Text tone="success">{success}</Text> : null}
-          <DialogFooter className="gap-2"><Button type="submit" disabled={saving}>{saving ? "Speichern…" : "Einstellungen speichern"}</Button></DialogFooter>
+          </div>
+          <DialogFooter className="mt-6 gap-2 border-t border-border/60 pt-4"><Button type="submit" disabled={saving}>{saving ? "Speichern…" : "Einstellungen speichern"}</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

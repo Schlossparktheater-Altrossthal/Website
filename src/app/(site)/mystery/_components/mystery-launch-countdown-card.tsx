@@ -9,9 +9,9 @@ import { Text } from "@/components/ui/typography";
 import { Countdown } from "@/components/countdown";
 import { useFrontendEditing } from "@/components/frontend-editing/frontend-editing-provider";
 import {
-  type MysteryCountdownSettingsFormSavedSettings,
-  MysteryCountdownSettingsForm,
-} from "@/components/mystery/mystery-countdown-settings-form";
+  type PremiereCountdownSettingsFormSavedSettings,
+  PremiereCountdownSettingsForm,
+} from "@/components/mystery/premiere-countdown-settings-form";
 
 const COUNTDOWN_LABEL_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "full",
@@ -112,7 +112,7 @@ export function MysteryLaunchCountdownCard({
 
   const showCountdown = !isFirstRiddleReleased && !countdownReached;
 
-  function handleSaved(next: MysteryCountdownSettingsFormSavedSettings) {
+  function handleSaved(next: PremiereCountdownSettingsFormSavedSettings) {
     setState({
       countdownTarget: next.countdownTarget,
       expirationMessage: next.expirationMessage,
@@ -177,7 +177,7 @@ export function MysteryLaunchCountdownCard({
           <Text variant="small" tone="muted">
             Änderungen werden direkt auf der öffentlichen Mystery-Seite sichtbar.
           </Text>
-          <MysteryCountdownSettingsForm
+          <PremiereCountdownSettingsForm
             scope="public"
             initialCountdownTarget={state.countdownTarget}
             initialExpirationMessage={state.expirationMessage}
