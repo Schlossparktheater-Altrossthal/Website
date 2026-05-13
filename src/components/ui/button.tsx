@@ -18,19 +18,19 @@ const buttonVariants = cva(
         accent:
           "bg-accent text-accent-foreground shadow-[var(--shadow-md)] hover:bg-accent/90",
         outline:
-          "border border-border bg-transparent text-foreground hover:border-primary/50 hover:text-primary",
+          "border border-border bg-transparent text-foreground shadow-[var(--shadow-sm)] hover:border-primary/50 hover:text-primary",
         ghost:
-          "bg-transparent text-foreground hover:bg-muted/40 hover:text-foreground",
+          "bg-transparent text-foreground shadow-[var(--shadow-sm)] hover:bg-muted/40 hover:text-foreground",
         subtle:
-          "bg-muted text-foreground/90 hover:bg-muted/70",
+          "bg-muted text-foreground/90 shadow-[var(--shadow-sm)] hover:bg-muted/70",
         link:
           "text-primary underline underline-offset-4 decoration-primary/60 hover:text-primary/90 hover:decoration-primary",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/40",
+          "bg-destructive text-destructive-foreground shadow-[var(--shadow-md)] hover:bg-destructive/90 focus-visible:ring-destructive/40",
         success:
-          "bg-success text-success-foreground hover:bg-success/90 focus-visible:ring-success/40",
+          "bg-success text-success-foreground shadow-[var(--shadow-md)] hover:bg-success/90 focus-visible:ring-success/40",
         info:
-          "bg-info text-info-foreground hover:bg-info/90 focus-visible:ring-info/40",
+          "bg-info text-info-foreground shadow-[var(--shadow-md)] hover:bg-info/90 focus-visible:ring-info/40",
       },
       size: {
         xs: "h-8 rounded-md px-3 text-xs",

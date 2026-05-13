@@ -110,10 +110,10 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
           <div className="space-y-3">
             {settings.termine.map((termin, index) => {
               const isNext = nextTermin ? nextTermin.label === termin.label : false;
-              return <div key={termin.label} className={`grid grid-cols-1 gap-2 rounded-xl border p-3 md:grid-cols-2 ${isNext ? "border-primary" : "border-border"}`}>
+              return <div key={termin.label} className={`grid grid-cols-1 gap-2 rounded-xl border p-3 md:grid-cols-2 md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] ${isNext ? "border-primary" : "border-border"}`}>
                 <Label className="md:col-span-2">Vorstellung {index + 1}</Label>
-                <Input type="date" value={termin.datum} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, datum: event.target.value } : t) }))} />
-                <Input type="time" value={termin.uhrzeit} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, uhrzeit: event.target.value } : t) }))} />
+                <Input className="min-w-0" type="date" value={termin.datum} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, datum: event.target.value } : t) }))} />
+                <Input className="min-w-0" type="time" value={termin.uhrzeit} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, uhrzeit: event.target.value } : t) }))} />
               </div>;
             })}
           </div>

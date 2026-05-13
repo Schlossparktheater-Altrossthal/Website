@@ -1255,7 +1255,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                     }))
                   }
                 >
-                  <SelectTrigger className="bg-background">
+                  <SelectTrigger>
                     <SelectValue placeholder="Wähle eine Option" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1837,7 +1837,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                       }))
                     }
                   >
-                    <SelectTrigger className="bg-background/80">
+                    <SelectTrigger >
                       <SelectValue placeholder="Wähle deinen Stil" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1878,7 +1878,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                           setForm((prev) => ({ ...prev, nutritionStrictness: value as DietaryStrictnessOption }))
                         }
                       >
-                        <SelectTrigger className="bg-background/80">
+                        <SelectTrigger >
                           <SelectValue placeholder="Wähle eine Option" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1971,7 +1971,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                     value={dietaryDraft.level}
                     onValueChange={(value: AllergyLevel) => setDietaryDraft((prev) => ({ ...prev, level: value }))}
                   >
-                    <SelectTrigger className="bg-background/80">
+                    <SelectTrigger >
                       <SelectValue placeholder="Wähle den Schweregrad" />
                     </SelectTrigger>
                     <SelectContent>
