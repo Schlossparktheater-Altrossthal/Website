@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Heading, Text } from "@/components/ui/typography";
 
 type TerminInput = { datum: string; uhrzeit: string; label: string };
@@ -47,21 +48,6 @@ function getNextTermin(termine: TerminInput[]) {
     if (!iso) return false;
     return parseIso(iso) > now;
   }) ?? null;
-}
-
-function Toggle({ checked, onCheckedChange, id }: { checked: boolean; onCheckedChange: (v: boolean) => void; id: string }) {
-  return (
-    <button
-      id={id}
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onCheckedChange(!checked)}
-      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"}`}
-    >
-      <span className={`h-5 w-5 rounded-full bg-background shadow transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
-    </button>
-  );
 }
 
 export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
@@ -117,7 +103,7 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/60 p-4">
             <Label htmlFor="premiere-countdown-section-visible" className="text-sm font-semibold">Countdown auf der Startseite anzeigen</Label>
-            <Toggle id="premiere-countdown-section-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
+            <Switch id="premiere-countdown-section-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
           </div>
 
           <div className="space-y-3">

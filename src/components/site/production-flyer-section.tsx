@@ -10,22 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 type Props = { aktiv: boolean; titel: string | null; beschreibung: string | null; hasBild: boolean };
-
-function Toggle({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (next: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onCheckedChange(!checked)}
-      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 ${checked ? "bg-primary" : "bg-muted"}`}
-    >
-      <span className={`h-5 w-5 rounded-full bg-background shadow transition-transform duration-200 ${checked ? "translate-x-6" : "translate-x-1"}`} />
-    </button>
-  );
-}
 
 export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: Props) {
   const { status } = useSession();
@@ -95,7 +82,7 @@ export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: 
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-xl border border-border p-3">
               <span>Sektion aktiv anzeigen</span>
-              <Toggle checked={form.aktiv} onCheckedChange={(next) => setForm((s) => ({ ...s, aktiv: next }))} />
+              <Switch checked={form.aktiv} onCheckedChange={(next) => setForm((s) => ({ ...s, aktiv: next }))} />
             </div>
             <Input placeholder="Stücktitel 2026" value={form.titel} onChange={(e) => setForm((s) => ({ ...s, titel: e.target.value }))} />
             <Textarea placeholder="Beschreibung" value={form.beschreibung} onChange={(e) => setForm((s) => ({ ...s, beschreibung: e.target.value }))} />

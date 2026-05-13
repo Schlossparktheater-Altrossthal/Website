@@ -39,6 +39,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --breakpoint-xs: 20rem;
+  --breakpoint-2xl: 120rem;
+  --animate-carousel: carousel var(--carousel-duration, 60s) linear infinite;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -89,6 +92,9 @@
     --space-2xl: 4rem;
     --space-3xl: 6rem;
     --color-orange-rgb: 232, 126, 32;
+    --transition-fast: 150ms ease;
+    --transition-base: 200ms ease;
+    --transition-slow: 300ms ease;
   }
 
   @media (min-width: 768px) {
@@ -869,4 +875,15 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+
+@keyframes carousel {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
