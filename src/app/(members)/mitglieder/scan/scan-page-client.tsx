@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 import { liveQuery } from "dexie";
 import { toast } from "sonner";
+import { Download, RefreshCw } from "lucide-react";
 
 import { BarcodeScanner } from "@/components/scan/scanner";
 import { Badge } from "@/components/ui/badge";
@@ -548,6 +549,7 @@ export default function ScanPageClient({ breadcrumb }: ScanPageClientProps) {
               onClick={handleBootstrap}
               disabled={manualActionPending || isSyncing}
             >
+              <Download className="h-4 w-4" aria-hidden />
               Offline-Daten laden
             </Button>
             <Button
@@ -556,7 +558,8 @@ export default function ScanPageClient({ breadcrumb }: ScanPageClientProps) {
               onClick={handleForceRefresh}
               disabled={manualActionPending || isSyncing}
             >
-              Force-Refresh
+              <RefreshCw className="h-4 w-4" aria-hidden />
+              Neu laden
             </Button>
             <Button
               size="sm"
@@ -571,7 +574,7 @@ export default function ScanPageClient({ breadcrumb }: ScanPageClientProps) {
 
       {!offlineReady ? (
         <div className="rounded-lg border border-dashed border-warning/40 bg-warning/10 p-4 text-sm text-warning">
-          Offline-Speicher wird initialisiert. Starte einen Force-Refresh oder lade die Offline-Daten, sobald die
+          Offline-Speicher wird initialisiert. Starte „Neu laden“ oder lade die Offline-Daten, sobald die
           Verbindung steht.
         </div>
       ) : null}

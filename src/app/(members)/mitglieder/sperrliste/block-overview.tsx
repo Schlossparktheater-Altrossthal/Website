@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { formatWeekdayList, getWeekdayLabel, sortWeekdays, type WeekdayValue } from '@/lib/weekdays';
 import { toast } from 'sonner';
+import { FileDown } from 'lucide-react';
 
 import type { HolidayRange } from '@/types/holidays';
 
@@ -364,6 +365,7 @@ export function BlockOverview({
                 aria-busy={isExportingPdf}
                 className="sm:w-auto"
               >
+                <FileDown className="h-4 w-4" aria-hidden />
                 PDF exportieren
               </Button>
             </div>

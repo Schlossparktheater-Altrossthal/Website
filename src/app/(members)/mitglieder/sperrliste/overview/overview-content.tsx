@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./sperrliste-styles.css";
 import { Button } from "@/components/ui/button";
+import { FileDown } from "lucide-react";
 
 import { DesktopCalendar } from "./DesktopCalendar";
 import { DesktopTable } from "./desktop-table";
@@ -391,10 +392,11 @@ export default function OverviewContent({
 
         <Button
           type="button"
-          className="self-end"
+          className="self-end gap-2"
           onClick={onExportPdf}
           aria-label="Sperrlistenübersicht als PDF exportieren"
         >
+          <FileDown className="h-4 w-4" aria-hidden />
           PDF exportieren
         </Button>
     </div>

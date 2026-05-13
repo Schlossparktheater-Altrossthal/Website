@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Download, Loader2, Share2 } from "lucide-react";
+import { FileDown, Loader2, RefreshCw, Share2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
+import { cn } from "@/lib/utils";
 
 const statusVariant: Record<OnboardingSummary["status"], "success" | "warning" | "muted"> = {
   active: "success",
@@ -128,7 +129,7 @@ export function HeaderBar({
               {isExportingPdf ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Download className="h-4 w-4" />
+                <FileDown className="h-4 w-4" />
               )}
               {isExportingPdf ? "Bereite PDF vor…" : "Statistik exportieren"}
             </Button>
@@ -153,7 +154,8 @@ export function HeaderBar({
           onClick={onRefresh}
           disabled={isRefreshing}
         >
-          {isRefreshing ? "Aktualisiere…" : "Refresh"}
+          <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden />
+          {isRefreshing ? "Aktualisiere…" : "Neu laden"}
         </Button>
       ) : null}
     </Card>

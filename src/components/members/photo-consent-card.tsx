@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
-import { Camera, ChevronDown } from "lucide-react";
+import { Camera, ChevronDown, RefreshCw, Upload } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -729,6 +729,7 @@ export function PhotoConsentCard({
                         onClick={handleSelectUploadMode}
                         disabled={submitting}
                       >
+                        <Upload className="h-4 w-4" aria-hidden />
                         Datei hochladen
                       </Button>
                       <Button
@@ -818,6 +819,7 @@ export function PhotoConsentCard({
                     {submitting ? "Speichere …" : "Jetzt zustimmen"}
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={submitting}>
+                    <RefreshCw className="h-4 w-4" aria-hidden />
                     Status aktualisieren
                   </Button>
                   {status === "approved" && (
