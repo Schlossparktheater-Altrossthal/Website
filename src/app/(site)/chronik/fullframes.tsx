@@ -146,7 +146,7 @@ export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
               <div className="absolute inset-0 -z-0 bg-gradient-to-b from-background/80 via-background/60 to-background/80" />
               <div className="absolute inset-0 -z-0 bg-[radial-gradient(60rem_30rem_at_20%_-10%,_color-mix(in_oklab,var(--primary)_16%,transparent),transparent_65%)] pointer-events-none" />
 
-              <div className="container mx-auto py-16 md:py-24 grid md:grid-cols-2 gap-8 items-center">
+              <div className="layout-container grid items-center gap-8 py-16 md:grid-cols-2 md:py-24">
                 <div className="space-y-2">
                   <div className="text-sm text-foreground/80">{s.year}</div>
                   <h2 className="text-3xl md:text-4xl font-serif">{s.title ?? `Saison ${s.year}`}</h2>

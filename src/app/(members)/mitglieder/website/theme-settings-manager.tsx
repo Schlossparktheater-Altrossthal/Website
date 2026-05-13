@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { hexToOklch, oklchToHex, type OklchColor } from "@/lib/color";
@@ -1532,27 +1533,16 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                   Blendet die öffentliche Website aus. Angemeldete Mitglieder behalten weiterhin vollen Zugriff.
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={maintenanceMode}
-                onClick={() => setMaintenanceMode((prev) => !prev)}
+              <Switch
+                checked={maintenanceMode}
+                onCheckedChange={setMaintenanceMode}
+                aria-label="Wartungsmodus umschalten"
                 className={cn(
-                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   maintenanceMode
-                    ? "border-warning/60 bg-warning/70"
-                    : "border-border/70 bg-background",
+                    ? "bg-warning data-[state=checked]:bg-warning"
+                    : "bg-muted data-[state=unchecked]:bg-muted",
                 )}
-              >
-                <span className="sr-only">Wartungsmodus umschalten</span>
-                <span
-                  aria-hidden
-                  className={cn(
-                    "inline-block h-5 w-5 rounded-full bg-background shadow transition-transform",
-                    maintenanceMode ? "translate-x-5" : "translate-x-1",
-                  )}
-                />
-              </button>
+              />
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <Badge variant={maintenanceMode ? "warning" : "muted"}>
