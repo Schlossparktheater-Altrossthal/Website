@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Countdown } from "@/components/countdown";
 import { useFrontendEditing } from "@/components/frontend-editing/frontend-editing-provider";
@@ -14,6 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { Heading, Text } from "@/components/ui/typography";
 
 type TerminInput = { datum: string; uhrzeit: string; label: string };
+const MIN_TERMINE = 1;
+const MAX_TERMINE = 8;
 
 type PremiereCountdownSectionProps = {
   initialCountdownTarget: string | null;
@@ -110,12 +113,51 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
           <div className="space-y-3">
             {settings.termine.map((termin, index) => {
               const isNext = nextTermin ? nextTermin.label === termin.label : false;
-              return <div key={termin.label} className={`grid grid-cols-1 gap-2 rounded-xl border p-3 md:grid-cols-2 md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] ${isNext ? "border-primary" : "border-border"}`}>
-                <Label className="md:col-span-2">Vorstellung {index + 1}</Label>
-                <Input className="min-w-0" type="date" value={termin.datum} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, datum: event.target.value } : t) }))} />
-                <Input className="min-w-0" type="time" value={termin.uhrzeit} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, uhrzeit: event.target.value } : t) }))} />
+              return <div key={`${termin.label}-${index}`} className={`grid grid-cols-1 gap-2 rounded-xl border p-3 md:grid-cols-2 md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] ${isNext ? "border-primary" : "border-border"}`}>
+                <div className="min-w-0 md:col-span-2 flex items-center justify-between gap-2">
+                  <Label>Vorstellung {index + 1}</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={settings.termine.length <= MIN_TERMINE}
+                    aria-label={`Vorstellung ${index + 1} entfernen`}
+                    onClick={() =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        termine: prev.termine.length <= MIN_TERMINE ? prev.termine : prev.termine.filter((_, i) => i !== index),
+                      }))
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="min-w-0">
+                  <Input className="min-w-0" type="date" value={termin.datum} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, datum: event.target.value } : t) }))} />
+                </div>
+                <div className="min-w-0">
+                  <Input className="min-w-0" type="time" value={termin.uhrzeit} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, uhrzeit: event.target.value } : t) }))} />
+                </div>
               </div>;
             })}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={settings.termine.length >= MAX_TERMINE}
+              onClick={() =>
+                setSettings((prev) => ({
+                  ...prev,
+                  termine:
+                    prev.termine.length >= MAX_TERMINE
+                      ? prev.termine
+                      : [...prev.termine, { datum: "", uhrzeit: "", label: `Vorstellung ${prev.termine.length + 1}` }],
+                }))
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Vorstellung hinzufügen
+            </Button>
           </div>
 
           <div className="space-y-2">
