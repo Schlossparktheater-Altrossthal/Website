@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Settings } from "lucide-react";
+import { ChevronDown, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -25,10 +25,16 @@ const publicPages: PublicPageConfig[] = [
 ];
 
 export function SeitensteuerungManager() {
-  const memberPages = useMemo(
-    () => membersNavigation.flatMap((group) => group.items.map((item) => ({ key: item.href, label: item.label }))),
+  const memberPageGroups = useMemo(
+    () =>
+      membersNavigation.map((group) => ({
+        id: group.id,
+        label: group.label,
+        pages: group.items.map((item) => ({ key: item.href, label: item.label })),
+      })),
     [],
   );
+  const memberPages = useMemo(() => memberPageGroups.flatMap((group) => group.pages), [memberPageGroups]);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [pageVisibility, setPageVisibility] = useState<ClientWebsiteSettings["pageVisibility"]>({
@@ -40,11 +46,15 @@ export function SeitensteuerungManager() {
   const [pendingPublic, setPendingPublic] = useState(pageVisibility.public);
   const [pendingMembers, setPendingMembers] = useState<Record<string, boolean>>({});
   const [savingPage, setSavingPage] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const initialMembers = Object.fromEntries(memberPages.map((page) => [page.key, true]));
     setPendingMembers(initialMembers);
   }, [memberPages]);
+  useEffect(() => {
+    setExpandedCategories(Object.fromEntries(memberPageGroups.map((group) => [group.id, true])));
+  }, [memberPageGroups]);
 
   useEffect(() => {
     let mounted = true;
@@ -110,6 +120,20 @@ export function SeitensteuerungManager() {
     toast.success("Seitenstatus gespeichert");
   };
 
+  const setCategoryExpanded = (categoryId: string) => {
+    setExpandedCategories((prev) => ({ ...prev, [categoryId]: !prev[categoryId] }));
+  };
+
+  const isCategoryEnabled = (categoryPageKeys: string[]) =>
+    categoryPageKeys.every((pageKey) => (pendingMembers[pageKey] ?? true) === true);
+
+  const toggleCategory = (categoryPageKeys: string[], next: boolean) => {
+    setPendingMembers((prev) => ({
+      ...prev,
+      ...Object.fromEntries(categoryPageKeys.map((pageKey) => [pageKey, next])),
+    }));
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold tracking-tight">Seitensteuerung</h1>
@@ -155,24 +179,56 @@ export function SeitensteuerungManager() {
       <Card>
         <CardHeader><CardTitle>Mitglieder-Seiten ({memberPages.length})</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {memberPages.map((page) => (
-            <div key={page.key} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
-              <span>{page.label}</span>
-              <Dialog>
-                <DialogTrigger asChild><Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button></DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>{page.label} konfigurieren</DialogTitle></DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor={`member-${page.key}`}>Seite aktivieren</Label>
-                      <Switch id={`member-${page.key}`} checked={pendingMembers[page.key] ?? true} onCheckedChange={(checked) => setPendingMembers((prev) => ({ ...prev, [page.key]: checked }))} />
-                    </div>
-                    <Button disabled={savingPage === page.key} onClick={() => void saveVisibility({ members: { ...pageVisibility.members, [page.key]: pendingMembers[page.key] ?? true } }, page.key)}>Speichern</Button>
+          {memberPageGroups.map((group) => {
+            const categoryPageKeys = group.pages.map((page) => page.key);
+            const categoryEnabled = isCategoryEnabled(categoryPageKeys);
+            const expanded = expandedCategories[group.id] ?? true;
+
+            return (
+              <div key={group.id} className="rounded-md border border-border bg-card">
+                <div className="flex items-center gap-3 border-b border-border px-3 py-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-auto flex-1 justify-start p-0 text-left"
+                    onClick={() => setCategoryExpanded(group.id)}
+                  >
+                    <ChevronDown
+                      className={`mr-2 h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`}
+                    />
+                    <span className="font-medium">{group.label}</span>
+                  </Button>
+                  <Switch
+                    checked={categoryEnabled}
+                    onCheckedChange={(checked) => toggleCategory(categoryPageKeys, checked)}
+                    aria-label={`${group.label} aktivieren`}
+                  />
+                </div>
+                {expanded && (
+                  <div className="space-y-2 p-3">
+                    {group.pages.map((page) => (
+                      <div key={page.key} className="flex items-center justify-between rounded-md border border-border bg-muted px-3 py-2">
+                        <span>{page.label}</span>
+                        <Dialog>
+                          <DialogTrigger asChild><Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button></DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader><DialogTitle>{page.label} konfigurieren</DialogTitle></DialogHeader>
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <Label htmlFor={`member-${page.key}`}>Seite aktivieren</Label>
+                                <Switch id={`member-${page.key}`} checked={pendingMembers[page.key] ?? true} onCheckedChange={(checked) => setPendingMembers((prev) => ({ ...prev, [page.key]: checked }))} />
+                              </div>
+                              <Button disabled={savingPage === page.key} onClick={() => void saveVisibility({ members: { ...pageVisibility.members, [page.key]: pendingMembers[page.key] ?? true } }, page.key)}>Speichern</Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    ))}
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
     </div>
