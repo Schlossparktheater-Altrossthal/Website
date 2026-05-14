@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   AudioLines,
@@ -22,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CarouselHint } from "@/app/(site)/ueber-uns/carousel-hint";
 import { Heading, Text } from "@/components/ui/typography";
 import { getCurrentProductionEnsembleStats } from "@/lib/ensemble";
+import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
 export const metadata: Metadata = {
   title: "Über uns",
@@ -224,6 +226,10 @@ const CAROUSEL_GROUP_COUNT = 2;
 const SECTION_HEADING_CLASS = "text-[clamp(1.2rem,2.5vw,1.8rem)] font-bold text-foreground";
 
 export default async function PublicAboutPage() {
+  const visibility = await getPublicPageVisibility();
+  if (!visibility.about) {
+    notFound();
+  }
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const ensembleStats = await getCurrentProductionEnsembleStats();
   const statisticItems = baseStatisticItems.map<StatisticItem>((item) => {

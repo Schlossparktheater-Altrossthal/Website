@@ -2,12 +2,14 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { Cat, Fish, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
+import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
 import { SchoolCatEncountersSection } from "./encounters-section";
 import { SchulkatzeGallery } from "./schulkatze-gallery";
@@ -140,7 +142,11 @@ const catCareLessons: string[] = [
   "Wer künftig eine Schulkatze willkommen heißt, sollte an Dieters Bedürfnisse denken: Ruhe, Respekt und Zeit.",
 ];
 
-export default function SchoolCatPage() {
+export default async function SchoolCatPage() {
+  const visibility = await getPublicPageVisibility();
+  if (!visibility.schoolCat) {
+    notFound();
+  }
   return (
     <div className="relative isolate">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
