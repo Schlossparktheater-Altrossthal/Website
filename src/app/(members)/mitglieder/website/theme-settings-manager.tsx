@@ -1262,7 +1262,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
       setAvailableThemes(themes);
       const fallbackId = payload.activeThemeId ?? themes[0]?.id;
       if (fallbackId) {
-        await loadThemeById(fallbackId);
+        await handleThemeSelect(fallbackId);
       }
       setSiteSnapshot((prev) => ({ ...prev, activeThemeId: payload.activeThemeId ?? prev.activeThemeId }));
       toast.success("Theme wurde gelöscht.");
