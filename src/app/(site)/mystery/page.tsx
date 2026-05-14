@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { notFound } from "next/navigation";
 import { Eye, Lock } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import type { Clue, MysteryTip as MysteryTipModel, Prisma } from "@prisma/client";
 import { getMysteryClueSummaries, getMysteryScoreboard } from "@/lib/mystery-submissions";
+import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
 import { MysteryGuessBoard } from "./_components/mystery-guess-board";
 import { MysteryScoreboard } from "./_components/mystery-scoreboard";
@@ -83,6 +85,10 @@ function renderClueBody(clue: Clue, content: ClueContent) {
 export const revalidate = 30;
 
 export default async function MysteryPage() {
+  const visibility = await getPublicPageVisibility();
+  if (!visibility.mystery) {
+    notFound();
+  }
   const now = new Date();
   const initialNow = now.getTime();
   let clues: Clue[] = [];

@@ -14,7 +14,7 @@ import { useSession } from "next-auth/react";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
-import { primaryNavigation } from "@/config/navigation";
+import { primaryNavigation, type NavigationItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -95,7 +95,7 @@ const heroGradientStyles = {
   height: HEADER_SPACING.gradientHeight,
 } satisfies CSSProperties;
 
-export function SiteHeader({ siteTitle }: { siteTitle: string }) {
+export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: { siteTitle: string; navigationItems?: NavigationItem[] }) {
   const headerRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -104,7 +104,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const isAuthenticated = status === "authenticated";
   const isHomePage = pathname === "/";
 
-  const navigationItems = useMemo(() => primaryNavigation, []);
+  const visibleNavigationItems = useMemo(() => navigationItems, [navigationItems]);
 
   useLayoutEffect(() => {
     if (typeof document === "undefined") {
@@ -216,7 +216,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
           </Link>
 
           <div className="hidden items-center gap-[var(--space-md)] md:flex">
-            {navigationItems.map((item) => {
+            {visibleNavigationItems.map((item) => {
               const isActive =
                 pathname === item.href || pathname?.startsWith(`${item.href}/`);
 
@@ -290,7 +290,7 @@ export function SiteHeader({ siteTitle }: { siteTitle: string }) {
           style={drawerLinkGroupStyles}
           className="flex flex-col gap-[var(--drawer-link-gap)]"
         >
-          {navigationItems.map((item) => {
+              {visibleNavigationItems.map((item) => {
             const isActive =
               pathname === item.href || pathname?.startsWith(`${item.href}/`);
 
