@@ -215,6 +215,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
+    key: "pages.manage",
+    label: "Pages verwalten",
+    description:
+      "Wartungsmodus, Seitensteuerung und Website-Bereiche im Mitgliederbereich verwalten.",
+    category: "membership",
+  },
+  {
     key: "mitglieder.website.settings",
     label: "Website-Einstellungen verwalten",
     description:

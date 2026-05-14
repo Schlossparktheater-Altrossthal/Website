@@ -10,6 +10,68 @@ export const DEFAULT_SITE_TITLE = "Sommertheater im Schlosspark" as const;
 export const DEFAULT_COLOR_MODE = "dark" as const;
 export const DEFAULT_MAINTENANCE_MODE = false as const;
 
+
+export type PageVisibilitySettings = {
+  pages: {
+    general: boolean;
+    maintenance: boolean;
+    ui: boolean;
+    websiteTheme: boolean;
+  };
+  public: {
+    about: boolean;
+    mystery: boolean;
+    schoolCat: boolean;
+    timeline: boolean;
+  };
+  categories: {
+    dateisystem: {
+      enabled: boolean;
+      archive: boolean;
+      images: boolean;
+      timeline: boolean;
+      data: boolean;
+    };
+  };
+};
+
+export const DEFAULT_PAGE_VISIBILITY: PageVisibilitySettings = {
+  pages: { general: true, maintenance: true, ui: true, websiteTheme: true },
+  public: { about: true, mystery: true, schoolCat: true, timeline: true },
+  categories: { dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true } },
+};
+
+function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
+  const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+  const pages = source.pages && typeof source.pages === "object" ? source.pages as Record<string, unknown> : {};
+  const publicPages = source.public && typeof source.public === "object" ? source.public as Record<string, unknown> : {};
+  const categories = source.categories && typeof source.categories === "object" ? source.categories as Record<string, unknown> : {};
+  const dateisystem = categories.dateisystem && typeof categories.dateisystem === "object" ? categories.dateisystem as Record<string, unknown> : {};
+  const pick=(v:unknown,d:boolean)=> typeof v === 'boolean' ? v : d;
+  return {
+    pages: {
+      general: pick(pages.general, true),
+      maintenance: pick(pages.maintenance, true),
+      ui: pick(pages.ui, true),
+      websiteTheme: pick(pages.websiteTheme, true),
+    },
+    public: {
+      about: pick(publicPages.about, true),
+      mystery: pick(publicPages.mystery, true),
+      schoolCat: pick(publicPages.schoolCat, true),
+      timeline: pick(publicPages.timeline, true),
+    },
+    categories: {
+      dateisystem: {
+        enabled: pick(dateisystem.enabled, true),
+        archive: pick(dateisystem.archive, true),
+        images: pick(dateisystem.images, true),
+        timeline: pick(dateisystem.timeline, true),
+        data: pick(dateisystem.data, true),
+      },
+    },
+  };
+}
 export const THEME_COLOR_MODES = ["light", "dark", "system"] as const;
 export type ThemeColorMode = (typeof THEME_COLOR_MODES)[number];
 
@@ -1063,6 +1125,7 @@ export type ResolvedWebsiteSettings = {
   siteTitle: string;
   colorMode: ThemeColorMode;
   maintenanceMode: boolean;
+  pageVisibility: PageVisibilitySettings;
   updatedAt: Date | null;
   theme: ResolvedWebsiteTheme;
 };
@@ -1100,6 +1163,7 @@ export function resolveWebsiteSettings(record: WebsiteSettingsRecord): ResolvedW
     siteTitle: record ? sanitiseSiteTitle(record.siteTitle) : DEFAULT_SITE_TITLE,
     colorMode: record ? sanitiseColorMode(record.colorMode) : DEFAULT_COLOR_MODE,
     maintenanceMode: record ? sanitiseMaintenanceMode(record.maintenanceMode) : DEFAULT_MAINTENANCE_MODE,
+    pageVisibility: record ? sanitisePageVisibility(record.pageVisibility) : DEFAULT_PAGE_VISIBILITY,
     updatedAt: record?.updatedAt ?? null,
     theme,
   };
@@ -1129,6 +1193,7 @@ export type ClientWebsiteSettings = {
   siteTitle: string;
   colorMode: ThemeColorMode;
   maintenanceMode: boolean;
+  pageVisibility: PageVisibilitySettings;
   updatedAt: string | null;
   theme: ClientWebsiteTheme;
 };
@@ -1164,6 +1229,7 @@ export function toClientWebsiteSettings(resolved: ResolvedWebsiteSettings): Clie
     siteTitle: resolved.siteTitle,
     colorMode: resolved.colorMode,
     maintenanceMode: resolved.maintenanceMode,
+    pageVisibility: resolved.pageVisibility,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
     theme: toClientWebsiteTheme(resolved.theme),
   };
@@ -1227,6 +1293,7 @@ export async function ensureWebsiteSettingsRecord() {
       siteTitle: DEFAULT_SITE_TITLE,
       colorMode: DEFAULT_COLOR_MODE,
       maintenanceMode: DEFAULT_MAINTENANCE_MODE,
+      pageVisibility: DEFAULT_PAGE_VISIBILITY as Prisma.InputJsonValue,
       theme: { connect: { id: theme.id } },
     },
     include: { theme: true },
@@ -1237,6 +1304,7 @@ export type WebsiteSettingsInput = {
   siteTitle?: string | null;
   colorMode?: ThemeColorMode | null;
   maintenanceMode?: boolean | null;
+  pageVisibility?: PageVisibilitySettings | null;
   themeId?: string | null;
 };
 
@@ -1247,6 +1315,7 @@ export async function saveWebsiteSettings(input: WebsiteSettingsInput) {
     siteTitle: DEFAULT_SITE_TITLE,
     colorMode: DEFAULT_COLOR_MODE,
     maintenanceMode: DEFAULT_MAINTENANCE_MODE,
+    pageVisibility: DEFAULT_PAGE_VISIBILITY as Prisma.InputJsonValue,
   };
 
   if (input.siteTitle !== undefined) {
@@ -1265,6 +1334,12 @@ export async function saveWebsiteSettings(input: WebsiteSettingsInput) {
     const maintenanceMode = sanitiseMaintenanceMode(input.maintenanceMode);
     update.maintenanceMode = maintenanceMode;
     create.maintenanceMode = maintenanceMode;
+  }
+
+  if (input.pageVisibility !== undefined) {
+    const pageVisibility = sanitisePageVisibility(input.pageVisibility);
+    update.pageVisibility = pageVisibility as Prisma.InputJsonValue;
+    create.pageVisibility = pageVisibility as Prisma.InputJsonValue;
   }
 
   if (input.themeId !== undefined) {

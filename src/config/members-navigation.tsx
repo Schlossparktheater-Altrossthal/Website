@@ -14,7 +14,8 @@ export type MembersNavGroupId =
   | "production"
   | "inventory"
   | "finance"
-  | "admin";
+  | "admin"
+  | "pages";
 
 export const MEMBERS_NAV_ASSIGNMENTS_GROUP_ID: MembersNavGroupId = "assignments";
 export const MEMBERS_NAV_PRODUCTION_GROUP_ID: MembersNavGroupId = "production";
@@ -632,6 +633,36 @@ export const membersNavigation = [
     ],
   },
   {
+    id: "pages",
+    label: "Pages",
+    items: [
+      {
+        href: "/mitglieder/pages/wartungsmodus",
+        label: "Wartungsmodus",
+        permissionKey: "pages.manage",
+        icon: WebsiteIcon,
+      },
+      {
+        href: "/mitglieder/pages/seitensteuerung",
+        label: "Seitensteuerung",
+        permissionKey: "pages.manage",
+        icon: WebsiteIcon,
+      },
+      {
+        href: "/mitglieder/pages/ui",
+        label: "UI",
+        permissionKey: "pages.manage",
+        icon: DashboardIcon,
+      },
+      {
+        href: "/mitglieder/website",
+        label: "Website & Theme",
+        permissionKey: "pages.manage",
+        icon: WebsiteIcon,
+      },
+    ],
+  },
+  {
     id: "admin",
     label: "Verwaltung",
     items: [
@@ -652,12 +683,6 @@ export const membersNavigation = [
         label: "Fotoerlaubnisse",
         permissionKey: "mitglieder.fotoerlaubnisse",
         icon: PhotoConsentIcon,
-      },
-      {
-        href: "/mitglieder/website",
-        label: "Website & Theme",
-        permissionKey: "mitglieder.website.settings",
-        icon: WebsiteIcon,
       },
       {
         href: "/mitglieder/server-einstellungen",
