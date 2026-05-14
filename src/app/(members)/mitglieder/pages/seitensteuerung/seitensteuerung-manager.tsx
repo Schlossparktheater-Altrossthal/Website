@@ -12,7 +12,6 @@ import { membersNavigation } from "@/config/members-navigation";
 import { toast } from "sonner";
 import type { ClientWebsiteSettings } from "@/lib/website-settings";
 
-type PublicPageConfig = { key: keyof ClientWebsiteSettings["pageVisibility"]["public"]; label: string };
 type PublicPageConfig = {
   key: keyof ClientWebsiteSettings["pageVisibility"]["public"];
   label: string;
