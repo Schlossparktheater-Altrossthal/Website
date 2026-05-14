@@ -27,15 +27,17 @@ const publicPages: PublicPageConfig[] = [
 export function SeitensteuerungManager() {
   const memberPageGroups = useMemo(
     () =>
-      membersNavigation.map((group) => ({
-        id: group.id,
-        label: group.label,
-        pages: group.items
-          .filter((item) => item.href !== "/mitglieder/pages/seitensteuerung")
-          .map((item) => ({ key: item.href, label: item.label })),
-      })),
+      membersNavigation
+        .map((group) => ({
+          id: group.id,
+          label: group.label,
+          pages: group.items
+            .filter((item) => item.href !== "/mitglieder/pages/seitensteuerung")
+            .map((item) => ({ key: item.href, label: item.label })),
+        }))
+        .filter((group) => group.pages.length > 0),
     [],
-  ).filter((group) => group.pages.length > 0);
+  );
   const memberPages = useMemo(() => memberPageGroups.flatMap((group) => group.pages), [memberPageGroups]);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
