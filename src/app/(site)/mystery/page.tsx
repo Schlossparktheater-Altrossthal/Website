@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { Eye, Lock } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heading, Text } from "@/components/ui/typography";
@@ -92,10 +93,7 @@ export default async function MysteryPage() {
 
   if (process.env.DATABASE_URL) {
     const [cluesResult, tipsResult, settingsResult, scoreboardResult, clueSummaryResult] = await Promise.allSettled([
-      prisma.clue.findMany({
-        where: { published: true, releaseAt: { lte: now } },
-        orderBy: [{ index: "asc" }],
-      }),
+      prisma.clue.findMany({ orderBy: [{ index: "asc" }] }),
       prisma.mysteryTip.findMany({
         orderBy: [
           { count: "desc" },
@@ -123,8 +121,9 @@ export default async function MysteryPage() {
   const effectiveExpirationMessage = resolvedSettings.effectiveExpirationMessage ?? DEFAULT_MYSTERY_EXPIRATION_MESSAGE;
   const updatedAtIso = resolvedSettings.updatedAt ? resolvedSettings.updatedAt.toISOString() : null;
 
+  const visibleClues = clues.filter((clue) => clue.published && clue.releaseAt <= now);
   const firstRiddle = clues.find((clue) => clue.index === 1) ?? null;
-  const remainingClues = firstRiddle ? clues.filter((clue) => clue.id !== firstRiddle.id) : clues;
+  const remainingClues = clues.filter((clue) => clue.id !== firstRiddle?.id);
   const firstRiddleContent = firstRiddle ? parseClueContent(firstRiddle.content) : null;
 
   const initialTips = tips.map((tip) => ({
@@ -150,9 +149,8 @@ export default async function MysteryPage() {
     lastUpdated: entry.lastUpdated ? entry.lastUpdated.toISOString() : null,
   }));
 
-  const countdownReached = resolvedSettings.effectiveCountdownTarget <= now;
-  const isFirstRiddleReleased = countdownReached || Boolean(firstRiddle);
-  const showSilentMessage = !isFirstRiddleReleased && clues.length === 0;
+  const isFirstRiddleReleased = Boolean(firstRiddle && firstRiddle.published && firstRiddle.releaseAt <= now);
+  const showSilentMessage = !isFirstRiddleReleased && visibleClues.length === 0;
   const hasAdditionalClues = remainingClues.length > 0;
 
   return (
@@ -196,7 +194,15 @@ export default async function MysteryPage() {
                   <Text tone="muted">Das Rätsel wird gerade vorbereitet. Schau bald wieder vorbei.</Text>
                 )
               ) : (
-                <Text className="text-2xl font-semibold text-muted-foreground">Das 1. Rätsel</Text>
+                <div className="space-y-2">
+                  <Lock className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
+                  <Text tone="muted">Das 1. Rätsel kommt bald.</Text>
+                  {firstRiddle?.releaseAt ? (
+                    <Text variant="small" tone="muted">
+                      Geplant für {new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(firstRiddle.releaseAt)}
+                    </Text>
+                  ) : null}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -214,6 +220,7 @@ export default async function MysteryPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {remainingClues.map((clue) => {
               const content = parseClueContent(clue.content);
+              const isReleased = clue.published && clue.releaseAt <= now;
               return (
                 <Card key={clue.id}>
                   <CardHeader>
@@ -222,7 +229,13 @@ export default async function MysteryPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {renderClueBody(clue, content)}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      {isReleased ? <Eye className="h-4 w-4" aria-hidden /> : <Lock className="h-4 w-4" aria-hidden />}
+                      <Text variant="small" tone="muted">
+                        {isReleased ? "Enthüllt" : "Geplant"} am {new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(clue.releaseAt)}
+                      </Text>
+                    </div>
+                    {isReleased ? renderClueBody(clue, content) : <Text tone="muted">Dieser Hinweis ist noch verschlossen.</Text>}
                   </CardContent>
                 </Card>
               );

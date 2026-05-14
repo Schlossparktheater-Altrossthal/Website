@@ -240,15 +240,33 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
-    key: "mitglieder.mystery.launch-countdown",
-    label: "Mystery-Timer verwalten",
+    key: "mystery.timer.edit",
+    label: "Mystery-Timer bearbeiten",
     description: "Countdown und Hinweistext für das öffentliche Geheimnis pflegen.",
     category: "mystery",
   },
   {
-    key: "mitglieder.mystery.tips",
+    key: "mystery.puzzle.manage",
+    label: "Mystery-Rätsel verwalten",
+    description: "Rätsel erstellen, bearbeiten und veröffentlichen.",
+    category: "mystery",
+  },
+  {
+    key: "mystery.tips.manage",
     label: "Mystery-Tipps verwalten",
-    description: "Community-Tipps nach Rätsel auswerten und Punkte für richtige Ideen vergeben.",
+    description: "Community-Tipps moderieren und löschen.",
+    category: "mystery",
+  },
+  {
+    key: "mystery.scoreboard.manage",
+    label: "Mystery-Scoreboard verwalten",
+    description: "Punkte vergeben und Scoreboard-Einträge bearbeiten.",
+    category: "mystery",
+  },
+  {
+    key: "mystery.hints.manage",
+    label: "Mystery-Hinweise verwalten",
+    description: "Hinweise freischalten und hinzufügen.",
     category: "mystery",
   },
   {
