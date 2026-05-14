@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Heading, Text } from "@/components/ui/typography";
+import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
 import { ChronikFeaturedShowCards } from "./chronik-featured-show-cards";
 import { ChronikYearNavigation } from "./chronik-year-navigation";
@@ -38,6 +40,10 @@ export const metadata: Metadata = {
 };
 
 export default async function ChronikPage() {
+  const visibility = await getPublicPageVisibility();
+  if (!visibility.timeline) {
+    notFound();
+  }
   const items = await getChronikItems();
 
   if (items.length === 0) {

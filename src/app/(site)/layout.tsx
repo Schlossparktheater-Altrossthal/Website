@@ -5,6 +5,7 @@ import { execSync } from "node:child_process";
 import { MysticBackground } from "@/components/mystic-background";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { primaryNavigation } from "@/config/navigation";
 import { getSession } from "@/lib/rbac";
 import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
 
@@ -93,6 +94,13 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   }
 
   const siteTitle = resolvedSettings.siteTitle;
+  const visibleNavigationItems = primaryNavigation.filter((item) => {
+    if (item.href === "/ueber-uns") return resolvedSettings.pageVisibility.public.about;
+    if (item.href === "/mystery") return resolvedSettings.pageVisibility.public.mystery;
+    if (item.href === "/unsere-schulkatze") return resolvedSettings.pageVisibility.public.schoolCat;
+    if (item.href === "/chronik") return resolvedSettings.pageVisibility.public.timeline;
+    return true;
+  });
   const maintenanceModeEnabled = resolvedSettings.maintenanceMode;
   const userRoles = extractUserRoles(session);
   const isDeactivated = session?.user?.isDeactivated ?? false;
@@ -102,7 +110,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <div className="app-shell">
       <MysticBackground />
-      {!showMaintenanceNotice ? <SiteHeader siteTitle={siteTitle} /> : null}
+      {!showMaintenanceNotice ? <SiteHeader siteTitle={siteTitle} navigationItems={visibleNavigationItems} /> : null}
       <main id="main" className="site-main">
         {showMaintenanceNotice ? (
           <div className="flex min-h-[60svh] items-center justify-center px-6 py-16">
