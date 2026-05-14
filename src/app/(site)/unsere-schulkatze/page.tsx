@@ -302,21 +302,6 @@ export default async function SchoolCatPage() {
 
       <SchoolCatEncountersSection />
 
-      <section className="layout-container pb-24">
-        <div className="mx-auto max-w-3xl space-y-4 text-center">
-          <Heading level="h2" align="center">
-            In Erinnerung an Dieter
-          </Heading>
-          <Text variant="bodyLg" tone="muted" align="center">
-            Dieter hat Generationen von Schülern begleitet und unserer Schule ein unverwechselbares Gefühl von Heimat gegeben.
-            Seine Geschichte erinnert uns daran, wie wertvoll Fürsorge und Gemeinschaft sind.
-          </Text>
-          <Text tone="muted" align="center">
-            Wer Erinnerungen teilen oder die Arbeit der Pflege-AG weiterführen möchte, erreicht uns unter{' '}
-            <TextLink href="mailto:schulkatze@sommertheater-altrossthal.de">schulkatze@sommertheater-altrossthal.de</TextLink>.
-          </Text>
-        </div>
-      </section>
     </div>
   );
 }
