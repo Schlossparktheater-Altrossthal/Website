@@ -1496,6 +1496,32 @@ export async function getWebsiteTheme(id: string) {
   return toClientWebsiteTheme(resolveWebsiteTheme(record));
 }
 
+
+export async function deleteWebsiteTheme(id: string) {
+  const existing = await prisma.websiteTheme.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error("Theme nicht gefunden.");
+  }
+  if (existing.isDefault || PRESET_THEME_IDS.has(existing.id)) {
+    throw new LockedWebsiteThemeError();
+  }
+
+  const settings = await prisma.websiteSettings.findUnique({ where: { id: DEFAULT_WEBSITE_SETTINGS_ID } });
+  if (settings?.themeId === id) {
+    await prisma.websiteSettings.update({
+      where: { id: DEFAULT_WEBSITE_SETTINGS_ID },
+      data: { themeId: DEFAULT_THEME_ID },
+    });
+  }
+
+  await prisma.websiteTheme.delete({ where: { id } });
+  const active = await readWebsiteSettings();
+  return {
+    themes: await listWebsiteThemes(),
+    activeThemeId: active.activeThemeId,
+  };
+}
+
 export async function createWebsiteTheme(
   options: CreateWebsiteThemeOptions = {},
 ): Promise<ClientWebsiteTheme> {
