@@ -7,6 +7,7 @@ export function isMembersPathEnabled(pathname: string, visibility: PageVisibilit
   if (!ds.enabled) {
     return !pathname.startsWith("/mitglieder/archiv") && !pathname.startsWith("/mitglieder/bilder") && !pathname.startsWith("/mitglieder/chronik") && !pathname.startsWith("/mitglieder/daten");
   }
+
   if (pathname.startsWith("/mitglieder/archiv")) return ds.archive;
   if (pathname.startsWith("/mitglieder/bilder")) return ds.images;
   if (pathname.startsWith("/mitglieder/chronik")) return ds.timeline;
