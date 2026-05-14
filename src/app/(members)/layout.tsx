@@ -166,6 +166,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
                   isAuthenticated={true}
                   isDevBuild={isDevBuild}
                   siteTitle={siteTitle}
+                  primaryNavigationItems={visibleNavigationItems}
                 />
               }
             >

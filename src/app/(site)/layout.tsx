@@ -126,6 +126,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           isDevBuild={isDevBuild}
           siteTitle={siteTitle}
           isAuthenticated={Boolean(session?.user)}
+          primaryNavigationItems={visibleNavigationItems}
         />
       ) : null}
     </div>
