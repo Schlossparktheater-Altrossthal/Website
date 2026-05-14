@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { hexToOklch, oklchToHex, type OklchColor } from "@/lib/color";
@@ -783,6 +782,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
   const [isLoadingTheme, setIsLoadingTheme] = useState(false);
   const [isCreatingTheme, setIsCreatingTheme] = useState(false);
   const [isDuplicatingTheme, setIsDuplicatingTheme] = useState(false);
+  const [isDeletingTheme, setIsDeletingTheme] = useState(false);
   const [isActivatingTheme, setIsActivatingTheme] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
