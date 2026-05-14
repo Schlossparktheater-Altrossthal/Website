@@ -24,6 +24,7 @@ export type PageVisibilitySettings = {
     schoolCat: boolean;
     timeline: boolean;
   };
+  members: Record<string, boolean>;
   categories: {
     dateisystem: {
       enabled: boolean;
@@ -38,6 +39,7 @@ export type PageVisibilitySettings = {
 export const DEFAULT_PAGE_VISIBILITY: PageVisibilitySettings = {
   pages: { general: true, maintenance: true, ui: true, websiteTheme: true },
   public: { about: true, mystery: true, schoolCat: true, timeline: true },
+  members: {},
   categories: { dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true } },
 };
 
@@ -45,6 +47,7 @@ function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
   const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
   const pages = source.pages && typeof source.pages === "object" ? source.pages as Record<string, unknown> : {};
   const publicPages = source.public && typeof source.public === "object" ? source.public as Record<string, unknown> : {};
+  const members = source.members && typeof source.members === "object" ? source.members as Record<string, unknown> : {};
   const categories = source.categories && typeof source.categories === "object" ? source.categories as Record<string, unknown> : {};
   const dateisystem = categories.dateisystem && typeof categories.dateisystem === "object" ? categories.dateisystem as Record<string, unknown> : {};
   const pick=(v:unknown,d:boolean)=> typeof v === 'boolean' ? v : d;
@@ -61,6 +64,7 @@ function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
       schoolCat: pick(publicPages.schoolCat, true),
       timeline: pick(publicPages.timeline, true),
     },
+    members: Object.fromEntries(Object.entries(members).map(([key, value]) => [key, pick(value, true)])),
     categories: {
       dateisystem: {
         enabled: pick(dateisystem.enabled, true),

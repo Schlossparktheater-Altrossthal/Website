@@ -10,8 +10,10 @@ import {
   resolvePremiereCountdownSettings,
 } from "@/lib/premiere-countdown-settings";
 import React from "react";
+import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
 export default async function PublicHomePage() {
+  const publicVisibility = await getPublicPageVisibility();
   const availableHeroImages = getHeroImages();
   const selectedHeroImage = pickHeroForNow(availableHeroImages) ?? "https://picsum.photos/id/1069/1600/900";
   const heroImages = availableHeroImages.length > 0 ? availableHeroImages.slice(0, 5) : [selectedHeroImage];
@@ -62,7 +64,7 @@ export default async function PublicHomePage() {
 
   return (
     <div>
-      <Hero images={heroImages} />
+      <Hero images={heroImages} showMysteryLink={publicVisibility.mystery} showTimelineLink={publicVisibility.timeline} />
       <div className="layout-container">
         <div className="space-y-12 py-16">
           <section className="flex flex-col items-center gap-6 text-center">

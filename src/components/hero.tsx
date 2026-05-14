@@ -7,7 +7,7 @@ import { Heading, Text } from "@/components/ui/typography";
 import { HeroRotator } from "@/components/hero-rotator";
 import { BookOpen, Sparkles } from "lucide-react";
 
-export function Hero({ images }: { images: string[] }) {
+export function Hero({ images, showMysteryLink = true, showTimelineLink = true }: { images: string[]; showMysteryLink?: boolean; showTimelineLink?: boolean }) {
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export function Hero({ images }: { images: string[] }) {
                 Ein Sommer. Ein Wochenende. Ein einziges Stück – verborgen zwischen Licht und Laub.
               </Text>
               <div className="flex flex-col items-center justify-center gap-4 md:flex-row md:gap-5">
-                <Button
+                {showMysteryLink ? <Button
                   asChild
                   size="xl"
                   className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold tracking-wide"
@@ -116,8 +116,8 @@ export function Hero({ images }: { images: string[] }) {
                     <Sparkles aria-hidden className="h-5 w-5" />
                     <span>Das Geheimnis entdecken</span>
                   </Link>
-                </Button>
-                <Button
+                </Button> : null}
+                {showTimelineLink ? <Button
                   variant="outline"
                   asChild
                   size="xl"
@@ -127,7 +127,7 @@ export function Hero({ images }: { images: string[] }) {
                     <BookOpen aria-hidden className="h-5 w-5" />
                     <span>Chronik</span>
                   </Link>
-                </Button>
+                </Button> : null}
               </div>
             </div>
           </div>
