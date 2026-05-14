@@ -645,16 +645,7 @@ export const membersNavigation = [
     items: [
       { href: "/mitglieder/pages/ui", label: "UI", permissionKey: "pages.manage", icon: DashboardIcon },
       { href: "/mitglieder/website", label: "Website & Theme", permissionKey: "pages.manage", icon: WebsiteIcon },
-    ],
-    subgroups: [
-      {
-        id: "pages-general",
-        label: "Allgemein",
-        items: [
-          { href: "/mitglieder/pages/wartungsmodus", label: "Wartungsmodus", permissionKey: "pages.manage", icon: WebsiteIcon },
-          { href: "/mitglieder/pages/seitensteuerung", label: "Seitensteuerung", permissionKey: "pages.manage", icon: WebsiteIcon },
-        ],
-      },
+      { href: "/mitglieder/pages/seitensteuerung", label: "Seitensteuerung", permissionKey: "pages.manage", icon: WebsiteIcon },
     ],
   },
   {

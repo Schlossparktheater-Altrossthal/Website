@@ -7,6 +7,7 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import {
   LockedWebsiteThemeError,
+  deleteWebsiteTheme,
   getWebsiteTheme,
   saveWebsiteTheme,
 } from "@/lib/website-settings";
@@ -89,5 +90,28 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
     console.error("Failed to update website theme", error);
     return NextResponse.json({ error: "Theme konnte nicht aktualisiert werden." }, { status: 500 });
+  }
+}
+
+
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ themeId: string }> }) {
+  const { themeId } = await params;
+  const permissionResponse = await ensurePermission();
+  if (permissionResponse) {
+    return permissionResponse;
+  }
+
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json({ error: "Datenbank ist nicht konfiguriert." }, { status: 500 });
+  }
+
+  try {
+    const result = await deleteWebsiteTheme(themeId);
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof LockedWebsiteThemeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Theme konnte nicht gelöscht werden." }, { status: 500 });
   }
 }
