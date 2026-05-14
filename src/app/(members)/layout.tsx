@@ -5,6 +5,7 @@ import { execSync } from "node:child_process";
 import { MysticBackground } from "@/components/mystic-background";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { primaryNavigation } from "@/config/navigation";
 import type { AssignmentFocus } from "@/components/members-nav";
 import { MembersPermissionsProvider } from "@/components/members/permissions-context";
 import { MembersAppShell } from "@/components/members/members-app-shell";
@@ -101,6 +102,13 @@ export default async function MembersLayout({ children }: { children: React.Reac
   }
 
   const siteTitle = resolvedSettings.siteTitle;
+  const visibleNavigationItems = primaryNavigation.filter((item) => {
+    if (item.href === "/ueber-uns") return resolvedSettings.pageVisibility.public.about;
+    if (item.href === "/mystery") return resolvedSettings.pageVisibility.public.mystery;
+    if (item.href === "/unsere-schulkatze") return resolvedSettings.pageVisibility.public.schoolCat;
+    if (item.href === "/chronik") return resolvedSettings.pageVisibility.public.timeline;
+    return true;
+  });
 
   let assignmentFocus: AssignmentFocus = "none";
   const userId = session.user?.id;
@@ -136,7 +144,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
   return (
     <div className="app-shell bg-background">
       <MysticBackground />
-      <SiteHeader siteTitle={siteTitle} />
+      <SiteHeader siteTitle={siteTitle} navigationItems={visibleNavigationItems} />
       <main className="relative z-10 flex min-h-0 flex-col pt-[var(--header-height)]">
         <SidebarProvider
           defaultOpen={defaultSidebarOpen}
