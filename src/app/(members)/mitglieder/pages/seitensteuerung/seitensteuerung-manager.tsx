@@ -30,10 +30,12 @@ export function SeitensteuerungManager() {
       membersNavigation.map((group) => ({
         id: group.id,
         label: group.label,
-        pages: group.items.map((item) => ({ key: item.href, label: item.label })),
+        pages: group.items
+          .filter((item) => item.href !== "/mitglieder/pages/seitensteuerung")
+          .map((item) => ({ key: item.href, label: item.label })),
       })),
     [],
-  );
+  ).filter((group) => group.pages.length > 0);
   const memberPages = useMemo(() => memberPageGroups.flatMap((group) => group.pages), [memberPageGroups]);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
@@ -222,7 +224,7 @@ export function SeitensteuerungManager() {
                 {expanded && (
                   <div className="space-y-2 pl-2">
                     {group.pages.map((page) => (
-                      <div key={page.key} className="flex items-center justify-between rounded-md border border-border bg-muted px-3 py-2">
+                      <div key={page.key} className="flex items-center justify-between px-3 py-2">
                         <span>{page.label}</span>
                         <Dialog>
                           <DialogTrigger asChild><Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button></DialogTrigger>
