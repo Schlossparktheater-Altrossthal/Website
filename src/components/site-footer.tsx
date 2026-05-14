@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { BuildInfoTimestamp } from "@/components/build-info-timestamp";
-import { primaryNavigation, secondaryNavigation } from "@/config/navigation";
+import { primaryNavigation, secondaryNavigation, type NavigationItem } from "@/config/navigation";
 
 type CommitInfo = {
   short: string;
@@ -19,9 +19,16 @@ type SiteFooterProps = {
   isDevBuild: boolean;
   siteTitle: string;
   isAuthenticated: boolean;
+  primaryNavigationItems?: NavigationItem[];
 };
 
-export function SiteFooter({ buildInfo, isDevBuild, siteTitle, isAuthenticated }: SiteFooterProps) {
+export function SiteFooter({
+  buildInfo,
+  isDevBuild,
+  siteTitle,
+  isAuthenticated,
+  primaryNavigationItems = primaryNavigation,
+}: SiteFooterProps) {
   return (
     <footer className="relative z-20 border-t border-border/60 bg-background/80 backdrop-blur">
       <div className="layout-container py-12 sm:py-16">
@@ -79,7 +86,7 @@ export function SiteFooter({ buildInfo, isDevBuild, siteTitle, isAuthenticated }
                 Programm
               </h2>
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                {primaryNavigation.map((item) => (
+                {primaryNavigationItems.map((item) => (
                   <li key={item.href}>
                     <Link className="transition-colors hover:text-primary" href={item.href}>
                       {item.label}
