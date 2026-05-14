@@ -17,7 +17,7 @@ const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     key: "mystery.launch-countdown",
     label: "Mystery-Timer",
     description: "Countdown und Hinweistext für die Mystery-Startseite verwalten.",
-    permissionKey: "mitglieder.mystery.launch-countdown",
+    permissionKey: "mystery.timer.edit",
   },
   {
     key: "website.premiere-countdown",

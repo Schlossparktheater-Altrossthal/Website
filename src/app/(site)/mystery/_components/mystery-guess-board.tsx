@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FocusEvent, type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -60,10 +60,17 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
   const [listError, setListError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(initialTips.length === 0);
+  const [didSubmit, setDidSubmit] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<{ playerName: boolean; clueId: boolean }>({
+    playerName: false,
+    clueId: false,
+  });
 
   const hasMinimumLength = useMemo(() => tipText.trim().length >= 3, [tipText]);
   const hasValidName = useMemo(() => playerName.trim().length >= 2, [playerName]);
   const hasSelectedClue = Boolean(selectedClueId);
+  const showPlayerNameError = (didSubmit || touchedFields.playerName) && !hasValidName;
+  const showClueError = (didSubmit || touchedFields.clueId) && !hasSelectedClue;
 
   const refreshTips = useCallback(async () => {
     setIsLoading(true);
@@ -107,6 +114,7 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      setDidSubmit(true);
       const trimmed = tipText.trim();
       if (trimmed.length < 3) {
         setSubmissionError("Dein Tipp sollte mindestens 3 Zeichen lang sein.");
@@ -144,6 +152,8 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
         });
         setTipText("");
         setPlayerName("");
+        setDidSubmit(false);
+        setTouchedFields({ playerName: false, clueId: false });
       } catch (err) {
         console.error("Failed to submit mystery tip", err);
         setSubmissionError(err instanceof Error ? err.message : "Unbekannter Fehler beim Speichern.");
@@ -176,17 +186,37 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
                   maxLength={50}
                   placeholder="Wie dürfen wir dich im Scoreboard nennen?"
                   disabled={isSubmitting}
-                  aria-invalid={hasValidName ? undefined : true}
+                  aria-invalid={showPlayerNameError ? true : undefined}
+                  onBlur={(event: FocusEvent<HTMLInputElement>) => {
+                    if (!touchedFields.playerName) {
+                      setTouchedFields((current) => ({ ...current, playerName: true }));
+                    }
+                    setPlayerName(event.target.value);
+                  }}
                 />
-                <Text variant="small" tone={hasValidName ? "muted" : "destructive"}>
+                <Text variant="small" tone={showPlayerNameError ? "destructive" : "muted"}>
                   Mindestens 2 Zeichen. Dieser Name erscheint im öffentlichen Scoreboard.
                 </Text>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="mystery-clue">Rätsel auswählen</Label>
-                <Select value={selectedClueId} onValueChange={setSelectedClueId} disabled={clueOptions.length === 0 || isSubmitting}>
-                  <SelectTrigger id="mystery-clue" className="w-full">
+                <Select value={selectedClueId} onValueChange={(value) => {
+                  setSelectedClueId(value);
+                  if (!touchedFields.clueId) {
+                    setTouchedFields((current) => ({ ...current, clueId: true }));
+                  }
+                }} disabled={clueOptions.length === 0 || isSubmitting}>
+                  <SelectTrigger
+                    id="mystery-clue"
+                    className="w-full"
+                    aria-invalid={showClueError ? true : undefined}
+                    onBlur={() => {
+                      if (!touchedFields.clueId) {
+                        setTouchedFields((current) => ({ ...current, clueId: true }));
+                      }
+                    }}
+                  >
                     <SelectValue placeholder="Rätsel wählen" />
                   </SelectTrigger>
                   <SelectContent>
@@ -197,7 +227,7 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
                     ))}
                   </SelectContent>
                 </Select>
-                <Text variant="small" tone={hasSelectedClue ? "muted" : "destructive"}>
+                <Text variant="small" tone={showClueError ? "destructive" : "muted"}>
                   Ordne deinen Tipp einem konkreten Rätsel zu, um Punkte zu sammeln.
                 </Text>
               </div>
