@@ -1275,13 +1275,26 @@ export async function ensureWebsiteSettingsRecord() {
   });
 
   if (existing) {
-    if (existing.themeId && existing.theme) {
+    const patch: Prisma.WebsiteSettingsUpdateInput = {};
+    if (!existing.themeId || !existing.theme) {
+      const theme = await ensureWebsiteTheme(existing.themeId);
+      patch.theme = { connect: { id: theme.id } };
+    }
+
+    const currentVisibility = sanitisePageVisibility(existing.pageVisibility);
+    const needsVisibilityPatch = JSON.stringify(currentVisibility) !== JSON.stringify(DEFAULT_PAGE_VISIBILITY)
+      && (!existing.pageVisibility || Object.keys((existing.pageVisibility as Record<string, unknown>) ?? {}).length === 0);
+    if (needsVisibilityPatch) {
+      patch.pageVisibility = currentVisibility as Prisma.InputJsonValue;
+    }
+
+    if (Object.keys(patch).length === 0) {
       return existing;
     }
-    const theme = await ensureWebsiteTheme(existing.themeId);
+
     return prisma.websiteSettings.update({
       where: { id: existing.id },
-      data: { theme: { connect: { id: theme.id } } },
+      data: patch,
       include: { theme: true },
     });
   }

@@ -24,6 +24,7 @@ import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   defaultMembersNavIcon,
   membersNavigation,
+  type MembersNavItem,
 } from "@/config/members-navigation";
 import {
   filterMembersNavigationByPermissions,
@@ -229,6 +230,28 @@ function MembersNavProductionSwitcher({
   );
 }
 
+
+function renderItem(pathname: string, isCollapsed: boolean, item: MembersNavItem) {
+  const active = isActive(pathname, item.href);
+  const Icon = item.icon ?? defaultMembersNavIcon;
+  const badgeContent = item.badge;
+  const hasBadgeValue = badgeContent !== undefined && badgeContent !== null && badgeContent !== false;
+  const showBadge = !isCollapsed && hasBadgeValue;
+  const isPrimitiveBadge = typeof badgeContent === "string" || typeof badgeContent === "number";
+  const reserveBadgeSpace = showBadge && isPrimitiveBadge;
+  return (
+    <SidebarMenuItem key={item.href}>
+      <SidebarMenuButton asChild isActive={active} tooltip={item.label} className={cn("gap-[var(--space-2xs)]", isCollapsed && "justify-center")}>
+        <Link href={item.href} aria-label={item.ariaLabel ?? item.label} aria-current={active ? "page" : undefined}>
+          <Icon className={cn("h-4 w-4 shrink-0 transition-opacity", active ? "opacity-100" : "opacity-70", !isCollapsed && "mt-0.5")} />
+          {!isCollapsed ? <div className={cn("flex min-w-0 flex-1 flex-col", reserveBadgeSpace && "pr-8")}><span className="break-words text-sidebar-foreground leading-5">{item.label}</span></div> : null}
+          {showBadge ? (isPrimitiveBadge ? <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">{badgeContent}</SidebarMenuBadge> : <span className="ml-auto flex shrink-0 items-center">{badgeContent}</span>) : null}
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
 export function MembersNav({
   permissions,
   activeProduction,
@@ -366,69 +389,15 @@ export function MembersNav({
               <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {group.items.map((item) => {
-                    const active = isActive(pathname, item.href);
-                    const Icon = item.icon ?? defaultMembersNavIcon;
-                    const badgeContent = item.badge;
-                    const hasBadgeValue =
-                      badgeContent !== undefined &&
-                      badgeContent !== null &&
-                      badgeContent !== false;
-                    const showBadge = !isCollapsed && hasBadgeValue;
-                    const isPrimitiveBadge =
-                      typeof badgeContent === "string" ||
-                      typeof badgeContent === "number";
-                    const reserveBadgeSpace = showBadge && isPrimitiveBadge;
-
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          tooltip={item.label}
-                          className={cn(
-                            "gap-[var(--space-2xs)]",
-                            isCollapsed && "justify-center",
-                          )}
-                        >
-                          <Link
-                            href={item.href}
-                            aria-label={item.ariaLabel ?? item.label}
-                            aria-current={active ? "page" : undefined}
-                          >
-                            <Icon
-                              className={cn(
-                                "h-4 w-4 shrink-0 transition-opacity",
-                                active ? "opacity-100" : "opacity-70",
-                                !isCollapsed && "mt-0.5",
-                              )}
-                            />
-                            {!isCollapsed ? (
-                              <div
-                                className={cn(
-                                  "flex min-w-0 flex-1 flex-col",
-                                  reserveBadgeSpace && "pr-8",
-                                )}
-                              >
-                                <span className="break-words text-sidebar-foreground leading-5">
-                                  {item.label}
-                                </span>
-                              </div>
-                            ) : null}
-                            {showBadge ? (
-                              isPrimitiveBadge ? (
-                                <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">
-                                  {badgeContent}
-                                </SidebarMenuBadge>
-                              ) : (
-                                <span className="ml-auto flex shrink-0 items-center">{badgeContent}</span>
-                              )
-                            ) : null}
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
+                  {group.items.map((item) => renderItem(pathname, isCollapsed, item))}
+                  {group.subgroups?.map((subgroup) => (
+                    <details key={subgroup.id} open className="space-y-1">
+                      <summary className="cursor-pointer list-none rounded-md px-2 py-1 text-xs font-medium text-sidebar-foreground/75">
+                        {subgroup.label}
+                      </summary>
+                      {subgroup.items.map((item) => renderItem(pathname, isCollapsed, item))}
+                    </details>
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

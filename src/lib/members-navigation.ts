@@ -1,4 +1,4 @@
-import type { MembersNavGroup, MembersNavItem } from "@/config/members-navigation";
+import type { MembersNavGroup, MembersNavItem, MembersNavSubgroup } from "@/config/members-navigation";
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
@@ -28,6 +28,10 @@ function cloneGroupItems(items: readonly MembersNavItem[]) {
   return items.map((item) => ({ ...item }));
 }
 
+function cloneSubgroups(subgroups: readonly MembersNavSubgroup[] | undefined) {
+  return subgroups?.map((subgroup) => ({ ...subgroup, items: cloneGroupItems(subgroup.items) }));
+}
+
 export function selectMembersNavigation({
   groups = membersNavigation,
   activeProduction = null,
@@ -35,7 +39,7 @@ export function selectMembersNavigation({
   return groups.map((group) => {
     if (group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID) {
       const items = cloneGroupItems(group.items);
-      return { ...group, items };
+      return { ...group, items, subgroups: cloneSubgroups(group.subgroups) };
     }
 
     if (group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID) {
@@ -66,10 +70,10 @@ export function selectMembersNavigation({
 
         items.unshift(activeItem);
       }
-      return { ...group, items };
+      return { ...group, items, subgroups: cloneSubgroups(group.subgroups) };
     }
 
-    return { ...group, items: cloneGroupItems(group.items) };
+    return { ...group, items: cloneGroupItems(group.items), subgroups: cloneSubgroups(group.subgroups) };
   });
 }
 
@@ -109,11 +113,11 @@ export function filterMembersNavigationByPermissions(
         if (!item.permissionKey || !permissionSet) return true;
         return permissionSet.has(item.permissionKey);
       });
-      return { ...group, items };
+      return { ...group, items, subgroups: cloneSubgroups(group.subgroups) };
     })
-    .filter((group) => group.items.length > 0);
+    .filter((group) => group.items.length > 0 || (group.subgroups?.length ?? 0) > 0);
 
-  const flat = filteredGroups.flatMap((group) => group.items);
+  const flat = filteredGroups.flatMap((group) => [...group.items, ...(group.subgroups?.flatMap((sub) => sub.items) ?? [])]);
   return { groups: filteredGroups, flat };
 }
 
@@ -132,11 +136,11 @@ export function filterMembersNavigationByQuery(
       const items = group.items.filter((item) =>
         item.label.toLowerCase().includes(normalizedQuery),
       );
-      return { ...group, items };
+      return { ...group, items, subgroups: cloneSubgroups(group.subgroups) };
     })
-    .filter((group) => group.items.length > 0);
+    .filter((group) => group.items.length > 0 || (group.subgroups?.length ?? 0) > 0);
 
-  const flat = filteredGroups.flatMap((group) => group.items);
+  const flat = filteredGroups.flatMap((group) => [...group.items, ...(group.subgroups?.flatMap((sub) => sub.items) ?? [])]);
   return { groups: filteredGroups, flat };
 }
 
