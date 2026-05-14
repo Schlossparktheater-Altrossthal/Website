@@ -1518,7 +1518,7 @@ export async function deleteWebsiteTheme(id: string) {
   const active = await ensureWebsiteSettingsRecord();
   return {
     themes: await listWebsiteThemes(),
-    activeThemeId: active.activeThemeId,
+    activeThemeId: active.themeId ?? DEFAULT_THEME_ID,
   };
 }
 
