@@ -41,7 +41,9 @@ const updateSchema = z.object({
 
 async function ensurePermission() {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.website.settings"))) {
+  const canManageWebsite = await hasPermission(session.user, "mitglieder.website.settings");
+  const canManagePages = await hasPermission(session.user, "pages.manage");
+  if (!canManageWebsite && !canManagePages) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

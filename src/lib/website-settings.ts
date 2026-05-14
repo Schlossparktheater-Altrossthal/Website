@@ -18,6 +18,12 @@ export type PageVisibilitySettings = {
     ui: boolean;
     websiteTheme: boolean;
   };
+  public: {
+    about: boolean;
+    mystery: boolean;
+    schoolCat: boolean;
+    timeline: boolean;
+  };
   categories: {
     dateisystem: {
       enabled: boolean;
@@ -31,12 +37,14 @@ export type PageVisibilitySettings = {
 
 export const DEFAULT_PAGE_VISIBILITY: PageVisibilitySettings = {
   pages: { general: true, maintenance: true, ui: true, websiteTheme: true },
+  public: { about: true, mystery: true, schoolCat: true, timeline: true },
   categories: { dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true } },
 };
 
 function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
   const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
   const pages = source.pages && typeof source.pages === "object" ? source.pages as Record<string, unknown> : {};
+  const publicPages = source.public && typeof source.public === "object" ? source.public as Record<string, unknown> : {};
   const categories = source.categories && typeof source.categories === "object" ? source.categories as Record<string, unknown> : {};
   const dateisystem = categories.dateisystem && typeof categories.dateisystem === "object" ? categories.dateisystem as Record<string, unknown> : {};
   const pick=(v:unknown,d:boolean)=> typeof v === 'boolean' ? v : d;
@@ -46,6 +54,12 @@ function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
       maintenance: pick(pages.maintenance, true),
       ui: pick(pages.ui, true),
       websiteTheme: pick(pages.websiteTheme, true),
+    },
+    public: {
+      about: pick(publicPages.about, true),
+      mystery: pick(publicPages.mystery, true),
+      schoolCat: pick(publicPages.schoolCat, true),
+      timeline: pick(publicPages.timeline, true),
     },
     categories: {
       dateisystem: {
