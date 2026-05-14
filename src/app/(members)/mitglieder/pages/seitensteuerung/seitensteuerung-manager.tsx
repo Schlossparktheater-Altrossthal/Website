@@ -25,7 +25,10 @@ const publicPages: PublicPageConfig[] = [
 ];
 
 export function SeitensteuerungManager() {
-  const memberPages = useMemo(() => membersNavigation.flatMap((group) => group.items.map((item) => item.label)), []);
+  const memberPages = useMemo(
+    () => membersNavigation.flatMap((group) => group.items.map((item) => ({ key: item.href, label: item.label }))),
+    [],
+  );
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [pageVisibility, setPageVisibility] = useState<ClientWebsiteSettings["pageVisibility"]>({
@@ -39,7 +42,7 @@ export function SeitensteuerungManager() {
   const [savingPage, setSavingPage] = useState<string | null>(null);
 
   useEffect(() => {
-    const initialMembers = Object.fromEntries(memberPages.map((name) => [name, true]));
+    const initialMembers = Object.fromEntries(memberPages.map((page) => [page.key, true]));
     setPendingMembers(initialMembers);
   }, [memberPages]);
 
@@ -57,7 +60,9 @@ export function SeitensteuerungManager() {
       setPageVisibility(payload.settings.pageVisibility);
       setPendingPublic(payload.settings.pageVisibility.public);
       const membersFromSettings = payload.settings.pageVisibility.members ?? {};
-      setPendingMembers(Object.fromEntries(memberPages.map((name) => [name, membersFromSettings[name] ?? true])));
+      setPendingMembers(
+        Object.fromEntries(memberPages.map((page) => [page.key, membersFromSettings[page.key] ?? true])),
+      );
     };
     void loadSettings();
     return () => {
@@ -150,19 +155,19 @@ export function SeitensteuerungManager() {
       <Card>
         <CardHeader><CardTitle>Mitglieder-Seiten ({memberPages.length})</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {memberPages.map((name) => (
-            <div key={name} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
-              <span>{name}</span>
+          {memberPages.map((page) => (
+            <div key={page.key} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
+              <span>{page.label}</span>
               <Dialog>
                 <DialogTrigger asChild><Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button></DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>{name} konfigurieren</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{page.label} konfigurieren</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor={`member-${name}`}>Seite aktivieren</Label>
-                      <Switch id={`member-${name}`} checked={pendingMembers[name] ?? true} onCheckedChange={(checked) => setPendingMembers((prev) => ({ ...prev, [name]: checked }))} />
+                      <Label htmlFor={`member-${page.key}`}>Seite aktivieren</Label>
+                      <Switch id={`member-${page.key}`} checked={pendingMembers[page.key] ?? true} onCheckedChange={(checked) => setPendingMembers((prev) => ({ ...prev, [page.key]: checked }))} />
                     </div>
-                    <Button disabled={savingPage === name} onClick={() => void saveVisibility({ members: { ...pageVisibility.members, [name]: pendingMembers[name] ?? true } }, name)}>Speichern</Button>
+                    <Button disabled={savingPage === page.key} onClick={() => void saveVisibility({ members: { ...pageVisibility.members, [page.key]: pendingMembers[page.key] ?? true } }, page.key)}>Speichern</Button>
                   </div>
                 </DialogContent>
               </Dialog>

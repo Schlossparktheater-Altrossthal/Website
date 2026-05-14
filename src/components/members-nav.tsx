@@ -270,6 +270,7 @@ export function MembersNav({
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
   const normalizedQuery = query.trim().toLowerCase();
   const isFiltering = normalizedQuery.length > 0;
   const searchInputId = useId();
@@ -317,6 +318,43 @@ export function MembersNav({
 
     return filterMembersNavigationByQuery(permittedGroups, normalizedQuery);
   }, [permittedFlat, permittedGroups, isFiltering, normalizedQuery]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadVisibility = async () => {
+      const response = await fetch("/api/website/settings", { cache: "no-store" });
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as {
+        settings?: { pageVisibility?: { members?: Record<string, boolean> } };
+      };
+      if (!mounted) return;
+      setVisibilityMap(payload.settings?.pageVisibility?.members ?? {});
+    };
+
+    void loadVisibility();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const visibleGroups = useMemo(
+    () =>
+      groups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => visibilityMap[item.href] ?? true),
+          subgroups: group.subgroups?.map((subgroup) => ({
+            ...subgroup,
+            items: subgroup.items.filter((item) => visibilityMap[item.href] ?? true),
+          })).filter((subgroup) => subgroup.items.length > 0),
+        }))
+        .filter((group) => group.items.length > 0 || (group.subgroups?.length ?? 0) > 0),
+    [groups, visibilityMap],
+  );
 
   const emptyStateMessage = isFiltering
     ? "Keine Bereiche gefunden. Passe die Suche an."
@@ -377,29 +415,33 @@ export function MembersNav({
           currentPath={pathname}
         />
 
-        {groups.length === 0 ? (
+        {visibleGroups.length === 0 ? (
           <div className="mx-[var(--space-xs)] rounded-lg border border-dashed border-sidebar-border/60 bg-sidebar/40 p-[var(--space-xs)] text-sidebar-foreground/70">
             <Text variant="small" className="text-sidebar-foreground/70">
               {emptyStateMessage}
             </Text>
           </div>
         ) : (
-          groups.map((group) => (
+          visibleGroups.map((group) => (
             <SidebarGroup key={group.id}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => renderItem(pathname, isCollapsed, item))}
-                  {group.subgroups?.map((subgroup) => (
-                    <details key={subgroup.id} open className="space-y-1">
-                      <summary className="cursor-pointer list-none rounded-md px-2 py-1 text-xs font-medium text-sidebar-foreground/75">
-                        {subgroup.label}
-                      </summary>
-                      {subgroup.items.map((item) => renderItem(pathname, isCollapsed, item))}
-                    </details>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
+              <details open>
+                <summary className="list-none">
+                  <SidebarGroupLabel className="cursor-pointer">{group.label}</SidebarGroupLabel>
+                </summary>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => renderItem(pathname, isCollapsed, item))}
+                    {group.subgroups?.map((subgroup) => (
+                      <details key={subgroup.id} open className="space-y-1">
+                        <summary className="cursor-pointer list-none rounded-md px-2 py-1 text-xs font-medium text-sidebar-foreground/75">
+                          {subgroup.label}
+                        </summary>
+                        {subgroup.items.map((item) => renderItem(pathname, isCollapsed, item))}
+                      </details>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </details>
             </SidebarGroup>
           ))
         )}
