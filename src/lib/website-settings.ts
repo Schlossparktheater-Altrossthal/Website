@@ -1515,7 +1515,7 @@ export async function deleteWebsiteTheme(id: string) {
   }
 
   await prisma.websiteTheme.delete({ where: { id } });
-  const active = await readWebsiteSettings();
+  const active = await ensureWebsiteSettingsRecord();
   return {
     themes: await listWebsiteThemes(),
     activeThemeId: active.activeThemeId,
