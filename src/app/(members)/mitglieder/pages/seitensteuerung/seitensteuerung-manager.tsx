@@ -199,17 +199,17 @@ export function SeitensteuerungManager() {
             return (
               <div key={group.id} className="space-y-2">
                 <div className="flex items-center gap-3 px-1 py-1">
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    className="h-auto flex-1 justify-start p-0 text-left"
+                    className="flex flex-1 items-center text-left"
                     onClick={() => setCategoryExpanded(group.id)}
+                    aria-expanded={expanded}
                   >
                     <ChevronDown
                       className={`mr-2 h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`}
                     />
                     <span className="text-lg font-semibold">{group.label}</span>
-                  </Button>
+                  </button>
                   <div className="relative">
                     <Switch
                       checked={categoryStatus === "enabled"}
