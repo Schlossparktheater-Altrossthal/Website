@@ -82,7 +82,13 @@ export function SeitensteuerungManager() {
     toast.success("Wartungsmodus gespeichert");
   };
 
-  const saveVisibility = async (partial: { public?: Record<string, boolean>; members?: Record<string, boolean> }, key: string) => {
+  const saveVisibility = async (
+    partial: {
+      public?: ClientWebsiteSettings["pageVisibility"]["public"];
+      members?: ClientWebsiteSettings["pageVisibility"]["members"];
+    },
+    key: string,
+  ) => {
     setSavingPage(key);
     const nextVisibility = { ...pageVisibility, ...partial };
     const res = await fetch("/api/website/settings", {
