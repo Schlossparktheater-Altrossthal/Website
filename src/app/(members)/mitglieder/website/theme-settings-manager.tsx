@@ -1239,6 +1239,39 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
     }
   }
 
+
+  async function handleDeleteThemeClick() {
+    if (themeEditingLocked) {
+      toast.error("Standard-Designs können nicht gelöscht werden.");
+      return;
+    }
+
+    if (!window.confirm(`Theme "${currentTheme.name}" wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.`)) {
+      return;
+    }
+
+    setIsDeletingTheme(true);
+    try {
+      const response = await fetch(`/api/website/themes/${currentTheme.id}`, { method: "DELETE" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(typeof payload?.error === "string" ? payload.error : "Theme konnte nicht gelöscht werden.");
+      }
+
+      const themes = sortThemeSummaries(payload.themes ?? []);
+      setAvailableThemes(themes);
+      const fallbackId = payload.activeThemeId ?? themes[0]?.id;
+      if (fallbackId) {
+        await loadThemeById(fallbackId);
+      }
+      setSiteSnapshot((prev) => ({ ...prev, activeThemeId: payload.activeThemeId ?? prev.activeThemeId }));
+      toast.success("Theme wurde gelöscht.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Theme konnte nicht gelöscht werden.");
+    } finally {
+      setIsDeletingTheme(false);
+    }
+  }
   async function handleActivateThemeClick() {
     setIsActivatingTheme(true);
     try {
@@ -1471,6 +1504,15 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
             >
               {isActivatingTheme ? "Aktiviere…" : "Theme aktivieren"}
             </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteThemeClick}
+              disabled={isDeletingTheme || isSaving || isLoadingTheme || themeEditingLocked}
+              data-state={isDeletingTheme ? "loading" : undefined}
+            >
+              {isDeletingTheme ? "Lösche…" : "Theme löschen"}
+            </Button>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span>
@@ -1525,36 +1567,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
               </Select>
             </div>
           </div>
-          <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-semibold">Wartungsmodus</p>
-                <p className="text-xs text-muted-foreground">
-                  Blendet die öffentliche Website aus. Angemeldete Mitglieder behalten weiterhin vollen Zugriff.
-                </p>
-              </div>
-              <Switch
-                checked={maintenanceMode}
-                onCheckedChange={setMaintenanceMode}
-                aria-label="Wartungsmodus umschalten"
-                className={cn(
-                  maintenanceMode
-                    ? "bg-warning data-[state=checked]:bg-warning"
-                    : "bg-muted data-[state=unchecked]:bg-muted",
-                )}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <Badge variant={maintenanceMode ? "warning" : "muted"}>
-                {maintenanceMode ? "Aktiv" : "Deaktiviert"}
-              </Badge>
-              <span className="text-muted-foreground">
-                {maintenanceMode
-                  ? "Besucher sehen eine Wartungsmeldung, der Login bleibt erreichbar."
-                  : "Die Website ist öffentlich sichtbar."}
-              </span>
-            </div>
-          </div>
+
         </CardContent>
       </Card>
 
