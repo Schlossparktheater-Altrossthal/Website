@@ -31,10 +31,17 @@ export interface MembersNavItem {
   badge?: ReactNode;
 }
 
+export interface MembersNavSubgroup {
+  id: string;
+  label: string;
+  items: readonly MembersNavItem[];
+}
+
 export interface MembersNavGroup {
   id: MembersNavGroupId;
   label: string;
   items: readonly MembersNavItem[];
+  subgroups?: readonly MembersNavSubgroup[];
 }
 
 function createMembersNavIcon(children: ReactNode): MembersNavIcon {
@@ -636,29 +643,17 @@ export const membersNavigation = [
     id: "pages",
     label: "Pages",
     items: [
+      { href: "/mitglieder/pages/ui", label: "UI", permissionKey: "pages.manage", icon: DashboardIcon },
+      { href: "/mitglieder/website", label: "Website & Theme", permissionKey: "pages.manage", icon: WebsiteIcon },
+    ],
+    subgroups: [
       {
-        href: "/mitglieder/pages/wartungsmodus",
-        label: "Wartungsmodus",
-        permissionKey: "pages.manage",
-        icon: WebsiteIcon,
-      },
-      {
-        href: "/mitglieder/pages/seitensteuerung",
-        label: "Seitensteuerung",
-        permissionKey: "pages.manage",
-        icon: WebsiteIcon,
-      },
-      {
-        href: "/mitglieder/pages/ui",
-        label: "UI",
-        permissionKey: "pages.manage",
-        icon: DashboardIcon,
-      },
-      {
-        href: "/mitglieder/website",
-        label: "Website & Theme",
-        permissionKey: "pages.manage",
-        icon: WebsiteIcon,
+        id: "pages-general",
+        label: "Allgemein",
+        items: [
+          { href: "/mitglieder/pages/wartungsmodus", label: "Wartungsmodus", permissionKey: "pages.manage", icon: WebsiteIcon },
+          { href: "/mitglieder/pages/seitensteuerung", label: "Seitensteuerung", permissionKey: "pages.manage", icon: WebsiteIcon },
+        ],
       },
     ],
   },

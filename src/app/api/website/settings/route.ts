@@ -25,6 +25,7 @@ const updateSchema = z.object({
       siteTitle: z.string().trim().min(1).max(160).optional(),
       colorMode: colorModeSchema.optional(),
       maintenanceMode: z.boolean().optional(),
+      pageVisibility: z.unknown().optional(),
       themeId: themeIdSchema.optional(),
     })
     .optional(),
@@ -125,6 +126,7 @@ export async function PUT(request: NextRequest) {
         siteTitle: settingsPayload?.siteTitle ?? undefined,
         colorMode: settingsPayload?.colorMode ?? undefined,
         maintenanceMode: settingsPayload?.maintenanceMode ?? undefined,
+        pageVisibility: (settingsPayload?.pageVisibility as never) ?? undefined,
         themeId: desiredThemeId,
       });
     }
