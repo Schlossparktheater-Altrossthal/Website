@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { getSession } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { createSyncToken } from "@/lib/sync/tokens";
+import { CookieBanner } from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
@@ -134,6 +135,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             Zum Inhalt springen
           </a>
           {children}
+          <CookieBanner />
         </Providers>
       </body>
     </html>
