@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAttendanceRealtime, usePresence, useRealtime } from '@/hooks/useRealtime';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,39 +40,41 @@ interface RealtimeStatusProps {
 export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeStatusProps) {
   const { connectionStatus, isConnected, reconnect } = useRealtime();
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const handleAttendanceEvent = useCallback((event) => {
+    const occurredAt = event.timestamp ? new Date(event.timestamp) : new Date();
+    setLastUpdate(occurredAt);
+
+    const statusLabel = getStatusText(event.status);
+    const actorLabel = formatUserId(event.actorUserId);
+    const targetLabel = event.targetUserId ? ` für ${formatUserId(event.targetUserId)}` : '';
+    const descriptionParts = [
+      event.rehearsalId ? `Probe: ${event.rehearsalId}` : null,
+      event.comment ? `Kommentar: ${event.comment}` : null,
+    ].filter(Boolean) as string[];
+
+    toast.info(
+      `${actorLabel} hat die Anwesenheit${targetLabel} auf „${statusLabel}“ gesetzt`,
+      {
+        description: descriptionParts.length ? descriptionParts.join(' · ') : undefined,
+        duration: 3000,
+      }
+    );
+  }, [rehearsalId]);
+  const handlePresenceEvent = useCallback((event) => {
+    const action = event.action === 'join' ? 'ist online gekommen' : 'ist offline gegangen';
+    toast.info(`${event.user.name} ${action}`);
+  }, []);
   
   // Handle attendance updates if rehearsalId is provided
   useAttendanceRealtime(
     rehearsalId || null,
-    (event) => {
-      const occurredAt = event.timestamp ? new Date(event.timestamp) : new Date();
-      setLastUpdate(occurredAt);
-
-      const statusLabel = getStatusText(event.status);
-      const actorLabel = formatUserId(event.actorUserId);
-      const targetLabel = event.targetUserId ? ` für ${formatUserId(event.targetUserId)}` : '';
-      const descriptionParts = [
-        event.rehearsalId ? `Probe: ${event.rehearsalId}` : null,
-        event.comment ? `Kommentar: ${event.comment}` : null,
-      ].filter(Boolean) as string[];
-
-      toast.info(
-        `${actorLabel} hat die Anwesenheit${targetLabel} auf „${statusLabel}“ gesetzt`,
-        {
-          description: descriptionParts.length ? descriptionParts.join(' · ') : undefined,
-          duration: 3000,
-        }
-      );
-    }
+    handleAttendanceEvent
   );
 
   // Handle user presence if enabled and rehearsalId provided
   const presentUsers = usePresence(
     showPresence && rehearsalId ? rehearsalId : null,
-    (event) => {
-      const action = event.action === 'join' ? 'ist online gekommen' : 'ist offline gegangen';
-      toast.info(`${event.user.name} ${action}`);
-    }
+    handlePresenceEvent
   );
 
   const getConnectionIcon = () => {
