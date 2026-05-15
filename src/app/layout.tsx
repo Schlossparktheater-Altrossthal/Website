@@ -26,6 +26,11 @@ export const metadata: Metadata = {
   },
   description: "Mystische Bühne unter freiem Himmel",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/Logo-Sommertheater.png",
+    shortcut: "/Logo-Sommertheater.png",
+    apple: "/Logo-Sommertheater.png",
+  },
   alternates: {
     canonical: "/",
   },
@@ -36,7 +41,7 @@ export const metadata: Metadata = {
     description: "Mystische Bühne unter freiem Himmel",
     images: [
       {
-        url: "https://picsum.photos/id/1069/1200/630",
+        url: "/Logo-Sommertheater.png",
         width: 1200,
         height: 630,
         alt: "Mystischer Schlosspark",
@@ -49,7 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: DEFAULT_SITE_TITLE,
     description: "Mystische Bühne unter freiem Himmel",
-    images: ["https://picsum.photos/id/1069/1200/630"],
+    images: ["/Logo-Sommertheater.png"],
   },
 };
 
