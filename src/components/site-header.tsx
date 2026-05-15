@@ -187,7 +187,7 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
         className={`fixed top-0 z-50 w-full transition-all duration-300 ${
           scrolled || !isHomePage
             ? "border-b border-border/50 bg-background/95 backdrop-blur-md shadow-lg"
-            : "bg-gradient-to-b from-black/40 via-black/25 via-black/12 to-transparent backdrop-blur-[1px]"
+            : "bg-gradient-to-b from-background/80 via-background/50 via-background/20 to-transparent backdrop-blur-[1px]"
         }`}
       >
         <div
