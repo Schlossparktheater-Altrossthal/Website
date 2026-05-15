@@ -21,8 +21,7 @@ import type {
 } from '@/lib/realtime/types';
 import { useOfflineSyncClient } from '@/lib/offline/hooks';
 
-// Allow essentially unlimited reconnects; avoid noisy hard-fail in production
-const MAX_RECONNECT_ATTEMPTS: number = Number.POSITIVE_INFINITY;
+const MAX_RECONNECT_ATTEMPTS = 10;
 const PING_INTERVAL_MS = 30_000;
 const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL;
 const REALTIME_PATH = process.env.NEXT_PUBLIC_REALTIME_PATH || '/socket.io';
@@ -252,8 +251,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           transports: ['websocket', 'polling'],
           forceNew: true,
           reconnection: true,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000,
+          reconnectionDelay: 2000,
+          reconnectionDelayMax: 30000,
           reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
           auth: handshake,
         };
