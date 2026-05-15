@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { Heading, Text } from "@/components/ui/typography";
 
@@ -38,8 +39,26 @@ export default function ImpressumPage() {
         <Heading level="h2" className="text-xl" weight="bold">
           BSZ für Agrarwirtschaft und Ernährung Dresden
         </Heading>
-        <Text>Canalettostraße 8</Text>
-        <Text>01307 Dresden</Text>
+        <Text>
+          <a
+            className="underline underline-offset-4 transition-colors hover:text-primary"
+            href="https://maps.google.com/?q=Canalettostra%C3%9Fe+8,+01307+Dresden"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Canalettostraße 8
+          </a>
+        </Text>
+        <Text>
+          <a
+            className="underline underline-offset-4 transition-colors hover:text-primary"
+            href="https://maps.google.com/?q=Canalettostra%C3%9Fe+8,+01307+Dresden"
+            target="_blank"
+            rel="noreferrer"
+          >
+            01307 Dresden
+          </a>
+        </Text>
       </div>
 
       <div className="space-y-2">
@@ -53,9 +72,24 @@ export default function ImpressumPage() {
         <Heading level="h3" className="text-xl" weight="bold">
           Kontakt
         </Heading>
-        <Text>E-Mail: info@bsz-ae-dd.de</Text>
-        <Text>Tel.: 0351 / 435094 0</Text>
-        <Text>Fax: 0351 / 435094 20</Text>
+        <Text>
+          E-Mail:{" "}
+          <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="mailto:info@bsz-ae-dd.de">
+            info@bsz-ae-dd.de
+          </Link>
+        </Text>
+        <Text>
+          Tel.:{" "}
+          <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="tel:+493514350940">
+            0351 / 435094 0
+          </Link>
+        </Text>
+        <Text>
+          Fax:{" "}
+          <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="fax:+4935143509420">
+            0351 / 435094 20
+          </Link>
+        </Text>
       </div>
     </div>
   );
