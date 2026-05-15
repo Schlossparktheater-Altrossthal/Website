@@ -84,15 +84,18 @@ export default async function MembersLayout({ children }: { children: React.Reac
     typeof sidebarState === "undefined" ? true : sidebarState === "true";
 
   const session = await requireAuth();
-  const permissions = await getUserPermissionKeys(session.user);
-  const activeProduction = await getActiveProduction(session.user?.id);
+  const [permissions, activeProduction, websiteSettingsRecord] = await Promise.all([
+    getUserPermissionKeys(session.user),
+    getActiveProduction(session.user?.id),
+    process.env.DATABASE_URL ? readWebsiteSettings() : Promise.resolve(null),
+  ]);
   const isBoard = hasRole(session.user, "board");
 
   let resolvedSettings = resolveWebsiteSettings(null);
 
   if (process.env.DATABASE_URL) {
     try {
-      const record = await readWebsiteSettings();
+      const record = websiteSettingsRecord;
       if (record) {
         resolvedSettings = resolveWebsiteSettings(record);
       }
