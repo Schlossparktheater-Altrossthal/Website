@@ -37,41 +37,47 @@ export default function ImpressumPage() {
 
       <div className="space-y-2">
         <Heading level="h2" className="text-xl" weight="bold">
-          BSZ für Agrarwirtschaft und Ernährung Dresden
+          Angaben gemäß §5 TMG
         </Heading>
+        <Text>Freunde und Förderer des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung e.V.</Text>
         <Text>
           <a
             className="underline underline-offset-4 transition-colors hover:text-primary"
-            href="https://maps.google.com/?q=Canalettostra%C3%9Fe+8,+01307+Dresden"
+            href="https://maps.google.com/?q=Altro%C3%9Fthal+1,+01169+Dresden"
             target="_blank"
             rel="noreferrer"
           >
-            Canalettostraße 8
+            Altroßthal 1
           </a>
         </Text>
         <Text>
           <a
             className="underline underline-offset-4 transition-colors hover:text-primary"
-            href="https://maps.google.com/?q=Canalettostra%C3%9Fe+8,+01307+Dresden"
+            href="https://maps.google.com/?q=Altro%C3%9Fthal+1,+01169+Dresden"
             target="_blank"
             rel="noreferrer"
           >
-            01307 Dresden
+            01169 Dresden
           </a>
         </Text>
+        <Text>Registergericht: Amtsgericht Dresden</Text>
+        <Text>Registernummer: VR 2281</Text>
       </div>
 
       <div className="space-y-2">
         <Heading level="h3" className="text-xl" weight="bold">
-          Schulleiterin
+          Vorstand (Vertretungsberechtigte)
         </Heading>
-        <Text>Anja Unger</Text>
+        <Text>Dr. Falk Hohmann (1. Vorsitzender)</Text>
+        <Text>Anke Habich (2. Vorsitzende)</Text>
       </div>
 
       <div className="space-y-2">
         <Heading level="h3" className="text-xl" weight="bold">
           Kontakt
         </Heading>
+        <Text>BSZ für Agrarwirtschaft und Ernährung Dresden</Text>
+        <Text>Canalettostraße 8, 01307 Dresden</Text>
         <Text>
           E-Mail:{" "}
           <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="mailto:info@bsz-ae-dd.de">
