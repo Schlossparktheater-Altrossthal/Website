@@ -4,7 +4,7 @@ import path from "node:path";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { Cat, Fish, Heart, MoonStar, PawPrint, ShieldCheck, Sun, Users } from "lucide-react";
+import { Cat, Heart, MoonStar, PawPrint, ShieldCheck, Sun } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
@@ -66,12 +66,6 @@ type CatMemoryItem = {
   detail: string;
 };
 
-type CatCareSupporter = {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-};
-
 const catProfileHighlights: CatProfileHighlight[] = [
   {
     icon: Cat,
@@ -111,27 +105,6 @@ const catMemoryItems: CatMemoryItem[] = [
     title: "Abende im Park",
     detail:
       "Wenn der Tag endete, blieb er oft noch eine Weile, als wolle er sicherstellen, dass alles seinen Platz hat, bevor er in die Nacht verschwand.",
-  },
-];
-
-const catCareSupporters: CatCareSupporter[] = [
-  {
-    icon: Users,
-    title: "Pflege-AG & Schülerschaft",
-    description:
-      "In festen Diensten sorgten engagierte Schüler für Futter, frisches Wasser und liebevolle Aufmerksamkeit.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Hausmeisterteam & Tierärztin",
-    description:
-      "Sie behielten Gesundheit und Sicherheit im Blick, koordinierten Checks und boten Dieter auch in seinen älteren Jahren Halt.",
-  },
-  {
-    icon: Fish,
-    title: "Patenschaften & Spenden",
-    description:
-      "Klassen und Kollegium legten zusammen, damit Futter, Medikamente und letzte Wege gemeinschaftlich getragen wurden.",
   },
 ];
 
@@ -244,31 +217,6 @@ export default async function SchoolCatPage() {
             </div>
           </Card>
 
-          <Card className="h-full space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
-                <Heart className="h-5 w-5" aria-hidden />
-              </div>
-              <Text weight="semibold" className="text-base sm:text-lg">
-                Wer sich gekümmert hat
-              </Text>
-            </div>
-            <div className="space-y-3">
-              {catCareSupporters.map((entry) => (
-                <div key={entry.title} className="flex gap-3">
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <entry.icon className="h-5 w-5" aria-hidden />
-                  </div>
-                  <div className="space-y-1">
-                    <Text weight="medium">{entry.title}</Text>
-                    <Text variant="small" tone="muted" className="leading-relaxed">
-                      {entry.description}
-                    </Text>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
       </section>
 
