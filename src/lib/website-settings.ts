@@ -6,7 +6,7 @@ import type { Prisma, WebsiteSettings, WebsiteTheme } from "@prisma/client";
 
 export const DEFAULT_THEME_ID = "default-website-theme" as const;
 export const DEFAULT_WEBSITE_SETTINGS_ID = "public" as const;
-export const DEFAULT_SITE_TITLE = "Sommertheater im Schlosspark" as const;
+export const DEFAULT_SITE_TITLE = "Sommertheater Altrossthal" as const;
 export const DEFAULT_COLOR_MODE = "dark" as const;
 export const DEFAULT_MAINTENANCE_MODE = false as const;
 
