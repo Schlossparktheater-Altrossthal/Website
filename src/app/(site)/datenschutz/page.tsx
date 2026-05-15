@@ -111,43 +111,7 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          6. Mitgliederbereich und Anmeldung (Magic Link)
-        </Heading>
-        <Text>
-          Unsere Website verfügt über einen passwortgeschützten Mitgliederbereich, der ausschließlich registrierten Mitgliedern zugänglich
-          ist. Für die Anmeldung verwenden wir ein sogenanntes Magic-Link-Verfahren: Sie geben Ihre E-Mail-Adresse ein und erhalten einen
-          Einmal-Link zur Anmeldung.
-        </Text>
-        <Text>Im Zuge der Nutzung des Mitgliederbereichs verarbeiten wir folgende Daten:</Text>
-        <ul className="list-disc space-y-1 pl-6 text-foreground">
-          <li>E-Mail-Adresse (zur Authentifizierung und Kommunikation)</li>
-          <li>Name (soweit angegeben)</li>
-          <li>Vereinsrolle (z. B. Vorstand, Ensemble, Mitglied)</li>
-          <li>Zeitstempel von Anmeldungen (Session-Daten)</li>
-          <li>Hochgeladene oder erstellte Inhalte innerhalb der Plattform</li>
-        </ul>
-        <Text>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung im Rahmen der Vereinsmitgliedschaft) sowie Art. 6 Abs. 1 lit. f DSGVO.</Text>
-        <Text>
-          Die Daten werden gelöscht oder gesperrt, sobald die Mitgliedschaft endet oder der Zweck der Speicherung entfällt, sofern keine
-          gesetzlichen Aufbewahrungspflichten bestehen.
-        </Text>
-      </section>
-
-      <section className="mb-8 space-y-2 border-t border-border pt-6">
-        <Heading level="h2" className="text-xl" weight="bold">
-          7. Nextcloud (Dateiablage)
-        </Heading>
-        <Text>
-          Für die vereinsinterne Dateiablage und Zusammenarbeit betreiben wir eine eigene Nextcloud-Instanz unter
-          cloud.sommertheater-altrossthal.de. Dabei werden Nutzerdaten (E-Mail-Adresse, hochgeladene Dateien, Aktivitätsprotokolle)
-          ausschließlich auf unserem eigenen Server gespeichert und nicht an Dritte übermittelt.
-        </Text>
-        <Text>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vereinsmitgliedschaft).</Text>
-      </section>
-
-      <section className="mb-8 space-y-2 border-t border-border pt-6">
-        <Heading level="h2" className="text-xl" weight="bold">
-          8. Cookies und Session-Daten
+          6. Cookies und Session-Daten
         </Heading>
         <Text>
           Unsere Website verwendet technisch notwendige Cookies, um den Betrieb des Mitgliederbereichs zu ermöglichen (Session-Cookie für
@@ -162,7 +126,7 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          9. Keine Drittanbieter-Tracking-Dienste
+          7. Keine Drittanbieter-Tracking-Dienste
         </Heading>
         <Text>
           Wir setzen auf dieser Website keine Analyse- oder Tracking-Werkzeuge von Drittanbietern ein (z. B. Google Analytics, Facebook
@@ -176,7 +140,7 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          10. Ihre Rechte als betroffene Person
+          8. Ihre Rechte als betroffene Person
         </Heading>
         <Text>Sie haben gegenüber uns folgende Rechte hinsichtlich Ihrer personenbezogenen Daten:</Text>
         <ul className="list-disc space-y-1 pl-6 text-foreground">
@@ -193,7 +157,7 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          11. Beschwerderecht bei der Aufsichtsbehörde
+          9. Beschwerderecht bei der Aufsichtsbehörde
         </Heading>
         <Text>
           Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer personenbezogenen Daten durch uns
@@ -211,7 +175,7 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          12. Datensicherheit
+          10. Datensicherheit
         </Heading>
         <Text>
           Wir treffen technische und organisatorische Maßnahmen, um Ihre Daten gegen Verlust, Zerstörung, Manipulation und unberechtigten
@@ -222,7 +186,7 @@ export default function DatenschutzPage() {
 
       <section className="space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          13. Aktualität und Änderungen dieser Datenschutzerklärung
+          11. Aktualität und Änderungen dieser Datenschutzerklärung
         </Heading>
         <Text>
           Diese Datenschutzerklärung ist aktuell gültig. Durch die Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher
