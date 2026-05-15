@@ -31,38 +31,7 @@ type CatEncounter = {
 
 type StoredCatEncounter = Omit<CatEncounter, "source">;
 
-const curatedCatEncounters: CatEncounter[] = [
-  {
-    id: "curated-1",
-    since: "Sommer 2024",
-    nickname: "Dennis Dieter vom Werkhof",
-    story:
-      "Bei der Generalprobe huschte Dennis Dieter zwischen den Kulissen hindurch, kletterte auf die letzte Reihe und beobachtete uns mit großen Augen. Sein zufriedenes Schnurren nahm allen die Nervosität.",
-    author: "Lara aus der Kostümwerkstatt",
-    createdAt: "Juni 2024",
-    source: "curated",
-  },
-  {
-    id: "curated-2",
-    since: "Frühjahr 2024",
-    nickname: "Bibliotheks-Dennis",
-    story:
-      "Im Selbstlernzentrum legte er sich mitten zwischen Karteikästen und erinnerte uns daran, Pausen zu machen. Seitdem gehört ein kurzer Streichler für Dennis Dieter zu jeder Lernrunde.",
-    author: "Herr Schubert, Mathekollegium",
-    createdAt: "März 2024",
-    source: "curated",
-  },
-  {
-    id: "curated-3",
-    since: "Herbst 2024",
-    nickname: "Captain Dennis",
-    story:
-      "Beim Kulissenbau bewachte er mit wachem Blick die Werkzeugkisten. Niemand vergaß dank ihm den Helm – Dennis Dieter passte einfach auf uns auf.",
-    author: "Werkstatt-AG",
-    createdAt: "Oktober 2024",
-    source: "curated",
-  },
-];
+const curatedCatEncounters: CatEncounter[] = [];
 
 function generateEncounterId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
