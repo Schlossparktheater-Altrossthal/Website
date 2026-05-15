@@ -121,6 +121,9 @@ export function SiteFooter({
             <Link className="transition-colors hover:text-primary" href="/impressum">
               Impressum
             </Link>
+            <Link className="transition-colors hover:text-primary" href="/datenschutz">
+              Datenschutzerklärung
+            </Link>
           </div>
           {isAuthenticated ? (
             <p className="text-xs text-muted-foreground/80 sm:text-sm">
