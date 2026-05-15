@@ -46,7 +46,7 @@ function normalizeSocketPath(path: string | undefined | null): string {
 }
 
 type SocketInstance = Socket<ServerToClientEvents, ClientToServerEvents>;
-type AttendanceUpdateMessage = Parameters<ServerToClientEvents['attendance_updated']>[0];
+export type AttendanceUpdateMessage = Parameters<ServerToClientEvents['attendance_updated']>[0];
 type NotificationMessage = Parameters<ServerToClientEvents['notification_created']>[0];
 type RehearsalCreatedMessage = Parameters<ServerToClientEvents['rehearsal_created']>[0];
 type RehearsalUpdatedMessage = Parameters<ServerToClientEvents['rehearsal_updated']>[0];

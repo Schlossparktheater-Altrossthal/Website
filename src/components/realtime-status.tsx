@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from 'react';
-import { useAttendanceRealtime, usePresence, useRealtime } from '@/hooks/useRealtime';
+import { type AttendanceUpdateMessage, useAttendanceRealtime, usePresence, useRealtime } from '@/hooks/useRealtime';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -14,6 +14,7 @@ import {
   XCircle 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import type { UserPresenceEvent } from '@/lib/realtime/types';
 
 const STATUS_TEXT: Record<string, string> = {
   yes: 'Zusage',
@@ -40,7 +41,7 @@ interface RealtimeStatusProps {
 export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeStatusProps) {
   const { connectionStatus, isConnected, reconnect } = useRealtime();
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const handleAttendanceEvent = useCallback((event) => {
+  const handleAttendanceEvent = useCallback((event: AttendanceUpdateMessage) => {
     const occurredAt = event.timestamp ? new Date(event.timestamp) : new Date();
     setLastUpdate(occurredAt);
 
@@ -59,8 +60,8 @@ export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeSta
         duration: 3000,
       }
     );
-  }, [rehearsalId]);
-  const handlePresenceEvent = useCallback((event) => {
+  }, []);
+  const handlePresenceEvent = useCallback((event: UserPresenceEvent) => {
     const action = event.action === 'join' ? 'ist online gekommen' : 'ist offline gegangen';
     toast.info(`${event.user.name} ${action}`);
   }, []);
