@@ -35,7 +35,7 @@ export default function ImpressumPage() {
     <div className="layout-container space-y-6 py-12">
       <Heading level="h1">Impressum</Heading>
 
-      <div className="space-y-2">
+      <div className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
           Angaben gemäß §5 TMG
         </Heading>
@@ -64,7 +64,7 @@ export default function ImpressumPage() {
         <Text>Registernummer: VR 2281</Text>
       </div>
 
-      <div className="space-y-2">
+      <div className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h3" className="text-xl" weight="bold">
           Vorstand (Vertretungsberechtigte)
         </Heading>
@@ -72,7 +72,7 @@ export default function ImpressumPage() {
         <Text>Anke Habich (2. Vorsitzende)</Text>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 border-t border-border pt-6">
         <Heading level="h3" className="text-xl" weight="bold">
           Kontakt
         </Heading>
@@ -92,7 +92,7 @@ export default function ImpressumPage() {
         </Text>
         <Text>
           Fax:{" "}
-          <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="fax:+4935143509420">
+          <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="tel:+4935143509420">
             0351 / 435094 20
           </Link>
         </Text>
