@@ -17,11 +17,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
 import { primaryNavigation, type NavigationItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const HEADER_SPACING = {
   gradientHeight: "var(--header-gradient-height)",
@@ -96,7 +92,13 @@ const heroGradientStyles = {
   height: HEADER_SPACING.gradientHeight,
 } satisfies CSSProperties;
 
-export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: { siteTitle: string; navigationItems?: NavigationItem[] }) {
+export function SiteHeader({
+  siteTitle,
+  navigationItems = primaryNavigation,
+}: {
+  siteTitle: string;
+  navigationItems?: NavigationItem[];
+}) {
   const headerRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -104,8 +106,12 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const isHomePage = pathname === "/";
+  const isTransparentHomeHeader = isHomePage && !scrolled;
 
-  const visibleNavigationItems = useMemo(() => navigationItems, [navigationItems]);
+  const visibleNavigationItems = useMemo(
+    () => navigationItems,
+    [navigationItems],
+  );
 
   useLayoutEffect(() => {
     if (typeof document === "undefined") {
@@ -185,15 +191,15 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
       <header
         ref={headerRef}
         className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-          scrolled || !isHomePage
+          !isTransparentHomeHeader
             ? "border-b border-border/50 bg-background/95 backdrop-blur-md shadow-lg"
-            : "bg-gradient-to-b from-background/80 via-background/50 via-background/20 to-transparent backdrop-blur-[1px]"
+            : "bg-gradient-to-b from-black/40 via-black/25 via-black/12 to-transparent backdrop-blur-[1px]"
         }`}
       >
         <div
-          style={!scrolled && isHomePage ? heroGradientStyles : undefined}
+          style={isTransparentHomeHeader ? heroGradientStyles : undefined}
           className={`${
-            !scrolled && isHomePage
+            isTransparentHomeHeader
               ? "absolute inset-x-0 top-full bg-gradient-to-b from-transparent via-transparent to-transparent"
               : ""
           }`}
@@ -205,9 +211,9 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
         >
           <Link
             className={`flex-1 min-w-0 truncate font-serif text-lg transition-all duration-300 sm:text-xl ${
-              scrolled || !isHomePage
+              !isTransparentHomeHeader
                 ? "text-primary hover:opacity-90"
-                : "text-foreground drop-shadow-lg hover:text-primary/90"
+                : "text-white drop-shadow-lg hover:text-white/90"
             }`}
             href="/"
             title={siteTitle}
@@ -236,11 +242,9 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
                   className={cn(
                     "relative inline-flex items-center font-medium transition-all duration-300",
                     "after:absolute after:-bottom-[var(--space-3xs)] after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-[var(--primary)] after:opacity-95 after:transition-transform after:duration-300 after:content-[''] after:transform",
-                    "hover:text-[var(--primary)] hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-[var(--primary)] focus-visible:after:scale-x-100",
-                    "data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:after:scale-x-100",
-                    scrolled || !isHomePage
-                      ? "text-foreground/90"
-                      : "text-foreground/90 drop-shadow-lg"
+                    !isTransparentHomeHeader
+                      ? "text-foreground/90 hover:text-[var(--primary)] hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-[var(--primary)] focus-visible:after:scale-x-100 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:after:scale-x-100"
+                      : "text-white drop-shadow-lg hover:text-white/90 hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-white focus-visible:after:scale-x-100 data-[active=true]:font-semibold data-[active=true]:text-white data-[active=true]:after:scale-x-100",
                   )}
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
@@ -265,7 +269,7 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
                 type="button"
                 aria-label="Menü öffnen"
                 className={`inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] flex-shrink-0 items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring md:hidden ${
-                  scrolled || !isHomePage
+                  !isTransparentHomeHeader
                     ? "border border-border/60 text-foreground hover:bg-accent/30"
                     : "border border-border/60 text-foreground drop-shadow-lg hover:bg-accent/20"
                 }`}
@@ -300,7 +304,7 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
           style={drawerLinkGroupStyles}
           className="flex flex-col gap-[var(--drawer-link-gap)]"
         >
-              {visibleNavigationItems.map((item) => {
+          {visibleNavigationItems.map((item) => {
             const isActive =
               pathname === item.href || pathname?.startsWith(`${item.href}/`);
 
@@ -311,7 +315,7 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
                 style={drawerLinkPaddingStyles}
                 className={cn(
                   "block rounded-lg text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  "data-[active=true]:bg-accent/20 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:ring-1 data-[active=true]:ring-inset data-[active=true]:ring-[var(--primary)]"
+                  "data-[active=true]:bg-accent/20 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:ring-1 data-[active=true]:ring-inset data-[active=true]:ring-[var(--primary)]",
                 )}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
