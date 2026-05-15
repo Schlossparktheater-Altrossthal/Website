@@ -121,9 +121,6 @@ export function SiteFooter({
             <Link className="transition-colors hover:text-primary" href="/impressum">
               Impressum
             </Link>
-            <a className="transition-colors hover:text-primary" href="mailto:hallo@sommertheater.de">
-              Kontakt
-            </a>
           </div>
           {isAuthenticated ? (
             <p className="text-xs text-muted-foreground/80 sm:text-sm">
