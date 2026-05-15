@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   type CSSProperties,
   useEffect,
@@ -212,7 +213,16 @@ export function SiteHeader({ siteTitle, navigationItems = primaryNavigation }: {
             title={siteTitle}
           >
             <span className="hidden md:inline">{siteTitle}</span>
-            <span className="md:hidden">Sommertheater</span>
+            <span className="md:hidden">
+              <Image
+                src="/Logo-Sommertheater.png"
+                alt={siteTitle}
+                width={140}
+                height={40}
+                className="h-10 w-auto"
+                priority
+              />
+            </span>
           </Link>
 
           <div className="hidden items-center gap-[var(--space-md)] md:flex">
