@@ -39,7 +39,7 @@ export default async function PublicHomePage() {
     {
       question: "Was ist das Sommertheater im Schlosspark?",
       answer:
-        "Unser Sommertheater vereint Musik, Schauspiel und eine Prise Geheimnis vor der einzigartigen Kulisse des Schlossparks. Wir gestalten jedes Jahr ein neues Stück, das Publikum aller Altersgruppen begeistert und zum Staunen einlädt.",
+        "Unser Sommertheater vereint Musik, Schauspiel und eine Prise Geheimnis vor der einzigartigen Kulisse des Schlossparks. Wir gestalten jedes Jahr ein neues Stück, das unser Publikum aller Altersgruppen begeistert und zum Staunen einlädt.",
     },
     {
       question: "Wann startet der Ticketverkauf?",
@@ -47,14 +47,14 @@ export default async function PublicHomePage() {
         "Der Ticketverkauf wird über den Instagram-Kanal der Schule bekanntgegeben. Folge uns dort, um nichts zu verpassen.",
     },
     {
-      question: "Wo findet die Aufführung statt?",
+      question: "Wo finden die Aufführungen statt?",
       answer:
-        "Die Vorstellung findet im Schlosspark Altroßthal statt. Adresse: BSZ für Agrarwirtschaft und Ernährung Dresden, Altroßthal 1, 01169 Dresden.",
+        "Die Vorstellungen finden im Schlosspark Altroßthal statt. Adresse: BSZ für Agrarwirtschaft und Ernährung Dresden, Altroßthal 1, 01169 Dresden.",
     },
     {
-      question: "Wie lange dauert die Vorstellung?",
+      question: "Wie lange dauern die Vorstellungen?",
       answer:
-        "Die Vorstellung dauert durchschnittlich 1,5 Stunden und beinhaltet eine Pause.",
+        "Die Vorstellungen dauern durchschnittlich 1,5 Stunden und beinhalten eine Pause.",
     },
     {
       question: "Gibt es eine Altersempfehlung?",
