@@ -114,5 +114,6 @@
     "typescript": "^5",
     "vitest": "^3.2.4",
     "workbox-cli": "7.1.0"
-  }
+  },
+  "browserslist": "> 0.5%, last 2 versions, not dead, not ie 11"
 }

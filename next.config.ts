@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: "https",
@@ -20,6 +21,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.felix-hitzig.de" },
       { protocol: "https", hostname: "www.gravatar.com" },
     ],
+  },
+  experimental: {
+    browsersListForSwc: true,
   },
   // Next.js 15+: serverComponentsExternalPackages moved to serverExternalPackages
   serverExternalPackages: ["bcryptjs", "pdfkit", "qrcode", "node-ical", "sharp"],

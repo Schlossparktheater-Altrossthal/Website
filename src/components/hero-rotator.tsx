@@ -68,7 +68,8 @@ function Frame({
         alt="Hero Hintergrund"
         fill
         sizes="100vw"
-        priority={priority}
+        quality={75}
+        priority={priority === true}
         className="object-cover blur-2xl scale-110 opacity-30"
       />
       <Image
@@ -76,7 +77,8 @@ function Frame({
         alt="Hero"
         fill
         sizes="100vw"
-        priority={priority}
+        quality={75}
+        priority={priority === true}
         className="object-cover brightness-110 contrast-105"
       />
     </div>
