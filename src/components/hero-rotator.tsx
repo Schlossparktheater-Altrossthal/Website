@@ -20,19 +20,14 @@ export function HeroRotator({
   React.useEffect(() => {
     if (count <= 1) return;
     const id = setInterval(() => {
-      setPrev((p) => (p === null ? idx : (idx % count)));
+      setPrev((p) => (p === null ? idx : idx % count));
       setIdx((i) => (i + 1) % count);
     }, intervalMs);
     return () => clearInterval(id);
   }, [count, intervalMs, idx]);
 
-  // Preload the next image to leverage browser cache
-  React.useEffect(() => {
-    if (count <= 1) return;
-    const next = order[(idx + 1) % count];
-    const img = new window.Image();
-    img.src = next;
-  }, [idx, order, count]);
+  // Next/Image handles optimized loading. Avoid manual window.Image preloads,
+  // because they fetch the original public/hero asset and bypass optimization.
 
   if (count === 0) return null;
 
@@ -41,7 +36,9 @@ export function HeroRotator({
 
   return (
     <div className="absolute inset-0 -z-10">
-      {prevSrc && <Frame src={prevSrc} fadeMs={fadeMs} visible={false} priority={false} />}
+      {prevSrc && (
+        <Frame src={prevSrc} fadeMs={fadeMs} visible={false} priority={false} />
+      )}
       <Frame src={currentSrc} fadeMs={fadeMs} visible={true} priority={true} />
     </div>
   );
@@ -68,7 +65,7 @@ function Frame({
         alt="Hero Hintergrund"
         fill
         sizes="100vw"
-        quality={75}
+        quality={80}
         priority={priority === true}
         className="object-cover blur-2xl scale-110 opacity-30"
       />
@@ -77,7 +74,7 @@ function Frame({
         alt="Hero"
         fill
         sizes="100vw"
-        quality={75}
+        quality={80}
         priority={priority === true}
         className="object-cover brightness-110 contrast-105"
       />
