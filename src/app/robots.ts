@@ -10,4 +10,3 @@ export default function robots(): MetadataRoute.Robots {
     sitemap: "https://sommertheater-altrossthal.de/sitemap.xml",
   };
 }
-
