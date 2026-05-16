@@ -9,25 +9,25 @@ import {
   useRef,
   useState,
   type ReactNode,
-} from 'react';
-import { useSession } from 'next-auth/react';
-import { io, Socket } from 'socket.io-client';
-import type { ManagerOptions, SocketOptions } from 'socket.io-client';
+} from "react";
+import { useSession } from "next-auth/react";
+import type { ManagerOptions, Socket, SocketOptions } from "socket.io-client";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
   RoomType,
   UserPresenceEvent,
-} from '@/lib/realtime/types';
-import { useOfflineSyncClient } from '@/lib/offline/hooks';
+} from "@/lib/realtime/types";
+import { useOfflineSyncClient } from "@/lib/offline/hooks";
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 const PING_INTERVAL_MS = 30_000;
 const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL;
-const REALTIME_PATH = process.env.NEXT_PUBLIC_REALTIME_PATH || '/socket.io';
-const REALTIME_INIT_PATH = process.env.NEXT_PUBLIC_REALTIME_INIT_PATH || '/api/socket';
+const REALTIME_PATH = process.env.NEXT_PUBLIC_REALTIME_PATH || "/socket.io";
+const REALTIME_INIT_PATH =
+  process.env.NEXT_PUBLIC_REALTIME_INIT_PATH || "/api/socket";
 
-const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function isLocalHostname(hostname: string | undefined): boolean {
   if (!hostname) return false;
@@ -35,30 +35,46 @@ function isLocalHostname(hostname: string | undefined): boolean {
 }
 
 function normalizeSocketPath(path: string | undefined | null): string {
-  if (typeof path !== 'string') {
-    return '/socket.io';
+  if (typeof path !== "string") {
+    return "/socket.io";
   }
   const trimmed = path.trim();
   if (!trimmed) {
-    return '/socket.io';
+    return "/socket.io";
   }
-  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
 type SocketInstance = Socket<ServerToClientEvents, ClientToServerEvents>;
-export type AttendanceUpdateMessage = Parameters<ServerToClientEvents['attendance_updated']>[0];
-type NotificationMessage = Parameters<ServerToClientEvents['notification_created']>[0];
-type RehearsalCreatedMessage = Parameters<ServerToClientEvents['rehearsal_created']>[0];
-type RehearsalUpdatedMessage = Parameters<ServerToClientEvents['rehearsal_updated']>[0];
-type InventoryRealtimeMessage = Parameters<ServerToClientEvents['inventory_event']>[0];
-type TicketRealtimeMessage = Parameters<ServerToClientEvents['ticket_scan_event']>[0];
+export type AttendanceUpdateMessage = Parameters<
+  ServerToClientEvents["attendance_updated"]
+>[0];
+type NotificationMessage = Parameters<
+  ServerToClientEvents["notification_created"]
+>[0];
+type RehearsalCreatedMessage = Parameters<
+  ServerToClientEvents["rehearsal_created"]
+>[0];
+type RehearsalUpdatedMessage = Parameters<
+  ServerToClientEvents["rehearsal_updated"]
+>[0];
+type InventoryRealtimeMessage = Parameters<
+  ServerToClientEvents["inventory_event"]
+>[0];
+type TicketRealtimeMessage = Parameters<
+  ServerToClientEvents["ticket_scan_event"]
+>[0];
 type HandshakeAuthPayload = {
   userId: string;
   userName?: string;
   token: string;
 };
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+export type ConnectionStatus =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
 
 interface RealtimeContextValue {
   socket: SocketInstance | null;
@@ -69,13 +85,16 @@ interface RealtimeContextValue {
   reconnect: () => void;
 }
 
-const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined);
+const RealtimeContext = createContext<RealtimeContextValue | undefined>(
+  undefined,
+);
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const { client: syncClient } = useOfflineSyncClient();
   const [socket, setSocket] = useState<SocketInstance | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("disconnected");
   const reconnectAttempts = useRef(0);
   const [connectionVersion, setConnectionVersion] = useState(0);
   const socketRef = useRef<SocketInstance | null>(null);
@@ -107,20 +126,22 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     if (!userId) {
       cleanupSocket();
-      setConnectionStatus('disconnected');
+      setConnectionStatus("disconnected");
       return () => {
         disposed = true;
         abortController.abort();
       };
     }
 
-    const warmupRealtimeBridge = async (signal?: AbortSignal): Promise<void> => {
+    const warmupRealtimeBridge = async (
+      signal?: AbortSignal,
+    ): Promise<void> => {
       if (!REALTIME_INIT_PATH) {
         return;
       }
 
       let target = REALTIME_INIT_PATH;
-      if (typeof window !== 'undefined' && !/^https?:/i.test(target)) {
+      if (typeof window !== "undefined" && !/^https?:/i.test(target)) {
         const shouldWarmup = (() => {
           if (!REALTIME_URL) {
             return true;
@@ -129,8 +150,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             const parsed = new URL(REALTIME_URL, window.location.origin);
             return parsed.origin === window.location.origin;
           } catch (error) {
-            console.warn('[Realtime] Failed to parse NEXT_PUBLIC_REALTIME_URL for warmup', error);
-            return REALTIME_URL.startsWith('/');
+            console.warn(
+              "[Realtime] Failed to parse NEXT_PUBLIC_REALTIME_URL for warmup",
+              error,
+            );
+            return REALTIME_URL.startsWith("/");
           }
         })();
 
@@ -138,13 +162,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        target = target.startsWith('/') ? target : `/${target}`;
+        target = target.startsWith("/") ? target : `/${target}`;
       }
 
       try {
         const response = await fetch(target, {
-          method: 'GET',
-          cache: 'no-store',
+          method: "GET",
+          cache: "no-store",
           signal,
         });
 
@@ -152,15 +176,17 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           throw new Error(`Socket bootstrap failed (${response.status})`);
         }
       } catch (error) {
-        console.error('Failed to initialize realtime bridge', error);
+        console.error("Failed to initialize realtime bridge", error);
         throw error;
       }
     };
 
-    const requestHandshake = async (signal?: AbortSignal): Promise<HandshakeAuthPayload> => {
-      const response = await fetch('/api/realtime/handshake', {
-        method: 'GET',
-        cache: 'no-store',
+    const requestHandshake = async (
+      signal?: AbortSignal,
+    ): Promise<HandshakeAuthPayload> => {
+      const response = await fetch("/api/realtime/handshake", {
+        method: "GET",
+        cache: "no-store",
         signal,
       });
       if (!response.ok) {
@@ -172,13 +198,15 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         userName?: unknown;
       };
       if (data?.userId && data.userId !== userId) {
-        throw new Error('Handshake user mismatch');
+        throw new Error("Handshake user mismatch");
       }
-      if (!data || typeof data.token !== 'string' || !data.token.trim()) {
-        throw new Error('Handshake token missing');
+      if (!data || typeof data.token !== "string" || !data.token.trim()) {
+        throw new Error("Handshake token missing");
       }
       const canonicalName =
-        typeof data.userName === 'string' && data.userName.trim() ? data.userName : fallbackUserName;
+        typeof data.userName === "string" && data.userName.trim()
+          ? data.userName
+          : fallbackUserName;
       return {
         userId,
         userName: canonicalName,
@@ -186,10 +214,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       };
     };
 
-    const resolveConnectionEndpoint = (): { target: string | undefined; path: string } => {
+    const resolveConnectionEndpoint = (): {
+      target: string | undefined;
+      path: string;
+    } => {
       const normalizedPath = normalizeSocketPath(REALTIME_PATH);
 
-      if (typeof window === 'undefined') {
+      if (typeof window === "undefined") {
         return { target: REALTIME_URL, path: normalizedPath };
       }
 
@@ -199,27 +230,30 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
       try {
         const parsed = new URL(REALTIME_URL, window.location.origin);
-        const basePath = parsed.pathname.replace(/\/$/, '');
+        const basePath = parsed.pathname.replace(/\/$/, "");
         let resolvedPath = normalizedPath;
         if (basePath && !resolvedPath.startsWith(basePath)) {
-          resolvedPath = `${basePath}${resolvedPath.startsWith('/') ? '' : '/'}${resolvedPath}`;
+          resolvedPath = `${basePath}${resolvedPath.startsWith("/") ? "" : "/"}${resolvedPath}`;
         }
 
         let origin = parsed.origin;
         const hostIsLocal = isLocalHostname(parsed.hostname);
         const browserHostIsLocal = isLocalHostname(window.location.hostname);
         if (hostIsLocal && !browserHostIsLocal) {
-          const port = parsed.port || '4001';
+          const port = parsed.port || "4001";
           origin = `${window.location.protocol}//${window.location.hostname}:${port}`;
         }
 
         return { target: origin, path: resolvedPath };
       } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('[Realtime] Failed to parse NEXT_PUBLIC_REALTIME_URL', error);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(
+            "[Realtime] Failed to parse NEXT_PUBLIC_REALTIME_URL",
+            error,
+          );
         }
 
-        if (REALTIME_URL.startsWith('/')) {
+        if (REALTIME_URL.startsWith("/")) {
           return { target: undefined, path: normalizedPath };
         }
 
@@ -230,7 +264,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     let connectionCleanup: (() => void) | null = null;
 
     const establishConnection = async () => {
-      setConnectionStatus('connecting');
+      setConnectionStatus("connecting");
 
       if (socketRef.current) {
         socketRef.current.removeAllListeners();
@@ -244,11 +278,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         if (disposed) return;
         latestAuth = handshake;
 
-        const { target: connectionTarget, path: socketPath } = resolveConnectionEndpoint();
+        const { target: connectionTarget, path: socketPath } =
+          resolveConnectionEndpoint();
 
         const options: Partial<ManagerOptions & SocketOptions> = {
           path: socketPath,
-          transports: ['websocket', 'polling'],
+          transports: ["websocket", "polling"],
           forceNew: true,
           reconnection: true,
           reconnectionDelay: 2000,
@@ -257,40 +292,44 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           auth: handshake,
         };
 
-        const instance: SocketInstance = connectionTarget ? io(connectionTarget, options) : io(options);
+        const { io } = await import("socket.io-client");
+        const instance: SocketInstance = connectionTarget
+          ? io(connectionTarget, options)
+          : io(options);
 
         const applyAuth = (auth: HandshakeAuthPayload | null) => {
           if (!auth) return;
           instance.auth = auth;
           if (instance.io?.opts) {
-            (instance.io.opts as Partial<ManagerOptions & SocketOptions>).auth = auth;
+            (instance.io.opts as Partial<ManagerOptions & SocketOptions>).auth =
+              auth;
           }
         };
 
         socketRef.current = instance;
         setSocket(instance);
 
-        instance.on('connect', () => {
+        instance.on("connect", () => {
           if (disposed) {
             return;
           }
-          setConnectionStatus('connected');
+          setConnectionStatus("connected");
           reconnectAttempts.current = 0;
 
-          instance.emit('join_room', `user_${userId}`);
-          instance.emit('join_room', 'global');
+          instance.emit("join_room", `user_${userId}`);
+          instance.emit("join_room", "global");
 
           stopPingInterval();
           pingIntervalRef.current = setInterval(() => {
             if (instance.connected) {
-              instance.emit('ping');
+              instance.emit("ping");
             }
           }, PING_INTERVAL_MS);
         });
 
-        instance.on('disconnect', () => {
+        instance.on("disconnect", () => {
           if (disposed) return;
-          setConnectionStatus('disconnected');
+          setConnectionStatus("disconnected");
           stopPingInterval();
         });
 
@@ -301,19 +340,22 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             latestAuth = refreshed;
             applyAuth(latestAuth);
           } catch (error) {
-            console.warn('Failed to refresh realtime auth token', error);
+            console.warn("Failed to refresh realtime auth token", error);
           }
         };
 
-        instance.io.on('reconnect_attempt', handleReconnectAttempt);
+        instance.io.on("reconnect_attempt", handleReconnectAttempt);
 
-        instance.on('connect_error', async (error: Error) => {
-          console.warn('Socket.IO connection error:', error?.message || error);
-          setConnectionStatus('error');
+        instance.on("connect_error", async (error: Error) => {
+          console.warn("Socket.IO connection error:", error?.message || error);
+          setConnectionStatus("error");
           reconnectAttempts.current += 1;
 
-          const message = String(error?.message || '').toLowerCase();
-          if (message.includes('unauthorized') || message.includes('forbidden')) {
+          const message = String(error?.message || "").toLowerCase();
+          if (
+            message.includes("unauthorized") ||
+            message.includes("forbidden")
+          ) {
             try {
               const refreshed = await requestHandshake();
               if (disposed) return;
@@ -321,27 +363,27 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               applyAuth(latestAuth);
               instance.connect();
             } catch (refreshError) {
-              console.error('Realtime handshake refresh failed', refreshError);
+              console.error("Realtime handshake refresh failed", refreshError);
             }
           }
           // With infinite attempts configured, let socket.io keep trying with backoff
         });
 
-        instance.on('pong', () => {
+        instance.on("pong", () => {
           // Keep connection alive acknowledgement
         });
 
         applyAuth(latestAuth);
 
         connectionCleanup = () => {
-          instance.io.off('reconnect_attempt', handleReconnectAttempt);
+          instance.io.off("reconnect_attempt", handleReconnectAttempt);
           instance.removeAllListeners();
           instance.disconnect();
         };
       } catch (error) {
         if (disposed) return;
-        console.error('Failed to establish realtime connection', error);
-        setConnectionStatus('error');
+        console.error("Failed to establish realtime connection", error);
+        setConnectionStatus("error");
         cleanupSocket();
       }
     };
@@ -360,7 +402,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
       setSocket(null);
     };
-  }, [session?.user?.id, session?.user?.name, connectionVersion, stopPingInterval]);
+  }, [
+    session?.user?.id,
+    session?.user?.name,
+    connectionVersion,
+    stopPingInterval,
+  ]);
 
   useEffect(() => {
     if (!socket) {
@@ -373,7 +420,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const scope = payload.scope ?? 'inventory';
+      const scope = payload.scope ?? "inventory";
 
       void syncClient
         .applyRealtimePayload({
@@ -383,7 +430,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           delta: payload.delta,
         })
         .catch((error) => {
-          console.warn('[Realtime] Failed to apply inventory realtime delta', error);
+          console.warn(
+            "[Realtime] Failed to apply inventory realtime delta",
+            error,
+          );
         });
     };
 
@@ -393,7 +443,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const scope = payload.scope ?? 'tickets';
+      const scope = payload.scope ?? "tickets";
 
       void syncClient
         .applyRealtimePayload({
@@ -403,30 +453,33 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           delta: payload.delta,
         })
         .catch((error) => {
-          console.warn('[Realtime] Failed to apply ticket realtime delta', error);
+          console.warn(
+            "[Realtime] Failed to apply ticket realtime delta",
+            error,
+          );
         });
     };
 
-    socket.on('inventory_event', handleInventoryEvent);
-    socket.on('ticket_scan_event', handleTicketEvent);
+    socket.on("inventory_event", handleInventoryEvent);
+    socket.on("ticket_scan_event", handleTicketEvent);
 
     return () => {
-      socket.off('inventory_event', handleInventoryEvent);
-      socket.off('ticket_scan_event', handleTicketEvent);
+      socket.off("inventory_event", handleInventoryEvent);
+      socket.off("ticket_scan_event", handleTicketEvent);
     };
   }, [socket, syncClient]);
 
   const joinRoom = useCallback((room: RoomType) => {
     const instance = socketRef.current;
     if (instance?.connected) {
-      instance.emit('join_room', room);
+      instance.emit("join_room", room);
     }
   }, []);
 
   const leaveRoom = useCallback((room: RoomType) => {
     const instance = socketRef.current;
     if (instance?.connected) {
-      instance.emit('leave_room', room);
+      instance.emit("leave_room", room);
     }
   }, []);
 
@@ -444,14 +497,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     }
 
     setConnectionVersion((version) => version + 1);
-    setConnectionStatus('connecting');
+    setConnectionStatus("connecting");
   }, [session?.user?.id, stopPingInterval]);
 
   const value = useMemo(
     (): RealtimeContextValue => ({
       socket,
       connectionStatus,
-      isConnected: connectionStatus === 'connected',
+      isConnected: connectionStatus === "connected",
       joinRoom,
       leaveRoom,
       reconnect,
@@ -469,7 +522,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 export function useRealtime(): RealtimeContextValue {
   const context = useContext(RealtimeContext);
   if (!context) {
-    throw new Error('useRealtime must be used within a RealtimeProvider');
+    throw new Error("useRealtime must be used within a RealtimeProvider");
   }
   return context;
 }
@@ -494,10 +547,10 @@ export function useAttendanceRealtime(
       currentRoom.current = room;
     }
 
-    socket.on('attendance_updated', onUpdate);
+    socket.on("attendance_updated", onUpdate);
 
     return () => {
-      socket.off('attendance_updated', onUpdate);
+      socket.off("attendance_updated", onUpdate);
       if (currentRoom.current) {
         leaveRoom(currentRoom.current);
         currentRoom.current = null;
@@ -511,7 +564,9 @@ export function usePresence(
   onPresenceChange?: (event: UserPresenceEvent) => void,
 ) {
   const { socket, joinRoom, leaveRoom } = useRealtime();
-  const [presentUsers, setPresentUsers] = useState<UserPresenceEvent['user'][]>([]);
+  const [presentUsers, setPresentUsers] = useState<UserPresenceEvent["user"][]>(
+    [],
+  );
 
   useEffect(() => {
     if (!socket || !rehearsalId) return;
@@ -521,7 +576,7 @@ export function usePresence(
 
     const handlePresence = (event: UserPresenceEvent) => {
       setPresentUsers((prev) => {
-        if (event.action === 'join') {
+        if (event.action === "join") {
           return prev.some((user) => user.id === event.user.id)
             ? prev
             : [...prev, event.user];
@@ -531,10 +586,10 @@ export function usePresence(
       onPresenceChange?.(event);
     };
 
-    socket.on('user_presence', handlePresence);
+    socket.on("user_presence", handlePresence);
 
     return () => {
-      socket.off('user_presence', handlePresence);
+      socket.off("user_presence", handlePresence);
       leaveRoom(room);
       setPresentUsers([]);
     };
@@ -551,10 +606,10 @@ export function useNotificationRealtime(
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('notification_created', onNotification);
+    socket.on("notification_created", onNotification);
 
     return () => {
-      socket.off('notification_created', onNotification);
+      socket.off("notification_created", onNotification);
     };
   }, [socket, onNotification]);
 }
@@ -569,19 +624,19 @@ export function useRehearsalRealtime(
     if (!socket) return;
 
     if (onRehearsalCreated) {
-      socket.on('rehearsal_created', onRehearsalCreated);
+      socket.on("rehearsal_created", onRehearsalCreated);
     }
 
     if (onRehearsalUpdated) {
-      socket.on('rehearsal_updated', onRehearsalUpdated);
+      socket.on("rehearsal_updated", onRehearsalUpdated);
     }
 
     return () => {
       if (onRehearsalCreated) {
-        socket.off('rehearsal_created', onRehearsalCreated);
+        socket.off("rehearsal_created", onRehearsalCreated);
       }
       if (onRehearsalUpdated) {
-        socket.off('rehearsal_updated', onRehearsalUpdated);
+        socket.off("rehearsal_updated", onRehearsalUpdated);
       }
     };
   }, [socket, onRehearsalCreated, onRehearsalUpdated]);
