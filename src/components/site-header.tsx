@@ -225,6 +225,7 @@ export function SiteHeader({
                 alt={siteTitle}
                 width={140}
                 height={40}
+                sizes="40px"
                 className="h-10 w-auto"
                 priority
               />
