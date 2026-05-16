@@ -46,8 +46,7 @@ type SavedSettingsResponse = { settings?: CountdownSettingsState; error?: string
 function parseIso(iso: string | null) { return iso ? new Date(iso).getTime() : Number.NaN; }
 function localInputToIso(value: string) { if (!value) return null; const date = new Date(value); return Number.isNaN(date.getTime()) ? null : date.toISOString(); }
 
-function getNextTermin(termine: TerminInput[]) {
-  const now = Date.now();
+function getNextTermin(termine: TerminInput[], now: number) {
   return termine.find((t) => {
     const iso = localInputToIso(`${t.datum}T${t.uhrzeit}`);
     if (!iso) return false;
@@ -68,12 +67,24 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [now, setNow] = useState(() => props.initialNow);
 
   useEffect(() => {
     setSettings({ ...props, countdownTarget: props.effectiveCountdownTarget });
     setFormDisabled(props.disabled);
   }, [props]);
-  const nextTermin = useMemo(() => getNextTermin(settings.termine), [settings.termine]);
+
+  useEffect(() => {
+    setNow(Date.now());
+
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 30_000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const nextTermin = useMemo(() => getNextTermin(settings.termine, now), [settings.termine, now]);
   const countdownActive = !settings.disabled;
   const allDone = countdownActive && !nextTermin;
 
