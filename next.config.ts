@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 86400,
+    minimumCacheTTL: 604800,
     remotePatterns: [
       {
         protocol: "https",
@@ -26,7 +26,13 @@ const nextConfig: NextConfig = {
     browsersListForSwc: true,
   },
   // Next.js 15+: serverComponentsExternalPackages moved to serverExternalPackages
-  serverExternalPackages: ["bcryptjs", "pdfkit", "qrcode", "node-ical", "sharp"],
+  serverExternalPackages: [
+    "bcryptjs",
+    "pdfkit",
+    "qrcode",
+    "node-ical",
+    "sharp",
+  ],
   async redirects() {
     return [
       {

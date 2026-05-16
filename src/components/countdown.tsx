@@ -35,16 +35,24 @@ const EMPTY_COUNTDOWN_STATE: CountdownState = {
   seconds: 0,
 };
 
-function getTimeRemaining(targetTimestamp: number, now: number): CountdownState {
+function getTimeRemaining(
+  targetTimestamp: number,
+  now: number,
+): CountdownState {
   const totalMilliseconds = Math.max(0, targetTimestamp - now);
   const totalSeconds = Math.floor(totalMilliseconds / MILLISECONDS_PER_SECOND);
 
-  const days = Math.floor(totalSeconds / (HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE));
+  const days = Math.floor(
+    totalSeconds / (HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE),
+  );
   const hours = Math.floor(
     (totalSeconds % (HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE)) /
       (MINUTES_PER_HOUR * SECONDS_PER_MINUTE),
   );
-  const minutes = Math.floor((totalSeconds % (MINUTES_PER_HOUR * SECONDS_PER_MINUTE)) / SECONDS_PER_MINUTE);
+  const minutes = Math.floor(
+    (totalSeconds % (MINUTES_PER_HOUR * SECONDS_PER_MINUTE)) /
+      SECONDS_PER_MINUTE,
+  );
   const seconds = totalSeconds % SECONDS_PER_MINUTE;
 
   return {
@@ -60,8 +68,16 @@ function formatNumber(value: number) {
   return value.toString().padStart(2, "0");
 }
 
-export function Countdown({ targetDate, initialNow, className, variant = "default" }: CountdownProps) {
-  const targetTimestamp = useMemo(() => new Date(targetDate).getTime(), [targetDate]);
+export function Countdown({
+  targetDate,
+  initialNow,
+  className,
+  variant = "default",
+}: CountdownProps) {
+  const targetTimestamp = useMemo(
+    () => new Date(targetDate).getTime(),
+    [targetDate],
+  );
   const [state, setState] = useState<CountdownState>(() => {
     if (Number.isNaN(targetTimestamp) || !Number.isFinite(initialNow)) {
       return EMPTY_COUNTDOWN_STATE;
@@ -111,7 +127,11 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
     { label: "Sekunden", value: state.seconds },
   ];
 
-  const containerClassName = cn("mx-auto grid w-full grid-cols-2 gap-[clamp(0.4rem,1.5vw,1rem)] text-center md:grid-cols-4", className);
+  const containerClassName = cn(
+    "mx-auto grid w-full grid-cols-2 gap-[clamp(0.4rem,1.5vw,1rem)] text-center transition-[opacity,transform] duration-700 ease-out will-change-[opacity,transform] md:grid-cols-4",
+    loaded ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
+    className,
+  );
   const cellClassName =
     variant === "highlight"
       ? "rounded-lg border border-primary/50 bg-primary/10 px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center text-primary shadow-sm"
@@ -123,10 +143,18 @@ export function Countdown({ targetDate, initialNow, className, variant = "defaul
   const labelTone = variant === "highlight" ? "primary" : "muted";
 
   return (
-    <div className={cn(containerClassName, loaded ? "animate-in fade-in slide-in-from-bottom-2 duration-700" : "opacity-0")} aria-live="polite">
+    <div className={containerClassName} aria-live="polite">
       {timeParts.map((part) => (
-        <div key={part.label} className={cn(cellClassName,"flex flex-col items-center justify-center")}>
-          <div className={cn(numberClassName,"text-center")}>{formatNumber(part.value)}</div>
+        <div
+          key={part.label}
+          className={cn(
+            cellClassName,
+            "flex flex-col items-center justify-center",
+          )}
+        >
+          <div className={cn(numberClassName, "text-center")}>
+            {formatNumber(part.value)}
+          </div>
           <Text
             variant="small"
             tone={labelTone}
