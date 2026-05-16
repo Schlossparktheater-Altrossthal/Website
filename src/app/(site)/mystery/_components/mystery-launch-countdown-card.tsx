@@ -75,6 +75,7 @@ export function MysteryLaunchCountdownCard({
     hasCustomMessage,
     updatedAt,
   }));
+  const [now, setNow] = useState(() => initialNow);
 
   useEffect(() => {
     setState({
@@ -99,6 +100,16 @@ export function MysteryLaunchCountdownCard({
   const canEdit = hasFeature("mystery.launch-countdown");
   const editorOpen = canEdit && activeFeature === "mystery.launch-countdown";
 
+  useEffect(() => {
+    setNow(Date.now());
+
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 30_000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   const countdownLabel = useMemo(
     () => formatLabel(state.effectiveCountdownTarget),
     [state.effectiveCountdownTarget],
@@ -107,8 +118,8 @@ export function MysteryLaunchCountdownCard({
   const countdownReached = useMemo(() => {
     const target = new Date(state.effectiveCountdownTarget);
     if (Number.isNaN(target.getTime())) return false;
-    return target.getTime() <= Date.now();
-  }, [state.effectiveCountdownTarget]);
+    return target.getTime() <= now;
+  }, [state.effectiveCountdownTarget, now]);
 
   const showCountdown = !isFirstRiddleReleased && !countdownReached;
 

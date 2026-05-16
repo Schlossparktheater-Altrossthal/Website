@@ -60,6 +60,7 @@ export function ProductionFlyerSection({ aktiv, titel, beschreibung, hasBild }: 
               alt={titel ?? "Flyer"}
               width={800}
               height={450}
+              sizes="(max-width: 768px) 100vw, 800px"
               className="mx-auto block h-auto w-full max-w-[clamp(280px,80vw,800px)] shadow-[0_4px_24px_rgba(0,0,0,0.35)]"
             />
           ) : null}
