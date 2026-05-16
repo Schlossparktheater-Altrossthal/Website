@@ -3,18 +3,26 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { NextAuthOptions } from "next-auth";
 import type { AvatarSource, Role } from "@prisma/client";
-import type { AdapterUser } from "next-auth/adapters";
+import type { Adapter, AdapterUser } from "next-auth/adapters";
 import type { JWT } from "next-auth/jwt";
 import EmailProvider from "next-auth/providers/email";
 import Credentials from "next-auth/providers/credentials";
 import type { CredentialInput } from "next-auth/providers/credentials";
 import { sortRoles, ROLES } from "@/lib/roles";
-import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
+import {
+  DEV_TEST_USER_EMAILS,
+  DEV_TEST_USER_ROLE_MAP,
+} from "@/lib/auth-dev-test-users";
 import { verifyPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
 import { ensureDevTestUser } from "@/lib/dev-auth";
 import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
 import { getAuthSecret } from "@/lib/auth-secret";
+import {
+  normalizeMagicLinkEmail,
+  recordMagicLinkAttempt,
+  sendMagicLinkEmail,
+} from "@/lib/auth/magic-link";
 // trigger build
 // trigger build
 
@@ -45,7 +53,8 @@ const isRole = (value: unknown): value is Role =>
 const AVATAR_SOURCE_VALUES = ["GRAVATAR", "UPLOAD", "INITIALS"] as const;
 
 const isAvatarSource = (value: unknown): value is AvatarSource =>
-  typeof value === "string" && (AVATAR_SOURCE_VALUES as readonly string[]).includes(value);
+  typeof value === "string" &&
+  (AVATAR_SOURCE_VALUES as readonly string[]).includes(value);
 
 function extractAvatarSource(value: unknown): AvatarSource | undefined {
   if (typeof value !== "string") return undefined;
@@ -68,7 +77,10 @@ function extractIsoDate(value: unknown): string | undefined {
   return undefined;
 }
 
-function applyAvatarFields(target: MutableToken, source: Record<string, unknown>) {
+function applyAvatarFields(
+  target: MutableToken,
+  source: Record<string, unknown>,
+) {
   if ("avatarSource" in source) {
     const raw = (source as { avatarSource?: unknown }).avatarSource;
     const parsed = extractAvatarSource(raw);
@@ -77,11 +89,12 @@ function applyAvatarFields(target: MutableToken, source: Record<string, unknown>
     }
   }
 
-  const updatedRaw = "avatarUpdatedAt" in source
-    ? (source as { avatarUpdatedAt?: unknown }).avatarUpdatedAt
-    : "avatarImageUpdatedAt" in source
-    ? (source as { avatarImageUpdatedAt?: unknown }).avatarImageUpdatedAt
-    : undefined;
+  const updatedRaw =
+    "avatarUpdatedAt" in source
+      ? (source as { avatarUpdatedAt?: unknown }).avatarUpdatedAt
+      : "avatarImageUpdatedAt" in source
+        ? (source as { avatarImageUpdatedAt?: unknown }).avatarImageUpdatedAt
+        : undefined;
 
   if (updatedRaw === null) {
     target.avatarUpdatedAt = null;
@@ -93,7 +106,10 @@ function applyAvatarFields(target: MutableToken, source: Record<string, unknown>
   }
 }
 
-function applyNameFields(target: MutableToken, source: Record<string, unknown>) {
+function applyNameFields(
+  target: MutableToken,
+  source: Record<string, unknown>,
+) {
   let fallbackName: string | null | undefined;
 
   if ("firstName" in source) {
@@ -167,7 +183,9 @@ function extractRoles(value: unknown): Role[] | undefined {
   return undefined;
 }
 
-function extractRolesFromSource(source: RoleSource | undefined): Role[] | undefined {
+function extractRolesFromSource(
+  source: RoleSource | undefined,
+): Role[] | undefined {
   if (!source) return undefined;
   return extractRoles(source.roles) ?? extractRoles(source.role);
 }
@@ -184,6 +202,50 @@ const credentialInputs: Record<string, CredentialInput> = {
 if (process.env.NODE_ENV !== "production") {
   credentialInputs.dev = { label: "Dev", type: "text" };
 }
+
+const baseAdapter = PrismaAdapter(prisma);
+
+const authAdapter: Adapter = {
+  ...baseAdapter,
+  async createVerificationToken(verificationToken) {
+    const email = normalizeMagicLinkEmail(verificationToken.identifier);
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (!user) {
+      return null;
+    }
+
+    return baseAdapter.createVerificationToken?.({
+      ...verificationToken,
+      identifier: email,
+    });
+  },
+  async useVerificationToken(params) {
+    const verificationToken = await baseAdapter.useVerificationToken?.(params);
+    if (
+      !verificationToken ||
+      verificationToken.expires.valueOf() < Date.now()
+    ) {
+      return null;
+    }
+
+    const email = normalizeMagicLinkEmail(verificationToken.identifier);
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (!user) {
+      return null;
+    }
+
+    return {
+      ...verificationToken,
+      identifier: email,
+    };
+  },
+};
 
 const credentialsProvider = Credentials({
   name: "Passwort Login",
@@ -235,7 +297,8 @@ const credentialsProvider = Credentials({
       email: user.email!,
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
-      name: combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null),
+      name:
+        combineNameParts(user.firstName, user.lastName) ?? user.name ?? null,
       role: combinedRoles[combinedRoles.length - 1],
       roles: combinedRoles,
       avatarSource: user.avatarSource,
@@ -245,7 +308,7 @@ const credentialsProvider = Credentials({
 });
 
 export const authOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: authAdapter,
   useSecureCookies,
   // Use JWT sessions for reliability in dev (works with Credentials + Email).
   session: {
@@ -259,40 +322,52 @@ export const authOptions = {
     EmailProvider({
       server: process.env.EMAIL_SERVER,
       from: process.env.EMAIL_FROM,
-      async sendVerificationRequest({ identifier, url }) {
-        if (!process.env.EMAIL_SERVER || process.env.NODE_ENV !== "production") {
-          console.log("[DEV Magic Link]", identifier, url);
+      async sendVerificationRequest({ identifier, url, provider }) {
+        const email = normalizeMagicLinkEmail(identifier);
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: { id: true },
+        });
+        if (!user) {
           return;
         }
-        console.log("[MAGIC LINK REQUEST]", identifier);
-        // send mail via nodemailer using process.env.EMAIL_SERVER
-        const { createTransport } = await import("nodemailer");
-        const transport = createTransport(process.env.EMAIL_SERVER);
-        await transport.sendMail({
-          to: identifier,
-          from: process.env.EMAIL_FROM,
-          subject: "Passwort zurücksetzen – Sommertheater Altroßthal",
-          text: `Sommertheater Altroßthal\n\nPasswort zurücksetzen\n\nKlicke auf den Link, um ein neues Passwort festzulegen. Der Link ist 24 Stunden gültig.\n\n${url}\n\nFalls du diese E-Mail nicht angefordert hast, kannst du sie ignorieren.`,
-          html: `
-            <div style="background:#0d1117;padding:32px 16px;font-family:Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#ffffff;">
-              <div style="max-width:560px;margin:0 auto;background:#111827;border:1px solid #1f2937;border-radius:16px;padding:32px;">
-                <p style="margin:0 0 20px 0;font-size:24px;line-height:1.3;font-weight:700;color:#f97316;">Sommertheater Altroßthal</p>
-                <h1 style="margin:0 0 16px 0;font-size:28px;line-height:1.2;font-weight:700;color:#ffffff;">Passwort zurücksetzen</h1>
-                <p style="margin:0 0 28px 0;font-size:16px;line-height:1.6;color:#ffffff;">Klicke auf den Button unten, um ein neues Passwort festzulegen. Der Link ist 24 Stunden gültig.</p>
-                <a href="${url}" style="display:inline-block;background:#f97316;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;padding:14px 24px;border-radius:10px;">Neues Passwort festlegen</a>
-                <p style="margin:28px 0 0 0;font-size:13px;line-height:1.5;color:#d1d5db;">Falls du diese E-Mail nicht angefordert hast, kannst du sie ignorieren.</p>
-              </div>
-            </div>
-          `,
-        });
-        console.log("[MAGIC LINK SENT]", identifier);
+
+        try {
+          await sendMagicLinkEmail({ identifier: email, url, provider });
+        } catch (error) {
+          console.error("[MAGIC LINK ERROR]", error);
+        }
       },
     }),
     credentialsProvider,
   ],
-  pages: { signIn: "/login" },
+  pages: { signIn: "/login", error: "/login" },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account, email }) {
+      if (account?.provider === "email") {
+        const rawEmail = typeof user?.email === "string" ? user.email : null;
+        if (!rawEmail) return "/login?error=Verification";
+
+        const normalizedEmail = normalizeMagicLinkEmail(rawEmail);
+
+        if (email?.verificationRequest) {
+          const rateLimit = recordMagicLinkAttempt(
+            normalizedEmail,
+            "nextauth-direct",
+          );
+          if (!rateLimit.allowed) return false;
+        }
+
+        const dbUser = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
+          select: { id: true, deactivatedAt: true },
+        });
+        if (!dbUser) return "/login?error=Verification";
+        if (dbUser.deactivatedAt)
+          return "/login?error=AccessDenied&reason=deactivated";
+        return true;
+      }
+
       const userId = typeof user?.id === "string" ? user.id : null;
       if (!userId) return false;
       const dbUser = await prisma.user.findUnique({
@@ -322,21 +397,27 @@ export const authOptions = {
         mutableToken.deactivatedAt = null;
         mutableToken.isDeactivated = false;
         applyNameFields(mutableToken, user);
-        const userRoles = extractRolesFromSource(user as AdapterUser & RoleSource);
+        const userRoles = extractRolesFromSource(
+          user as AdapterUser & RoleSource,
+        );
         if (userRoles) applyRoles(userRoles);
         applyAvatarFields(mutableToken, user);
       }
 
       if (trigger === "update") {
         const updateSource = isRecord(session)
-          ? (isRecord(session.user) ? session.user : session)
+          ? isRecord(session.user)
+            ? session.user
+            : session
           : undefined;
 
         if (isRecord(updateSource)) {
           applyNameFields(mutableToken, updateSource);
           const nextEmail = extractString(updateSource.email);
           if (nextEmail) mutableToken.email = nextEmail;
-          const updatedRoles = extractRolesFromSource(updateSource as RoleSource);
+          const updatedRoles = extractRolesFromSource(
+            updateSource as RoleSource,
+          );
           if (updatedRoles) applyRoles(updatedRoles);
           applyAvatarFields(mutableToken, updateSource);
         }
@@ -367,12 +448,18 @@ export const authOptions = {
             ...dbUser.roles.map((r) => r.role as Role),
           ]);
           applyRoles(combined);
-          applyNameFields(mutableToken, dbUser as unknown as Record<string, unknown>);
+          applyNameFields(
+            mutableToken,
+            dbUser as unknown as Record<string, unknown>,
+          );
           const dbEmail = extractString(dbUser.email);
           if (dbEmail) {
             mutableToken.email = dbEmail;
           }
-          applyAvatarFields(mutableToken, dbUser as unknown as Record<string, unknown>);
+          applyAvatarFields(
+            mutableToken,
+            dbUser as unknown as Record<string, unknown>,
+          );
           if (dbUser.deactivatedAt) {
             mutableToken.deactivatedAt = dbUser.deactivatedAt.toISOString();
             mutableToken.isDeactivated = true;
@@ -393,7 +480,9 @@ export const authOptions = {
         }
         session.user.firstName = mutableToken.firstName ?? null;
         session.user.lastName = mutableToken.lastName ?? null;
-        const sessionFullName = combineNameParts(mutableToken.firstName, mutableToken.lastName) ?? (typeof mutableToken.name === "string" ? mutableToken.name : null);
+        const sessionFullName =
+          combineNameParts(mutableToken.firstName, mutableToken.lastName) ??
+          (typeof mutableToken.name === "string" ? mutableToken.name : null);
         session.user.name = sessionFullName;
         if (mutableToken.role) {
           session.user.role = mutableToken.role;
@@ -420,7 +509,9 @@ export const authOptions = {
     async session({ token }) {
       const mutableToken = token as MutableToken;
       const roles = Array.isArray(mutableToken.roles)
-        ? (mutableToken.roles.filter((role): role is Role => typeof role === "string") as Role[])
+        ? (mutableToken.roles.filter(
+            (role): role is Role => typeof role === "string",
+          ) as Role[])
         : undefined;
 
       await recordSessionStart({
