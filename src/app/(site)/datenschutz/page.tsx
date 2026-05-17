@@ -15,7 +15,7 @@ export default function DatenschutzPage() {
   return (
     <div className="layout-container space-y-6 py-12">
       <Heading level="h1">Datenschutzerklärung</Heading>
-      <Text>Stand: 15. Mai 2026</Text>
+      <Text>Stand: Mai 2026</Text>
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
@@ -51,7 +51,8 @@ export default function DatenschutzPage() {
         <Heading level="h2" className="text-xl" weight="bold">
           3. Hosting und Server-Logfiles
         </Heading>
-        <Text>Diese Website wird auf einem selbst betriebenen Virtual Private Server (VPS) gehostet.</Text>
+        <Text>Diese Website wird auf einem Virtual Private Server (VPS) gehostet.</Text>
+        <Text>Die Website wird auf einem VPS des Anbieters Contabo GmbH, Aschauer Straße 32a, 81549 München, Deutschland gehostet.</Text>
         <Text>Beim Aufruf unserer Website übermittelt Ihr Browser automatisch Informationen an unseren Server. Diese sogenannten Server-Logfiles enthalten:</Text>
         <ul className="list-disc space-y-1 pl-6 text-foreground">
           <li>IP-Adresse des anfragenden Rechners</li>
@@ -63,8 +64,8 @@ export default function DatenschutzPage() {
           <li>Betriebssystem</li>
         </ul>
         <Text>
-          Die Verarbeitung erfolgt auf Basis von Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt in der technischen
-          Bereitstellung und Sicherstellung des Betriebs der Website. Die Logfiles werden nach spätestens 30 Tagen gelöscht, sofern keine
+          Die Verarbeitung erfolgt auf Basis von Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt in der Gewährleistung der
+          Stabilität, Sicherheit und Funktionsfähigkeit der Website. Die Logfiles werden nach spätestens 30 Tagen gelöscht, sofern keine
           sicherheitsrelevante Auswertung erforderlich ist.
         </Text>
       </section>
@@ -115,9 +116,10 @@ export default function DatenschutzPage() {
         </Heading>
         <Text>
           Unsere Website verwendet technisch notwendige Cookies, um den Betrieb des Mitgliederbereichs zu ermöglichen (Session-Cookie für
-          den Login). Diese Cookies enthalten keine personenbezogenen Daten im eigentlichen Sinne, sondern lediglich eine zufällig
-          generierte Session-ID.
+          den Login). Die Session-Cookies enthalten lediglich eine pseudonyme Session-ID, die zur Aufrechterhaltung der Anmeldung
+          erforderlich ist.
         </Text>
+        <Text>Die Session-Cookies werden nach Ende der Sitzung bzw. beim Schließen des Browsers automatisch gelöscht.</Text>
         <Text>Wir verwenden keine Tracking-Cookies, keine Werbe-Cookies und kein Cookie-basiertes Analyse-Tracking.</Text>
         <Text>
           Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Technisch notwendige Cookies erfordern keine Einwilligung gemäß § 25 Abs. 2 TTDSG.
@@ -126,7 +128,17 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          7. Keine Drittanbieter-Tracking-Dienste
+          7. Mitgliederbereich / Benutzerkonten
+        </Heading>
+        <Text>
+          Für registrierte Mitglieder speichern wir die zur Anmeldung erforderlichen Zugangsdaten. Die Authentifizierung erfolgt per Magic
+          Link (E-Mail). Es werden keine Passwörter gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+        </Text>
+      </section>
+
+      <section className="mb-8 space-y-2 border-t border-border pt-6">
+        <Heading level="h2" className="text-xl" weight="bold">
+          8. Keine Drittanbieter-Tracking-Dienste
         </Heading>
         <Text>
           Wir setzen auf dieser Website keine Analyse- oder Tracking-Werkzeuge von Drittanbietern ein (z. B. Google Analytics, Facebook
@@ -140,7 +152,7 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          8. Ihre Rechte als betroffene Person
+          9. Ihre Rechte als betroffene Person
         </Heading>
         <Text>Sie haben gegenüber uns folgende Rechte hinsichtlich Ihrer personenbezogenen Daten:</Text>
         <ul className="list-disc space-y-1 pl-6 text-foreground">
@@ -157,7 +169,7 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          9. Beschwerderecht bei der Aufsichtsbehörde
+          10. Beschwerderecht bei der Aufsichtsbehörde
         </Heading>
         <Text>
           Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer personenbezogenen Daten durch uns
@@ -175,18 +187,18 @@ export default function DatenschutzPage() {
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          10. Datensicherheit
+          11. Datensicherheit
         </Heading>
         <Text>
           Wir treffen technische und organisatorische Maßnahmen, um Ihre Daten gegen Verlust, Zerstörung, Manipulation und unberechtigten
-          Zugriff zu schützen. Alle Verbindungen zu unserer Website werden per TLS/HTTPS verschlüsselt übertragen. Unsere Server sind
-          durch Zugangskontrollen und aktuelle Sicherheitsupdates geschützt.
+          Zugriff zu schützen. Diese Seite nutzt aus Sicherheitsgründen und zum Schutz der Übertragung vertraulicher Inhalte eine
+          TLS-Verschlüsselung (HTTPS). Unsere Server sind durch Zugangskontrollen und aktuelle Sicherheitsupdates geschützt.
         </Text>
       </section>
 
       <section className="space-y-2 border-t border-border pt-6">
         <Heading level="h2" className="text-xl" weight="bold">
-          11. Aktualität und Änderungen dieser Datenschutzerklärung
+          12. Aktualität und Änderungen dieser Datenschutzerklärung
         </Heading>
         <Text>
           Diese Datenschutzerklärung ist aktuell gültig. Durch die Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher
