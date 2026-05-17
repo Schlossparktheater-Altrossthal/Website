@@ -1,4 +1,7 @@
-import { DEFAULT_COLOR_MODE, type ThemeColorMode } from "@/lib/website-settings";
+import {
+  DEFAULT_COLOR_MODE,
+  type ThemeColorMode,
+} from "@/lib/website-settings";
 
 export type ColorModeScriptProps = {
   mode: ThemeColorMode;
@@ -30,6 +33,28 @@ export function ColorModeScript({ mode }: ColorModeScriptProps) {
     };
 
     let removePreferenceListener = null;
+    let observer = null;
+    let isCleanedUp = false;
+
+    const cleanup = () => {
+      if (isCleanedUp) {
+        return;
+      }
+      isCleanedUp = true;
+
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
+
+      if (removePreferenceListener) {
+        removePreferenceListener();
+        removePreferenceListener = null;
+      }
+
+      window.removeEventListener("pagehide", cleanup);
+      window.removeEventListener("beforeunload", cleanup);
+    };
 
     const apply = (modeToApply) => {
       if (modeToApply === "system") {
@@ -50,6 +75,10 @@ export function ColorModeScript({ mode }: ColorModeScriptProps) {
     };
 
     const updateFromAttribute = () => {
+      if (isCleanedUp) {
+        return;
+      }
+
       const activeMode = root.getAttribute(attribute) || defaultMode;
       if (activeMode === "system") {
         if (!removePreferenceListener) {
@@ -68,7 +97,7 @@ export function ColorModeScript({ mode }: ColorModeScriptProps) {
 
     updateFromAttribute();
 
-    const observer = new MutationObserver((mutations) => {
+    observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === "attributes" && mutation.attributeName === attribute) {
           updateFromAttribute();
@@ -77,6 +106,8 @@ export function ColorModeScript({ mode }: ColorModeScriptProps) {
     });
 
     observer.observe(root, { attributes: true, attributeFilter: [attribute] });
+    window.addEventListener("pagehide", cleanup);
+    window.addEventListener("beforeunload", cleanup);
   })();`;
 
   return <script dangerouslySetInnerHTML={{ __html: script }} />;
