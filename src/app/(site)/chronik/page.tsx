@@ -9,7 +9,7 @@ import { ChronikFeaturedShowCards } from "./chronik-featured-show-cards";
 import { ChronikYearNavigation } from "./chronik-year-navigation";
 import { getChronikItems } from "./data";
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: "Chronik vergangener Sommer",
   description:
     "Erkunde die Chronik vergangener Sommertheater-Saisons und entdecke Aufführungen, Highlights und Geschichten aus dem Schlosspark.",
@@ -82,3 +82,34 @@ export default async function ChronikPage() {
     </div>
   );
 }
+
+async function isPublicPageEnabled(key: "about" | "mystery" | "schoolCat" | "timeline") {
+  try {
+    const response = await fetch("https://sommertheater-altrossthal.de/api/website/settings", { cache: "no-store" });
+    if (!response.ok) {
+      return true;
+    }
+    const payload = (await response.json()) as {
+      settings?: { pageVisibility?: { public?: Partial<Record<"about" | "mystery" | "schoolCat" | "timeline", boolean>> } };
+    };
+
+    return payload.settings?.pageVisibility?.public?.[key] ?? true;
+  } catch {
+    return true;
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const enabled = await isPublicPageEnabled("timeline");
+  return {
+    ...baseMetadata,
+    alternates: {
+      canonical: "/chronik",
+    },
+    robots: {
+      index: enabled,
+      follow: enabled,
+    },
+  };
+}
+

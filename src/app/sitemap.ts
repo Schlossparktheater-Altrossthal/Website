@@ -1,14 +1,39 @@
 import type { MetadataRoute } from "next";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const base = (process.env.NEXT_PUBLIC_BASE_URL ?? "https://sommertheater-altrossthal.de").replace(/\/$/, "");
+import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
+
+const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL ?? "https://sommertheater-altrossthal.de").replace(/\/$/, "");
+
+const publicRouteMap = {
+  about: "/ueber-uns",
+  mystery: "/mystery",
+  schoolCat: "/unsere-schulkatze",
+  timeline: "/chronik",
+} as const;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  return [
-    { url: `${base}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: `${base}/ueber-uns`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${base}/mystery`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
-    { url: `${base}/galerie`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
-    { url: `${base}/chronik`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${base}/login`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
+  const baseEntries: MetadataRoute.Sitemap = [
+    { url: `${BASE_URL}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
+    { url: `${BASE_URL}/impressum`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${BASE_URL}/datenschutz`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
   ];
+
+  try {
+    const record = await readWebsiteSettings();
+    const visibility = resolveWebsiteSettings(record).pageVisibility.public;
+
+    const dynamicEntries = Object.entries(publicRouteMap)
+      .filter(([key]) => visibility[key as keyof typeof visibility])
+      .map(([, route]) => ({
+        url: `${BASE_URL}${route}`,
+        lastModified: now,
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      }));
+
+    return [...baseEntries, ...dynamicEntries];
+  } catch {
+    return baseEntries;
+  }
 }

@@ -38,7 +38,7 @@ function resolveSchulkatzeImages(): string[] {
 
 const schulkatzeImages = resolveSchulkatzeImages();
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: "Unsere Schulkatze",
   description:
     "Wir erinnern uns an Dieter Dennis von Altroßthal, die grau getigerte Schulkatze des BSZ Altrossthal, und erzählen seine Geschichte.",
@@ -53,6 +53,37 @@ export const metadata: Metadata = {
     type: "website",
   },
 };
+
+async function isPublicPageEnabled(key: "about" | "mystery" | "schoolCat" | "timeline") {
+  try {
+    const response = await fetch("https://sommertheater-altrossthal.de/api/website/settings", { cache: "no-store" });
+    if (!response.ok) {
+      return true;
+    }
+    const payload = (await response.json()) as {
+      settings?: { pageVisibility?: { public?: Partial<Record<"about" | "mystery" | "schoolCat" | "timeline", boolean>> } };
+    };
+
+    return payload.settings?.pageVisibility?.public?.[key] ?? true;
+  } catch {
+    return true;
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const enabled = await isPublicPageEnabled("schoolCat");
+  return {
+    ...baseMetadata,
+    alternates: {
+      canonical: "/unsere-schulkatze",
+    },
+    robots: {
+      index: enabled,
+      follow: enabled,
+    },
+  };
+}
+
 
 type CatProfileHighlight = {
   icon: LucideIcon;
