@@ -31,7 +31,8 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       },
       sitemap: SITEMAP_URL,
     };
-  } catch {
+  } catch (error) {
+    console.error("[robots.ts] Fehler beim Laden der WebsiteSettings:", error);
     return {
       rules: {
         userAgent: "*",
