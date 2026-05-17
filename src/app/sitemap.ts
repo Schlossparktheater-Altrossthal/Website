@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 
 import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
 
+export const dynamic = "force-dynamic";
+
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL ?? "https://sommertheater-altrossthal.de").replace(/\/$/, "");
 
 const publicRouteMap = {
