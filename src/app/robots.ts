@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 
 import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
 
+export const dynamic = "force-dynamic";
+
 const SITEMAP_URL = "https://sommertheater-altrossthal.de/sitemap.xml";
 
 const publicRouteMap = {
