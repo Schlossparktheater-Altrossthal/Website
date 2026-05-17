@@ -25,7 +25,7 @@ import { Heading, Text } from "@/components/ui/typography";
 import { getCurrentProductionEnsembleStats } from "@/lib/ensemble";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: "Über uns",
   description:
     "Lerne das Sommertheater Altrossthal kennen – unser Ensemble, unsere Werte und die Menschen, die jeden Sommer magische Abende im Schlosspark schaffen.",
@@ -40,6 +40,37 @@ export const metadata: Metadata = {
     type: "website",
   },
 };
+
+async function isPublicPageEnabled(key: "about" | "mystery" | "schoolCat" | "timeline") {
+  try {
+    const response = await fetch("https://sommertheater-altrossthal.de/api/website/settings", { cache: "no-store" });
+    if (!response.ok) {
+      return true;
+    }
+    const payload = (await response.json()) as {
+      settings?: { pageVisibility?: { public?: Partial<Record<"about" | "mystery" | "schoolCat" | "timeline", boolean>> } };
+    };
+
+    return payload.settings?.pageVisibility?.public?.[key] ?? true;
+  } catch {
+    return true;
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const enabled = await isPublicPageEnabled("about");
+  return {
+    ...baseMetadata,
+    alternates: {
+      canonical: "/ueber-uns",
+    },
+    robots: {
+      index: enabled,
+      follow: enabled,
+    },
+  };
+}
+
 
 type StatisticItem = {
   label: string;

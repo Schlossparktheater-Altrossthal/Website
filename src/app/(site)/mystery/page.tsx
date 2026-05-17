@@ -20,7 +20,7 @@ import { MysteryGuessBoard } from "./_components/mystery-guess-board";
 import { MysteryScoreboard } from "./_components/mystery-scoreboard";
 import { MysteryLaunchCountdownCard } from "./_components/mystery-launch-countdown-card";
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: "Das Geheimnis des Sommertheaters",
   description:
     "Entschlüssele Hinweise, verfolge das Countdown-Ritual und teile deine Tipps für das große Sommertheater-Mysterium im Schlosspark.",
@@ -49,6 +49,37 @@ export const metadata: Metadata = {
     images: ["/images/RuJ_3.png"],
   },
 };
+
+async function isPublicPageEnabled(key: "about" | "mystery" | "schoolCat" | "timeline") {
+  try {
+    const response = await fetch("https://sommertheater-altrossthal.de/api/website/settings", { cache: "no-store" });
+    if (!response.ok) {
+      return true;
+    }
+    const payload = (await response.json()) as {
+      settings?: { pageVisibility?: { public?: Partial<Record<"about" | "mystery" | "schoolCat" | "timeline", boolean>> } };
+    };
+
+    return payload.settings?.pageVisibility?.public?.[key] ?? true;
+  } catch {
+    return true;
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const enabled = await isPublicPageEnabled("mystery");
+  return {
+    ...baseMetadata,
+    alternates: {
+      canonical: "/mystery",
+    },
+    robots: {
+      index: enabled,
+      follow: enabled,
+    },
+  };
+}
+
 
 type ClueContent = {
   text?: string;
