@@ -271,7 +271,7 @@ export default async function PublicAboutPage() {
     return {
       ...item,
       value: NUMBER_FORMATTER.format(ensembleStats.memberCount),
-      detail: "Mitglieder in der aktuellen Produktion – Darstellende, Musiker:innen und helfende Hände",
+      detail: "Mitglieder in der aktuellen Produktion – Schauspieler auf der Bühne",
     };
   });
   const aboutOrganizationJsonLd = {
