@@ -11,12 +11,12 @@ import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
-import { SchoolCatEncountersSection } from "./encounters-section";
-import { SchulkatzeGallery } from "./schulkatze-gallery";
+import { CatMemorySection } from "./encounters-section";
+import { CatGallery } from "./schulkatze-gallery";
 
 const SUPPORTED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
 
-function resolveSchulkatzeImages(): string[] {
+function resolveCatImages(): string[] {
   const directory = path.join(process.cwd(), "public", "images", "katze");
 
   try {
@@ -36,7 +36,7 @@ function resolveSchulkatzeImages(): string[] {
   return ["/images/katze/IMG_8370.JPEG"];
 }
 
-const schulkatzeImages = resolveSchulkatzeImages();
+const catImages = resolveCatImages();
 
 const baseMetadata: Metadata = {
   title: "Unsere Schulkatze",
@@ -190,8 +190,8 @@ export default async function SchoolCatPage() {
               Schulgemeinschaft bleiben und prägen, wie wir auch künftig füreinander da sind.
             </Text>
           </div>
-          <SchulkatzeGallery
-            images={schulkatzeImages}
+          <CatGallery
+            images={catImages}
             alt="Schulkatze Dieter Dennis von Altroßthal, grau getigert, sitzt aufmerksam im Schulhof."
             caption="Dieter Dennis von Altroßthal war über viele Jahre Teil unserer Schulgemeinschaft."
           />
@@ -279,7 +279,7 @@ export default async function SchoolCatPage() {
         </Card>
       </section>
 
-      <SchoolCatEncountersSection />
+      <CatMemorySection />
 
     </div>
   );

@@ -15,9 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { SchulkatzeImageRotator } from "./image-rotator";
+import { CatImageRotator } from "./image-rotator";
 
-type SchulkatzeGalleryProps = {
+type CatGalleryProps = {
   images: string[];
   alt: string;
   caption: string;
@@ -28,13 +28,13 @@ type SchulkatzeGalleryProps = {
 const DIALOG_PREVIEW_SIZES = "(min-width: 1440px) 960px, (min-width: 1024px) 70vw, 90vw";
 const THUMBNAIL_SIZES = "(min-width: 1024px) 120px, (min-width: 768px) 15vw, 25vw";
 
-export function SchulkatzeGallery({
+export function CatGallery({
   images,
   alt,
   caption,
   sizes,
   className,
-}: SchulkatzeGalleryProps) {
+}: CatGalleryProps) {
   const validImages = useMemo(
     () =>
       Array.from(
@@ -123,7 +123,7 @@ export function SchulkatzeGallery({
             className="group relative block h-auto w-full p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
             aria-label="Galerie mit Erinnerungsfotos unserer Schulkatze öffnen"
           >
-            <SchulkatzeImageRotator
+            <CatImageRotator
               images={validImages}
               alt={alt}
               sizes={sizes}
