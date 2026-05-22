@@ -40,7 +40,7 @@ function formatDateTime(date: Date) {
   return format(date, "EEEE, dd.MM.yyyy '·' HH:mm 'Uhr'", { locale: de });
 }
 
-export default async function MeineProbenPage() {
+export default async function MyRehearsalsPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.meine-proben");
   if (!allowed) {

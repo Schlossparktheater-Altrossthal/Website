@@ -5,7 +5,7 @@ import {
   getDefaultHolidaySourceUrl,
   getDefaultPublicHolidaySourceUrl,
   readSperrlisteSettings,
-  resolveSperrlisteSettings,
+  resolveBlocklistSettings,
   HOLIDAY_SOURCE_MODES,
   type HolidaySourceMode,
   type ResolvedSperrlisteSettings,
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const record = await readSperrlisteSettings();
-    const resolved = resolveSperrlisteSettings(record);
+    const resolved = resolveBlocklistSettings(record);
     const candidate = buildCandidateSettings(resolved, source, mode, url);
     const result = await fetchHolidayRangesForSettings(candidate);
 

@@ -9,10 +9,10 @@ import {
   getDefaultHolidaySourceUrl,
   getDefaultPublicHolidaySourceUrl,
   readSperrlisteSettings,
-  resolveSperrlisteSettings,
-  toClientSperrlisteSettings,
+  resolveBlocklistSettings,
+  toClientBlocklistSettings,
 } from "@/lib/sperrliste-settings";
-import { SperrlistePageClient } from "./page-client";
+import { BlocklistPageClient } from "./page-client";
 import type { OverviewMember } from "./block-overview";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { databaseEnabled } from "@/lib/dev-database";
@@ -25,7 +25,7 @@ import {
   DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE,
 } from "@/lib/dev-sperrliste-fixture";
 
-export default async function SperrlistePage() {
+export default async function BlocklistPage() {
   const session = await requireAuth();
   const userId = session.user?.id;
   if (!userId) {
@@ -88,7 +88,7 @@ export default async function SperrlistePage() {
           title="Sperrliste"
           breadcrumbs={breadcrumbs}
         />
-        <SperrlistePageClient
+        <BlocklistPageClient
           initialBlockedDays={initialBlockedDays}
           initialHolidays={DEV_SPERRLISTE_HOLIDAYS_FIXTURE}
           overviewMembers={overviewMembers}
@@ -105,7 +105,7 @@ export default async function SperrlistePage() {
   }
 
   const settingsRecord = await readSperrlisteSettings();
-  const resolvedSettingsBefore = resolveSperrlisteSettings(settingsRecord);
+  const resolvedSettingsBefore = resolveBlocklistSettings(settingsRecord);
 
   const [personalBlockedDays, holidayRanges, overviewUsers] = await Promise.all([
     prisma.blockedDay.findMany({
@@ -143,8 +143,8 @@ export default async function SperrlistePage() {
   ]);
 
   const refreshedSettingsRecord = await readSperrlisteSettings();
-  const resolvedSettings = resolveSperrlisteSettings(refreshedSettingsRecord);
-  const clientSettings = toClientSperrlisteSettings(resolvedSettings);
+  const resolvedSettings = resolveBlocklistSettings(refreshedSettingsRecord);
+  const clientSettings = toClientBlocklistSettings(resolvedSettings);
   const defaultHolidaySourceUrl = getDefaultHolidaySourceUrl();
   const defaultPublicHolidaySourceUrl = getDefaultPublicHolidaySourceUrl();
 
@@ -185,7 +185,7 @@ export default async function SperrlistePage() {
         description="Markiere Tage, an denen du nicht verfügbar bist, damit das Team die Planung im Blick behält."
         breadcrumbs={breadcrumbs}
       />
-      <SperrlistePageClient
+      <BlocklistPageClient
         initialBlockedDays={initialBlockedDays}
         initialHolidays={holidayRanges}
         overviewMembers={overviewMembers}

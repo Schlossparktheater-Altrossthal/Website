@@ -19,7 +19,7 @@ import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
 import { combineNameParts } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
-export default async function ProbenplanungPage() {
+export default async function RehearsalPlanningPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
   if (!allowed) {

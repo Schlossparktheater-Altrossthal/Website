@@ -7,17 +7,17 @@ import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 
 import { PosterSlideshow } from "../poster-slideshow";
-import { getChronikItem } from "../data";
+import { getChronicleItem } from "../data";
 import { formatCastMemberDisplayName } from "../cast-name-formatters";
 import type { ChronikCastEntry, ChronikMeta } from "../types";
 import { EditablePerformanceDatesCard } from "../editable-performance-dates-card";
 
-type ChronikDetailPageParams = {
+type ChronicleDetailPageParams = {
   showId: string;
 };
 
-type ChronikDetailPageProps = {
-  params: Promise<ChronikDetailPageParams>;
+type ChronicleDetailPageProps = {
+  params: Promise<ChronicleDetailPageParams>;
 };
 
 function buildPrimaryDetails(meta: ChronikMeta | null) {
@@ -51,7 +51,7 @@ function sanitizeCast(meta: ChronikMeta | null) {
   return meta.cast;
 }
 
-export async function generateMetadata({ params }: ChronikDetailPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: ChronicleDetailPageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const showId = resolvedParams?.showId;
 
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: ChronikDetailPageProps): Prom
     };
   }
 
-  const item = await getChronikItem(showId);
+  const item = await getChronicleItem(showId);
 
   if (!item) {
     return {
@@ -79,14 +79,14 @@ export async function generateMetadata({ params }: ChronikDetailPageProps): Prom
   };
 }
 
-export default async function ChronikDetailPage({ params }: ChronikDetailPageProps) {
+export default async function ChronicleDetailPage({ params }: ChronicleDetailPageProps) {
   const resolvedParams = await params;
   const showId = resolvedParams?.showId;
   if (!showId) {
     notFound();
   }
 
-  const item = await getChronikItem(showId);
+  const item = await getChronicleItem(showId);
 
   if (!item) {
     notFound();

@@ -7,7 +7,7 @@ import { MembersTable } from "@/components/members/members-table";
 import { MemberInviteManager } from "@/components/members/member-invite-manager";
 import { combineNameParts } from "@/lib/names";
 
-export default async function MitgliederVerwaltungPage() {
+export default async function MemberManagementPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "mitglieder.rollenverwaltung");
   if (!allowed) {

@@ -12,7 +12,7 @@ import {
 import {
   DEFAULT_FREEZE_DAYS,
   readSperrlisteSettings,
-  resolveSperrlisteSettings,
+  resolveBlocklistSettings,
 } from "@/lib/sperrliste-settings";
 import {
   isoDate,
@@ -68,7 +68,7 @@ export async function GET() {
 async function resolveFreezeDays() {
   try {
     const record = await readSperrlisteSettings();
-    const resolved = resolveSperrlisteSettings(record);
+    const resolved = resolveBlocklistSettings(record);
     return Number.isFinite(resolved.freezeDays)
       ? Math.max(0, Math.floor(resolved.freezeDays))
       : DEFAULT_FREEZE_DAYS;

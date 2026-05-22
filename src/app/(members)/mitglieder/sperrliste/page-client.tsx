@@ -7,10 +7,10 @@ import type { HolidayRange } from "@/types/holidays";
 
 import type { BlockedDay } from "./block-calendar";
 import type { OverviewMember } from "./block-overview";
-import { SperrlisteSettingsDialog } from "./settings-dialog";
-import { SperrlisteTabs } from "./sperrliste-tabs";
+import { BlocklistSettingsDialog } from "./settings-dialog";
+import { BlocklistTabs } from "./sperrliste-tabs";
 
-interface SperrlistePageClientProps {
+interface BlocklistPageClientProps {
   initialBlockedDays: BlockedDay[];
   initialHolidays: HolidayRange[];
   overviewMembers: OverviewMember[];
@@ -23,7 +23,7 @@ interface SperrlistePageClientProps {
   offlineMessage?: string;
 }
 
-export function SperrlistePageClient({
+export function BlocklistPageClient({
   initialBlockedDays,
   initialHolidays,
   overviewMembers,
@@ -34,7 +34,7 @@ export function SperrlistePageClient({
   defaultPublicHolidaySourceUrl,
   isOffline = false,
   offlineMessage,
-}: SperrlistePageClientProps) {
+}: BlocklistPageClientProps) {
   const [settings, setSettings] = useState<ClientSperrlisteSettings>(initialSettings);
   const [holidays, setHolidays] = useState<HolidayRange[]>(initialHolidays);
   const [defaultHolidayUrl, setDefaultHolidayUrl] = useState(defaultHolidaySourceUrl);
@@ -71,7 +71,7 @@ export function SperrlistePageClient({
           </p>
         </div>
       ) : null}
-      <SperrlisteTabs
+      <BlocklistTabs
         initialBlockedDays={initialBlockedDays}
         holidays={holidays}
         overviewMembers={overviewMembers}
@@ -83,7 +83,7 @@ export function SperrlistePageClient({
         readOnlyMessage={offlineNotice ?? undefined}
         actions={
           canManageSettings && !offline ? (
-            <SperrlisteSettingsDialog
+            <BlocklistSettingsDialog
               settings={settings}
               defaultHolidaySourceUrl={defaultHolidayUrl}
               defaultPublicHolidaySourceUrl={defaultPublicHolidayUrl}

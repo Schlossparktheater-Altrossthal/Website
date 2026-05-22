@@ -9,7 +9,7 @@ import {
   getDefaultHolidaySourceUrl,
   getDefaultPublicHolidaySourceUrl,
   readSperrlisteSettings,
-  resolveSperrlisteSettings,
+  resolveBlocklistSettings,
   type HolidaySourceStatus,
   type ResolvedSperrlisteSettings,
 } from "@/lib/sperrliste-settings";
@@ -669,7 +669,7 @@ export const getSaxonySchoolHolidayRanges = unstable_cache(
   async (_settingsKey?: string) => {
     void _settingsKey;
     const record = await readSperrlisteSettings();
-    const resolved = resolveSperrlisteSettings(record);
+    const resolved = resolveBlocklistSettings(record);
     const result = await fetchHolidayRangesForSettings(resolved);
     await applyHolidaySourceStatuses({
       holiday: result.holidayStatus,

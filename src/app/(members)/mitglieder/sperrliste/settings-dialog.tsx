@@ -6,22 +6,22 @@ import { Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import type { SperrlisteSettingsChangePayload } from "./settings-manager";
-import { SperrlisteSettingsManager } from "./settings-manager";
+import { BlocklistSettingsManager } from "./settings-manager";
 import type { ClientSperrlisteSettings } from "@/lib/sperrliste-settings";
 
-interface SperrlisteSettingsDialogProps {
+interface BlocklistSettingsDialogProps {
   settings: ClientSperrlisteSettings;
   defaultHolidaySourceUrl: string;
   defaultPublicHolidaySourceUrl: string;
   onSettingsChange?: (payload: SperrlisteSettingsChangePayload) => void;
 }
 
-export function SperrlisteSettingsDialog({
+export function BlocklistSettingsDialog({
   settings,
   defaultHolidaySourceUrl,
   defaultPublicHolidaySourceUrl,
   onSettingsChange,
-}: SperrlisteSettingsDialogProps) {
+}: BlocklistSettingsDialogProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -39,7 +39,7 @@ export function SperrlisteSettingsDialog({
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-hidden border-0 bg-transparent p-0 sm:max-w-5xl">
         <div className="max-h-[90vh] overflow-y-auto">
-          <SperrlisteSettingsManager
+          <BlocklistSettingsManager
             settings={settings}
             defaultHolidaySourceUrl={defaultHolidaySourceUrl}
             defaultPublicHolidaySourceUrl={defaultPublicHolidaySourceUrl}

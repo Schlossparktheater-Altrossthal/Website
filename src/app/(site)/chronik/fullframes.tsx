@@ -39,7 +39,7 @@ function toPosterSources(value: ChronikItem["posterUrl"]) {
     .filter((entry): entry is string => entry.length > 0);
 }
 
-export function ChronikFullframes({ items }: { items: ChronikItem[] }) {
+export function ChronicleFullframes({ items }: { items: ChronikItem[] }) {
   const sorted = useMemo(() => [...items].sort((a, b) => b.year - a.year), [items]);
   const [active, setActive] = useState(sorted[0]?.id);
   const [reducedMotion, setReducedMotion] = useState(false);

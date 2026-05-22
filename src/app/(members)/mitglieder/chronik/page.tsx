@@ -2,7 +2,7 @@ import { PageHeader } from "@/components/members/page-header";
 
 export const dynamic = "force-dynamic";
 
-export default function ChronikPage() {
+export default function ChroniclePage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Chronik" description="Hier entsteht neues." />
