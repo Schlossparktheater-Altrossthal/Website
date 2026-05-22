@@ -5,7 +5,7 @@ import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 
-type SchulkatzeImageRotatorProps = {
+type CatImageRotatorProps = {
   images: string[];
   alt: string;
   interval?: number;
@@ -17,13 +17,13 @@ const DEFAULT_INTERVAL = 6000;
 const MINIMUM_INTERVAL = 2000;
 const DEFAULT_SIZES = "(min-width: 1024px) 320px, (min-width: 768px) 40vw, 90vw";
 
-export function SchulkatzeImageRotator({
+export function CatImageRotator({
   images,
   alt,
   interval = DEFAULT_INTERVAL,
   sizes = DEFAULT_SIZES,
   className,
-}: SchulkatzeImageRotatorProps) {
+}: CatImageRotatorProps) {
   const validImages = useMemo(
     () =>
       Array.from(

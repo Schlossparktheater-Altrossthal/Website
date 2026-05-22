@@ -14,12 +14,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Text } from "@/components/ui/typography";
 
-const STORAGE_KEY = "dennis-dieter-encounters";
-const MODERATION_STORAGE_KEY = "dennis-dieter-hidden-encounters";
+const STORAGE_KEY = "cat-memory-entries";
+const MODERATION_STORAGE_KEY = "cat-memory-hidden";
 
 const MODERATOR_ROLES = new Set<Role>(["board", "admin", "owner"]);
 
-type CatEncounter = {
+type CatMemoryEntry = {
   id: string;
   since: string;
   nickname: string;
@@ -29,22 +29,22 @@ type CatEncounter = {
   source: "curated" | "user";
 };
 
-type StoredCatEncounter = Omit<CatEncounter, "source">;
+type StoredCatMemoryEntry = Omit<CatMemoryEntry, "source">;
 
-const curatedCatEncounters: CatEncounter[] = [];
+const curatedCatMemoryEntries: CatMemoryEntry[] = [];
 
-function generateEncounterId() {
+function generateMemoryId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
 
-  return `encounter-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return `memory-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function SchoolCatEncountersSection() {
+export function CatMemorySection() {
   const { data: session } = useSession();
-  const [userSubmittedCatEncounters, setUserSubmittedCatEncounters] = useState<CatEncounter[]>([]);
-  const [moderatedHiddenEncounterIds, setModeratedHiddenEncounterIds] = useState<string[]>([]);
+  const [userMemories, setUserMemories] = useState<CatMemoryEntry[]>([]);
+  const [hiddenMemoryIds, setHiddenMemoryIds] = useState<string[]>([]);
   const [showModerationDetails, setShowModerationDetails] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -60,7 +60,7 @@ export function SchoolCatEncountersSection() {
     }
 
     try {
-      const parsed = JSON.parse(storedValue) as StoredCatEncounter[];
+      const parsed = JSON.parse(storedValue) as StoredCatMemoryEntry[];
 
       if (!Array.isArray(parsed)) {
         return;
@@ -68,7 +68,7 @@ export function SchoolCatEncountersSection() {
 
       const sanitized = parsed
         .filter(
-          (entry): entry is StoredCatEncounter =>
+          (entry): entry is StoredCatMemoryEntry =>
             typeof entry === "object" &&
             entry !== null &&
             typeof entry.since === "string" &&
@@ -76,7 +76,7 @@ export function SchoolCatEncountersSection() {
             typeof entry.story === "string"
         )
         .map((entry) => ({
-          id: entry.id ?? generateEncounterId(),
+          id: entry.id ?? generateMemoryId(),
           since: entry.since.trim(),
           nickname: entry.nickname.trim(),
           story: entry.story.trim(),
@@ -86,7 +86,7 @@ export function SchoolCatEncountersSection() {
         }));
 
       if (sanitized.length > 0) {
-        setUserSubmittedCatEncounters(sanitized);
+        setUserMemories(sanitized);
       }
     } catch {
       // Wenn Parsing fehlschlägt, ignorieren wir den lokalen Speicher und starten frisch.
@@ -98,18 +98,18 @@ export function SchoolCatEncountersSection() {
       return;
     }
 
-    if (userSubmittedCatEncounters.length === 0) {
+    if (userMemories.length === 0) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;
     }
 
-    const payload: StoredCatEncounter[] = userSubmittedCatEncounters.map((entry) => {
+    const payload: StoredCatMemoryEntry[] = userMemories.map((entry) => {
       const { source: _source, ...rest } = entry;
       void _source;
       return rest;
     });
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  }, [userSubmittedCatEncounters]);
+  }, [userMemories]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -132,7 +132,7 @@ export function SchoolCatEncountersSection() {
       const sanitized = parsed.filter((value): value is string => typeof value === "string" && value.trim().length > 0);
 
       if (sanitized.length > 0) {
-        setModeratedHiddenEncounterIds(Array.from(new Set(sanitized)));
+        setHiddenMemoryIds(Array.from(new Set(sanitized)));
       }
     } catch {
       // Wenn Parsing fehlschlägt, ignorieren wir die Moderationsdaten.
@@ -144,26 +144,26 @@ export function SchoolCatEncountersSection() {
       return;
     }
 
-    if (moderatedHiddenEncounterIds.length === 0) {
+    if (hiddenMemoryIds.length === 0) {
       window.localStorage.removeItem(MODERATION_STORAGE_KEY);
       return;
     }
 
-    window.localStorage.setItem(MODERATION_STORAGE_KEY, JSON.stringify(moderatedHiddenEncounterIds));
-  }, [moderatedHiddenEncounterIds]);
+    window.localStorage.setItem(MODERATION_STORAGE_KEY, JSON.stringify(hiddenMemoryIds));
+  }, [hiddenMemoryIds]);
 
-  const allCatEncounters = useMemo(() => [...userSubmittedCatEncounters, ...curatedCatEncounters], [userSubmittedCatEncounters]);
+  const allCatMemoryEntries = useMemo(() => [...userMemories, ...curatedCatMemoryEntries], [userMemories]);
 
-  const hiddenCatEncounterIdSet = useMemo(() => new Set(moderatedHiddenEncounterIds), [moderatedHiddenEncounterIds]);
+  const hiddenCatMemoryEntryIdSet = useMemo(() => new Set(hiddenMemoryIds), [hiddenMemoryIds]);
 
-  const visibleCatEncounters = useMemo(
-    () => allCatEncounters.filter((entry) => !hiddenCatEncounterIdSet.has(entry.id)),
-    [allCatEncounters, hiddenCatEncounterIdSet],
+  const visibleCatMemoryEntries = useMemo(
+    () => allCatMemoryEntries.filter((entry) => !hiddenCatMemoryEntryIdSet.has(entry.id)),
+    [allCatMemoryEntries, hiddenCatMemoryEntryIdSet],
   );
 
-  const archivedCatEncounters = useMemo(
-    () => allCatEncounters.filter((entry) => hiddenCatEncounterIdSet.has(entry.id)),
-    [allCatEncounters, hiddenCatEncounterIdSet],
+  const archivedCatMemoryEntries = useMemo(
+    () => allCatMemoryEntries.filter((entry) => hiddenCatMemoryEntryIdSet.has(entry.id)),
+    [allCatMemoryEntries, hiddenCatMemoryEntryIdSet],
   );
 
   const userRoles = useMemo(() => {
@@ -192,8 +192,8 @@ export function SchoolCatEncountersSection() {
     }
   }, [canModerate]);
 
-  const handleHideCatEncounter = useCallback((entryId: string) => {
-    setModeratedHiddenEncounterIds((previous) => {
+  const handleHideCatMemoryEntry = useCallback((entryId: string) => {
+    setHiddenMemoryIds((previous) => {
       if (previous.includes(entryId)) {
         return previous;
       }
@@ -202,13 +202,13 @@ export function SchoolCatEncountersSection() {
     setShowModerationDetails(true);
   }, []);
 
-  const handleRestoreCatEncounter = useCallback((entryId: string) => {
-    setModeratedHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
+  const handleRestoreCatMemoryEntry = useCallback((entryId: string) => {
+    setHiddenMemoryIds((previous) => previous.filter((storedId) => storedId !== entryId));
   }, []);
 
-  const handleDeleteCatEncounter = useCallback((entryId: string) => {
-    setUserSubmittedCatEncounters((previous) => previous.filter((entry) => entry.id !== entryId));
-    setModeratedHiddenEncounterIds((previous) => previous.filter((storedId) => storedId !== entryId));
+  const handleDeleteCatMemoryEntry = useCallback((entryId: string) => {
+    setUserMemories((previous) => previous.filter((entry) => entry.id !== entryId));
+    setHiddenMemoryIds((previous) => previous.filter((storedId) => storedId !== entryId));
   }, []);
 
   const toggleFormVisibility = useCallback(() => {
@@ -235,8 +235,8 @@ export function SchoolCatEncountersSection() {
         ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(new Date())
         : undefined;
 
-    const newCatEncounter: CatEncounter = {
-      id: generateEncounterId(),
+    const newCatMemoryEntry: CatMemoryEntry = {
+      id: generateMemoryId(),
       since,
       nickname,
       story,
@@ -245,10 +245,10 @@ export function SchoolCatEncountersSection() {
       source: "user",
     };
 
-    setUserSubmittedCatEncounters((previous) => [newCatEncounter, ...previous]);
+    setUserMemories((previous) => [newCatMemoryEntry, ...previous]);
     form.reset();
 
-    const sinceInput = form.querySelector<HTMLInputElement>("#dennis-dieter-since");
+    const sinceInput = form.querySelector<HTMLInputElement>("#cat-memory-since");
     sinceInput?.focus();
   }, []);
 
@@ -316,7 +316,7 @@ export function SchoolCatEncountersSection() {
                   className="rounded-full px-4"
                   onClick={toggleFormVisibility}
                   aria-expanded={isFormOpen}
-                  aria-controls="dennis-dieter-encounter-form"
+                  aria-controls="cat-memory-form"
                 >
                   <Sparkles className="h-4 w-4" aria-hidden />
                   {isFormOpen ? "Formular schließen" : "Begegnung eintragen"}
@@ -325,19 +325,19 @@ export function SchoolCatEncountersSection() {
 
               {isFormOpen ? (
                 <form
-                  id="dennis-dieter-encounter-form"
+                  id="cat-memory-form"
                   className="mt-6 space-y-4"
                   onSubmit={handleSubmit}
                 >
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="dennis-dieter-since">Seit wann kennen Sie Dennis Dieter?</Label>
-                      <Input id="dennis-dieter-since" name="since" placeholder="z. B. Frühjahr 2024" required autoComplete="off" />
+                      <Label htmlFor="cat-memory-since">Seit wann kennen Sie Dennis Dieter?</Label>
+                      <Input id="cat-memory-since" name="since" placeholder="z. B. Frühjahr 2024" required autoComplete="off" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="dennis-dieter-nickname">Wie hieß er bei Ihnen?</Label>
+                      <Label htmlFor="cat-memory-nickname">Wie hieß er bei Ihnen?</Label>
                       <Input
-                        id="dennis-dieter-nickname"
+                        id="cat-memory-nickname"
                         name="nickname"
                         placeholder="Unser Spitzname für Dennis Dieter"
                         required
@@ -347,9 +347,9 @@ export function SchoolCatEncountersSection() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="dennis-dieter-author">Wer teilt diese Begegnung? (optional)</Label>
+                    <Label htmlFor="cat-memory-author">Wer teilt diese Begegnung? (optional)</Label>
                     <Input
-                      id="dennis-dieter-author"
+                      id="cat-memory-author"
                       name="author"
                       placeholder="Ihr Name, Ihre Klasse oder Gruppe"
                       autoComplete="off"
@@ -357,9 +357,9 @@ export function SchoolCatEncountersSection() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="dennis-dieter-story">Ihre Begegnung mit Dennis Dieter</Label>
+                    <Label htmlFor="cat-memory-story">Ihre Begegnung mit Dennis Dieter</Label>
                     <Textarea
-                      id="dennis-dieter-story"
+                      id="cat-memory-story"
                       name="story"
                       placeholder="Was haben Sie mit Dennis Dieter erlebt?"
                       rows={5}
@@ -403,22 +403,22 @@ export function SchoolCatEncountersSection() {
                 />
 
                 <ul className="space-y-5">
-                  {visibleCatEncounters.length > 0 ? (
-                    visibleCatEncounters.map((entry) => {
+                  {visibleCatMemoryEntries.length > 0 ? (
+                    visibleCatMemoryEntries.map((entry) => {
                       const isUserEntry = entry.source === "user";
                       const moderationItems = canModerate
                         ? [
                             {
                               label: "Beitrag ausblenden",
                               icon: <EyeOff className="h-4 w-4" aria-hidden />,
-                              onClick: () => handleHideCatEncounter(entry.id),
+                              onClick: () => handleHideCatMemoryEntry(entry.id),
                             },
                             ...(isUserEntry
                               ? [
                                   {
                                     label: "Beitrag löschen (lokal)",
                                     icon: <Trash2 className="h-4 w-4" aria-hidden />,
-                                    onClick: () => handleDeleteCatEncounter(entry.id),
+                                    onClick: () => handleDeleteCatMemoryEntry(entry.id),
                                     variant: "destructive" as const,
                                   },
                                 ]
@@ -475,7 +475,7 @@ export function SchoolCatEncountersSection() {
                             {isUserEntry ? (
                               <button
                                 type="button"
-                                onClick={() => handleDeleteCatEncounter(entry.id)}
+                                onClick={() => handleDeleteCatMemoryEntry(entry.id)}
                                 className="text-[11px] font-medium text-muted-foreground underline-offset-2 transition hover:text-destructive hover:underline focus-visible:outline-none"
                               >
                                 Beitrag auf diesem Gerät entfernen
@@ -500,7 +500,7 @@ export function SchoolCatEncountersSection() {
                 </ul>
               </div>
 
-              {canModerate && archivedCatEncounters.length > 0 ? (
+              {canModerate && archivedCatMemoryEntries.length > 0 ? (
                 <Card className="rounded-2xl border border-dashed border-primary/35 bg-primary/5 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -517,13 +517,13 @@ export function SchoolCatEncountersSection() {
                     >
                       {showModerationDetails
                         ? "Verbergen"
-                        : `Anzeigen (${archivedCatEncounters.length})`}
+                        : `Anzeigen (${archivedCatMemoryEntries.length})`}
                     </Button>
                   </div>
 
                   {showModerationDetails ? (
                     <div className="mt-4 space-y-3">
-                      {archivedCatEncounters.map((entry) => (
+                      {archivedCatMemoryEntries.map((entry) => (
                         <div
                           key={entry.id}
                           className="flex flex-col gap-2 rounded-2xl border border-border/40 bg-background/70 p-4 sm:flex-row sm:items-center sm:justify-between"
@@ -541,7 +541,7 @@ export function SchoolCatEncountersSection() {
                             variant="ghost"
                             size="sm"
                             className="self-start text-primary hover:text-primary focus-visible:ring-primary/30"
-                            onClick={() => handleRestoreCatEncounter(entry.id)}
+                            onClick={() => handleRestoreCatMemoryEntry(entry.id)}
                           >
                             <Undo2 className="mr-2 h-4 w-4" aria-hidden />
                             Wiederherstellen
