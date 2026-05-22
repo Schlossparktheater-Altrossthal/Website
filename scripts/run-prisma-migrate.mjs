@@ -9,7 +9,6 @@ import { PrismaClient } from "@prisma/client";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const schemaPath = join(__dirname, "..", "prisma", "schema.prisma");
 
 function toUtf8(value) {
   if (!value) return "";
