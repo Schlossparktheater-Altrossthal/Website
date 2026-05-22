@@ -34,7 +34,7 @@ export type SperrlisteSettingsChangePayload = {
   message?: string;
 };
 
-interface SperrlisteSettingsManagerProps {
+interface BlocklistSettingsManagerProps {
   settings: ClientSperrlisteSettings;
   defaultHolidaySourceUrl: string;
   defaultPublicHolidaySourceUrl: string;
@@ -140,12 +140,12 @@ function buildFreezeOptions(current: number | null) {
     }));
 }
 
-export function SperrlisteSettingsManager({
+export function BlocklistSettingsManager({
   settings,
   defaultHolidaySourceUrl,
   defaultPublicHolidaySourceUrl,
   onSettingsChange,
-}: SperrlisteSettingsManagerProps) {
+}: BlocklistSettingsManagerProps) {
   const [freezeDaysValue, setFreezeDaysValue] = useState(String(settings.freezeDays));
   const [holidayModeState, setHolidayModeState] = useState<HolidaySourceMode>(settings.holidaySource.mode);
   const [holidayUrlState, setHolidayUrlState] = useState(settings.holidaySource.url ?? "");

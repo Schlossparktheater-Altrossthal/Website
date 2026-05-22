@@ -40,7 +40,7 @@ vi.mock("@/lib/permissions", () => ({
 vi.mock("@/lib/sperrliste-settings", () => ({
   DEFAULT_FREEZE_DAYS: 7,
   readSperrlisteSettings: readSettingsMock,
-  resolveSperrlisteSettings: resolveSettingsMock,
+  resolveBlocklistSettings: resolveSettingsMock,
 }));
 
 vi.mock("@/lib/dev-database", () => ({

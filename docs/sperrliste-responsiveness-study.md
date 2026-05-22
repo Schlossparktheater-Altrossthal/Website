@@ -4,7 +4,7 @@
 Die Studie bewertet den Sperrlistenbereich der Mitgliederoberfläche hinsichtlich Layout-Anpassungen über verschiedene Viewport-Breiten, Touch-Bedienbarkeit sowie Informationsdichte für mobile Nutzerinnen und Nutzer.
 
 ## Methodik
-- Codeanalyse der relevanten Komponenten (`SperrlisteTabs`, `BlockCalendar`, `BlockOverview`, `MonthCalendar`) inklusive Tailwind-Klassen, konditionaler Renderings und ARIA-Attributen.
+- Codeanalyse der relevanten Komponenten (`BlocklistTabs`, `BlockCalendar`, `BlockOverview`, `MonthCalendar`) inklusive Tailwind-Klassen, konditionaler Renderings und ARIA-Attributen.
 - Ableitung der erwarteten Darstellung auf vier Breakpoint-Gruppen (unter 640 px, 640–767 px, 768–1023 px, ab 1024 px) auf Basis der eingesetzten `sm`-, `lg`- und `hidden`/`block`-Utility-Klassen.
 - Bewertung der Interaktionsmuster (z. B. horizontale Scrollcontainer, Mehrfachauswahl, Dialoge) im Hinblick auf Touch-Geräte.
 

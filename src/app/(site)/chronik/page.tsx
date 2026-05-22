@@ -7,7 +7,7 @@ import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
 import { ChronikFeaturedShowCards } from "./chronik-featured-show-cards";
 import { ChronikYearNavigation } from "./chronik-year-navigation";
-import { getChronikItems } from "./data";
+import { getChronicleItems } from "./data";
 
 const baseMetadata: Metadata = {
   title: "Chronik vergangener Sommer",
@@ -39,12 +39,12 @@ const baseMetadata: Metadata = {
   },
 };
 
-export default async function ChronikPage() {
+export default async function ChroniclePage() {
   const visibility = await getPublicPageVisibility();
   if (!visibility.timeline) {
     notFound();
   }
-  const items = await getChronikItems();
+  const items = await getChronicleItems();
 
   if (items.length === 0) {
     return (

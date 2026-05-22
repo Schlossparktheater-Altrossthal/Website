@@ -66,7 +66,7 @@ function sanitizePosterSources(sources: (string | null | undefined)[]) {
   return sanitized;
 }
 
-function getChronikPosterSources(show: ChronikShowRecord) {
+function getChroniclePosterSources(show: ChronikShowRecord) {
   const override = CHRONIK_POSTER_OVERRIDES[show.id];
   const baseSources = sanitizePosterSources([show.posterUrl]);
 
@@ -83,7 +83,7 @@ function getChronikPosterSources(show: ChronikShowRecord) {
   return sanitizePosterSources([...baseSources, ...overrideSources]);
 }
 
-function parseChronikDates(value: Prisma.JsonValue | null | undefined): string | null {
+function parseChronicleStats(value: Prisma.JsonValue | null | undefined): string | null {
   if (!value) {
     return null;
   }
@@ -261,7 +261,7 @@ const CHRONIK_SUPPLEMENTS: Record<string, Partial<ChronikMeta>> = {
   },
 };
 
-function applyChronikSupplements(id: string, meta: ChronikMeta | null): ChronikMeta | null {
+function applyChronicleSupplements(id: string, meta: ChronikMeta | null): ChronikMeta | null {
   const supplements = CHRONIK_SUPPLEMENTS[id];
   if (!supplements) {
     return meta;
@@ -282,7 +282,7 @@ function applyChronikSupplements(id: string, meta: ChronikMeta | null): ChronikM
   return base;
 }
 
-async function fetchChronikRecords(): Promise<ChronikShowRecord[]> {
+async function fetchChronicleRecords(): Promise<ChronikShowRecord[]> {
   const now = new Date();
 
   try {
@@ -310,24 +310,24 @@ async function fetchChronikRecords(): Promise<ChronikShowRecord[]> {
   return [...chronikFallbackShows];
 }
 
-function mapChronikRecord(record: ChronikShowRecord): ChronikPreparedItem {
+function mapChronicleRecord(record: ChronikShowRecord): ChronikPreparedItem {
   return {
     id: record.id,
     year: record.year,
     title: record.title ?? null,
     synopsis: record.synopsis ?? null,
-    dates: parseChronikDates(record.dates),
-    posterSources: getChronikPosterSources(record),
-    meta: applyChronikSupplements(record.id, parseShowMeta(record.meta)),
+    dates: parseChronicleStats(record.dates),
+    posterSources: getChroniclePosterSources(record),
+    meta: applyChronicleSupplements(record.id, parseShowMeta(record.meta)),
   };
 }
 
-export async function getChronikItems(): Promise<ChronikPreparedItem[]> {
-  const records = await fetchChronikRecords();
-  return records.map((record) => mapChronikRecord(record));
+export async function getChronicleItems(): Promise<ChronikPreparedItem[]> {
+  const records = await fetchChronicleRecords();
+  return records.map((record) => mapChronicleRecord(record));
 }
 
-export async function getChronikItem(id: string): Promise<ChronikPreparedItem | null> {
+export async function getChronicleItem(id: string): Promise<ChronikPreparedItem | null> {
   const now = new Date();
 
   try {
@@ -345,12 +345,12 @@ export async function getChronikItem(id: string): Promise<ChronikPreparedItem | 
     });
 
     if (record) {
-      return mapChronikRecord(record);
+      return mapChronicleRecord(record);
     }
   } catch {
     // ignore and fall back to static data
   }
 
   const fallback = chronikFallbackShows.find((entry) => entry.id === id);
-  return fallback ? mapChronikRecord(fallback) : null;
+  return fallback ? mapChronicleRecord(fallback) : null;
 }

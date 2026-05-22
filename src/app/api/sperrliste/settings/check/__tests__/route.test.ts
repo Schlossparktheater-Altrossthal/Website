@@ -7,7 +7,7 @@ const {
   requireAuthMock,
   hasPermissionMock,
   readSperrlisteSettingsMock,
-  resolveSperrlisteSettingsMock,
+  resolveBlocklistSettingsMock,
   fetchHolidayRangesForSettingsMock,
   baseSettings,
   defaultHolidayUrl,
@@ -19,7 +19,7 @@ const {
     requireAuthMock: vi.fn(),
     hasPermissionMock: vi.fn(),
     readSperrlisteSettingsMock: vi.fn(),
-    resolveSperrlisteSettingsMock: vi.fn(),
+    resolveBlocklistSettingsMock: vi.fn(),
     fetchHolidayRangesForSettingsMock: vi.fn(),
     baseSettings: {
       id: "default",
@@ -63,7 +63,7 @@ vi.mock("@/lib/sperrliste-settings", () => ({
   getDefaultHolidaySourceUrl: vi.fn(() => defaultHolidayUrl),
   getDefaultPublicHolidaySourceUrl: vi.fn(() => defaultPublicHolidayUrl),
   readSperrlisteSettings: readSperrlisteSettingsMock,
-  resolveSperrlisteSettings: resolveSperrlisteSettingsMock,
+  resolveBlocklistSettings: resolveBlocklistSettingsMock,
 }));
 vi.mock("@/lib/holidays", async () => {
   const actual = await vi.importActual<typeof import("@/lib/holidays")>("@/lib/holidays");
@@ -86,7 +86,7 @@ describe("sperrliste settings check route", () => {
     requireAuthMock.mockResolvedValue({ user: { id: "user-1" } });
     hasPermissionMock.mockResolvedValue(true);
     readSperrlisteSettingsMock.mockResolvedValue(null);
-    resolveSperrlisteSettingsMock.mockReturnValue({ ...baseSettings });
+    resolveBlocklistSettingsMock.mockReturnValue({ ...baseSettings });
     previousDatabaseUrl = process.env.DATABASE_URL;
     process.env.DATABASE_URL = "postgres://example.invalid/test";
   });

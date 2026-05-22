@@ -11,7 +11,7 @@ import { BlockCalendar, type BlockedDay } from "./block-calendar";
 import { BlockOverview, type OverviewMember } from "./block-overview";
 import type { HolidayRange } from "@/types/holidays";
 
-interface SperrlisteTabsProps {
+interface BlocklistTabsProps {
   initialBlockedDays: BlockedDay[];
   holidays?: HolidayRange[];
   overviewMembers: OverviewMember[];
@@ -24,7 +24,7 @@ interface SperrlisteTabsProps {
   readOnlyMessage?: string;
 }
 
-export function SperrlisteTabs({
+export function BlocklistTabs({
   initialBlockedDays,
   holidays = [],
   overviewMembers,
@@ -35,7 +35,7 @@ export function SperrlisteTabs({
   actions,
   readOnly = false,
   readOnlyMessage,
-}: SperrlisteTabsProps) {
+}: BlocklistTabsProps) {
   const formattedFreeze = useMemo(() => {
     if (!freezeDays || freezeDays <= 0) {
       return null;

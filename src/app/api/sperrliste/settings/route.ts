@@ -6,9 +6,9 @@ import {
   getDefaultHolidaySourceUrl,
   getDefaultPublicHolidaySourceUrl,
   readSperrlisteSettings,
-  resolveSperrlisteSettings,
-  saveSperrlisteSettings,
-  toClientSperrlisteSettings,
+  resolveBlocklistSettings,
+  saveBlocklistSettings,
+  toClientBlocklistSettings,
 } from "@/lib/sperrliste-settings";
 import { fetchHolidayRangesForSettings } from "@/lib/holidays";
 import { hasPermission } from "@/lib/permissions";
@@ -91,10 +91,10 @@ export async function GET() {
 
   try {
     const { record, offline } = await readSperrlisteSettings({ withMeta: true });
-    const resolved = resolveSperrlisteSettings(record);
+    const resolved = resolveBlocklistSettings(record);
     return NextResponse.json({
       offline,
-      settings: toClientSperrlisteSettings(resolved),
+      settings: toClientBlocklistSettings(resolved),
       defaults: {
         holidaySourceUrl: getDefaultHolidaySourceUrl(),
         publicHolidaySourceUrl: getDefaultPublicHolidaySourceUrl(),
@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const existingRecord = await readSperrlisteSettings();
-    const resolvedBefore = resolveSperrlisteSettings(existingRecord);
+    const resolvedBefore = resolveBlocklistSettings(existingRecord);
 
     const modeChanged = resolvedBefore.holidaySource.mode !== mode;
     const urlChanged = (resolvedBefore.holidaySource.url ?? null) !== (url ?? null);
@@ -170,7 +170,7 @@ export async function PUT(request: NextRequest) {
     const publicUrlChanged =
       (resolvedBefore.publicHolidaySource.url ?? null) !== (publicUrl ?? null);
 
-    const savedRecord = await saveSperrlisteSettings(
+    const savedRecord = await saveBlocklistSettings(
       {
         freezeDays: parsed.data.freezeDays,
         preferredWeekdays,
@@ -186,7 +186,7 @@ export async function PUT(request: NextRequest) {
       },
     );
 
-    const resolvedAfterSave = resolveSperrlisteSettings(savedRecord);
+    const resolvedAfterSave = resolveBlocklistSettings(savedRecord);
     const result = await fetchHolidayRangesForSettings(resolvedAfterSave);
     await applyHolidaySourceStatuses({
       holiday: result.holidayStatus,
@@ -194,11 +194,11 @@ export async function PUT(request: NextRequest) {
     });
 
     const refreshedRecord = await readSperrlisteSettings();
-    const resolved = resolveSperrlisteSettings(refreshedRecord);
+    const resolved = resolveBlocklistSettings(refreshedRecord);
 
     return NextResponse.json({
       offline: false,
-      settings: toClientSperrlisteSettings(resolved),
+      settings: toClientBlocklistSettings(resolved),
       holidays: result.ranges,
       defaults: {
         holidaySourceUrl: getDefaultHolidaySourceUrl(),

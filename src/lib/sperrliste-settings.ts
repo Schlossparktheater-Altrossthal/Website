@@ -267,7 +267,7 @@ export async function readSperrlisteSettings<
   return record as ReadSperrlisteSettingsResult<TOptions>;
 }
 
-export function resolveSperrlisteSettings(record: SperrlisteSettingsRecord): ResolvedSperrlisteSettings {
+export function resolveBlocklistSettings(record: SperrlisteSettingsRecord): ResolvedSperrlisteSettings {
   const freezeDays = clampNumber(record?.freezeDays, 0, 365, DEFAULT_FREEZE_DAYS);
   const preferredWeekdays = sanitiseWeekdayJson(record?.preferredWeekdays ?? null, DEFAULT_PREFERRED_WEEKDAYS);
   const exceptionWeekdays = sanitiseWeekdayJson(record?.exceptionWeekdays ?? null, DEFAULT_EXCEPTION_WEEKDAYS);
@@ -331,7 +331,7 @@ export function resolveSperrlisteSettings(record: SperrlisteSettingsRecord): Res
   };
 }
 
-export function toClientSperrlisteSettings(
+export function toClientBlocklistSettings(
   resolved: ResolvedSperrlisteSettings,
 ): ClientSperrlisteSettings {
   return {
@@ -383,7 +383,7 @@ function toJsonArray(values: number[]) {
   return WEEKDAY_ORDER.filter((weekday) => set.has(weekday));
 }
 
-export async function saveSperrlisteSettings(
+export async function saveBlocklistSettings(
   data: SperrlisteSettingsInput,
   options: { resetHolidayStatus?: boolean; resetPublicHolidayStatus?: boolean } = {},
 ) {
