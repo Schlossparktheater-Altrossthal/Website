@@ -58,7 +58,7 @@ function resolveFailedMigrations(prismaExecutable) {
   try {
     statusOutput = execFileSync(
       prismaExecutable,
-      ["migrate", "status", "--schema", schemaPath],
+      ["migrate", "status"],
       { env: process.env, encoding: "utf8" },
     );
   } catch (error) {
@@ -83,7 +83,7 @@ function resolveFailedMigrations(prismaExecutable) {
     );
     execFileSync(
       prismaExecutable,
-      ["migrate", "resolve", "--rolled-back", migrationName, "--schema", schemaPath],
+      ["migrate", "resolve", "--rolled-back", migrationName],
       {
         stdio: "inherit",
         env: process.env,
