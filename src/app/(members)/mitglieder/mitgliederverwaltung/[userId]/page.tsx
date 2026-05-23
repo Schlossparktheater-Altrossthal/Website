@@ -406,8 +406,8 @@ const memberSelect = {
 export default async function MemberProfileAdminPage({ params }: PageProps) {
   const session = await requireAuth();
   const [allowed, canSendTestNotifications] = await Promise.all([
-    hasPermission(session.user, "mitglieder.rollenverwaltung"),
-    hasPermission(session.user, "mitglieder.notifications.test"),
+    hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"),
+    hasPermission(session.user, "PRIVATE.SUPPORT.NOTIFICATION.TEST"),
   ]);
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Mitgliederprofile.</div>;

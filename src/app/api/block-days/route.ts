@@ -42,7 +42,7 @@ export async function GET() {
 
   const offline = !databaseEnabled();
 
-  if (!offline && !(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+  if (!offline && !(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
 
   const offline = !databaseEnabled();
 
-  if (!offline && !(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+  if (!offline && !(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

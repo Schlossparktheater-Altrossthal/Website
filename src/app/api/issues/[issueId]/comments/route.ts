@@ -16,8 +16,8 @@ export async function POST(
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
   const [canView, canManage] = await Promise.all([
-    hasPermission(session.user, "mitglieder.issues"),
-    hasPermission(session.user, "mitglieder.issues.manage"),
+    hasPermission(session.user, "PRIVATE.SUPPORT.ISSUE.VIEW"),
+    hasPermission(session.user, "PRIVATE.SUPPORT.ISSUE.MANAGE"),
   ]);
   if (!canView) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });

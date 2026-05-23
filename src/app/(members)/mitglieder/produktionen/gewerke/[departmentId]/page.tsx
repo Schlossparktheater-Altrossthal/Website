@@ -92,7 +92,7 @@ async function loadDepartmentWithRelations(id: string) {
 
 export default async function DepartmentMissionControlPage({ params }: PageProps) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+  const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
   if (!allowed) {
     return (
       <div className="space-y-6">

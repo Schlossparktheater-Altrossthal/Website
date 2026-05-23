@@ -122,7 +122,7 @@ export async function updateServerLogStatusAction(
   input: UpdateServerLogStatusInput,
 ): Promise<UpdateServerLogStatusResult> {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.analytics");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.ANALYTICS");
   if (!allowed) {
     return { success: false, error: "not_authorized" };
   }
@@ -145,7 +145,7 @@ export async function updateServerLogStatusAction(
 
 export async function reloadCriticalServerLogs(): Promise<LoadedServerLog[]> {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.analytics");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.ANALYTICS");
   if (!allowed) {
     return [];
   }
@@ -163,7 +163,7 @@ export async function updateServerAnalyticsSettingsAction(
   input: UpdateServerAnalyticsSettingsInput,
 ): Promise<UpdateServerAnalyticsSettingsResult> {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.analytics");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.ANALYTICS");
   if (!allowed || !hasOwnerRole(session.user)) {
     return { success: false, error: "not_authorized" };
   }
@@ -192,7 +192,7 @@ export async function updateServerAnalyticsSettingsAction(
 
 export async function resetServerAnalyticsAction(): Promise<ResetServerAnalyticsResult> {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.analytics");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.ANALYTICS");
   if (!allowed || !hasOwnerRole(session.user)) {
     return { success: false, error: "not_authorized" };
   }

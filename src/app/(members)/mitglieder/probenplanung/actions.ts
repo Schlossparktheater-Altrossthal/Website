@@ -94,7 +94,7 @@ async function ensurePlanner() {
   if (!userId) {
     return { ok: false as const, error: "Keine Berechtigung." };
   }
-  const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
+  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
   if (!allowed) {
     return { ok: false as const, error: "Keine Berechtigung." };
   }

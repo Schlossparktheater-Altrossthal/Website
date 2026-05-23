@@ -35,7 +35,7 @@ const CATEGORY_CONFIG: Record<InventoryCategory, InventoryCategoryConfig> = {
     title: "Technik-Lager",
     description:
       "Alle Geräte, Kabel und Bühnenkomponenten des Techniklagers im Blick – perfekt für Vorbereitung und Rückgabe.",
-    permissionKey: "mitglieder.lager.technik",
+    permissionKey: "PRIVATE.INVENTORY.TECH.MANAGE",
     href: "/mitglieder/lagerverwaltung/technik",
     emptyDescription: "Noch keine Inventarposten für das Technik-Lager hinterlegt.",
     emptyHint:
@@ -48,7 +48,7 @@ const CATEGORY_CONFIG: Record<InventoryCategory, InventoryCategoryConfig> = {
     title: "Kostüm-Lager",
     description:
       "Kostümfundus, Accessoires und Pflegehinweise gebündelt – ideal für Anproben, Änderungen und Ausgaben.",
-    permissionKey: "mitglieder.lager.kostueme",
+    permissionKey: "PRIVATE.INVENTORY.COSTUME.MANAGE",
     href: "/mitglieder/lagerverwaltung/kostueme",
     emptyDescription: "Noch keine Inventarposten für das Kostüm-Lager hinterlegt.",
     emptyHint:

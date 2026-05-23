@@ -16,8 +16,8 @@ const budgetSchema = z.object({
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const [canView, canApprove] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.VIEW"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
   ]);
 
   if (!canView) {
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await requireAuth();
-  const canManage = await hasPermission(session.user, "mitglieder.finanzen.manage");
+  const canManage = await hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.MANAGE");
   if (!canManage) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }

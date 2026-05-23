@@ -17,7 +17,7 @@ export async function GET(
 ) {
   const { id: itemId } = await context.params;
   const session = await requireAuth();
-  const canView = await hasPermission(session.user, "mitglieder.galerie");
+  const canView = await hasPermission(session.user, "PRIVATE.GALLERY.MEDIA.VIEW");
 
   if (!canView) {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });

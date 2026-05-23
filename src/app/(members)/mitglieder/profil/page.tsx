@@ -17,7 +17,7 @@ const membersBreadcrumb = membersNavigationBreadcrumb("/mitglieder/profil");
 
 export default async function ProfilePage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.profil");
+  const allowed = await hasPermission(session.user, "PRIVATE.PROFILE.OWN.VIEW");
 
   if (!allowed) {
     return (

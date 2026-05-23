@@ -10,7 +10,7 @@ import { ServerSettingsContent } from "./server-settings-content";
 
 export default async function ServerSettingsPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.settings");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.SETTINGS");
 
   if (!allowed) {
     return (

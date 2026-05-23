@@ -43,10 +43,10 @@ export default async function FinancePage({ params, searchParams }: PageProps) {
   const resolvedParams = await params;
   const resolvedSearch = (await searchParams) ?? {};
   const [canView, canManage, canApprove, canExport] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen"),
-    hasPermission(session.user, "mitglieder.finanzen.manage"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
-    hasPermission(session.user, "mitglieder.finanzen.export"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.VIEW"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.MANAGE"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.EXPORT"),
   ]);
 
   if (!canView) {

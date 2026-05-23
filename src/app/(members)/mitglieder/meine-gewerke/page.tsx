@@ -18,7 +18,7 @@ type StatItem = {
 
 export default async function MeineGewerkePage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
+  const allowed = await hasPermission(session.user, "PRIVATE.DEPARTMENT.OWN.VIEW");
   const isBoard = hasRole(session.user, "board");
 
   if (!allowed) {

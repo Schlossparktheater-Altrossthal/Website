@@ -17,9 +17,9 @@ export async function DELETE(
   }
 
   const [canView, canUpload, canModerate] = await Promise.all([
-    hasPermission(session.user, "mitglieder.galerie"),
-    hasPermission(session.user, "mitglieder.galerie.upload"),
-    hasPermission(session.user, "mitglieder.galerie.delete"),
+    hasPermission(session.user, "PRIVATE.GALLERY.MEDIA.VIEW"),
+    hasPermission(session.user, "PRIVATE.GALLERY.MEDIA.UPLOAD"),
+    hasPermission(session.user, "PRIVATE.GALLERY.MEDIA.DELETE"),
   ]);
 
   if (!canView || (!canUpload && !canModerate)) {

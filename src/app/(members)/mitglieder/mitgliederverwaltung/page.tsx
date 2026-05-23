@@ -9,13 +9,13 @@ import { combineNameParts } from "@/lib/names";
 
 export default async function MemberManagementPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.rollenverwaltung");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE");
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Mitgliederverwaltung</div>;
   }
 
   const canManageInvites =
-    (await hasPermission(session.user, "mitglieder.einladungen")) || allowed;
+    (await hasPermission(session.user, "PRIVATE.ADMIN.INVITES.MANAGE")) || allowed;
 
   const [users, customRoles] = await Promise.all([
     prisma.user.findMany({

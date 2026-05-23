@@ -44,99 +44,99 @@ type ResolvedRoleContext = {
 
 // Shared keys for profile data gatekeeping
 export const PROFILE_DATA_PERMISSION_KEYS = {
-  measurements: "mitglieder.koerpermasse",
-  sizes: "mitglieder.konfektionsgroessen",
-  dietary: "mitglieder.ernaehrungshinweise",
+  measurements: "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
+  sizes: "PRIVATE.PROFILE.SIZES.MANAGE",
+  dietary: "PRIVATE.PROFILE.DIETARY.MANAGE",
 } as const satisfies Record<"measurements" | "sizes" | "dietary", PermissionDefinition["key"]>;
 
 // Registry of all permissions used by the app
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
-  { key: "mitglieder.dashboard", label: "Mitglieder-Dashboard öffnen", category: "base" },
-  { key: "mitglieder.profil", label: "Profilbereich aufrufen", category: "base" },
-  { key: "mitglieder.scan", label: "Scanner & Check-in nutzen", category: "base" },
+  { key: "PRIVATE.DASHBOARD.OVERVIEW.VIEW", label: "Mitglieder-Dashboard öffnen", category: "base" },
+  { key: "PRIVATE.PROFILE.OWN.VIEW", label: "Profilbereich aufrufen", category: "base" },
+  { key: "PRIVATE.INVENTORY.SCAN.USE", label: "Scanner & Check-in nutzen", category: "base" },
   {
-    key: "mitglieder.inventaraufkleber",
+    key: "PRIVATE.INVENTORY.STICKER.EXPORT",
     label: "Inventaraufkleber erstellen",
     description: "Druckfertige Inventaraufkleber mit QR-Codes erstellen und exportieren.",
     category: "base",
   },
   {
-    key: "mitglieder.lager.technik",
+    key: "PRIVATE.INVENTORY.TECH.MANAGE",
     label: "Technik-Lager verwalten",
     description:
       "Gerätebestand, Ausgaben und Rückgaben im Techniklager koordinieren und nachverfolgen.",
     category: "planning",
   },
   {
-    key: "mitglieder.lager.kostueme",
+    key: "PRIVATE.INVENTORY.COSTUME.MANAGE",
     label: "Kostüm-Lager verwalten",
     description:
       "Bestand des Kostümfundus pflegen, Größen kontrollieren und Pflegehinweise dokumentieren.",
     category: "planning",
   },
   {
-    key: "mitglieder.galerie",
+    key: "PRIVATE.GALLERY.MEDIA.VIEW",
     label: "Archiv und Bilder öffnen",
     description:
       "Zugang zum Medienarchiv mit Jahrgangsordnern, Fotos und Videos im Mitgliederportal.",
     category: "self",
   },
   {
-    key: "mitglieder.galerie.upload",
+    key: "PRIVATE.GALLERY.MEDIA.UPLOAD",
     label: "Medien in Archiv und Bilder hochladen",
     description:
       "Eigene Fotos und Videos in Jahrgangsordnern ablegen sowie Beschreibungen ergänzen.",
     category: "self",
   },
   {
-    key: "mitglieder.galerie.delete",
+    key: "PRIVATE.GALLERY.MEDIA.DELETE",
     label: "Uploads im Archiv moderieren",
     description:
       "Fremde Beiträge löschen, Inhalte kuratieren und das Medienarchiv aufräumen.",
     category: "self",
   },
   {
-    key: "mitglieder.dateisystem",
+    key: "PRIVATE.FILES.FOLDER.VIEW",
     label: "Dateisystem öffnen",
     description:
       "Greift auf das gemeinsame Dateisystem mit Ordnerstruktur, Dokumenten und Downloads zu.",
     category: "self",
   },
   {
-    key: "mitglieder.dateisystem.manage",
+    key: "PRIVATE.FILES.FOLDER.MANAGE",
     label: "Dateisystem verwalten",
     description:
       "Struktur und Zugriffsrechte des Dateisystems pflegen, Dateien moderieren und Freigaben steuern.",
     category: "membership",
   },
   {
-    key: "mitglieder.issues",
+    key: "PRIVATE.SUPPORT.ISSUE.VIEW",
     label: "Feedback & Support nutzen",
     description:
       "Anliegen, Probleme oder Verbesserungsvorschläge im Mitglieder-Issue-Board melden und einsehen.",
     category: "communication",
   },
   {
-    key: "mitglieder.issues.manage",
+    key: "PRIVATE.SUPPORT.ISSUE.MANAGE",
     label: "Feedback-Anliegen verwalten",
     description: "Status, Priorität und Moderation für gemeldete Anliegen im Issue-Board übernehmen.",
     category: "communication",
   },
   {
-    key: "mitglieder.notifications.test",
+    key: "PRIVATE.SUPPORT.NOTIFICATION.TEST",
     label: "Testbenachrichtigungen senden",
     description:
       "Versendet Test-Nachrichten (normal oder Notfall) an Mitglieder, um Benachrichtigungskanäle zu prüfen.",
     category: "communication",
   },
   {
-    key: "mitglieder.meine-proben",
+    key: "PRIVATE.REHEARSAL.OWN.VIEW",
     label: "Eigene Probentermine einsehen",
     description: 'Zugang zum Bereich "Meine Termine" mit persönlichen Terminen und Fristen.',
     category: "self",
   },
   {
-    key: "mitglieder.meine-gewerke",
+    key: "PRIVATE.DEPARTMENT.OWN.VIEW",
     label: "Gewerkeplanung einsehen",
     description:
       'Zugang zum Bereich "Gewerkeplanung" mit Aufgabenübersicht und Terminvorschlägen.',
@@ -163,159 +163,159 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
       "Einsicht und Pflege von Allergien, Unverträglichkeiten und Ernährungspräferenzen zur sicheren Verpflegung.",
     category: "self",
   },
-  { key: "mitglieder.probenplanung", label: "Probenplanung verwalten", category: "planning" },
+  { key: "PRIVATE.REHEARSAL.PLANNING.MANAGE", label: "Probenplanung verwalten", category: "planning" },
   {
-    key: "mitglieder.essenplanung",
+    key: "PRIVATE.REHEARSAL.MEALS.MANAGE",
     label: "Essensplanung koordinieren",
     description:
       "Zugang zum kulinarischen Cockpit für die Endprobenwoche: Ernährungsprofile bündeln, Allergien absichern und Menüs zusammenstellen.",
     category: "planning",
   },
   {
-    key: "mitglieder.endprobenwoche",
+    key: "PRIVATE.REHEARSAL.FINALWEEK.VIEW",
     label: "Endprobenwoche einsehen",
     description:
       "Planungsübersicht für die finale Probenwoche mit Dienstplänen, Verpflegung und organisatorischen Hinweisen einsehen.",
     category: "planning",
   },
   {
-    key: "mitglieder.endprobenwoche.manage",
+    key: "PRIVATE.REHEARSAL.FINALWEEK.MANAGE",
     label: "Endprobenwoche koordinieren",
     description:
       "Dienstpläne der Endprobenwoche pflegen, Aufgaben hinzufügen und verantwortliche Mitglieder zuweisen.",
     category: "planning",
   },
   {
-    key: "mitglieder.produktionen",
+    key: "PRIVATE.PRODUCTION.SHOW.MANAGE",
     label: "Produktionsplanung öffnen",
     description:
       "Bereich zur Verwaltung von Gewerken, Besetzungen, Szenen und Breakdown-Aufgaben im Produktionsmanagement.",
     category: "planning",
   },
-  { key: "mitglieder.rollenverwaltung", label: "Mitgliederverwaltung öffnen", category: "membership" },
+  { key: "PRIVATE.ADMIN.MEMBERS.MANAGE", label: "Mitgliederverwaltung öffnen", category: "membership" },
   {
-    key: "mitglieder.einladungen",
+    key: "PRIVATE.ADMIN.INVITES.MANAGE",
     label: "Einladungslinks verwalten",
     description: "Mehrfach nutzbare Einladungslinks anlegen, deaktivieren und deren Status prüfen.",
     category: "membership",
   },
-  { key: "mitglieder.rechte", label: "Rechteverwaltung öffnen", category: "membership" },
-  { key: "mitglieder.sperrliste", label: "Sperrliste pflegen", category: "membership" },
+  { key: "PRIVATE.ADMIN.PERMISSIONS.MANAGE", label: "Rechteverwaltung öffnen", category: "membership" },
+  { key: "PRIVATE.REHEARSAL.BLOCKLIST.VIEW", label: "Sperrliste pflegen", category: "membership" },
   {
-    key: "mitglieder.sperrliste.settings",
+    key: "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS",
     label: "Sperrlisten-Einstellungen verwalten",
     description: "Ferienquelle, Vorlaufzeit und bevorzugte Probentage anpassen.",
     category: "membership",
   },
   {
-    key: "mitglieder.sperrliste.export",
+    key: "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT",
     label: "Sperrlisten-Export herunterladen",
     description:
       "CSV-Übersichten der nächsten zwei Wochen für die wichtigsten Probentage exportieren.",
     category: "membership",
   },
   {
-    key: "pages.manage",
+    key: "PRIVATE.ADMIN.PAGES.MANAGE",
     label: "Pages verwalten",
     description:
       "Wartungsmodus, Seitensteuerung und Website-Bereiche im Mitgliederbereich verwalten.",
     category: "membership",
   },
   {
-    key: "mitglieder.website.settings",
+    key: "PRIVATE.WEBSITE.THEME.MANAGE",
     label: "Website-Einstellungen verwalten",
     description:
       "Theme-Farben, Branding und öffentliche Website-Parameter anpassen.",
     category: "membership",
   },
   {
-    key: "mitglieder.website.premiere-countdown",
+    key: "PRIVATE.WEBSITE.COUNTDOWN.EDIT",
     label: "Premieren-Countdown verwalten",
     description: "Countdown zur ersten Aufführung auf der öffentlichen Startseite einstellen.",
     category: "membership",
   },
   {
-    key: "mitglieder.website.chronik",
+    key: "PRIVATE.WEBSITE.CHRONIK.EDIT",
     label: "Chronik-Termine pflegen",
     description: "Aufführungstermine der öffentlichen Chronik direkt im Frontend bearbeiten.",
     category: "membership",
   },
   {
-    key: "mitglieder.fotoerlaubnisse",
+    key: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
     category: "membership",
   },
   {
-    key: "mystery.timer.edit",
+    key: "PRIVATE.MYSTERY.TIMER.EDIT",
     label: "Mystery-Timer bearbeiten",
     description: "Countdown und Hinweistext für das öffentliche Geheimnis pflegen.",
     category: "mystery",
   },
   {
-    key: "mystery.puzzle.manage",
+    key: "PRIVATE.MYSTERY.PUZZLE.MANAGE",
     label: "Mystery-Rätsel verwalten",
     description: "Rätsel erstellen, bearbeiten und veröffentlichen.",
     category: "mystery",
   },
   {
-    key: "mystery.tips.manage",
+    key: "PRIVATE.MYSTERY.TIPS.MANAGE",
     label: "Mystery-Tipps verwalten",
     description: "Community-Tipps moderieren und löschen.",
     category: "mystery",
   },
   {
-    key: "mystery.scoreboard.manage",
+    key: "PRIVATE.MYSTERY.SCOREBOARD.MANAGE",
     label: "Mystery-Scoreboard verwalten",
     description: "Punkte vergeben und Scoreboard-Einträge bearbeiten.",
     category: "mystery",
   },
   {
-    key: "mystery.hints.manage",
+    key: "PRIVATE.MYSTERY.HINTS.MANAGE",
     label: "Mystery-Hinweise verwalten",
     description: "Hinweise freischalten und hinzufügen.",
     category: "mystery",
   },
   {
-    key: "mitglieder.finanzen",
+    key: "PRIVATE.FINANCE.ENTRY.VIEW",
     label: "Finanzbereich öffnen",
     description:
       "Dashboard für Einnahmen, Ausgaben, Rechnungen und Spenden im Mitgliederbereich einsehen.",
     category: "finances",
   },
   {
-    key: "mitglieder.finanzen.manage",
+    key: "PRIVATE.FINANCE.ENTRY.MANAGE",
     label: "Finanzbuchungen verwalten",
     description:
       "Neue Finanzbuchungen anlegen, bearbeiten, Rechnungen erfassen und Spenden dokumentieren.",
     category: "finances",
   },
   {
-    key: "mitglieder.finanzen.approve",
+    key: "PRIVATE.FINANCE.ENTRY.APPROVE",
     label: "Finanzbuchungen freigeben",
     description: "Prüfen und freigeben von Rechnungen, Auslagen und Auszahlungen im Finanzmodul.",
     category: "finances",
   },
   {
-    key: "mitglieder.finanzen.export",
+    key: "PRIVATE.FINANCE.ENTRY.EXPORT",
     label: "Finanzdaten exportieren",
     description: "CSV- oder Excel-Exporte der Finanzbuchungen und Budgetübersichten erstellen.",
     category: "finances",
   },
   {
-    key: "mitglieder.onboarding.analytics",
+    key: "PRIVATE.ADMIN.ONBOARDING.ANALYTICS",
     label: "Onboarding-Analytics öffnen",
     description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
     category: "analytics",
   },
   {
-    key: "mitglieder.server.settings",
+    key: "PRIVATE.ADMIN.SERVER.SETTINGS",
     label: "Servereinstellungen verwalten",
     description: "SMTP-Server und technische Basisdienste konfigurieren.",
     category: "membership",
   },
   {
-    key: "mitglieder.server.analytics",
+    key: "PRIVATE.ADMIN.SERVER.ANALYTICS",
     label: "Server-Statistiken einsehen",
     description: "Auslastung, Antwortzeiten und Nutzungsverhalten in der Server-Statistik abrufen.",
     category: "analytics",
@@ -327,15 +327,15 @@ const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
 
 // Grouped permission helpers
 const FINANCE_PERMISSION_KEYS = [
-  "mitglieder.finanzen",
-  "mitglieder.finanzen.manage",
-  "mitglieder.finanzen.approve",
-  "mitglieder.finanzen.export",
+  "PRIVATE.FINANCE.ENTRY.VIEW",
+  "PRIVATE.FINANCE.ENTRY.MANAGE",
+  "PRIVATE.FINANCE.ENTRY.APPROVE",
+  "PRIVATE.FINANCE.ENTRY.EXPORT",
 ] as const satisfies PermissionDefinition["key"][];
 
 const FINANCE_BOARD_PERMISSION_KEYS = [
-  "mitglieder.finanzen",
-  "mitglieder.finanzen.export",
+  "PRIVATE.FINANCE.ENTRY.VIEW",
+  "PRIVATE.FINANCE.ENTRY.EXPORT",
 ] as const satisfies PermissionDefinition["key"][];
 
 const MEASUREMENT_PERMISSION_KEY = PROFILE_DATA_PERMISSION_KEYS.measurements;
@@ -354,7 +354,7 @@ const MEASUREMENT_DEFAULT_ROLE_NAMES = [
 ] as const satisfies readonly Role[];
 
 const FINAL_WEEK_VIEW_PERMISSION_KEY =
-  "mitglieder.endprobenwoche" as const satisfies PermissionDefinition["key"];
+  "PRIVATE.REHEARSAL.FINALWEEK.VIEW" as const satisfies PermissionDefinition["key"];
 
 const FINAL_WEEK_VIEW_DEFAULT_ROLE_NAMES = [
   "member",
@@ -365,15 +365,15 @@ const FINAL_WEEK_VIEW_DEFAULT_ROLE_NAMES = [
 ] as const satisfies readonly Role[];
 
 const FINAL_WEEK_MANAGE_PERMISSION_KEY =
-  "mitglieder.endprobenwoche.manage" as const satisfies PermissionDefinition["key"];
+  "PRIVATE.REHEARSAL.FINALWEEK.MANAGE" as const satisfies PermissionDefinition["key"];
 
 const FINAL_WEEK_MANAGE_ROLE_NAMES = ["board"] as const satisfies readonly Role[];
 
 // Baseline permissions that every authenticated user should retain even when not explicitly granted
 const BASELINE_PERMISSION_KEYS = new Set([
-  "mitglieder.dashboard",
-  "mitglieder.profil",
-  "mitglieder.issues",
+  "PRIVATE.DASHBOARD.OVERVIEW.VIEW",
+  "PRIVATE.PROFILE.OWN.VIEW",
+  "PRIVATE.SUPPORT.ISSUE.VIEW",
 ] satisfies PermissionDefinition["key"][]);
 
 let ensurePermissionsPromise: Promise<void> | null = null;

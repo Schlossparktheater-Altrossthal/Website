@@ -126,7 +126,7 @@ export async function createTechnikInventoryItem(
 ): Promise<TechnikInventoryActionState> {
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.lager.technik");
+    const allowed = await hasPermission(session.user, "PRIVATE.INVENTORY.TECH.MANAGE");
 
     if (!allowed) {
       throw new Error("Du hast keinen Zugriff auf das Technik-Lager.");
@@ -199,7 +199,7 @@ export async function updateTechnikInventoryItem(
 ): Promise<TechnikInventoryActionState> {
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.lager.technik");
+    const allowed = await hasPermission(session.user, "PRIVATE.INVENTORY.TECH.MANAGE");
 
     if (!allowed) {
       throw new Error("Du hast keinen Zugriff auf das Technik-Lager.");

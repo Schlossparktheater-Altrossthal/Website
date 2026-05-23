@@ -29,7 +29,7 @@ export async function respondToRehearsal(
 ): Promise<AttendanceActionState> {
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.meine-proben");
+    const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.OWN.VIEW");
     const userId = session.user?.id ?? null;
 
     if (!allowed || !userId) {

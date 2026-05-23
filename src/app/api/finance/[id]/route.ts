@@ -43,8 +43,8 @@ export async function GET(_: NextRequest, context: { params: Promise<{ id: strin
   const { id } = await context.params;
   const session = await requireAuth();
   const [canView, canApprove] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.VIEW"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
   ]);
 
   if (!canView) {
@@ -118,8 +118,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const { id } = await context.params;
   const session = await requireAuth();
   const [canManage, canApprove] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen.manage"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.MANAGE"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
   ]);
 
   if (!canManage) {
@@ -310,8 +310,8 @@ export async function DELETE(_: NextRequest, context: { params: Promise<{ id: st
   const { id } = await context.params;
   const session = await requireAuth();
   const [canManage, canApprove] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen.manage"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.MANAGE"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
   ]);
 
   if (!canManage) {

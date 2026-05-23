@@ -739,7 +739,7 @@ describe("sync API integration", () => {
   });
 
   test("rejects sync baseline when sync token header is missing", async () => {
-    allowedPermissions.add("mitglieder.scan");
+    allowedPermissions.add("PRIVATE.INVENTORY.SCAN.USE");
 
     const request = new Request("http://localhost/api/sync/initial?scope=tickets");
     const response = await initialRoute(request);
@@ -748,7 +748,7 @@ describe("sync API integration", () => {
   });
 
   test("rejects sync pull with mismatched token user", async () => {
-    allowedPermissions.add("mitglieder.scan");
+    allowedPermissions.add("PRIVATE.INVENTORY.SCAN.USE");
     syncToken = createSyncToken("user-2");
 
     const request = createSyncRequest("http://localhost/api/sync/pull", {
@@ -773,7 +773,7 @@ describe("sync API integration", () => {
   });
 
   test("rejects inventory baseline when inventory permissions are missing", async () => {
-    allowedPermissions.add("mitglieder.scan");
+    allowedPermissions.add("PRIVATE.INVENTORY.SCAN.USE");
 
     const request = createSyncRequest("http://localhost/api/sync/initial?scope=inventory");
     const response = await initialRoute(request);
@@ -782,8 +782,8 @@ describe("sync API integration", () => {
   });
 
   test("returns paginated inventory baseline with cache headers", async () => {
-    allowedPermissions.add("mitglieder.scan");
-    allowedPermissions.add("mitglieder.lager.technik");
+    allowedPermissions.add("PRIVATE.INVENTORY.SCAN.USE");
+    allowedPermissions.add("PRIVATE.INVENTORY.TECH.MANAGE");
 
     await prismaStub.inventoryItem.createMany({
       data: [
@@ -813,7 +813,7 @@ describe("sync API integration", () => {
   });
 
   test("returns incremental ticket events when pulling after a server sequence", async () => {
-    allowedPermissions.add("mitglieder.scan");
+    allowedPermissions.add("PRIVATE.INVENTORY.SCAN.USE");
 
     const mutation = (await prismaStub.syncMutation.create({
       data: {
@@ -873,7 +873,7 @@ describe("sync API integration", () => {
   });
 
   test("applies incoming ticket events and skips duplicates by dedupe key", async () => {
-    allowedPermissions.add("mitglieder.scan");
+    allowedPermissions.add("PRIVATE.INVENTORY.SCAN.USE");
 
     const existingMutation = (await prismaStub.syncMutation.create({
       data: {
@@ -963,7 +963,7 @@ describe("sync API integration", () => {
   });
 
   test("rejects incoming events with invalid payload structure", async () => {
-    allowedPermissions.add("mitglieder.scan");
+    allowedPermissions.add("PRIVATE.INVENTORY.SCAN.USE");
 
     const request = createSyncRequest("http://localhost/api/sync/push", {
       method: "POST",

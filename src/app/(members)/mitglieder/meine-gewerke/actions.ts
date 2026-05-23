@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 
 const DEPARTMENT_MEMBER_ROLE_NAME = "department-member";
-const DEPARTMENT_PERMISSION_KEY = "mitglieder.meine-gewerke";
+const DEPARTMENT_PERMISSION_KEY = "PRIVATE.DEPARTMENT.OWN.VIEW";
 
 async function ensureDepartmentMemberAppRole() {
   const [role, permission] = await Promise.all([

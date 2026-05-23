@@ -16,8 +16,8 @@ type SessionUser = Awaited<SessionPromise>["user"];
 
 async function canManageInvites(user: SessionUser) {
   if (!user) return false;
-  if (await hasPermission(user, "mitglieder.einladungen")) return true;
-  return hasPermission(user, "mitglieder.rollenverwaltung");
+  if (await hasPermission(user, "PRIVATE.ADMIN.INVITES.MANAGE")) return true;
+  return hasPermission(user, "PRIVATE.ADMIN.MEMBERS.MANAGE");
 }
 
 function parseDate(value: unknown) {
