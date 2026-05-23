@@ -11,6 +11,7 @@ import { getChronicleItem } from "../data";
 import { formatCastMemberDisplayName } from "../cast-name-formatters";
 import type { ChronikCastEntry, ChronikMeta } from "../types";
 import { EditablePerformanceDatesCard } from "../editable-performance-dates-card";
+import { getSession } from "@/lib/rbac";
 
 type ChronicleDetailPageParams = {
   showId: string;
@@ -86,7 +87,11 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
     notFound();
   }
 
-  const item = await getChronicleItem(showId);
+  const [item, session] = await Promise.all([
+    getChronicleItem(showId),
+    getSession(),
+  ]);
+  const isLoggedIn = Boolean(session?.user);
 
   if (!item) {
     notFound();
@@ -201,10 +206,12 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
                     </span>
                   </Heading>
                   <Text className="mt-2 text-sm text-foreground/80 md:text-base">
-                    {entry.players
-                      .map((player) => formatCastMemberDisplayName(player))
-                      .filter(Boolean)
-                      .join(", ")}
+                    {isLoggedIn
+                      ? entry.players.filter(Boolean).join(", ")
+                      : entry.players
+                          .map((player) => formatCastMemberDisplayName(player))
+                          .filter(Boolean)
+                          .join(", ")}
                   </Text>
                 </div>
               ))}
