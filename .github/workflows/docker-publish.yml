@@ -60,7 +60,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: Schlossparktheater-Altrossthal/k8s-infrastructure
-          token: ${{ secrets.K8S_REPO_PAT }}
+          token: ${{ secrets.K8S_INFRA_TOKEN }}
           path: k8s-infra
 
       - name: Update production image tag
@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: Schlossparktheater-Altrossthal/k8s-infrastructure
-          token: ${{ secrets.K8S_REPO_PAT }}
+          token: ${{ secrets.K8S_INFRA_TOKEN }}
           path: k8s-infra
 
       - name: Update staging image tag
