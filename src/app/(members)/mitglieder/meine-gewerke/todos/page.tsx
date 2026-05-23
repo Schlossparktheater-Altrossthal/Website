@@ -16,7 +16,7 @@ type TodoStat = {
 
 export default async function DepartmentTodosPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
+  const allowed = await hasPermission(session.user, "PRIVATE.DEPARTMENT.OWN.VIEW");
 
   if (!allowed) {
     return (

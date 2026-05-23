@@ -21,7 +21,7 @@ type UsageSection = {
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.rollenverwaltung"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

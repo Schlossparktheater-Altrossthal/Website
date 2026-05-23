@@ -201,7 +201,7 @@ function CreateCharacterDialog({ showId, users }: { showId: string; users: Displ
 
 export default async function ProduktionsBesetzungPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+  const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
 
   if (!allowed) {
     return (

@@ -21,7 +21,7 @@ const currentPath = "/mitglieder/produktionen/gewerke";
 
 export default async function ProduktionsGewerkePage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+  const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
 
   if (!allowed) {
     return (

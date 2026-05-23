@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const session = await requireAuth();
 
-    const allowed = await hasPermission(session.user, "mitglieder.notifications.test");
+    const allowed = await hasPermission(session.user, "PRIVATE.SUPPORT.NOTIFICATION.TEST");
     if (!allowed) {
       return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
     }

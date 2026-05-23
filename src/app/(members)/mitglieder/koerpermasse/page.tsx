@@ -11,7 +11,7 @@ import type { Prisma } from "@prisma/client";
 
 export default async function MemberMeasurementsPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.koerpermasse");
+  const allowed = await hasPermission(session.user, "PRIVATE.PROFILE.MEASUREMENTS.MANAGE");
 
   if (!allowed) {
     return (

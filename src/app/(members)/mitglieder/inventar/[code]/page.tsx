@@ -55,7 +55,7 @@ type PageProps = { params: Promise<{ code: string }> };
 
 export default async function InventoryItemPage({ params }: PageProps) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.lager.technik");
+  const allowed = await hasPermission(session.user, "PRIVATE.INVENTORY.TECH.MANAGE");
 
   if (!allowed) {
     return (

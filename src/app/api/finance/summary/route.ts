@@ -12,8 +12,8 @@ const PENDING_STATUSES: FinanceEntryStatus[] = ["pending", "approved"];
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const [canView, canApprove] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.VIEW"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
   ]);
 
   if (!canView) {

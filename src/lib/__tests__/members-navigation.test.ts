@@ -13,20 +13,20 @@ import {
 } from "@/lib/members-navigation";
 
 const BASE_PERMISSIONS = [
-  "mitglieder.dashboard",
-  "mitglieder.profil",
-  "mitglieder.scan",
-  "mitglieder.inventaraufkleber",
-  "mitglieder.galerie",
-  "mitglieder.sperrliste",
-  "mitglieder.issues",
-  "mitglieder.meine-proben",
-  "mitglieder.meine-gewerke",
-  "mitglieder.koerpermasse",
-  "mitglieder.probenplanung",
-  "mitglieder.endprobenwoche",
-  "mitglieder.essenplanung",
-  "mitglieder.produktionen",
+  "PRIVATE.DASHBOARD.OVERVIEW.VIEW",
+  "PRIVATE.PROFILE.OWN.VIEW",
+  "PRIVATE.INVENTORY.SCAN.USE",
+  "PRIVATE.INVENTORY.STICKER.EXPORT",
+  "PRIVATE.GALLERY.MEDIA.VIEW",
+  "PRIVATE.REHEARSAL.BLOCKLIST.VIEW",
+  "PRIVATE.SUPPORT.ISSUE.VIEW",
+  "PRIVATE.REHEARSAL.OWN.VIEW",
+  "PRIVATE.DEPARTMENT.OWN.VIEW",
+  "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
+  "PRIVATE.REHEARSAL.PLANNING.MANAGE",
+  "PRIVATE.REHEARSAL.FINALWEEK.VIEW",
+  "PRIVATE.REHEARSAL.MEALS.MANAGE",
+  "PRIVATE.PRODUCTION.SHOW.MANAGE",
 ];
 
 describe("selectMembersNavigation", () => {
@@ -77,7 +77,7 @@ describe("filterMembersNavigationByPermissions", () => {
 
   it("keeps only department related assignments for department-focused members", () => {
     const groups = selectMembersNavigation();
-    const permissions = ["mitglieder.meine-gewerke"] as const;
+    const permissions = ["PRIVATE.DEPARTMENT.OWN.VIEW"] as const;
     const { groups: filtered } = filterMembersNavigationByPermissions(groups, permissions, {
       isDepartmentLead: true,
     });
@@ -99,10 +99,10 @@ describe("resolveAssignmentsGroupLabel", () => {
 
   it("infers label from permissions when focus is none", () => {
     expect(
-      resolveAssignmentsGroupLabel("none", ["mitglieder.meine-gewerke", "mitglieder.meine-proben"]),
+      resolveAssignmentsGroupLabel("none", ["PRIVATE.DEPARTMENT.OWN.VIEW", "PRIVATE.REHEARSAL.OWN.VIEW"]),
     ).toBe("Gewerke");
-    expect(resolveAssignmentsGroupLabel("none", ["mitglieder.meine-gewerke"])).toBe("Gewerke");
-    expect(resolveAssignmentsGroupLabel("none", ["mitglieder.meine-proben"])).toBe("Proben");
+    expect(resolveAssignmentsGroupLabel("none", ["PRIVATE.DEPARTMENT.OWN.VIEW"])).toBe("Gewerke");
+    expect(resolveAssignmentsGroupLabel("none", ["PRIVATE.REHEARSAL.OWN.VIEW"])).toBe("Proben");
     expect(resolveAssignmentsGroupLabel("none", [])).toBe("Proben");
   });
 });

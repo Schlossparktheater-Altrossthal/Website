@@ -14,7 +14,7 @@ function parseDate(date: string) {
 
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.probenplanung");
+  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
   if (!allowed) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

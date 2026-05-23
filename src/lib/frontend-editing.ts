@@ -17,25 +17,25 @@ const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     key: "mystery.launch-countdown",
     label: "Mystery-Timer",
     description: "Countdown und Hinweistext für die Mystery-Startseite verwalten.",
-    permissionKey: "mystery.timer.edit",
+    permissionKey: "PRIVATE.MYSTERY.TIMER.EDIT",
   },
   {
     key: "website.premiere-countdown",
     label: "Premieren-Countdown",
     description: "Countdown für die öffentliche Startseite anpassen.",
-    permissionKey: "mitglieder.website.premiere-countdown",
+    permissionKey: "PRIVATE.WEBSITE.COUNTDOWN.EDIT",
   },
   {
     key: "website.production-flyer",
     label: "Homepage-Flyer",
     description: "Flyer-Sektion für die öffentliche Startseite anpassen.",
-    permissionKey: "mitglieder.website.premiere-countdown",
+    permissionKey: "PRIVATE.WEBSITE.COUNTDOWN.EDIT",
   },
   {
     key: "chronik.performance-dates",
     label: "Chronik-Termine",
     description: "Aufführungstermine in der öffentlichen Chronik bearbeiten.",
-    permissionKey: "mitglieder.website.chronik",
+    permissionKey: "PRIVATE.WEBSITE.CHRONIK.EDIT",
   },
 ];
 

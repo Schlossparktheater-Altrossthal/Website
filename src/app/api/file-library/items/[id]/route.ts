@@ -15,7 +15,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  const canAccessArea = await hasPermission(session.user, "mitglieder.dateisystem");
+  const canAccessArea = await hasPermission(session.user, "PRIVATE.FILES.FOLDER.VIEW");
   if (!canAccessArea) {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }

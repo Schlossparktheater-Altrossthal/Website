@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TechnikLagerPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.lager.technik");
+  const allowed = await hasPermission(session.user, "PRIVATE.INVENTORY.TECH.MANAGE");
 
   if (!allowed) {
     return (

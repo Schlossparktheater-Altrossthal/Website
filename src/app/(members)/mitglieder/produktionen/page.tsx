@@ -26,7 +26,7 @@ function formatShowTitle(show: { title: string | null; year: number }) {
 
 export default async function ProduktionenPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+  const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
   if (!allowed) {
     return (
       <div className="space-y-6">

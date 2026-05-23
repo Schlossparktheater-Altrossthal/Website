@@ -48,9 +48,9 @@ function formatRelative(date: Date | null) {
 export default async function ArchiveOverviewPage() {
   const session = await requireAuth();
   const [canView, canUpload, canModerate] = await Promise.all([
-    hasPermission(session.user, "mitglieder.galerie"),
-    hasPermission(session.user, "mitglieder.galerie.upload"),
-    hasPermission(session.user, "mitglieder.galerie.delete"),
+    hasPermission(session.user, "PRIVATE.GALLERY.MEDIA.VIEW"),
+    hasPermission(session.user, "PRIVATE.GALLERY.MEDIA.UPLOAD"),
+    hasPermission(session.user, "PRIVATE.GALLERY.MEDIA.DELETE"),
   ]);
 
   const baseBreadcrumb = membersNavigationBreadcrumb("/mitglieder/archiv-und-bilder");

@@ -207,7 +207,7 @@ export async function saveServerSettingsAction(
   input: Partial<Record<keyof ServerSettingsInput, unknown>>,
 ): Promise<SaveServerSettingsResult> {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.settings");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.SETTINGS");
   if (!allowed) {
     return { success: false, error: "not_authorized" };
   }
@@ -244,7 +244,7 @@ export async function testMailServerConnectionAction(
   input: Partial<Record<keyof ServerSettingsInput, unknown>>,
 ): Promise<TestMailServerResult> {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.settings");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.SETTINGS");
   if (!allowed) {
     return { success: false, error: "not_authorized" };
   }
@@ -296,7 +296,7 @@ export async function autoDetectMailServerSettingsAction(
   input: Partial<Record<keyof ServerSettingsInput, unknown>>,
 ): Promise<AutoDetectMailServerResult> {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.settings");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.SETTINGS");
   if (!allowed) {
     return { success: false, error: "not_authorized" };
   }

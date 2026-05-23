@@ -1,5 +1,5 @@
 export const FINAL_WEEK_VIEW_PERMISSION_KEY =
-  "mitglieder.endprobenwoche" as const;
+  "PRIVATE.REHEARSAL.FINALWEEK.VIEW" as const;
 
 export const FINAL_WEEK_MANAGE_PERMISSION_KEY =
-  "mitglieder.endprobenwoche.manage" as const;
+  "PRIVATE.REHEARSAL.FINALWEEK.MANAGE" as const;

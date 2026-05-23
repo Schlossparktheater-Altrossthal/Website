@@ -83,7 +83,7 @@ async function collectFolderHierarchyIds(
 
 export async function createFileLibraryFolder(formData: FormData) {
   const session = await requireAuth();
-  const canManage = await hasPermission(session.user, "mitglieder.dateisystem.manage");
+  const canManage = await hasPermission(session.user, "PRIVATE.FILES.FOLDER.MANAGE");
   if (!canManage) {
     throw new Error("Keine Berechtigung");
   }
@@ -132,7 +132,7 @@ export async function createFileLibraryFolder(formData: FormData) {
 
 export async function updateFileLibraryPermissions(formData: FormData) {
   const session = await requireAuth();
-  const canManage = await hasPermission(session.user, "mitglieder.dateisystem.manage");
+  const canManage = await hasPermission(session.user, "PRIVATE.FILES.FOLDER.MANAGE");
   if (!canManage) {
     throw new Error("Keine Berechtigung");
   }
@@ -239,7 +239,7 @@ export async function updateFileLibraryPermissions(formData: FormData) {
 
 export async function deleteFileLibraryFolder(formData: FormData) {
   const session = await requireAuth();
-  const canManage = await hasPermission(session.user, "mitglieder.dateisystem.manage");
+  const canManage = await hasPermission(session.user, "PRIVATE.FILES.FOLDER.MANAGE");
   if (!canManage) {
     throw new Error("Keine Berechtigung");
   }

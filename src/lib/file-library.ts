@@ -92,7 +92,7 @@ function matchesAccessRule(
 export const resolveFileLibraryAccessContext = cache(async (user: { id?: string | null }) => {
   const userLike = user?.id != null ? { id: user.id } : null;
   const baseContext = await getPermissionRoleContext(userLike);
-  const canManage = await hasPermission(userLike, "mitglieder.dateisystem.manage");
+  const canManage = await hasPermission(userLike, "PRIVATE.FILES.FOLDER.MANAGE");
   return { ...baseContext, canManage } satisfies FileLibraryAccessContext;
 });
 

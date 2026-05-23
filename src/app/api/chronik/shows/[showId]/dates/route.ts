@@ -47,7 +47,7 @@ function serializeDates(value: unknown): string | null {
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ showId: string }> }) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.website.chronik"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.WEBSITE.CHRONIK.EDIT"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

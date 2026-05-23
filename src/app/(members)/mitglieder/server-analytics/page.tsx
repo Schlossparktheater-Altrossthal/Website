@@ -30,7 +30,7 @@ function userHasOwnerRole(user: { role?: string | null; roles?: unknown } | null
 
 export default async function ServerAnalyticsPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.server.analytics");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.SERVER.ANALYTICS");
   if (!allowed) {
     return (
       <div className="space-y-6">

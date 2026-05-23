@@ -36,7 +36,7 @@ async function ensurePermission() {
       { status: 503 },
     );
   }
-  if (!(await hasPermission(session.user, "mitglieder.sperrliste.settings"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

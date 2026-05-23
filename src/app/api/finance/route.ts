@@ -32,8 +32,8 @@ function ensureAllowedScope(requested: VisibilityScope | undefined, allowed: rea
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const [canView, canApprove] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.VIEW"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
   ]);
 
   if (!canView) {
@@ -181,8 +181,8 @@ const payloadSchema = z.object({
 export async function POST(request: NextRequest) {
   const session = await requireAuth();
   const [canManage, canApprove] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen.manage"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.MANAGE"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
   ]);
 
   if (!canManage) {

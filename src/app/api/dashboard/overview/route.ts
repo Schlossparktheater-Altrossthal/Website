@@ -32,7 +32,7 @@ export async function GET() {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
-    if (!(await hasPermission(session.user, "mitglieder.dashboard"))) {
+    if (!(await hasPermission(session.user, "PRIVATE.DASHBOARD.OVERVIEW.VIEW"))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

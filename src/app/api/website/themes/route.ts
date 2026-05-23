@@ -17,7 +17,7 @@ const createThemeSchema = z
 
 async function ensurePermission() {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.website.settings"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.WEBSITE.THEME.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

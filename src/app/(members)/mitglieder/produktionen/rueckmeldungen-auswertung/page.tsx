@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ProduktionsRueckmeldungenPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+  const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
   if (!allowed) {
     return (
       <div className="space-y-6">

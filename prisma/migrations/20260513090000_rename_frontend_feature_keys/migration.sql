@@ -8,8 +8,8 @@ DECLARE
     ARRAY['site' || '.' || 'homepage-flyer', 'website.production-flyer'],
     ARRAY['mystery' || '.' || 'timer', 'mystery.launch-countdown'],
     ARRAY['chronik' || '.' || 'dates', 'chronik.performance-dates'],
-    ARRAY['mitglieder.mystery' || '.' || 'timer', 'mitglieder.mystery.launch-countdown'],
-    ARRAY['mitglieder.website' || '.' || 'countdown', 'mitglieder.website.premiere-countdown']
+    ARRAY['PRIVATE.MYSTERY' || '.' || 'timer', 'PRIVATE.WEBSITE.COUNTDOWN.EDIT'],
+    ARRAY['PRIVATE.WEBSITE' || '.' || 'COUNTDOWN.EDIT', 'PRIVATE.WEBSITE.COUNTDOWN.EDIT']
   ];
   pair text[];
   old_permission_id text;

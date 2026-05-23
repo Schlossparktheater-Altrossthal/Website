@@ -40,9 +40,9 @@ export default async function BlocklistPage() {
 
   if (databaseOnline) {
     const [allowedResult, manageResult, exportResult] = await Promise.all([
-      hasPermission(session.user, "mitglieder.sperrliste"),
-      hasPermission(session.user, "mitglieder.sperrliste.settings"),
-      hasPermission(session.user, "mitglieder.sperrliste.export"),
+      hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"),
+      hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"),
+      hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT"),
     ]);
     allowed = allowedResult;
     canManageSettings = manageResult;

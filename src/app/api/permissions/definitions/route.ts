@@ -12,7 +12,7 @@ import { requireAuth } from "@/lib/rbac";
 
 export async function GET() {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.rechte"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -71,7 +71,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.rechte"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
