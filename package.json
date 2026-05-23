@@ -5,6 +5,13 @@
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
+    "dev:setup": "node scripts/setup-dev.mjs setup",
+    "dev:setup:local": "node scripts/setup-dev.mjs setup --local",
+    "dev:start": "node scripts/setup-dev.mjs start",
+    "dev:start:local": "node scripts/setup-dev.mjs start --local",
+    "dev:start:prod": "node scripts/setup-dev.mjs start --prod",
+    "dev:reset": "node scripts/setup-dev.mjs reset",
+    "dev:clean": "node scripts/setup-dev.mjs clean",
     "predev": "pnpm run workbox:copy-lib && node scripts/run-prisma-migrate.mjs",
     "dev": "next dev --turbopack",
     "prebuild": "pnpm prisma:generate && pnpm run workbox:copy-lib",
