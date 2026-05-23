@@ -84,12 +84,12 @@ export default async function PublicHomePage() {
                 hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
                 disabled={resolvedCountdown.disabled}
                 initialNow={countdownInitialNow}
-                scheduledDates={(resolvedCountdown.scheduledDates as { date: string; time: string; label?: string }[]).map((scheduledDate, index) => ({
-                  date: scheduledDate.date ?? "",
-                  time: scheduledDate.time ?? "",
-                  label: scheduledDate.label ?? `Vorstellung ${index + 1}`,
+                scheduledDates={resolvedCountdown.termine.map((termin, index) => ({
+                  date: termin.datum ?? "",
+                  time: termin.uhrzeit ?? "",
+                  label: termin.label ?? `Vorstellung ${index + 1}`,
                 }))}
-                postShowText={resolvedCountdown.postShowText}
+                postShowText={resolvedCountdown.nachSommerText}
               />
             </div>
           </section>
