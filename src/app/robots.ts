@@ -4,7 +4,8 @@ import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-setti
 
 export const dynamic = "force-dynamic";
 
-const SITEMAP_URL = "https://sommertheater-altrossthal.de/sitemap.xml";
+const PRODUCTION_URL = "https://sommertheater-altrossthal.de";
+const SITEMAP_URL = `${PRODUCTION_URL}/sitemap.xml`;
 
 const publicRouteMap = {
   about: "/ueber-uns",
@@ -17,6 +18,10 @@ const alwaysDisallow = ["/login", "/api/", "/mitglieder/"];
 const alwaysAllow = ["/impressum", "/datenschutz"];
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
+  if (process.env.NEXT_PUBLIC_BASE_URL !== PRODUCTION_URL) {
+    return { rules: { userAgent: "*", disallow: "/" } };
+  }
+
   try {
     const record = await readWebsiteSettings();
     const visibility = resolveWebsiteSettings(record).pageVisibility.public;
