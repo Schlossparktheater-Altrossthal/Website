@@ -12,18 +12,22 @@ HTTP endpoint.
 ## Quick Start (Development)
 
 ```bash
-./start-dev.sh
+# With Docker (recommended) — starts DB, Mailpit and the app container:
+pnpm dev:start
+
+# Without Docker — assumes a local Postgres instance is already running:
+pnpm dev:start:local
 ```
 
-This automatically sets up and starts the complete development environment:
-- PostgreSQL database + Mailpit email interface
-- Secure `.env` configuration with random secrets  
+Both commands automatically handle:
+- Secure `.env` configuration with random secrets
+- Node.js dependency installation
 - Database migrations and seeding
 - Next.js development server with realtime support
 
 **Access URLs after startup:**
 - Main App: http://localhost:3000
-- Email UI: http://localhost:8025
+- Email UI: http://localhost:8025 (Docker mode only)
 
 See [docs/development.md](docs/development.md) for more details and troubleshooting.
 

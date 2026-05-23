@@ -3,35 +3,42 @@
 ## Quick Start
 
 ```bash
-./start-dev.sh
+# Mit Docker (empfohlen) — startet DB, Mailpit und den App-Container:
+pnpm dev:start
+
+# Ohne Docker — setzt eine lokal laufende Postgres-Instanz voraus:
+pnpm dev:start:local
 ```
 
-Das Script startet automatisch:
-- PostgreSQL Datenbank (Port 5432)
-- Mailpit E-Mail Interface (Port 8025)
+Beide Befehle starten automatisch:
+- PostgreSQL Datenbank (Port 5432, Docker-Modus)
+- Mailpit E-Mail Interface (Port 8025, Docker-Modus)
 - Next.js Development Server mit Realtime Support (Port 3000)
 
 ## Script Optionen
 
 ```bash
-./start-dev.sh --help     # Hilfe anzeigen
-./start-dev.sh --reset    # Vollständiger Reset (Container, Volumes, node_modules)
-./start-dev.sh --clean    # Projekt-spezifische Bereinigung (Container, Images, Volumes)
+pnpm dev:setup            # Nur Setup (ohne App zu starten), Docker-Modus
+pnpm dev:setup:local      # Nur Setup, lokaler Modus (kein Docker)
+pnpm dev:start            # Setup + App starten, Docker-Modus
+pnpm dev:start:local      # Setup + Next.js starten, lokaler Modus
+pnpm dev:start:prod       # Production-Build via Docker hochfahren
+pnpm dev:reset            # Vollständiger Reset (Container, Volumes, node_modules)
+pnpm dev:clean            # Tiefe Bereinigung (Container, Images, Volumes, node_modules)
 ```
 
 ## Was macht das Script?
 
-1. **Requirements Check**: Überprüft Docker, Node.js, pnpm
+1. **Requirements Check**: Überprüft Docker (außer `--local`), Node.js, pnpm
 2. **Environment Setup**: Erstellt `.env` mit sicheren Zufallswerten
 3. **Dependencies**: Installiert Node.js Abhängigkeiten (für Prisma Client)
-4. **Services**: Startet PostgreSQL und Mailpit via Docker Compose
-5. **Application**: Startet App-Container (inkl. DB-Setup, Migrations, Seeding)
-6. **Logs**: Zeigt Live-Logs der Anwendung
+4. **Services** (Docker-Modus): Startet PostgreSQL und Mailpit via Docker Compose
+5. **Application**: Startet App-Container (Docker) bzw. `next dev` (lokal)
 
 ## URLs nach dem Start
 
 - **Hauptanwendung**: http://localhost:3000
-- **E-Mail Interface**: http://localhost:8025
+- **E-Mail Interface**: http://localhost:8025 (Docker-Modus)
 - **Datenbank**: localhost:5432
 
 ## Nützliche Befehle
@@ -46,7 +53,7 @@ docker compose logs -f db           # Datenbank
 docker compose logs -f              # Alle Services
 
 # Datenbank zurücksetzen
-docker compose down -v && ./start-dev.sh
+docker compose down -v && pnpm dev:start
 
 # Container Status
 docker compose ps
@@ -88,8 +95,7 @@ netstat -tulpn | grep :8025
 docker compose restart db
 
 # Datenbank vollständig zurücksetzen
-docker compose down -v
-./start-dev.sh --reset
+pnpm dev:reset
 ```
 
 ### Node.js/pnpm Probleme
@@ -132,4 +138,4 @@ eine deterministische Demo-Antwort zurück (`offline: true`).
 - Der Fallback deckt Kennzahlen, Aktivitäten, Endproben-Woche und die Profil-Checkliste ab.
 - Im Frontend erscheint ein dezenter Hinweisbanner, damit Screenshots klar als Demo-Daten gekennzeichnet sind.
 
-Für echte Daten einfach wieder eine gültige `DATABASE_URL` setzen oder den Dev-Stack über `./start-dev.sh` starten.
+Für echte Daten einfach wieder eine gültige `DATABASE_URL` setzen oder den Dev-Stack über `pnpm dev:start` starten.
