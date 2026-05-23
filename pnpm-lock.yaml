@@ -121,7 +121,7 @@ importers:
         version: 0.17.2
       postcss:
         specifier: ^8.5.6
-        version: 8.5.10
+        version: 8.5.11
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -251,7 +251,7 @@ importers:
         version: 6.2.2
       jsdom:
         specifier: ^27.0.0
-        version: 27.0.0(postcss@8.5.10)
+        version: 27.0.0(postcss@8.5.11)
       pg-mem:
         specifier: ^3.0.5
         version: 3.0.5
@@ -269,7 +269,7 @@ importers:
         version: 5.9.2
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.5.2)(jiti@2.5.1)(jsdom@27.0.0(postcss@8.5.10))(lightningcss@1.30.1)(terser@5.44.0)
+        version: 3.2.4(@types/node@24.5.2)(jiti@2.5.1)(jsdom@27.0.0(postcss@8.5.11))(lightningcss@1.30.1)(terser@5.44.0)
       workbox-cli:
         specifier: 7.1.0
         version: 7.1.0
@@ -4974,8 +4974,8 @@ packages:
     resolution: {integrity: sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ==}
     engines: {node: ^10 || ^12 || >=14}
 
-  postcss@8.5.10:
-    resolution: {integrity: sha512-pMMHxBOZKFU6HgAZ4eyGnwXF/EvPGGqUr0MnZ5+99485wwW41kW91A4LOGxSHhgugZmSChL5AlElNdwlNgcnLQ==}
+  postcss@8.5.11:
+    resolution: {integrity: sha512-5dDj8+lmvA8XB78SmzGI8NlQoksv7IfutGWeVZxiixHbO+p4LDPT3wuG/D9sM/wrjZZ9I+Siy/e117vbFPxSZg==}
     engines: {node: ^10 || ^12 || >=14}
 
   postgres-array@2.0.0:
@@ -7273,9 +7273,9 @@ snapshots:
     dependencies:
       '@csstools/css-tokenizer': 3.0.4
 
-  '@csstools/css-syntax-patches-for-csstree@1.0.14(postcss@8.5.10)':
+  '@csstools/css-syntax-patches-for-csstree@1.0.14(postcss@8.5.11)':
     dependencies:
-      postcss: 8.5.10
+      postcss: 8.5.11
 
   '@csstools/css-tokenizer@3.0.4': {}
 
@@ -8668,7 +8668,7 @@ snapshots:
       '@alloc/quick-lru': 5.2.0
       '@tailwindcss/node': 4.1.13
       '@tailwindcss/oxide': 4.1.13
-      postcss: 8.5.10
+      postcss: 8.5.11
       tailwindcss: 4.1.13
 
   '@tanstack/query-core@5.90.1': {}
@@ -9482,10 +9482,10 @@ snapshots:
 
   css.escape@1.5.1: {}
 
-  cssstyle@5.3.1(postcss@8.5.10):
+  cssstyle@5.3.1(postcss@8.5.11):
     dependencies:
       '@asamuzakjp/css-color': 4.0.5
-      '@csstools/css-syntax-patches-for-csstree': 1.0.14(postcss@8.5.10)
+      '@csstools/css-syntax-patches-for-csstree': 1.0.14(postcss@8.5.11)
       css-tree: 3.1.0
     transitivePeerDependencies:
       - postcss
@@ -10693,10 +10693,10 @@ snapshots:
     dependencies:
       argparse: 2.0.1
 
-  jsdom@27.0.0(postcss@8.5.10):
+  jsdom@27.0.0(postcss@8.5.11):
     dependencies:
       '@asamuzakjp/dom-selector': 6.5.6
-      cssstyle: 5.3.1(postcss@8.5.10)
+      cssstyle: 5.3.1(postcss@8.5.11)
       data-urls: 6.0.0
       decimal.js: 10.6.0
       html-encoding-sniffer: 4.0.0
@@ -11349,7 +11349,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postcss@8.5.10:
+  postcss@8.5.11:
     dependencies:
       nanoid: 3.3.12
       picocolors: 1.1.1
@@ -11762,7 +11762,7 @@ snapshots:
       htmlparser2: 8.0.2
       is-plain-object: 5.0.0
       parse-srcset: 1.0.2
-      postcss: 8.5.10
+      postcss: 8.5.11
 
   saxes@6.0.0:
     dependencies:
@@ -12409,7 +12409,7 @@ snapshots:
       esbuild: 0.25.10
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
-      postcss: 8.5.10
+      postcss: 8.5.11
       rollup: 4.52.0
       tinyglobby: 0.2.15
     optionalDependencies:
@@ -12419,7 +12419,7 @@ snapshots:
       lightningcss: 1.30.1
       terser: 5.44.0
 
-  vitest@3.2.4(@types/node@24.5.2)(jiti@2.5.1)(jsdom@27.0.0(postcss@8.5.10))(lightningcss@1.30.1)(terser@5.44.0):
+  vitest@3.2.4(@types/node@24.5.2)(jiti@2.5.1)(jsdom@27.0.0(postcss@8.5.11))(lightningcss@1.30.1)(terser@5.44.0):
     dependencies:
       '@types/chai': 5.2.2
       '@vitest/expect': 3.2.4
@@ -12446,7 +12446,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.5.2
-      jsdom: 27.0.0(postcss@8.5.10)
+      jsdom: 27.0.0(postcss@8.5.11)
     transitivePeerDependencies:
       - jiti
       - less
