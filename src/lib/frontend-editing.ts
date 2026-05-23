@@ -1,6 +1,6 @@
 import { hasPermission } from "@/lib/permissions";
 
-export type FrontendEditingFeatureKey = "mystery.launch-countdown" | "FEATURE.HOME.COUNTDOWN" | "FEATURE.HOME.FLYER" | "chronik.performance-dates";
+export type FrontendEditingFeatureKey = "FEATURE.HOME.COUNTDOWN" | "FEATURE.HOME.FLYER";
 
 export type FrontendEditingFeature = {
   key: FrontendEditingFeatureKey;
@@ -14,12 +14,6 @@ type FeatureDefinition = FrontendEditingFeature & {
 
 const FEATURE_DEFINITIONS: FeatureDefinition[] = [
   {
-    key: "mystery.launch-countdown",
-    label: "Mystery-Timer",
-    description: "Countdown und Hinweistext für die Mystery-Startseite verwalten.",
-    permissionKey: "PRIVATE.MYSTERY.TIMER.EDIT",
-  },
-  {
     key: "FEATURE.HOME.COUNTDOWN",
     label: "Premieren-Countdown",
     description: "Countdown für die öffentliche Startseite anpassen.",
@@ -30,12 +24,6 @@ const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     label: "Homepage-Flyer",
     description: "Flyer-Sektion für die öffentliche Startseite anpassen.",
     permissionKey: "PUBLIC.HOME.FLYER.EDIT",
-  },
-  {
-    key: "chronik.performance-dates",
-    label: "Chronik-Termine",
-    description: "Aufführungstermine in der öffentlichen Chronik bearbeiten.",
-    permissionKey: "PRIVATE.WEBSITE.CHRONIK.EDIT",
   },
 ];
 
