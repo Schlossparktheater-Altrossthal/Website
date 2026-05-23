@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/rbac";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.rechte"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -34,7 +34,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.rechte"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

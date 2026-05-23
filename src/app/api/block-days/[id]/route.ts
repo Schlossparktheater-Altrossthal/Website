@@ -30,7 +30,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  if (!(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -82,7 +82,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  if (!(await hasPermission(session.user, "mitglieder.sperrliste"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -114,7 +114,7 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
 
 export async function GET() {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.fotoerlaubnisse"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -148,7 +148,7 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.fotoerlaubnisse"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

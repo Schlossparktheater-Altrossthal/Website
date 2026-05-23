@@ -78,7 +78,7 @@ function readOptionalRolePreferenceCode(
 export async function setActiveProductionAction(formData: FormData): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
     if (!allowed) {
       throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
@@ -111,7 +111,7 @@ export async function setActiveProductionAction(formData: FormData): Promise<Pro
 export async function clearActiveProductionAction(formData: FormData): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
     if (!allowed) {
       throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
@@ -134,7 +134,7 @@ export async function clearActiveProductionAction(formData: FormData): Promise<P
 export async function createProductionAction(formData: FormData): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
     if (!allowed) {
       throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
@@ -240,7 +240,7 @@ export async function createProductionAction(formData: FormData): Promise<Produc
 export async function updateProductionAction(formData: FormData): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
     if (!allowed) {
       throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
@@ -303,7 +303,7 @@ export async function updateProductionTimelineAction(formData: FormData): Promis
   const redirectPath = parseRedirectPath(formData);
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
     if (!allowed) {
       throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
@@ -382,7 +382,7 @@ export async function updateOnboardingSettingsAction(formData: FormData): Promis
   const redirectPath = parseRedirectPath(formData);
   try {
     const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+    const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
     if (!allowed) {
       throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
     }
@@ -599,7 +599,7 @@ async function requireProductionManager() {
   if (!userId) {
     throw new Error("Keine Berechtigung.");
   }
-  const allowed = await hasPermission(session.user, "mitglieder.produktionen");
+  const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
   if (!allowed) {
     throw new Error("Keine Berechtigung.");
   }

@@ -67,7 +67,7 @@ async function ensurePermission(): Promise<PermissionResult> {
   if (!databaseEnabled()) {
     return { status: "offline", response: null };
   }
-  if (!(await hasPermission(session.user, "mitglieder.sperrliste.settings"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"))) {
     return { status: "denied", response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
   return { status: "ok", response: null };

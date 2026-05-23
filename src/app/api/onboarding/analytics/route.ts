@@ -6,7 +6,7 @@ import { hasPermission } from "@/lib/permissions";
 
 export async function GET() {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.onboarding.analytics"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.ONBOARDING.ANALYTICS"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

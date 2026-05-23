@@ -95,7 +95,7 @@ export async function getActiveProductionId(
 
   const canManageProductions =
     options?.canManageProductions ??
-    (await hasPermission({ id: userId }, "mitglieder.produktionen"));
+    (await hasPermission({ id: userId }, "PRIVATE.PRODUCTION.SHOW.MANAGE"));
 
   if (cookieValue) {
     if (canManageProductions) {
@@ -127,7 +127,7 @@ export async function getActiveProductionId(
 
 export const getActiveProduction = cache(async (userId?: string | null) => {
   const canManageProductions = userId
-    ? await hasPermission({ id: userId }, "mitglieder.produktionen")
+    ? await hasPermission({ id: userId }, "PRIVATE.PRODUCTION.SHOW.MANAGE")
     : false;
 
   const activeProductionId = await getActiveProductionId(userId, {

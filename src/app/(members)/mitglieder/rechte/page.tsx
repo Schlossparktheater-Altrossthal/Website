@@ -5,7 +5,7 @@ import { PermissionWorkbench } from "@/components/members/permissions/permission
 export default async function RechteVerwaltungPage() {
   const session = await requireAuth();
   await Promise.all([ensureSystemRoles(), ensurePermissionDefinitions()]);
-  const allowed = await hasPermission(session.user, "mitglieder.rechte");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE");
   if (!allowed) {
     // Next.js server components cannot return 403 easily; show message
     return <div className="text-sm text-red-600">Kein Zugriff auf die Rechteverwaltung</div>;

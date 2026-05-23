@@ -48,8 +48,8 @@ export default async function RehearsalDetailPage({
 }) {
   const session = await requireAuth();
   const [canViewOwn, canPlan] = await Promise.all([
-    hasPermission(session.user, "mitglieder.meine-proben"),
-    hasPermission(session.user, "mitglieder.probenplanung"),
+    hasPermission(session.user, "PRIVATE.REHEARSAL.OWN.VIEW"),
+    hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE"),
   ]);
 
   if (!canViewOwn && !canPlan) {

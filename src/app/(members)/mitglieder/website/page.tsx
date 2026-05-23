@@ -12,7 +12,7 @@ import { WebsiteThemeSettingsManager } from "./theme-settings-manager";
 
 export default async function WebsiteSettingsPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.website.settings");
+  const allowed = await hasPermission(session.user, "PRIVATE.WEBSITE.THEME.MANAGE");
 
   if (!allowed) {
     return (

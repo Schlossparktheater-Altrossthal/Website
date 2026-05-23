@@ -260,22 +260,22 @@ async function main() {
 
   const financePermissionSeeds = [
     {
-      key: "mitglieder.finanzen",
+      key: "PRIVATE.FINANCE.ENTRY.VIEW",
       label: "Finanzbereich öffnen",
       description: "Dashboard für Einnahmen, Ausgaben, Rechnungen und Spenden im Mitgliederbereich einsehen.",
     },
     {
-      key: "mitglieder.finanzen.manage",
+      key: "PRIVATE.FINANCE.ENTRY.MANAGE",
       label: "Finanzbuchungen verwalten",
       description: "Neue Finanzbuchungen anlegen, bearbeiten, Rechnungen erfassen und Spenden dokumentieren.",
     },
     {
-      key: "mitglieder.finanzen.approve",
+      key: "PRIVATE.FINANCE.ENTRY.APPROVE",
       label: "Finanzbuchungen freigeben",
       description: "Prüfen und freigeben von Rechnungen, Auslagen und Auszahlungen im Finanzmodul.",
     },
     {
-      key: "mitglieder.finanzen.export",
+      key: "PRIVATE.FINANCE.ENTRY.EXPORT",
       label: "Finanzdaten exportieren",
       description: "CSV- oder Excel-Exporte der Finanzbuchungen und Budgetübersichten erstellen.",
     },
@@ -308,14 +308,14 @@ async function main() {
   }
 
   const measurementPermission = await prisma.permission.upsert({
-    where: { key: "mitglieder.koerpermasse" },
+    where: { key: "PRIVATE.PROFILE.MEASUREMENTS.MANAGE" },
     update: {
       label: "Körpermaße verwalten",
       description:
         "Öffnet das Körpermaße-Control-Center für das Kostüm-Team, um alle Maße des Ensembles futuristisch zu überwachen, fehlende Angaben zu erkennen und Einträge live zu aktualisieren.",
     },
     create: {
-      key: "mitglieder.koerpermasse",
+      key: "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
       label: "Körpermaße verwalten",
       description:
         "Öffnet das Körpermaße-Control-Center für das Kostüm-Team, um alle Maße des Ensembles futuristisch zu überwachen, fehlende Angaben zu erkennen und Einträge live zu aktualisieren.",
@@ -337,13 +337,13 @@ async function main() {
 
   const profileAdminPermissionSeeds = [
     {
-      key: "mitglieder.konfektionsgroessen",
+      key: "PRIVATE.PROFILE.SIZES.MANAGE",
       label: "Konfektionsgrößen verwalten",
       description:
         "Erfasst und pflegt Konfektionsgrößen sowie zugehörige Passform-Notizen für Ensemble und Kostüm-Team.",
     },
     {
-      key: "mitglieder.ernaehrungshinweise",
+      key: "PRIVATE.PROFILE.DIETARY.MANAGE",
       label: "Ernährungshinweise verwalten",
       description:
         "Einsicht und Pflege von Allergien, Unverträglichkeiten und Ernährungspräferenzen zur sicheren Verpflegung.",
@@ -381,7 +381,7 @@ async function main() {
   }
 
   const financePermissionKeys = financePermissionSeeds.map((perm) => perm.key);
-  const boardPermissionKeys = ["mitglieder.finanzen", "mitglieder.finanzen.export"];
+  const boardPermissionKeys = ["PRIVATE.FINANCE.ENTRY.VIEW", "PRIVATE.FINANCE.ENTRY.EXPORT"];
 
   const [financeRole, boardRole, financePermissions] = await Promise.all([
     prisma.appRole.findUnique({ where: { name: "finance" } }),

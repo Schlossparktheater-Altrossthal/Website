@@ -57,7 +57,7 @@ function formatScanEvent(event: TicketCheckInResult["scanEvent"]) {
 
 export async function POST(request: Request) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.scan");
+  const allowed = await hasPermission(session.user, "PRIVATE.INVENTORY.SCAN.USE");
 
   if (!allowed) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ fo
   const currentUser = session.user ?? { id: null };
 
   const [canAccessArea, folder] = await Promise.all([
-    hasPermission(session.user, "mitglieder.dateisystem"),
+    hasPermission(session.user, "PRIVATE.FILES.FOLDER.VIEW"),
     prisma.fileLibraryFolder.findUnique({
       where: { id: folderId },
       include: { accessRules: true },

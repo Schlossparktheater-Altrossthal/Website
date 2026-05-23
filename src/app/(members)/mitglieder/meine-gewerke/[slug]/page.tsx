@@ -29,14 +29,14 @@ type PageProps = { params: Promise<{ slug: string }> };
 
 export default async function GewerkDetailPage({ params }: PageProps) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.meine-gewerke");
+  const allowed = await hasPermission(session.user, "PRIVATE.DEPARTMENT.OWN.VIEW");
   const hasMeasurementPermission = await hasPermission(
     session.user,
-    "mitglieder.koerpermasse",
+    "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
   );
   const canManageDepartments = await hasPermission(
     session.user,
-    "mitglieder.produktionen",
+    "PRIVATE.PRODUCTION.SHOW.MANAGE",
   );
   const isEnsembleMember = hasRole(session.user, "cast");
   const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;

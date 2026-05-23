@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const session = await requireAuth();
 
   const currentUser = session.user ?? { id: null };
-  const canAccessArea = await hasPermission(session.user, "mitglieder.dateisystem");
+  const canAccessArea = await hasPermission(session.user, "PRIVATE.FILES.FOLDER.VIEW");
   if (!canAccessArea) {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }

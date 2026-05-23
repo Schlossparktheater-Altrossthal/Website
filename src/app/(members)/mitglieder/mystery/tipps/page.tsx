@@ -10,7 +10,7 @@ export default async function MysteryTipsAdminPage({
   searchParams?: Promise<{ clue?: string }>;
 }) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mystery.tips.manage");
+  const allowed = await hasPermission(session.user, "PRIVATE.MYSTERY.TIPS.MANAGE");
   if (!allowed) {
     return <div className="text-sm text-red-600">Kein Zugriff auf die Mystery-Tipps</div>;
   }

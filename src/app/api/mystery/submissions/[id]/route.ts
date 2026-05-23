@@ -13,7 +13,7 @@ const updateSchema = z.object({
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mystery.tips.manage");
+  const allowed = await hasPermission(session.user, "PRIVATE.MYSTERY.TIPS.MANAGE");
   if (!allowed) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

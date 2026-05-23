@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const canManageAll = await hasPermission(session.user, "mitglieder.koerpermasse");
+    const canManageAll = await hasPermission(session.user, "PRIVATE.PROFILE.MEASUREMENTS.MANAGE");
     const requestedUserId = request.nextUrl.searchParams.get("userId");
     const targetUserId = requestedUserId ?? userId;
 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
-    const canManageAll = await hasPermission(session.user, "mitglieder.koerpermasse");
+    const canManageAll = await hasPermission(session.user, "PRIVATE.PROFILE.MEASUREMENTS.MANAGE");
     if (!canManageAll) {
       return NextResponse.json(
         { error: "Körpermaße können nur im Bereich Körpermaße gepflegt werden." },

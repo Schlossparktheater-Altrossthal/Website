@@ -19,7 +19,7 @@ const updateSchema = z
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const session = await requireAuth();
-  const canManage = await hasPermission(session.user, "mitglieder.finanzen.manage");
+  const canManage = await hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.MANAGE");
   if (!canManage) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }
@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const session = await requireAuth();
-  const canManage = await hasPermission(session.user, "mitglieder.finanzen.manage");
+  const canManage = await hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.MANAGE");
   if (!canManage) {
     return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
   }

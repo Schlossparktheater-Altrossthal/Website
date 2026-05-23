@@ -7,8 +7,8 @@ import { verifySyncToken } from "@/lib/sync/tokens";
 import { getSession } from "@/lib/rbac";
 
 const INVENTORY_PERMISSIONS = [
-  "mitglieder.lager.technik",
-  "mitglieder.lager.kostueme",
+  "PRIVATE.INVENTORY.TECH.MANAGE",
+  "PRIVATE.INVENTORY.COSTUME.MANAGE",
 ] as const satisfies readonly string[];
 
 const tokenIssue = z.object({
@@ -102,7 +102,7 @@ export async function authenticateSyncRequest(
   }
 
   const permissionChecks: Array<Promise<boolean>> = [
-    hasPermission(session.user, "mitglieder.scan"),
+    hasPermission(session.user, "PRIVATE.INVENTORY.SCAN.USE"),
   ];
 
   if (scope === "inventory") {
@@ -115,7 +115,7 @@ export async function authenticateSyncRequest(
   const [canScan, ...inventoryPermissions] = results;
 
   if (!canScan) {
-    logDeniedAccess(scope, "missing permission mitglieder.scan", userId);
+    logDeniedAccess(scope, "missing permission PRIVATE.INVENTORY.SCAN.USE", userId);
     return {
       kind: "error",
       response: NextResponse.json({ error: "Missing permission" }, { status: 403 }),

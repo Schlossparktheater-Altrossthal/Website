@@ -19,8 +19,8 @@ function createEmptyCounts(): IssueStatusCounts {
 export default async function IssuesPage() {
   const session = await requireAuth();
   const [canView, canManage] = await Promise.all([
-    hasPermission(session.user, "mitglieder.issues"),
-    hasPermission(session.user, "mitglieder.issues.manage"),
+    hasPermission(session.user, "PRIVATE.SUPPORT.ISSUE.VIEW"),
+    hasPermission(session.user, "PRIVATE.SUPPORT.ISSUE.MANAGE"),
   ]);
 
   if (!canView) {

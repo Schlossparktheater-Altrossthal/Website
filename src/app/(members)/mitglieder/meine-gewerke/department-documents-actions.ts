@@ -97,7 +97,7 @@ export async function uploadDepartmentDocumentAction(formData: FormData) {
     throw new Error("Bitte wähle mindestens eine Datei aus.");
   }
 
-  const canManageByPermission = await hasPermission(session.user, "mitglieder.produktionen");
+  const canManageByPermission = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
   let canManage = canManageByPermission;
   if (!canManage) {
     const membership = await prisma.departmentMembership.findFirst({
@@ -182,7 +182,7 @@ export async function deleteDepartmentDocumentAction(formData: FormData) {
     throw new Error("Dokument wurde nicht gefunden.");
   }
 
-  const canManageByPermission = await hasPermission(session.user, "mitglieder.produktionen");
+  const canManageByPermission = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
   let canManage = canManageByPermission;
   if (!canManage) {
     const membership = await prisma.departmentMembership.findFirst({

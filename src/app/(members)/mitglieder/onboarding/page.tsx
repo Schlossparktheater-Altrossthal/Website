@@ -25,7 +25,7 @@ export default async function MembersOnboardingAnalyticsPage({
   searchParams,
 }: MembersOnboardingAnalyticsPageProps) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.onboarding.analytics");
+  const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.ONBOARDING.ANALYTICS");
 
   if (!allowed) {
     redirect("/mitglieder");

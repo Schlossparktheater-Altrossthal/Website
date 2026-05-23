@@ -13,7 +13,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, "mitglieder.fotoerlaubnisse"))) {
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

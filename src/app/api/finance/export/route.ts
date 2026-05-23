@@ -22,9 +22,9 @@ function escapeCsv(value: unknown): string {
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const [canView, canApprove, canExport] = await Promise.all([
-    hasPermission(session.user, "mitglieder.finanzen"),
-    hasPermission(session.user, "mitglieder.finanzen.approve"),
-    hasPermission(session.user, "mitglieder.finanzen.export"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.VIEW"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.APPROVE"),
+    hasPermission(session.user, "PRIVATE.FINANCE.ENTRY.EXPORT"),
   ]);
 
   if (!canView || !canExport) {

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function KostuemLagerPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "mitglieder.lager.kostueme");
+  const allowed = await hasPermission(session.user, "PRIVATE.INVENTORY.COSTUME.MANAGE");
 
   if (!allowed) {
     return (

@@ -52,7 +52,7 @@ beforeEach(async () => {
 
     const result = await getActiveProduction(userId);
 
-    expect(mockHasPermission).toHaveBeenCalledWith({ id: userId }, "mitglieder.produktionen");
+    expect(mockHasPermission).toHaveBeenCalledWith({ id: userId }, "PRIVATE.PRODUCTION.SHOW.MANAGE");
     expect(mockMembershipFindFirst).not.toHaveBeenCalled();
     expect(mockShowFindFirst).toHaveBeenCalledWith({
       where: { id: showId },

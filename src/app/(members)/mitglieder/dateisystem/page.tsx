@@ -70,7 +70,7 @@ function formatLatest(date: Date | null) {
 
 export default async function FileLibraryOverviewPage() {
   const session = await requireAuth();
-  const canAccess = await hasPermission(session.user, "mitglieder.dateisystem");
+  const canAccess = await hasPermission(session.user, "PRIVATE.FILES.FOLDER.VIEW");
   const baseBreadcrumb = membersNavigationBreadcrumb("/mitglieder/dateisystem");
 
   if (!canAccess) {
