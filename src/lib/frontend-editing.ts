@@ -1,6 +1,6 @@
 import { hasPermission } from "@/lib/permissions";
 
-export type FrontendEditingFeatureKey = "mystery.launch-countdown" | "website.premiere-countdown" | "website.production-flyer" | "chronik.performance-dates";
+export type FrontendEditingFeatureKey = "mystery.launch-countdown" | "FEATURE.HOME.COUNTDOWN" | "FEATURE.HOME.FLYER" | "chronik.performance-dates";
 
 export type FrontendEditingFeature = {
   key: FrontendEditingFeatureKey;
@@ -20,16 +20,16 @@ const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     permissionKey: "PRIVATE.MYSTERY.TIMER.EDIT",
   },
   {
-    key: "website.premiere-countdown",
+    key: "FEATURE.HOME.COUNTDOWN",
     label: "Premieren-Countdown",
     description: "Countdown für die öffentliche Startseite anpassen.",
-    permissionKey: "PRIVATE.WEBSITE.COUNTDOWN.EDIT",
+    permissionKey: "PUBLIC.HOME.COUNTDOWN.EDIT",
   },
   {
-    key: "website.production-flyer",
+    key: "FEATURE.HOME.FLYER",
     label: "Homepage-Flyer",
     description: "Flyer-Sektion für die öffentliche Startseite anpassen.",
-    permissionKey: "PRIVATE.WEBSITE.COUNTDOWN.EDIT",
+    permissionKey: "PUBLIC.HOME.FLYER.EDIT",
   },
   {
     key: "chronik.performance-dates",
