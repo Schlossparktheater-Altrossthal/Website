@@ -97,47 +97,6 @@ type CatMemoryItem = {
   detail: string;
 };
 
-const catProfileHighlights: CatProfileHighlight[] = [
-  {
-    icon: Cat,
-    title: "Porträt",
-    description:
-      "Dieter Dennis von Altroßthal war unsere grau getigerte Schulkatze – verlässlich, gelassen und immer bereit für eine stille Beobachtung.",
-  },
-  {
-    icon: MoonStar,
-    title: "Uralter Bekannter",
-    description:
-      "Niemand konnte genau sagen, wann er eingezogen ist. Gefühlt streifte er schon seit über fünfzehn, zwanzig Jahren über das Schulgelände.",
-  },
-  {
-    icon: Heart,
-    title: "Teil der Gemeinschaft",
-    description:
-      "Ob Unterricht oder Premiere: Dieter gehörte einfach dazu und brachte eine Ruhe mit, die uns alle miteinander verband.",
-  },
-];
-
-const catMemoryItems: CatMemoryItem[] = [
-  {
-    icon: Sun,
-    title: "Frühe Streifzüge",
-    detail:
-      "Geschichten erzählen davon, dass Dieter morgens schon vor dem ersten Klingeln seine Runden drehte und uns mit prüfendem Blick begrüßte.",
-  },
-  {
-    icon: PawPrint,
-    title: "Lieblingsorte",
-    detail:
-      "Fensterbänke, Probebühnen und Parkbänke wurden zu seinen Ruhepolen – überall dort wirkte er wie ein grauer Wächter des Geländes.",
-  },
-  {
-    icon: MoonStar,
-    title: "Abende im Park",
-    detail:
-      "Wenn der Tag endete, blieb er oft noch eine Weile, als wolle er sicherstellen, dass alles seinen Platz hat, bevor er in die Nacht verschwand.",
-  },
-];
 
 const catCareLessons: string[] = [
   "Tiere, die unsere Schule begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
@@ -179,14 +138,14 @@ export default async function SchoolCatPage() {
             </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
               Dieter Dennis von Altroßthal – von allen nur Dieter genannt – war unsere grau getigerte Schulkatze. Über Generationen hinweg
-              streifte er über das Schulgelände und wurde zum vertrauten Gesicht des BSZ Altrossthal.
+              streifte er über das Schulgelände und wurde zum vertrauten Gesicht des BSZ Altroßthal.
             </Text>
             <Text tone="muted">
               Niemand wusste genau, seit wann er da war; gefühlt waren es weit über fünfzehn Jahre. Seine stille Präsenz begleitete Unterricht,
-              Proben und Festspiele gleichermaßen.
+              Proben und Aufführungen gleichermaßen.
             </Text>
             <Text tone="muted">
-              In diesem Jahr mussten wir uns von Dieter verabschieden. Die Erinnerungen an ihn, seine Gelassenheit und die Fürsorge der
+              2025 mussten wir uns von Dieter verabschieden. Die Erinnerungen an ihn, seine Gelassenheit und die Fürsorge der
               Schulgemeinschaft bleiben und prägen, wie wir auch künftig füreinander da sind.
             </Text>
           </div>
@@ -198,86 +157,6 @@ export default async function SchoolCatPage() {
         </div>
       </section>
 
-      <section className="layout-container pb-16">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {catProfileHighlights.map((item) => (
-            <Card key={item.title} className="h-full">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
-                  <item.icon className="h-5 w-5" aria-hidden />
-                </div>
-                <div className="space-y-2">
-                  <Text weight="semibold" className="text-base sm:text-lg">
-                    {item.title}
-                  </Text>
-                  <Text variant="small" tone="muted" className="leading-relaxed">
-                    {item.description}
-                  </Text>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <section className="layout-container pb-16">
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <Card className="h-full space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
-                <PawPrint className="h-5 w-5" aria-hidden />
-              </div>
-              <Text weight="semibold" className="text-base sm:text-lg">
-                Erinnerungen an Dieter
-              </Text>
-            </div>
-            <div className="space-y-4">
-              {catMemoryItems.map((entry) => (
-                <div key={entry.title} className="flex gap-3">
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <entry.icon className="h-5 w-5" aria-hidden />
-                  </div>
-                  <div className="space-y-1">
-                    <Text weight="medium">{entry.title}</Text>
-                    <Text variant="small" tone="muted" className="leading-relaxed">
-                      {entry.detail}
-                    </Text>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-        </div>
-      </section>
-
-      <section className="layout-container pb-16">
-        <Card className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/15 text-primary">
-              <ShieldCheck className="h-5 w-5" aria-hidden />
-            </div>
-            <Text weight="semibold" className="text-base sm:text-lg">
-              Was wir aus Dieters Zeit mitnehmen
-            </Text>
-          </div>
-          <div className="space-y-3">
-            <Text variant="small" tone="muted">
-              Dieter hat uns gezeigt, wie wichtig Achtsamkeit ist. Diese Gedanken begleiten uns auch in Zukunft:
-            </Text>
-            <ul className="space-y-2">
-              {catCareLessons.map((lesson) => (
-                <li key={lesson} className="flex items-start gap-3">
-                  <span className="mt-2 h-2 w-2 flex-none rounded-full bg-primary" aria-hidden />
-                  <Text variant="small" tone="muted" className="leading-relaxed">
-                    {lesson}
-                  </Text>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Card>
-      </section>
 
       <CatMemorySection />
 

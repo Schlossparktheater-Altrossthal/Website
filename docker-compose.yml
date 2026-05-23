@@ -1,1 +1,56 @@
-git push
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: theater_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+      AUTH_DEV_NO_DB: "0"
+      NEXT_PUBLIC_AUTH_DEV_NO_DB: "0"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/theater_dev?schema=public
+      EMAIL_SERVER: smtp://mailpit:1025
+      EMAIL_FROM: noreply@example.com
+      REALTIME_BASE_PATH: /realtime
+      REALTIME_AUTH_TOKEN: ${REALTIME_AUTH_TOKEN:-dev-realtime-secret}
+      REALTIME_HANDSHAKE_SECRET: ${REALTIME_HANDSHAKE_SECRET:-dev-realtime-secret}
+      NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-http://localhost:3000/realtime}
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: >-
+      sh -c "pnpm -s prisma:generate && node scripts/run-prisma-migrate.mjs && (pnpm -s db:seed || true) && node scripts/start-with-proxy.mjs"
+
+volumes:
+  pgdata:
