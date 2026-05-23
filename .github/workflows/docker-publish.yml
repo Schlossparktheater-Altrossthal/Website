@@ -54,8 +54,8 @@ jobs:
             ${{ env.IMAGE }}:staging
             ${{ env.IMAGE }}:${{ github.sha }}-staging
           build-args: GIT_COMMIT_SHA=${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.IMAGE }}:staging
-          cache-to: type=inline
+          cache-from: type=registry,ref=${{ env.IMAGE }}:cache-staging
+          cache-to: type=registry,ref=${{ env.IMAGE }}:cache-staging,mode=max
 
       - name: Checkout k8s-infrastructure
         uses: actions/checkout@v5
@@ -104,8 +104,8 @@ jobs:
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:${{ github.ref_name }}
           build-args: GIT_COMMIT_SHA=${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.IMAGE }}:prod
-          cache-to: type=inline
+          cache-from: type=registry,ref=${{ env.IMAGE }}:cache-prod
+          cache-to: type=registry,ref=${{ env.IMAGE }}:cache-prod,mode=max
 
       - name: Checkout k8s-infrastructure
         uses: actions/checkout@v5

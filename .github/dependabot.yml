@@ -59,7 +59,7 @@ updates:
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
       day: "monday"
       time: "05:30"
       timezone: "Europe/Berlin"

@@ -11,15 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
-          run_install: false
-      - name: Enable corepack
-        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Run ESLint
@@ -27,18 +25,15 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: lint
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
-          run_install: false
-      - name: Enable corepack
-        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Run Vitest suite
@@ -51,15 +46,13 @@ jobs:
     needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
-          run_install: false
-      - name: Enable corepack
-        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install Playwright browsers
