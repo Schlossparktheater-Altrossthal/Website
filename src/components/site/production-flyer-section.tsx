@@ -19,35 +19,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
 type Props = {
-  aktiv: boolean;
-  titel: string | null;
-  beschreibung: string | null;
-  hasBild: boolean;
+  active: boolean;
+  title: string | null;
+  description: string | null;
+  hasImage: boolean;
 };
 
-export function ProductionFlyerSection({
-  aktiv,
-  titel,
-  beschreibung,
-  hasBild,
+export function ShowFlyerSection({
+  active,
+  title,
+  description,
+  hasImage,
 }: Props) {
   const { status } = useSession();
   const { hasFeature, openFeature, closeFeature, activeFeature } =
     useFrontendEditing();
   const canEdit =
-    status === "authenticated" && hasFeature("website.production-flyer");
-  const open = canEdit && activeFeature === "website.production-flyer";
+    status === "authenticated" && hasFeature("FEATURE.HOME.FLYER");
+  const open = canEdit && activeFeature === "FEATURE.HOME.FLYER";
 
   const [form, setForm] = useState({
-    aktiv,
-    titel: titel ?? "",
-    beschreibung: beschreibung ?? "",
+    active,
+    title: title ?? "",
+    description: description ?? "",
   });
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function removeImage() {
-    const res = await fetch("/api/website/production-flyer/image", {
+    const res = await fetch("/api/website/show-flyer/image", {
       method: "DELETE",
     });
     if (!res.ok) return toast.error("Bild konnte nicht entfernt werden.");
@@ -56,20 +56,20 @@ export function ProductionFlyerSection({
   }
 
   async function save() {
-    const meta = await fetch("/api/website/production-flyer", {
+    const meta = await fetch("/api/website/show-flyer", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        aktiv: form.aktiv,
-        titel: form.titel || null,
-        beschreibung: form.beschreibung || null,
+        active: form.active,
+        title: form.title || null,
+        description: form.description || null,
       }),
     });
     if (!meta.ok) return toast.error("Flyer konnte nicht gespeichert werden.");
     if (file) {
       const fd = new FormData();
       fd.append("image", file);
-      const up = await fetch("/api/website/production-flyer/image", {
+      const up = await fetch("/api/website/show-flyer/image", {
         method: "POST",
         body: fd,
       });
@@ -82,26 +82,26 @@ export function ProductionFlyerSection({
 
   return (
     <section className="w-full py-[clamp(2rem,6vw,5rem)] text-center">
-      {aktiv ? (
+      {active ? (
         <div className="layout-container space-y-4">
-          {titel ? (
+          {title ? (
             <h2 className="text-[clamp(1.4rem,4vw,2.2rem)] font-semibold">
-              {titel}
+              {title}
             </h2>
           ) : null}
-          {hasBild ? (
+          {hasImage ? (
             <Image
-              src="/api/website/production-flyer/image"
-              alt={titel ?? "Flyer"}
+              src="/api/website/show-flyer/image"
+              alt={title ?? "Flyer"}
               width={800}
               height={450}
               sizes="(max-width: 768px) 100vw, 800px"
               className="mx-auto block h-auto w-full max-w-[clamp(280px,80vw,800px)] shadow-[0_4px_24px_rgba(0,0,0,0.35)]"
             />
           ) : null}
-          {beschreibung ? (
+          {description ? (
             <p className="text-muted-foreground text-[clamp(0.9rem,2vw,1.1rem)]">
-              {beschreibung}
+              {description}
             </p>
           ) : null}
         </div>
@@ -113,7 +113,7 @@ export function ProductionFlyerSection({
             size="sm"
             variant={open ? "secondary" : "outline"}
             onClick={() =>
-              open ? closeFeature() : openFeature("website.production-flyer")
+              open ? closeFeature() : openFeature("FEATURE.HOME.FLYER")
             }
           >
             {open ? "Einstellungen schließen" : "Flyer bearbeiten"}
@@ -124,7 +124,7 @@ export function ProductionFlyerSection({
       <Dialog
         open={open}
         onOpenChange={(v) =>
-          v ? openFeature("website.production-flyer") : closeFeature()
+          v ? openFeature("FEATURE.HOME.FLYER") : closeFeature()
         }
       >
         <DialogContent>
@@ -133,26 +133,26 @@ export function ProductionFlyerSection({
           </DialogHeader>
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-xl border border-border p-3">
-              <span>Sektion aktiv anzeigen</span>
+              <span>Sektion active anzeigen</span>
               <Switch
-                checked={form.aktiv}
+                checked={form.active}
                 onCheckedChange={(next) =>
-                  setForm((s) => ({ ...s, aktiv: next }))
+                  setForm((s) => ({ ...s, active: next }))
                 }
               />
             </div>
             <Input
-              placeholder="Stücktitel 2026"
-              value={form.titel}
+              placeholder="Stücktitle 2026"
+              value={form.title}
               onChange={(e) =>
-                setForm((s) => ({ ...s, titel: e.target.value }))
+                setForm((s) => ({ ...s, title: e.target.value }))
               }
             />
             <Textarea
               placeholder="Beschreibung"
-              value={form.beschreibung}
+              value={form.description}
               onChange={(e) =>
-                setForm((s) => ({ ...s, beschreibung: e.target.value }))
+                setForm((s) => ({ ...s, description: e.target.value }))
               }
             />
             <Input

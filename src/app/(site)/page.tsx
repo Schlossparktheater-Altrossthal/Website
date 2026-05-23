@@ -2,8 +2,8 @@ import { Hero } from "@/components/hero";
 import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
 import { getHeroImages, pickHeroForNow } from "@/lib/hero-images";
-import { PremiereCountdownSection } from "./_components/premiere-countdown-section";
-import { ProductionFlyerSection } from "@/components/site/production-flyer-section";
+import { ShowCountdownSection } from "./_components/premiere-countdown-section";
+import { ShowFlyerSection } from "@/components/site/production-flyer-section";
 import { readProductionFlyerSettings } from "@/lib/production-flyer-settings";
 import {
   readPremiereCountdownSettings,
@@ -35,7 +35,7 @@ export default async function PublicHomePage() {
     ? resolvedCountdown.countdownTarget.toISOString()
     : null;
   const updatedAtIso = resolvedCountdown.updatedAt ? resolvedCountdown.updatedAt.toISOString() : null;
-  const homepageFaqItems = [
+  const faqItems = [
     {
       question: "Was ist das Sommertheater im Schlosspark?",
       answer:
@@ -77,23 +77,23 @@ export default async function PublicHomePage() {
               Sommertheater Altrossthal
             </Text>
             <div className="w-full max-w-3xl">
-              <PremiereCountdownSection
+              <ShowCountdownSection
                 initialCountdownTarget={initialCountdownTargetIso}
                 effectiveCountdownTarget={effectiveCountdownTargetIso}
                 updatedAt={updatedAtIso}
                 hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
                 disabled={resolvedCountdown.disabled}
                 initialNow={countdownInitialNow}
-                termine={(resolvedCountdown.termine as { datum: string; uhrzeit: string; label?: string }[]).map((termin, index) => ({
-                  datum: termin.datum ?? "",
-                  uhrzeit: termin.uhrzeit ?? "",
-                  label: termin.label ?? `Vorstellung ${index + 1}`,
+                scheduledDates={(resolvedCountdown.scheduledDates as { date: string; time: string; label?: string }[]).map((scheduledDate, index) => ({
+                  date: scheduledDate.date ?? "",
+                  time: scheduledDate.time ?? "",
+                  label: scheduledDate.label ?? `Vorstellung ${index + 1}`,
                 }))}
-                nachSommerText={resolvedCountdown.nachSommerText}
+                postShowText={resolvedCountdown.postShowText}
               />
             </div>
           </section>
-          <ProductionFlyerSection aktiv={productionFlyer?.aktiv ?? false} titel={productionFlyer?.titel ?? null} beschreibung={productionFlyer?.beschreibung ?? null} hasBild={Boolean(productionFlyer?.bildData && productionFlyer?.bildMimeType)} />
+          <ShowFlyerSection active={productionFlyer?.aktiv ?? false} title={productionFlyer?.titel ?? null} description={productionFlyer?.beschreibung ?? null} hasImage={Boolean(productionFlyer?.bildData && productionFlyer?.bildMimeType)} />
           <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--primary)_35%,transparent),_transparent_60%),radial-gradient(circle_at_bottom,_color-mix(in_oklab,var(--info)_25%,transparent),_transparent_55%)]"
@@ -113,7 +113,7 @@ export default async function PublicHomePage() {
                 </Heading>
               </div>
               <div className="space-y-4">
-                {homepageFaqItems.map((faq) => (
+                {faqItems.map((faq) => (
                   <details
                     key={faq.question}
                     className="group rounded-2xl border border-border/60 bg-background/60 p-6 text-left shadow-lg backdrop-blur transition duration-300 open:border-primary/40 open:bg-background/80"

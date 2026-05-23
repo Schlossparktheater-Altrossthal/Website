@@ -229,9 +229,15 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
-    key: "PRIVATE.WEBSITE.COUNTDOWN.EDIT",
+    key: "PUBLIC.HOME.COUNTDOWN.EDIT",
     label: "Premieren-Countdown verwalten",
     description: "Countdown zur ersten Aufführung auf der öffentlichen Startseite einstellen.",
+    category: "membership",
+  },
+  {
+    key: "PUBLIC.HOME.FLYER.EDIT",
+    label: "Homepage-Flyer verwalten",
+    description: "Flyer-Sektion auf der öffentlichen Startseite einstellen.",
     category: "membership",
   },
   {

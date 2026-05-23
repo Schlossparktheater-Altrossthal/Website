@@ -16,50 +16,50 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Text } from "@/components/ui/typography";
 
-type TerminInput = { datum: string; uhrzeit: string; label: string };
-const MIN_TERMINE = 1;
-const MAX_TERMINE = 8;
+type ShowDateInput = { date: string; time: string; label: string };
+const MIN_DATES = 1;
+const MAX_DATES = 8;
 
-type PremiereCountdownSectionProps = {
+type ShowCountdownSectionProps = {
   initialCountdownTarget: string | null;
   effectiveCountdownTarget: string;
   updatedAt: string | null;
   hasCustomCountdown: boolean;
   disabled: boolean;
   initialNow: number;
-  termine: TerminInput[];
-  nachSommerText: string;
+  scheduledDates: ShowDateInput[];
+  postShowText: string;
 };
 
-type CountdownSettingsState = {
+type ShowCountdownSettingsState = {
   countdownTarget: string | null;
   effectiveCountdownTarget: string;
   updatedAt: string | null;
   hasCustomCountdown: boolean;
   disabled: boolean;
-  termine: TerminInput[];
-  nachSommerText: string;
+  scheduledDates: ShowDateInput[];
+  postShowText: string;
 };
 
-type SavedSettingsResponse = { settings?: CountdownSettingsState; error?: string };
+type SavedSettingsResponse = { settings?: ShowCountdownSettingsState; error?: string };
 
 function parseIso(iso: string | null) { return iso ? new Date(iso).getTime() : Number.NaN; }
 function localInputToIso(value: string) { if (!value) return null; const date = new Date(value); return Number.isNaN(date.getTime()) ? null : date.toISOString(); }
 
-function getNextTermin(termine: TerminInput[], now: number) {
-  return termine.find((t) => {
-    const iso = localInputToIso(`${t.datum}T${t.uhrzeit}`);
+function getNextShowDate(scheduledDates: ShowDateInput[], now: number) {
+  return scheduledDates.find((t) => {
+    const iso = localInputToIso(`${t.date}T${t.time}`);
     if (!iso) return false;
     return parseIso(iso) > now;
   }) ?? null;
 }
 
-export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
+export function ShowCountdownSection(props: ShowCountdownSectionProps) {
   const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
   const { status } = useSession();
-  const canEdit = status === "authenticated" && hasFeature("website.premiere-countdown");
-  const editorOpen = canEdit && activeFeature === "website.premiere-countdown";
-  const [settings, setSettings] = useState<CountdownSettingsState>(() => ({
+  const canEdit = status === "authenticated" && hasFeature("FEATURE.HOME.COUNTDOWN");
+  const editorOpen = canEdit && activeFeature === "FEATURE.HOME.COUNTDOWN";
+  const [settings, setSettings] = useState<ShowCountdownSettingsState>(() => ({
     ...props,
     countdownTarget: props.effectiveCountdownTarget,
   }));
@@ -84,7 +84,7 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
     return () => window.clearInterval(interval);
   }, []);
 
-  const nextTermin = useMemo(() => getNextTermin(settings.termine, now), [settings.termine, now]);
+  const nextTermin = useMemo(() => getNextShowDate(settings.scheduledDates, now), [settings.scheduledDates, now]);
   const countdownActive = !settings.disabled;
   const allDone = countdownActive && !nextTermin;
 
@@ -92,10 +92,10 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
     event.preventDefault();
     setSaving(true); setError(null); setSuccess(null);
     try {
-      const countdownTarget = nextTermin ? localInputToIso(`${nextTermin.datum}T${nextTermin.uhrzeit}`) : null;
-      const response = await fetch("/api/website/premiere-countdown", {
+      const countdownTarget = nextTermin ? localInputToIso(`${nextTermin.date}T${nextTermin.time}`) : null;
+      const response = await fetch("/api/website/show-countdown", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ countdownTarget, disabled: formDisabled, termine: settings.termine, nachSommerText: settings.nachSommerText }),
+        body: JSON.stringify({ countdownTarget, disabled: formDisabled, scheduledDates: settings.scheduledDates, postShowText: settings.postShowText }),
       });
       const data = (await response.json().catch(() => ({}))) as SavedSettingsResponse;
       if (!response.ok || !data.settings) throw new Error(data.error || "Der Countdown konnte nicht gespeichert werden.");
@@ -109,36 +109,36 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
       <Heading level="h2" align="center" className="text-[clamp(2.2rem,7vw,4.1rem)] font-extrabold">
         {!countdownActive ? "Premieren-Countdown" : nextTermin ? (settings.hasCustomCountdown ? "Premiere in" : "Nächste Vorstellung in") : "Vorstellungen beendet"}
       </Heading>
-      {countdownActive ? (allDone ? (settings.nachSommerText ? <Text variant="lead">{settings.nachSommerText}</Text> : null) : <Countdown targetDate={localInputToIso(`${nextTermin?.datum}T${nextTermin?.uhrzeit}`) ?? settings.effectiveCountdownTarget} initialNow={props.initialNow} />) : <Text variant="lead" tone="muted" className="font-semibold">Der Countdown ist aktuell deaktiviert.</Text>}
-      {canEdit ? <Button size="sm" variant={editorOpen ? "secondary" : "outline"} onClick={() => (editorOpen ? closeFeature() : openFeature("website.premiere-countdown"))}>{editorOpen ? "Einstellungen schließen" : "Countdown bearbeiten"}</Button> : null}
+      {countdownActive ? (allDone ? (settings.postShowText ? <Text variant="lead">{settings.postShowText}</Text> : null) : <Countdown targetDate={localInputToIso(`${nextTermin?.date}T${nextTermin?.time}`) ?? settings.effectiveCountdownTarget} initialNow={props.initialNow} />) : <Text variant="lead" tone="muted" className="font-semibold">Der Countdown ist aktuell deaktiviert.</Text>}
+      {canEdit ? <Button size="sm" variant={editorOpen ? "secondary" : "outline"} onClick={() => (editorOpen ? closeFeature() : openFeature("FEATURE.HOME.COUNTDOWN"))}>{editorOpen ? "Einstellungen schließen" : "Countdown bearbeiten"}</Button> : null}
     </div>
 
-    <Dialog open={editorOpen} onOpenChange={(open) => (open ? openFeature("website.premiere-countdown") : closeFeature())}>
+    <Dialog open={editorOpen} onOpenChange={(open) => (open ? openFeature("FEATURE.HOME.COUNTDOWN") : closeFeature())}>
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-h-[85dvh]">
         <DialogHeader><DialogTitle>Premieren-Countdown einstellen</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="space-y-6 overflow-y-auto pr-1">
           <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/60 p-4">
-            <Label htmlFor="premiere-countdown-section-visible" className="text-sm font-semibold">Countdown auf der Startseite anzeigen</Label>
-            <Switch id="premiere-countdown-section-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
+            <Label htmlFor="show-countdown-section-visible" className="text-sm font-semibold">Countdown auf der Startseite anzeigen</Label>
+            <Switch id="show-countdown-section-visible" checked={!formDisabled} onCheckedChange={(v) => setFormDisabled(!v)} />
           </div>
 
           <div className="space-y-3">
-            {settings.termine.map((termin, index) => {
-              const isNext = nextTermin ? nextTermin.label === termin.label : false;
-              return <div key={`${termin.label}-${index}`} className={`grid grid-cols-1 gap-2 overflow-hidden rounded-xl border p-3 md:grid-cols-2 md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] ${isNext ? "border-primary" : "border-border"}`}>
+            {settings.scheduledDates.map((scheduledDate, index) => {
+              const isNext = nextTermin ? nextTermin.label === scheduledDate.label : false;
+              return <div key={`${scheduledDate.label}-${index}`} className={`grid grid-cols-1 gap-2 overflow-hidden rounded-xl border p-3 md:grid-cols-2 md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] ${isNext ? "border-primary" : "border-border"}`}>
                 <div className="min-w-0 md:col-span-2 flex items-center justify-between gap-2">
                   <Label>Vorstellung {index + 1}</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    disabled={settings.termine.length <= MIN_TERMINE}
+                    disabled={settings.scheduledDates.length <= MIN_DATES}
                     aria-label={`Vorstellung ${index + 1} entfernen`}
                     onClick={() =>
                       setSettings((prev) => ({
                         ...prev,
-                        termine: prev.termine.length <= MIN_TERMINE ? prev.termine : prev.termine.filter((_, i) => i !== index),
+                        scheduledDates: prev.scheduledDates.length <= MIN_DATES ? prev.scheduledDates : prev.scheduledDates.filter((_, i) => i !== index),
                       }))
                     }
                   >
@@ -146,10 +146,10 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
                   </Button>
                 </div>
                 <div className="min-w-0">
-                  <DateInput className="min-w-0" value={termin.datum} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, datum: event.target.value } : t) }))} />
+                  <DateInput className="min-w-0" value={scheduledDate.date} onChange={(event) => setSettings((prev) => ({ ...prev, scheduledDates: prev.scheduledDates.map((t, i) => i === index ? { ...t, date: event.target.value } : t) }))} />
                 </div>
                 <div className="min-w-0">
-                  <TimeInput className="min-w-0" value={termin.uhrzeit} onChange={(event) => setSettings((prev) => ({ ...prev, termine: prev.termine.map((t, i) => i === index ? { ...t, uhrzeit: event.target.value } : t) }))} />
+                  <TimeInput className="min-w-0" value={scheduledDate.time} onChange={(event) => setSettings((prev) => ({ ...prev, scheduledDates: prev.scheduledDates.map((t, i) => i === index ? { ...t, time: event.target.value } : t) }))} />
                 </div>
               </div>;
             })}
@@ -157,14 +157,14 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
               type="button"
               variant="outline"
               className="w-full"
-              disabled={settings.termine.length >= MAX_TERMINE}
+              disabled={settings.scheduledDates.length >= MAX_DATES}
               onClick={() =>
                 setSettings((prev) => ({
                   ...prev,
-                  termine:
-                    prev.termine.length >= MAX_TERMINE
-                      ? prev.termine
-                      : [...prev.termine, { datum: "", uhrzeit: "", label: `Vorstellung ${prev.termine.length + 1}` }],
+                  scheduledDates:
+                    prev.scheduledDates.length >= MAX_DATES
+                      ? prev.scheduledDates
+                      : [...prev.scheduledDates, { date: "", time: "", label: `Vorstellung ${prev.scheduledDates.length + 1}` }],
                 }))
               }
             >
@@ -175,7 +175,7 @@ export function PremiereCountdownSection(props: PremiereCountdownSectionProps) {
 
           <div className="space-y-2">
             <Label htmlFor="after-show-text">Text nach allen Vorstellungen</Label>
-            <Textarea id="after-show-text" value={settings.nachSommerText} onChange={(e) => setSettings((prev) => ({ ...prev, nachSommerText: e.target.value }))} />
+            <Textarea id="after-show-text" value={settings.postShowText} onChange={(e) => setSettings((prev) => ({ ...prev, postShowText: e.target.value }))} />
           </div>
 
           {error ? <Text tone="destructive">{error}</Text> : null}
