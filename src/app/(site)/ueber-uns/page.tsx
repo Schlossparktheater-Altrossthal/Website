@@ -41,24 +41,9 @@ const baseMetadata: Metadata = {
   },
 };
 
-async function isPublicPageEnabled(key: "about" | "mystery" | "schoolCat" | "timeline") {
-  try {
-    const response = await fetch("https://sommertheater-altrossthal.de/api/website/settings", { cache: "no-store" });
-    if (!response.ok) {
-      return true;
-    }
-    const payload = (await response.json()) as {
-      settings?: { pageVisibility?: { public?: Partial<Record<"about" | "mystery" | "schoolCat" | "timeline", boolean>> } };
-    };
-
-    return payload.settings?.pageVisibility?.public?.[key] ?? true;
-  } catch {
-    return true;
-  }
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const enabled = await isPublicPageEnabled("about");
+  const visibility = await getPublicPageVisibility();
+  const enabled = visibility.about;
   return {
     ...baseMetadata,
     alternates: {
@@ -80,7 +65,7 @@ type StatisticItem = {
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("de-DE");
 
-const baseStatisticItems: StatisticItem[] = [
+const STATISTIC_ITEMS: StatisticItem[] = [
   {
     label: "Gründung",
     value: "2009",
@@ -103,7 +88,7 @@ const baseStatisticItems: StatisticItem[] = [
   },
 ];
 
-const signatureSectionItems = [
+const SIGNATURE_ITEMS = [
   {
     icon: Drama,
     title: "Freiluftbühne im Schlosspark",
@@ -124,7 +109,7 @@ const signatureSectionItems = [
   },
 ];
 
-const valuesItems = [
+const VALUES_ITEMS = [
   {
     icon: HeartHandshake,
     title: "Gemeinschaft",
@@ -145,7 +130,7 @@ const valuesItems = [
   },
 ];
 
-const milestoneItems = [
+const MILESTONE_ITEMS = [
   {
     year: "2008",
     title: "Theatergruppe im Kulturpalast",
@@ -190,7 +175,7 @@ type TradeItem = {
   description: string;
 };
 
-const tradeItems: TradeItem[] = [
+const TRADE_ITEMS: TradeItem[] = [
   {
     icon: Drama,
     title: "Schauspiel",
@@ -263,7 +248,7 @@ export default async function PublicAboutPage() {
   }
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const ensembleStats = await getCurrentProductionEnsembleStats();
-  const statisticItems = baseStatisticItems.map<StatisticItem>((item) => {
+  const statisticItems = STATISTIC_ITEMS.map<StatisticItem>((item) => {
     if (item.label !== "Ensemble" || !ensembleStats) {
       return item;
     }
@@ -380,7 +365,7 @@ export default async function PublicAboutPage() {
             >
               {Array.from({ length: CAROUSEL_GROUP_COUNT }).map((_, groupIndex) => (
                 <div key={groupIndex} className="flex gap-6" aria-hidden={groupIndex > 0}>
-                  {tradeItems.map(({ icon: TradeIcon, title, description }) => (
+                  {TRADE_ITEMS.map(({ icon: TradeIcon, title, description }) => (
                     <Card
                       key={`${title}-${groupIndex}`}
                       role={groupIndex === 0 ? "listitem" : "presentation"}
@@ -423,7 +408,7 @@ export default async function PublicAboutPage() {
                 Berufsschulzentrums fließen direkt in Bühnenwelten ein.
               </Text>
               <div className="space-y-5">
-                {signatureSectionItems.map(({ icon: SignatureIcon, title, description }) => (
+                {SIGNATURE_ITEMS.map(({ icon: SignatureIcon, title, description }) => (
                   <div
                     key={title}
                     className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
@@ -475,7 +460,7 @@ export default async function PublicAboutPage() {
             </Text>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {valuesItems.map(({ icon: ValueIcon, title, description }) => (
+            {VALUES_ITEMS.map(({ icon: ValueIcon, title, description }) => (
               <Card key={title} className="relative overflow-hidden bg-card/70">
                 <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
                 <CardHeader>
@@ -507,7 +492,7 @@ export default async function PublicAboutPage() {
             <div className="relative">
               <div className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" aria-hidden />
               <ul className="space-y-8">
-                {milestoneItems.map((milestone) => (
+                {MILESTONE_ITEMS.map((milestone) => (
                   <li key={milestone.year} className="relative pl-12">
                     <div className="absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-primary/20 text-primary">
                       <span className="text-xs font-semibold">{milestone.year}</span>
