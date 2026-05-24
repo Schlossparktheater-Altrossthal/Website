@@ -2,7 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
-export { DEFAULT_SERVER_ANALYTICS_SETTINGS, SERVER_ANALYTICS_SETTINGS_LIMITS } from "./server-analytics-settings-constants.js";
+import { DEFAULT_SERVER_ANALYTICS_SETTINGS, SERVER_ANALYTICS_SETTINGS_LIMITS } from "./server-analytics-settings-constants.js";
+export { DEFAULT_SERVER_ANALYTICS_SETTINGS, SERVER_ANALYTICS_SETTINGS_LIMITS };
 
 const SETTINGS_ID = "default";
 const globalForAnalyticsSettings = globalThis;
