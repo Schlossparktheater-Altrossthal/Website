@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const globalForAnalytics = globalThis;
 
@@ -103,7 +105,13 @@ function getAnalyticsPrisma() {
 
   const globalKey = Symbol.for("__analytics_prisma");
   if (!globalForAnalytics[globalKey]) {
+    const poolKey = Symbol.for("__analytics_pg_pool");
+    if (!globalForAnalytics[poolKey]) {
+      globalForAnalytics[poolKey] = new Pool({ connectionString: process.env.DATABASE_URL });
+    }
+    const adapter = new PrismaPg(globalForAnalytics[poolKey]);
     globalForAnalytics[globalKey] = new PrismaClient({
+      adapter,
       log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
     });
   }
