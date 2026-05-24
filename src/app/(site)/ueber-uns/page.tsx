@@ -24,6 +24,32 @@ import { CarouselHint } from "@/app/(site)/ueber-uns/carousel-hint";
 import { Heading, Text } from "@/components/ui/typography";
 import { getCurrentProductionEnsembleStats } from "@/lib/ensemble";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
+import {
+  readUeberUnsIntro,
+  readUeberUnsMilestones,
+  readUeberUnsSignature,
+  readUeberUnsStats,
+  readUeberUnsTrades,
+  readUeberUnsValues,
+} from "@/lib/website-content";
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  AudioLines,
+  CalendarHeart,
+  ClipboardList,
+  Drama,
+  HeartHandshake,
+  Megaphone,
+  Music3,
+  Package,
+  Shirt,
+  Sparkles,
+  Trees,
+  Users,
+  UtensilsCrossed,
+  WandSparkles,
+  Zap,
+};
 
 const baseMetadata: Metadata = {
   title: "Über uns",
@@ -65,179 +91,6 @@ type StatisticItem = {
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("de-DE");
 
-const STATISTIC_ITEMS: StatisticItem[] = [
-  {
-    label: "Gründung",
-    value: "2009",
-    detail: "Premiere mit \"Die lustigen Weiber von Windsor\" im Schlosspark",
-  },
-  {
-    label: "Ensemble",
-    value: "45+",
-    detail: "Darstellende, Musiker:innen und helfende Hände",
-  },
-  {
-    label: "Publikum",
-    value: "400+",
-    detail: "Gäste pro Aufführung",
-  },
-  {
-    label: "Aufführungen",
-    value: "4",
-    detail: "pro Saison",
-  },
-];
-
-const SIGNATURE_ITEMS = [
-  {
-    icon: Drama,
-    title: "Freiluftbühne im Schlosspark",
-    description:
-      "Wir verwandeln historische Mauern und alte Baumkronen in eine Bühne voller Atmosphären, Licht und Klang.",
-  },
-  {
-    icon: Sparkles,
-    title: "Storytelling mit Tiefgang",
-    description:
-      "Jedes Stück entsteht eigens für Altrossthal – poetisch, geheimnisvoll und nah an den Menschen, die uns umgeben.",
-  },
-  {
-    icon: Trees,
-    title: "Schulgelände voller Gewerke",
-    description:
-      "Schüler:innen des BSZ Altroßthal bringen Floristik, Holz- und Metallbau ein – so wachsen Bühne, Kostüm und Szenografie Hand in Hand.",
-  },
-];
-
-const VALUES_ITEMS = [
-  {
-    icon: HeartHandshake,
-    title: "Gemeinschaft",
-    description:
-      "Im Ensemble wirken Generationen zusammen. Ehrenamt, Professionalität und Nachbarschaft greifen ineinander.",
-  },
-  {
-    icon: Users,
-    title: "Offenheit",
-    description:
-      "Wir schaffen Räume, in denen neue Stimmen hörbar werden – auf der Bühne, in den Werkstätten und beim Ausprobieren neuer Gewerke.",
-  },
-  {
-    icon: CalendarHeart,
-    title: "Sorgfalt",
-    description:
-      "Jedes Detail zählt: von der Dramaturgie über die Kostüme bis zur letzten Bankreihe im Park.",
-  },
-];
-
-const MILESTONE_ITEMS = [
-  {
-    year: "2008",
-    title: "Theatergruppe im Kulturpalast",
-    description:
-      "Schüler:innen des BSZ schließen sich erstmals als Theatergruppe zusammen und zeigen \"Fluch(t)weg\" im Studiotheater des Kulturpalastes.",
-  },
-  {
-    year: "2009",
-    title: "Die erste Inszenierung",
-    description:
-      "Toni Burghard Friedrich initiiert das Sommertheater mit \"Die lustigen Weiber von Windsor\" und schafft einen neuen Ort für Schüler:innen des BSZ.",
-  },
-  {
-    year: "2017",
-    title: "Werkstatt-Ateliers",
-    description:
-      "Neue Workshops ermöglichen Schüler:innen, sich in Lichttechnik, Metallbau und Kostümhandwerk auszuprobieren und Verantwortung zu übernehmen.",
-  },
-  {
-    year: "2023",
-    title: "Digital verbunden",
-    description:
-      "Livestreams für Menschen, die nicht vor Ort sein können, und ein hybrides Probenformat für unser Ensemble.",
-  },
-  {
-    year: "2023",
-    title: "Headsets für präzisen Klang",
-    description:
-      "Erstes Theaterstück, bei dem Headsets eingesetzt werden, um Stimmen auf der Freiluftbühne noch klarer zu transportieren.",
-  },
-  {
-    year: "2025",
-    title: "Eigene Webseite für Produktionen",
-    description:
-      "Alle Produktionen und Meilensteine erhalten ein digitales Zuhause – die neue Webseite bündelt seitdem Archiv, Tickets und Rückblicke.",
-  },
-];
-
-type TradeItem = {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-};
-
-const TRADE_ITEMS: TradeItem[] = [
-  {
-    icon: Drama,
-    title: "Schauspiel",
-    description:
-      "Wir entwickeln Szenen gemeinsam und finden für jede Person die passende Herausforderung – vom leisen Spiel bis zur großen Hauptrolle.",
-  },
-  {
-    icon: Package,
-    title: "Requisite",
-    description:
-      "Vom alten Koffer bis zum magischen Artefakt – die Requisite recherchiert, baut und pflegt alles, was Figuren in den Händen halten.",
-  },
-  {
-    icon: Shirt,
-    title: "Kostüm",
-    description:
-      "Outfits werden entworfen, zugeschnitten und veredelt. So erzählen Stoffe, Farben und Accessoires eigene Geschichten.",
-  },
-  {
-    icon: WandSparkles,
-    title: "Maske",
-    description:
-      "Mit Pinseln, Airbrush und viel Fingerspitzengefühl entstehen Charaktere – vom sommerlichen Glow bis hin zu fantastischen Wesen.",
-  },
-  {
-    icon: Megaphone,
-    title: "Werbung",
-    description:
-      "Stories, Reels und Plakatideen machen Probenprozesse sichtbar und laden unser Publikum frühzeitig in den Schlosspark ein.",
-  },
-  {
-    icon: AudioLines,
-    title: "Soufflage",
-    description:
-      "Mit Textbuch und Ruhe bewahren die Souffleur:innen den Überblick – und geben im richtigen Moment leise Stichworte.",
-  },
-  {
-    icon: Music3,
-    title: "Musik",
-    description:
-      "Eigenkompositionen, Chorarrangements und choreografierte Bewegungen verweben Klang und Rhythmus mit der Handlung.",
-  },
-  {
-    icon: UtensilsCrossed,
-    title: "Verpflegung",
-    description:
-      "Snacks für lange Probentage und liebevoll gedeckte Buffets vor den Shows halten Ensemble und Gäste bei Kräften.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Regieassistenz & Organisation",
-    description:
-      "Spielpläne, Probenprotokolle und Kontaktlisten laufen hier zusammen – damit jede Premiere punktgenau gelingt.",
-  },
-  {
-    icon: Zap,
-    title: "Technik & Licht",
-    description:
-      "Von der ersten Probe bis zur Premiere: Unser Technikteam steuert Licht und Ton – damit jeder Moment auf der Bühne sitzt.",
-  },
-];
-
 const CAROUSEL_GROUP_COUNT = 2;
 const SECTION_HEADING_CLASS = "text-[clamp(1.2rem,2.5vw,1.8rem)] font-bold text-foreground";
 
@@ -247,12 +100,20 @@ export default async function PublicAboutPage() {
     notFound();
   }
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
-  const ensembleStats = await getCurrentProductionEnsembleStats();
-  const statisticItems = STATISTIC_ITEMS.map<StatisticItem>((item) => {
+  const [ensembleStats, intro, statsContent, milestones, signature, values, trades] = await Promise.all([
+    getCurrentProductionEnsembleStats(),
+    readUeberUnsIntro(),
+    readUeberUnsStats(),
+    readUeberUnsMilestones(),
+    readUeberUnsSignature(),
+    readUeberUnsValues(),
+    readUeberUnsTrades(),
+  ]);
+
+  const statisticItems = statsContent.items.map<StatisticItem>((item) => {
     if (item.label !== "Ensemble" || !ensembleStats) {
       return item;
     }
-
     return {
       ...item,
       value: NUMBER_FORMATTER.format(ensembleStats.memberCount),
@@ -300,22 +161,11 @@ export default async function PublicAboutPage() {
             <Heading level="h1" className="text-[clamp(1.2rem,2.5vw,1.8rem)] font-bold text-foreground">
               Über uns
             </Heading>
-            <Text variant="bodyLg" tone="muted" className="mt-6">
-              Wir erzählen Geschichten für laue Sommernächte. Unser Ensemble verbindet professionelle Theaterarbeit mit ehrenamtlichem Herzblut – mitten im
-              Schlosspark Altrossthal.
-            </Text>
-            <Text tone="muted" className="mt-4">
-              Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Lernende, Alumni und Freund:innen des
-              BSZ Altroßthal, um eine Bühne zu schaffen, die weit über klassischen Unterricht hinausgeht.
-            </Text>
-            <Text tone="muted" className="mt-4">
-              Das Ensemble besteht aus Schüler:innen des Beruflichen Gymnasiums und der Fachoberschule, Auszubildenden aus Landwirtschaft, Floristik, Konditorei
-              und vielen weiteren Gewerken sowie Freund:innen des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung Dresden.
-            </Text>
-            <Text tone="muted" className="mt-4">
-              Die Regie übernehmen meist professionelle Schauspieler:innen oder Regisseur:innen, die ihre Erfahrung teilen und gemeinsam mit uns neue Sommerstücke
-              entwickeln.
-            </Text>
+            {intro.paragraphs.map((paragraph, index) => (
+              <Text key={index} variant={index === 0 ? "bodyLg" : "body"} tone="muted" className={index === 0 ? "mt-6" : "mt-4"}>
+                {paragraph}
+              </Text>
+            ))}
           </div>
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -365,7 +215,7 @@ export default async function PublicAboutPage() {
             >
               {Array.from({ length: CAROUSEL_GROUP_COUNT }).map((_, groupIndex) => (
                 <div key={groupIndex} className="flex gap-6" aria-hidden={groupIndex > 0}>
-                  {TRADE_ITEMS.map(({ icon: TradeIcon, title, description }) => (
+                  {trades.items.map(({ icon: iconName, title, description }) => { const TradeIcon = ICON_MAP[iconName] ?? Drama; return (
                     <Card
                       key={`${title}-${groupIndex}`}
                       role={groupIndex === 0 ? "listitem" : "presentation"}
@@ -387,7 +237,7 @@ export default async function PublicAboutPage() {
                         </Text>
                       </div>
                     </Card>
-                  ))}
+                  ); })}
                 </div>
               ))}
             </div>
@@ -408,7 +258,7 @@ export default async function PublicAboutPage() {
                 Berufsschulzentrums fließen direkt in Bühnenwelten ein.
               </Text>
               <div className="space-y-5">
-                {SIGNATURE_ITEMS.map(({ icon: SignatureIcon, title, description }) => (
+                {signature.items.map(({ icon: iconName, title, description }) => { const SignatureIcon = ICON_MAP[iconName] ?? Drama; return (
                   <div
                     key={title}
                     className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
@@ -425,7 +275,7 @@ export default async function PublicAboutPage() {
                       </Text>
                     </div>
                   </div>
-                ))}
+                ); })}
               </div>
             </div>
 
@@ -460,7 +310,7 @@ export default async function PublicAboutPage() {
             </Text>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {VALUES_ITEMS.map(({ icon: ValueIcon, title, description }) => (
+            {values.items.map(({ icon: iconName, title, description }) => { const ValueIcon = ICON_MAP[iconName] ?? Drama; return (
               <Card key={title} className="relative overflow-hidden bg-card/70">
                 <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
                 <CardHeader>
@@ -473,7 +323,7 @@ export default async function PublicAboutPage() {
                   </Text>
                 </CardContent>
               </Card>
-            ))}
+            ); })}
           </div>
         </div>
       </section>
@@ -492,8 +342,8 @@ export default async function PublicAboutPage() {
             <div className="relative">
               <div className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" aria-hidden />
               <ul className="space-y-8">
-                {MILESTONE_ITEMS.map((milestone) => (
-                  <li key={milestone.year} className="relative pl-12">
+                {milestones.items.map((milestone, index) => (
+                  <li key={index} className="relative pl-12">
                     <div className="absolute left-0 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-primary/50 bg-primary/20 text-primary">
                       <span className="text-xs font-semibold">{milestone.year}</span>
                     </div>

@@ -339,6 +339,15 @@ const WebsiteIcon = createMembersNavIcon(
   </>,
 );
 
+const ContentIcon = createMembersNavIcon(
+  <>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M7 8h10" />
+    <path d="M7 12h10" />
+    <path d="M7 16h6" />
+  </>,
+);
+
 const ServerAnalyticsIcon = createMembersNavIcon(
   <>
     <path d="M4 20h16" />
@@ -645,6 +654,7 @@ export const membersNavigation = [
     items: [
       { href: "/mitglieder/pages/ui", label: "UI", permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE", icon: DashboardIcon },
       { href: "/mitglieder/website", label: "Website & Theme", permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE", icon: WebsiteIcon },
+      { href: "/mitglieder/website/inhalte", label: "Seiteninhalte", permissionKey: "PUBLIC.CONTENT.MANAGE", icon: ContentIcon },
       { href: "/mitglieder/pages/seitensteuerung", label: "Seitensteuerung", permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE", icon: WebsiteIcon },
     ],
   },

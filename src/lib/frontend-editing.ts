@@ -4,7 +4,10 @@ export type FrontendEditingFeatureKey =
   | "FEATURE.MYSTERY.COUNTDOWN"
   | "FEATURE.HOME.COUNTDOWN"
   | "FEATURE.HOME.FLYER"
-  | "FEATURE.CHRONIK.DATES";
+  | "FEATURE.CHRONIK.DATES"
+  | "FEATURE.HOME.FAQ"
+  | "FEATURE.SCHULKATZE.CONTENT"
+  | "FEATURE.UEBER_UNS.CONTENT";
 
 export type FrontendEditingFeature = {
   key: FrontendEditingFeatureKey;
@@ -40,6 +43,24 @@ const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     label: "Chronik-Termine",
     description: "Aufführungstermine in der öffentlichen Chronik bearbeiten.",
     permissionKey: "PUBLIC.CHRONIK.DATES.EDIT",
+  },
+  {
+    key: "FEATURE.HOME.FAQ",
+    label: "FAQ bearbeiten",
+    description: "Häufig gestellte Fragen auf der Startseite im CMS pflegen.",
+    permissionKey: "PUBLIC.CONTENT.MANAGE",
+  },
+  {
+    key: "FEATURE.SCHULKATZE.CONTENT",
+    label: "Schulkatze-Seite bearbeiten",
+    description: "Einleitungstext der Schulkatze-Seite im CMS pflegen.",
+    permissionKey: "PUBLIC.CONTENT.MANAGE",
+  },
+  {
+    key: "FEATURE.UEBER_UNS.CONTENT",
+    label: "Über-uns-Seite bearbeiten",
+    description: "Alle Inhalte der Über-uns-Seite im CMS pflegen.",
+    permissionKey: "PUBLIC.CONTENT.MANAGE",
   },
 ];
 

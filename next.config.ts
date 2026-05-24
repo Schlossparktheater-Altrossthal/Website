@@ -41,6 +41,43 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async headers() {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      [
+        "img-src 'self' data: blob:",
+        "https://www.gravatar.com",
+        "https://picsum.photos",
+        "https://images.unsplash.com",
+        "https://i.imgur.com",
+        "https://www.elbmargarita.de",
+        "https://www.dresden.de",
+        "https://radiodresden.de",
+        "https://www.felix-hitzig.de",
+      ].join(" "),
+      "font-src 'self' data:",
+      "connect-src 'self' ws: wss:",
+      "media-src 'self' blob: data:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+    ].join("; ");
+
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "Content-Security-Policy", value: csp },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
   webpack: (config) => {
     config.resolve ??= {};
     config.resolve.alias ??= {};

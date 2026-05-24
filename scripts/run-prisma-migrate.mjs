@@ -61,7 +61,7 @@ function resolveFailedMigrations(prismaExecutable) {
     statusOutput = execFileSync(
       prismaExecutable,
       ["migrate", "status", "--schema", schemaPath],
-      { env: process.env, encoding: "utf8" },
+      { env: process.env, encoding: "utf8", shell: process.platform === "win32" },
     );
   } catch (error) {
     const combined = collectErrorOutput(error);
@@ -89,6 +89,7 @@ function resolveFailedMigrations(prismaExecutable) {
       {
         stdio: "inherit",
         env: process.env,
+        shell: process.platform === "win32",
       },
     );
     resolved.push(migrationName);
@@ -103,6 +104,7 @@ function runMigrateDeploy(prismaExecutable) {
       stdio: ["inherit", "pipe", "pipe"],
       env: process.env,
       encoding: "utf8",
+      shell: process.platform === "win32",
     });
     if (output) process.stdout.write(output);
   } catch (error) {

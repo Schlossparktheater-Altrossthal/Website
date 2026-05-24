@@ -10,6 +10,7 @@ import {
   resolvePremiereCountdownSettings,
 } from "@/lib/premiere-countdown-settings";
 import React from "react";
+import { readFaqContent } from "@/lib/website-content";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
 export default async function PublicHomePage() {
@@ -29,38 +30,13 @@ export default async function PublicHomePage() {
   const resolvedCountdown = resolvePremiereCountdownSettings(countdownRecord);
   let productionFlyer = null;
   if (hasDatabase) { try { productionFlyer = await readProductionFlyerSettings(); } catch {} }
+  const faqContent = await readFaqContent();
   const countdownInitialNow = Date.now();
   const effectiveCountdownTargetIso = resolvedCountdown.effectiveCountdownTarget.toISOString();
   const initialCountdownTargetIso = resolvedCountdown.countdownTarget
     ? resolvedCountdown.countdownTarget.toISOString()
     : null;
   const updatedAtIso = resolvedCountdown.updatedAt ? resolvedCountdown.updatedAt.toISOString() : null;
-  const faqItems = [
-    {
-      question: "Was ist das Sommertheater im Schlosspark?",
-      answer:
-        "Unser Sommertheater vereint Musik, Schauspiel und eine Prise Geheimnis vor der einzigartigen Kulisse des Schlossparks. Wir gestalten jedes Jahr ein neues Stück, das unser Publikum aller Altersgruppen begeistert und zum Staunen einlädt.",
-    },
-    {
-      question: "Wann startet der Ticketverkauf?",
-      answer:
-        "Der Ticketverkauf wird über den Instagram-Kanal der Schule bekanntgegeben. Folge uns dort, um nichts zu verpassen.",
-    },
-    {
-      question: "Wo finden die Aufführungen statt?",
-      answer:
-        "Die Vorstellungen finden im Schlosspark Altroßthal statt. Adresse: BSZ für Agrarwirtschaft und Ernährung Dresden, Altroßthal 1, 01169 Dresden.",
-    },
-    {
-      question: "Wie lange dauern die Vorstellungen?",
-      answer:
-        "Die Vorstellungen dauern durchschnittlich 1,5 Stunden und beinhalten eine Pause.",
-    },
-    {
-      question: "Gibt es eine Altersempfehlung?",
-      answer: "Das Stück richtet sich an alle Altersgruppen.",
-    },
-  ];
 
   return (
     <div>
@@ -113,7 +89,7 @@ export default async function PublicHomePage() {
                 </Heading>
               </div>
               <div className="space-y-4">
-                {faqItems.map((faq) => (
+                {faqContent.items.map((faq) => (
                   <details
                     key={faq.question}
                     className="group rounded-2xl border border-border/60 bg-background/60 p-6 text-left shadow-lg backdrop-blur transition duration-300 open:border-primary/40 open:bg-background/80"

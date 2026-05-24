@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
+import { readSchulkatzeIntro } from "@/lib/website-content";
 
 import { CatMemorySection } from "./encounters-section";
 import { CatGallery } from "./schulkatze-gallery";
@@ -110,6 +111,7 @@ export default async function SchoolCatPage() {
   if (!visibility.schoolCat) {
     notFound();
   }
+  const introContent = await readSchulkatzeIntro();
   return (
     <div className="relative isolate">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -136,18 +138,11 @@ export default async function SchoolCatPage() {
             <Heading level="h1" className="mt-2">
               Unsere Schulkatze
             </Heading>
-            <Text variant="bodyLg" tone="muted" className="mt-4">
-              Dieter Dennis von Altroßthal – von allen nur Dieter genannt – war unsere grau getigerte Schulkatze. Über Generationen hinweg
-              streifte er über das Schulgelände und wurde zum vertrauten Gesicht des BSZ Altroßthal.
-            </Text>
-            <Text tone="muted">
-              Niemand wusste genau, seit wann er da war; gefühlt waren es weit über fünfzehn Jahre. Seine stille Präsenz begleitete Unterricht,
-              Proben und Aufführungen gleichermaßen.
-            </Text>
-            <Text tone="muted">
-              2025 mussten wir uns von Dieter verabschieden. Die Erinnerungen an ihn, seine Gelassenheit und die Fürsorge der
-              Schulgemeinschaft bleiben und prägen, wie wir auch künftig füreinander da sind.
-            </Text>
+            {introContent.paragraphs.map((paragraph, index) => (
+              <Text key={index} variant={index === 0 ? "bodyLg" : "body"} tone="muted" className={index === 0 ? "mt-4" : undefined}>
+                {paragraph}
+              </Text>
+            ))}
           </div>
           <CatGallery
             images={catImages}

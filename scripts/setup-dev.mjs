@@ -4,12 +4,15 @@
  * Replaces start-dev.sh with a Node.js script that works on Windows, macOS, and Linux.
  *
  * Usage:
- *   pnpm dev:setup          # Docker mode (default): DB + Mailpit via Docker
- *   pnpm dev:setup --local  # Local mode: no Docker, assumes local Postgres
- *   pnpm dev:start          # Docker mode + start app container
- *   pnpm dev:start --local  # Local mode + start Next.js dev server
- *   pnpm dev:reset          # Reset containers, volumes, node_modules
- *   pnpm dev:clean          # Deep clean (containers, images, volumes, node_modules)
+ *   pnpm dev:setup            # Docker mode (default): DB + Mailpit via Docker
+ *   pnpm dev:setup --local    # Local mode: no Docker, assumes local Postgres
+ *   pnpm dev:start            # Docker mode + start app container
+ *   pnpm dev:start --local    # Local mode + start Next.js dev server
+ *   pnpm dev:start --hybrid   # Hybrid: Docker for DB/Mailpit, Next.js runs locally
+ *   pnpm dev:reset            # Reset containers, volumes, node_modules
+ *   pnpm dev:clean            # Deep clean (containers, images, volumes, node_modules)
+ *   pnpm dev:services         # Start only Docker services (db + mailpit)
+ *   pnpm dev:services:down    # Stop Docker services
  */
 
 import { execSync, spawnSync } from 'child_process';
@@ -58,9 +61,9 @@ function runOrFail(cmd, errorMsg) {
 // ---------------------------------------------------------------------------
 
 const args = process.argv.slice(2);
-const MODE = args.includes('--local') ? 'local' : 'docker';
 const COMMAND = args.find((a) => !a.startsWith('--')) ?? 'setup';
 const PROD = args.includes('--prod') || args.includes('--production');
+const MODE = args.includes('--local') ? 'local' : args.includes('--hybrid') ? 'hybrid' : 'docker';
 
 // ---------------------------------------------------------------------------
 // Requirements check
@@ -74,7 +77,7 @@ function checkRequirements() {
     { cmd: 'pnpm --version', name: 'pnpm', hint: 'npm install -g pnpm' },
   ];
 
-  if (MODE === 'docker') {
+  if (MODE === 'docker' || MODE === 'hybrid') {
     required.push(
       { cmd: 'docker --version', name: 'Docker', hint: 'https://docs.docker.com/get-docker/' },
       { cmd: 'docker compose version', name: 'Docker Compose', hint: 'Included with Docker Desktop' },
@@ -210,6 +213,12 @@ function startDockerApp() {
   runOrFail('docker compose up --build app', 'Failed to start app container.');
 }
 
+function stopDockerServices() {
+  log.info('Stopping Docker services (db, mailpit)...');
+  run('docker compose stop db mailpit', { silent: false });
+  log.info('Docker services stopped ✓');
+}
+
 function startDockerProd() {
   run('docker compose -f docker-compose.yml -f docker-compose.hosting.yml down', { silent: true });
   log.info('Building and starting production containers...');
@@ -279,6 +288,19 @@ switch (COMMAND) {
     cleanEnv();
     break;
 
+  case 'services': {
+    checkRequirements();
+    startDockerServices();
+    log.info('Docker services running (db on :5432, mailpit on :8025 / :1025) ✓');
+    log.info('Stop with: pnpm dev:services:down');
+    break;
+  }
+
+  case 'services:down': {
+    stopDockerServices();
+    break;
+  }
+
   default: {
     checkRequirements();
     setupEnv();
@@ -288,6 +310,11 @@ switch (COMMAND) {
       if (MODE === 'local') {
         setupPrisma();
         startLocalDev();
+      } else if (MODE === 'hybrid') {
+        startDockerServices();
+        runOrFail('pnpm prisma:generate', 'Prisma generate failed.');
+        log.info('Starting Next.js dev server locally...');
+        runOrFail('pnpm dev', 'Next.js dev server failed.');
       } else if (PROD) {
         startDockerProd();
       } else {
@@ -300,6 +327,10 @@ switch (COMMAND) {
       if (MODE === 'local') {
         setupPrisma();
         log.info('Local setup complete. Run "pnpm dev" to start the dev server.');
+      } else if (MODE === 'hybrid') {
+        startDockerServices();
+        runOrFail('pnpm prisma:generate', 'Prisma generate failed.');
+        log.info('Hybrid setup complete. Run "pnpm dev" to start the dev server.');
       } else {
         startDockerServices();
         runOrFail('pnpm prisma:generate', 'Prisma generate failed.');
