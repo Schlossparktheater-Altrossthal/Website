@@ -17,6 +17,7 @@ on:
       - 'components.json'
       - 'src/**'
       - 'public/**'
+      - 'prisma.config.ts'
       - 'prisma/**'
       - 'realtime-server/**'
       - 'scripts/**'
