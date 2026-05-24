@@ -17,9 +17,7 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: theater-vaultwarden
       server: https://kubernetes.default.svc
-  clusterResourceWhitelist:
-    - group: ''
-      kind: Namespace
+  clusterResourceWhitelist: []
   namespaceResourceWhitelist:
     - group: '*'
       kind: '*'
