@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState } from "react";
-import type { TooltipContentProps, TooltipProps } from "recharts";
+import type { TooltipContentProps } from "recharts";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -229,7 +229,7 @@ export function RoleSpiderChart({
                 strokeWidth: 1,
                 fill: "transparent",
               }}
-              content={renderTooltip as TooltipProps<number, string>["content"]}
+              content={(props) => renderTooltip(props as TooltipContentProps<number, string>)}
               labelFormatter={tooltipLabelFormatter}
             />
           </RadarChart>
