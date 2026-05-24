@@ -102,6 +102,10 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Löschaktionen verwenden immer `variant="destructive"` und das `TrashIcon`.
 - Bearbeitungsaktionen verwenden immer das `EditIcon`.
 - Dialoge für destruktive Aktionen müssen vor der Ausführung eine Bestätigung abfragen.
+- Für alle Buttons mit Ladezustand AsyncButton aus `src/components/ui/async-button.tsx` verwenden. Nie Button manuell mit Loader2 kombinieren.
+- Für alle destruktiven Bestätigungen ConfirmDialog aus `src/components/ui/confirm-dialog.tsx` verwenden. `window.confirm` ist verboten.
+- Für alle Create/Edit-Dialoge ModalFormDialog aus `src/components/ui/modal-form-dialog.tsx` verwenden.
+- `src/lib/ui-standards.ts` ist die Single Source of Truth für Props-Interfaces aller geteilten UI-Patterns.
 
 ## Design-Tokens
 
