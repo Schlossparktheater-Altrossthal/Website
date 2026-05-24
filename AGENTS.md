@@ -112,6 +112,15 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Farben immer über semantische CSS-Variablen aus `src/design-system/tokens.json` verwenden, z. B. `text-primary`, `text-destructive`, `bg-muted`.
 - Hardcodierte Farbwerte sind nicht erlaubt.
 
+## Surface & Card Hierarchie
+
+- `bg-background` ist die Seitenbasis. Innerhalb einer Card darf es nie verwendet werden.
+- `bg-card` gilt für alle primären Cards und Section-Container.
+- `bg-muted` gilt für verschachtelte/sekundäre Flächen innerhalb einer Card (Sub-Cards, innere Sektionen).
+- `bg-popover` ist ausschließlich für Overlays, Dropdowns und Tooltips reserviert.
+- Card-Rahmen verwenden `border-border`. `border-primary` (orange) ist auf strukturellen Containern verboten — orange Rahmen sind ausschließlich für interaktive/ausgewählte Zustände reserviert.
+- Niemals hardcodierte Farben für Flächen verwenden. Immer semantische Tokens nutzen.
+
 ## Seiten-Patterns
 
 - Seiten-Header verwenden das `PageHeader`-Pattern aus `src/design-system/patterns/page-header.tsx`.
