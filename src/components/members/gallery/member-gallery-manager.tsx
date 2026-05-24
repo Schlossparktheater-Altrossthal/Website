@@ -1,16 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import {
-  AlertCircle,
-  Image as ImageIcon,
-  Loader2,
-  Trash2,
-  UploadCloud,
-  Video,
-} from "lucide-react";
+import { Image as ImageIcon, UploadCloud, Video } from "lucide-react";
 import { toast } from "sonner";
 
+import { TrashIcon, AlertIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -428,7 +423,7 @@ export function MemberGalleryManager({ year, canUpload, canModerate, initialItem
                                 className="h-7 w-7 text-muted-foreground"
                                 onClick={() => handleRemoveCandidate(entry.key)}
                               >
-                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                <TrashIcon className="h-4 w-4" aria-hidden="true" />
                               </Button>
                             </div>
                             <div className="mt-3 space-y-1">
@@ -452,7 +447,7 @@ export function MemberGalleryManager({ year, canUpload, canModerate, initialItem
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 rounded-md border border-dashed border-border/50 bg-muted/30 p-4 text-sm text-muted-foreground">
-                      <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                      <AlertIcon className="h-4 w-4" aria-hidden="true" />
                       Noch keine Dateien ausgewählt.
                     </div>
                   )}
@@ -475,17 +470,14 @@ export function MemberGalleryManager({ year, canUpload, canModerate, initialItem
                       Auswahl leeren
                     </Button>
                   ) : null}
-                  <Button type="submit" disabled={uploading || selectedFiles.length === 0}>
-                    {uploading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Upload läuft
-                      </>
-                    ) : (
-                      <>
-                        <UploadCloud className="mr-2 h-4 w-4" aria-hidden /> Upload starten
-                      </>
-                    )}
-                  </Button>
+                  <AsyncButton
+                    type="submit"
+                    isLoading={uploading}
+                    loadingText="Upload läuft"
+                    disabled={selectedFiles.length === 0}
+                  >
+                    <UploadCloud className="h-4 w-4" aria-hidden /> Upload starten
+                  </AsyncButton>
                 </div>
               </div>
             </form>
@@ -545,20 +537,16 @@ export function MemberGalleryManager({ year, canUpload, canModerate, initialItem
                       </a>
                     </Button>
                     {item.canDelete || canModerate ? (
-                      <Button
+                      <AsyncButton
                         type="button"
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(item.id)}
-                        disabled={deletingId === item.id}
+                        isLoading={deletingId === item.id}
+                        loadingText="Entfernen"
                       >
-                        {deletingId === item.id ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="mr-2 h-4 w-4" />
-                        )}
-                        Entfernen
-                      </Button>
+                        <TrashIcon className="h-4 w-4" aria-hidden /> Entfernen
+                      </AsyncButton>
                     ) : null}
                   </div>
                 </CardContent>

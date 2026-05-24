@@ -9,12 +9,11 @@ import {
   FINANCE_ENTRY_STATUS_VALUES,
   FINANCE_TYPE_LABELS,
 } from "@/lib/finance";
-import { Button } from "@/components/ui/button";
+import { AsyncButton } from "@/components/ui/async-button";
 import { DateInput } from "@/components/ui/date-input";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { FileDown, Loader2 } from "lucide-react";
+import { DownloadIcon } from "@/components/ui/action-icons";
 
 type FinanceExportSectionProps = {
   showId: string;
@@ -112,14 +111,15 @@ export function FinanceExportSection({ showId }: FinanceExportSectionProps) {
         <DateInput value={to} onChange={(event) => setTo(event.target.value)} placeholder="Bis" />
       </div>
       <div>
-        <Button type="button" onClick={handleDownload} disabled={downloading} className="gap-2">
-          {downloading ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          ) : (
-            <FileDown className="h-4 w-4" aria-hidden />
-          )}
-          {downloading ? "Export wird erstellt…" : "CSV-Export herunterladen"}
-        </Button>
+        <AsyncButton
+          type="button"
+          onClick={handleDownload}
+          isLoading={downloading}
+          loadingText="Export wird erstellt…"
+          className="gap-2"
+        >
+          <DownloadIcon className="h-4 w-4" aria-hidden /> CSV-Export herunterladen
+        </AsyncButton>
       </div>
     </div>
   );
