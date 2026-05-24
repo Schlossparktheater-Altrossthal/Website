@@ -125,3 +125,38 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 
 - Seiten-Header verwenden das `PageHeader`-Pattern aus `src/design-system/patterns/page-header.tsx`.
 - Metric-Cards verwenden das `KeyMetricCard`-Pattern aus `src/design-system/patterns/key-metric.tsx`.
+
+## Typografie & Abstände
+- Seitentitel (h1): text-3xl font-bold, nur einmal pro Seite.
+- Abschnittstitel (h2): text-xl font-semibold, mit mb-4 darunter.
+- Kartentitel (h3): text-base font-medium.
+- Abstände zwischen Hauptsektionen: space-y-6 oder gap-6.
+- Text-Hierarchie: text-foreground für Haupttext, text-muted-foreground für Sekundärtext und Labels.
+
+## Badge & Status
+- Badges verwenden die Badge-Komponente aus src/components/ui/badge.tsx.
+- Status-Semantik: success-Token für positiv/aktiv, warning-Token für ausstehend/Hinweis, destructive-Token für Fehler/gesperrt, muted für neutral/inaktiv.
+- Nie hardcodierte Farben für Statusbadges. Immer variant oder className mit semantischem Token.
+
+## Empty States
+- Leere Zustände immer mit zentriertem Text und muted-foreground Farbe darstellen.
+- Struktur: umschließende div mit py-12 text-center, Icon optional in text-muted-foreground, darunter p mit text-muted-foreground.
+- Kein window.confirm, kein gestrichelter Box-Eigenbau ohne diese Struktur.
+
+## Skeleton & Ladezeichen
+- Ladezeichen immer mit der Skeleton-Komponente aus src/components/ui/skeleton.tsx.
+- animate-pulse direkt auf Elementen ist verboten. Immer Skeleton verwenden.
+- Suspense-Fallbacks verwenden dedizierte loading.tsx Dateien mit Skeleton-Komponenten.
+
+## Toast & Feedback
+- toast.success für erfolgreich abgeschlossene Aktionen.
+- toast.error für Fehler die eine Nutzeraktion erfordern.
+- toast.info für neutrale Statusänderungen und Echtzeit-Events.
+- Dauer: Erfolg 3000ms, Fehler 5000ms, Info 2000ms.
+- Toasts haben immer einen kurzen Titel und optional eine description für Details.
+
+## Callout & Hinweisboxen
+- Hinweisboxen verwenden bg-muted border border-border rounded-lg p-4.
+- Warnhinweise verwenden bg-warning/10 border border-warning text-warning-foreground rounded-lg p-4.
+- Fehlerhinweise verwenden bg-destructive/10 border border-destructive text-destructive-foreground rounded-lg p-4.
+- Nie eigene Farben oder hardcodierte Hintergründe für Hinweisboxen.
