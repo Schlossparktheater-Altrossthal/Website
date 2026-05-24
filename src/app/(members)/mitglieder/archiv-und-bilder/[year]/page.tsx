@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
 import { MemberGalleryManager, type MemberGalleryItem } from "@/components/members/gallery/member-gallery-manager";
 import { Button } from "@/components/ui/button";
+import { ArrowLeftIcon } from "@/components/ui/action-icons";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -46,7 +46,7 @@ export default async function ArchiveYearPage({
           actions={
             <Button asChild variant="outline">
               <Link href="/mitglieder/archiv-und-bilder">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Zur Übersicht
+                <ArrowLeftIcon className="mr-2 h-4 w-4" /> Zur Übersicht
               </Link>
             </Button>
           }
@@ -91,7 +91,7 @@ export default async function ArchiveYearPage({
         actions={
           <Button asChild variant="outline">
             <Link href="/mitglieder/archiv-und-bilder">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Zur Übersicht
+              <ArrowLeftIcon className="mr-2 h-4 w-4" /> Zur Übersicht
             </Link>
           </Button>
         }
