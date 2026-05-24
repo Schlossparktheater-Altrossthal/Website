@@ -39,6 +39,7 @@ function getAnalyticsPrisma(client) {
   const globalKey = Symbol.for("__analytics_settings_prisma");
   if (!globalForAnalyticsSettings[globalKey]) {
     globalForAnalyticsSettings[globalKey] = new PrismaClient({
+      datasourceUrl: process.env.DATABASE_URL,
       log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
     });
   }

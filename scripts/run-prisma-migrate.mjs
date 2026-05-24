@@ -53,12 +53,16 @@ function parseFailedMigrations(output) {
   return result;
 }
 
+function getMigrateUrlArgs() {
+  return process.env.DATABASE_URL ? ["--url", process.env.DATABASE_URL] : [];
+}
+
 function resolveFailedMigrations(prismaExecutable) {
   let statusOutput = "";
   try {
     statusOutput = execFileSync(
       prismaExecutable,
-      ["migrate", "status", "--schema", schemaPath],
+      ["migrate", "status", "--schema", schemaPath, ...getMigrateUrlArgs()],
       { env: process.env, encoding: "utf8" },
     );
   } catch (error) {
@@ -83,7 +87,7 @@ function resolveFailedMigrations(prismaExecutable) {
     );
     execFileSync(
       prismaExecutable,
-      ["migrate", "resolve", "--rolled-back", migrationName, "--schema", schemaPath],
+      ["migrate", "resolve", "--rolled-back", migrationName, "--schema", schemaPath, ...getMigrateUrlArgs()],
       {
         stdio: "inherit",
         env: process.env,
@@ -96,7 +100,7 @@ function resolveFailedMigrations(prismaExecutable) {
 }
 
 function runMigrateDeploy(prismaExecutable) {
-  execFileSync(prismaExecutable, ["migrate", "deploy"], {
+  execFileSync(prismaExecutable, ["migrate", "deploy", ...getMigrateUrlArgs()], {
     stdio: "inherit",
     env: process.env,
   });
