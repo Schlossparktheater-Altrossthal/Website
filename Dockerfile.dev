@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 
 # Development Dockerfile bundling the Next.js app and realtime server
-FROM node:24-alpine
+FROM node:26-alpine
 
 ARG NODE_ENV=development
 ARG GIT_COMMIT_SHA
