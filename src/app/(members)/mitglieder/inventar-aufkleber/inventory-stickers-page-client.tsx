@@ -3,20 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  CirclePlus,
-  Minus,
-  Plus,
-  Printer,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 
 import { PageHeader } from "@/components/members/page-header";
+import { CirclePlusIcon, MinusIcon, PrinterIcon, SearchIcon, TrashIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -345,7 +339,7 @@ export default function InventoryStickersPageClient({
       .slice(0, 12);
   }, [inventoryItems, inventoryQuery]);
 
-  const addInventoryItem = useCallback(
+  const handleAddInventoryItem = useCallback(
     (item: InventoryItemOption) => {
       const details = [normalizeDetails(item.location), normalizeDetails(item.owner ? `Verantwortlich: ${item.owner}` : null)]
         .filter(Boolean)
@@ -389,7 +383,7 @@ export default function InventoryStickersPageClient({
         event.preventDefault();
         const [first] = filteredInventory;
         if (first) {
-          addInventoryItem(first);
+          handleAddInventoryItem(first);
         }
       }
 
@@ -397,7 +391,7 @@ export default function InventoryStickersPageClient({
         setInventoryQuery("");
       }
     },
-    [addInventoryItem, filteredInventory, inventoryQuery],
+    [handleAddInventoryItem, filteredInventory, inventoryQuery],
   );
 
   const handleGenerateSequence = sequenceForm.handleSubmit((values) => {
@@ -460,7 +454,7 @@ export default function InventoryStickersPageClient({
     manualForm.reset({ code: "", title: "", subtitle: values.subtitle ?? "", copies: 1 });
   });
 
-  const adjustCopies = useCallback((key: string, delta: number) => {
+  const handleAdjustCopies = useCallback((key: string, delta: number) => {
     setStickers((previous) =>
       previous.map((entry) => {
         if (entry.key !== key) {
@@ -473,7 +467,7 @@ export default function InventoryStickersPageClient({
     );
   }, []);
 
-  const updateSticker = useCallback((key: string, patch: Partial<Omit<StickerEntry, "key" | "copies" | "source" | "sourceId">>) => {
+  const handleUpdateSticker = useCallback((key: string, patch: Partial<Omit<StickerEntry, "key" | "copies" | "source" | "sourceId">>) => {
     setStickers((previous) =>
       previous.map((entry) => {
         if (entry.key !== key) {
@@ -485,11 +479,11 @@ export default function InventoryStickersPageClient({
     );
   }, []);
 
-  const removeSticker = useCallback((key: string) => {
+  const handleRemoveSticker = useCallback((key: string) => {
     setStickers((previous) => previous.filter((entry) => entry.key !== key));
   }, []);
 
-  const clearStickers = useCallback(() => {
+  const handleClearStickers = useCallback(() => {
     setStickers([]);
     toast.info("Druckliste geleert.");
   }, []);
@@ -509,7 +503,7 @@ export default function InventoryStickersPageClient({
           breadcrumbs={[breadcrumb]}
           actions={
             <Button type="button" onClick={handlePrint} disabled={previewEntries.length === 0}>
-              <Printer className="mr-2 h-4 w-4" /> Druckansicht
+              <PrinterIcon className="mr-2 h-4 w-4" /> Druckansicht
             </Button>
           }
           status={
@@ -542,7 +536,7 @@ export default function InventoryStickersPageClient({
                       Inventar durchsuchen
                     </label>
                     <div className="relative mt-1">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="inventory-search"
                         type="search"
@@ -590,8 +584,8 @@ export default function InventoryStickersPageClient({
                                 ) : null}
                               </Text>
                             </div>
-                            <Button type="button" variant="outline" size="sm" onClick={() => addInventoryItem(item)}>
-                              <CirclePlus className="mr-2 h-4 w-4" /> Hinzufügen
+                            <Button type="button" variant="outline" size="sm" onClick={() => handleAddInventoryItem(item)}>
+                              <CirclePlusIcon className="mr-2 h-4 w-4" /> Hinzufügen
                             </Button>
                           </div>
                         );
@@ -785,7 +779,7 @@ export default function InventoryStickersPageClient({
                       )}
                     />
                     <Button type="submit" className="self-end">
-                      <CirclePlus className="mr-2 h-4 w-4" /> Hinzufügen
+                      <CirclePlusIcon className="mr-2 h-4 w-4" /> Hinzufügen
                     </Button>
                   </div>
                 </form>
@@ -807,10 +801,10 @@ export default function InventoryStickersPageClient({
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={clearStickers}
+                onClick={handleClearStickers}
                 disabled={stickers.length === 0}
               >
-                <Trash2 className="mr-2 h-4 w-4" /> Liste leeren
+                <TrashIcon className="mr-2 h-4 w-4" /> Liste leeren
               </Button>
             </CardHeader>
             <CardContent>
@@ -847,11 +841,11 @@ export default function InventoryStickersPageClient({
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={(event) => adjustCopies(entry.key, event.shiftKey ? -5 : -1)}
+                            onClick={(event) => handleAdjustCopies(entry.key, event.shiftKey ? -5 : -1)}
                             disabled={entry.copies <= 1}
                             title="Minus 1 (Shift: -5)"
                           >
-                            <Minus className="h-4 w-4" />
+                            <MinusIcon className="h-4 w-4" />
                           </Button>
                           <Text className="w-12 text-center font-mono text-sm" aria-live="polite">
                             {entry.copies}
@@ -860,7 +854,7 @@ export default function InventoryStickersPageClient({
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={(event) => adjustCopies(entry.key, event.shiftKey ? 5 : 1)}
+                            onClick={(event) => handleAdjustCopies(entry.key, event.shiftKey ? 5 : 1)}
                             disabled={entry.copies >= MAX_TOTAL_STICKERS}
                             title="Plus 1 (Shift: +5)"
                           >
@@ -870,10 +864,10 @@ export default function InventoryStickersPageClient({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            onClick={() => removeSticker(entry.key)}
+                            onClick={() => handleRemoveSticker(entry.key)}
                             title="Sticker entfernen"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <TrashIcon className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -881,7 +875,7 @@ export default function InventoryStickersPageClient({
                         <label className="block text-xs font-medium text-muted-foreground">Code</label>
                         <Input
                           value={entry.code}
-                          onChange={(event) => updateSticker(entry.key, { code: event.target.value })}
+                          onChange={(event) => handleUpdateSticker(entry.key, { code: event.target.value })}
                           className="font-mono"
                         />
                       </div>
@@ -890,7 +884,7 @@ export default function InventoryStickersPageClient({
                           <label className="block text-xs font-medium text-muted-foreground">Titelzeile</label>
                           <Input
                             value={entry.primaryText}
-                            onChange={(event) => updateSticker(entry.key, { primaryText: event.target.value })}
+                            onChange={(event) => handleUpdateSticker(entry.key, { primaryText: event.target.value })}
                           />
                         </div>
                         <div className="space-y-2">
@@ -898,7 +892,7 @@ export default function InventoryStickersPageClient({
                           <Input
                             value={entry.secondaryText ?? ""}
                             onChange={(event) =>
-                              updateSticker(entry.key, {
+                              handleUpdateSticker(entry.key, {
                                 secondaryText: event.target.value.length > 0 ? event.target.value : undefined,
                               })
                             }

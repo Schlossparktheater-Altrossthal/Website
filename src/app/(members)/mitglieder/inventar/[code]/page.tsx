@@ -60,7 +60,7 @@ export default async function InventoryItemPage({ params }: PageProps) {
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-red-600">
+        <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-destructive">
           Kein Zugriff auf diesen Lagerbereich.
         </div>
       </div>
