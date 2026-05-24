@@ -1,37 +1,16 @@
 # syntax=docker/dockerfile:1.4
 
-# Production Dockerfile bundling the Next.js app and realtime server
-ARG GIT_COMMIT_SHA
+# Pre-built artifacts (node_modules, .next, public, etc.) are provided
+# by the CI build step and copied directly into the image.
 
-FROM node:26-alpine AS base
+FROM node:26-slim AS base
 ENV PNPM_HOME=/root/.local/share/pnpm \
     PATH=/root/.local/share/pnpm:$PATH \
     NEXT_TELEMETRY_DISABLED=1
-RUN apk add --no-cache openssl \
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* \
     && npm install -g corepack@latest \
     && corepack enable
 WORKDIR /app
-
-FROM base AS deps
-COPY package.json pnpm-lock.yaml ./
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store/v3 \
-    SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --frozen-lockfile
-
-FROM base AS builder
-ARG GIT_COMMIT_SHA
-ENV NODE_ENV=production \
-    VERCEL_GIT_COMMIT_SHA=${GIT_COMMIT_SHA} \
-    NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA=${GIT_COMMIT_SHA} \
-    REALTIME_BASE_PATH=/realtime \
-    NEXT_PUBLIC_REALTIME_URL=/realtime \
-    NEXT_PUBLIC_REALTIME_PATH=/realtime/socket.io \
-    NEXT_PUBLIC_REALTIME_INIT_PATH=/api/socket \
-    REALTIME_SERVER_EVENT_PATH=/realtime/events
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN pnpm prisma:generate
-RUN pnpm build
-RUN pnpm prune --prod
 
 FROM base AS runner
 ARG GIT_COMMIT_SHA
@@ -47,16 +26,15 @@ ENV NODE_ENV=production \
     REALTIME_SERVER_EVENT_PATH=/realtime/events \
     REALTIME_INTERNAL_ORIGIN=http://127.0.0.1:3001 \
     REALTIME_SERVER_URL=http://127.0.0.1:3001/realtime
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/realtime-server ./realtime-server
-COPY --from=builder /app/src/data ./src/data
-COPY --from=builder /app/src/lib ./src/lib
+COPY node_modules ./node_modules
+COPY package.json pnpm-lock.yaml ./
+COPY .next ./.next
+COPY public ./public
+COPY prisma ./prisma
+COPY scripts ./scripts
+COPY realtime-server ./realtime-server
+COPY src/data ./src/data
+COPY src/lib ./src/lib
 
 EXPOSE 3000
 

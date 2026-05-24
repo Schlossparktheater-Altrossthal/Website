@@ -1,14 +1,9 @@
-node_modules
-.next
-out
-build
 pnpm-store
 .git
-.gitignore
+.github
 dev.db*
 .DS_Store
-
+.next/cache
 
 # local-only compose files
 docker-compose.internal.yml
-
