@@ -253,6 +253,12 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
+    key: "PRIVATE.CHRONIK.MANAGE",
+    label: "Chronik verwalten",
+    description: "Chronik-Produktionen anlegen, bearbeiten und löschen.",
+    category: "membership",
+  },
+  {
     key: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",

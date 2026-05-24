@@ -601,7 +601,7 @@ export const membersNavigation = [
       {
         href: "/mitglieder/chronik",
         label: "Chronik",
-        permissionKey: "PRIVATE.GALLERY.MEDIA.VIEW",
+        permissionKey: "PRIVATE.CHRONIK.MANAGE",
         icon: TimelineIcon,
       },
       {
