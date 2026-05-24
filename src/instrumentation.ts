@@ -1,7 +1,5 @@
 import type { AnalyticsRequestArea } from "@prisma/client";
 
-import { ingestHttpRequest } from "@/lib/analytics/ingest-http";
-
 const requestMeta = new WeakMap<Request, PendingRequest>();
 
 const IGNORED_PREFIXES = ["/_next", "/_proxy", "/favicon", "/assets", "/fonts", "/icons"];
@@ -118,17 +116,19 @@ function finalizeRequest(request: Request, response: Response) {
   const statusCode = typeof response.status === "number" ? response.status : 0;
   const durationMs = Math.max(0, finishedAt - metadata.startedAt);
 
-  void ingestHttpRequest({
-    timestamp: new Date(metadata.startedAt),
-    route: metadata.route,
-    area: metadata.area,
-    statusCode,
-    durationMs,
-    payloadBytes: metadata.payloadBytes,
-    method: metadata.method,
-  }).catch((error) => {
-    console.error("[analytics] Failed to record HTTP request", error);
-  });
+  void import("@/lib/analytics/ingest-http").then(({ ingestHttpRequest }) =>
+    ingestHttpRequest({
+      timestamp: new Date(metadata.startedAt),
+      route: metadata.route,
+      area: metadata.area,
+      statusCode,
+      durationMs,
+      payloadBytes: metadata.payloadBytes,
+      method: metadata.method,
+    }).catch((error) => {
+      console.error("[analytics] Failed to record HTTP request", error);
+    })
+  );
 }
 
 export function onRequest(event: RequestEvent) {

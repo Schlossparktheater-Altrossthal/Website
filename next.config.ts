@@ -29,6 +29,8 @@ const nextConfig: NextConfig = {
     "qrcode",
     "node-ical",
     "sharp",
+    "pg",
+    "@prisma/adapter-pg",
   ],
   async redirects() {
     return [

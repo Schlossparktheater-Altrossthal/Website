@@ -46,7 +46,7 @@ import {
   type UpdateServerAnalyticsSettingsInput,
 } from "./actions";
 import { OverviewMetrics, type OverviewMetricDefinition } from "./overview-metrics";
-import { SERVER_ANALYTICS_SETTINGS_LIMITS } from "@/lib/server-analytics-settings";
+import { SERVER_ANALYTICS_SETTINGS_LIMITS } from "@/lib/server-analytics-settings-constants";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
 const decimalFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
