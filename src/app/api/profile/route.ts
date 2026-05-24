@@ -597,7 +597,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Bild konnte nicht verarbeitet werden" }, { status: 400 });
     }
 
-    updates.avatarImage = avatarBuffer ? new Uint8Array(avatarBuffer.buffer, avatarBuffer.byteOffset, avatarBuffer.byteLength) as Uint8Array<ArrayBuffer> : undefined;
+    updates.avatarImage = avatarBuffer;
     updates.avatarImageMime = avatarMime;
     updates.avatarImageUpdatedAt = new Date();
     if (!parsedAvatarSource) {

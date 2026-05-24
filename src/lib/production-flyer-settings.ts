@@ -14,7 +14,7 @@ export async function saveProductionFlyerSettings(data: { aktiv: boolean; titel:
   });
 }
 
-export async function saveProductionFlyerSettingsImage(data: { bildData: Uint8Array<ArrayBuffer>; bildMimeType: string }) {
+export async function saveProductionFlyerSettingsImage(data: { bildData: Buffer; bildMimeType: string }) {
   return prisma.homepageFlyer.upsert({
     where: { id: PRODUCTION_FLYER_SETTINGS_ID },
     update: data,

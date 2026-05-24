@@ -1,5 +1,6 @@
 "use server";
 
+import { Buffer } from "node:buffer";
 import { revalidatePath } from "next/cache";
 import { DepartmentMembershipRole } from "@prisma/client";
 
@@ -113,7 +114,7 @@ export async function uploadDepartmentDocumentAction(formData: FormData) {
   }
 
   const errors: string[] = [];
-  const payloads: { file: File; buffer: Uint8Array<ArrayBuffer> }[] = [];
+  const payloads: { file: File; buffer: Buffer }[] = [];
 
   for (const file of files) {
     if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
@@ -130,7 +131,7 @@ export async function uploadDepartmentDocumentAction(formData: FormData) {
       continue;
     }
 
-    const buffer = new Uint8Array(await file.arrayBuffer());
+    const buffer = Buffer.from(await file.arrayBuffer());
     payloads.push({ file, buffer });
   }
 
