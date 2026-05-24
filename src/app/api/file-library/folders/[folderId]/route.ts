@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Buffer } from "node:buffer";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
