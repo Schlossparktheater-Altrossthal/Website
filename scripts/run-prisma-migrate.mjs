@@ -96,10 +96,22 @@ function resolveFailedMigrations(prismaExecutable) {
 }
 
 function runMigrateDeploy(prismaExecutable) {
-  execFileSync(prismaExecutable, ["migrate", "deploy"], {
-    stdio: "inherit",
-    env: process.env,
-  });
+  try {
+    const output = execFileSync(prismaExecutable, ["migrate", "deploy"], {
+      stdio: ["inherit", "pipe", "pipe"],
+      env: process.env,
+      encoding: "utf8",
+    });
+    if (output) process.stdout.write(output);
+  } catch (error) {
+    // Write captured output so it appears in logs, then rethrow with stdout/stderr
+    // attached so includesFailedMigrationHint can detect P3009 from error.stdout.
+    const stdout = toUtf8(error.stdout);
+    const stderr = toUtf8(error.stderr);
+    if (stdout) process.stdout.write(stdout);
+    if (stderr) process.stderr.write(stderr);
+    throw error;
+  }
 }
 
 function shouldSkip() {
