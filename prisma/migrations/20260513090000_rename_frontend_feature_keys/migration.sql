@@ -6,7 +6,7 @@ DECLARE
   mapping text[][] := ARRAY[
     ARRAY['site' || '.' || 'countdown', 'website.premiere-countdown'],
     ARRAY['site' || '.' || 'homepage-flyer', 'website.production-flyer'],
-    ARRAY['mystery' || '.' || 'timer', 'mystery.launch-countdown'],
+    ARRAY['mystery' || '.' || 'timer', 'FEATURE.MYSTERY.COUNTDOWN'],
     ARRAY['chronik' || '.' || 'dates', 'chronik.performance-dates'],
     ARRAY['PRIVATE.MYSTERY' || '.' || 'timer', 'PRIVATE.WEBSITE.COUNTDOWN.EDIT'],
     ARRAY['PRIVATE.WEBSITE' || '.' || 'COUNTDOWN.EDIT', 'PRIVATE.WEBSITE.COUNTDOWN.EDIT']

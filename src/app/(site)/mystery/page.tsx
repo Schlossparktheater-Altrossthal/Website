@@ -50,24 +50,9 @@ const baseMetadata: Metadata = {
   },
 };
 
-async function isPublicPageEnabled(key: "about" | "mystery" | "schoolCat" | "timeline") {
-  try {
-    const response = await fetch("https://sommertheater-altrossthal.de/api/website/settings", { cache: "no-store" });
-    if (!response.ok) {
-      return true;
-    }
-    const payload = (await response.json()) as {
-      settings?: { pageVisibility?: { public?: Partial<Record<"about" | "mystery" | "schoolCat" | "timeline", boolean>> } };
-    };
-
-    return payload.settings?.pageVisibility?.public?.[key] ?? true;
-  } catch {
-    return true;
-  }
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const enabled = await isPublicPageEnabled("mystery");
+  const visibility = await getPublicPageVisibility();
+  const enabled = visibility.mystery;
   return {
     ...baseMetadata,
     alternates: {
