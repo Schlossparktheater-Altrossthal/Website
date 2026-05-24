@@ -58,7 +58,7 @@ export default async function SeiteninhalteePage() {
 
   return (
     <div className="space-y-6">
-      <Heading level={2}>Website-Redaktion</Heading>
+      <Heading level="h2">Website-Redaktion</Heading>
       <ContentManager
         ids={WEBSITE_CONTENT_IDS}
         initialData={{
