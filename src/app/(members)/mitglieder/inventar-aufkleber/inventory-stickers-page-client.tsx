@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 
 import { PageHeader } from "@/components/members/page-header";
-import { CirclePlusIcon, MinusIcon, PrinterIcon, SearchIcon, TrashIcon } from "@/components/ui/action-icons";
+import { CirclePlusIcon, MinusIcon, PlusIcon, PrinterIcon, SearchIcon, TrashIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -858,7 +857,7 @@ export default function InventoryStickersPageClient({
                             disabled={entry.copies >= MAX_TOTAL_STICKERS}
                             title="Plus 1 (Shift: +5)"
                           >
-                            <Plus className="h-4 w-4" />
+                            <PlusIcon className="h-4 w-4" />
                           </Button>
                           <Button
                             type="button"
