@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeftIcon } from "@/components/ui/action-icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -107,7 +107,7 @@ export default async function FileLibraryFolderPage({
           actions={
             <Button asChild variant="outline">
               <Link href="/mitglieder/dateisystem">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Zur Übersicht
+                <ArrowLeftIcon className="mr-2 h-4 w-4" /> Zur Übersicht
               </Link>
             </Button>
           }
@@ -159,7 +159,7 @@ export default async function FileLibraryFolderPage({
           actions={
             <Button asChild variant="outline">
               <Link href="/mitglieder/dateisystem">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Zur Übersicht
+                <ArrowLeftIcon className="mr-2 h-4 w-4" /> Zur Übersicht
               </Link>
             </Button>
           }
@@ -286,7 +286,7 @@ export default async function FileLibraryFolderPage({
           <div className="flex items-center gap-2">
             <Button asChild variant="outline">
               <Link href="/mitglieder/dateisystem">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Zur Übersicht
+                <ArrowLeftIcon className="mr-2 h-4 w-4" /> Zur Übersicht
               </Link>
             </Button>
             {canManage ? (
