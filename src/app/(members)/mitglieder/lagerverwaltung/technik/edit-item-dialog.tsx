@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 
+import { EditIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -200,7 +201,7 @@ export function EditTechnikItemDialog({
           size="icon"
           aria-label={`Inventarposten ${item.sku} bearbeiten`}
         >
-          <Pencil className="h-4 w-4" />
+          <EditIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
@@ -373,12 +374,12 @@ export function EditTechnikItemDialog({
             </p>
           </div>
           {errorMessage ? (
-            <p className="text-sm text-red-600">{errorMessage}</p>
+            <p className="text-sm text-destructive">{errorMessage}</p>
           ) : null}
           <DialogFooter>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Speichere …" : "Änderungen speichern"}
-            </Button>
+            <AsyncButton type="submit" isLoading={isPending} loadingText="Speichere …">
+              Änderungen speichern
+            </AsyncButton>
           </DialogFooter>
         </form>
       </DialogContent>

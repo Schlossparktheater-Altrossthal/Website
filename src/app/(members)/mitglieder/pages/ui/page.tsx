@@ -1,10 +1,9 @@
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, Settings, Plus, Eye } from "lucide-react";
+import { EditIcon, SettingsIcon, TrashIcon } from "@/components/ui/action-icons";
 
 const uiElements = [
   { type: "Button", variant: "primary", purpose: "Primäre Aktion", usages: ["Szenen > add", "Produktionen > speichern", "Mitglieder > erstellen"] },
@@ -14,9 +13,9 @@ const uiElements = [
 ] as const;
 
 const iconUsages = [
-  { Icon: Pencil, name: "Pencil", purpose: "Bearbeiten", usages: ["Szenen", "Mitgliederverwaltung", "Dokumente"] },
-  { Icon: Trash2, name: "Trash2", purpose: "Löschen", usages: ["Szenen", "Dateimanager", "Theme-Verwaltung"] },
-  { Icon: Settings, name: "Settings", purpose: "Einstellungen", usages: ["Seitensteuerung", "Server-Einstellungen", "Website & Theme"] },
+  { Icon: EditIcon, name: "EditIcon", purpose: "Bearbeiten", usages: ["Szenen", "Mitgliederverwaltung", "Dokumente"] },
+  { Icon: TrashIcon, name: "TrashIcon", purpose: "Löschen", usages: ["Szenen", "Dateimanager", "Theme-Verwaltung"] },
+  { Icon: SettingsIcon, name: "SettingsIcon", purpose: "Einstellungen", usages: ["Seitensteuerung", "Server-Einstellungen", "Website & Theme"] },
 ] as const;
 
 export default async function PagesUiOverviewPage() {
@@ -27,7 +26,7 @@ export default async function PagesUiOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight">UI</h1>
+      <h1 className="text-h1">UI</h1>
       <Tabs defaultValue="elements" className="space-y-4">
         <TabsList>
           <TabsTrigger value="elements">Elemente</TabsTrigger>
@@ -73,7 +72,6 @@ export default async function PagesUiOverviewPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Funktion</TableHead>
                 <TableHead>Nutzungen</TableHead>
-                <TableHead>Aktion</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -85,12 +83,6 @@ export default async function PagesUiOverviewPage() {
                   <TableCell>
                     <div className="flex flex-wrap gap-2">
                       {usages.map((usage) => <Badge key={usage} variant="secondary">{usage}</Badge>)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline"><Eye className="mr-1 h-4 w-4" />Verwendungen</Button>
-                      <Button size="sm"><Plus className="mr-1 h-4 w-4" />Icon ersetzen</Button>
                     </div>
                   </TableCell>
                 </TableRow>
