@@ -91,6 +91,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Alle Standard-Icons sind in `src/components/ui/action-icons.tsx` definiert und müssen von dort importiert werden, nicht direkt aus `lucide-react`.
 - Neue projektweit gebrauchte Icons zuerst in `src/components/ui/action-icons.tsx` ergänzen.
 - Seitenspezifische dekorative Icons dürfen direkt aus `lucide-react` importiert werden.
+- Diese Regel hat Vorrang vor `docs/design-system.md`, auch wenn dort direkte `lucide-react`-Imports referenziert werden.
 
 ## UI-Komponenten
 
@@ -111,6 +112,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 
 - Farben immer über semantische CSS-Variablen aus `src/design-system/tokens.json` verwenden, z. B. `text-primary`, `text-destructive`, `bg-muted`.
 - Hardcodierte Farbwerte sind nicht erlaubt.
+- Die autoritative Token-Referenz ist `docs/design-system.md`. Bei Konflikten hat `AGENTS.md` Vorrang.
 
 ## Surface & Card Hierarchie
 
@@ -121,17 +123,20 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Card-Rahmen verwenden `border-border`. `border-primary` (orange) ist auf strukturellen Containern verboten — orange Rahmen sind ausschließlich für interaktive/ausgewählte Zustände reserviert.
 - Niemals hardcodierte Farben für Flächen verwenden. Immer semantische Tokens nutzen.
 
+## Responsive Design
+
+- Mobile-first: Basis-Styles immer zuerst für Mobile schreiben und mit `sm:`, `md:`, `lg:`, `xl:` und `2xl:` erweitern.
+- Keine fixen Pixelbreiten verwenden. Nutze Tailwind-Responsive-Utilities und das Container-System aus `docs/design-system.md`.
+- Touch-Targets auf Mobile mindestens 44px Höhe sicherstellen (z. B. `min-h-11` oder `size="lg"` bei Buttons).
+- Layouts auf Mobile vertikal stapeln und erst mit `lg:flex-row` auf horizontal umstellen.
+
 ## Seiten-Patterns
 
 - Seiten-Header verwenden das `PageHeader`-Pattern aus `src/design-system/patterns/page-header.tsx`.
 - Metric-Cards verwenden das `KeyMetricCard`-Pattern aus `src/design-system/patterns/key-metric.tsx`.
 
 ## Typografie & Abstände
-- Seitentitel (h1): text-3xl font-bold, nur einmal pro Seite.
-- Abschnittstitel (h2): text-xl font-semibold, mit mb-4 darunter.
-- Kartentitel (h3): text-base font-medium.
-- Abstände zwischen Hauptsektionen: space-y-6 oder gap-6.
-- Text-Hierarchie: text-foreground für Haupttext, text-muted-foreground für Sekundärtext und Labels.
+- Folge der Typografie-Skala aus `docs/design-system.md` (`text-h1`, `text-h2`, `text-body` usw.). Verwende `Heading`- und `Text`-Komponenten aus `@/components/ui/typography`.
 
 ## Badge & Status
 - Badges verwenden die Badge-Komponente aus src/components/ui/badge.tsx.
