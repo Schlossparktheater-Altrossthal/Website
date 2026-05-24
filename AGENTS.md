@@ -1,5 +1,76 @@
 # AGENTS.md
 
+## Stack & Einstieg
+-## UI, UX & Content
+- Tailwind CSS und shadcn/ui bilden die Basis. Baue auf Komponenten aus `src/components/ui` auf und erweitere sie konsistent mit `tailwind-variants` bzw. `class-variance-authority`.
+- Designentscheidungen, Farbpaletten und Typografie folgen den Vorgaben in `docs/design-system.md` sowie den generierten Swatches (`docs/swatches`). Bei Änderungen Token neu generieren.
+- Barrierefreiheit hat Priorität: semantische HTML-Strukturen, beschreibende `aria`-Attribute, sichtbare Fokuszustände und ausreichende Kontraste gemäß bestehendem Layout (`src/app/layout.tsx`).
+- Toaster/Feedback-Komponenten laufen über `sonner`. Bei neuen Interaktionen sparsame, zugängliche Rückmeldungen implementieren.
+
+## Design-System & Layout-System
+- **Design-Tokens statt hard-coded Farben:** Verwende ausschließlich semantische Tokens (`bg-card`, `text-foreground`, `border-border`, `bg-muted` etc.) statt hard-coded Tailwind-Farben (`bg-white`, `text-slate-*`, `bg-gray-*`, `border-slate-*`). Alle Komponenten müssen in Light & Dark Mode funktionieren.
+- **Mitgliederbereich-Layout:** `MembersAppShell` übernimmt automatisch Container und Padding. Seiten benötigen nur `<div className="space-y-6">` für Spacing – **keine eigenen** `mx-auto`, `px-*`, `py-*` oder `<main>`-Wrapper hinzufügen. Dies führt zu doppeltem Padding.
+- **Custom-Layouts:** Nur bei Bedarf `<MembersContentLayout width="..." padding="..." />` verwenden (z. B. `width="full"` für breite Tabellen). Aktuell nutzen nur 3 von ~94 Seiten Custom-Layouts.
+- **Legacy-Code:** Bestehende Komponenten mit hard-coded Farben (z. B. Sperrlistenübersicht) nutzen CSS-Override-Strategie (`.wrapper-class` mit `!important`-Mappings, siehe `sperrliste-styles.css`). Neue Komponenten immer von Anfang an mit Design-Tokens bauen.
+- **Vollständige Dokumentation:** Alle Details zu Farb-Tokens, Container-System, Typografie, Spacing, Komponenten-Patterns und Best Practices in `docs/design-system.md`. Bei Unsicherheiten dort nachschlagen oder bei UI-Änderungen die Checkliste verwenden.Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion (siehe Dockerfiles); aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
+- App-Code liegt im `src`-Ordner. Wichtige Bereiche: `src/app` (Routing & Server Components), `src/components` (UI-Bausteine inkl. shadcn/ui), `src/lib` (Domänenlogik & Hilfsfunktionen), `prisma` (Schema & Seeds) sowie `realtime-server` (Socket.io-Dienst).
+- Globale Provider für Session, React Query, Frontend-Editing und Realtime kommen aus `src/app/providers.tsx`. Ergänzende Kontexte bitte dort integrieren, nicht lokal verschachteln.
+- Legacy-Endpunkte unter `src/pages/api` existieren nur für die Socket-Bridge. Neue APIs gehören in `src/app/api` oder als dedizierte Server Actions.
+
+## Tooling & lokale Entwicklung
+- Installiere Abhängigkeiten mit `pnpm install --frozen-lockfile`. Für neue Pakete gilt `pnpm add <pkg>` (bzw. `pnpm add -D <pkg>` für Dev-Deps).
+- `pnpm dev` startet den Turbopack-Devserver, führt Prisma-Migrationen über `scripts/run-prisma-migrate.mjs` aus und synchronisiert Seeds bei Bedarf.
+- Weitere zentrale Skripte:
+  - `pnpm lint`, `pnpm test` (Vitest) und `pnpm build` müssen vor jedem Commit sauber durchlaufen.
+  - `pnpm prisma:generate`, `pnpm db:migrate`, `pnpm db:seed` für Datenbankarbeiten.
+  - `pnpm start:combined` bzw. `pnpm start:proxy` spiegeln das Docker-Setup ohne Container.
+  - Design-Token-Workflows: `pnpm swatches:gen` und `pnpm design-system:tokens`.
+- Docker-Compose-Stacks (siehe `README.md`) stellen Postgres & Mailpit bereit. Bei lokalen Datenbankänderungen immer auch `.env.example` aktualisieren.
+- Für manuelle Tests steht eine gehostete Postgres-Instanz zur Verfügung: `PGPASSWORD=HcLZvPJqj6UPJe7imjToQKGMk6mS4kpS psql -h dpg-d3ajsrd6ubrc739spr30-a.oregon-postgres.render.com -U test_kxuk_user test_kxuk`.
+
+## Architektur- & Code-Richtlinien
+- Füge dem Repository keinerlei Binärdateien hinzu (z. B. PNG/JPG/GIF/WebP, Videos, Audio, Schriftarten, proprietäre Assets). Jegliche Ergänzungen oder Aktualisierungen solcher Dateien blockieren die PR-Erstellung im Codex-Web-Workflow und sind daher untersagt. Setze stattdessen auf textbasierte Alternativen (z. B. Inline-SVG) oder verweise auf bestehende Assets.
+- Standardmäßig React Server Components verwenden. `"use client"` nur bei zwingenden interaktiven Szenarien (Formulare, Drag & Drop, React Query etc.) setzen.
+- Server Actions liegen direkt neben den konsumierenden Komponenten (`actions.ts`). Bevorzugt Actions + React Server Components statt API-Mutationen, sofern Sessions oder Revalidierung (`revalidatePath`, `revalidateTag`) nicht entgegenstehen.
+- Datenbankzugriffe ausschließlich über den Proxy aus `@/lib/prisma`. Wiederverwendbare Queries in `@/lib/prisma-helpers` oder modularen Services kapseln.
+- Validierungen & Parsing mit `zod`. Für HTTP-Handler immer typed Schemas und eindeutige Fehlerantworten nutzen.
+- Verwende den Pfad-Alias `@/*` statt relativer Importketten. Helpers wie `cn` aus `@/lib/utils` für Klassenketten einsetzen.
+- Nutze Flat-Config-ESLint (`eslint.config.mjs`) und Prettier 3. Vor PRs `pnpm lint --fix` und ggf. `pnpm dlx prettier --check .` verwenden, um Formatierungsfehler früh zu erkennen.
+
+## Daten, Backend & Realtime
+- Schemaänderungen in `prisma/schema.prisma` stets mit Migration (`pnpm db:migrate`) begleiten, danach `pnpm prisma:generate` ausführen. Neue Tabellen/Felder im Seed (`prisma/seed.mjs`) und in Tests berücksichtigen.
+- Relevante ENV-Variablen (`DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_REALTIME_URL`, `REALTIME_AUTH_TOKEN`, `REALTIME_HANDSHAKE_SECRET` usw.) konsequent dokumentieren und in `.env.example` sowie README ergänzen.
+- Route Handler unter `src/app/api/**/route.ts` folgen der `NextRequest`/`NextResponse`-API. Gemeinsame Logik in `@/lib` auslagern, Fehler zentral über Hilfsfunktionen serialisieren.
+- Realtime-Ereignisse laufen über `@/hooks/useRealtime` und den Socket.io-Server (`realtime-server/src`). Neue Events gleichzeitig im Frontend (`@/lib/realtime`, Hooks oder Stores) und Backend pflegen, inklusive Auth-/Room-Validierung.
+
+## UI, UX & Content
+- Tailwind CSS und shadcn/ui bilden die Basis. Baue auf Komponenten aus `src/components/ui` auf und erweitere sie konsistent mit `tailwind-variants` bzw. `class-variance-authority`.
+- Designentscheidungen, Farbpaletten und Typografie folgen den Vorgaben in `docs/design-system.md` sowie den generierten Swatches (`docs/swatches`). Bei Änderungen Token neu generieren.
+- Barrierefreiheit hat Priorität: semantische HTML-Strukturen, beschreibende `aria`-Attribute, sichtbare Fokuszustände und ausreichende Kontraste gemäß bestehendem Layout (`src/app/layout.tsx`).
+- Toaster/Feedback-Komponenten laufen über `sonner`. Bei neuen Interaktionen sparsame, zugängliche Rückmeldungen implementieren.
+
+## Tests, Qualitätssicherung & Reviews
+- Vor jedem Commit `pnpm lint`, `pnpm test` und `pnpm build` ausführen; Fehler müssen behoben werden.
+- Vitest-Tests (`*.test.ts`, `__tests__`) liegen nahe am Quellcode. Für React-Komponenten `@testing-library/react` + Vitest verwenden, für Logik reine Unit-Tests.
+- Realtime-Änderungen zusätzlich durch `node realtime-server/src/server.js` bzw. bestehende npm-Skripte prüfen und Konsolen-Logs beobachten.
+- Nutze Preview-Deployments oder lokale Storybook-artige Seiten (sofern vorhanden), um UI-Änderungen visuell abzusichern.
+
+## Dokumentation & Kommunikation
+- README, `docs/**` und `.env.example` bei relevanten Änderungen aktualisieren. Architektur- oder Designentscheidungen bitte im passenden Dokument notieren.
+- Tickets oder PR-Beschreibungen sollten Kontext, Entscheidungspunkte und QA-Schritte enthalten. Verweise auf Monitoring/Analytics ergänzen, falls betroffen.
+- Beachte die "Dev only Screenshot"-Sektion in den systemweiten Vorgaben: Bei wahrnehmbaren UI-Änderungen und vorhandener Dev-Server-Anleitung einen Screenshot für den Abschlussbericht aufnehmen.
+- Nutze dafür konsequent das automatisierte Screenshot-System (`/api/dev/screenshot-session`) und dokumentiere die Zielroute – manuell aufgenommene Login-Screens helfen dem Review-Team nicht weiter.
+- In sämtlichen Texten und Kommentaren bitte auf gendergerechte Schreibweisen verzichten und ausschließlich generische Maskulina verwenden.
+- Diese `AGENTS.md` bei Bedarf fortschreiben, wenn bessere Kollaborationsmuster oder neue Tooling-Standards entstehen. Änderungen nachvollziehbar begründen.
+
+## Ausnahmen & Sonderfälle
+- Reine Dokumentations-, Kommunikations- oder Organisationsänderungen (z. B. Updates an Markdown-Dateien) dürfen ohne `pnpm lint/test/build` abgeschlossen werden – im Abschlussbericht explizit darauf hinweisen.
+- Arbeiten ausschließlich am Socket.io-Dienst im Ordner `realtime-server` erfordern nur die dort relevanten Checks. Frontend-Builds können entfallen.
+- Wenn lokale Rahmenbedingungen (fehlende Binärabhängigkeiten, Rechteprobleme etc.) das Ausführen von Checks verhindern, Blockade dokumentieren und – wenn möglich – manuelle Tests oder statische Analysen beilegen.
+
+
+# AGENTS.md
+
 ## Einführung
 Diese Datei definiert die Projektstandards für die Website des Sommertheaters Altrossthal. Jeder, der an diesem Code arbeitet, soll diese Regeln einhalten, damit der Code verständlich, konsistent und wartbar bleibt.
 
