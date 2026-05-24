@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { FileText, Loader2, Trash2, UploadCloud } from "lucide-react";
+import { UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
+import { FileIcon, TrashIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -347,17 +349,13 @@ export function FileLibraryManager({ folderId, canUpload, canDownload, canManage
                     ))}
                   </div>
                   <div className="flex justify-end">
-                    <Button type="submit" disabled={uploading}>
-                      {uploading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Upload läuft…
-                        </>
-                      ) : (
-                        <>
-                          <UploadCloud className="mr-2 h-4 w-4" aria-hidden /> Upload starten
-                        </>
-                      )}
-                    </Button>
+                    <AsyncButton
+                      type="submit"
+                      isLoading={uploading}
+                      loadingText="Upload läuft…"
+                    >
+                      Upload starten
+                    </AsyncButton>
                   </div>
                 </div>
               ) : null}
@@ -376,7 +374,7 @@ export function FileLibraryManager({ folderId, canUpload, canDownload, canManage
               {items.map((item) => (
                 <div key={item.id} className="flex flex-col gap-3 rounded-md border border-border/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-1 items-start gap-3">
-                    <FileText className="mt-1 h-5 w-5 text-muted-foreground" aria-hidden />
+                    <FileIcon className="mt-1 h-5 w-5 text-muted-foreground" aria-hidden />
                     <div className="space-y-1">
                       <p className="font-medium text-foreground">{item.fileName}</p>
                       {item.description ? (
@@ -400,20 +398,17 @@ export function FileLibraryManager({ folderId, canUpload, canDownload, canManage
                       </Button>
                     )}
                     {(canManage || item.canDelete) && (
-                      <Button
+                      <AsyncButton
                         type="button"
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(item.id)}
-                        disabled={deletingId === item.id}
+                        isLoading={deletingId === item.id}
                         aria-label="Datei löschen"
                       >
-                        {deletingId === item.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                        <TrashIcon className="h-4 w-4" aria-hidden />
+                        <span className="sr-only">Datei löschen</span>
+                      </AsyncButton>
                     )}
                   </div>
                 </div>

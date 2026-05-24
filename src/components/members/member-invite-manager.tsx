@@ -4,11 +4,14 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 import type { Role } from "@prisma/client";
-import { ChevronDown, ChevronUp, Copy, ExternalLink, FileDown, MessageCircle, Pencil, Power, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, MessageCircle, Power } from "lucide-react";
 
+import { CopyIcon, DownloadIcon, EditIcon, ExternalLinkIcon, TrashIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -215,6 +218,7 @@ export function MemberInviteManager() {
   const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
   const [expandedInviteId, setExpandedInviteId] = useState<string | null>(null);
   const [editingInvite, setEditingInvite] = useState<EditableInviteFields | null>(null);
+  const [confirmDeleteInvite, setConfirmDeleteInvite] = useState<InviteSummary | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [updatingInviteId, setUpdatingInviteId] = useState<string | null>(null);
   const [onboardingSettings, setOnboardingSettings] =
@@ -866,18 +870,19 @@ export function MemberInviteManager() {
     }
   };
 
-  const deleteInvite = async (invite: InviteSummary) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        "Möchtest du diesen Onboarding-Link wirklich löschen? Dieser Schritt kann nicht rückgängig gemacht werden.",
-      );
-      if (!confirmed) return;
+  const deleteInvite = (invite: InviteSummary) => {
+    setConfirmDeleteInvite(invite);
+  };
+
+  const handleConfirmDeleteInvite = async () => {
+    if (!confirmDeleteInvite) {
+      return;
     }
 
-    setProcessingInviteId(invite.id);
+    setProcessingInviteId(confirmDeleteInvite.id);
     setError(null);
     try {
-      const response = await fetch(`/api/member-invites/${invite.id}`, {
+      const response = await fetch(`/api/member-invites/${confirmDeleteInvite.id}`, {
         method: "DELETE",
       });
       const data = await response.json().catch(() => null);
@@ -885,9 +890,10 @@ export function MemberInviteManager() {
         throw new Error(data?.error ?? "Einladung konnte nicht gelöscht werden");
       }
       toast.success("Einladung gelöscht");
-      if (freshInvite?.id === invite.id) {
+      if (freshInvite?.id === confirmDeleteInvite.id) {
         setFreshInvite(null);
       }
+      setConfirmDeleteInvite(null);
       await loadInvites();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Einladung konnte nicht gelöscht werden";
@@ -950,7 +956,7 @@ export function MemberInviteManager() {
                   onClick={copyFreshInvite}
                   disabled={!freshInviteLinkDetails.target}
                 >
-                  <Copy className="h-4 w-4" />
+                  <CopyIcon className="h-4 w-4" />
                   Link kopieren
                 </Button>
                 <Button
@@ -972,7 +978,7 @@ export function MemberInviteManager() {
                   }}
                   disabled={updatingInviteId === freshInvite.id}
                 >
-                  <Pencil className="h-4 w-4" />
+                  <EditIcon className="h-4 w-4" />
                   Details bearbeiten
                 </Button>
                 <Button
@@ -998,7 +1004,7 @@ export function MemberInviteManager() {
                     "PDF wird erstellt …"
                   ) : (
                     <>
-                      <FileDown className="h-4 w-4" />
+                      <DownloadIcon className="h-4 w-4" />
                       PDF generieren
                     </>
                   )}
@@ -1011,7 +1017,7 @@ export function MemberInviteManager() {
                     asChild
                   >
                     <a href={freshInviteLinkDetails.display || undefined} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
+                      <ExternalLinkIcon className="h-4 w-4" />
                       Öffnen
                     </a>
                   </Button>
@@ -1072,7 +1078,7 @@ export function MemberInviteManager() {
                 const menuItems = [
                   {
                     label: "Details bearbeiten",
-                    icon: <Pencil className="h-4 w-4" />,
+                    icon: <EditIcon className="h-4 w-4" />,
                     onClick: () => {
                       if (updatingInviteId) return;
                       openEditModalWith(invite);
@@ -1082,14 +1088,14 @@ export function MemberInviteManager() {
                     ? [
                         {
                           label: "Link kopieren",
-                          icon: <Copy className="h-4 w-4" />,
+                          icon: <CopyIcon className="h-4 w-4" />,
                           onClick: () => {
                             void copyInviteLink(sharePath);
                           },
                         },
                         {
                           label: isDownloading ? "PDF wird erstellt …" : "PDF generieren",
-                          icon: <FileDown className="h-4 w-4" />,
+                          icon: <DownloadIcon className="h-4 w-4" />,
                           onClick: () => {
                             if (isDownloading) return;
                             void requestInvitePdf({
@@ -1105,7 +1111,7 @@ export function MemberInviteManager() {
                         },
                         {
                           label: "Im neuen Tab öffnen",
-                          icon: <ExternalLink className="h-4 w-4" />,
+                          icon: <ExternalLinkIcon className="h-4 w-4" />,
                           onClick: () => {
                             const absolute = buildAbsoluteUrl(sharePath);
                             if (absolute && typeof window !== "undefined") {
@@ -1127,7 +1133,7 @@ export function MemberInviteManager() {
                   },
                   {
                     label: "Einladung löschen",
-                    icon: <Trash2 className="h-4 w-4" />,
+                    icon: <TrashIcon className="h-4 w-4" />,
                     onClick: () => {
                       if (isProcessing) return;
                       void deleteInvite(invite);
@@ -1223,7 +1229,7 @@ export function MemberInviteManager() {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
-                                      <ExternalLink className="h-4 w-4" />
+                                      <ExternalLinkIcon className="h-4 w-4" />
                                       Öffnen
                                     </a>
                                   </Button>
@@ -1267,7 +1273,7 @@ export function MemberInviteManager() {
                                     className="h-8 gap-2 px-3 text-xs"
                                     onClick={() => copyInviteLink(sharePath)}
                                   >
-                                    <Copy className="h-4 w-4" />
+                                    <CopyIcon className="h-4 w-4" />
                                     Link kopieren
                                   </Button>
                                   <Button
@@ -1277,7 +1283,7 @@ export function MemberInviteManager() {
                                     onClick={() => openEditModalWith(invite)}
                                     disabled={updatingInviteId === invite.id}
                                   >
-                                    <Pencil className="h-4 w-4" />
+                                    <EditIcon className="h-4 w-4" />
                                     Details bearbeiten
                                   </Button>
                                   <Button
@@ -1302,7 +1308,7 @@ export function MemberInviteManager() {
                                       "PDF wird erstellt …"
                                     ) : (
                                       <>
-                                        <FileDown className="h-4 w-4" />
+                                        <DownloadIcon className="h-4 w-4" />
                                         PDF generieren
                                       </>
                                     )}
@@ -1314,7 +1320,7 @@ export function MemberInviteManager() {
                                     asChild
                                   >
                                     <a href={sharePath} target="_blank" rel="noopener noreferrer">
-                                      <ExternalLink className="h-4 w-4" />
+                                      <ExternalLinkIcon className="h-4 w-4" />
                                       Öffnen
                                     </a>
                                   </Button>
@@ -1546,9 +1552,9 @@ export function MemberInviteManager() {
             <Button type="button" variant="outline" onClick={closeEditModal} disabled={isUpdatingCurrentInvite}>
               Abbrechen
             </Button>
-            <Button onClick={handleUpdate} disabled={isUpdatingCurrentInvite || !editingInviteId}>
-              {isUpdatingCurrentInvite ? "Speichere …" : "Änderungen speichern"}
-            </Button>
+            <AsyncButton onClick={handleUpdate} isLoading={isUpdatingCurrentInvite} loadingText="Speichere …" disabled={!editingInviteId}>
+              Änderungen speichern
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1690,9 +1696,9 @@ export function MemberInviteManager() {
             >
               Abbrechen
             </Button>
-            <Button onClick={handleCreate} disabled={creating}>
-              {creating ? "Erstelle …" : "Link erzeugen"}
-            </Button>
+            <AsyncButton onClick={handleCreate} isLoading={creating} loadingText="Erstelle …">
+              Link erzeugen
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1778,6 +1784,22 @@ export function MemberInviteManager() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDeleteInvite !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setConfirmDeleteInvite(null);
+          }
+        }}
+        variant="destructive"
+        title="Einladung löschen"
+        description="Möchtest du diesen Onboarding-Link wirklich löschen? Dieser Schritt kann nicht rückgängig gemacht werden."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        onConfirm={handleConfirmDeleteInvite}
+        onCancel={() => setConfirmDeleteInvite(null)}
+      />
     </Card>
   );
 }

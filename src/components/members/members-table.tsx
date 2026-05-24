@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Loader2, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
+import { UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 
+import { EditIcon, EyeIcon, LoadingIcon, TrashIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -416,7 +418,7 @@ function MemberActionButtons({
           aria-label={`Profil von ${actionTarget} öffnen`}
           title={`Profil von ${actionTarget} öffnen`}
         >
-          <Eye className="h-4 w-4" aria-hidden />
+          <EyeIcon className="h-4 w-4" aria-hidden />
           <span className="sr-only">Profil</span>
         </Link>
       </Button>
@@ -432,7 +434,7 @@ function MemberActionButtons({
         aria-label={`${actionTarget} bearbeiten`}
         title={`${actionTarget} bearbeiten`}
       >
-        <Pencil className="h-4 w-4" aria-hidden />
+        <EditIcon className="h-4 w-4" aria-hidden />
         <span className="sr-only">Bearbeiten</span>
       </Button>
       <Button
@@ -459,7 +461,7 @@ function MemberActionButtons({
         aria-label={`${actionTarget} löschen`}
         title={`${actionTarget} löschen`}
       >
-        <Trash2 className="h-4 w-4" aria-hidden />
+        <TrashIcon className="h-4 w-4" aria-hidden />
         <span className="sr-only">Löschen</span>
       </Button>
     </div>
@@ -537,12 +539,12 @@ function MemberStatusModal({ user, onClose, onStatusChange }: MemberStatusModalP
             <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
           </div>
           {targetWillDeactivate ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
               Deaktivierte Profile bleiben in Listen sichtbar, verfügen jedoch über keinerlei Rechte mehr. Die
               Reaktivierung ist jederzeit möglich.
             </div>
           ) : (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+            <div className="rounded-md border border-success/30 bg-success/10 p-3 text-xs text-success-foreground">
               Das Mitglied kann nach der Reaktivierung sofort wieder alle zugewiesenen Funktionen nutzen.
             </div>
           )}
@@ -551,21 +553,15 @@ function MemberStatusModal({ user, onClose, onStatusChange }: MemberStatusModalP
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             Abbrechen
           </Button>
-          <Button
+          <AsyncButton
             type="button"
             variant={targetWillDeactivate ? "destructive" : "default"}
             onClick={handleSubmit}
-            disabled={loading}
+            isLoading={loading}
+            loadingText={targetWillDeactivate ? "Deaktivieren" : "Aktivieren"}
           >
-            {loading ? (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                {targetWillDeactivate ? "Deaktivieren" : "Aktivieren"}
-              </span>
-            ) : (
-              targetWillDeactivate ? "Deaktivieren" : "Aktivieren"
-            )}
-          </Button>
+            {targetWillDeactivate ? "Deaktivieren" : "Aktivieren"}
+          </AsyncButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -698,7 +694,7 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
 
           {loadingUsage ? (
             <div className="flex items-center justify-center gap-2 rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <LoadingIcon className="h-4 w-4" aria-hidden />
               Lade Zuordnungen …
             </div>
           ) : usageError ? (
@@ -745,16 +741,15 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Abbrechen
             </Button>
-            <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>
-              {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  Löschen
-                </span>
-              ) : (
-                "Endgültig löschen"
-              )}
-            </Button>
+            <AsyncButton
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              isLoading={loading}
+              loadingText="Löschen"
+            >
+              Endgültig löschen
+            </AsyncButton>
           </div>
         </DialogFooter>
       </DialogContent>
