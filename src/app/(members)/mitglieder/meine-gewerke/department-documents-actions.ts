@@ -113,7 +113,7 @@ export async function uploadDepartmentDocumentAction(formData: FormData) {
   }
 
   const errors: string[] = [];
-  const payloads: { file: File; buffer: Uint8Array }[] = [];
+  const payloads: { file: File; buffer: Uint8Array<ArrayBuffer> }[] = [];
 
   for (const file of files) {
     if (file.size > MAX_DOCUMENT_SIZE_BYTES) {

@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
       })()
     : null;
 
-  let documentBuffer: Uint8Array | null = null;
+  let documentBuffer: Uint8Array<ArrayBuffer> | null = null;
   let documentMime: string | null = null;
   let documentName: string | null = null;
   let documentSize: number | null = null;

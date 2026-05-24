@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let documentBuffer: Uint8Array | undefined;
+  let documentBuffer: Uint8Array<ArrayBuffer> | undefined;
   let documentMime: string | undefined;
   let documentName: string | undefined;
   let documentSize: number | undefined;
