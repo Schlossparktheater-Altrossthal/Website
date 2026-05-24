@@ -42,8 +42,8 @@ function formatDisplayValue(value: string | null) {
 
 export function EditablePerformanceDatesCard({ showId, initialDates }: EditablePerformanceDatesCardProps) {
   const { hasFeature, activeFeature, openFeature, closeFeature } = useFrontendEditing();
-  const canEdit = hasFeature(FEATURE_KEY);
-  const editorOpen = canEdit && activeFeature === FEATURE_KEY;
+  const canEdit = hasFeature(FEATURE_KEY as never);
+  const editorOpen = canEdit && activeFeature === (FEATURE_KEY as never);
 
   const [dates, setDates] = useState<string | null>(initialDates ?? null);
   const [textareaValue, setTextareaValue] = useState<string>(initialDates ?? "");
@@ -118,7 +118,7 @@ export function EditablePerformanceDatesCard({ showId, initialDates }: EditableP
                 if (editorOpen) {
                   closeFeature();
                 } else {
-                  openFeature(FEATURE_KEY);
+                  openFeature(FEATURE_KEY as never);
                 }
               }}
             >
@@ -134,7 +134,7 @@ export function EditablePerformanceDatesCard({ showId, initialDates }: EditableP
           onOpenChange={(open) => {
             if (!canEdit) return;
             if (open) {
-              openFeature(FEATURE_KEY);
+              openFeature(FEATURE_KEY as never);
             } else {
               closeFeature();
             }
