@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Stack & Einstieg
--## UI, UX & Content
+--## UI, UX & Content
 - Tailwind CSS und shadcn/ui bilden die Basis. Baue auf Komponenten aus `src/components/ui` auf und erweitere sie konsistent mit `tailwind-variants` bzw. `class-variance-authority`.
 - Designentscheidungen, Farbpaletten und Typografie folgen den Vorgaben in `docs/design-system.md` sowie den generierten Swatches (`docs/swatches`). Bei Änderungen Token neu generieren.
 - Barrierefreiheit hat Priorität: semantische HTML-Strukturen, beschreibende `aria`-Attribute, sichtbare Fokuszustände und ausreichende Kontraste gemäß bestehendem Layout (`src/app/layout.tsx`).
@@ -36,12 +36,19 @@
 - Validierungen & Parsing mit `zod`. Für HTTP-Handler immer typed Schemas und eindeutige Fehlerantworten nutzen.
 - Verwende den Pfad-Alias `@/*` statt relativer Importketten. Helpers wie `cn` aus `@/lib/utils` für Klassenketten einsetzen.
 - Nutze Flat-Config-ESLint (`eslint.config.mjs`) und Prettier 3. Vor PRs `pnpm lint --fix` und ggf. `pnpm dlx prettier --check .` verwenden, um Formatierungsfehler früh zu erkennen.
+- Type-Casts wie "as never", "as any" oder "as unknown as ..." sind verboten. Stattdessen korrekte Typen und Guards verwenden.
+- Vor dem Hinzufügen neuer Hilfsfunktionen zuerst mit rg suchen, ob eine passende Funktion bereits existiert. Keine Duplikate anlegen.
+- Keine leeren catch-Blöcke. Fehler immer loggen oder explizit weitergeben.
+- API-Routes geben Fehler immer als { error: string } mit dem passenden HTTP-Statuscode zurück.
 
 ## Daten, Backend & Realtime
 - Schemaänderungen in `prisma/schema.prisma` stets mit Migration (`pnpm db:migrate`) begleiten, danach `pnpm prisma:generate` ausführen. Neue Tabellen/Felder im Seed (`prisma/seed.mjs`) und in Tests berücksichtigen.
 - Relevante ENV-Variablen (`DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_REALTIME_URL`, `REALTIME_AUTH_TOKEN`, `REALTIME_HANDSHAKE_SECRET` usw.) konsequent dokumentieren und in `.env.example` sowie README ergänzen.
 - Route Handler unter `src/app/api/**/route.ts` folgen der `NextRequest`/`NextResponse`-API. Gemeinsame Logik in `@/lib` auslagern, Fehler zentral über Hilfsfunktionen serialisieren.
 - Realtime-Ereignisse laufen über `@/hooks/useRealtime` und den Socket.io-Server (`realtime-server/src`). Neue Events gleichzeitig im Frontend (`@/lib/realtime`, Hooks oder Stores) und Backend pflegen, inklusive Auth-/Room-Validierung.
+- Neue Permission-Keys müssen immer in DEFAULT_PERMISSION_DEFINITIONS in src/lib/permissions.ts registriert werden, bevor sie irgendwo verwendet werden.
+- Neue Feature-Keys für editierbare Bereiche auf öffentlichen Seiten müssen in FEATURE_DEFINITIONS in src/lib/frontend-editing.ts eingetragen werden.
+- Bei jeder Umbenennung von Permission-Keys muss eine neue Prisma-Migration erstellt werden, die die alten Keys in der Datenbank umbenennt und auf die neuen Keys migriert.
 
 ## UI, UX & Content
 - Tailwind CSS und shadcn/ui bilden die Basis. Baue auf Komponenten aus `src/components/ui` auf und erweitere sie konsistent mit `tailwind-variants` bzw. `class-variance-authority`.
@@ -68,9 +75,6 @@
 - Arbeiten ausschließlich am Socket.io-Dienst im Ordner `realtime-server` erfordern nur die dort relevanten Checks. Frontend-Builds können entfallen.
 - Wenn lokale Rahmenbedingungen (fehlende Binärabhängigkeiten, Rechteprobleme etc.) das Ausführen von Checks verhindern, Blockade dokumentieren und – wenn möglich – manuelle Tests oder statische Analysen beilegen.
 
-
-# AGENTS.md
-
 ## Einführung
 Diese Datei definiert die Projektstandards für die Website des Sommertheaters Altrossthal. Jeder, der an diesem Code arbeitet, soll diese Regeln einhalten, damit der Code verständlich, konsistent und wartbar bleibt.
 
@@ -83,6 +87,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Konstanten verwenden `SCREAMING_SNAKE_CASE`.
 - React-Komponenten verwenden `PascalCase`.
 - Funktionen verwenden `camelCase` und beginnen mit einem Verb wie `get`, `resolve`, `read`, `save`, `handle`, `ensure`.
+- Permission-Keys dürfen niemals als hardcodierte Strings im Code verwendet werden, ohne dass sie in DEFAULT_PERMISSION_DEFINITIONS in src/lib/permissions.ts registriert sind.
 
 ## Icons
 - Alle Standard-Icons sind in `src/components/ui/action-icons.tsx` definiert und müssen von dort importiert werden, nicht direkt aus `lucide-react`.
