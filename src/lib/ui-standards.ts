@@ -3,7 +3,7 @@ import type { ButtonProps } from "@/components/ui/button";
 
 export interface ConfirmDialogProps {
   title: string;
-  description: string;
+  description?: string;
   confirmLabel: string;
   cancelLabel: string;
   variant: "destructive" | "default";
