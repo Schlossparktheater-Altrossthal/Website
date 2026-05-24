@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let documentBuffer: Buffer | undefined;
+  let documentBuffer: Uint8Array<ArrayBuffer> | undefined;
   let documentMime: string | undefined;
   let documentName: string | undefined;
   let documentSize: number | undefined;
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
     if (mime && !ALLOWED_DOCUMENT_TYPES.has(mime)) {
       return NextResponse.json({ error: "Erlaubt sind PDF oder Bilddateien (JPG, PNG)" }, { status: 400 });
     }
-    const buffer = Buffer.from(await upload.arrayBuffer());
+    const buffer = new Uint8Array(await upload.arrayBuffer());
     documentBuffer = buffer;
     documentMime = mime || "application/octet-stream";
     documentName = sanitizeFilename(upload.name || "einverstaendnis.pdf");

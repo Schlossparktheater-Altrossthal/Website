@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
       })()
     : null;
 
-  let documentBuffer: Buffer | null = null;
+  let documentBuffer: Uint8Array<ArrayBuffer> | null = null;
   let documentMime: string | null = null;
   let documentName: string | null = null;
   let documentSize: number | null = null;
@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Bitte nutze PDF oder Bilddateien (JPG/PNG)" }, { status: 400 });
     }
     const arrayBuffer = await documentFile.arrayBuffer();
-    documentBuffer = Buffer.from(arrayBuffer);
+    documentBuffer = new Uint8Array(arrayBuffer);
     documentMime = type || null;
     documentName = sanitizeFilename(documentFile.name);
     documentSize = documentBuffer.length;

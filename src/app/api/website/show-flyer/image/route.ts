@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) return NextResponse.json({ error: "Datei fehlt." }, { status: 400 });
   if (!file.type.startsWith("image/")) return NextResponse.json({ error: "Nur Bilder erlaubt." }, { status: 400 });
   if (file.size > MAX_SIZE) return NextResponse.json({ error: "Datei zu groß (max 5MB)." }, { status: 400 });
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const buffer = new Uint8Array(await file.arrayBuffer());
   await saveProductionFlyerSettingsImage({ bildData: buffer, bildMimeType: file.type });
   return NextResponse.json({ success: true });
 }
