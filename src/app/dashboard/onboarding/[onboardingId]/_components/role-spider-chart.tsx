@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { TooltipContentProps } from "recharts";
 import {
   PolarAngleAxis,
@@ -127,7 +127,7 @@ export function RoleSpiderChart({
     [chartData],
   );
 
-  const tooltipLabelFormatter = (value: string | number) => (typeof value === "string" ? value : `${value}%`);
+  const tooltipLabelFormatter = (value: ReactNode) => (typeof value === "string" ? value : typeof value === "number" ? `${value}%` : String(value ?? ""));
 
   const renderTooltip = ({ active, payload }: TooltipContentProps<number, string>) => {
     if (!active || !payload?.length) {
