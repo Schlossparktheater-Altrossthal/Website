@@ -112,7 +112,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ fo
   try {
     const created = await Promise.all(
       payloads.map(async ({ file, description, fileName, mimeType }) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
+        const buffer = new Uint8Array(await file.arrayBuffer());
         return prisma.fileLibraryItem.create({
           data: {
             folderId,

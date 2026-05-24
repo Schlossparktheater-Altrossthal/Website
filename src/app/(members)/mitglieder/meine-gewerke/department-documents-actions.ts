@@ -132,7 +132,7 @@ export async function uploadDepartmentDocumentAction(formData: FormData) {
       continue;
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = new Uint8Array(await file.arrayBuffer());
     payloads.push({ file, buffer });
   }
 

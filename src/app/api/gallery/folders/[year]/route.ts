@@ -165,7 +165,7 @@ export async function POST(
   try {
     const created = await Promise.all(
       payloads.map(async ({ file, description, kind, mimeType, fileName }) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
+        const buffer = new Uint8Array(await file.arrayBuffer());
         return prisma.galleryItem.create({
           data: {
             year: parsedYear,
