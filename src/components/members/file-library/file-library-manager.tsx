@@ -18,7 +18,7 @@ import {
   MAX_FILE_LIBRARY_FILE_BYTES,
   MAX_FILE_LIBRARY_FILES_PER_UPLOAD,
   formatFileLibraryFileSize,
-} from "@/lib/file-library";
+} from "@/lib/file-library-constants";
 
 const ACCEPT_SET = new Set(FILE_LIBRARY_ACCEPT_MIME_TYPES.map((entry) => entry.toLowerCase()));
 
