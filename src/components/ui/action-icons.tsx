@@ -24,6 +24,9 @@ import {
   MoreVertical,
   Pencil,
   Plus,
+  CirclePlus,
+  Minus,
+  Printer,
   RefreshCw,
   Search,
   Settings,
@@ -165,4 +168,17 @@ export function ImageIcon({ className = "w-4 h-4", ...props }: { className?: str
 
 export function SettingsIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return <Settings className={className} aria-hidden {...props} />;
+}
+
+
+export function CirclePlusIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <CirclePlus className={className} aria-hidden {...props} />;
+}
+
+export function MinusIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Minus className={className} aria-hidden {...props} />;
+}
+
+export function PrinterIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Printer className={className} aria-hidden {...props} />;
 }
