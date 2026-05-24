@@ -3,7 +3,8 @@ import { hasPermission } from "@/lib/permissions";
 export type FrontendEditingFeatureKey =
   | "FEATURE.MYSTERY.COUNTDOWN"
   | "FEATURE.HOME.COUNTDOWN"
-  | "FEATURE.HOME.FLYER";
+  | "FEATURE.HOME.FLYER"
+  | "FEATURE.CHRONIK.DATES";
 
 export type FrontendEditingFeature = {
   key: FrontendEditingFeatureKey;
@@ -33,6 +34,12 @@ const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     label: "Homepage-Flyer",
     description: "Flyer-Sektion für die öffentliche Startseite anpassen.",
     permissionKey: "PUBLIC.HOME.FLYER.EDIT",
+  },
+  {
+    key: "FEATURE.CHRONIK.DATES",
+    label: "Chronik-Termine",
+    description: "Aufführungstermine in der öffentlichen Chronik bearbeiten.",
+    permissionKey: "PUBLIC.CHRONIK.DATES.EDIT",
   },
 ];
 
