@@ -10,12 +10,13 @@ import {
   FINANCE_ENTRY_STATUS_VALUES,
   FINANCE_TYPE_LABELS,
 } from "@/lib/finance";
-import { Button } from "@/components/ui/button";
+import { TrashIcon, RefreshIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { RefreshCw, Trash2 } from "lucide-react";
 
 function formatCurrency(amount: number, currency: string) {
   try {
@@ -61,6 +62,7 @@ export function FinanceEntryTable({
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [entryPendingDelete, setEntryPendingDelete] = useState<FinanceEntryDTO | null>(null);
 
   const filteredEntries = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -108,9 +110,6 @@ export function FinanceEntryTable({
 
   async function handleDelete(entry: FinanceEntryDTO) {
     if (!canManage) return;
-    if (!window.confirm(`Soll die Buchung "${entry.title}" wirklich gelöscht werden?`)) {
-      return;
-    }
     try {
       setDeletingId(entry.id);
       const response = await fetch(`/api/finance/${entry.id}`, { method: "DELETE" });
@@ -191,10 +190,10 @@ export function FinanceEntryTable({
           <div className="text-xs text-muted-foreground">
             {filteredEntries.length} von {entries.length} Buchungen · Ausgaben {formatCurrency(totalExpenses, dominantCurrency)} · Einnahmen {formatCurrency(totalIncome, dominantCurrency)}
           </div>
-          <Button type="button" variant="secondary" size="sm" onClick={onRefresh} disabled={refreshing} className="gap-2">
-            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} aria-hidden />
-            {refreshing ? "Aktualisiere…" : "Aktualisieren"}
-          </Button>
+          <AsyncButton type="button" variant="secondary" size="sm" onClick={onRefresh} isLoading={refreshing} loadingText="Aktualisiere…" className="gap-2">
+            <RefreshIcon className={cn("h-4 w-4", refreshing && "animate-spin")} aria-hidden />
+            Aktualisieren
+          </AsyncButton>
         </div>
       </div>
 
@@ -308,16 +307,17 @@ export function FinanceEntryTable({
                   </td>
                   {canManage ? (
                     <td className="px-3 py-2 align-top text-right">
-                      <Button
+                      <AsyncButton
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(entry)}
-                        disabled={deletingId === entry.id}
+                        onClick={() => setEntryPendingDelete(entry)}
+                        isLoading={deletingId === entry.id}
+                        loadingText="Löschen…"
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden />
+                        <TrashIcon className="h-4 w-4" aria-hidden />
                         Löschen
-                      </Button>
+                      </AsyncButton>
                     </td>
                   ) : null}
                 </tr>
@@ -333,6 +333,26 @@ export function FinanceEntryTable({
           </tbody>
         </table>
       </div>
+      <ConfirmDialog
+        open={entryPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEntryPendingDelete(null);
+          }
+        }}
+        title="Buchung löschen"
+        description={entryPendingDelete ? `Soll die Buchung "${entryPendingDelete.title}" wirklich gelöscht werden?` : ""}
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onConfirm={async () => {
+          if (entryPendingDelete) {
+            await handleDelete(entryPendingDelete);
+            setEntryPendingDelete(null);
+          }
+        }}
+        onCancel={() => setEntryPendingDelete(null)}
+      />
     </div>
   );
 }

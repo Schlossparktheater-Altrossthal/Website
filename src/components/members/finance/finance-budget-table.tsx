@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2 } from "lucide-react";
 import type { FinanceBudgetDTO } from "@/app/api/finance/utils";
+import { EditIcon, TrashIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 function formatCurrency(amount: number, currency: string) {
@@ -24,6 +26,7 @@ type FinanceBudgetTableProps = {
 
 export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, canManage }: FinanceBudgetTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [budgetPendingDelete, setBudgetPendingDelete] = useState<FinanceBudgetDTO | null>(null);
 
   const totals = useMemo(() => {
     return budgets.reduce(
@@ -38,7 +41,6 @@ export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, ca
 
   async function handleDelete(budget: FinanceBudgetDTO) {
     if (!canManage) return;
-    if (!window.confirm(`Budget "${budget.category}" löschen?`)) return;
     try {
       setDeletingId(budget.id);
       const response = await fetch(`/api/finance/budgets/${budget.id}`, { method: "DELETE" });
@@ -106,19 +108,20 @@ export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, ca
                   <td className="px-3 py-2 align-top text-right">
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="ghost" size="sm" onClick={() => onRequestEdit(budget)}>
-                        <Pencil className="h-4 w-4" aria-hidden />
+                        <EditIcon className="h-4 w-4" aria-hidden />
                         Bearbeiten
                       </Button>
-                      <Button
+                      <AsyncButton
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(budget)}
-                        disabled={deletingId === budget.id}
+                        onClick={() => setBudgetPendingDelete(budget)}
+                        isLoading={deletingId === budget.id}
+                        loadingText="Löschen…"
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden />
+                        <TrashIcon className="h-4 w-4" aria-hidden />
                         Löschen
-                      </Button>
+                      </AsyncButton>
                     </div>
                   </td>
                 ) : null}
@@ -142,6 +145,26 @@ export function FinanceBudgetTable({ budgets, onRequestEdit, onBudgetDeleted, ca
           </tr>
         </tfoot>
       </table>
+      <ConfirmDialog
+        open={budgetPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBudgetPendingDelete(null);
+          }
+        }}
+        title="Budget löschen"
+        description={budgetPendingDelete ? `Budget "${budgetPendingDelete.category}" löschen?` : ""}
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onConfirm={async () => {
+          if (budgetPendingDelete) {
+            await handleDelete(budgetPendingDelete);
+            setBudgetPendingDelete(null);
+          }
+        }}
+        onCancel={() => setBudgetPendingDelete(null)}
+      />
     </div>
   );
 }
