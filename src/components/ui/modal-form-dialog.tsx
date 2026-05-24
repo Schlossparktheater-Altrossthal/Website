@@ -1,6 +1,7 @@
 "use client";
 
 import type { ModalFormDialogProps } from "@/lib/ui-standards";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,13 @@ export function ModalFormDialog({
   onOpenChange,
   children,
   footer,
+  onSave,
+  saveLabel = "Speichern",
 }: ModalFormDialogProps) {
+  const effectiveFooter = footer ?? (onSave ? (
+    <Button type="button" onClick={onSave}>{saveLabel}</Button>
+  ) : null);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -26,7 +33,7 @@ export function ModalFormDialog({
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         {children}
-        {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+        {effectiveFooter ? <DialogFooter>{effectiveFooter}</DialogFooter> : null}
       </DialogContent>
     </Dialog>
   );

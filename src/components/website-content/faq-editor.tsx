@@ -23,6 +23,7 @@ export function FaqEditor({ contentId, initialContent }: Props) {
   const [saving, setSaving] = useState(false);
   const [editItem, setEditItem] = useState<FaqItem & { index: number } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -106,17 +107,9 @@ export function FaqEditor({ contentId, initialContent }: Props) {
               >
                 <EditIcon className="h-4 w-4" />
               </Button>
-              <ConfirmDialog
-                trigger={
-                  <Button variant="ghost" size="icon" aria-label="Löschen">
-                    <TrashIcon className="h-4 w-4" />
-                  </Button>
-                }
-                title="Frage löschen?"
-                description={`"${item.question}" wird dauerhaft entfernt.`}
-                confirmLabel="Löschen"
-                onConfirm={() => handleDelete(index)}
-              />
+              <Button variant="ghost" size="icon" aria-label="Löschen" onClick={() => setDeleteIndex(index)}>
+                <TrashIcon className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         ))}
@@ -126,7 +119,7 @@ export function FaqEditor({ contentId, initialContent }: Props) {
         <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
           + Frage hinzufügen
         </Button>
-        <AsyncButton onClick={save} loading={saving} size="sm">
+        <AsyncButton onClick={save} isLoading={saving} size="sm">
           Speichern
         </AsyncButton>
       </div>
@@ -153,6 +146,17 @@ export function FaqEditor({ contentId, initialContent }: Props) {
           }}
         />
       )}
+      <ConfirmDialog
+        open={deleteIndex !== null}
+        onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}
+        title="Frage löschen?"
+        description={deleteIndex !== null ? `"${items[deleteIndex]?.question}" wird dauerhaft entfernt.` : undefined}
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onConfirm={() => { if (deleteIndex !== null) handleDelete(deleteIndex); setDeleteIndex(null); }}
+        onCancel={() => setDeleteIndex(null)}
+      />
     </div>
   );
 }

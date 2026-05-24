@@ -25,6 +25,8 @@ export interface ModalFormDialogProps {
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  onSave?: () => void;
+  saveLabel?: string;
 }
 
 export const UI_PATTERNS = {

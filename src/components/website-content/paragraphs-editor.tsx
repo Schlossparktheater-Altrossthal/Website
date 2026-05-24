@@ -18,6 +18,7 @@ type Props = {
 export function ParagraphsEditor({ contentId, initialContent }: Props) {
   const [paragraphs, setParagraphs] = useState<string[]>(initialContent.paragraphs);
   const [saving, setSaving] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -91,17 +92,9 @@ export function ParagraphsEditor({ contentId, initialContent }: Props) {
             onChange={(e) => updateParagraph(index, e.target.value)}
             placeholder={`Absatz ${index + 1}`}
           />
-          <ConfirmDialog
-            trigger={
-              <Button variant="ghost" size="icon" className="mt-2 shrink-0" aria-label="Absatz löschen">
-                <TrashIcon className="h-4 w-4" />
-              </Button>
-            }
-            title="Absatz löschen?"
-            description="Dieser Absatz wird dauerhaft entfernt."
-            confirmLabel="Löschen"
-            onConfirm={() => deleteParagraph(index)}
-          />
+          <Button variant="ghost" size="icon" className="mt-2 shrink-0" aria-label="Absatz löschen" onClick={() => setDeleteIndex(index)}>
+            <TrashIcon className="h-4 w-4" />
+          </Button>
         </div>
       ))}
 
@@ -109,10 +102,21 @@ export function ParagraphsEditor({ contentId, initialContent }: Props) {
         <Button variant="outline" size="sm" onClick={addParagraph}>
           + Absatz hinzufügen
         </Button>
-        <AsyncButton onClick={save} loading={saving} size="sm">
+        <AsyncButton onClick={save} isLoading={saving} size="sm">
           Speichern
         </AsyncButton>
       </div>
+      <ConfirmDialog
+        open={deleteIndex !== null}
+        onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}
+        title="Absatz löschen?"
+        description="Dieser Absatz wird dauerhaft entfernt."
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onConfirm={() => { if (deleteIndex !== null) { deleteParagraph(deleteIndex); setDeleteIndex(null); } }}
+        onCancel={() => setDeleteIndex(null)}
+      />
     </div>
   );
 }

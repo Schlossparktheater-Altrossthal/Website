@@ -22,6 +22,7 @@ export function StatsEditor({ contentId, initialContent }: Props) {
   const [saving, setSaving] = useState(false);
   const [editItem, setEditItem] = useState<(StatItem & { index: number }) | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -67,13 +68,9 @@ export function StatsEditor({ contentId, initialContent }: Props) {
               <Button variant="ghost" size="icon" onClick={() => setEditItem({ ...item, index })} aria-label="Bearbeiten">
                 <EditIcon className="h-4 w-4" />
               </Button>
-              <ConfirmDialog
-                trigger={<Button variant="ghost" size="icon" aria-label="Löschen"><TrashIcon className="h-4 w-4" /></Button>}
-                title="Kennzahl löschen?"
-                description={`"${item.label}" wird dauerhaft entfernt.`}
-                confirmLabel="Löschen"
-                onConfirm={() => setItems((prev) => prev.filter((_, i) => i !== index))}
-              />
+              <Button variant="ghost" size="icon" aria-label="Löschen" onClick={() => setDeleteIndex(index)}>
+                <TrashIcon className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         ))}
@@ -81,7 +78,7 @@ export function StatsEditor({ contentId, initialContent }: Props) {
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>+ Kennzahl hinzufügen</Button>
-        <AsyncButton onClick={save} loading={saving} size="sm">Speichern</AsyncButton>
+        <AsyncButton onClick={save} isLoading={saving} size="sm">Speichern</AsyncButton>
       </div>
 
       <StatDialog open={addOpen} onOpenChange={setAddOpen} title="Neue Kennzahl" onSave={(item) => { setItems((prev) => [...prev, item]); setAddOpen(false); }} />
@@ -89,6 +86,17 @@ export function StatsEditor({ contentId, initialContent }: Props) {
         <StatDialog open onOpenChange={(open) => !open && setEditItem(null)} title="Kennzahl bearbeiten" initialValues={editItem}
           onSave={(item) => { setItems((prev) => prev.map((it, i) => (i === editItem.index ? item : it))); setEditItem(null); }} />
       )}
+      <ConfirmDialog
+        open={deleteIndex !== null}
+        onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}
+        title="Kennzahl löschen?"
+        description={deleteIndex !== null ? `"${items[deleteIndex]?.label}" wird dauerhaft entfernt.` : undefined}
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onConfirm={() => { if (deleteIndex !== null) { setItems((prev) => prev.filter((_, i) => i !== deleteIndex)); setDeleteIndex(null); } }}
+        onCancel={() => setDeleteIndex(null)}
+      />
     </div>
   );
 }

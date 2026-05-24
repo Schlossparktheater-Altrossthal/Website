@@ -23,6 +23,7 @@ export function MilestonesEditor({ contentId, initialContent }: Props) {
   const [saving, setSaving] = useState(false);
   const [editItem, setEditItem] = useState<(MilestoneItem & { index: number }) | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -69,13 +70,9 @@ export function MilestonesEditor({ contentId, initialContent }: Props) {
               <Button variant="ghost" size="icon" onClick={() => setEditItem({ ...item, index })} aria-label="Bearbeiten">
                 <EditIcon className="h-4 w-4" />
               </Button>
-              <ConfirmDialog
-                trigger={<Button variant="ghost" size="icon" aria-label="Löschen"><TrashIcon className="h-4 w-4" /></Button>}
-                title="Meilenstein löschen?"
-                description={`"${item.title}" (${item.year}) wird dauerhaft entfernt.`}
-                confirmLabel="Löschen"
-                onConfirm={() => setItems((prev) => prev.filter((_, i) => i !== index))}
-              />
+              <Button variant="ghost" size="icon" aria-label="Löschen" onClick={() => setDeleteIndex(index)}>
+                <TrashIcon className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         ))}
@@ -83,7 +80,7 @@ export function MilestonesEditor({ contentId, initialContent }: Props) {
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>+ Meilenstein hinzufügen</Button>
-        <AsyncButton onClick={save} loading={saving} size="sm">Speichern</AsyncButton>
+        <AsyncButton onClick={save} isLoading={saving} size="sm">Speichern</AsyncButton>
       </div>
 
       <MilestoneDialog
@@ -102,6 +99,17 @@ export function MilestonesEditor({ contentId, initialContent }: Props) {
           onSave={(item) => { setItems((prev) => prev.map((it, i) => (i === editItem.index ? item : it))); setEditItem(null); }}
         />
       )}
+      <ConfirmDialog
+        open={deleteIndex !== null}
+        onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}
+        title="Meilenstein löschen?"
+        description={deleteIndex !== null ? `"${items[deleteIndex]?.title}" (${items[deleteIndex]?.year}) wird dauerhaft entfernt.` : undefined}
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onConfirm={() => { if (deleteIndex !== null) { setItems((prev) => prev.filter((_, i) => i !== deleteIndex)); setDeleteIndex(null); } }}
+        onCancel={() => setDeleteIndex(null)}
+      />
     </div>
   );
 }
