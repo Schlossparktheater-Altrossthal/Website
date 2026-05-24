@@ -222,7 +222,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "membership",
   },
   {
-    key: "PRIVATE.WEBSITE.THEME.MANAGE",
+    key: "PRIVATE.SETTINGS.THEME.MANAGE",
     label: "Website-Einstellungen verwalten",
     description:
       "Theme-Farben, Branding und öffentliche Website-Parameter anpassen.",
