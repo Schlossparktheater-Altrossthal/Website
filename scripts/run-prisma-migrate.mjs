@@ -33,6 +33,16 @@ function includesFailedMigrationHint(error) {
 
 function parseFailedMigrations(output) {
   if (!output) return [];
+
+  // Primary: extract directly from Prisma P3009 error message.
+  // Format: "The `<name>` migration started at <ts> failed"
+  const p3009Matches = [...output.matchAll(/The `([^`]+)` migration started at .+? failed/g)];
+  if (p3009Matches.length > 0) {
+    return [...new Set(p3009Matches.map((m) => m[1]))];
+  }
+
+  // Fallback: parse `migrate status` output.
+  // Prisma v6: "  - <name>", Prisma v7: bare "<name>" line after "have failed".
   const lines = output.split(/\r?\n/);
   const result = [];
   let capture = false;
@@ -43,14 +53,14 @@ function parseFailedMigrations(output) {
       continue;
     }
     if (!capture) continue;
-    const match = line.match(/^\s*-\s+(.+?)\s*$/);
-    if (match) {
-      result.push(match[1].trim());
-      continue;
-    }
-    if (line.trim() === "" && result.length > 0) {
-      break;
-    }
+    // v6 format: "  - migration_name"
+    const dashMatch = line.match(/^\s*-\s+(\d{14}_\S+)\s*$/);
+    if (dashMatch) { result.push(dashMatch[1]); continue; }
+    // v7 format: bare "migration_name" (timestamp prefix, no dash)
+    const bareMatch = line.match(/^\s*(\d{14}_\S+)\s*$/);
+    if (bareMatch) { result.push(bareMatch[1]); continue; }
+    // Stop on blank line after capturing, or on non-name non-blank content
+    if (result.length > 0) break;
   }
   return result;
 }
