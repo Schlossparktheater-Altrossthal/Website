@@ -51,7 +51,7 @@ jobs:
         run: SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --frozen-lockfile
 
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .next/cache
           key: nextjs-staging-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
@@ -136,7 +136,7 @@ jobs:
         run: SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --frozen-lockfile
 
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .next/cache
           key: nextjs-prod-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
