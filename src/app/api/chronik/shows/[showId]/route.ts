@@ -55,7 +55,7 @@ const updateShowSchema = z.object({
   dates: z.string().max(280).nullable().optional(),
   posterUrl: z.string().max(500).nullable().optional(),
   revealedAt: z.string().datetime().nullable().optional(),
-  meta: z.record(z.unknown()).nullable().optional(),
+  meta: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export async function PUT(request: NextRequest, { params }: RouteContext) {
@@ -78,28 +78,32 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     );
   }
 
-  const data: Record<string, unknown> = {};
-
-  if (parsed.data.year !== undefined) data.year = parsed.data.year;
-  if (parsed.data.title !== undefined) data.title = parsed.data.title;
-  if (parsed.data.synopsis !== undefined) data.synopsis = parsed.data.synopsis;
-  if ("dates" in parsed.data) {
-    const d = parsed.data.dates;
-    data.dates = typeof d === "string" && d.trim().length > 0 ? d.trim() : Prisma.JsonNull;
-  }
-  if (parsed.data.posterUrl !== undefined) data.posterUrl = parsed.data.posterUrl;
-  if ("revealedAt" in parsed.data) {
-    data.revealedAt = parsed.data.revealedAt ? new Date(parsed.data.revealedAt) : null;
-  }
-  if ("meta" in parsed.data) {
-    data.meta = parsed.data.meta
-      ? (parsed.data.meta as Prisma.InputJsonValue)
-      : Prisma.JsonNull;
-  }
-
   const show = await prisma.show.update({
     where: { id: showId },
-    data,
+    data: {
+      ...(parsed.data.year !== undefined ? { year: parsed.data.year } : {}),
+      ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
+      ...("synopsis" in parsed.data ? { synopsis: parsed.data.synopsis ?? null } : {}),
+      ...("dates" in parsed.data
+        ? {
+            dates:
+              typeof parsed.data.dates === "string" && parsed.data.dates.trim().length > 0
+                ? parsed.data.dates.trim()
+                : "",
+          }
+        : {}),
+      ...("posterUrl" in parsed.data ? { posterUrl: parsed.data.posterUrl ?? null } : {}),
+      ...("revealedAt" in parsed.data
+        ? { revealedAt: parsed.data.revealedAt ? new Date(parsed.data.revealedAt) : null }
+        : {}),
+      ...("meta" in parsed.data
+        ? {
+            meta: parsed.data.meta
+              ? (parsed.data.meta as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
+          }
+        : {}),
+    },
     select: {
       id: true,
       year: true,

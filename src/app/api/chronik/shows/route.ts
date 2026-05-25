@@ -47,7 +47,7 @@ const createShowSchema = z.object({
   dates: z.string().max(280).nullable().optional(),
   posterUrl: z.string().max(500).nullable().optional(),
   revealedAt: z.string().datetime().nullable().optional(),
-  meta: z.record(z.unknown()).nullable().optional(),
+  meta: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   const datesValue: Prisma.InputJsonValue =
-    typeof dates === "string" && dates.trim().length > 0 ? dates.trim() : Prisma.JsonNull;
+    typeof dates === "string" && dates.trim().length > 0 ? dates.trim() : "";
 
   const show = await prisma.show.create({
     data: {
