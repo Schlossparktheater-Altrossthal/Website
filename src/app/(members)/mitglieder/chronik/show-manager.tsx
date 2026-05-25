@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { AddIcon, EditIcon, TrashIcon } from "@/components/ui/action-icons";
+import { PlusIcon, EditIcon, TrashIcon } from "@/components/ui/action-icons";
 import { ShowFormDialog } from "./show-form-dialog";
 import { MetaFormDialog } from "./meta-form-dialog";
 import type { ShowRecord } from "./types";
@@ -63,7 +63,7 @@ export function ShowManager({ initialShows }: ShowManagerProps) {
           Produktionen
         </Heading>
         <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>
-          <AddIcon />
+          <PlusIcon />
           Neue Produktion
         </Button>
       </div>

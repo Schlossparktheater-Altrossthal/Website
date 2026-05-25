@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AddIcon, TrashIcon } from "@/components/ui/action-icons";
+import { PlusIcon, TrashIcon } from "@/components/ui/action-icons";
 import type { ShowRecord, ShowMeta, CastEntry } from "./types";
 
 type MetaFormDialogProps = {
@@ -248,7 +248,7 @@ export function MetaFormDialog({ open, onOpenChange, show, onSaved }: MetaFormDi
                   Besetzung
                 </Heading>
                 <Button variant="outline" size="sm" type="button" onClick={addCastRow}>
-                  <AddIcon />
+                  <PlusIcon />
                   Rolle
                 </Button>
               </div>
