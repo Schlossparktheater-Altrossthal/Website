@@ -258,37 +258,6 @@ async function main() {
     });
   }
 
-  const financePermissionSeeds = [
-    {
-      key: "PRIVATE.FINANCE.ENTRY.VIEW",
-      label: "Finanzbereich öffnen",
-      description: "Dashboard für Einnahmen, Ausgaben, Rechnungen und Spenden im Mitgliederbereich einsehen.",
-    },
-    {
-      key: "PRIVATE.FINANCE.ENTRY.MANAGE",
-      label: "Finanzbuchungen verwalten",
-      description: "Neue Finanzbuchungen anlegen, bearbeiten, Rechnungen erfassen und Spenden dokumentieren.",
-    },
-    {
-      key: "PRIVATE.FINANCE.ENTRY.APPROVE",
-      label: "Finanzbuchungen freigeben",
-      description: "Prüfen und freigeben von Rechnungen, Auslagen und Auszahlungen im Finanzmodul.",
-    },
-    {
-      key: "PRIVATE.FINANCE.ENTRY.EXPORT",
-      label: "Finanzdaten exportieren",
-      description: "CSV- oder Excel-Exporte der Finanzbuchungen und Budgetübersichten erstellen.",
-    },
-  ];
-
-  for (const perm of financePermissionSeeds) {
-    await prisma.permission.upsert({
-      where: { key: perm.key },
-      update: { label: perm.label, description: perm.description },
-      create: perm,
-    });
-  }
-
   const systemAppRoles = [
     { name: "member", systemRole: "member", isSystem: false },
     { name: "cast", systemRole: "cast", isSystem: false },
@@ -379,30 +348,6 @@ async function main() {
       });
     }
   }
-
-  const financePermissionKeys = financePermissionSeeds.map((perm) => perm.key);
-  const boardPermissionKeys = ["PRIVATE.FINANCE.ENTRY.VIEW", "PRIVATE.FINANCE.ENTRY.EXPORT"];
-
-  const [financeRole, boardRole, financePermissions] = await Promise.all([
-    prisma.appRole.findUnique({ where: { name: "finance" } }),
-    prisma.appRole.findUnique({ where: { name: "board" } }),
-    prisma.permission.findMany({ where: { key: { in: financePermissionKeys } } }),
-  ]);
-
-  const permissionMap = new Map(financePermissions.map((perm) => [perm.key, perm.id]));
-
-  if (financeRole) {
-    for (const key of financePermissionKeys) {
-      const permissionId = permissionMap.get(key);
-      if (!permissionId) continue;
-      await prisma.appRolePermission.upsert({
-        where: { roleId_permissionId: { roleId: financeRole.id, permissionId } },
-        update: {},
-        create: { roleId: financeRole.id, permissionId },
-      });
-    }
-  }
-
   if (boardRole) {
     for (const key of boardPermissionKeys) {
       const permissionId = permissionMap.get(key);

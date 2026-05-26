@@ -88,7 +88,7 @@ describe("ticket check-in API", () => {
     );
 
     expect(requireAuthMock).toHaveBeenCalled();
-    expect(hasPermissionMock).toHaveBeenCalledWith({ id: "user-1" }, "PRIVATE.INVENTORY.SCAN.USE");
+    expect(hasPermissionMock).toHaveBeenCalledWith({ id: "user-1" }, "PRIVATE.PRODUCTION.SHOW.MANAGE");
     expect(checkInTicketMock).toHaveBeenCalledWith(expect.any(Object), {
       ticketId: null,
       code: "CODE-123",

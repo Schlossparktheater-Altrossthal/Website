@@ -53,27 +53,6 @@ export const PROFILE_DATA_PERMISSION_KEYS = {
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "PRIVATE.DASHBOARD.OVERVIEW.VIEW", label: "Mitglieder-Dashboard öffnen", category: "base" },
   { key: "PRIVATE.PROFILE.OWN.VIEW", label: "Profilbereich aufrufen", category: "base" },
-  { key: "PRIVATE.INVENTORY.SCAN.USE", label: "Scanner & Check-in nutzen", category: "base" },
-  {
-    key: "PRIVATE.INVENTORY.STICKER.EXPORT",
-    label: "Inventaraufkleber erstellen",
-    description: "Druckfertige Inventaraufkleber mit QR-Codes erstellen und exportieren.",
-    category: "base",
-  },
-  {
-    key: "PRIVATE.INVENTORY.TECH.MANAGE",
-    label: "Technik-Lager verwalten",
-    description:
-      "Gerätebestand, Ausgaben und Rückgaben im Techniklager koordinieren und nachverfolgen.",
-    category: "planning",
-  },
-  {
-    key: "PRIVATE.INVENTORY.COSTUME.MANAGE",
-    label: "Kostüm-Lager verwalten",
-    description:
-      "Bestand des Kostümfundus pflegen, Größen kontrollieren und Pflegehinweise dokumentieren.",
-    category: "planning",
-  },
   {
     key: "PRIVATE.GALLERY.MEDIA.VIEW",
     label: "Archiv und Bilder öffnen",
@@ -94,20 +73,6 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     description:
       "Fremde Beiträge löschen, Inhalte kuratieren und das Medienarchiv aufräumen.",
     category: "self",
-  },
-  {
-    key: "PRIVATE.FILES.FOLDER.VIEW",
-    label: "Dateisystem öffnen",
-    description:
-      "Greift auf das gemeinsame Dateisystem mit Ordnerstruktur, Dokumenten und Downloads zu.",
-    category: "self",
-  },
-  {
-    key: "PRIVATE.FILES.FOLDER.MANAGE",
-    label: "Dateisystem verwalten",
-    description:
-      "Struktur und Zugriffsrechte des Dateisystems pflegen, Dateien moderieren und Freigaben steuern.",
-    category: "membership",
   },
   {
     key: "PRIVATE.SUPPORT.ISSUE.VIEW",
@@ -164,27 +129,6 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "self",
   },
   { key: "PRIVATE.REHEARSAL.PLANNING.MANAGE", label: "Probenplanung verwalten", category: "planning" },
-  {
-    key: "PRIVATE.REHEARSAL.MEALS.MANAGE",
-    label: "Essensplanung koordinieren",
-    description:
-      "Zugang zum kulinarischen Cockpit für die Endprobenwoche: Ernährungsprofile bündeln, Allergien absichern und Menüs zusammenstellen.",
-    category: "planning",
-  },
-  {
-    key: "PRIVATE.REHEARSAL.FINALWEEK.VIEW",
-    label: "Endprobenwoche einsehen",
-    description:
-      "Planungsübersicht für die finale Probenwoche mit Dienstplänen, Verpflegung und organisatorischen Hinweisen einsehen.",
-    category: "planning",
-  },
-  {
-    key: "PRIVATE.REHEARSAL.FINALWEEK.MANAGE",
-    label: "Endprobenwoche koordinieren",
-    description:
-      "Dienstpläne der Endprobenwoche pflegen, Aufgaben hinzufügen und verantwortliche Mitglieder zuweisen.",
-    category: "planning",
-  },
   {
     key: "PRIVATE.PRODUCTION.SHOW.MANAGE",
     label: "Produktionsplanung öffnen",
@@ -295,32 +239,6 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "mystery",
   },
   {
-    key: "PRIVATE.FINANCE.ENTRY.VIEW",
-    label: "Finanzbereich öffnen",
-    description:
-      "Dashboard für Einnahmen, Ausgaben, Rechnungen und Spenden im Mitgliederbereich einsehen.",
-    category: "finances",
-  },
-  {
-    key: "PRIVATE.FINANCE.ENTRY.MANAGE",
-    label: "Finanzbuchungen verwalten",
-    description:
-      "Neue Finanzbuchungen anlegen, bearbeiten, Rechnungen erfassen und Spenden dokumentieren.",
-    category: "finances",
-  },
-  {
-    key: "PRIVATE.FINANCE.ENTRY.APPROVE",
-    label: "Finanzbuchungen freigeben",
-    description: "Prüfen und freigeben von Rechnungen, Auslagen und Auszahlungen im Finanzmodul.",
-    category: "finances",
-  },
-  {
-    key: "PRIVATE.FINANCE.ENTRY.EXPORT",
-    label: "Finanzdaten exportieren",
-    description: "CSV- oder Excel-Exporte der Finanzbuchungen und Budgetübersichten erstellen.",
-    category: "finances",
-  },
-  {
     key: "PRIVATE.ADMIN.ONBOARDING.ANALYTICS",
     label: "Onboarding-Analytics öffnen",
     description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
@@ -344,17 +262,7 @@ const DEFAULT_PERMISSION_KEYS = DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.
 const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
 
 // Grouped permission helpers
-const FINANCE_PERMISSION_KEYS = [
-  "PRIVATE.FINANCE.ENTRY.VIEW",
-  "PRIVATE.FINANCE.ENTRY.MANAGE",
-  "PRIVATE.FINANCE.ENTRY.APPROVE",
-  "PRIVATE.FINANCE.ENTRY.EXPORT",
-] as const satisfies PermissionDefinition["key"][];
 
-const FINANCE_BOARD_PERMISSION_KEYS = [
-  "PRIVATE.FINANCE.ENTRY.VIEW",
-  "PRIVATE.FINANCE.ENTRY.EXPORT",
-] as const satisfies PermissionDefinition["key"][];
 
 const MEASUREMENT_PERMISSION_KEY = PROFILE_DATA_PERMISSION_KEYS.measurements;
 
@@ -371,21 +279,9 @@ const MEASUREMENT_DEFAULT_ROLE_NAMES = [
   "finance",
 ] as const satisfies readonly Role[];
 
-const FINAL_WEEK_VIEW_PERMISSION_KEY =
-  "PRIVATE.REHEARSAL.FINALWEEK.VIEW" as const satisfies PermissionDefinition["key"];
 
-const FINAL_WEEK_VIEW_DEFAULT_ROLE_NAMES = [
-  "member",
-  "cast",
-  "tech",
-  "board",
-  "finance",
-] as const satisfies readonly Role[];
 
-const FINAL_WEEK_MANAGE_PERMISSION_KEY =
-  "PRIVATE.REHEARSAL.FINALWEEK.MANAGE" as const satisfies PermissionDefinition["key"];
 
-const FINAL_WEEK_MANAGE_ROLE_NAMES = ["board"] as const satisfies readonly Role[];
 
 // Baseline permissions that every authenticated user should retain even when not explicitly granted
 const BASELINE_PERMISSION_KEYS = new Set([
@@ -414,10 +310,8 @@ async function runEnsurePermissionDefinitions() {
   );
   await prisma.$transaction(operations);
   await prisma.permission.deleteMany({ where: { key: { notIn: Array.from(PERMISSION_KEY_SET) } } });
-  await ensureFinanceRoleDefaultAssignments();
   await ensureMeasurementRoleDefaultAssignments();
   await ensureProfileAdminDefaultAssignments();
-  await ensureFinalWeekRoleDefaultAssignments();
 }
 
 export async function ensurePermissionDefinitions() {
@@ -464,58 +358,6 @@ export async function ensureSystemRoles() {
     });
   }
   await ensureSystemRolesPromise;
-}
-
-async function ensureFinanceRoleDefaultAssignments() {
-  await ensureSystemRoles();
-
-  const permissionKeys = Array.from(
-    new Set<string>([...FINANCE_PERMISSION_KEYS, ...FINANCE_BOARD_PERMISSION_KEYS]),
-  );
-
-  const [roles, permissions] = await Promise.all([
-    prisma.appRole.findMany({ where: { name: { in: ["finance", "board"] } } }),
-    prisma.permission.findMany({ where: { key: { in: permissionKeys } } }),
-  ]);
-
-  if (!roles.length || !permissions.length) return;
-
-  const permissionMap = new Map(permissions.map((perm) => [perm.key, perm.id]));
-  const operations: Prisma.PrismaPromise<unknown>[] = [];
-
-  const financeRole = roles.find((role) => role.name === "finance");
-  if (financeRole) {
-    for (const key of FINANCE_PERMISSION_KEYS) {
-      const permissionId = permissionMap.get(key);
-      if (!permissionId) continue;
-      operations.push(
-        prisma.appRolePermission.upsert({
-          where: { roleId_permissionId: { roleId: financeRole.id, permissionId } },
-          update: {},
-          create: { roleId: financeRole.id, permissionId },
-        }),
-      );
-    }
-  }
-
-  const boardRole = roles.find((role) => role.name === "board");
-  if (boardRole) {
-    for (const key of FINANCE_BOARD_PERMISSION_KEYS) {
-      const permissionId = permissionMap.get(key);
-      if (!permissionId) continue;
-      operations.push(
-        prisma.appRolePermission.upsert({
-          where: { roleId_permissionId: { roleId: boardRole.id, permissionId } },
-          update: {},
-          create: { roleId: boardRole.id, permissionId },
-        }),
-      );
-    }
-  }
-
-  if (operations.length) {
-    await prisma.$transaction(operations);
-  }
 }
 
 async function ensureMeasurementRoleDefaultAssignments() {
@@ -569,64 +411,6 @@ async function ensureProfileAdminDefaultAssignments() {
         create: { roleId: role.id, permissionId },
       }),
     );
-  }
-
-  if (operations.length) {
-    await prisma.$transaction(operations);
-  }
-}
-
-async function ensureFinalWeekRoleDefaultAssignments() {
-  await ensureSystemRoles();
-
-  const roleNames = Array.from(
-    new Set<string>([...FINAL_WEEK_VIEW_DEFAULT_ROLE_NAMES, ...FINAL_WEEK_MANAGE_ROLE_NAMES]),
-  );
-
-  const [viewPermission, managePermission, roles] = await Promise.all([
-    prisma.permission.findUnique({ where: { key: FINAL_WEEK_VIEW_PERMISSION_KEY } }),
-    prisma.permission.findUnique({ where: { key: FINAL_WEEK_MANAGE_PERMISSION_KEY } }),
-    prisma.appRole.findMany({ where: { name: { in: roleNames } } }),
-  ]);
-
-  if ((!viewPermission && !managePermission) || roles.length === 0) {
-    return;
-  }
-
-  const operations: Prisma.PrismaPromise<unknown>[] = [];
-
-  if (viewPermission) {
-    const viewRoles = new Set<Role>(FINAL_WEEK_VIEW_DEFAULT_ROLE_NAMES);
-    for (const role of roles) {
-      const roleName = role.name as Role;
-      if (!viewRoles.has(roleName)) continue;
-      operations.push(
-        prisma.appRolePermission.upsert({
-          where: {
-            roleId_permissionId: { roleId: role.id, permissionId: viewPermission.id },
-          },
-          update: {},
-          create: { roleId: role.id, permissionId: viewPermission.id },
-        }),
-      );
-    }
-  }
-
-  if (managePermission) {
-    const manageRoles = new Set<Role>(FINAL_WEEK_MANAGE_ROLE_NAMES);
-    for (const role of roles) {
-      const roleName = role.name as Role;
-      if (!manageRoles.has(roleName)) continue;
-      operations.push(
-        prisma.appRolePermission.upsert({
-          where: {
-            roleId_permissionId: { roleId: role.id, permissionId: managePermission.id },
-          },
-          update: {},
-          create: { roleId: role.id, permissionId: managePermission.id },
-        }),
-      );
-    }
   }
 
   if (operations.length) {
