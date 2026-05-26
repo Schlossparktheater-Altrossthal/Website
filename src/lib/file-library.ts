@@ -9,7 +9,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { hasPermission, getPermissionRoleContext, type PermissionRoleContext } from "@/lib/permissions";
+import { getPermissionRoleContext, type PermissionRoleContext } from "@/lib/permissions";
 import type { Role } from "@/lib/roles";
 
 export {
@@ -76,8 +76,7 @@ function matchesAccessRule(
 export const resolveFileLibraryAccessContext = cache(async (user: { id?: string | null }) => {
   const userLike = user?.id != null ? { id: user.id } : null;
   const baseContext = await getPermissionRoleContext(userLike);
-  const canManage = await hasPermission(userLike, "PRIVATE.GALLERY.MEDIA.DELETE");
-  return { ...baseContext, canManage } satisfies FileLibraryAccessContext;
+  return { ...baseContext, canManage: false } satisfies FileLibraryAccessContext;
 });
 
 export async function userHasFileLibraryAccess(
