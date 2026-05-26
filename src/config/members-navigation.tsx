@@ -8,12 +8,8 @@ export type MembersNavIcon = ComponentType<MembersNavIconProps>;
 
 export type MembersNavGroupId =
   | "general"
-  | "media"
   | "assignments"
-  | "final-week"
   | "production"
-  | "inventory"
-  | "finance"
   | "admin"
   | "pages";
 
@@ -445,12 +441,6 @@ export const membersNavigation = [
         permissionKey: "PRIVATE.REHEARSAL.OWN.VIEW",
         icon: RehearsalsIcon,
       },
-      {
-        href: "/mitglieder/issues",
-        label: "Feedback & Support",
-        permissionKey: "PRIVATE.SUPPORT.ISSUE.VIEW",
-        icon: IssuesIcon,
-      },
     ],
   },
   {
@@ -513,138 +503,6 @@ export const membersNavigation = [
         label: "Körpermaße",
         permissionKey: "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
         icon: BodyMeasurementsIcon,
-      },
-    ],
-  },
-  {
-    id: "final-week",
-    label: "Endprobenwoche",
-    items: [
-      {
-        href: "/mitglieder/endproben-woche",
-        label: "Allgemeines",
-        permissionKey: "PRIVATE.REHEARSAL.FINALWEEK.VIEW",
-        icon: ProductionIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/dienstplan",
-        label: "Dienstplan",
-        permissionKey: "PRIVATE.REHEARSAL.FINALWEEK.VIEW",
-        icon: DutyRosterIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/menueplan",
-        label: "Menüplan",
-        permissionKey: "PRIVATE.REHEARSAL.MEALS.MANAGE",
-        icon: MealPlanIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/essenplanung",
-        label: "Essensplanung",
-        permissionKey: "PRIVATE.REHEARSAL.MEALS.MANAGE",
-        icon: CateringIcon,
-      },
-      {
-        href: "/mitglieder/endproben-woche/einkaufsliste",
-        label: "Einkaufsliste",
-        permissionKey: "PRIVATE.REHEARSAL.MEALS.MANAGE",
-        icon: ShoppingListIcon,
-      },
-    ],
-  },
-  {
-    id: "finance",
-    label: "Finanzen",
-    items: [
-      {
-        href: "/mitglieder/finanzen",
-        label: "Übersicht",
-        permissionKey: "PRIVATE.FINANCE.ENTRY.VIEW",
-        icon: FinanceDashboardIcon,
-      },
-      {
-        href: "/mitglieder/finanzen/buchungen",
-        label: "Buchungen",
-        permissionKey: "PRIVATE.FINANCE.ENTRY.VIEW",
-        icon: FinanceBookingsIcon,
-      },
-      {
-        href: "/mitglieder/finanzen/budgets",
-        label: "Budgetverwaltung",
-        permissionKey: "PRIVATE.FINANCE.ENTRY.VIEW",
-        icon: FinanceBudgetsIcon,
-      },
-      {
-        href: "/mitglieder/finanzen/export",
-        label: "Exporte",
-        permissionKey: "PRIVATE.FINANCE.ENTRY.EXPORT",
-        icon: FinanceExportIcon,
-      },
-    ],
-  },
-  {
-    id: "media",
-    label: "Dateisystem",
-    items: [
-      {
-        href: "/mitglieder/archiv",
-        label: "Archiv",
-        permissionKey: "PRIVATE.GALLERY.MEDIA.VIEW",
-        icon: ArchiveIcon,
-      },
-      {
-        href: "/mitglieder/bilder",
-        label: "Bilder",
-        permissionKey: "PRIVATE.GALLERY.MEDIA.VIEW",
-        icon: GalleryIcon,
-      },
-      {
-        href: "/mitglieder/chronik",
-        label: "Chronik",
-        permissionKey: "PRIVATE.CHRONIK.MANAGE",
-        icon: TimelineIcon,
-      },
-      {
-        href: "/mitglieder/daten",
-        label: "Daten",
-        permissionKey: "PRIVATE.FILES.FOLDER.VIEW",
-        icon: FileLibraryIcon,
-      },
-    ],
-  },
-  {
-    id: "inventory",
-    label: "Lager & Inventar",
-    items: [
-      {
-        href: "/mitglieder/lagerverwaltung/technik",
-        label: "Technik-Lager",
-        permissionKey: "PRIVATE.INVENTORY.TECH.MANAGE",
-        icon: TechInventoryIcon,
-      },
-      {
-        href: "/mitglieder/lagerverwaltung/kostueme",
-        label: "Kostüm-Lager",
-        permissionKey: "PRIVATE.INVENTORY.COSTUME.MANAGE",
-        icon: CostumeInventoryIcon,
-      },
-      {
-        href: "/mitglieder/inventar-aufkleber",
-        label: "Inventaraufkleber",
-        permissionKey: "PRIVATE.INVENTORY.STICKER.EXPORT",
-        icon: InventoryStickersIcon,
-      },
-      {
-        href: "/mitglieder/scan",
-        label: "Scanner",
-        permissionKey: "PRIVATE.INVENTORY.SCAN.USE",
-        icon: ScannerIcon,
-      },
-      {
-        href: "/mitglieder/lagerverwaltung/probleme",
-        label: "Probleme",
-        permissionKey: "PRIVATE.INVENTORY.TECH.MANAGE",
-        icon: IssuesIcon,
       },
     ],
   },

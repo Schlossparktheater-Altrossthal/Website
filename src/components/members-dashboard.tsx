@@ -137,28 +137,10 @@ const QUICK_ACTION_LINKS = [
     permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
   },
   {
-    href: "/mitglieder/finanzen",
-    label: "Finanzen",
-    icon: PiggyBank,
-    permissionKey: "PRIVATE.FINANCE.ENTRY.VIEW",
-  },
-  {
     href: "/mitglieder/probenplanung",
     label: "Probenplanung",
     icon: CalendarCog,
     permissionKey: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
-  },
-  {
-    href: "/mitglieder/endproben-woche/dienstplan",
-    label: "Endproben-Woche",
-    icon: CalendarRange,
-    permissionKey: "PRIVATE.REHEARSAL.FINALWEEK.VIEW",
-  },
-  {
-    href: "/mitglieder/endproben-woche/essenplanung",
-    label: "Essensplanung",
-    icon: UtensilsCrossed,
-    permissionKey: "PRIVATE.REHEARSAL.MEALS.MANAGE",
   },
   {
     href: "/mitglieder/mitgliederverwaltung",
