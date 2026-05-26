@@ -5,6 +5,8 @@
 
 import React, { useMemo, useRef, useState, useEffect } from "react";
 
+import { Button } from "@/components/ui/button";
+
 import { CalendarStarIcon, ClockIcon, UmbrellaIcon } from "./icons";
 import { Cell } from "./table-cell";
 import { IconButton } from "./ui-components";
@@ -82,14 +84,16 @@ export function DesktopTable({
               </IconButton>
             )}
             {onJumpToToday && (
-              <button
+              <Button
                 type="button"
-                className="ml-1 inline-flex items-center gap-2 rounded-lg border border-border bg-card/70 px-2.5 py-1 text-sm font-medium hover:bg-card transition-colors"
+                variant="outline"
+                size="sm"
+                className="ml-1 h-auto gap-2 border-border bg-card/70 px-2.5 py-1 text-sm font-medium hover:bg-card"
                 aria-label="Zu heute springen"
                 onClick={onJumpToToday}
               >
                 <ClockIcon className="h-4 w-4" /> Heute
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -117,9 +121,9 @@ export function DesktopTable({
                 {hasFerien && (
                   <tr>
                     {showGroupColumn && (
-                      <th className="sticky left-0 z-20 w-3 border-b border-r border-[color:var(--th)] bg-white"></th>
+                      <th className="sticky left-0 z-20 w-3 border-b border-r border-[color:var(--th)] bg-card"></th>
                     )}
-                    <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-right`}>
+                    <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-card px-3 py-2 text-right`}>
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">Ferien</span>
                     </th>
                     {dayCols.map((_, idx) => {
@@ -146,7 +150,7 @@ export function DesktopTable({
                         return null; // Wird vom colSpan abgedeckt
                       }
                       
-                      return <th key={idx} className="border-b border-[color:var(--th)] bg-white"></th>;
+                      return <th key={idx} className="border-b border-[color:var(--th)] bg-card"></th>;
                     })}
                   </tr>
                 )}
@@ -155,9 +159,9 @@ export function DesktopTable({
                 {hasFeiertage && (
                   <tr>
                     {showGroupColumn && (
-                      <th className="sticky left-0 z-20 w-3 border-b border-r border-[color:var(--th)] bg-white"></th>
+                      <th className="sticky left-0 z-20 w-3 border-b border-r border-[color:var(--th)] bg-card"></th>
                     )}
-                    <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-white px-3 py-2 text-right`}>
+                    <th className={`sticky ${showGroupColumn ? 'left-3' : 'left-0'} z-20 w-[280px] sm:w-[340px] min-w-[280px] border-b border-r border-[color:var(--th)] bg-card px-3 py-2 text-right`}>
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-warning">Feiertage</span>
                     </th>
                     {dayCols.map((_, idx) => {
@@ -176,7 +180,7 @@ export function DesktopTable({
                         );
                       }
                       
-                      return <th key={idx} className="border-b border-[color:var(--th)] bg-white"></th>;
+                      return <th key={idx} className="border-b border-[color:var(--th)] bg-card"></th>;
                     })}
                   </tr>
                 )}
@@ -186,7 +190,7 @@ export function DesktopTable({
             {/* Haupt-Header mit Tag-Nummern */}
             <tr>
               {showGroupColumn && (
-                <th scope="col" className="sticky left-0 z-20 w-3 min-w-[12px] border-b border-r border-[color:var(--th)] bg-white"></th>
+                <th scope="col" className="sticky left-0 z-20 w-3 min-w-[12px] border-b border-r border-[color:var(--th)] bg-card"></th>
               )}
               <th 
                 scope="col" 
@@ -325,7 +329,7 @@ function PersonRow({
         >
           <div className="flex h-full items-center justify-center">
             <span 
-              className="text-[9px] font-bold uppercase tracking-widest text-white whitespace-nowrap"
+              className="text-[9px] font-bold uppercase tracking-widest text-primary-foreground whitespace-nowrap"
               style={{ 
                 writingMode: 'vertical-rl', 
                 transform: 'rotate(180deg)',
