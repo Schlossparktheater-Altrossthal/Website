@@ -56,7 +56,7 @@ const STATUS_LINE_CLASSES: Record<HolidayStatusMeta["tone"], string> = {
   ok: "border-emerald-500/50 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100",
   warning: "border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100",
   disabled: "border-border bg-muted text-muted-foreground",
-  unknown: "border-slate-400/60 bg-slate-400/10 text-slate-800 dark:text-slate-100",
+  unknown: "border-border/60 bg-muted/10 text-muted-foreground dark:text-muted-foreground",
 };
 
 const STATUS_BADGE_VARIANTS = {

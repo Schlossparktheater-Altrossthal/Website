@@ -37,7 +37,7 @@ export const timelineStatusStyles = tv({
       preferred:
         "border border-emerald-400/60 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100",
       holiday:
-        "border border-sky-400/40 bg-sky-500/10 text-sky-900 dark:text-sky-100",
+        "border border-primary400/40 bg-primary500/10 text-primary900 dark:text-primary100",
       free: "border border-border/40 bg-background/60 text-muted-foreground/80 backdrop-blur",
       freeMuted: "border border-border/50 bg-muted/30 text-muted-foreground",
       preferredPlaceholder:
@@ -238,7 +238,7 @@ export function DesktopTimeline({
                   className={cn(
                     "border-b border-border/60 px-2 py-1 text-center align-middle text-[10px] font-semibold uppercase tracking-wide",
                     segment.isHoliday
-                      ? "bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200"
+                      ? "bg-primary500/15 text-primary700 dark:bg-primary500/20 dark:text-primary200"
                       : "bg-card/95 text-transparent",
                     segment.showDivider && "border-l border-border/60",
                   )}

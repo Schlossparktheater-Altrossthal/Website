@@ -221,7 +221,7 @@ export default async function PublicAboutPage() {
                       role={groupIndex === 0 ? "listitem" : "presentation"}
                       aria-hidden={groupIndex > 0}
                       tabIndex={groupIndex === 0 ? 0 : -1}
-                      className="flex w-[min(18.5rem,80vw)] shrink-0 snap-center flex-col justify-between gap-4 rounded-2xl border border-primary/50 bg-card/70 p-6 shadow-[0_0_16px_2px_hsl(var(--primary)/0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:w-[22rem] sm:snap-start"
+                      className="flex w-[min(18.5rem,80vw)] shrink-0 snap-center flex-col justify-between gap-4 rounded-2xl border border-primary/50 bg-card/70 p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:w-[22rem] sm:snap-start"
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">

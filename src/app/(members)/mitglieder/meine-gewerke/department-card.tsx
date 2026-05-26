@@ -155,7 +155,7 @@ export function DepartmentCard({
 
   return (
     <Card
-      className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80 shadow-[0_30px_120px_-60px_rgba(99,102,241,0.65)]"
+      className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80"
       style={accentStyle}
     >
       <div
@@ -274,7 +274,7 @@ export function DepartmentCard({
                           triggerProps={{
                             size: "xs",
                             className:
-                              "px-3 text-xs shadow-[0_12px_30px_-32px_rgba(99,102,241,0.7)] hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
+                              "px-3 text-xs hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
                           }}
                         />
                       ) : null}
@@ -313,7 +313,7 @@ export function DepartmentCard({
                                   label: "Übernehmen",
                                   size: "xs",
                                   className:
-                                    "px-3 text-xs shadow-[0_10px_26px_-34px_rgba(99,102,241,0.65)] hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
+                                    "px-3 text-xs hover:from-primary/85 hover:via-primary/75 hover:to-primary/85",
                                 }}
                               />
                             ) : null}

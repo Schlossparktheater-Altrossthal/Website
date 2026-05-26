@@ -1390,7 +1390,7 @@ export function MemberInviteManager() {
                                           </div>
                                           <span
                                             aria-hidden
-                                            className="h-2 w-2 rounded-full bg-primary/80 shadow-[0_0_0.75rem_rgba(0,0,0,0.25)] transition group-hover:scale-110 group-hover:bg-primary"
+                                            className="h-2 w-2 rounded-full bg-primary/80 transition group-hover:scale-110 group-hover:bg-primary"
                                           />
                                         </div>
                                       </div>

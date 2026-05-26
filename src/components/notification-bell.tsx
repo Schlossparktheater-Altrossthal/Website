@@ -471,11 +471,11 @@ function NotificationEntry({ item }: NotificationEntryProps) {
   const cardClass = cn(
     "rounded-lg border p-3 shadow-sm",
     highlightEmergency
-      ? "border-rose-400/70 bg-rose-500/10 shadow-[0_0_0_1px_rgba(244,63,94,0.35)]"
+      ? "border-rose-400/70 bg-rose-500/10"
       : highlightUpdate
-      ? "border-primary/60 bg-primary/10 shadow-[0_0_0_1px_rgba(129,140,248,0.25)]"
+      ? "border-primary/60 bg-primary/10"
       : highlightAttendance
-      ? "border-amber-400/70 bg-amber-500/10 shadow-[0_0_0_1px_rgba(251,191,36,0.25)]"
+      ? "border-amber-400/70 bg-amber-500/10"
       : "border-border/40 bg-background/85",
   );
 

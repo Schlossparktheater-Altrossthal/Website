@@ -213,7 +213,7 @@ export function SiteHeader({
             className={`flex-1 min-w-0 truncate font-serif text-lg transition-all duration-300 sm:text-xl ${
               !isTransparentHomeHeader
                 ? "text-primary hover:opacity-90"
-                : "text-white drop-shadow-lg hover:text-white/90"
+                : "text-primary-foreground drop-shadow-lg hover:text-primary-foreground/90"
             }`}
             href="/"
             title={siteTitle}
@@ -245,7 +245,7 @@ export function SiteHeader({
                     "after:absolute after:-bottom-[var(--space-3xs)] after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-[var(--primary)] after:opacity-95 after:transition-transform after:duration-300 after:content-[''] after:transform",
                     !isTransparentHomeHeader
                       ? "text-foreground/90 hover:text-[var(--primary)] hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-[var(--primary)] focus-visible:after:scale-x-100 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:after:scale-x-100"
-                      : "text-white drop-shadow-lg hover:text-white/90 hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-white focus-visible:after:scale-x-100 data-[active=true]:font-semibold data-[active=true]:text-white data-[active=true]:after:scale-x-100",
+                      : "text-primary-foreground drop-shadow-lg hover:text-primary-foreground/90 hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-primary-foreground focus-visible:after:scale-x-100 data-[active=true]:font-semibold data-[active=true]:text-primary-foreground data-[active=true]:after:scale-x-100",
                   )}
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}

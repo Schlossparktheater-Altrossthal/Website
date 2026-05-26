@@ -67,7 +67,7 @@ const ANIMATION_DURATION_MS = 450;
 
 const visitorSegmentAccentMap: Record<ServerAnalytics["visitorDistribution"][number]["id"], string> = {
   "logged-in": "bg-indigo-500",
-  "logged-out": "bg-sky-500",
+  "logged-out": "bg-primary500",
   bot: "bg-amber-500",
 };
 
@@ -741,7 +741,7 @@ export function ServerAnalyticsContent({
       case "connected":
         return "bg-emerald-500 animate-pulse";
       case "connecting":
-        return "bg-sky-500 animate-pulse";
+        return "bg-primary500 animate-pulse";
       case "error":
         return "bg-orange-500";
       default:

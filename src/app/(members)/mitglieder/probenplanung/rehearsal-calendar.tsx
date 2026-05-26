@@ -572,12 +572,12 @@ export function RehearsalCalendar({
                 className: cn(
                   "transition",
                   dayRehearsals.length > 0 &&
-                    "border-primary/50 bg-primary/5 shadow-[0_0_0_1px_rgba(129,140,248,0.25)]",
+                    "border-primary/50 bg-primary/5",
                   availRatio <= 0.5 && "border-destructive/60 bg-destructive/10",
                   availRatio > 0.5 && availRatio <= 0.75 &&
                     "border-amber-400/60 bg-amber-100/30 dark:border-amber-400/40 dark:bg-amber-500/10",
                   isSelected &&
-                    "border-primary/70 bg-primary/10 shadow-[0_12px_30px_rgba(129,140,248,0.25)]"
+                    "border-primary/70 bg-primary/10"
                 ),
                 "aria-label": ariaLabelParts.join(". "),
                 "aria-pressed": isSelected,
