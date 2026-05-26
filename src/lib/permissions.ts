@@ -5,23 +5,23 @@ import { Prisma } from "@prisma/client";
 // Categories for permissions
 type PermissionCategoryKey =
   | "base"
-  | "communication"
-  | "self"
-  | "planning"
-  | "membership"
-  | "mystery"
-  | "finances"
-  | "analytics";
+  | "rehearsal"
+  | "department"
+  | "pages"
+  | "admin"
+  | "public"
+  | "analytics"
+  | "communication";
 
 export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> = {
-  base: "Basisbereiche & Start",
-  communication: "Kommunikation & Support",
-  self: "Persönliche Bereiche",
-  planning: "Planung & Produktionen",
-  membership: "Mitgliederverwaltung & Administration",
-  mystery: "Community & Mystery",
-  finances: "Finanzen & Controlling",
-  analytics: "Onboarding & Analysen",
+  base: "Allgemeines",
+  rehearsal: "Proben",
+  department: "Gewerke",
+  pages: "Pages",
+  admin: "Verwaltung",
+  public: "Öffentliche Seiten",
+  analytics: "Analysen",
+  communication: "Kommunikation",
 };
 
 // Permission definition shape
@@ -77,145 +77,145 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     key: "PRIVATE.REHEARSAL.OWN.VIEW",
     label: "Eigene Probentermine einsehen",
     description: 'Zugang zum Bereich "Meine Termine" mit persönlichen Terminen und Fristen.',
-    category: "self",
+    category: "rehearsal",
   },
   {
     key: "PRIVATE.DEPARTMENT.OWN.VIEW",
     label: "Gewerkeplanung einsehen",
     description:
       'Zugang zum Bereich "Gewerkeplanung" mit Aufgabenübersicht und Terminvorschlägen.',
-    category: "self",
+    category: "department",
   },
   {
     key: PROFILE_DATA_PERMISSION_KEYS.measurements,
     label: "Körpermaße verwalten",
     description:
       "Öffnet das Körpermaße-Control-Center für das Kostüm-Team, um alle Maße des Ensembles futuristisch zu überwachen, fehlende Angaben zu erkennen und Einträge live zu aktualisieren.",
-    category: "self",
+    category: "department",
   },
   {
     key: PROFILE_DATA_PERMISSION_KEYS.sizes,
     label: "Konfektionsgrößen verwalten",
     description:
       "Erfasst und pflegt Konfektionsgrößen sowie zugehörige Passform-Notizen für Ensemble und Kostüm-Team.",
-    category: "self",
+    category: "department",
   },
   {
     key: PROFILE_DATA_PERMISSION_KEYS.dietary,
     label: "Ernährungshinweise verwalten",
     description:
       "Einsicht und Pflege von Allergien, Unverträglichkeiten und Ernährungspräferenzen zur sicheren Verpflegung.",
-    category: "self",
+    category: "department",
   },
-  { key: "PRIVATE.REHEARSAL.PLANNING.MANAGE", label: "Probenplanung verwalten", category: "planning" },
+  { key: "PRIVATE.REHEARSAL.PLANNING.MANAGE", label: "Probenplanung verwalten", category: "rehearsal" },
   {
     key: "PRIVATE.PRODUCTION.SHOW.MANAGE",
     label: "Produktionsplanung öffnen",
     description:
       "Bereich zur Verwaltung von Gewerken, Besetzungen, Szenen und Breakdown-Aufgaben im Produktionsmanagement.",
-    category: "planning",
+    category: "pages",
   },
-  { key: "PRIVATE.ADMIN.MEMBERS.MANAGE", label: "Mitgliederverwaltung öffnen", category: "membership" },
+  { key: "PRIVATE.ADMIN.MEMBERS.MANAGE", label: "Mitgliederverwaltung öffnen", category: "admin" },
   {
     key: "PRIVATE.ADMIN.INVITES.MANAGE",
     label: "Einladungslinks verwalten",
     description: "Mehrfach nutzbare Einladungslinks anlegen, deaktivieren und deren Status prüfen.",
-    category: "membership",
+    category: "admin",
   },
-  { key: "PRIVATE.ADMIN.PERMISSIONS.MANAGE", label: "Rechteverwaltung öffnen", category: "membership" },
-  { key: "PRIVATE.REHEARSAL.BLOCKLIST.VIEW", label: "Sperrliste pflegen", category: "membership" },
+  { key: "PRIVATE.ADMIN.PERMISSIONS.MANAGE", label: "Rechteverwaltung öffnen", category: "admin" },
+  { key: "PRIVATE.REHEARSAL.BLOCKLIST.VIEW", label: "Sperrliste pflegen", category: "rehearsal" },
   {
     key: "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS",
     label: "Sperrlisten-Einstellungen verwalten",
     description: "Ferienquelle, Vorlaufzeit und bevorzugte Probentage anpassen.",
-    category: "membership",
+    category: "rehearsal",
   },
   {
     key: "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT",
     label: "Sperrlisten-Export herunterladen",
     description:
       "CSV-Übersichten der nächsten zwei Wochen für die wichtigsten Probentage exportieren.",
-    category: "membership",
+    category: "rehearsal",
   },
   {
     key: "PRIVATE.ADMIN.PAGES.MANAGE",
     label: "Pages verwalten",
     description:
       "Wartungsmodus, Seitensteuerung und Website-Bereiche im Mitgliederbereich verwalten.",
-    category: "membership",
+    category: "pages",
   },
   {
     key: "PRIVATE.SETTINGS.THEME.MANAGE",
     label: "Website-Einstellungen verwalten",
     description:
       "Theme-Farben, Branding und öffentliche Website-Parameter anpassen.",
-    category: "membership",
+    category: "pages",
   },
   {
     key: "PUBLIC.HOME.COUNTDOWN.EDIT",
     label: "Premieren-Countdown verwalten",
     description: "Countdown zur ersten Aufführung auf der öffentlichen Startseite einstellen.",
-    category: "membership",
+    category: "pages",
   },
   {
     key: "PUBLIC.HOME.FLYER.EDIT",
     label: "Homepage-Flyer verwalten",
     description: "Flyer-Sektion auf der öffentlichen Startseite einstellen.",
-    category: "membership",
+    category: "pages",
   },
   {
     key: "PUBLIC.CONTENT.MANAGE",
     label: "Seiteninhalte verwalten",
     description: "FAQ, Über-uns-Seite und Schulkatze-Seite im integrierten CMS bearbeiten.",
-    category: "membership",
+    category: "pages",
   },
   {
     key: "PUBLIC.CHRONIK.DATES.EDIT",
     label: "Chronik-Termine pflegen",
     description: "Aufführungstermine der öffentlichen Chronik direkt im Frontend bearbeiten.",
-    category: "membership",
+    category: "pages",
   },
   {
     key: "PRIVATE.CHRONIK.MANAGE",
     label: "Chronik verwalten",
     description: "Chronik-Produktionen anlegen, bearbeiten und löschen.",
-    category: "membership",
+    category: "admin",
   },
   {
     key: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
-    category: "membership",
+    category: "admin",
   },
   {
     key: "PUBLIC.MYSTERY.TIMER.EDIT",
     label: "Mystery-Timer bearbeiten",
     description: "Countdown und Hinweistext für das öffentliche Geheimnis pflegen.",
-    category: "mystery",
+    category: "public",
   },
   {
     key: "PUBLIC.MYSTERY.PUZZLE.MANAGE",
     label: "Mystery-Rätsel verwalten",
     description: "Rätsel erstellen, bearbeiten und veröffentlichen.",
-    category: "mystery",
+    category: "public",
   },
   {
     key: "PUBLIC.MYSTERY.TIPS.MANAGE",
     label: "Mystery-Tipps verwalten",
     description: "Community-Tipps moderieren und löschen.",
-    category: "mystery",
+    category: "public",
   },
   {
     key: "PUBLIC.MYSTERY.SCOREBOARD.MANAGE",
     label: "Mystery-Scoreboard verwalten",
     description: "Punkte vergeben und Scoreboard-Einträge bearbeiten.",
-    category: "mystery",
+    category: "public",
   },
   {
     key: "PUBLIC.MYSTERY.HINTS.MANAGE",
     label: "Mystery-Hinweise verwalten",
     description: "Hinweise freischalten und hinzufügen.",
-    category: "mystery",
+    category: "public",
   },
   {
     key: "PRIVATE.ADMIN.ONBOARDING.ANALYTICS",
@@ -227,7 +227,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     key: "PRIVATE.ADMIN.SERVER.SETTINGS",
     label: "Servereinstellungen verwalten",
     description: "SMTP-Server und technische Basisdienste konfigurieren.",
-    category: "membership",
+    category: "admin",
   },
   {
     key: "PRIVATE.ADMIN.SERVER.ANALYTICS",
