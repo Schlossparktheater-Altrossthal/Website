@@ -85,6 +85,7 @@ export function PermissionWorkbenchClient({
       </TabsContent>
       <TabsContent value="roles">
         <RoleAdministrationPanel
+          permissions={permissions}
           roles={roles}
           setRoles={setRoles}
           roleGrants={roleGrants}
