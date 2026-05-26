@@ -125,7 +125,9 @@ export function useInventory() {
     const db = offlineDb;
 
     if (!storage.isSupported || !storage.isReady || !db) {
-      setItems([]);
+      queueMicrotask(() => {
+        setItems([]);
+      });
       return;
     }
 
@@ -145,8 +147,10 @@ export function useInventory() {
     const db = offlineDb;
 
     if (!storage.isSupported || !storage.isReady || !db) {
-      setPendingCount(0);
-      setBufferEntries([]);
+      queueMicrotask(() => {
+        setPendingCount(0);
+        setBufferEntries([]);
+      });
       return;
     }
 

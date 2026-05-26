@@ -21,6 +21,10 @@ export function useInterestSuggestions(options?: Options) {
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
+      await Promise.resolve();
+      if (signal?.aborted) {
+        return;
+      }
       setLoading(true);
       try {
         const response = await fetch("/api/onboarding/interests", { cache: "no-store", signal });
@@ -57,7 +61,9 @@ export function useInterestSuggestions(options?: Options) {
       return undefined;
     }
     const controller = new AbortController();
-    void load(controller.signal);
+    queueMicrotask(() => {
+      void load(controller.signal);
+    });
     return () => {
       controller.abort();
     };

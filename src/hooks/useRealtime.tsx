@@ -126,7 +126,6 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     if (!userId) {
       cleanupSocket();
-      setConnectionStatus("disconnected");
       return () => {
         disposed = true;
         abortController.abort();
