@@ -20,7 +20,7 @@ import type {
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeftIconIcon, CalendarIcon, MailIconIcon, ShieldCheckIconIcon, SparklesIconIcon } from "@/components/ui/action-icons";
+import { ArrowLeftIcon, CalendarIcon, MailIcon, ShieldCheckIcon, SparklesIcon } from "@/components/ui/action-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
