@@ -18,9 +18,11 @@ const buttonVariants = cva(
         accent:
           "bg-accent text-accent-foreground shadow-[var(--shadow-md)] hover:bg-accent/90",
         outline:
-          "border border-border bg-transparent text-foreground shadow-[var(--shadow-sm)] hover:border-primary/50 hover:text-primary",
+          "border border-border bg-transparent text-foreground hover:border-primary/50 hover:text-primary",
+        toggle:
+          "border border-transparent bg-transparent text-muted-foreground hover:bg-muted/40 data-[state=active]:border-transparent data-[state=active]:bg-accent data-[state=active]:text-accent-foreground",
         ghost:
-          "bg-transparent text-foreground shadow-[var(--shadow-sm)] hover:bg-muted/40 hover:text-foreground",
+          "bg-transparent text-foreground hover:bg-muted/40 hover:text-foreground",
         subtle:
           "bg-muted text-foreground/90 shadow-[var(--shadow-sm)] hover:bg-muted/70",
         link:
