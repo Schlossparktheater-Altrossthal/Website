@@ -1,15 +1,17 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { Clock, MapPin, Trash2 } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 import { getUserDisplayName } from "@/lib/names";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ClockIcon, TrashIcon } from "@/components/ui/action-icons";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 import { deleteDepartmentEventAction } from "./department-events-actions";
 import { CreateDepartmentEventButton } from "./department-event-create-button";
@@ -114,7 +116,7 @@ export function DepartmentEventPlanner({
           </p>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="outline" className="bg-background/80">
-              <Clock aria-hidden className="mr-1 h-3.5 w-3.5" />
+              <ClockIcon aria-hidden className="mr-1 h-3.5 w-3.5" />
               {upcomingCount} {upcomingCount === 1 ? "Termin geplant" : "Termine geplant"}
             </Badge>
             <Badge variant="outline" className="bg-background/80">
@@ -156,7 +158,7 @@ export function DepartmentEventPlanner({
                           </Badge>
                         </div>
                         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock aria-hidden className="h-4 w-4" />
+                          <ClockIcon aria-hidden className="h-4 w-4" />
                           <span>
                             {DATE_FORMATTER.format(event.startDate)} · {TIME_FORMATTER.format(event.startDate)}
                             {event.endDate ? ` – ${TIME_FORMATTER.format(event.endDate)}` : ""}
@@ -206,13 +208,9 @@ type DeleteButtonProps = {
 
 function DeleteDepartmentEventButton({ eventId, title, onDeleted }: DeleteButtonProps) {
   const [isPending, startTransition] = useTransition();
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const handleDelete = () => {
-    const confirmed = window.confirm(`Möchtest du den Termin "${title}" wirklich löschen?`);
-    if (!confirmed) {
-      return;
-    }
-
     startTransition(() => {
       deleteDepartmentEventAction({ eventId })
         .then((result) => {
@@ -230,16 +228,32 @@ function DeleteDepartmentEventButton({ eventId, title, onDeleted }: DeleteButton
   };
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      onClick={handleDelete}
-      disabled={isPending}
-      className="text-destructive hover:text-destructive"
-    >
-      <Trash2 aria-hidden className="h-4 w-4" />
-      <span className="sr-only">Termin löschen</span>
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => setIsConfirmOpen(true)}
+        disabled={isPending}
+        className="text-destructive hover:text-destructive"
+      >
+        <TrashIcon aria-hidden className="h-4 w-4" />
+        <span className="sr-only">Termin löschen</span>
+      </Button>
+      <ConfirmDialog
+        open={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        title="Termin löschen?"
+        description={`Möchtest du den Termin "${title}" wirklich löschen?`}
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onCancel={() => setIsConfirmOpen(false)}
+        onConfirm={() => {
+          setIsConfirmOpen(false);
+          handleDelete();
+        }}
+      />
+    </>
   );
 }

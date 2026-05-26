@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { ClipboardCheck, ListTodo, Users } from "lucide-react";
+import { ClipboardCheck, ListTodo } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UsersIcon } from "@/components/ui/action-icons";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -55,7 +56,7 @@ export default async function DepartmentTodosPage() {
   const openAssignedToMe = assignedToMe.filter((task) => task.status !== "done").length;
 
   const stats: TodoStat[] = [
-    { label: "Teams", value: memberships.length.toString(), hint: "Gewerke mit Aufgaben", icon: Users },
+    { label: "Teams", value: memberships.length.toString(), hint: "Gewerke mit Aufgaben", icon: UsersIcon },
     { label: "Offene Aufgaben", value: openTasks.toString(), hint: "Alle offenen Todos", icon: ListTodo },
     { label: "Meine offenen Aufgaben", value: openAssignedToMe.toString(), hint: "Direkt zugewiesen", icon: ClipboardCheck },
   ];

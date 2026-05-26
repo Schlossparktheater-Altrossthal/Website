@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeftIcon } from "@/components/ui/action-icons";
 
 import { Badge } from "@/components/ui/badge";
 import { getOnboardingDashboardData } from "@/lib/onboarding/dashboard-service";
@@ -96,7 +96,7 @@ export default async function MembersTalentDetailPage({
           href={backHref}
           className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-primary"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
+          <ArrowLeftIcon className="h-4 w-4" aria-hidden />
           Zurück zur Onboarding-Analyse
         </Link>
 

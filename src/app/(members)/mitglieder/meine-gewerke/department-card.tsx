@@ -2,11 +2,12 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { format, parse } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { BellRing, CalendarDays, Clock } from "lucide-react";
+import { BellRing } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CalendarIcon, ClockIcon } from "@/components/ui/action-icons";
 import { compareMembersByLastName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import {

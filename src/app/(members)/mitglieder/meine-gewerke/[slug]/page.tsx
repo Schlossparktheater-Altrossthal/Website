@@ -3,10 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, CheckCircle2, ListTodo, Ruler, Sparkles, Users } from "lucide-react";
+import { ListTodo, Ruler } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CalendarIcon, SuccessIcon, SparklesIcon, UsersIcon } from "@/components/ui/action-icons";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -221,9 +222,9 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   const completedTasksCount = tasksForStats.filter((task) => task.status === "done").length;
 
   const summaryStats: SummaryStat[] = [
-    { label: "Teammitglieder", value: membership.department.memberships.length, hint: "Aktive Personen", icon: Users },
+    { label: "Teammitglieder", value: membership.department.memberships.length, hint: "Aktive Personen", icon: UsersIcon },
     { label: "Aktive Aufgaben", value: activeTasksCount, hint: "Offen & in Arbeit im Gewerk", icon: ListTodo },
-    { label: "Abgeschlossen", value: completedTasksCount, hint: "Erledigte Gewerke-Aufgaben", icon: CheckCircle2 },
+    { label: "Abgeschlossen", value: completedTasksCount, hint: "Erledigte Gewerke-Aufgaben", icon: SuccessIcon },
   ];
 
   const headerActions = (
@@ -248,7 +249,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
         className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
       >
         <Link href="/mitglieder/sperrliste" title="Sperrliste öffnen">
-          <CalendarDays aria-hidden className="h-4 w-4" />
+          <CalendarIcon aria-hidden className="h-4 w-4" />
           <span>Sperrliste</span>
         </Link>
       </Button>
@@ -259,7 +260,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
         className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
       >
         <Link href="/mitglieder/meine-gewerke" title="Zur Übersicht">
-          <Users aria-hidden className="h-4 w-4" />
+          <UsersIcon aria-hidden className="h-4 w-4" />
           <span>Zur Übersicht</span>
         </Link>
       </Button>
@@ -286,7 +287,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1">
-                <Sparkles aria-hidden className="h-4 w-4" />
+                <SparklesIcon aria-hidden className="h-4 w-4" />
                 <span className="tracking-[0.2em]">Mission Control</span>
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-muted-foreground">
@@ -340,7 +341,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:text-sm">
           <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
-            <CalendarDays aria-hidden className="h-4 w-4" />
+            <CalendarIcon aria-hidden className="h-4 w-4" />
             Vorschläge berücksichtigen Sperrlisten bis {freezeUntilLabel}
           </span>
           <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
