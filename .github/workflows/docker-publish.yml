@@ -48,7 +48,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --frozen-lockfile
+        run: SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --no-frozen-lockfile
 
       - name: Restore Next.js build cache
         uses: actions/cache@v5
@@ -133,7 +133,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --frozen-lockfile
+        run: SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --no-frozen-lockfile
 
       - name: Restore Next.js build cache
         uses: actions/cache@v5
