@@ -405,16 +405,14 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
     [normalizedPath, options?.scope],
   );
 
+  const providedWeight = options?.weight;
   const weight = useMemo(() => {
-    if (
-      typeof options?.weight !== "number" ||
-      !Number.isFinite(options.weight)
-    ) {
+    if (typeof providedWeight !== "number" || !Number.isFinite(providedWeight)) {
       return 1;
     }
-    const rounded = Math.round(options.weight);
+    const rounded = Math.round(providedWeight);
     return Math.min(Math.max(rounded, 1), 10_000);
-  }, [options?.weight]);
+  }, [providedWeight]);
 
   const analyticsSessionId = options?.analyticsSessionId ?? null;
   const metricId = useMemo(

@@ -1,2 +1,4 @@
 /** @type {import('tailwindcss').Config} */
-export default {};
+const config = {};
+
+export default config;

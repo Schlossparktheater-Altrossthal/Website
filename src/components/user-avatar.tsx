@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getGravatarUrl } from "@/lib/gravatar";
 import { cn } from "@/lib/utils";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
@@ -70,9 +70,7 @@ export default function UserAvatar({
 
   const [gravatarFailed, setGravatarFailed] = useState(false);
 
-  useEffect(() => {
-    setGravatarFailed(false);
-  }, [normalized, trimmedEmail]);
+  const gravatarResetKey = `${normalized ?? ""}:${trimmedEmail ?? ""}`;
 
   let effectiveSource = normalized ?? (previewUrl ? "UPLOAD" : trimmedEmail ? "GRAVATAR" : "INITIALS");
   if (effectiveSource === "GRAVATAR" && !trimmedEmail) {
@@ -107,6 +105,7 @@ export default function UserAvatar({
     const src = getGravatarUrl(trimmedEmail, { size: gravatarSize, defaultImage: "404" });
     return (
       <Image
+        key={gravatarResetKey}
         src={src}
         alt={label ? `Avatar von ${label}` : "Avatar"}
         title={label}

@@ -50,8 +50,6 @@ export function useBrowserNotifications(
       return;
     }
 
-    setPermission(window.Notification.permission);
-
     let permissionStatus: PermissionStatus | null = null;
     let cancelled = false;
 
