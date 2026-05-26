@@ -3,6 +3,7 @@
 import { type FocusEvent, type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
+import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -255,9 +256,9 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
                 </Text>
               )}
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={!canSubmit}>
-                  {isSubmitting ? "Wird gesendet…" : "Tipp abschicken"}
-                </Button>
+                <AsyncButton type="submit" isLoading={isSubmitting} loadingText="Wird gesendet…" disabled={!canSubmit}>
+                  Tipp abschicken
+                </AsyncButton>
                 <Button type="button" variant="ghost" onClick={refreshTips} disabled={isLoading} className="gap-2">
                   <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden />
                   Aktualisieren

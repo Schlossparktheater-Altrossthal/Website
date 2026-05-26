@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { AsyncButton } from "@/components/ui/async-button";
 
 import { createRehearsalDraftAction } from "./actions";
 
@@ -30,8 +30,8 @@ export function CreateRehearsalButton() {
   };
 
   return (
-    <Button type="button" onClick={handleClick} disabled={isPending}>
-      {isPending ? "Entwurf wird vorbereitet…" : "Neue Probe anlegen"}
-    </Button>
+    <AsyncButton type="button" onClick={handleClick} isLoading={isPending} loadingText="Entwurf wird vorbereitet…">
+      Neue Probe anlegen
+    </AsyncButton>
   );
 }
