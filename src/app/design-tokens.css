@@ -5,7 +5,7 @@
 
 :root {
   --radius: 0.625rem;
-  --accent: oklch(0.78 0.11 210);
+  --accent: oklch(0.61 0.19 63.3);
   --accent-foreground: oklch(0.18 0.025 255);
   --background: oklch(0.99 0.006 255);
   --border: oklch(0.88 0.012 255);
@@ -50,7 +50,7 @@
 }
 
 .dark {
-  --accent: oklch(0.55 0.12 210);
+  --accent: oklch(0.72 0.19 63.3);
   --accent-foreground: oklch(0.95 0.02 255);
   --background: oklch(0.11 0.025 255);
   --border: oklch(0.24 0.022 255);
