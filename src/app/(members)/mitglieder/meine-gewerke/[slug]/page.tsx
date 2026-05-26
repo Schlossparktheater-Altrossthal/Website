@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
-import type { LucideIcon } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 import { ListTodo, Ruler } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,8 @@ import {
 import { DepartmentCard, type DepartmentMeasurementsByUser } from "../department-card";
 import { DepartmentEventPlanner, type DepartmentEventLite } from "../department-event-planner";
 
-type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
+type SummaryStatIcon = ComponentType<SVGProps<SVGSVGElement>>;
+type SummaryStat = { label: string; value: number; hint?: string; icon: SummaryStatIcon };
 
 type PageProps = { params: Promise<{ slug: string }> };
 
