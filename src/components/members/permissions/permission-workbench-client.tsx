@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PermissionExplorer } from "@/components/members/permissions/permission-explorer";
 import { RoleAdministrationPanel } from "@/components/members/permissions/role-administration-panel";
-import { DepartmentAdministrationPanel } from "@/components/members/permissions/department-administration-panel";
 
 export type PermissionWorkbenchPermission = {
   id: string;
@@ -71,7 +70,6 @@ export function PermissionWorkbenchClient({
       <TabsList>
         <TabsTrigger value="permissions">Rechte ({permissions.length})</TabsTrigger>
         <TabsTrigger value="roles">Rollen ({roles.length})</TabsTrigger>
-        <TabsTrigger value="departments">Gewerke ({departments.length})</TabsTrigger>
       </TabsList>
       <TabsContent value="permissions" className="space-y-6">
         <PermissionExplorer
@@ -91,14 +89,6 @@ export function PermissionWorkbenchClient({
           setRoles={setRoles}
           roleGrants={roleGrants}
           setRoleGrants={setRoleGrants}
-        />
-      </TabsContent>
-      <TabsContent value="departments">
-        <DepartmentAdministrationPanel
-          permissions={permissions}
-          departments={departments}
-          departmentGrants={departmentGrants}
-          setDepartmentGrants={setDepartmentGrants}
         />
       </TabsContent>
     </Tabs>
