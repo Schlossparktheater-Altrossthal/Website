@@ -988,22 +988,17 @@ export function BlockCalendar({
   ) : null;
 
   const headerToggleBase =
-    "flex select-none items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring focus-visible:ring-offset-background";
-  const headerToggleInactive =
-    "border-border/60 bg-background/80 text-muted-foreground hover:border-border hover:text-foreground focus-visible:ring-offset-background    ";
-  const holidayToggleActive =
-    "border-border bg-muted text-foreground shadow-sm hover:bg-info/15 focus-visible:ring-offset-background  dark:bg-muted0/20  dark:hover:bg-muted0/30";
-  const selectionToggleActive =
-    "border-primary/50 bg-primary/10 text-primary shadow-sm hover:bg-primary/15 focus-visible:ring-primary focus-visible:ring-offset-background dark:border-primary/40 dark:bg-primary/15 dark:text-primary-foreground dark:hover:bg-primary/20 dark:focus-visible:ring-primary";
+    "flex select-none items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium";
 
   const holidayHeaderToggle = (
-    <button
+    <Button
       type="button"
+      variant="toggle"
+      data-state={showHolidays ? "active" : "inactive"}
       onClick={() => setShowHolidays((prev) => !prev)}
       className={cn(
         headerToggleBase,
         "w-full justify-center sm:w-auto sm:justify-start",
-        showHolidays ? holidayToggleActive : headerToggleInactive,
       )}
       aria-pressed={showHolidays}
     >
@@ -1011,24 +1006,25 @@ export function BlockCalendar({
         <CalendarDays className="h-4 w-4" aria-hidden />
         <span>{showHolidays ? "Ferien & Feiertage eingeblendet" : "Ferien & Feiertage anzeigen"}</span>
       </span>
-    </button>
+    </Button>
   );
 
   const selectionModeToggle = (
-    <button
+    <Button
       type="button"
+      variant="toggle"
+      data-state={selectionMode ? "active" : "inactive"}
       onClick={handleToggleSelectionMode}
         className={cn(
           headerToggleBase,
           "w-full justify-center sm:w-auto sm:justify-start",
-          selectionMode ? selectionToggleActive : headerToggleInactive,
           readOnly && "cursor-not-allowed opacity-60",
         )}
       aria-pressed={selectionMode}
       disabled={readOnly}
     >
       {selectionMode ? "Auswahl beenden" : "Mehrfachauswahl"}
-    </button>
+    </Button>
   );
 
   const holidayPanelContent = upcomingHolidays.length
@@ -1091,15 +1087,12 @@ export function BlockCalendar({
 
   const holidayPanel = (
     <section className="space-y-3">
-      <button
+      <Button
         type="button"
+        variant="toggle"
+        data-state={holidayPanelOpen ? "active" : "inactive"}
         onClick={() => setHolidayPanelOpen((prev) => !prev)}
-        className={cn(
-          "flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition",
-          holidayPanelOpen
-            ? "border-border bg-muted text-foreground shadow-sm hover:bg-info/15  dark:bg-muted0/20  dark:hover:bg-muted0/30"
-            : "border-border/60 bg-background/80 text-muted-foreground hover:border-border hover:text-foreground    ",
-        )}
+        className="flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium"
         aria-expanded={holidayPanelOpen}
         aria-controls={holidayPanelId}
       >
@@ -1111,7 +1104,7 @@ export function BlockCalendar({
           className={cn("h-4 w-4 transition-transform", holidayPanelOpen ? "rotate-180" : "rotate-0")}
           aria-hidden
         />
-      </button>
+      </Button>
       <div
         id={holidayPanelId}
         className={cn(holidayPanelOpen ? "block" : "hidden")}
