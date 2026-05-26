@@ -1,8 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+
+import { AsyncButton } from "@/components/ui/async-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 import { discardRehearsalDraftAction } from "./actions";
 
@@ -14,17 +17,14 @@ type DiscardDraftButtonProps = {
 export function DiscardDraftButton({ id, title }: DiscardDraftButtonProps) {
   const router = useRouter();
   const [isDiscarding, startDiscard] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const normalizedTitle = title?.trim();
+  const confirmationMessage = normalizedTitle
+    ? `Möchtest du den Entwurf "${normalizedTitle}" wirklich verwerfen? Diese Aktion kann nicht rückgängig gemacht werden.`
+    : "Möchtest du diesen Entwurf wirklich verwerfen? Diese Aktion kann nicht rückgängig gemacht werden.";
 
   const handleDiscard = () => {
-    const normalizedTitle = title?.trim();
-    const confirmationMessage = normalizedTitle
-      ? `Möchtest du den Entwurf "${normalizedTitle}" wirklich verwerfen? Diese Aktion kann nicht rückgängig gemacht werden.`
-      : "Möchtest du diesen Entwurf wirklich verwerfen? Diese Aktion kann nicht rückgängig gemacht werden.";
-
-    if (!confirm(confirmationMessage)) {
-      return;
-    }
-
     startDiscard(() => {
       discardRehearsalDraftAction({ id })
         .then((result) => {
@@ -37,18 +37,35 @@ export function DiscardDraftButton({ id, title }: DiscardDraftButtonProps) {
         })
         .catch(() => {
           toast.error("Der Entwurf konnte nicht verworfen werden.");
+        })
+        .finally(() => {
+          setConfirmOpen(false);
         });
     });
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleDiscard}
-      disabled={isDiscarding}
-      className="rounded text-xs font-medium text-destructive underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {isDiscarding ? "Verwerfe Entwurf…" : "Entwurf verwerfen"}
-    </button>
+    <>
+      <AsyncButton
+        type="button"
+        variant="destructive"
+        onClick={() => setConfirmOpen(true)}
+        isLoading={isDiscarding}
+        loadingText="Verwerfe Entwurf…"
+      >
+        Entwurf verwerfen
+      </AsyncButton>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleDiscard}
+        title="Entwurf verwerfen?"
+        description={confirmationMessage}
+        confirmLabel="Verwerfen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+      />
+    </>
   );
 }

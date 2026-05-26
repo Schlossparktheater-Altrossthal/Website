@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
-import { Camera, ChevronDown, RefreshCw, Upload } from "lucide-react";
+import { Camera } from "lucide-react";
+import { ChevronDownIcon, RefreshIcon, UploadIcon } from "@/components/ui/action-icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -117,7 +118,7 @@ function ConsentDocumentPreview({ previewUrl, documentName, signatureVersion, si
             alt={documentName ? `Digitale Unterschrift: ${documentName}` : "Digitale Unterschrift"}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
-            className="object-contain bg-white"
+            className="object-contain bg-card"
             unoptimized
           />
         );
@@ -138,7 +139,7 @@ function ConsentDocumentPreview({ previewUrl, documentName, signatureVersion, si
           alt={documentName ? `Digitale Unterschrift: ${documentName}` : "Digitale Unterschrift"}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
-          className="object-contain bg-white"
+          className="object-contain bg-card"
           unoptimized
         />
       );
@@ -520,21 +521,20 @@ export function PhotoConsentCard({
             {statusBadge}
           </div>
           {isCollapsible && (
-            <button
+            <Button
               type="button"
+              variant="toggle"
+              data-state={expanded ? "active" : "inactive"}
               onClick={() => setExpanded((prev) => !prev)}
               aria-expanded={expanded}
-              className={cn(
-                "group inline-flex items-center justify-center gap-2 self-start rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary transition hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:self-end",
-                expanded ? "bg-primary/15" : ""
-              )}
+              className="group self-start rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] sm:self-end"
             >
               <span>{expanded ? "Details ausblenden" : "Details anzeigen"}</span>
-              <ChevronDown
+              <ChevronDownIcon
                 className={cn("h-4 w-4 transition-transform", expanded ? "rotate-180" : "rotate-0")}
                 aria-hidden="true"
               />
-            </button>
+            </Button>
           )}
         </div>
       </CardHeader>
@@ -726,7 +726,7 @@ export function PhotoConsentCard({
                         onClick={handleSelectUploadMode}
                         disabled={submitting}
                       >
-                        <Upload className="h-4 w-4" aria-hidden />
+                        <UploadIcon className="h-4 w-4" aria-hidden />
                         Datei hochladen
                       </Button>
                       <Button
@@ -813,7 +813,7 @@ export function PhotoConsentCard({
                     {submitting ? "Speichere …" : "Jetzt zustimmen"}
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={submitting}>
-                    <RefreshCw className="h-4 w-4" aria-hidden />
+                    <RefreshIcon className="h-4 w-4" aria-hidden />
                     Status aktualisieren
                   </Button>
                   {status === "approved" && (
