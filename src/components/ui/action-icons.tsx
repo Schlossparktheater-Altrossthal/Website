@@ -3,12 +3,18 @@
 import {
   AlertCircle,
   AlertTriangle,
+  ArrowRight,
+  ArrowUpRight,
   ArrowLeft,
+  CalendarCheck,
+  CalendarCog,
+  CalendarRange,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
+  CreditCard,
   Copy,
   Download,
   ExternalLink,
@@ -16,14 +22,21 @@ import {
   EyeOff,
   FileText,
   Filter,
+  Hammer,
+  Heart,
   Image as LucideImage,
   Info,
   Loader2,
   Lock,
   Mail,
+  MessageCircle,
   MoreVertical,
   Pencil,
+  PiggyBank,
   Plus,
+  ShieldCheck,
+  Sparkles,
+  Theater,
   CirclePlus,
   Minus,
   Printer,
@@ -33,7 +46,13 @@ import {
   Trash2,
   Upload,
   User,
+  UserRound,
   Users,
+  UsersRound,
+  Utensils,
+  UtensilsCrossed,
+  Wifi,
+  WifiOff,
   X,
   CalendarDays,
 } from "lucide-react";
@@ -102,6 +121,14 @@ export function ArrowLeftIcon({ className = "w-4 h-4", ...props }: { className?:
   return <ArrowLeft className={className} aria-hidden {...props} />;
 }
 
+export function ArrowRightIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <ArrowRight className={className} aria-hidden {...props} />;
+}
+
+export function ArrowUpRightIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <ArrowUpRight className={className} aria-hidden {...props} />;
+}
+
 export function ExternalLinkIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return <ExternalLink className={className} aria-hidden {...props} />;
 }
@@ -158,6 +185,10 @@ export function MailIcon({ className = "w-4 h-4", ...props }: { className?: stri
   return <Mail className={className} aria-hidden {...props} />;
 }
 
+export function MessageCircleIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <MessageCircle className={className} aria-hidden {...props} />;
+}
+
 export function FileIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return <FileText className={className} aria-hidden {...props} />;
 }
@@ -170,6 +201,69 @@ export function SettingsIcon({ className = "w-4 h-4", ...props }: { className?: 
   return <Settings className={className} aria-hidden {...props} />;
 }
 
+export function CreditCardIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <CreditCard className={className} aria-hidden {...props} />;
+}
+
+export function UtensilsIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Utensils className={className} aria-hidden {...props} />;
+}
+
+export function HeartIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Heart className={className} aria-hidden {...props} />;
+}
+
+export function SparklesIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Sparkles className={className} aria-hidden {...props} />;
+}
+
+export function TheaterIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Theater className={className} aria-hidden {...props} />;
+}
+
+export function ShieldCheckIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <ShieldCheck className={className} aria-hidden {...props} />;
+}
+
+export function WifiIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Wifi className={className} aria-hidden {...props} />;
+}
+
+export function WifiOffIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <WifiOff className={className} aria-hidden {...props} />;
+}
+
+export function UserRoundIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <UserRound className={className} aria-hidden {...props} />;
+}
+
+export function CalendarCheckIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <CalendarCheck className={className} aria-hidden {...props} />;
+}
+
+export function CalendarCogIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <CalendarCog className={className} aria-hidden {...props} />;
+}
+
+export function UsersRoundIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <UsersRound className={className} aria-hidden {...props} />;
+}
+
+export function HammerIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Hammer className={className} aria-hidden {...props} />;
+}
+
+export function PiggyBankIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <PiggyBank className={className} aria-hidden {...props} />;
+}
+
+export function CalendarRangeIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <CalendarRange className={className} aria-hidden {...props} />;
+}
+
+export function UtensilsCrossedIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <UtensilsCrossed className={className} aria-hidden {...props} />;
+}
 
 export function CirclePlusIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return <CirclePlus className={className} aria-hidden {...props} />;
