@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   ArrowLeft,
+  BellRing,
   CalendarCheck,
   CalendarCog,
   CalendarRange,
@@ -175,6 +176,10 @@ export function UsersIcon({ className = "w-4 h-4", ...props }: { className?: str
 
 export function CalendarIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return <CalendarDays className={className} aria-hidden {...props} />;
+}
+
+export function BellRingIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <BellRing className={className} aria-hidden {...props} />;
 }
 
 export function ClockIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {

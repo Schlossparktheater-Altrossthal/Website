@@ -2,12 +2,10 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { format, parse } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { BellRing } from "lucide-react";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, ClockIcon } from "@/components/ui/action-icons";
+import { BellRingIcon, CalendarIcon, ClockIcon } from "@/components/ui/action-icons";
 import { compareMembersByLastName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import {
@@ -290,7 +288,7 @@ export function DepartmentCard({
                         >
                           <div className="flex items-center gap-3">
                             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                              <CalendarDays aria-hidden className="h-5 w-5" />
+                              <CalendarIcon aria-hidden className="h-5 w-5" />
                             </span>
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-foreground">{suggestion.label}</p>
@@ -331,7 +329,7 @@ export function DepartmentCard({
                     <div className="space-y-2 rounded-xl border border-dashed border-amber-400/40 bg-amber-500/5 p-3 text-xs">
                       <div className="flex items-center gap-2 text-foreground">
                         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-                          <BellRing aria-hidden className="h-4 w-4" />
+                          <BellRingIcon aria-hidden className="h-4 w-4" />
                         </span>
                         <p className="text-sm font-semibold">Abmeldungen im Planungsfenster</p>
                       </div>
@@ -359,7 +357,7 @@ export function DepartmentCard({
                       href="/mitglieder/sperrliste"
                       className="inline-flex items-center gap-1 font-semibold text-primary transition hover:text-primary/80"
                     >
-                      <CalendarDays aria-hidden className="h-4 w-4" />
+                      <CalendarIcon aria-hidden className="h-4 w-4" />
                       Sperrliste öffnen
                     </Link>
                   </div>
@@ -495,7 +493,7 @@ export function DepartmentCard({
                                 dueMeta.isOverdue ? "border-destructive/60 text-destructive" : "text-muted-foreground",
                               )}
                             >
-                              <Clock aria-hidden className="h-3.5 w-3.5" />
+                              <ClockIcon aria-hidden className="h-3.5 w-3.5" />
                               {dueMeta.relative}
                             </span>
                           ) : null}
