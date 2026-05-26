@@ -179,7 +179,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     key: "PRIVATE.CHRONIK.MANAGE",
     label: "Chronik verwalten",
     description: "Chronik-Produktionen anlegen, bearbeiten und löschen.",
-    category: "admin",
+    category: "public",
   },
   {
     key: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",

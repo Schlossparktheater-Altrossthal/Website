@@ -57,6 +57,7 @@ import {
   WifiOff,
   X,
   CalendarDays,
+  GripVertical,
 } from "lucide-react";
 import type * as React from "react";
 
@@ -247,6 +248,10 @@ export function UserRoundIcon({ className = "w-4 h-4", ...props }: { className?:
   return <UserRound className={className} aria-hidden {...props} />;
 }
 
+
+export function GripVerticalIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <GripVertical className={className} aria-hidden {...props} />;
+}
 export function CalendarCheckIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return <CalendarCheck className={className} aria-hidden {...props} />;
 }
