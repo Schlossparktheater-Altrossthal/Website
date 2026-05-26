@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -77,7 +78,6 @@ export function PermissionWorkbenchClient({ permissions, roles: initialRoles, ro
       </>}</CollapsibleContent></></Collapsible>; })}
       </tbody></table></DndSortableProvider>
     </div>
-
     <ModalFormDialog open={createOpen} onOpenChange={setCreateOpen} title="Neue Rolle" description="Lege eine neue Rolle an." confirmLabel="Speichern" onConfirm={async () => { const response = await fetch('/api/permissions/roles', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: roleName })}); if (!response.ok) { toast.error('Rolle konnte nicht erstellt werden', { duration: 5000 }); return; } const data = await response.json() as { role: PermissionWorkbenchRole }; setRoles((r) => [...r, data.role]); setRoleOrder((o) => [...o, data.role.id]); setCreateOpen(false); toast.success('Rolle erstellt', { duration: 3000 }); }}><Input value={roleName} onChange={(e) => setRoleName(e.target.value)} placeholder="Rollenname" /></ModalFormDialog>
 
     <ModalFormDialog open={Boolean(editRole)} onOpenChange={(open) => { if (!open) setEditRole(null); }} title="Rolle bearbeiten" description="Passe den Rollennamen an." confirmLabel="Speichern" onConfirm={async () => { if (!editRole) return; const response = await fetch(`/api/permissions/roles/${editRole.id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: roleName })}); if (!response.ok) { toast.error('Rolle konnte nicht aktualisiert werden', { duration: 5000 }); return; } setRoles((curr) => curr.map((r) => r.id === editRole.id ? { ...r, name: roleName } : r)); setEditRole(null); toast.success('Rolle aktualisiert', { duration: 3000 }); }}><Input value={roleName} onChange={(e) => setRoleName(e.target.value)} placeholder="Rollenname" /></ModalFormDialog>
