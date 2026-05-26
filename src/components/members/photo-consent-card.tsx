@@ -168,20 +168,17 @@ function ConsentDocumentPreview({ previewUrl, documentName, signatureVersion, si
         {controls.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em]">
             {controls.map((control) => (
-              <button
+              <Button
                 key={control.key}
                 type="button"
                 onClick={() => setMode(control.key)}
-                className={cn(
-                  "rounded-full px-2 py-0.5 transition",
-                  mode === control.key
-                    ? "bg-primary text-primary-foreground shadow"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
+                variant="toggle"
+                data-state={mode === control.key ? "active" : "inactive"}
+                className="rounded-full px-2 py-0.5"
                 aria-pressed={mode === control.key}
               >
                 {control.label}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -772,16 +769,13 @@ export function PhotoConsentCard({
                               </span>
                               <div className="flex flex-wrap items-center gap-1">
                                 {(["outline", "velocity", "replay"] as const).map((mode) => (
-                                  <button
+                                  <Button
                                     key={mode}
                                     type="button"
                                     onClick={() => setSignaturePreviewMode(mode)}
-                                    className={cn(
-                                      "rounded-full px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] transition",
-                                      signaturePreviewMode === mode
-                                        ? "bg-primary text-primary-foreground shadow"
-                                        : "text-muted-foreground hover:bg-muted",
-                                    )}
+                                    variant="toggle"
+                                    data-state={signaturePreviewMode === mode ? "active" : "inactive"}
+                                    className="rounded-full px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em]"
                                     aria-pressed={signaturePreviewMode === mode}
                                   >
                                     {mode === "outline"
@@ -789,7 +783,7 @@ export function PhotoConsentCard({
                                       : mode === "velocity"
                                       ? "Geschwindigkeit"
                                       : "Replay"}
-                                  </button>
+                                  </Button>
                                 ))}
                               </div>
                             </div>

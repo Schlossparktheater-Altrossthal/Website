@@ -200,7 +200,7 @@ export default function OverviewContent({
           <div className="flex flex-wrap items-center gap-2">
             {/* Monatswechsel-Handler (nur wenn verfügbar) */}
             {(onPreviousMonth || onNextMonth) && (
-              <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/80 p-1 shadow-sm backdrop-blur" role="group" aria-label="Monatsnavigation">
+              <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-card/80 p-1 backdrop-blur" role="group" aria-label="Monatsnavigation">
                 {onPreviousMonth && (
                   <IconButton aria-label="Vorheriger Monat" onClick={onPreviousMonth}>
                     &larr;
@@ -222,10 +222,10 @@ export default function OverviewContent({
               </div>
             )}
 
-            <div className="flex overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm" role="group" aria-label="Personenfilter">
+            <div className="flex overflow-hidden rounded-xl border border-border/60 bg-card" role="group" aria-label="Personenfilter">
               <Button
                 type="button"
-                className={`px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "all" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                variant="toggle" data-state={personFilter === "all" ? "active" : "inactive"} className="px-3 py-1.5 text-sm font-medium"
                 onClick={() => setPersonFilter("all")}
                 aria-pressed={personFilter === "all"}
                 aria-label={`Alle Personen anzeigen (${groupedCounts.total})`}
@@ -234,7 +234,7 @@ export default function OverviewContent({
               </Button>
               <Button
                 type="button"
-                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "actors" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                variant="toggle" data-state={personFilter === "actors" ? "active" : "inactive"} className="border-l border-border/60 px-3 py-1.5 text-sm font-medium"
                 onClick={() => setPersonFilter("actors")}
                 aria-pressed={personFilter === "actors"}
                 aria-label={`Schauspieler anzeigen (${groupedCounts.actors})`}
@@ -243,7 +243,7 @@ export default function OverviewContent({
               </Button>
               <Button
                 type="button"
-                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "crew" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                variant="toggle" data-state={personFilter === "crew" ? "active" : "inactive"} className="border-l border-border/60 px-3 py-1.5 text-sm font-medium"
                 onClick={() => setPersonFilter("crew")}
                 aria-pressed={personFilter === "crew"}
                 aria-label={`Gewerke anzeigen (${groupedCounts.crew})`}
@@ -251,10 +251,10 @@ export default function OverviewContent({
                 Gewerke ({groupedCounts.crew})
               </Button>
             </div>
-            <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm sm:flex" role="group" aria-label="Ansichtsauswahl">
+            <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card sm:flex" role="group" aria-label="Ansichtsauswahl">
               <Button
                 type="button"
-                className={`px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "calendar" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                variant="toggle" data-state={view === "calendar" ? "active" : "inactive"} className="px-3 py-1.5 text-sm font-medium"
                 onClick={() => setView("calendar")}
                 aria-pressed={view === "calendar"}
                 aria-label="Kalenderansicht (Tastenkombination: Strg+1)"
@@ -263,7 +263,7 @@ export default function OverviewContent({
               </Button>
               <Button
                 type="button"
-                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "table" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                variant="toggle" data-state={view === "table" ? "active" : "inactive"} className="border-l border-border/60 px-3 py-1.5 text-sm font-medium"
                 onClick={() => setView("table")}
                 aria-pressed={view === "table"}
                 aria-label="Tabellenansicht (Tastenkombination: Strg+2)"
@@ -272,7 +272,7 @@ export default function OverviewContent({
               </Button>
               <Button
                 type="button"
-                className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "timeline" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                variant="toggle" data-state={view === "timeline" ? "active" : "inactive"} className="border-l border-border/60 px-3 py-1.5 text-sm font-medium"
                 onClick={() => setView("timeline")}
                 aria-pressed={view === "timeline"}
                 aria-label="Timeline-Ansicht (Tastenkombination: Strg+3)"
@@ -281,13 +281,13 @@ export default function OverviewContent({
               </Button>
             </div>
             <div
-              className="flex w-full overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm sm:w-auto"
+              className="flex w-full overflow-hidden rounded-xl border border-border/60 bg-card sm:w-auto"
               role="group"
               aria-label="Wochentage filtern"
             >
               <Button
                 type="button"
-                className={`flex-1 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:flex-none ${showWeekendsOnly ? "text-muted-foreground hover:bg-muted/40" : "bg-muted text-foreground"}`}
+                variant="toggle" data-state={!showWeekendsOnly ? "active" : "inactive"} className="flex-1 px-3 py-1.5 text-sm font-medium sm:flex-none"
                 onClick={() => setShowWeekendsOnly(false)}
                 aria-pressed={!showWeekendsOnly}
               >
@@ -295,7 +295,7 @@ export default function OverviewContent({
               </Button>
               <Button
                 type="button"
-                className={`flex-1 border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:flex-none ${showWeekendsOnly ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
+                variant="toggle" data-state={showWeekendsOnly ? "active" : "inactive"} className="flex-1 border-l border-border/60 px-3 py-1.5 text-sm font-medium sm:flex-none"
                 onClick={() => setShowWeekendsOnly(true)}
                 aria-pressed={showWeekendsOnly}
               >

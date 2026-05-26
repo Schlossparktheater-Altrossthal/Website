@@ -6,8 +6,8 @@ import { toast } from "sonner";
 
 import { EditIcon, EyeIcon, LoadingIcon, TrashIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -77,39 +77,26 @@ export function MembersTable({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
-        <Badge
-          asChild
-          variant="outline"
-          className={cn(
-            "cursor-pointer transition",
-            !roleFilter
-              ? "border-primary/60 bg-primary/10 text-primary"
-              : "text-muted-foreground hover:bg-muted/40",
-          )}
+        <Button
+          type="button"
+          variant="toggle"
+          data-state={!roleFilter ? "active" : "inactive"}
+          className="h-auto px-3 py-1.5"
+          onClick={() => setRoleFilter(null)}
         >
-          <button type="button" onClick={() => setRoleFilter(null)}>
-            Alle Rollen
-          </button>
-        </Badge>
+          Alle Rollen
+        </Button>
         {ROLES.map((role) => (
-          <Badge
+          <Button
             key={role}
-            asChild
-            variant="outline"
-            className={cn(
-              "cursor-pointer transition",
-              roleFilter === role
-                ? ROLE_BADGE_VARIANTS[role]
-                : "text-muted-foreground hover:bg-muted/40",
-            )}
+            type="button"
+            variant="toggle"
+            data-state={roleFilter === role ? "active" : "inactive"}
+            className="h-auto px-3 py-1.5"
+            onClick={() => setRoleFilter((prev) => (prev === role ? null : role))}
           >
-            <button
-              type="button"
-              onClick={() => setRoleFilter((prev) => (prev === role ? null : role))}
-            >
-              {ROLE_LABELS[role] ?? role}
-            </button>
-          </Badge>
+            {ROLE_LABELS[role] ?? role}
+          </Button>
         ))}
       </div>
 
