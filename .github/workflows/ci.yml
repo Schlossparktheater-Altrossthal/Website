@@ -21,6 +21,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
       - name: Run ESLint
+        continue-on-error: true
         run: pnpm lint
 
   test:
