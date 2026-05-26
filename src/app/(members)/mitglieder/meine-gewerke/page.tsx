@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, FolderOpen, Wrench } from "lucide-react";
+import { Building2, CalendarDays, FolderOpen, Wrench } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Button } from "@/components/ui/button";
@@ -68,8 +68,8 @@ export default async function MeineGewerkePage() {
 
   const stats: StatItem[] = [
     { label: "Gewerke", value: teamCount.toString(), hint: "Teams mit Zugriff", icon: Wrench },
-    { label: "Offene Aufgaben", value: openTasks.toString(), hint: "Todos in deinen Gewerken", icon: ListTodo },
-    { label: "Termine", value: eventCount.toString(), hint: "Ereignisse in den Teams", icon: CalendarIcon },
+    { label: "Offene Aufgaben", value: openTasks.toString(), hint: "Todos in deinen Gewerken", icon: Wrench },
+    { label: "Termine", value: eventCount.toString(), hint: "Ereignisse in den Teams", icon: CalendarDays },
     { label: "Dokumente", value: documentCount.toString(), hint: "Dateien aus den Gewerken", icon: FolderOpen },
   ];
 
