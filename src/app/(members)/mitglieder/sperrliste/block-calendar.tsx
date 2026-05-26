@@ -662,7 +662,7 @@ export function BlockCalendar({
           {holidayEntries.map((holiday) => (
             <span
               key={`${holiday.id}-${holiday.date}`}
-              className="inline-flex items-center rounded-md bg-info/15 px-2 py-0.5 text-foreground dark:bg-muted0/20 dark:text-sky-100"
+              className="inline-flex items-center rounded-md bg-info/15 px-2 py-0.5 text-foreground dark:bg-muted0/20 dark:text-primary100"
               title={
                 holiday.rangeStart && !holiday.rangeEnd
                   ? `${holiday.title} (Beginn)`
@@ -688,7 +688,7 @@ export function BlockCalendar({
           isLimitedEntry &&
             "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/50 dark:bg-amber-500/10 dark:text-amber-100",
           !entry && isHoliday &&
-            "border-border bg-muted/50 dark:border-sky-500/40 dark:bg-muted0/10",
+            "border-border bg-muted/50 dark:border-primary500/40 dark:bg-muted0/10",
           !entry &&
             !isHoliday &&
             (isPreferredDay || isExceptionDay) &&
@@ -1029,12 +1029,12 @@ export function BlockCalendar({
 
   const holidayPanelContent = upcomingHolidays.length
     ? (
-        <div className="space-y-3 rounded-lg border border-sky-200 bg-muted p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-sky-500/40 dark:bg-muted0/10">
-          <div className="flex items-center gap-2 text-sky-800 dark:text-sky-100">
+        <div className="space-y-3 rounded-lg border border-primary200 bg-muted p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-primary500/40 dark:bg-muted0/10">
+          <div className="flex items-center gap-2 text-primary800 dark:text-primary100">
             <CalendarDays className="h-4 w-4" aria-hidden />
             <span className="font-semibold">Ferien &amp; Feiertage in Sachsen</span>
           </div>
-          <ul className="space-y-2 text-foreground/90 dark:text-sky-100/90">
+          <ul className="space-y-2 text-foreground/90 dark:text-primary100/90">
             {upcomingHolidays.map((holiday) => {
               const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
               const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
@@ -1043,14 +1043,14 @@ export function BlockCalendar({
               return (
                 <li
                   key={holiday.id}
-                  className="space-y-1 rounded-md bg-white/60 p-2 shadow-sm ring-1 ring-sky-200/60  dark:ring-sky-500/40"
+                  className="space-y-1 rounded-md bg-card/60 p-2 shadow-sm ring-1 ring-sky-200/60  dark:ring-sky-500/40"
                 >
                   <div
                     className={cn(
                       "font-medium",
                       isActive
                         ? "text-foreground "
-                        : "text-foreground/90 dark:text-sky-100/90",
+                        : "text-foreground/90 dark:text-primary100/90",
                     )}
                   >
                     <span
@@ -1065,10 +1065,10 @@ export function BlockCalendar({
                     </span>
                     <span className="align-middle">{holiday.title}</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-foreground/80 dark:text-sky-100/80">
+                  <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-foreground/80 dark:text-primary100/80">
                     <span>{rangeLabel}</span>
                     {isActive ? (
-                      <span className="inline-flex items-center rounded-full bg-sky-200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground dark:bg-muted0/30 ">
+                      <span className="inline-flex items-center rounded-full bg-primary200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground dark:bg-muted0/30 ">
                         Aktuell
                       </span>
                     ) : null}

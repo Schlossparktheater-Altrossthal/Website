@@ -133,12 +133,12 @@ export function WeekStrip({ people, dayCols, holidays, onJump }: WeekStripProps)
               )}
               {holidayType === 'vacation' && !isPublicHoliday && (
                 <div className="absolute right-1 top-1">
-                  <UmbrellaIcon className="h-3 w-3 text-sky-500" />
+                  <UmbrellaIcon className="h-3 w-3 text-primary500" />
                 </div>
               )}
               {holidayType === 'vacation' && isPublicHoliday && (
                 <div className="absolute right-0.5 top-0.5 flex gap-0.5">
-                  <UmbrellaIcon className="h-2.5 w-2.5 text-sky-500" />
+                  <UmbrellaIcon className="h-2.5 w-2.5 text-primary500" />
                   <CalendarStarIcon className="h-2.5 w-2.5 text-amber-500" />
                 </div>
               )}

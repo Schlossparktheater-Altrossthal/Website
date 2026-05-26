@@ -94,7 +94,7 @@ export function RoleHeatmap({ title = "Kombinationen", data, subtitle, className
                         const value = cell?.value ?? 0;
                         const normalized = maxValue > 0 ? value / maxValue : 0;
                         const background = normalized === 0 ? "hsl(var(--muted) / 0.25)" : colorScale(value);
-                        const textTone = normalized > 0.6 ? "text-white" : "text-foreground";
+                        const textTone = normalized > 0.6 ? "text-primary-foreground" : "text-foreground";
                         return (
                           <Tooltip key={cellKey}>
                             <TooltipTrigger asChild>
@@ -103,7 +103,7 @@ export function RoleHeatmap({ title = "Kombinationen", data, subtitle, className
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: cellIndex * 0.03, duration: 0.35, ease: "easeOut" }}
-                                className={`${textTone} relative flex h-16 flex-col items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-white/0 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1`}
+                                className={`${textTone} relative flex h-16 flex-col items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-white/0 text-sm font-semibold outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1`}
                                 style={{
                                   background:
                                     normalized === 0

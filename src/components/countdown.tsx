@@ -135,7 +135,7 @@ export function Countdown({
   const cellClassName =
     variant === "highlight"
       ? "rounded-lg border border-primary/50 bg-primary/10 px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center text-primary shadow-sm"
-      : "rounded-lg border border-border bg-card px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center shadow-[0_0_12px_rgba(var(--color-orange-rgb),0.25)]";
+      : "rounded-lg border border-border bg-card px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(0.5rem,2vw,1.5rem)] text-center";
   const numberClassName = cn(
     "text-[clamp(1.5rem,6vw,3.5rem)] font-semibold tabular-nums text-primary transition-transform duration-300",
     variant === "highlight" ? "text-primary" : undefined,

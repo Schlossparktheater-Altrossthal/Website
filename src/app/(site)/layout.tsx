@@ -149,7 +149,7 @@ function extractUserRoles(session: Session | null): string[] {
 
 function MaintenanceNotice({ siteTitle }: { siteTitle: string }) {
   return (
-    <section className="w-full max-w-2xl space-y-6 rounded-3xl border border-border/70 bg-background/80 p-10 text-center shadow-[0_35px_120px_-60px_rgba(15,23,42,0.55)] backdrop-blur">
+    <section className="w-full max-w-2xl space-y-6 rounded-3xl border border-border/70 bg-background/80 p-10 text-center backdrop-blur">
       <h1 className="text-3xl font-semibold tracking-tight text-foreground">
         Wartungsmodus aktiv
       </h1>
@@ -159,7 +159,7 @@ function MaintenanceNotice({ siteTitle }: { siteTitle: string }) {
       <div className="flex justify-center">
         <a
           href="/login"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[0_10px_30px_-15px_rgba(199,120,23,0.55)] transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Zum Login
         </a>

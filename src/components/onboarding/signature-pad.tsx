@@ -277,7 +277,7 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
     <div ref={containerRef} className={cn("space-y-2", className)}>
       <canvas
         ref={canvasRef}
-        className="w-full touch-none rounded-lg border border-border bg-white shadow-inner"
+        className="w-full touch-none rounded-lg border border-border bg-card shadow-inner"
         style={{ height: `${canvasHeight}px` }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

@@ -105,7 +105,7 @@ export function DepartmentEventPlanner({
   const pastCount = eventsWithMeta.length - upcomingCount;
 
   return (
-    <section className="space-y-6 rounded-3xl border border-border/60 bg-background/75 p-6 shadow-[0_24px_70px_-45px_rgba(99,102,241,0.55)]">
+    <section className="space-y-6 rounded-3xl border border-border/60 bg-background/75 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground sm:text-xl">Terminplanung</h2>

@@ -38,13 +38,13 @@ const statusVariants: Record<PhotoConsentSummary["status"], "default" | "seconda
 
 const statusBadgeClasses: Record<PhotoConsentSummary["status"], string> = {
   none:
-    "border-info/45 bg-info/15 text-info shadow-[0_12px_32px_color-mix(in_oklab,var(--info)_22%,transparent)]",
+    "border-info/45 bg-info/15 text-info",
   pending:
-    "border-warning/45 bg-warning/15 text-warning shadow-[0_12px_32px_color-mix(in_oklab,var(--warning)_22%,transparent)]",
+    "border-warning/45 bg-warning/15 text-warning",
   approved:
-    "border-success/45 bg-success/15 text-success shadow-[0_12px_36px_color-mix(in_oklab,var(--success)_24%,transparent)]",
+    "border-success/45 bg-success/15 text-success",
   rejected:
-    "border-destructive/45 bg-destructive/15 text-destructive shadow-[0_12px_32px_color-mix(in_oklab,var(--destructive)_22%,transparent)]",
+    "border-destructive/45 bg-destructive/15 text-destructive",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
@@ -592,7 +592,7 @@ export function PhotoConsentCard({
         ) : (
           <>
             {showIntro && (
-              <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 shadow-[0_18px_45px_color-mix(in_oklab,var(--info)_18%,transparent)] backdrop-blur">
+              <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 backdrop-blur">
                 <p className="font-semibold text-foreground">Mit deinem „Okay“ hilfst du unserem Auftrittsteam.</p>
                 <p className="mt-1 text-foreground/70">
                   Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim Cookiebanner am Seitenrand.
@@ -803,7 +803,7 @@ export function PhotoConsentCard({
                   <Button
                     type="submit"
                     size="lg"
-                    className="shadow-[0_20px_45px_color-mix(in_oklab,var(--info)_25%,transparent)] transition-shadow duration-200 hover:shadow-[0_22px_52px_color-mix(in_oklab,var(--info)_32%,transparent)]"
+                    className=" transition-shadow duration-200 hover:"
                     disabled={
                       submitting ||
                       !confirm ||

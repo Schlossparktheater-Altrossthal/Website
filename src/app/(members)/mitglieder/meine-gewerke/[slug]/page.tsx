@@ -256,7 +256,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
         asChild
         size="sm"
         variant="secondary"
-        className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground shadow-[0_18px_40px_-28px_rgba(99,102,241,0.9)] transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
+        className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
       >
         <Link href="/mitglieder/meine-gewerke" title="Zur Übersicht">
           <Users aria-hidden className="h-4 w-4" />
@@ -275,7 +275,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
     : "/mitglieder/meine-gewerke";
 
   const hero = (
-    <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/70 p-6 shadow-[0_28px_90px_-50px_rgba(99,102,241,0.8)] sm:p-10">
+    <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/70 p-6 sm:p-10">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 -left-24 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
         <div className="absolute -bottom-32 right-0 h-64 w-64 rounded-full bg-secondary/20 blur-3xl" />

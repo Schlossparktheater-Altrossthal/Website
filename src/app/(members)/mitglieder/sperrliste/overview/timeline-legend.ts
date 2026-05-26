@@ -65,12 +65,12 @@ export const timelineToneStyles = tv({
         text: "text-amber-800 dark:text-amber-100",
       },
       holiday: {
-        legendContainer: "border-sky-400/60 bg-sky-300/20 text-sky-800 dark:text-sky-200",
-        legendSwatch: "border-sky-400/60 bg-sky-400/60",
-        legendLabel: "text-sky-800 dark:text-sky-200",
-        legendDescription: "text-sky-700/80 dark:text-sky-200/80",
-        bullet: "bg-sky-500",
-        text: "text-sky-700 dark:text-sky-200",
+        legendContainer: "border-primary400/60 bg-primary300/20 text-primary800 dark:text-primary200",
+        legendSwatch: "border-primary400/60 bg-primary400/60",
+        legendLabel: "text-primary800 dark:text-primary200",
+        legendDescription: "text-primary700/80 dark:text-primary200/80",
+        bullet: "bg-primary500",
+        text: "text-primary700 dark:text-primary200",
       },
       preferred: {
         legendContainer: "border-emerald-400/60 bg-emerald-300/20 text-emerald-800 dark:text-emerald-200",

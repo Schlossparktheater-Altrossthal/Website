@@ -119,7 +119,7 @@ export function CreateDepartmentEventButton({
           size={triggerSize}
           variant={triggerVariant}
           className={cn(
-            "gap-2 rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary text-primary-foreground shadow-[0_16px_40px_-32px_rgba(99,102,241,0.85)] transition hover:from-primary/90 hover:via-primary/80 hover:to-primary/90",
+            "gap-2 rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary text-primary-foreground transition hover:from-primary/90 hover:via-primary/80 hover:to-primary/90",
             triggerClassName,
           )}
         >

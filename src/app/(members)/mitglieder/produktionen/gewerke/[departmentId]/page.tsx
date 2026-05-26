@@ -189,7 +189,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
 
   return (
     <div className="space-y-10">
-      <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80 p-6 shadow-[0_30px_120px_-60px_rgba(99,102,241,0.65)] sm:p-10">
+      <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80 p-6 sm:p-10">
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <div className="absolute -top-36 -left-24 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
           <div className="absolute -bottom-32 right-0 h-64 w-64 rounded-full bg-secondary/20 blur-3xl" />
@@ -236,7 +236,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                 asChild
                 size="sm"
                 variant="secondary"
-                className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground shadow-[0_18px_40px_-28px_rgba(99,102,241,0.9)] transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
+                className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
               >
                 <Link href="/mitglieder/sperrliste" title="Sperrliste öffnen">
                   <CalendarDays aria-hidden className="h-4 w-4" />
@@ -273,7 +273,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
 
       <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
         <Card
-          className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80 shadow-[0_30px_120px_-60px_rgba(99,102,241,0.65)]"
+          className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/80"
           style={accentStyle}
         >
           <div
@@ -525,7 +525,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/75 shadow-[0_30px_120px_-60px_rgba(59,130,246,0.45)]">
+        <Card className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/75">
           <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),transparent_70%)]" />
           <CardHeader className="relative z-[1] space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -585,7 +585,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
         </Card>
       </div>
 
-      <Card className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/75 shadow-[0_30px_120px_-60px_rgba(148,163,184,0.5)]">
+      <Card className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/75">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.16),transparent_70%)]" />
         <CardHeader className="relative z-[1] space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
