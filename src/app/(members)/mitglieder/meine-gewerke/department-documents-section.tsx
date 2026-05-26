@@ -1,10 +1,9 @@
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { FileText, Image as ImageIcon, Upload, X } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { CloseIcon, FileIcon, ImageIcon, UploadIcon } from "@/components/ui/action-icons";
 import { formatFileLibraryFileSize } from "@/lib/file-library";
 import { getUserDisplayName } from "@/lib/names";
 
@@ -41,7 +40,7 @@ function resolveIcon(mimeType: string) {
   if (mimeType.startsWith("image/")) {
     return ImageIcon;
   }
-  return FileText;
+  return FileIcon;
 }
 
 export function DepartmentDocumentsSection({
@@ -83,7 +82,7 @@ export function DepartmentDocumentsSection({
               Unterstützt Bilder (JPG, PNG, WebP) sowie PDF- und Office-Dokumente.
             </p>
             <Button type="submit" size="sm" className="gap-2">
-              <Upload aria-hidden className="h-4 w-4" />
+              <UploadIcon aria-hidden className="h-4 w-4" />
               <span>Hochladen</span>
             </Button>
           </div>
@@ -126,7 +125,7 @@ export function DepartmentDocumentsSection({
                     <input type="hidden" name="documentId" value={doc.id} />
                     <input type="hidden" name="redirectPath" value={refreshPath} />
                     <Button type="submit" variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                      <X aria-hidden className="mr-2 h-4 w-4" />
+                      <CloseIcon aria-hidden className="mr-2 h-4 w-4" />
                       Entfernen
                     </Button>
                   </form>

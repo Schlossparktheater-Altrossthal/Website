@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertIcon } from "@/components/ui/action-icons";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -105,7 +105,7 @@ export default async function MembersOnboardingAnalyticsPage({
         <div className="rounded-2xl border border-warning/40 bg-warning/10 px-5 py-4 text-sm text-warning-foreground shadow-sm">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-warning/40 bg-warning/15">
-              <AlertTriangle className="h-5 w-5 text-warning" aria-hidden />
+              <AlertIcon className="h-5 w-5 text-warning" aria-hidden />
             </div>
             <div className="space-y-1">
               <p className="text-sm font-semibold uppercase tracking-wide text-warning">Offline-Demo</p>

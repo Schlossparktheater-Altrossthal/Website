@@ -2,15 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Activity,
-  ArrowLeft,
   BarChart3,
   CalendarClock,
-  CalendarDays,
   History,
   ListChecks,
-  Mail,
-  ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type {
@@ -25,6 +20,7 @@ import type {
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ArrowLeftIconIcon, CalendarIcon, MailIconIcon, ShieldCheckIconIcon, SparklesIconIcon } from "@/components/ui/action-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
@@ -800,7 +796,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
               className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
             >
               <Link href="/mitglieder/mitgliederverwaltung">
-                <ArrowLeft className="h-4 w-4" aria-hidden />
+                <ArrowLeftIcon className="h-4 w-4" aria-hidden />
                 Zurück zur Übersicht
               </Link>
             </Button>
@@ -816,7 +812,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="flex w-full justify-start overflow-x-auto rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
           <TabsTrigger value="overview" className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-            <Sparkles className="h-4 w-4 text-muted-foreground/80" aria-hidden />
+            <SparklesIcon className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>Profil</span>
           </TabsTrigger>
           <TabsTrigger value="activity" className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
@@ -853,7 +849,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CalendarDays className="h-4 w-4" aria-hidden />
+                          <CalendarIcon className="h-4 w-4" aria-hidden />
                           {memberSinceLabel}
                         </div>
                         {isDeactivated && (
@@ -895,13 +891,13 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                   ) : null}
 
                   <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" aria-hidden />
+                    <MailIcon className="h-4 w-4" aria-hidden />
                     {email ? (
                       <a href={`mailto:${email}`} className="font-medium text-foreground transition hover:text-primary">
                         {email}
                       </a>
                     ) : (
-                      <span className="italic text-muted-foreground">Keine E-Mail hinterlegt</span>
+                      <span className="italic text-muted-foreground">Keine E-MailIcon hinterlegt</span>
                     )}
                   </div>
                 </CardContent>
@@ -917,7 +913,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                 <CardContent className="space-y-4">
                   <div className="rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <Sparkles className="h-4 w-4" aria-hidden />
+                      <SparklesIcon className="h-4 w-4" aria-hidden />
                       Schwerpunkt im Onboarding
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">{onboardingFocusLabel}</p>
@@ -952,7 +948,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
 
                   <div className="rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <ShieldCheck className="h-4 w-4" aria-hidden />
+                      <ShieldCheckIcon className="h-4 w-4" aria-hidden />
                       Fotoe.
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -996,7 +992,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       <dd className="text-sm font-medium text-foreground">{member.name?.trim() || "—"}</dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-Mail</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-MailIcon</dt>
                       <dd className="text-sm font-medium text-foreground">
                         {email ? (
                           <a href={`mailto:${email}`} className="transition hover:text-primary">
