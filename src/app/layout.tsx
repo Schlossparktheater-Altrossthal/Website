@@ -84,7 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   if (session?.user && !session.user.isDeactivated && typeof session.user.id === "string") {
     try {
-      const canScan = await hasPermission(session.user, "PRIVATE.INVENTORY.SCAN.USE");
+      const canScan = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
 
       if (canScan) {
         syncToken = createSyncToken(session.user.id);
