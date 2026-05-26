@@ -1,16 +1,17 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+function stripReactRules(config) {
+  if (!config?.rules) return config;
+  const filteredRules = Object.fromEntries(
+    Object.entries(config.rules).filter(([name]) => !name.startsWith("react/")),
+  );
+  return { ...config, rules: filteredRules };
+}
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...nextVitals.map(stripReactRules),
+  ...nextTypescript.map(stripReactRules),
   {
     ignores: [
       "node_modules/**",
@@ -19,6 +20,8 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
       "public/workbox/**",
+      "deploy-service/**",
+      "eslint.config.mjs",
     ],
   },
 ];
