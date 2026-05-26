@@ -54,27 +54,6 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: "PRIVATE.DASHBOARD.OVERVIEW.VIEW", label: "Mitglieder-Dashboard öffnen", category: "base" },
   { key: "PRIVATE.PROFILE.OWN.VIEW", label: "Profilbereich aufrufen", category: "base" },
   {
-    key: "PRIVATE.GALLERY.MEDIA.VIEW",
-    label: "Archiv und Bilder öffnen",
-    description:
-      "Zugang zum Medienarchiv mit Jahrgangsordnern, Fotos und Videos im Mitgliederportal.",
-    category: "self",
-  },
-  {
-    key: "PRIVATE.GALLERY.MEDIA.UPLOAD",
-    label: "Medien in Archiv und Bilder hochladen",
-    description:
-      "Eigene Fotos und Videos in Jahrgangsordnern ablegen sowie Beschreibungen ergänzen.",
-    category: "self",
-  },
-  {
-    key: "PRIVATE.GALLERY.MEDIA.DELETE",
-    label: "Uploads im Archiv moderieren",
-    description:
-      "Fremde Beiträge löschen, Inhalte kuratieren und das Medienarchiv aufräumen.",
-    category: "self",
-  },
-  {
     key: "PRIVATE.SUPPORT.ISSUE.VIEW",
     label: "Feedback & Support nutzen",
     description:
