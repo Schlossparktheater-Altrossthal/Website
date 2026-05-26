@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./sperrliste-styles.css";
 import { Button } from "@/components/ui/button";
-import { FileDown } from "lucide-react";
+import { DownloadIcon } from "@/components/ui/action-icons";
 
 import { DesktopCalendar } from "./DesktopCalendar";
 import { DesktopTable } from "./desktop-table";
@@ -211,19 +211,19 @@ export default function OverviewContent({
                     &rarr;
                   </IconButton>
                 )}
-                <button
+                <Button
                   type="button"
                   className="ml-1 inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/70 px-2.5 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label="Zu heute springen"
                   onClick={handleJumpToToday}
                 >
                   <ClockIcon className="h-4 w-4" aria-hidden="true" /> Heute
-                </button>
+                </Button>
               </div>
             )}
 
             <div className="flex overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm" role="group" aria-label="Personenfilter">
-              <button
+              <Button
                 type="button"
                 className={`px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "all" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setPersonFilter("all")}
@@ -231,8 +231,8 @@ export default function OverviewContent({
                 aria-label={`Alle Personen anzeigen (${groupedCounts.total})`}
               >
                 Alle ({groupedCounts.total})
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "actors" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setPersonFilter("actors")}
@@ -240,8 +240,8 @@ export default function OverviewContent({
                 aria-label={`Schauspieler anzeigen (${groupedCounts.actors})`}
               >
                 Schauspieler ({groupedCounts.actors})
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${personFilter === "crew" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setPersonFilter("crew")}
@@ -249,10 +249,10 @@ export default function OverviewContent({
                 aria-label={`Gewerke anzeigen (${groupedCounts.crew})`}
               >
                 Gewerke ({groupedCounts.crew})
-              </button>
+              </Button>
             </div>
             <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm sm:flex" role="group" aria-label="Ansichtsauswahl">
-              <button
+              <Button
                 type="button"
                 className={`px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "calendar" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setView("calendar")}
@@ -260,8 +260,8 @@ export default function OverviewContent({
                 aria-label="Kalenderansicht (Tastenkombination: Strg+1)"
               >
                 Kalender
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "table" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setView("table")}
@@ -269,8 +269,8 @@ export default function OverviewContent({
                 aria-label="Tabellenansicht (Tastenkombination: Strg+2)"
               >
                 Tabelle
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 className={`border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "timeline" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setView("timeline")}
@@ -278,29 +278,29 @@ export default function OverviewContent({
                 aria-label="Timeline-Ansicht (Tastenkombination: Strg+3)"
               >
                 Timeline
-              </button>
+              </Button>
             </div>
             <div
               className="flex w-full overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm sm:w-auto"
               role="group"
               aria-label="Wochentage filtern"
             >
-              <button
+              <Button
                 type="button"
                 className={`flex-1 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:flex-none ${showWeekendsOnly ? "text-muted-foreground hover:bg-muted/40" : "bg-muted text-foreground"}`}
                 onClick={() => setShowWeekendsOnly(false)}
                 aria-pressed={!showWeekendsOnly}
               >
                 Ganze Woche
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 className={`flex-1 border-l border-border/60 px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:flex-none ${showWeekendsOnly ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40"}`}
                 onClick={() => setShowWeekendsOnly(true)}
                 aria-pressed={showWeekendsOnly}
               >
                 Nur Wochenende
-              </button>
+              </Button>
             </div>
           </div>
         </header>
@@ -329,7 +329,7 @@ export default function OverviewContent({
                   <span>Feiertag</span>
                 </div>
                 <div className="flex items-center gap-0.5">
-                  <UmbrellaIcon className="h-3 w-3 text-sky-500" />
+                  <UmbrellaIcon className="h-3 w-3 text-info" />
                   <span>Ferien</span>
                 </div>
               </div>
@@ -396,7 +396,7 @@ export default function OverviewContent({
           onClick={onExportPdf}
           aria-label="Sperrlistenübersicht als PDF exportieren"
         >
-          <FileDown className="h-4 w-4" aria-hidden />
+          <DownloadIcon className="h-4 w-4" aria-hidden />
           PDF exportieren
         </Button>
     </div>

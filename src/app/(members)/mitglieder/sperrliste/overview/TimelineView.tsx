@@ -1,5 +1,7 @@
 import React, { useMemo, useEffect, useCallback } from "react";
 
+import { Button } from "@/components/ui/button";
+
 import { 
   CalendarStarIcon, 
   CheckIcon, 
@@ -192,7 +194,7 @@ export function TimelineView({
               </div>
               <div className="grid grid-cols-7 gap-0 min-w-0">
                 {dayCols.map((d) => (
-                  <button
+                  <Button
                     key={d.key}
                     data-day={d.n}
                     onClick={() => setHighlightedDay(highlightedDay === d.n ? null : d.n)}
@@ -207,7 +209,7 @@ export function TimelineView({
                         ? 'border-primary bg-primary text-primary-foreground shadow-md' 
                         : 'border-border bg-muted text-foreground group-hover:border-primary/60'
                     }`}>{d.n}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -338,7 +340,7 @@ function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneP
       <div className="grid grid-cols-[200px_1fr] gap-0">
         {/* Person Info */}
         <div className="flex items-center gap-2.5 border-r border-border/60 px-3 py-2">
-          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colorMap[groupColor]} text-xs font-semibold text-white shadow-sm`}>
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colorMap[groupColor]} text-xs font-semibold text-primary-foreground shadow-sm`}>
             {initials}
           </span>
           <div className="min-w-0">
