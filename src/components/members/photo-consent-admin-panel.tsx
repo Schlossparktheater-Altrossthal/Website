@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Loader2, RefreshCw, Search } from "lucide-react";
+import { LoadingIcon, RefreshIcon, SearchIcon } from "@/components/ui/action-icons";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +116,7 @@ function DocumentPreview({ previewUrl, documentName, signatureVersion, signature
             alt={documentName ? `Dokumentvorschau: ${documentName}` : "Digitale Unterschrift"}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
-            className="object-contain bg-white"
+            className="object-contain bg-card"
             unoptimized
           />
         );
@@ -142,7 +142,7 @@ function DocumentPreview({ previewUrl, documentName, signatureVersion, signature
           alt={documentName ? `Dokumentvorschau: ${documentName}` : "Digitale Unterschrift"}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
-          className="object-contain bg-white"
+          className="object-contain bg-card"
           unoptimized
         />
       );
@@ -353,7 +353,7 @@ export function PhotoConsentAdminPanel() {
         <div className="space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-md">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
@@ -457,9 +457,9 @@ export function PhotoConsentAdminPanel() {
             className="min-w-[10rem]"
           >
             {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <LoadingIcon className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshIcon className="mr-2 h-4 w-4" />
             )}
             {loading ? "Aktualisiere …" : "Aktualisieren"}
           </Button>
