@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Clock,
   CreditCard,
   Copy,
@@ -116,6 +117,10 @@ export function ChevronDownIcon({ className = "w-4 h-4", ...props }: { className
 
 export function ChevronRightIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return <ChevronRight className={className} aria-hidden {...props} />;
+}
+
+export function ChevronUpIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <ChevronUp className={className} aria-hidden {...props} />;
 }
 
 export function ArrowLeftIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
