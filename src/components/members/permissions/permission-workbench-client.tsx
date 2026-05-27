@@ -14,9 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DndSortableProvider, horizontalListSortingStrategy, SortableContext, SortableItem } from "@/components/ui/sortable";
 import { toast } from "sonner";
 
-export type PermissionWorkbenchPermission = { id: string; key: string; label: string; description: string | null; categoryKey: string; categoryLabel: string };
-export type PermissionWorkbenchRole = { id: string; name: string; isSystem: boolean; systemRole: string | null; sortIndex: number };
-export type RoleGrantState = Record<string, Set<string>>;
+import type { PermissionWorkbenchPermission, PermissionWorkbenchRole, RoleGrantState } from "@/components/members/permissions/permission-workbench-types";
 const CATEGORY_ORDER = ["base", "rehearsal", "department", "pages", "admin", "public", "communication", "analytics"] as const;
 type PermissionGroup = { id: string; category: string; label: string; description: string; keys: string[] };
 const GROUPS: PermissionGroup[] = [

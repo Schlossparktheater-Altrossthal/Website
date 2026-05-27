@@ -18,7 +18,7 @@ import type {
   PermissionWorkbenchPermission,
   PermissionWorkbenchRole,
   RoleGrantState,
-} from "@/components/members/permissions/permission-workbench-client";
+} from "@/components/members/permissions/permission-workbench-types";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS } from "@/lib/roles";
 
 const ACTION_BUTTON_CLASS =
