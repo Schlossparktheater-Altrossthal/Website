@@ -19,11 +19,12 @@ export type PermissionWorkbenchDepartment = { id: string; name: string; slug: st
 export type RoleGrantState = Record<string, Set<string>>;
 export type DepartmentGrantState = Record<string, Set<string>>;
 const CATEGORY_ORDER = ["base", "rehearsal", "department", "pages", "admin", "public", "communication", "analytics"] as const;
-const GROUPS = [
+type PermissionGroup = { id: string; category: string; label: string; description: string; keys: string[] };
+const GROUPS: PermissionGroup[] = [
   { id: "group-base-access", category: "base", label: "Allgemeiner Zugang", description: "Steuert den grundlegenden Mitgliederzugang.", keys: ["PRIVATE.DASHBOARD.OVERVIEW.VIEW", "PRIVATE.PROFILE.OWN.VIEW"] },
   { id: "group-department-costume", category: "department", label: "Kostüm & Verpflegung", description: "Bündelt Freigaben für Maße, Größen und Ernährung.", keys: ["PRIVATE.PROFILE.MEASUREMENTS.MANAGE", "PRIVATE.PROFILE.SIZES.MANAGE", "PRIVATE.PROFILE.DIETARY.MANAGE"] },
   { id: "group-public-content", category: "public", label: "Öffentliche Inhalte", description: "Regelt zentrale Inhalte der öffentlichen Website.", keys: ["PUBLIC.HOME.COUNTDOWN.EDIT", "PUBLIC.CONTENT.MANAGE"] },
-] as const;
+];
 
 function toGrantState(record: Record<string, string[]>) { const n: RoleGrantState = {}; for (const [k, v] of Object.entries(record)) n[k] = new Set(v); return n; }
 
