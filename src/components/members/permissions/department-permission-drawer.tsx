@@ -18,7 +18,7 @@ import type {
   DepartmentGrantState,
   PermissionWorkbenchDepartment,
   PermissionWorkbenchPermission,
-} from "@/components/members/permissions/permission-workbench-client";
+} from "@/components/members/permissions/permission-workbench-types";
 import { Filter, Layers, Power } from "lucide-react";
 
 type DepartmentPermissionDrawerProps = {
