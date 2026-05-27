@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { ChevronDownIcon, ChevronUpIcon, EditIcon, GripVerticalIcon, PlusIcon, SearchIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { PermissionToggle } from "@/components/ui/permission-toggle";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import type { PermissionWorkbenchPermission, PermissionWorkbenchRole, RoleGrantState } from "@/components/members/permissions/permission-workbench-types";
 const CATEGORY_ORDER = ["base", "rehearsal", "department", "pages", "admin", "public", "communication", "analytics"] as const;
+const ROLE_COLUMN_WIDTH_CLASS = "w-[7.5rem] min-w-[7.5rem] max-w-[7.5rem]";
 type PermissionGroup = { id: string; category: string; label: string; description: string; keys: string[] };
 const GROUPS: PermissionGroup[] = [
   { id: "group-base-access", category: "base", label: "Allgemeiner Zugang", description: "Steuert den grundlegenden Mitgliederzugang.", keys: ["PRIVATE.DASHBOARD.OVERVIEW.VIEW", "PRIVATE.PROFILE.OWN.VIEW"] },
@@ -109,7 +110,7 @@ export function PermissionWorkbenchClient({ permissions, roles: initialRoles, ro
                     <span className="text-sm font-medium text-foreground">{group.label}</span>
                     <span className="block text-xs text-muted-foreground">{group.description}</span>
                   </div>
-                  <Checkbox checked={allGranted ? true : someGranted ? "indeterminate" : false} onCheckedChange={(state) => { const grant = state === true; void Promise.all(group.keys.map((permissionKey) => togglePermission(mobileSelectedRoleId, permissionKey, grant))); }} />
+                  <PermissionToggle checked={allGranted ? true : someGranted ? "indeterminate" : false} onCheckedChange={(state) => { const grant = state === true; void Promise.all(group.keys.map((permissionKey) => togglePermission(mobileSelectedRoleId, permissionKey, grant))); }} />
                 </div>
                 {group.members.map((permission) => <div key={`mobile-member-${permission.key}`} className="border-b border-border/40 bg-card px-4 py-3 pl-8 last:border-b-0">
                   <span className="block text-sm font-medium text-foreground">{permission.label}</span>
@@ -124,7 +125,7 @@ export function PermissionWorkbenchClient({ permissions, roles: initialRoles, ro
                   <span className="block text-sm font-medium text-foreground">{permission.label}</span>
                   <span className="block text-xs text-muted-foreground">{permission.description ?? "Keine Beschreibung vorhanden."}</span>
                 </div>
-                <Checkbox checked={checked} onCheckedChange={(state) => void togglePermission(mobileSelectedRoleId, permission.key, state === true)} />
+                <PermissionToggle checked={checked} onCheckedChange={(state) => void togglePermission(mobileSelectedRoleId, permission.key, state === true)} />
               </div>;
             })}
           </div>
@@ -142,7 +143,7 @@ export function PermissionWorkbenchClient({ permissions, roles: initialRoles, ro
                 <th className="p-0" colSpan={orderedRoles.length}>
                   <SortableContext items={roleOrder} strategy={horizontalListSortingStrategy}>
                     <div className="flex">
-                      {orderedRoles.map((role) => <SortableItem key={role.id} id={role.id}>{({ attributes, listeners, setNodeRef, transform, transition }) => <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className="w-20 border-b border-l border-border/40 bg-card px-2 py-3 text-center text-sm font-medium text-foreground"><div className="space-y-1"><div className="truncate">{role.name}</div><div className="flex items-center justify-center gap-1"><button type="button" className="rounded p-1 hover:bg-muted" onClick={() => { setRoleName(role.name); setEditRole(role); }}><EditIcon className="size-4" /></button><button type="button" className="cursor-grab rounded p-1 hover:bg-muted" {...attributes} {...listeners}><GripVerticalIcon className="size-4" /></button></div></div></div>}</SortableItem>)}
+                      {orderedRoles.map((role) => <SortableItem key={role.id} id={role.id}>{({ attributes, listeners, setNodeRef, transform, transition }) => <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 bg-card px-2 py-3 text-center text-sm font-medium text-foreground`}><div className="flex min-w-0 flex-col items-center gap-1"><div className="w-full truncate">{role.name}</div><div className="flex flex-nowrap items-center justify-center gap-1 overflow-hidden"><button type="button" className="shrink-0 rounded p-1 hover:bg-muted" onClick={() => { setRoleName(role.name); setEditRole(role); }}><EditIcon className="size-4" /></button><button type="button" className="cursor-grab shrink-0 rounded p-1 hover:bg-muted" {...attributes} {...listeners}><GripVerticalIcon className="size-4" /></button></div></div></div>}</SortableItem>)}
                     </div>
                   </SortableContext>
                 </th>
@@ -160,12 +161,12 @@ export function PermissionWorkbenchClient({ permissions, roles: initialRoles, ro
                       return <Fragment key={group.id}>
                         <tr className="bg-muted/40 transition-colors hover:bg-muted/60">
                           <td className="border-b border-border/40 px-4 py-2.5"><button type="button" className="flex w-full items-start justify-between text-left" onClick={() => setOpenGroups((s) => ({ ...s, [group.id]: !groupOpen }))}><span><span className="text-sm font-medium text-foreground">{group.label}</span><span className="block text-xs text-muted-foreground">{group.description}</span></span>{groupOpen ? <ChevronUpIcon className="mt-0.5 size-4 text-muted-foreground" /> : <ChevronDownIcon className="mt-0.5 size-4 text-muted-foreground" />}</button></td>
-                          {orderedRoles.map((role) => { const granted = group.keys.filter((key) => roleGrants[role.id]?.has(key)).length; const all = granted === group.keys.length; const some = granted > 0 && !all; return <td key={`${group.id}-${role.id}`} className="w-20 border-b border-l border-border/40 px-2 py-2.5 text-center"><Checkbox checked={all ? true : some ? "indeterminate" : false} onCheckedChange={(state) => { const grant = state === true; void Promise.all(group.keys.map((permissionKey) => togglePermission(role.id, permissionKey, grant))); }} /></td>; })}
+                          {orderedRoles.map((role) => { const granted = group.keys.filter((key) => roleGrants[role.id]?.has(key)).length; const all = granted === group.keys.length; const some = granted > 0 && !all; return <td key={`${group.id}-${role.id}`} className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 px-2 py-2.5 text-center`}><PermissionToggle checked={all ? true : some ? "indeterminate" : false} onCheckedChange={(state) => { const grant = state === true; void Promise.all(group.keys.map((permissionKey) => togglePermission(role.id, permissionKey, grant))); }} /></td>; })}
                         </tr>
-                        {groupOpen && group.members.map((permission, index) => <tr key={permission.key} className={index % 2 === 0 ? "bg-card transition-colors hover:bg-muted/10" : "bg-muted/20 transition-colors hover:bg-muted/30"}><td className="border-b border-border/40 px-4 py-2.5 pl-8"><span className="block text-sm font-medium text-foreground">{permission.label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{permission.description ?? "Keine Beschreibung vorhanden."}</span></td>{orderedRoles.map((role) => <td key={`${permission.key}-${role.id}`} className="w-20 border-b border-l border-border/40 px-2 py-2.5 text-center"><Checkbox disabled checked={roleGrants[role.id]?.has(permission.key) ?? false} /></td>)}</tr>)}
+                        {groupOpen && group.members.map((permission, index) => <tr key={permission.key} className={index % 2 === 0 ? "bg-card transition-colors hover:bg-muted/10" : "bg-muted/10 transition-colors hover:bg-muted/20"}><td className="border-b border-border/40 px-4 py-2.5 pl-8"><span className="block text-sm font-medium text-foreground">{permission.label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{permission.description ?? "Keine Beschreibung vorhanden."}</span></td>{orderedRoles.map((role) => <td key={`${permission.key}-${role.id}`} className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 px-2 py-2.5 text-center`}><PermissionToggle disabled checked={roleGrants[role.id]?.has(permission.key) ?? false} /></td>)}</tr>)}
                       </Fragment>;
                     })}
-                    {category.singles.map((permission, idx) => <tr key={permission.key} className={idx % 2 === 0 ? "bg-card transition-colors hover:bg-muted/10" : "bg-muted/20 transition-colors hover:bg-muted/30"}><td className="border-b border-border/40 px-4 py-2.5"><span className="block text-sm font-medium text-foreground">{permission.label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{permission.description ?? "Keine Beschreibung vorhanden."}</span></td>{orderedRoles.map((role) => <td key={role.id} className="w-20 border-b border-l border-border/40 px-2 py-2.5 text-center"><Checkbox checked={roleGrants[role.id]?.has(permission.key) ?? false} onCheckedChange={(checked) => void togglePermission(role.id, permission.key, checked === true)} /></td>)}</tr>)}
+                    {category.singles.map((permission, idx) => <tr key={permission.key} className={idx % 2 === 0 ? "bg-card transition-colors hover:bg-muted/10" : "bg-muted/10 transition-colors hover:bg-muted/20"}><td className="border-b border-border/40 px-4 py-2.5"><span className="block text-sm font-medium text-foreground">{permission.label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{permission.description ?? "Keine Beschreibung vorhanden."}</span></td>{orderedRoles.map((role) => <td key={role.id} className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 px-2 py-2.5 text-center`}><PermissionToggle checked={roleGrants[role.id]?.has(permission.key) ?? false} onCheckedChange={(checked) => void togglePermission(role.id, permission.key, checked === true)} /></td>)}</tr>)}
                   </></CollapsibleContent>
                 </></Collapsible>;
               })}
