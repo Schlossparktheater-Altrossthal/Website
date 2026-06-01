@@ -69,7 +69,7 @@
     "http-proxy": "^1.18.1",
     "idb-keyval": "^6.2.1",
     "lucide-react": "^1.16.0",
-    "next": "16.2.6",
+    "next": "16.2.7",
     "next-auth": "^4.24.11",
     "node-ical": "^0.26.1",
     "nodemailer": "^8.0.5",
