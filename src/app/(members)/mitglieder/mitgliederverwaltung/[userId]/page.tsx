@@ -810,7 +810,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
         }
       />
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="flex w-full justify-start overflow-x-auto rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
+        <TabsList className="w-full justify-start rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
           <TabsTrigger value="overview" className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
             <SparklesIcon className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>Profil</span>

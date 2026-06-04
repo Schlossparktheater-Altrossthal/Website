@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Children,
   createContext,
   isValidElement,
   useCallback,
@@ -14,6 +15,13 @@ import {
   type ButtonHTMLAttributes,
 } from "react";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type TabsContextValue = {
@@ -118,12 +126,70 @@ interface TabsListProps {
   children: React.ReactNode;
 }
 
+type TabsListOption = {
+  value: string;
+  label: string;
+  disabled: boolean;
+};
+
+type TabsTriggerOptionProps = {
+  value?: unknown;
+  disabled?: unknown;
+  children?: React.ReactNode;
+};
+
+function readTextContent(node: React.ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(readTextContent).join(" ");
+  }
+
+  if (isValidElement<{ children?: React.ReactNode }>(node)) {
+    return readTextContent(node.props.children);
+  }
+
+  return "";
+}
+
+function getTabsListOptions(children: React.ReactNode): TabsListOption[] {
+  return Children.toArray(children).flatMap((child) => {
+    if (!isValidElement<TabsTriggerOptionProps>(child)) {
+      return [];
+    }
+
+    const { value, disabled, children: triggerChildren } = child.props;
+    if (typeof value !== "string" || value.length === 0) {
+      return [];
+    }
+
+    const label = readTextContent(triggerChildren).replace(/\s+/g, " ").trim();
+
+    return [
+      {
+        value,
+        label: label || value,
+        disabled: disabled === true,
+      },
+    ];
+  });
+}
+
+function usesCustomVisibility(className?: string) {
+  return className?.split(/\s+/).includes("hidden") ?? false;
+}
+
 export function TabsList({ className, children }: TabsListProps) {
-  const { value: activeValue } = useTabsContext("TabsList");
+  const { value: activeValue, setValue, idBase } = useTabsContext("TabsList");
   const listRef = useRef<HTMLDivElement>(null);
   const [pillState, setPillState] = useState<TabsPillState>({ left: 0, width: 0 });
+  const tabOptions = useMemo(() => getTabsListOptions(children), [children]);
+  const hasCustomVisibility = usesCustomVisibility(className);
+  const selectLabelId = `${idBase}-select-label`;
 
-  useLayoutEffect(() => {
+  const updatePillState = useCallback(() => {
     const activeTrigger = listRef.current?.querySelector<HTMLButtonElement>(
       '[aria-selected="true"]',
     );
@@ -137,25 +203,76 @@ export function TabsList({ className, children }: TabsListProps) {
       left: activeTrigger.offsetLeft,
       width: activeTrigger.offsetWidth,
     });
-  }, [activeValue]);
+  }, []);
+
+  useLayoutEffect(() => {
+    updatePillState();
+  }, [activeValue, children, updatePillState]);
+
+  useEffect(() => {
+    const listElement = listRef.current;
+    if (!listElement) {
+      return;
+    }
+
+    const handleResize = () => updatePillState();
+    window.addEventListener("resize", handleResize);
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updatePillState())
+        : null;
+    resizeObserver?.observe(listElement);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      resizeObserver?.disconnect();
+    };
+  }, [updatePillState]);
 
   return (
-    <div
-      ref={listRef}
-      role="tablist"
-      aria-orientation="horizontal"
-      className={cn(
-        "relative inline-flex flex-wrap items-center gap-2 overflow-hidden rounded-full",
-        className,
-      )}
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute bottom-1 top-1 z-0 rounded-full border border-primary/60 bg-primary/15 transition-all duration-300 ease-in-out"
-        style={{ left: pillState.left, width: pillState.width }}
-      />
-      {children}
-    </div>
+    <>
+      {!hasCustomVisibility ? (
+        <div className={cn("w-full", className, "sm:hidden")}>
+          <span id={selectLabelId} className="sr-only">
+            Tab auswählen
+          </span>
+          <Select value={activeValue} onValueChange={setValue}>
+            <SelectTrigger aria-labelledby={selectLabelId} className="w-full">
+              <SelectValue placeholder="Ansicht auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {tabOptions.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  disabled={option.disabled}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+      <div
+        ref={listRef}
+        role="tablist"
+        aria-orientation="horizontal"
+        className={cn(
+          "relative flex-wrap items-center gap-2 overflow-hidden rounded-full",
+          className,
+          !hasCustomVisibility && "hidden sm:inline-flex",
+        )}
+      >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-1 top-1 z-0 rounded-full border border-primary/60 bg-primary/15 transition-all duration-300 ease-in-out"
+          style={{ left: pillState.left, width: pillState.width }}
+        />
+        {children}
+      </div>
+    </>
   );
 }
 
