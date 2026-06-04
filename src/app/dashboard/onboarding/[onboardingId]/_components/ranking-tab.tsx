@@ -440,15 +440,34 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
   }, [ranking.roles]);
 
   useEffect(() => {
-    if (domain === "acting" && actingRoleSummaries.length === 0 && crewRoleSummaries.length > 0) {
-      setDomain("crew");
-    } else if (domain === "crew" && crewRoleSummaries.length === 0 && actingRoleSummaries.length > 0) {
-      setDomain("acting");
+    const nextDomain =
+      domain === "acting" && actingRoleSummaries.length === 0 && crewRoleSummaries.length > 0
+        ? "crew"
+        : domain === "crew" && crewRoleSummaries.length === 0 && actingRoleSummaries.length > 0
+          ? "acting"
+          : null;
+
+    if (!nextDomain) {
+      return;
     }
+
+    const frameId = requestAnimationFrame(() => {
+      setDomain(nextDomain);
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
   }, [actingRoleSummaries.length, crewRoleSummaries.length, domain]);
 
   useEffect(() => {
-    setRoleFilter("all");
+    const frameId = requestAnimationFrame(() => {
+      setRoleFilter("all");
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
   }, [domain]);
 
   const activeFilterOptions = domain === "acting" ? roleFilterOptions.acting : roleFilterOptions.crew;
@@ -515,7 +534,7 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
           
           {/* Tabs + Context Info */}
           <div className="flex items-center justify-between gap-4">
-            <TabsList className="bg-muted/50 border border-border/40">
+            <TabsList>
               <TabsTrigger value="acting">Acting</TabsTrigger>
               <TabsTrigger value="crew">Crew</TabsTrigger>
             </TabsList>

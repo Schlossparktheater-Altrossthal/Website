@@ -499,7 +499,7 @@ export function RehearsalCalendar({
         className="space-y-6"
       >
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-end">
-          <TabsList className="self-start">
+          <TabsList>
             <TabsTrigger value="calendar">Kalenderansicht</TabsTrigger>
             <TabsTrigger value="weekend">Wochenend-Fokus</TabsTrigger>
           </TabsList>
