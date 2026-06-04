@@ -4,8 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import { addDays, format } from "date-fns";
 import { de } from "date-fns/locale/de";
 
-import { CalendarCheck2, UsersRound } from "lucide-react";
-
+import { CalendarCheckIcon, UsersRoundIcon } from "@/components/ui/action-icons";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BlockCalendar, type BlockedDay } from "./block-calendar";
 import { BlockOverview, type OverviewMember } from "./block-overview";
@@ -49,19 +48,19 @@ export function BlocklistTabs({
   return (
     <Tabs defaultValue="personal" className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <TabsList className="order-2 flex w-full gap-1.5 bg-muted/50 p-1 sm:order-1 sm:w-auto">
+        <TabsList className="order-2 flex w-full gap-1.5 sm:order-1 sm:w-auto">
           <TabsTrigger
             value="personal"
             className="flex-1 gap-2 px-3 py-1.5 text-sm sm:flex-none"
           >
-            <CalendarCheck2 className="h-4 w-4" aria-hidden />
+            <CalendarCheckIcon className="h-4 w-4" aria-hidden />
             <span>Meine Sperrtermine</span>
           </TabsTrigger>
           <TabsTrigger
             value="overview"
             className="flex-1 gap-2 px-3 py-1.5 text-sm sm:flex-none"
           >
-            <UsersRound className="h-4 w-4" aria-hidden />
+            <UsersRoundIcon className="h-4 w-4" aria-hidden />
             <span>Übersicht</span>
           </TabsTrigger>
         </TabsList>

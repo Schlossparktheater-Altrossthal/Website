@@ -2,11 +2,14 @@
 
 import {
   createContext,
+  isValidElement,
   useCallback,
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ButtonHTMLAttributes,
 } from "react";
@@ -19,6 +22,11 @@ type TabsContextValue = {
   idBase: string;
 };
 
+type TabsPillState = {
+  left: number;
+  width: number;
+};
+
 const TabsContext = createContext<TabsContextValue | null>(null);
 
 function useTabsContext(component: string): TabsContextValue {
@@ -27,6 +35,24 @@ function useTabsContext(component: string): TabsContextValue {
     throw new Error(`${component} muss innerhalb von <Tabs> verwendet werden.`);
   }
   return context;
+}
+
+function hasAnimatedChild(children: React.ReactNode): boolean {
+  if (!isValidElement<{
+    animate?: unknown;
+    exit?: unknown;
+    initial?: unknown;
+    transition?: unknown;
+  }>(children)) {
+    return false;
+  }
+
+  return (
+    children.props.initial !== undefined &&
+    children.props.animate !== undefined &&
+    children.props.exit !== undefined &&
+    children.props.transition !== undefined
+  );
 }
 
 interface TabsProps {
@@ -50,9 +76,17 @@ export function Tabs({
   const value = controlledValue ?? uncontrolledValue;
 
   useEffect(() => {
-    if (controlledValue === undefined && defaultValue !== undefined) {
-      setUncontrolledValue(defaultValue);
+    if (controlledValue !== undefined || defaultValue === undefined) {
+      return;
     }
+
+    const frameId = requestAnimationFrame(() => {
+      setUncontrolledValue(defaultValue);
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
   }, [controlledValue, defaultValue]);
 
   const setValue = useCallback(
@@ -85,15 +119,41 @@ interface TabsListProps {
 }
 
 export function TabsList({ className, children }: TabsListProps) {
+  const { value: activeValue } = useTabsContext("TabsList");
+  const listRef = useRef<HTMLDivElement>(null);
+  const [pillState, setPillState] = useState<TabsPillState>({ left: 0, width: 0 });
+
+  useLayoutEffect(() => {
+    const activeTrigger = listRef.current?.querySelector<HTMLButtonElement>(
+      '[aria-selected="true"]',
+    );
+
+    if (!activeTrigger) {
+      setPillState({ left: 0, width: 0 });
+      return;
+    }
+
+    setPillState({
+      left: activeTrigger.offsetLeft,
+      width: activeTrigger.offsetWidth,
+    });
+  }, [activeValue]);
+
   return (
     <div
+      ref={listRef}
       role="tablist"
       aria-orientation="horizontal"
       className={cn(
-        "inline-flex flex-wrap items-center gap-2 rounded-full bg-muted/40 p-1",
+        "relative inline-flex flex-wrap items-center gap-2 overflow-hidden rounded-full",
         className,
       )}
     >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-1 top-1 z-0 rounded-full border border-primary/60 bg-primary/15 transition-all duration-300 ease-in-out"
+        style={{ left: pillState.left, width: pillState.width }}
+      />
       {children}
     </div>
   );
@@ -123,9 +183,9 @@ export function TabsTrigger({
       aria-controls={panelId}
       tabIndex={isActive ? 0 : -1}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition",
+        "relative z-10 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition",
         isActive
-          ? "border-primary/60 bg-primary/15 text-primary shadow-sm"
+          ? "border-transparent text-primary shadow-sm"
           : "border-transparent bg-transparent text-muted-foreground hover:border-primary/20 hover:bg-primary/10 hover:text-foreground",
         className,
       )}
@@ -150,9 +210,21 @@ interface TabsContentProps {
 
 export function TabsContent({ value, className, children }: TabsContentProps) {
   const { value: activeValue, idBase } = useTabsContext("TabsContent");
+  const [fadeIn, setFadeIn] = useState(false);
   const isActive = activeValue === value;
+  const shouldFade = !hasAnimatedChild(children);
   const panelId = `${idBase}-content-${value}`;
   const triggerId = `${idBase}-trigger-${value}`;
+
+  useEffect(() => {
+    const frameId = requestAnimationFrame(() => {
+      setFadeIn(isActive);
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [isActive]);
 
   return (
     <div
@@ -160,7 +232,13 @@ export function TabsContent({ value, className, children }: TabsContentProps) {
       id={panelId}
       aria-labelledby={triggerId}
       hidden={!isActive}
-      className={cn("focus-visible:outline-none", !isActive && "hidden", className)}
+      className={cn(
+        "focus-visible:outline-none",
+        !isActive && "hidden",
+        isActive && shouldFade && "transition-opacity duration-200",
+        isActive && shouldFade && (fadeIn ? "opacity-100" : "opacity-0"),
+        className,
+      )}
     >
       {isActive ? children : null}
     </div>
