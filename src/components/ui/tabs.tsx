@@ -260,7 +260,7 @@ export function TabsList({ className, children }: TabsListProps) {
         role="tablist"
         aria-orientation="horizontal"
         className={cn(
-          "relative flex-wrap items-center gap-2 overflow-hidden rounded-full",
+          "relative flex-wrap items-center gap-2 overflow-hidden rounded-full bg-muted/40 p-1",
           className,
           !hasCustomVisibility && "hidden sm:inline-flex",
         )}
@@ -300,7 +300,7 @@ export function TabsTrigger({
       aria-controls={panelId}
       tabIndex={isActive ? 0 : -1}
       className={cn(
-        "relative z-10 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition",
+        "relative z-10 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-base font-medium transition",
         isActive
           ? "border-transparent text-primary shadow-sm"
           : "border-transparent bg-transparent text-muted-foreground hover:border-primary/20 hover:bg-primary/10 hover:text-foreground",
