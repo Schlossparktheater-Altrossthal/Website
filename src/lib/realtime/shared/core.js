@@ -208,25 +208,35 @@ export function createRealtimeCore(options = {}) {
     emitter?.emit?.('user_presence', payload);
   }
 
-  function emitRehearsalUsersList({ rehearsalId, socket }) {
+  async function emitRehearsalUsersList({ rehearsalId, socket }) {
     if (!rehearsalId || !socket) return;
     const roomName = `rehearsal_${rehearsalId}`;
-    const room = io.sockets.adapter.rooms.get(roomName);
 
-    const users = room
-      ? Array.from(room).flatMap((socketId) => {
-          const participant = io.sockets.sockets.get(socketId);
-          if (!participant?.data?.userId) {
-            return [];
-          }
-          return [
-            {
-              id: participant.data.userId,
-              name: participant.data.userName,
-            },
-          ];
-        })
-      : [];
+    let participants;
+    if (typeof io.in === 'function' && typeof io.in(roomName).fetchSockets === 'function') {
+      // fetchSockets() works across instances when a Redis (or other
+      // distributed) adapter is configured, unlike the local adapter rooms map.
+      participants = await io.in(roomName).fetchSockets();
+    } else {
+      const room = io.sockets.adapter.rooms.get(roomName);
+      participants = room
+        ? Array.from(room)
+            .map((socketId) => io.sockets.sockets.get(socketId))
+            .filter(Boolean)
+        : [];
+    }
+
+    const users = participants.flatMap((participant) => {
+      if (!participant?.data?.userId) {
+        return [];
+      }
+      return [
+        {
+          id: participant.data.userId,
+          name: participant.data.userName,
+        },
+      ];
+    });
 
     socket.emit('rehearsal_users_list', {
       type: 'rehearsal_users_list',

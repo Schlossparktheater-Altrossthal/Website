@@ -19,7 +19,7 @@ export function createEventHandlers({ io, logger, toISO }) {
   }
 
   function emitRehearsalUsersList(rehearsalId, socket) {
-    core.emitRehearsalUsersList({ rehearsalId, socket });
+    core.emitRehearsalUsersList({ rehearsalId, socket }).catch((error) => logWarn('[Realtime] Failed to emit rehearsal users list', error));
   }
 
   function registerUser(socket) {

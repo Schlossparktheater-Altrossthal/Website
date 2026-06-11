@@ -60,7 +60,7 @@ export interface RealtimeCore {
   emitUserJoined(details: { userId: string; userName?: string; targets?: EmitTargets }): void;
   emitUserLeft(details: { userId: string; userName?: string; targets?: EmitTargets }): void;
   emitRehearsalPresence(details: { room: RoomType; socket: SocketInstance; action: 'join' | 'leave' }): void;
-  emitRehearsalUsersList(details: { rehearsalId: string; socket: SocketInstance }): void;
+  emitRehearsalUsersList(details: { rehearsalId: string; socket: SocketInstance }): Promise<void>;
   broadcast(event: RealtimeEvent, rooms: RoomType | RoomType[], excludeSocketId?: string): boolean;
   broadcastAttendanceUpdate(payload: {
     rehearsalId: string;

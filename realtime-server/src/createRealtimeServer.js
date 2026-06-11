@@ -1,5 +1,7 @@
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { Redis } from 'ioredis';
 import { URL } from 'url';
 import { createAnalyticsManager } from './analytics.js';
 import { createRealtimeAnalyticsRecorder } from './analytics-events.js';
@@ -148,6 +150,24 @@ export function createRealtimeServer(options = {}) {
     toISO,
     getOnlineStatsSnapshot,
   });
+
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    const pubClient = new Redis(redisUrl, { lazyConnect: true });
+    const subClient = pubClient.duplicate();
+    pubClient.on('error', (error) => logError('[Realtime] Redis pub client error', error));
+    subClient.on('error', (error) => logError('[Realtime] Redis sub client error', error));
+    Promise.all([pubClient.connect(), subClient.connect()])
+      .then(() => {
+        io.adapter(createAdapter(pubClient, subClient));
+        logInfo('[Realtime] Using Redis adapter for cross-instance broadcasts');
+      })
+      .catch((error) => {
+        logError('[Realtime] Failed to connect to Redis, falling back to single-instance mode', error);
+      });
+  } else {
+    logWarn('[Realtime] REDIS_URL is not configured. Realtime events will not be shared across replicas.');
+  }
 
   const analyticsRecorder =
     providedAnalyticsRecorder ?? createRealtimeAnalyticsRecorder({ logger });
