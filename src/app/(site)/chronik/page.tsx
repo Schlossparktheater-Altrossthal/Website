@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -83,24 +83,9 @@ export default async function ChroniclePage() {
   );
 }
 
-async function isPublicPageEnabled(key: "about" | "mystery" | "schoolCat" | "timeline") {
-  try {
-    const response = await fetch("https://sommertheater-altrossthal.de/api/website/settings", { cache: "no-store" });
-    if (!response.ok) {
-      return true;
-    }
-    const payload = (await response.json()) as {
-      settings?: { pageVisibility?: { public?: Partial<Record<"about" | "mystery" | "schoolCat" | "timeline", boolean>> } };
-    };
-
-    return payload.settings?.pageVisibility?.public?.[key] ?? true;
-  } catch {
-    return true;
-  }
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const enabled = await isPublicPageEnabled("timeline");
+  const visibility = await getPublicPageVisibility();
+  const enabled = visibility.timeline ?? true;
   return {
     ...baseMetadata,
     alternates: {

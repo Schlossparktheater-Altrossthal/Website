@@ -1,3 +1,5 @@
+export const revalidate = 60;
+
 import { Hero } from "@/components/hero";
 import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
