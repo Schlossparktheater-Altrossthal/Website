@@ -36,7 +36,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
@@ -95,7 +95,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Checkout k8s-infrastructure
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: Schlossparktheater-Altrossthal/k8s-infrastructure
           token: ${{ secrets.K8S_INFRA_TOKEN }}
@@ -121,7 +121,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
@@ -181,7 +181,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Checkout k8s-infrastructure
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: Schlossparktheater-Altrossthal/k8s-infrastructure
           token: ${{ secrets.K8S_INFRA_TOKEN }}
