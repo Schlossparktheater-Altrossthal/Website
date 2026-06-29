@@ -78,7 +78,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  webpack: (config) => {
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        ignored: /node_modules/,
+        poll: false,
+      };
+    }
+
     config.resolve ??= {};
     config.resolve.alias ??= {};
     Object.assign(config.resolve.alias, {
