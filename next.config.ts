@@ -1,10 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Silences the multi-lockfile workspace root warning by pinning the root to this app
-  turbopack: {
-    root: __dirname,
-  },
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 604800,
