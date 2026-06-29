@@ -74,7 +74,7 @@
     "next": "16.2.6",
     "next-auth": "^4.24.11",
     "node-ical": "^0.26.1",
-    "nodemailer": "^8.0.5",
+    "nodemailer": "^9.0.1",
     "pdfkit": "^0.18.0",
     "pg": "^8.21.0",
     "postcss": "^8.5.6",
