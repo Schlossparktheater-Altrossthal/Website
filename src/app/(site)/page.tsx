@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Heading, Text } from "@/components/ui/typography";
 import { getHeroImages, pickHeroForNow } from "@/lib/hero-images";
 import { ShowCountdownSection } from "./_components/premiere-countdown-section";
+import { HomepageLinkCards } from "./_components/homepage-link-cards";
 import { ShowFlyerSection } from "@/components/site/production-flyer-section";
 import { readProductionFlyerSettings } from "@/lib/production-flyer-settings";
 import {
@@ -33,7 +34,6 @@ export default async function PublicHomePage() {
   let productionFlyer = null;
   if (hasDatabase) { try { productionFlyer = await readProductionFlyerSettings(); } catch {} }
   const faqContent = await readFaqContent();
-  const countdownInitialNow = Date.now();
   const effectiveCountdownTargetIso = resolvedCountdown.effectiveCountdownTarget.toISOString();
   const initialCountdownTargetIso = resolvedCountdown.countdownTarget
     ? resolvedCountdown.countdownTarget.toISOString()
@@ -61,7 +61,6 @@ export default async function PublicHomePage() {
                 updatedAt={updatedAtIso}
                 hasCustomCountdown={resolvedCountdown.hasCustomCountdown}
                 disabled={resolvedCountdown.disabled}
-                initialNow={countdownInitialNow}
                 scheduledDates={resolvedCountdown.termine.map((termin, index) => ({
                   date: termin.datum ?? "",
                   time: termin.uhrzeit ?? "",
@@ -72,6 +71,7 @@ export default async function PublicHomePage() {
             </div>
           </section>
           <ShowFlyerSection active={productionFlyer?.aktiv ?? false} title={productionFlyer?.titel ?? null} description={productionFlyer?.beschreibung ?? null} hasImage={Boolean(productionFlyer?.bildData && productionFlyer?.bildMimeType)} />
+          <HomepageLinkCards />
           <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--primary)_35%,transparent),_transparent_60%),radial-gradient(circle_at_bottom,_color-mix(in_oklab,var(--info)_25%,transparent),_transparent_55%)]"

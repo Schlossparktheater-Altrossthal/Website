@@ -25,7 +25,6 @@ type ShowCountdownSectionProps = {
   updatedAt: string | null;
   hasCustomCountdown: boolean;
   disabled: boolean;
-  initialNow: number;
   scheduledDates: ShowDateInput[];
   postShowText: string;
 };
@@ -66,16 +65,9 @@ export function ShowCountdownSection(props: ShowCountdownSectionProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [now, setNow] = useState(() => props.initialNow);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    setSettings({ ...props, countdownTarget: props.effectiveCountdownTarget });
-    setFormDisabled(props.disabled);
-  }, [props]);
-
-  useEffect(() => {
-    setNow(Date.now());
-
     const interval = window.setInterval(() => {
       setNow(Date.now());
     }, 30_000);
@@ -106,10 +98,12 @@ export function ShowCountdownSection(props: ShowCountdownSectionProps) {
 
   return <div className="flex w-full flex-col items-center gap-5 text-center">
     <div className="flex flex-col items-center gap-5">
-      <Heading level="h2" align="center" className="text-[clamp(2.2rem,7vw,4.1rem)] font-extrabold">
-        {!countdownActive ? "Premieren-Countdown" : nextTermin ? (settings.hasCustomCountdown ? "Premiere in" : "Nächste Vorstellung in") : "Vorstellungen beendet"}
-      </Heading>
-      {countdownActive ? (allDone ? (settings.postShowText ? <Text variant="lead">{settings.postShowText}</Text> : null) : <Countdown targetDate={localInputToIso(`${nextTermin?.date}T${nextTermin?.time}`) ?? settings.effectiveCountdownTarget} initialNow={props.initialNow} />) : null}
+      {countdownActive ? (
+        <Heading level="h2" align="center" className="text-[clamp(2.2rem,7vw,4.1rem)] font-extrabold">
+          {nextTermin ? (settings.hasCustomCountdown ? "Premiere in" : "Nächste Vorstellung in") : "Vorstellungen beendet"}
+        </Heading>
+      ) : null}
+      {countdownActive ? (allDone ? (settings.postShowText ? <Text variant="lead">{settings.postShowText}</Text> : null) : <Countdown targetDate={localInputToIso(`${nextTermin?.date}T${nextTermin?.time}`) ?? settings.effectiveCountdownTarget} />) : null}
       {canEdit ? <Button size="sm" variant={editorOpen ? "secondary" : "outline"} onClick={() => (editorOpen ? closeFeature() : openFeature("FEATURE.HOME.COUNTDOWN"))}>{editorOpen ? "Einstellungen schließen" : "Countdown bearbeiten"}</Button> : null}
     </div>
 

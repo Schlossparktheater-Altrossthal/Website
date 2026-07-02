@@ -9,7 +9,7 @@ type CountdownVariant = "default" | "highlight";
 
 type CountdownProps = {
   targetDate: string;
-  initialNow: number;
+  initialNow?: number;
   className?: string;
   variant?: CountdownVariant;
 };
@@ -79,23 +79,22 @@ export function Countdown({
     [targetDate],
   );
   const [state, setState] = useState<CountdownState>(() => {
-    if (Number.isNaN(targetTimestamp) || !Number.isFinite(initialNow)) {
+    const initialTimestamp =
+      typeof initialNow === "number" && Number.isFinite(initialNow)
+        ? initialNow
+        : Date.now();
+
+    if (Number.isNaN(targetTimestamp)) {
       return EMPTY_COUNTDOWN_STATE;
     }
 
-    return getTimeRemaining(targetTimestamp, initialNow);
+    return getTimeRemaining(targetTimestamp, initialTimestamp);
   });
 
   useEffect(() => {
     if (Number.isNaN(targetTimestamp)) {
       return;
     }
-
-    const update = () => {
-      setState(getTimeRemaining(targetTimestamp, Date.now()));
-    };
-
-    update();
 
     const interval = window.setInterval(() => {
       setState((previous) => {
@@ -110,12 +109,6 @@ export function Countdown({
     return () => window.clearInterval(interval);
   }, [targetTimestamp]);
 
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    setLoaded(true);
-  }, []);
-
   if (Number.isNaN(targetTimestamp)) {
     return <Text tone="destructive">Ungültiges Datum</Text>;
   }
@@ -129,7 +122,7 @@ export function Countdown({
 
   const containerClassName = cn(
     "mx-auto grid w-full grid-cols-2 gap-[clamp(0.4rem,1.5vw,1rem)] text-center transition-[opacity,transform] duration-700 ease-out will-change-[opacity,transform] md:grid-cols-4",
-    loaded ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
+    "translate-y-0 opacity-100",
     className,
   );
   const cellClassName =

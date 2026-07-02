@@ -58,6 +58,8 @@ import {
   X,
   CalendarDays,
   GripVertical,
+  Cat,
+  BookOpenText,
 } from "lucide-react";
 import type * as React from "react";
 
@@ -258,6 +260,14 @@ export function CalendarCheckIcon({ className = "w-4 h-4", ...props }: { classNa
 
 export function CalendarCogIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
   return <CalendarCog className={className} aria-hidden {...props} />;
+}
+
+export function CatIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <Cat className={className} aria-hidden {...props} />;
+}
+
+export function BookOpenTextIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {
+  return <BookOpenText className={className} aria-hidden {...props} />;
 }
 
 export function UsersRoundIcon({ className = "w-4 h-4", ...props }: { className?: string } & React.SVGProps<SVGSVGElement>) {

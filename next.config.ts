@@ -26,6 +26,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.gravatar.com" },
     ],
   },
+  experimental: {
+    turbopackMemoryLimit: 4096,
+  },
   // Next.js 15+: serverComponentsExternalPackages moved to serverExternalPackages
   serverExternalPackages: [
     "bcryptjs",
