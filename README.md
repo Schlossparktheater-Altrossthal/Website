@@ -153,12 +153,10 @@ Both images execute `scripts/start-with-proxy.mjs`. The script first prepares
 Next.js via `scripts/start-combined-server.mjs`, attaches the Socket.IO server to
 an internal HTTP listener and then exposes it through a lightweight reverse
 proxy (default external port `3000`). During boot it configures
-`NEXT_PUBLIC_REALTIME_URL`, `NEXT_PUBLIC_REALTIME_PATH`,
-`NEXT_PUBLIC_REALTIME_INIT_PATH` and `REALTIME_SERVER_EVENT_PATH` automatically
-based on `REALTIME_BASE_PATH` (default `/realtime`). The Next.js runtime exposes
-the Socket.IO bridge on `/api/socket`; when the web client connects against the
-same origin it pings this handler once to ensure the Socket.IO instance is
-bootstrapped before starting the realtime handshake.
+`NEXT_PUBLIC_REALTIME_URL`, `NEXT_PUBLIC_REALTIME_PATH` and
+`REALTIME_SERVER_EVENT_PATH` automatically based on `REALTIME_BASE_PATH`
+(default `/realtime`). The client connects directly to the Socket.IO endpoint
+for the realtime handshake.
 
 ### Local development stack
 
@@ -199,9 +197,6 @@ Important environment variables:
   must use an absolute host instead of the relative `REALTIME_BASE_PATH`.
 - `REALTIME_AUTH_TOKEN` and `REALTIME_HANDSHAKE_SECRET` protect the realtime
   handshake and admin events.
-- `NEXT_PUBLIC_REALTIME_INIT_PATH` tells the client which API route should
-  warm up the embedded Socket.IO bridge (default `/api/socket`). Override it
-  when the bridge is exposed under a custom prefix.
 - `NEXT_PUBLIC_PWA_ENABLED` controls whether the client registers the PWA
   service worker and offline caches.
 - `SYNC_BATCH_LIMIT` caps how many queued mutations get flushed per background

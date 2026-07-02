@@ -49,9 +49,6 @@ async function main() {
   );
 
   process.env.NEXT_PUBLIC_REALTIME_PATH = socketPath;
-  if (!process.env.NEXT_PUBLIC_REALTIME_INIT_PATH) {
-    process.env.NEXT_PUBLIC_REALTIME_INIT_PATH = '/api/socket';
-  }
   process.env.REALTIME_SERVER_EVENT_PATH = eventPath;
 
   const internalOrigin = (process.env.REALTIME_INTERNAL_ORIGIN || `http://127.0.0.1:${port}`).replace(/\/$/, '');
