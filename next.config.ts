@@ -1,5 +1,12 @@
 import type { NextConfig } from "next";
 
+const WATCH_IGNORED_PATTERNS = [
+  /(^|[\\/])node_modules([\\/]|$)/,
+  /(^|[\\/])\.next([\\/]|$)/,
+  /(^|[\\/])\.git([\\/]|$)/,
+  /(^|[\\/])(dump|dumps|backup|backups|log|logs|tmp|temp)([\\/]|$)/,
+];
+
 const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
@@ -78,7 +85,7 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {
-        ignored: /node_modules/,
+        ignored: WATCH_IGNORED_PATTERNS,
         poll: false,
       };
     }
