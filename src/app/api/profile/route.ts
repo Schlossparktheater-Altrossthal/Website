@@ -91,7 +91,7 @@ async function processAvatarImage(
 ): Promise<{ buffer: Buffer; mime: string }> {
   const sharpModule = await getSharp();
   const sharpFactory = sharpModule.default;
-  const image = sharpFactory(buffer, { failOnError: false });
+  const image = sharpFactory(buffer);
   const metadata = await image.metadata();
 
   const sourceWidth = metadata.width ?? 0;
@@ -101,7 +101,7 @@ async function processAvatarImage(
     throw new Error("Ungültige Bildabmessungen");
   }
 
-  let pipeline = sharpFactory(buffer, { failOnError: false });
+  let pipeline = sharpFactory(buffer);
 
   if (crop) {
     const clamp = (value: number, max: number) => Math.min(max, Math.max(0, value));
