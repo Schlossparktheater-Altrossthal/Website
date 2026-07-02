@@ -15,6 +15,10 @@ function isDatabaseEnabled() {
   return Boolean(process.env.DATABASE_URL);
 }
 
+function isDevMode() {
+  return process.env.NODE_ENV === "development";
+}
+
 function determineMembership(roles: Role[] | undefined) {
   if (!roles || roles.length === 0) {
     return { isMember: false, membershipRole: null as string | null };
@@ -87,7 +91,7 @@ export async function recordSessionStart({
   startedAt?: Date;
   initialPath?: string | null;
 }) {
-  if (!isDatabaseEnabled()) {
+  if (!isDatabaseEnabled() || isDevMode()) {
     return;
   }
 
@@ -130,7 +134,7 @@ export async function recordSessionHeartbeat(
   identifier: SessionIdentifier,
   seenAt: Date = new Date(),
 ) {
-  if (!isDatabaseEnabled()) {
+  if (!isDatabaseEnabled() || isDevMode()) {
     return;
   }
 
@@ -156,7 +160,7 @@ export async function recordSessionPath(
   path: string | null | undefined,
   seenAt: Date = new Date(),
 ) {
-  if (!isDatabaseEnabled()) {
+  if (!isDatabaseEnabled() || isDevMode()) {
     return;
   }
 
@@ -204,7 +208,7 @@ export async function recordSessionEnd({
   analyticsSessionId: string | null | undefined;
   endedAt?: Date;
 }) {
-  if (!isDatabaseEnabled()) {
+  if (!isDatabaseEnabled() || isDevMode()) {
     return;
   }
 
@@ -249,7 +253,7 @@ export async function attachUserToSession({
   userId?: string | null;
   roles?: Role[] | null;
 }) {
-  if (!isDatabaseEnabled()) {
+  if (!isDatabaseEnabled() || isDevMode()) {
     return;
   }
 

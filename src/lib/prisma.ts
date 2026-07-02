@@ -20,7 +20,7 @@ function getPrismaClient(): PrismaClient {
     const adapter = new PrismaPg(globalForPrisma.pgPool);
     globalForPrisma.prisma = new PrismaClient({
       adapter,
-      log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+      log: ["error", "warn"],
     });
   }
 
