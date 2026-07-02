@@ -9,7 +9,6 @@ import { useFrontendEditing } from "@/components/frontend-editing/frontend-editi
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DateInput } from "@/components/ui/date-input";
-import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,6 +86,7 @@ export function ShowCountdownSection(props: ShowCountdownSectionProps) {
   const nextTermin = useMemo(() => getNextShowDate(settings.scheduledDates, now), [settings.scheduledDates, now]);
   const countdownActive = !settings.disabled;
   const allDone = countdownActive && !nextTermin;
+  if (!countdownActive && !canEdit) return null;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,7 +109,7 @@ export function ShowCountdownSection(props: ShowCountdownSectionProps) {
       <Heading level="h2" align="center" className="text-[clamp(2.2rem,7vw,4.1rem)] font-extrabold">
         {!countdownActive ? "Premieren-Countdown" : nextTermin ? (settings.hasCustomCountdown ? "Premiere in" : "Nächste Vorstellung in") : "Vorstellungen beendet"}
       </Heading>
-      {countdownActive ? (allDone ? (settings.postShowText ? <Text variant="lead">{settings.postShowText}</Text> : null) : <Countdown targetDate={localInputToIso(`${nextTermin?.date}T${nextTermin?.time}`) ?? settings.effectiveCountdownTarget} initialNow={props.initialNow} />) : <Text variant="lead" tone="muted" className="font-semibold">Der Countdown ist aktuell deaktiviert.</Text>}
+      {countdownActive ? (allDone ? (settings.postShowText ? <Text variant="lead">{settings.postShowText}</Text> : null) : <Countdown targetDate={localInputToIso(`${nextTermin?.date}T${nextTermin?.time}`) ?? settings.effectiveCountdownTarget} initialNow={props.initialNow} />) : null}
       {canEdit ? <Button size="sm" variant={editorOpen ? "secondary" : "outline"} onClick={() => (editorOpen ? closeFeature() : openFeature("FEATURE.HOME.COUNTDOWN"))}>{editorOpen ? "Einstellungen schließen" : "Countdown bearbeiten"}</Button> : null}
     </div>
 
