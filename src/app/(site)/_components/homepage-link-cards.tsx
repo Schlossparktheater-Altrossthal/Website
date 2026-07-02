@@ -40,19 +40,13 @@ export function HomepageLinkCards() {
         <Heading id="home-links-heading" level="h2" align="center" className="text-[clamp(1.8rem,4vw,2.6rem)] font-bold">
           Mehr entdecken
         </Heading>
-        <Text tone="muted" className="mt-3">
-          Drei Seiten, die den Überblick über das Sommertheater erweitern.
-        </Text>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {LINK_CARDS.map(({ href, title, description, Icon }) => (
-          <Card key={href} className="group h-full border border-border/60 bg-card/90 p-0 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
-            <Link href={href} className="flex h-full flex-col gap-4 p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted text-foreground">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <ArrowRightIcon className="mt-1 h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" />
+          <Card key={href} className="group flex h-full flex-col items-center border border-primary/60 bg-card/70 p-4 text-center shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <Link href={href} className="flex h-full w-full flex-col items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-primary/60 bg-muted text-foreground">
+                <Icon className="h-5 w-5" />
               </div>
               <div className="space-y-2">
                 <Heading level="h3" className="text-xl font-semibold">
@@ -62,6 +56,7 @@ export function HomepageLinkCards() {
                   {description}
                 </Text>
               </div>
+              <ArrowRightIcon className="mt-auto h-4 w-4 text-muted-foreground transition group-hover:translate-y-0.5 group-hover:text-foreground" />
             </Link>
           </Card>
         ))}

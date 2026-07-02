@@ -80,6 +80,8 @@ export function ShowFlyerSection({
     window.location.reload();
   }
 
+  if (!active && !canEdit) return null;
+
   return (
     <section className="w-full py-[clamp(2rem,6vw,5rem)] text-center">
       {active ? (
