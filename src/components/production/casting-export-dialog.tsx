@@ -1,7 +1,8 @@
 "use client";
 
+import { FileDownIcon } from "@/components/ui/action-icons";
+
 import { useMemo, useState, useTransition } from "react";
-import { FileDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -156,7 +157,7 @@ export function CastingExportDialog({ showTitle, characters }: CastingExportDial
     <Dialog>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
-          <FileDown className="mr-2 h-4 w-4" aria-hidden />
+          <FileDownIcon className="mr-2 h-4 w-4" aria-hidden />
           Export
         </Button>
       </DialogTrigger>
@@ -256,7 +257,7 @@ export function CastingExportDialog({ showTitle, characters }: CastingExportDial
             </Button>
           </DialogClose>
           <Button type="button" onClick={handleExport} disabled={isPending}>
-            <FileDown className="h-4 w-4" aria-hidden />
+            <FileDownIcon className="h-4 w-4" aria-hidden />
             {isPending ? "Exportiert…" : "PDF exportieren"}
           </Button>
         </DialogFooter>

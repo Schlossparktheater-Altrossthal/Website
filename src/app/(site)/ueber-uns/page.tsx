@@ -1,25 +1,8 @@
-export const revalidate = 60;
+
+import { AudioLinesIcon, CalendarHeartIcon, ClipboardListIcon, DramaIcon, HeartHandshakeIcon, IconComponent, MegaphoneIcon, Music3Icon, PackageIcon, ShirtIcon, SparklesIcon, TreesIcon, UsersIcon, UtensilsCrossedIcon, WandSparklesIcon, ZapIcon } from "@/components/ui/action-icons";export const revalidate = 60;
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
-import {
-  AudioLines,
-  CalendarHeart,
-  ClipboardList,
-  Drama,
-  HeartHandshake,
-  Megaphone,
-  Music3,
-  Package,
-  Shirt,
-  Sparkles,
-  Trees,
-  Users,
-  UtensilsCrossed,
-  WandSparkles,
-  Zap,
-} from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CarouselHint } from "@/app/(site)/ueber-uns/carousel-hint";
@@ -35,22 +18,22 @@ import {
   readUeberUnsValues,
 } from "@/lib/website-content";
 
-const ICON_MAP: Record<string, LucideIcon> = {
-  AudioLines,
-  CalendarHeart,
-  ClipboardList,
-  Drama,
-  HeartHandshake,
-  Megaphone,
-  Music3,
-  Package,
-  Shirt,
-  Sparkles,
-  Trees,
-  Users,
-  UtensilsCrossed,
-  WandSparkles,
-  Zap,
+const ICON_MAP: Record<string, IconComponent> = {
+  AudioLinesIcon,
+  CalendarHeartIcon,
+  ClipboardListIcon,
+  DramaIcon,
+  HeartHandshakeIcon,
+  MegaphoneIcon,
+  Music3Icon,
+  PackageIcon,
+  ShirtIcon,
+  SparklesIcon,
+  TreesIcon,
+  UsersIcon,
+  UtensilsCrossedIcon,
+  WandSparklesIcon,
+  ZapIcon,
 };
 
 const baseMetadata: Metadata = {
@@ -217,7 +200,7 @@ export default async function PublicAboutPage() {
             >
               {Array.from({ length: CAROUSEL_GROUP_COUNT }).map((_, groupIndex) => (
                 <div key={groupIndex} className="flex gap-6" aria-hidden={groupIndex > 0}>
-                  {trades.items.map(({ icon: iconName, title, description }) => { const TradeIcon = ICON_MAP[iconName] ?? Drama; return (
+                  {trades.items.map(({ icon: iconName, title, description }) => { const TradeIcon = ICON_MAP[iconName] ?? DramaIcon; return (
                     <Card
                       key={`${title}-${groupIndex}`}
                       role={groupIndex === 0 ? "listitem" : "presentation"}
@@ -260,7 +243,7 @@ export default async function PublicAboutPage() {
                 Berufsschulzentrums fließen direkt in Bühnenwelten ein.
               </Text>
               <div className="space-y-5">
-                {signature.items.map(({ icon: iconName, title, description }) => { const SignatureIcon = ICON_MAP[iconName] ?? Drama; return (
+                {signature.items.map(({ icon: iconName, title, description }) => { const SignatureIcon = ICON_MAP[iconName] ?? DramaIcon; return (
                   <div
                     key={title}
                     className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
@@ -312,7 +295,7 @@ export default async function PublicAboutPage() {
             </Text>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {values.items.map(({ icon: iconName, title, description }) => { const ValueIcon = ICON_MAP[iconName] ?? Drama; return (
+            {values.items.map(({ icon: iconName, title, description }) => { const ValueIcon = ICON_MAP[iconName] ?? DramaIcon; return (
               <Card key={title} className="relative overflow-hidden bg-card/70">
                 <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
                 <CardHeader>

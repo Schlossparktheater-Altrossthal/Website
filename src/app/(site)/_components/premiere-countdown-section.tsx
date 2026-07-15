@@ -1,8 +1,9 @@
 "use client";
 
+import { PlusIcon, Trash2Icon } from "@/components/ui/action-icons";
+
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Plus, Trash2 } from "lucide-react";
 
 import { Countdown } from "@/components/countdown";
 import { useFrontendEditing } from "@/components/frontend-editing/frontend-editing-provider";
@@ -136,7 +137,7 @@ export function ShowCountdownSection(props: ShowCountdownSectionProps) {
                       }))
                     }
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2Icon className="h-4 w-4" />
                   </Button>
                 </div>
                 <div className="min-w-0">
@@ -162,7 +163,7 @@ export function ShowCountdownSection(props: ShowCountdownSectionProps) {
                 }))
               }
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <PlusIcon className="mr-2 h-4 w-4" />
               Vorstellung hinzufügen
             </Button>
           </div>

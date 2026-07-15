@@ -1,9 +1,10 @@
 "use client";
 
+import { AlertCircleIcon, CheckCircle2Icon, Loader2Icon, UsersRoundIcon } from "@/components/ui/action-icons";
+
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { AlertCircle, CheckCircle2, Loader2, UsersRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -162,7 +163,7 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                       </p>
                     </div>
                     <Badge variant="outline" className="gap-1 text-xs uppercase tracking-[0.14em]">
-                      <UsersRound className="h-3.5 w-3.5" />
+                      <UsersRoundIcon className="h-3.5 w-3.5" />
                       {role.domain === "acting" ? "Acting" : "Crew"}
                     </Badge>
                   </div>
@@ -190,7 +191,7 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                               </span>
                               {candidate ? (
                                 <Badge variant="success" className="gap-1 text-xs">
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  <CheckCircle2Icon className="h-3.5 w-3.5" />
                                   {displayScore !== null ? `Score ${displayScore.toFixed(2)}` : "Score –"}
                                   {confidence !== null ? ` · Konfidenz ${confidence}%` : ""}
                                 </Badge>
@@ -343,7 +344,7 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
             >
               {isRecalculating ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Neu berechnen …
+                  <Loader2Icon className="h-4 w-4 animate-spin" /> Neu berechnen …
                 </>
               ) : (
                 "Neu berechnen"
@@ -351,7 +352,7 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
             </Button>
             {errorMessage ? (
               <p className="flex items-center gap-2 text-xs text-destructive">
-                <AlertCircle className="h-3.5 w-3.5" /> {errorMessage}
+                <AlertCircleIcon className="h-3.5 w-3.5" /> {errorMessage}
               </p>
             ) : null}
           </CardContent>

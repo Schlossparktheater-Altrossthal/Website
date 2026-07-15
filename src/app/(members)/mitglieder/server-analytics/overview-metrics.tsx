@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
 import { tv } from "tailwind-variants";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IconComponent } from "@/components/ui/action-icons";
 
 const overviewMetricStyles = tv({
   slots: {
@@ -59,7 +59,7 @@ export type OverviewMetricDefinition = {
   label: string;
   value: string;
   description: string;
-  icon: LucideIcon;
+  icon: IconComponent;
   tone?: OverviewMetricTone;
   secondary?: string;
 };

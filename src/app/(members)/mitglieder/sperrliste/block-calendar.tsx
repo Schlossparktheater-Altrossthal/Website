@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowLeftRightIcon, CalendarDaysIcon, ChevronDownIcon, CircleXIcon, ClockIcon, StarIcon } from "@/components/ui/action-icons";
+
 import {
   type PointerEvent as ReactPointerEvent,
   useCallback,
@@ -12,14 +14,6 @@ import {
 import { addDays, format, parseISO, startOfMonth, isValid } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { toast } from "sonner";
-import {
-  ArrowLeftRight,
-  CalendarDays,
-  ChevronDown,
-  CircleX,
-  Clock,
-  Star,
-} from "lucide-react";
 
 import {
   MonthCalendar,
@@ -708,7 +702,7 @@ export function BlockCalendar({
           <>
             {day.isToday ? (
               <span className="pointer-events-none absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary shadow-sm ring-1 ring-primary/40 dark:bg-primary/25">
-                <CalendarDays className="h-3 w-3" aria-hidden />
+                <CalendarDaysIcon className="h-3 w-3" aria-hidden />
                 <span>Heute</span>
               </span>
             ) : null}
@@ -725,11 +719,11 @@ export function BlockCalendar({
                 )}
               >
                 {isPreferredEntry ? (
-                  <Star className="h-4 w-4" />
+                  <StarIcon className="h-4 w-4" />
                 ) : isLimitedEntry ? (
-                  <Clock className="h-4 w-4" />
+                  <ClockIcon className="h-4 w-4" />
                 ) : (
-                  <CircleX className="h-4 w-4" />
+                  <CircleXIcon className="h-4 w-4" />
                 )}
                 <span className="truncate" title={entry.reason ?? undefined}>
                   {entry.reason ?? (isPreferredEntry ? "Bevorzugt" : isLimitedEntry ? "Eingeschränkt" : "Gesperrt")}
@@ -1003,7 +997,7 @@ export function BlockCalendar({
       aria-pressed={showHolidays}
     >
       <span className="flex items-center gap-1.5">
-        <CalendarDays className="h-4 w-4" aria-hidden />
+        <CalendarDaysIcon className="h-4 w-4" aria-hidden />
         <span>{showHolidays ? "Ferien & Feiertage eingeblendet" : "Ferien & Feiertage anzeigen"}</span>
       </span>
     </Button>
@@ -1031,7 +1025,7 @@ export function BlockCalendar({
     ? (
         <div className="space-y-3 rounded-lg border border-primary200 bg-muted p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-primary500/40 dark:bg-muted0/10">
           <div className="flex items-center gap-2 text-primary800 dark:text-primary100">
-            <CalendarDays className="h-4 w-4" aria-hidden />
+            <CalendarDaysIcon className="h-4 w-4" aria-hidden />
             <span className="font-semibold">Ferien &amp; Feiertage in Sachsen</span>
           </div>
           <ul className="space-y-2 text-foreground/90 dark:text-primary100/90">
@@ -1097,10 +1091,10 @@ export function BlockCalendar({
         aria-controls={holidayPanelId}
       >
         <span className="flex items-center gap-1.5">
-          <CalendarDays className="h-4 w-4" aria-hidden />
+          <CalendarDaysIcon className="h-4 w-4" aria-hidden />
           <span>Ferien &amp; Feiertage</span>
         </span>
-        <ChevronDown
+        <ChevronDownIcon
           className={cn("h-4 w-4 transition-transform", holidayPanelOpen ? "rotate-180" : "rotate-0")}
           aria-hidden
         />
@@ -1141,7 +1135,7 @@ export function BlockCalendar({
 
   const mobileScrollHint = (
     <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary dark:border-primary/30 dark:bg-primary/10 sm:hidden">
-      <ArrowLeftRight className="h-4 w-4" aria-hidden />
+      <ArrowLeftRightIcon className="h-4 w-4" aria-hidden />
       <span>Wische seitlich, um weitere Tage zu sehen.</span>
     </div>
   );

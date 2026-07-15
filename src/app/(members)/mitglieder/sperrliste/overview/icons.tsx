@@ -1,17 +1,12 @@
-/**
- * Icon-Komponenten für Sperrlistenübersicht
- * Basierend auf lucide-react mit einheitlichen Größen
- */
-
 import {
-  AlertCircle,
-  CalendarDays,
-  Check,
-  Clock,
-  Star,
-  Umbrella,
-  XCircle,
-} from "lucide-react";
+  AlertCircleIcon,
+  CalendarDaysIcon,
+  CheckIcon as BaseCheckIcon,
+  ClockIcon as BaseClockIcon,
+  StarIcon as BaseStarIcon,
+  UmbrellaIcon as BaseUmbrellaIcon,
+  XCircleIcon as BaseXCircleIcon,
+} from "@/components/ui/action-icons";
 
 // Standard Icon Props
 type IconProps = {
@@ -22,47 +17,47 @@ type IconProps = {
  * Star Icon - Für bevorzugte Termine
  */
 export function StarIcon({ className = "h-4 w-4" }: IconProps) {
-  return <Star className={className} />;
+  return <BaseStarIcon className={className} />;
 }
 
 /**
  * Clock Icon - Für "Heute" und aktuelle Zeit-Indikatoren
  */
 export function ClockIcon({ className = "h-4 w-4" }: IconProps) {
-  return <Clock className={className} />;
+  return <BaseClockIcon className={className} />;
 }
 
 /**
  * Clock Alert Icon - Für eingeschränkte Verfügbarkeit
  */
 export function ClockAlertIcon({ className = "h-4 w-4" }: IconProps) {
-  return <AlertCircle className={className} />;
+  return <AlertCircleIcon className={className} />;
 }
 
 /**
  * XCircle Icon - Für gesperrte/blockierte Termine
  */
 export function XCircleIcon({ className = "h-4 w-4" }: IconProps) {
-  return <XCircle className={className} />;
+  return <BaseXCircleIcon className={className} />;
 }
 
 /**
  * Check Icon - Für freie Verfügbarkeit
  */
 export function CheckIcon({ className = "h-3.5 w-3.5" }: IconProps) {
-  return <Check className={className} />;
+  return <BaseCheckIcon className={className} />;
 }
 
 /**
  * Umbrella Icon - Für Ferien/Urlaub
  */
 export function UmbrellaIcon({ className = "h-4 w-4" }: IconProps) {
-  return <Umbrella className={className} />;
+  return <BaseUmbrellaIcon className={className} />;
 }
 
 /**
  * Calendar Star Icon - Für Feiertage
  */
 export function CalendarStarIcon({ className = "h-4 w-4" }: IconProps) {
-  return <CalendarDays className={className} />;
+  return <CalendarDaysIcon className={className} />;
 }

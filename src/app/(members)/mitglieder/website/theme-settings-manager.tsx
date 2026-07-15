@@ -1,7 +1,8 @@
 "use client";
 
+import { ChevronDownIcon, ChevronRightIcon, InfoIcon } from "@/components/ui/action-icons";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ChevronDown, ChevronRight, Info } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -1581,7 +1582,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
         <CardContent className="space-y-8">
           {themeEditingLocked ? (
             <div className="flex items-start gap-3 rounded-md border border-border/70 bg-muted/40 p-3 text-sm leading-6 text-muted-foreground">
-              <Info className="mt-0.5 h-4 w-4 text-muted-foreground" aria-hidden />
+              <InfoIcon className="mt-0.5 h-4 w-4 text-muted-foreground" aria-hidden />
               <div>
                 <p className="font-medium text-foreground">Standard-Design geschützt</p>
                 <p>{LOCKED_THEME_MESSAGE}</p>
@@ -1659,9 +1660,9 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                         >
                           <span>Erweitert</span>
                           {isAdvancedVisible ? (
-                            <ChevronDown className="h-4 w-4" aria-hidden />
+                            <ChevronDownIcon className="h-4 w-4" aria-hidden />
                           ) : (
-                            <ChevronRight className="h-4 w-4" aria-hidden />
+                            <ChevronRightIcon className="h-4 w-4" aria-hidden />
                           )}
                         </Button>
                         <div className="flex gap-2">
@@ -1843,12 +1844,12 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                 >
                   {showSemanticTokens ? (
                     <>
-                      <ChevronDown className="h-4 w-4" aria-hidden />
+                      <ChevronDownIcon className="h-4 w-4" aria-hidden />
                       <span>Erweiterten Modus verbergen</span>
                     </>
                   ) : (
                     <>
-                      <ChevronRight className="h-4 w-4" aria-hidden />
+                      <ChevronRightIcon className="h-4 w-4" aria-hidden />
                       <span>Erweiterten Modus anzeigen</span>
                     </>
                   )}
@@ -1862,7 +1863,7 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
                       >
-                        <Info className="h-4 w-4" aria-hidden />
+                        <InfoIcon className="h-4 w-4" aria-hidden />
                         <span className="sr-only">Hinweis zum erweiterten Modus</span>
                       </Button>
                     </TooltipTrigger>

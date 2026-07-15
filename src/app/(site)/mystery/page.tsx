@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Eye, Lock } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heading, Text } from "@/components/ui/typography";
@@ -19,6 +18,7 @@ import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 import { MysteryGuessBoard } from "./_components/mystery-guess-board";
 import { MysteryScoreboard } from "./_components/mystery-scoreboard";
 import { MysteryLaunchCountdownCard } from "./_components/mystery-launch-countdown-card";
+import { EyeIcon, LockIcon } from "@/components/ui/action-icons";
 
 const baseMetadata: Metadata = {
   title: "Das Geheimnis des Sommertheaters",
@@ -217,7 +217,7 @@ export default async function MysteryPage() {
                 )
               ) : (
                 <div className="space-y-2">
-                  <Lock className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
+                  <LockIcon className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
                   <Text tone="muted">Das 1. Rätsel kommt bald.</Text>
                   {firstRiddle?.releaseAt ? (
                     <Text variant="small" tone="muted">
@@ -252,7 +252,7 @@ export default async function MysteryPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      {isReleased ? <Eye className="h-4 w-4" aria-hidden /> : <Lock className="h-4 w-4" aria-hidden />}
+                      {isReleased ? <EyeIcon className="h-4 w-4" aria-hidden /> : <LockIcon className="h-4 w-4" aria-hidden />}
                       <Text variant="small" tone="muted">
                         {isReleased ? "Enthüllt" : "Geplant"} am {new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(clue.releaseAt)}
                       </Text>

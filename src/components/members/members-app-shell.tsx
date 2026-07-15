@@ -1,10 +1,11 @@
 "use client";
 
+import { ArrowLeftIcon } from "@/components/ui/action-icons";
+
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cva, type VariantProps } from "class-variance-authority";
-import { ArrowLeft } from "lucide-react";
 
 import {
   Sidebar,
@@ -285,7 +286,7 @@ function MembersTopbarContent({
       className="gap-1.5 whitespace-nowrap"
     >
       <Link href="/" aria-label="Zur Hauptseite">
-        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <ArrowLeftIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span>Zur Hauptseite</span>
       </Link>
     </Button>

@@ -10,12 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 
-import { X } from "lucide-react";
-
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
 import { updateOnboardingSettingsAction, updateProductionTimelineAction } from "../actions";
 import { SetActiveProductionForm, UpdateProductionDialog } from "../production-forms-client";
+import { XIcon } from "@/components/ui/action-icons";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
   if (show.title && show.title.trim()) return show.title;
@@ -231,7 +230,7 @@ export default async function ProduktionDetailPage({
                       className="text-muted-foreground hover:text-destructive"
                       aria-label="Link entfernen"
                     >
-                      <X className="h-4 w-4" />
+                      <XIcon className="h-4 w-4" />
                     </Button>
                   ) : null}
                 </div>

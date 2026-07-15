@@ -1,9 +1,10 @@
 "use client";
 
+import { EyeOffIcon, SparklesIcon, Trash2Icon, Undo2Icon, UserRoundIcon } from "@/components/ui/action-icons";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import type { Role } from "@prisma/client";
-import { EyeOff, Sparkles, Trash2, Undo2, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -318,7 +319,7 @@ export function CatMemorySection() {
                   aria-expanded={isFormOpen}
                   aria-controls="cat-memory-form"
                 >
-                  <Sparkles className="h-4 w-4" aria-hidden />
+                  <SparklesIcon className="h-4 w-4" aria-hidden />
                   {isFormOpen ? "Formular schließen" : "Begegnung eintragen"}
                 </Button>
               </div>
@@ -410,14 +411,14 @@ export function CatMemorySection() {
                         ? [
                             {
                               label: "Beitrag ausblenden",
-                              icon: <EyeOff className="h-4 w-4" aria-hidden />,
+                              icon: <EyeOffIcon className="h-4 w-4" aria-hidden />,
                               onClick: () => handleHideCatMemoryEntry(entry.id),
                             },
                             ...(isUserEntry
                               ? [
                                   {
                                     label: "Beitrag löschen (lokal)",
-                                    icon: <Trash2 className="h-4 w-4" aria-hidden />,
+                                    icon: <Trash2Icon className="h-4 w-4" aria-hidden />,
                                     onClick: () => handleDeleteCatMemoryEntry(entry.id),
                                     variant: "destructive" as const,
                                   },
@@ -433,9 +434,9 @@ export function CatMemorySection() {
                             aria-hidden
                           >
                             {isUserEntry ? (
-                              <UserRound className="h-4 w-4" aria-hidden />
+                              <UserRoundIcon className="h-4 w-4" aria-hidden />
                             ) : (
-                              <Sparkles className="h-4 w-4" aria-hidden />
+                              <SparklesIcon className="h-4 w-4" aria-hidden />
                             )}
                           </span>
 
@@ -543,7 +544,7 @@ export function CatMemorySection() {
                             className="self-start text-primary hover:text-primary focus-visible:ring-primary/30"
                             onClick={() => handleRestoreCatMemoryEntry(entry.id)}
                           >
-                            <Undo2 className="mr-2 h-4 w-4" aria-hidden />
+                            <Undo2Icon className="mr-2 h-4 w-4" aria-hidden />
                             Wiederherstellen
                           </Button>
                         </div>

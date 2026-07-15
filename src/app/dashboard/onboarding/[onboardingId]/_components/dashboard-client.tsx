@@ -1,11 +1,12 @@
 "use client";
 
+import { FilterIcon, SearchIcon } from "@/components/ui/action-icons";
+
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
-import { Filter, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -222,11 +223,11 @@ export function DashboardClient({
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="w-full space-y-2 lg:max-w-2xl">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Search className="h-4 w-4" aria-hidden />
+                  <SearchIcon className="h-4 w-4" aria-hidden />
                   Suche
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                   <Input
                     value={memberQuery}
                     onChange={(event) => setMemberQuery(event.target.value)}
@@ -240,7 +241,7 @@ export function DashboardClient({
 
               <div className="w-full space-y-2 lg:max-w-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Filter className="h-4 w-4" aria-hidden />
+                  <FilterIcon className="h-4 w-4" aria-hidden />
                   Fotoe.-Filter
                 </div>
                 <div className="flex flex-wrap gap-2">

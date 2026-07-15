@@ -1,7 +1,8 @@
 "use client";
 
+import { ChevronDownIcon, SettingsIcon } from "@/components/ui/action-icons";
+
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -173,7 +174,7 @@ export function SeitensteuerungManager() {
             <div key={page.key} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
               <span>{page.label}</span>
               <Dialog>
-                <DialogTrigger asChild><Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button></DialogTrigger>
+                <DialogTrigger asChild><Button variant="ghost" size="icon"><SettingsIcon className="h-4 w-4" /></Button></DialogTrigger>
                 <DialogContent>
                   <DialogHeader><DialogTitle>{page.label} konfigurieren</DialogTitle></DialogHeader>
                   <div className="space-y-4">
@@ -207,7 +208,7 @@ export function SeitensteuerungManager() {
                     onClick={() => setCategoryExpanded(group.id)}
                     aria-expanded={expanded}
                   >
-                    <ChevronDown
+                    <ChevronDownIcon
                       className={`mr-2 h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`}
                     />
                     <span className="text-lg font-semibold">{group.label}</span>
@@ -229,7 +230,7 @@ export function SeitensteuerungManager() {
                       <div key={page.key} className="flex items-center justify-between px-3 py-2">
                         <span>{page.label}</span>
                         <Dialog>
-                          <DialogTrigger asChild><Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button></DialogTrigger>
+                          <DialogTrigger asChild><Button variant="ghost" size="icon"><SettingsIcon className="h-4 w-4" /></Button></DialogTrigger>
                           <DialogContent>
                             <DialogHeader><DialogTitle>{page.label} konfigurieren</DialogTitle></DialogHeader>
                             <div className="space-y-4">

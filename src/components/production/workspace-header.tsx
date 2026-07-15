@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clapperboard } from "lucide-react";
 
 import { ProductionWorkspaceNav } from "./workspace-nav";
+import { ClapperboardIcon } from "@/components/ui/action-icons";
 
 type WorkspaceKey =
   | "overview"
@@ -133,7 +133,7 @@ export function ProductionWorkspaceHeader({
                   href="/mitglieder/produktionen"
                   title="Produktion auswählen"
                 >
-                  <Clapperboard aria-hidden className="h-4 w-4" />
+                  <ClapperboardIcon aria-hidden className="h-4 w-4" />
                   <span>Produktion auswählen</span>
                 </Link>
               </Button>

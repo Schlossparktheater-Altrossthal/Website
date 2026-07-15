@@ -1,8 +1,9 @@
 "use client";
 
+import { ChevronLeftIcon, ChevronRightIcon, ImagesIcon, Maximize2Icon } from "@/components/ui/action-icons";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Images, Maximize2 } from "lucide-react";
 
 import {
   Dialog,
@@ -131,7 +132,7 @@ export function CatGallery({
             />
             <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100" />
             <span className="pointer-events-none absolute bottom-4 left-1/2 flex min-w-[12rem] -translate-x-1/2 items-center justify-center gap-2 rounded-full bg-background/95 px-4 py-2 text-sm font-medium text-foreground shadow ring-1 ring-border transition-transform duration-200 group-hover:-translate-y-0.5 group-focus-visible:-translate-y-0.5">
-              <Images className="h-4 w-4" aria-hidden="true" />
+              <ImagesIcon className="h-4 w-4" aria-hidden="true" />
               Galerie ansehen
             </span>
           </Button>
@@ -175,7 +176,7 @@ export function CatGallery({
                     onClick={showPrevious}
                     aria-label="Vorheriges Bild anzeigen"
                   >
-                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
                   </Button>
                   <Button
                     type="button"
@@ -185,7 +186,7 @@ export function CatGallery({
                     onClick={showNext}
                     aria-label="Nächstes Bild anzeigen"
                   >
-                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
                   </Button>
                 </>
               ) : null}
@@ -204,7 +205,7 @@ export function CatGallery({
                 }}
                 aria-label="Bild vergrößert anzeigen"
               >
-                <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                <Maximize2Icon className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           ) : null}

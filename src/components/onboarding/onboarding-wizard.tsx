@@ -1,11 +1,12 @@
 "use client";
 
+import { CheckIcon, LockIcon, MessageCircleIcon, ShieldCheckIcon, SparklesIcon, TargetIcon } from "@/components/ui/action-icons";
+
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { AllergyLevel, type Role } from "@prisma/client";
-import { Sparkles, ShieldCheck, Lock, Target, MessageCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 
 import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
@@ -1560,7 +1561,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                          <Sparkles className="h-4 w-4" />
+                          <SparklesIcon className="h-4 w-4" />
                           Eigenes Gewerk ergänzen
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -1815,7 +1816,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
         <Card className="border border-primary/30 bg-gradient-to-br from-primary/5 via-background to-background">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <ShieldCheck className="h-5 w-5 text-primary" />
+              <ShieldCheckIcon className="h-5 w-5 text-primary" />
               Ernährung, Unverträglichkeiten &amp; Bedürfnisse
             </CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -1950,7 +1951,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
 
             <div className="space-y-4 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-5">
               <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                <Target className="h-4 w-4" />
+                <TargetIcon className="h-4 w-4" />
                 Neue Unverträglichkeit hinzufügen
               </div>
               <p className="text-xs text-muted-foreground">
@@ -2056,7 +2057,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
               <section className="space-y-3 rounded-3xl border border-emerald-400/70 bg-emerald-50/90 p-5 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-base font-semibold text-emerald-900">
-                    <MessageCircle className="h-4 w-4" />
+                    <MessageCircleIcon className="h-4 w-4" />
                     WhatsApp-Gruppe zum Einstieg
                   </div>
                   <Button
@@ -2081,7 +2082,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 </p>
                 {whatsappVisitTracked ? (
                   <p className="flex items-center gap-2 text-xs font-medium text-emerald-900/80">
-                    <Check className="h-4 w-4" />
+                    <CheckIcon className="h-4 w-4" />
                     Danke! Wir haben notiert, dass du die Gruppe geöffnet hast.
                   </p>
                 ) : null}
@@ -2293,7 +2294,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 <div className="space-y-2 rounded-xl border border-border/60 bg-background p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <ShieldCheck className="h-4 w-4 text-primary" />
+                      <ShieldCheckIcon className="h-4 w-4 text-primary" />
                       Fotoerlaubnis
                     </div>
                     <Badge
@@ -2307,7 +2308,7 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
                 </div>
                 <div className="space-y-2 rounded-xl border border-border/60 bg-background p-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Lock className="h-4 w-4 text-primary" />
+                    <LockIcon className="h-4 w-4 text-primary" />
                     Passwort gesetzt
                   </div>
                   <p className="text-xs text-muted-foreground">

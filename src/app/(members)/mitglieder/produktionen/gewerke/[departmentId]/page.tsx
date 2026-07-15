@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import type { CSSProperties } from "react";
-import type { LucideIcon } from "lucide-react";
-import { CalendarDays, CheckCircle2, Clock, ListTodo, Sparkles, Trash2, Users } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -40,6 +38,7 @@ import {
   deleteDepartmentTaskAction,
   updateDepartmentTaskAction,
 } from "../../actions";
+import { CalendarDaysIcon, CheckCircle2Icon, ClockIcon, IconComponent, ListTodoIcon, SparklesIcon, Trash2Icon, UsersIcon } from "@/components/ui/action-icons";
 
 const selectClassName =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -49,7 +48,7 @@ const subtleSurfaceClassName =
 
 type PageProps = { params: Promise<{ departmentId: string }> };
 
-type SummaryStat = { label: string; value: number; hint?: string; icon: LucideIcon };
+type SummaryStat = { label: string; value: number; hint?: string; icon: IconComponent };
 
 type MeetingSuggestion = ReturnType<typeof findMeetingSuggestions>[number];
 
@@ -173,9 +172,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
   const completedTasks = sortedTasks.filter((task) => task.status === "done");
 
   const summaryStats: SummaryStat[] = [
-    { label: "Aktive Aufgaben", value: activeTasks.length, hint: "Offen & in Arbeit", icon: ListTodo },
-    { label: "Teammitglieder", value: department.memberships.length, hint: "Eingetragene Personen", icon: Users },
-    { label: "Abgeschlossen", value: completedTasks.length, hint: "Erledigte Aufgaben", icon: CheckCircle2 },
+    { label: "Aktive Aufgaben", value: activeTasks.length, hint: "Offen & in Arbeit", icon: ListTodoIcon },
+    { label: "Teammitglieder", value: department.memberships.length, hint: "Eingetragene Personen", icon: UsersIcon },
+    { label: "Abgeschlossen", value: completedTasks.length, hint: "Erledigte Aufgaben", icon: CheckCircle2Icon },
   ];
 
   const accentStyle = {
@@ -200,7 +199,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
             <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
                 <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1">
-                  <Sparkles aria-hidden className="h-4 w-4" />
+                  <SparklesIcon aria-hidden className="h-4 w-4" />
                   <span className="tracking-[0.2em]">Mission Control</span>
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-muted-foreground">
@@ -213,11 +212,11 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                 <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{heroDescription}</p>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
-                    <CalendarDays aria-hidden className="h-4 w-4" />
+                    <CalendarDaysIcon aria-hidden className="h-4 w-4" />
                     Planungsfenster: {freezeUntilLabel} – {planningWindowLabel}
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
-                    <Users aria-hidden className="h-4 w-4" />
+                    <UsersIcon aria-hidden className="h-4 w-4" />
                     {department.memberships.length} Teammitglieder
                   </span>
                 </div>
@@ -239,7 +238,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                 className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
               >
                 <Link href="/mitglieder/sperrliste" title="Sperrliste öffnen">
-                  <CalendarDays aria-hidden className="h-4 w-4" />
+                  <CalendarDaysIcon aria-hidden className="h-4 w-4" />
                   <span>Sperrliste</span>
                 </Link>
               </Button>
@@ -329,7 +328,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                                   dueMeta.isOverdue ? "text-destructive" : "text-muted-foreground",
                                 )}
                               >
-                                <Clock aria-hidden className="h-3.5 w-3.5" />
+                                <ClockIcon aria-hidden className="h-3.5 w-3.5" />
                                 {dueMeta.relative}
                               </span>
                             ) : null}
@@ -354,7 +353,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                             size="icon"
                             aria-label={`Aufgabe ${task.title} entfernen`}
                           >
-                            <Trash2 aria-hidden className="h-4 w-4" />
+                            <Trash2Icon aria-hidden className="h-4 w-4" />
                           </Button>
                         </form>
                       </div>
@@ -559,7 +558,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                     className="gap-2 rounded-full border border-border/60 bg-background/80 px-3"
                   >
                     <Link href="/mitglieder/sperrliste">
-                      <CalendarDays aria-hidden className="h-4 w-4" />
+                      <CalendarDaysIcon aria-hidden className="h-4 w-4" />
                       <span>Sperrliste öffnen</span>
                     </Link>
                   </Button>
@@ -656,7 +655,7 @@ function renderSuggestions(suggestions: MeetingSuggestion[], memberCount: number
         >
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <CalendarDays aria-hidden className="h-5 w-5" />
+              <CalendarDaysIcon aria-hidden className="h-5 w-5" />
             </span>
             <div className="space-y-1">
               <p className="text-sm font-medium text-foreground">{slot.label}</p>

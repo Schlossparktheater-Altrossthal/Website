@@ -4,13 +4,12 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 import { getUserDisplayName } from "@/lib/names";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ClockIcon, TrashIcon } from "@/components/ui/action-icons";
+import { ClockIcon, MapPinIcon, TrashIcon } from "@/components/ui/action-icons";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 import { deleteDepartmentEventAction } from "./department-events-actions";
@@ -166,7 +165,7 @@ export function DepartmentEventPlanner({
                         </p>
                         {event.location ? (
                           <p className="flex items-center gap-2 text-sm text-muted-foreground/90">
-                            <MapPin aria-hidden className="h-4 w-4" />
+                            <MapPinIcon aria-hidden className="h-4 w-4" />
                             <span>{event.location}</span>
                           </p>
                         ) : null}

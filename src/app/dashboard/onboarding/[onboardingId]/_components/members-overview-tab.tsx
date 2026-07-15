@@ -1,7 +1,8 @@
 "use client";
 
+import { CheckIcon, FilterIcon, MinusIcon, SearchIcon, XIcon } from "@/components/ui/action-icons";
+
 import { type ReactNode, useMemo } from "react";
-import { Check, Filter, Minus, Search, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -215,17 +216,17 @@ function renderRoles(list: { label: string; percentage?: number }[]): ReactNode 
 function renderPhotoConsent(status: MemberRow["photoConsentStatus"]): ReactNode {
   const iconMap = {
     approved: {
-      icon: Check,
+      icon: CheckIcon,
       className: "text-success",
       label: "Ja",
     },
     declined: {
-      icon: X,
+      icon: XIcon,
       className: "text-destructive",
       label: "Nein",
     },
     pending: {
-      icon: Minus,
+      icon: MinusIcon,
       className: "text-muted-foreground",
       label: "Ausstehend",
     },
@@ -275,14 +276,14 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
               <CardTitle className="text-lg">Mitgliederübersicht</CardTitle>
               <div className="flex flex-col items-end gap-1 text-right text-xs text-muted-foreground">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Search className="h-4 w-4" aria-hidden />
+                  <SearchIcon className="h-4 w-4" aria-hidden />
                   <span>
                     {filteredMembers.length} von {members.length} Einträgen
                   </span>
                 </div>
                 {photoConsentFilter !== "all" ? (
                   <Badge variant="secondary" className="inline-flex items-center gap-1">
-                    <Filter className="h-3 w-3" aria-hidden />
+                    <FilterIcon className="h-3 w-3" aria-hidden />
                     {PHOTO_FILTER_LABELS[photoConsentFilter]}
                   </Badge>
                 ) : null}

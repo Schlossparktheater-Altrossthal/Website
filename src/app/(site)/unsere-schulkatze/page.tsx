@@ -1,12 +1,11 @@
-export const revalidate = 60;
+
+import { CatIcon, HeartIcon, IconComponent, MoonStarIcon, PawPrintIcon, ShieldCheckIcon, SunIcon } from "@/components/ui/action-icons";export const revalidate = 60;
 
 import { readdirSync } from "node:fs";
 import path from "node:path";
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
-import { Cat, Heart, MoonStar, PawPrint, ShieldCheck, Sun } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { TextLink } from "@/components/ui/text-link";
@@ -74,13 +73,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 
 type CatProfileHighlight = {
-  icon: LucideIcon;
+  icon: IconComponent;
   title: string;
   description: string;
 };
 
 type CatMemoryItem = {
-  icon: LucideIcon;
+  icon: IconComponent;
   title: string;
   detail: string;
 };

@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronsUpDownIcon } from "@/components/ui/action-icons";
+
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -35,7 +37,6 @@ import {
   type AssignmentFocus,
 } from "@/lib/members-navigation";
 import { cn } from "@/lib/utils";
-import { ChevronsUpDown } from "lucide-react";
 
 export type { AssignmentFocus } from "@/lib/members-navigation";
 
@@ -171,7 +172,7 @@ function MembersNavProductionSwitcher({
                   </span>
                 </div>
               )}
-              <ChevronsUpDown
+              <ChevronsUpDownIcon
                 className={cn(
                   "ml-auto h-4 w-4 shrink-0 text-sidebar-foreground/60 transition-transform",
                   isOpen && !isCollapsed && "rotate-180",

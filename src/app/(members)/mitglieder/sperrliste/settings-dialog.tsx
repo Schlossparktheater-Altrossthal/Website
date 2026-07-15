@@ -1,7 +1,8 @@
 "use client";
 
+import { Settings2Icon } from "@/components/ui/action-icons";
+
 import { useState } from "react";
-import { Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -32,7 +33,7 @@ export function BlocklistSettingsDialog({
           size="sm"
           className="h-auto w-full justify-center gap-2 rounded-full border border-transparent px-5 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-none hover:border-primary/20 hover:bg-primary/10 hover:text-foreground sm:w-auto sm:justify-start sm:text-sm"
         >
-          <Settings2 className="h-4 w-4" aria-hidden />
+          <Settings2Icon className="h-4 w-4" aria-hidden />
           <span className="sm:hidden">Einstellungen</span>
           <span className="hidden sm:inline">Sperrlisten-Einstellungen</span>
         </Button>

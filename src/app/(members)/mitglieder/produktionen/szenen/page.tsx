@@ -1,5 +1,4 @@
 import { BreakdownStatus } from "@prisma/client";
-import { Clapperboard, FileStack, Theater } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -10,6 +9,7 @@ import { ProductionWorkspaceEmptyState } from "@/components/production/workspace
 
 import { SceneListClient } from "./scene-list-client";
 import { SceneCreateDialog } from "./scene-create-dialog";
+import { ClapperboardIcon, FileStackIcon, TheaterIcon } from "@/components/ui/action-icons";
 
 type SceneIdentifier = string | null;
 
@@ -197,17 +197,17 @@ export default async function ProduktionsSzenenPage() {
     {
       label: "Szenen",
       value: sceneCount,
-      icon: <Clapperboard className="h-4 w-4" aria-hidden />,
+      icon: <ClapperboardIcon className="h-4 w-4" aria-hidden />,
     },
     {
       label: "Breakdowns",
       value: breakdownCount,
-      icon: <FileStack className="h-4 w-4" aria-hidden />,
+      icon: <FileStackIcon className="h-4 w-4" aria-hidden />,
     },
     {
       label: "Rollen",
       value: characterCount,
-      icon: <Theater className="h-4 w-4" aria-hidden />,
+      icon: <TheaterIcon className="h-4 w-4" aria-hidden />,
     },
   ];
 

@@ -1,8 +1,9 @@
 "use client";
 
+import { UserRoundCheckIcon } from "@/components/ui/action-icons";
+
 import { useMemo, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { UserRoundCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import type { ImpersonationDetails } from "@/lib/auth/impersonation";
@@ -66,7 +67,7 @@ export function ImpersonationBanner({ details }: ImpersonationBannerProps) {
     <div className="flex flex-col gap-4 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-4 text-warning-foreground shadow-sm ring-1 ring-warning/20 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-warning/40 bg-warning/20">
-          <UserRoundCheck className="h-5 w-5" aria-hidden />
+          <UserRoundCheckIcon className="h-5 w-5" aria-hidden />
         </div>
         <div className="space-y-1 text-sm">
           <p className="font-semibold leading-tight">

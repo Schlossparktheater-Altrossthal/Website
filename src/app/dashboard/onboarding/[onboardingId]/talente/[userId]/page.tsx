@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { getOnboardingDashboardData } from "@/lib/onboarding/dashboard-service";
@@ -12,6 +11,7 @@ import {
 } from "@/app/dashboard/onboarding/[onboardingId]/_components/ranking-data";
 import type { HighlightContext } from "@/app/dashboard/onboarding/[onboardingId]/_components/ranking-types";
 import { TalentDetailContent } from "@/app/dashboard/onboarding/[onboardingId]/talente/talent-detail-content";
+import { ArrowLeftIcon } from "@/components/ui/action-icons";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +85,7 @@ export default async function OnboardingTalentDetailPage({
           href={`/dashboard/onboarding/${encodeURIComponent(onboardingId)}`}
           className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-primary"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
+          <ArrowLeftIcon className="h-4 w-4" aria-hidden />
           Zurück zur Onboarding-Übersicht
         </Link>
 

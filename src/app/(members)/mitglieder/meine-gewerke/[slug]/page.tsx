@@ -3,11 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { addDays, format, startOfToday } from "date-fns";
 import { de } from "date-fns/locale/de";
 import type { ComponentType, SVGProps } from "react";
-import { ListTodo, Ruler } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, SuccessIcon, SparklesIcon, UsersIcon } from "@/components/ui/action-icons";
+import { CalendarIcon, ListTodoIcon, RulerIcon, SparklesIcon, SuccessIcon, UsersIcon } from "@/components/ui/action-icons";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -224,7 +223,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
 
   const summaryStats: SummaryStat[] = [
     { label: "Teammitglieder", value: membership.department.memberships.length, hint: "Aktive Personen", icon: UsersIcon },
-    { label: "Aktive Aufgaben", value: activeTasksCount, hint: "Offen & in Arbeit im Gewerk", icon: ListTodo },
+    { label: "Aktive Aufgaben", value: activeTasksCount, hint: "Offen & in Arbeit im Gewerk", icon: ListTodoIcon },
     { label: "Abgeschlossen", value: completedTasksCount, hint: "Erledigte Gewerke-Aufgaben", icon: SuccessIcon },
   ];
 
@@ -238,7 +237,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
           className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
         >
           <Link href="/mitglieder/koerpermasse" title="Körpermaße verwalten">
-            <Ruler aria-hidden className="h-4 w-4" />
+            <RulerIcon aria-hidden className="h-4 w-4" />
             <span>Körpermaße</span>
           </Link>
         </Button>

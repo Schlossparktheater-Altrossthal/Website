@@ -1,12 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Activity,
-  BarChart3,
-  CalendarClock,
-  History,
-  ListChecks,
-} from "lucide-react";
 import type { ReactNode } from "react";
 import type {
   AttendanceStatus,
@@ -20,7 +13,7 @@ import type {
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeftIcon, CalendarIcon, MailIcon, ShieldCheckIcon, SparklesIcon } from "@/components/ui/action-icons";
+import { ActivityIcon, ArrowLeftIcon, BarChart3Icon, CalendarClockIcon, CalendarIcon, HistoryIcon, ListChecksIcon, MailIcon, ShieldCheckIcon, SparklesIcon } from "@/components/ui/action-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
@@ -816,7 +809,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
             <span>Profil</span>
           </TabsTrigger>
           <TabsTrigger value="activity" className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
-            <Activity className="h-4 w-4 text-muted-foreground/80" aria-hidden />
+            <ActivityIcon className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>Aktivität</span>
           </TabsTrigger>
         </TabsList>
@@ -927,7 +920,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
 
                   <div className="rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm">
                     <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <ListChecks className="h-4 w-4" aria-hidden />
+                      <ListChecksIcon className="h-4 w-4" aria-hidden />
                       Rollen &amp; Gewerke aus dem Onboarding
                     </div>
                     {hasRolePreferences ? (
@@ -1153,7 +1146,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
               label="Rückmeldungen (12 Monate)"
               value={totalResponsesLabel}
               hint={responsesHint}
-              icon={<BarChart3 className="h-5 w-5" aria-hidden />}
+              icon={<BarChart3Icon className="h-5 w-5" aria-hidden />}
             />
             <ActivityStatCard
               label="Zusagequote"
@@ -1163,19 +1156,19 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                   ? `${numberFormatter.format(attendanceStatusCounts.yes)} von ${totalResponsesLabel} Zusagen`
                   : "Noch keine Rückmeldungen erfasst."
               }
-              icon={<Activity className="h-5 w-5" aria-hidden />}
+              icon={<ActivityIcon className="h-5 w-5" aria-hidden />}
             />
             <ActivityStatCard
               label="Kommende Proben"
               value={numberFormatter.format(upcomingTotal)}
               hint={upcomingHint}
-              icon={<CalendarClock className="h-5 w-5" aria-hidden />}
+              icon={<CalendarClockIcon className="h-5 w-5" aria-hidden />}
             />
             <ActivityStatCard
               label="Offene Aufgaben"
               value={numberFormatter.format(openTaskCount)}
               hint={tasksHint}
-              icon={<ListChecks className="h-5 w-5" aria-hidden />}
+              icon={<ListChecksIcon className="h-5 w-5" aria-hidden />}
             />
           </div>
 
@@ -1231,7 +1224,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
             <CardHeader className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <CardTitle className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  <HistoryIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
                   Aktivitätshistorie
                 </CardTitle>
                 {lastActivityRelative || lastActivityAbsolute ? (

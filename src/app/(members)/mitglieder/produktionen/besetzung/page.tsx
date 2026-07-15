@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { CharacterCastingType } from "@prisma/client";
-import { BadgeCheck, UserRoundCheck, Users } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -36,6 +35,7 @@ import {
   selectSmallClassName,
 } from "./casting-utils";
 import { createCharacterAction } from "../actions";
+import { BadgeCheckIcon, UserRoundCheckIcon, UsersIcon } from "@/components/ui/action-icons";
 
 type HeaderStat = {
   label: string;
@@ -304,9 +304,9 @@ export default async function ProduktionsBesetzungPage() {
     })),
   }));
   const headerStats: HeaderStat[] = [
-    { label: "Rollen", value: characterCount, icon: <BadgeCheck className="h-4 w-4" aria-hidden /> },
-    { label: "Besetzungen", value: castingCount, icon: <Users className="h-4 w-4" aria-hidden /> },
-    { label: "Schauspieler", value: assignedActorCount, icon: <UserRoundCheck className="h-4 w-4" aria-hidden /> },
+    { label: "Rollen", value: characterCount, icon: <BadgeCheckIcon className="h-4 w-4" aria-hidden /> },
+    { label: "Besetzungen", value: castingCount, icon: <UsersIcon className="h-4 w-4" aria-hidden /> },
+    { label: "Schauspieler", value: assignedActorCount, icon: <UserRoundCheckIcon className="h-4 w-4" aria-hidden /> },
   ];
 
   return (

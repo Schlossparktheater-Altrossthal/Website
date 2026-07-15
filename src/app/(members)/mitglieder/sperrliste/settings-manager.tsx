@@ -1,7 +1,8 @@
 "use client";
 
+import { AlertCircleIcon, CheckCircle2Icon, Loader2Icon, PlugZapIcon, SparklesIcon } from "@/components/ui/action-icons";
+
 import { useEffect, useMemo, useState, type ComponentProps } from "react";
-import { AlertCircle, CheckCircle2, Loader2, PlugZap, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,10 +68,10 @@ const STATUS_BADGE_VARIANTS = {
 } as const satisfies Record<HolidayStatusMeta["tone"], ComponentProps<typeof Badge>["variant"]>;
 
 const STATUS_ICONS = {
-  ok: CheckCircle2,
-  warning: AlertCircle,
-  disabled: PlugZap,
-  unknown: Loader2,
+  ok: CheckCircle2Icon,
+  warning: AlertCircleIcon,
+  disabled: PlugZapIcon,
+  unknown: Loader2Icon,
 } as const;
 
 function getStatusMeta(status: HolidaySourceStatus): HolidayStatusMeta {
@@ -821,7 +822,7 @@ export function BlocklistSettingsManager({
       <CardHeader className="space-y-4">
         <div className="space-y-3">
           <CardTitle className="flex items-center gap-2 text-xl">
-            <Sparkles className="h-5 w-5 text-primary" aria-hidden />
+            <SparklesIcon className="h-5 w-5 text-primary" aria-hidden />
             Sperrlisten-Einstellungen
           </CardTitle>
           <Text variant="small" tone="muted">
@@ -888,7 +889,7 @@ export function BlocklistSettingsManager({
                   >
                     {isCheckingHoliday ? (
                       <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        <Loader2Icon className="h-4 w-4 animate-spin" aria-hidden />
                         Quelle prüfen
                       </span>
                     ) : (
@@ -978,7 +979,7 @@ export function BlocklistSettingsManager({
                   >
                     {isCheckingPublicHoliday ? (
                       <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        <Loader2Icon className="h-4 w-4 animate-spin" aria-hidden />
                         Quelle prüfen
                       </span>
                     ) : (
@@ -1135,7 +1136,7 @@ export function BlocklistSettingsManager({
               <Button type="submit" disabled={saving}>
                 {saving ? (
                   <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    <Loader2Icon className="h-4 w-4 animate-spin" aria-hidden />
                     Speichern …
                   </span>
                 ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { InfoIcon } from "@/components/ui/action-icons";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -17,7 +17,7 @@ export function CarouselHint() {
             aria-label="Karussell-Bedienhinweis"
             title={HINT_TEXT}
           >
-            <Info className="h-5 w-5" aria-hidden />
+            <InfoIcon className="h-5 w-5" aria-hidden />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" className="max-w-xs text-xs">

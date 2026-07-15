@@ -1,5 +1,7 @@
 "use client";
 
+import { MailCheckIcon } from "@/components/ui/action-icons";
+
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { MailCheck } from "lucide-react";
 import { DEV_TEST_USERS } from "@/lib/auth-dev-test-users";
 
 type TestLoginOption = {
@@ -215,7 +216,7 @@ export function LoginPageClient() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <MailCheck className="h-5 w-5" aria-hidden />
+                  <MailCheckIcon className="h-5 w-5" aria-hidden />
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-semibold">

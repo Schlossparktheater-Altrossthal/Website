@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/action-icons";
+
 import {
   addDays,
   addMonths,
@@ -24,7 +26,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -242,7 +243,7 @@ export function MonthCalendar({
           className="p-2 text-sm text-muted-foreground transition hover:text-foreground"
           aria-label="Vorheriger Monat"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeftIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -250,7 +251,7 @@ export function MonthCalendar({
           className="p-2 text-sm text-muted-foreground transition hover:text-foreground"
           aria-label="Nächster Monat"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
     </div>

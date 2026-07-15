@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRightCircle } from "lucide-react";
+import { ArrowRightCircleIcon } from "@/components/ui/action-icons";
 
 type ProductionWorkspaceEmptyStateProps = {
   title: string;
@@ -26,7 +26,7 @@ export function ProductionWorkspaceEmptyState({
       <CardContent>
         <Button asChild title={actionLabel}>
           <Link href={actionHref}>
-            <ArrowRightCircle aria-hidden className="h-4 w-4" />
+            <ArrowRightCircleIcon aria-hidden className="h-4 w-4" />
             <span className="sr-only sm:not-sr-only">{actionLabel}</span>
           </Link>
         </Button>

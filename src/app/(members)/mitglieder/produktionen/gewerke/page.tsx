@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowRight, Building2, ClipboardList, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Button } from "@/components/ui/button";
@@ -9,12 +8,13 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+import { ArrowRightIcon, Building2Icon, ClipboardListIcon, UsersIcon } from "@/components/ui/action-icons";
 
 type OverviewStat = {
   label: string;
   value: string;
   hint: string;
-  icon: typeof Building2;
+  icon: typeof Building2Icon;
 };
 
 const currentPath = "/mitglieder/produktionen/gewerke";
@@ -75,9 +75,9 @@ export default async function ProduktionsGewerkePage() {
     : 0;
 
   const stats: OverviewStat[] = [
-    { label: "Gewerke", value: departmentCount.toString(), hint: "Aktive Teams in der Produktion", icon: Building2 },
-    { label: "Mitglieder", value: memberCount.toString(), hint: "Zugeordnete Personen", icon: Users },
-    { label: "Offene Aufgaben", value: openTaskCount.toString(), hint: "Todos in allen Gewerken", icon: ClipboardList },
+    { label: "Gewerke", value: departmentCount.toString(), hint: "Aktive Teams in der Produktion", icon: Building2Icon },
+    { label: "Mitglieder", value: memberCount.toString(), hint: "Zugeordnete Personen", icon: UsersIcon },
+    { label: "Offene Aufgaben", value: openTaskCount.toString(), hint: "Todos in allen Gewerken", icon: ClipboardListIcon },
   ];
 
   return (
@@ -144,7 +144,7 @@ export default async function ProduktionsGewerkePage() {
                         <Button asChild variant="outline" size="sm" className="sm:ml-4">
                           <Link href={`/mitglieder/produktionen/gewerke/${department.id}`}>
                             Öffnen
-                            <ArrowRight className="h-4 w-4" aria-hidden />
+                            <ArrowRightIcon className="h-4 w-4" aria-hidden />
                           </Link>
                         </Button>
                       </div>

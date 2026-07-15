@@ -4,9 +4,8 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 import type { Role } from "@prisma/client";
-import { ChevronDown, ChevronUp, MessageCircle, Power } from "lucide-react";
 
-import { CopyIcon, DownloadIcon, EditIcon, ExternalLinkIcon, TrashIcon } from "@/components/ui/action-icons";
+import { ChevronDownIcon, ChevronUpIcon, CopyIcon, DownloadIcon, EditIcon, ExternalLinkIcon, MessageCircleIcon, PowerIcon, TrashIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1125,7 +1124,7 @@ export function MemberInviteManager() {
                     : []),
                   {
                     label: invite.isDisabled ? "Einladung aktivieren" : "Einladung deaktivieren",
-                    icon: <Power className="h-4 w-4" />,
+                    icon: <PowerIcon className="h-4 w-4" />,
                     onClick: () => {
                       if (isProcessing) return;
                       void toggleInvite(invite);
@@ -1180,12 +1179,12 @@ export function MemberInviteManager() {
                         >
                           {isExpanded ? (
                             <>
-                              <ChevronUp className="h-4 w-4" />
+                              <ChevronUpIcon className="h-4 w-4" />
                               Details verbergen
                             </>
                           ) : (
                             <>
-                              <ChevronDown className="h-4 w-4" />
+                              <ChevronDownIcon className="h-4 w-4" />
                               Details anzeigen
                             </>
                           )}
@@ -1239,7 +1238,7 @@ export function MemberInviteManager() {
                                     className="h-8 gap-2 px-3 text-xs"
                                     onClick={() => openOnboardingSettings(invite.showId)}
                                   >
-                                    <MessageCircle className="h-4 w-4" />
+                                    <MessageCircleIcon className="h-4 w-4" />
                                     Einstellungen
                                   </Button>
                                 </div>
@@ -1253,7 +1252,7 @@ export function MemberInviteManager() {
                                   className="h-8 gap-2 px-3 text-xs"
                                   onClick={() => openOnboardingSettings(invite.showId)}
                                 >
-                                  <MessageCircle className="h-4 w-4" />
+                                  <MessageCircleIcon className="h-4 w-4" />
                                   Link hinzufügen
                                 </Button>
                               </div>
@@ -1455,7 +1454,7 @@ export function MemberInviteManager() {
                     !editForm.showId
                   }
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <MessageCircleIcon className="h-4 w-4" />
                   Onboarding-Einstellungen
                 </Button>
               </div>
@@ -1598,7 +1597,7 @@ export function MemberInviteManager() {
                   onClick={() => openOnboardingSettings(form.showId)}
                   disabled={productions.length === 0 || !form.showId || creating}
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <MessageCircleIcon className="h-4 w-4" />
                   Onboarding-Einstellungen
                 </Button>
               </div>

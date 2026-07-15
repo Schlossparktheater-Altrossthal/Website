@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import type { ReactNode, SVGProps } from "react";
 
 import { Card } from "@/components/ui/card";
 import { Heading, Text } from "@/components/ui/typography";
@@ -9,7 +9,7 @@ type HomepageLinkCard = {
   href: string;
   title: string;
   description: string;
-  Icon: LucideIcon;
+  Icon: (props: SVGProps<SVGSVGElement>) => ReactNode;
 };
 
 const LINK_CARDS: HomepageLinkCard[] = [

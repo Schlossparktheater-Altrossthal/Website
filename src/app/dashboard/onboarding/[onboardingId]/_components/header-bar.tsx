@@ -1,7 +1,8 @@
 "use client";
 
+import { FileDownIcon, Loader2Icon, RefreshCwIcon, Share2Icon } from "@/components/ui/action-icons";
+
 import { useCallback, useMemo, useState } from "react";
-import { FileDown, Loader2, RefreshCw, Share2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -127,9 +128,9 @@ export function HeaderBar({
               disabled={isExportingPdf}
             >
               {isExportingPdf ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2Icon className="h-4 w-4 animate-spin" />
               ) : (
-                <FileDown className="h-4 w-4" />
+                <FileDownIcon className="h-4 w-4" />
               )}
               {isExportingPdf ? "Bereite PDF vor…" : "Statistik exportieren"}
             </Button>
@@ -140,7 +141,7 @@ export function HeaderBar({
             className="w-full sm:w-auto"
             onClick={handleShare}
           >
-            <Share2 className="h-4 w-4" />
+            <Share2Icon className="h-4 w-4" />
             {shareState === "success" ? "Link kopiert" : shareState === "error" ? "Fehler" : "Teilen"}
           </Button>
         </div>
@@ -154,7 +155,7 @@ export function HeaderBar({
           onClick={onRefresh}
           disabled={isRefreshing}
         >
-          <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden />
+          <RefreshCwIcon className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden />
           {isRefreshing ? "Aktualisiere…" : "Neu laden"}
         </Button>
       ) : null}

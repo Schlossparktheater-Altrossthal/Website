@@ -1,18 +1,11 @@
 "use client";
 
+import { AlertCircleIcon, CheckCircleIcon, ClockIcon, UsersIcon, WifiIcon, WifiOffIcon, XCircleIcon } from "@/components/ui/action-icons";
+
 import { useCallback, useState } from 'react';
 import { type AttendanceUpdateMessage, useAttendanceRealtime, usePresence, useRealtime } from '@/hooks/useRealtime';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Wifi, 
-  WifiOff, 
-  Users, 
-  Clock,
-  AlertCircle,
-  CheckCircle,
-  XCircle 
-} from 'lucide-react';
 import { toast } from 'sonner';
 import type { UserPresenceEvent } from '@/lib/realtime/types';
 
@@ -81,13 +74,13 @@ export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeSta
   const getConnectionIcon = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <Wifi className="h-4 w-4 text-success" />;
+        return <WifiIcon className="h-4 w-4 text-success" />;
       case 'connecting':
-        return <Clock className="h-4 w-4 text-warning animate-pulse" />;
+        return <ClockIcon className="h-4 w-4 text-warning animate-pulse" />;
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-destructive" />;
+        return <AlertCircleIcon className="h-4 w-4 text-destructive" />;
       default:
-        return <WifiOff className="h-4 w-4 text-muted-foreground" />;
+        return <WifiOffIcon className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -141,7 +134,7 @@ export function RealtimeStatus({ rehearsalId, showPresence = true }: RealtimeSta
         {showPresence && rehearsalId && (
           <div className="border-t pt-3">
             <div className="flex items-center gap-2 mb-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <UsersIcon className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">
                 Online ({presentUsers.length})
               </span>
@@ -212,11 +205,11 @@ export function AttendanceUpdates({ rehearsalId }: AttendanceUpdatesProps) {
   const getStatusIcon = (status: string | null) => {
     switch (status) {
       case 'yes':
-        return <CheckCircle className="h-4 w-4 text-success" />;
+        return <CheckCircleIcon className="h-4 w-4 text-success" />;
       case 'no':
-        return <XCircle className="h-4 w-4 text-destructive" />;
+        return <XCircleIcon className="h-4 w-4 text-destructive" />;
       case 'emergency':
-        return <AlertCircle className="h-4 w-4 text-warning" />;
+        return <AlertCircleIcon className="h-4 w-4 text-warning" />;
       default:
         return null;
     }

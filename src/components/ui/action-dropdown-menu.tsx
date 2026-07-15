@@ -1,7 +1,8 @@
 "use client";
 
+import { MoreVerticalIcon } from "@/components/ui/action-icons";
+
 import * as React from "react";
-import { MoreVertical } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -44,7 +45,7 @@ export function ActionDropdownMenu({
             className,
           )}
         >
-          <MoreVertical className="h-4 w-4" aria-hidden />
+          <MoreVerticalIcon className="h-4 w-4" aria-hidden />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56">

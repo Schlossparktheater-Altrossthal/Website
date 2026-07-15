@@ -1,5 +1,7 @@
 "use client";
 
+import { ActivityIcon, AlertTriangleIcon, HardDriveIcon, RadioIcon, ShieldCheckIcon, TimerIcon, UsersIcon } from "@/components/ui/action-icons";
+
 import {
   useCallback,
   useEffect,
@@ -9,8 +11,6 @@ import {
   useTransition,
   type FormEvent,
 } from "react";
-
-import { Activity, AlertTriangle, HardDrive, Radio, ShieldCheck, Timer, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -683,7 +683,7 @@ export function ServerAnalyticsContent({
       label: "Verfügbarkeit",
       value: `${uptimeFormat.format(displayAnalytics.summary.uptimePercentage)} %`,
       description: "letzte 30 Tage",
-      icon: ShieldCheck,
+      icon: ShieldCheckIcon,
       tone: "emerald",
     },
     {
@@ -691,7 +691,7 @@ export function ServerAnalyticsContent({
       label: "Anfragen (24h)",
       value: numberFormat.format(displayAnalytics.summary.requestsLast24h),
       description: "über alle Systeme hinweg",
-      icon: Activity,
+      icon: ActivityIcon,
       tone: "violet",
     },
     {
@@ -699,7 +699,7 @@ export function ServerAnalyticsContent({
       label: "Ø Antwortzeit",
       value: formatMs(displayAnalytics.summary.averageResponseTimeMs),
       description: `95. Perzentil liegt bei ${formatMs(displayAnalytics.summary.averageResponseTimeMs * 1.6)}`,
-      icon: Timer,
+      icon: TimerIcon,
       tone: "sky",
     },
     {
@@ -707,7 +707,7 @@ export function ServerAnalyticsContent({
       label: "Peak gleichzeitiger Nutzer",
       value: numberFormat.format(displayAnalytics.summary.peakConcurrentUsers),
       description: "innerhalb der letzten 24 Stunden",
-      icon: Users,
+      icon: UsersIcon,
       tone: "indigo",
     },
     {
@@ -715,7 +715,7 @@ export function ServerAnalyticsContent({
       label: "Cache-Hit-Rate",
       value: percentPreciseFormat.format(displayAnalytics.summary.cacheHitRate),
       description: "Edge- und Anwendungscache kombiniert",
-      icon: HardDrive,
+      icon: HardDriveIcon,
       tone: "amber",
     },
     {
@@ -723,7 +723,7 @@ export function ServerAnalyticsContent({
       label: "Realtime-Ereignisse (24h)",
       value: numberFormat.format(displayAnalytics.summary.realtimeEventsLast24h),
       description: "Socket.io Updates und Live-Sync",
-      icon: Radio,
+      icon: RadioIcon,
       tone: "rose",
     },
     {
@@ -731,7 +731,7 @@ export function ServerAnalyticsContent({
       label: "Fehlerquote",
       value: percentPreciseFormat.format(displayAnalytics.summary.errorRate),
       description: "5xx/4xx im Verhältnis zu allen Requests",
-      icon: AlertTriangle,
+      icon: AlertTriangleIcon,
       tone: "slate",
     },
   ];

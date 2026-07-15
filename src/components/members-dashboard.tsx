@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowUpRightIcon, CalendarCheckIcon, CalendarCogIcon, CalendarIcon, CalendarRangeIcon, CheckCircle2Icon, HammerIcon, IconComponent, PiggyBankIcon, ShieldCheckIcon, SparklesIcon, UserRoundIcon, UsersIcon, UsersRoundIcon, UtensilsCrossedIcon, WifiIcon, WifiOffIcon } from "@/components/ui/action-icons";
+
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -17,25 +19,6 @@ import {
 } from "@/components/members/members-app-shell";
 import { useMembersPermissions } from "@/components/members/permissions-context";
 import { PageHeader, PageHeaderDescription, PageHeaderStatus, PageHeaderTitle } from "@/design-system/patterns";
-import {
-  Users,
-  Calendar,
-  Wifi,
-  WifiOff,
-  CheckCircle2,
-  Sparkles,
-  UserRound,
-  CalendarCheck,
-  CalendarCog,
-  UsersRound,
-  ShieldCheck,
-  Hammer,
-  PiggyBank,
-  CalendarRange,
-  UtensilsCrossed,
-  ArrowUpRight,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DashboardStats {
@@ -63,7 +46,7 @@ const INITIAL_STATS: DashboardStats = {
 type QuickActionLink = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: IconComponent;
   permissionKey?: string;
 };
 
@@ -121,37 +104,37 @@ const QUICK_ACTION_LINKS = [
   {
     href: "/mitglieder/profil",
     label: "Profil öffnen",
-    icon: UserRound,
+    icon: UserRoundIcon,
     permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
   },
   {
     href: "/mitglieder/meine-proben",
     label: "Meine Termine",
-    icon: CalendarCheck,
+    icon: CalendarCheckIcon,
     permissionKey: "PRIVATE.REHEARSAL.OWN.VIEW",
   },
   {
     href: "/mitglieder/meine-gewerke",
     label: "Gewerkeplanung",
-    icon: Hammer,
+    icon: HammerIcon,
     permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
   },
   {
     href: "/mitglieder/probenplanung",
     label: "Probenplanung",
-    icon: CalendarCog,
+    icon: CalendarCogIcon,
     permissionKey: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
   },
   {
     href: "/mitglieder/mitgliederverwaltung",
     label: "Mitgliederverwaltung",
-    icon: UsersRound,
+    icon: UsersRoundIcon,
     permissionKey: "PRIVATE.ADMIN.MEMBERS.MANAGE",
   },
   {
     href: "/mitglieder/rechte",
     label: "Rechteverwaltung",
-    icon: ShieldCheck,
+    icon: ShieldCheckIcon,
     permissionKey: "PRIVATE.ADMIN.PERMISSIONS.MANAGE",
   },
 ] satisfies QuickActionLink[];
@@ -341,7 +324,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     if (connectionStatus === "connected") {
       return {
         state: "online" as const,
-        icon: <Wifi className="h-4 w-4" />,
+        icon: <WifiIcon className="h-4 w-4" />,
         label: "Live verbunden",
       };
     }
@@ -349,7 +332,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     if (connectionStatus === "error") {
       return {
         state: "error" as const,
-        icon: <WifiOff className="h-4 w-4" />,
+        icon: <WifiOffIcon className="h-4 w-4" />,
         label: "Verbindungsfehler",
       };
     }
@@ -357,14 +340,14 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     if (connectionStatus === "connecting") {
       return {
         state: "warning" as const,
-        icon: <Wifi className="h-4 w-4 animate-pulse" />,
+        icon: <WifiIcon className="h-4 w-4 animate-pulse" />,
         label: "Verbindung wird aufgebaut",
       };
     }
 
     return {
       state: "offline" as const,
-      icon: <WifiOff className="h-4 w-4" />,
+      icon: <WifiOffIcon className="h-4 w-4" />,
       label: "Offline",
     };
   }, [connectionStatus]);
@@ -451,7 +434,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         label: "Online Mitglieder",
         value: numberFormatter.format(stats.totalOnline),
         hint: onlineUpdatedHint,
-        icon: <Users className="h-4 w-4" />,
+        icon: <UsersIcon className="h-4 w-4" />,
         tone: "positive",
       },
       {
@@ -459,7 +442,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         label: "Mitglieder gesamt",
         value: numberFormatter.format(stats.totalMembers),
         hint: "inkl. Ensemble und Technik",
-        icon: <Users className="h-4 w-4" />,
+        icon: <UsersIcon className="h-4 w-4" />,
         tone: "positive",
       },
       {
@@ -467,7 +450,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         label: "Proben diese Woche",
         value: numberFormatter.format(stats.rehearsalsThisWeek),
         hint: "Termine der laufenden Kalenderwoche",
-        icon: <Calendar className="h-4 w-4" />,
+        icon: <CalendarIcon className="h-4 w-4" />,
         tone: "accent",
       },
     ];
@@ -490,7 +473,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             ? numberFormatter.format(finalRehearsalMetric.value)
             : finalRehearsalMetric.value,
         hint: finalRehearsalMetric.hint,
-        icon: <Sparkles className="h-4 w-4" />,
+        icon: <SparklesIcon className="h-4 w-4" />,
         tone: rehearsalTone,
       });
     }
@@ -526,7 +509,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
             <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-warning/30 bg-warning/20 text-warning" aria-hidden="true">
-                <CalendarRange className="h-5 w-5" />
+                <CalendarRangeIcon className="h-5 w-5" />
               </div>
               <p className="text-base font-semibold">Profilangaben unvollständig</p>
             </div>
@@ -552,7 +535,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     return (
       <div className="flex items-start gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm text-success" role="status" aria-live="polite">
         <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border border-success/30 bg-success/15" aria-hidden="true">
-          <CheckCircle2 className="h-4 w-4" />
+          <CheckCircle2Icon className="h-4 w-4" />
         </div>
         <div>
           <p className="font-semibold">Profil vollständig</p>
@@ -632,7 +615,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/12 text-primary">
-                    <Sparkles className="h-5 w-5" />
+                    <SparklesIcon className="h-5 w-5" />
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Willkommen zurück</p>
@@ -643,7 +626,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                 </div>
                 {onlineUsers.length ? (
                   <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
-                    <Users className="h-3.5 w-3.5" />
+                    <UsersIcon className="h-3.5 w-3.5" />
                     <span>{numberFormatter.format(onlineUsers.length)} online</span>
                   </div>
                 ) : null}
@@ -680,7 +663,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                           </span>
                           <span className="text-left font-medium leading-tight">{link.label}</span>
                         </span>
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                        <ArrowUpRightIcon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                       </Link>
                     );
                   })}

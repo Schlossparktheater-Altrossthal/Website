@@ -5,8 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
-import { Camera } from "lucide-react";
-import { ChevronDownIcon, RefreshIcon, UploadIcon } from "@/components/ui/action-icons";
+import { CameraIcon, ChevronDownIcon, RefreshIcon, UploadIcon } from "@/components/ui/action-icons";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -504,7 +503,7 @@ export function PhotoConsentCard({
       <CardHeader className="flex flex-col gap-4 border-b border-primary/20 px-6 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-7">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary shadow-inner shadow-primary/10">
-            <Camera className="h-6 w-6" aria-hidden="true" />
+            <CameraIcon className="h-6 w-6" aria-hidden="true" />
           </span>
           <div className="space-y-1 text-center sm:text-left">
             <CardTitle className="text-xl font-semibold leading-tight">Darf dein Bühnenmoment sichtbar sein?</CardTitle>

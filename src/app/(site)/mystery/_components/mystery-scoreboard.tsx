@@ -1,8 +1,9 @@
-import { Trophy } from "lucide-react";
+
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { TrophyIcon } from "@/components/ui/action-icons";
 
 const NUMBER_FORMATTER = new Intl.NumberFormat("de-DE");
 
@@ -50,7 +51,7 @@ export function MysteryScoreboard({ entries }: { entries: ScoreboardEntry[] }) {
                     <tr key={entry.playerName} className={cn("bg-background/60", isTopThree && "bg-primary/10")}>
                       <td className="px-3 py-2 font-semibold text-foreground">
                         <span className="inline-flex items-center gap-1">
-                          {rank <= 3 ? <Trophy className="h-4 w-4 text-primary" aria-hidden /> : null}
+                          {rank <= 3 ? <TrophyIcon className="h-4 w-4 text-primary" aria-hidden /> : null}
                           {rank}.
                         </span>
                       </td>

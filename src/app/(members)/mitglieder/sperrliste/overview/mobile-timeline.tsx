@@ -1,13 +1,9 @@
 'use client';
 
+import { ArrowRightLeftIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon } from "@/components/ui/action-icons";
+
 import { format, isToday } from 'date-fns';
 import { de } from 'date-fns/locale/de';
-import {
-  ArrowRightLeft,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-} from 'lucide-react';
 import * as React from 'react';
 
 import { UserAvatar } from '@/components/user-avatar';
@@ -93,7 +89,7 @@ function ReasonPreview({ reason, label, tone }: ReasonPreviewProps) {
               <span className="line-clamp-2 flex-1 text-[11px] leading-4">
                 {reason}
               </span>
-            <Info
+            <InfoIcon
               aria-hidden
               className={cn(
                 'mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-colors group-hover:text-foreground',
@@ -202,13 +198,13 @@ export function MobileTimeline({
                   aria-hidden
                   className="pointer-events-none absolute inset-y-3 left-0 flex w-8 items-center justify-start bg-gradient-to-r from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
                 >
-                  <ChevronLeft className="h-4 w-4 text-muted-foreground/70" />
+                  <ChevronLeftIcon className="h-4 w-4 text-muted-foreground/70" />
                 </div>
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-y-3 right-0 flex w-8 items-center justify-end bg-gradient-to-l from-[hsl(var(--background))] via-[hsl(var(--background))] to-transparent"
                 >
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
+                  <ChevronRightIcon className="h-4 w-4 text-muted-foreground/70" />
                 </div>
                 <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pl-1 pr-6 [scrollbar-width:thin]">
                   {visibleDayInfo.map((info) => {
@@ -436,7 +432,7 @@ export function MobileTimeline({
                   </div>
                 ) : null}
                 <div className="mt-2 flex items-center justify-center gap-2 text-xs leading-5 text-muted-foreground/90">
-                  <ArrowRightLeft className="h-4 w-4" aria-hidden />
+                  <ArrowRightLeftIcon className="h-4 w-4" aria-hidden />
                   <span>Wische für weitere Tage</span>
                 </div>
               </div>

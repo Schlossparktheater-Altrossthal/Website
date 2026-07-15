@@ -1,8 +1,9 @@
 "use client";
 
+import { ArrowDownAZIcon, ArrowUpAZIcon, ChevronDownIcon, FilterXIcon, LayoutGridIcon, ListIcon, PencilIcon, PlusIcon, Trash2Icon } from "@/components/ui/action-icons";
+
 import { useMemo, useState } from "react";
 import { BreakdownStatus } from "@prisma/client";
-import { ArrowDownAZ, ArrowUpAZ, ChevronDown, FilterX, LayoutGrid, List, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { getUserDisplayName } from "@/lib/names";
 import { Button } from "@/components/ui/button";
@@ -248,7 +249,7 @@ export function SceneListClient({
               aria-label={sceneSort === "asc" ? "Nummern A bis Z sortieren" : "Nummern Z bis A sortieren"}
               onClick={() => setSceneSort((prev) => (prev === "asc" ? "desc" : "asc"))}
             >
-              {sceneSort === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
+              {sceneSort === "asc" ? <ArrowDownAZIcon className="h-4 w-4" /> : <ArrowUpAZIcon className="h-4 w-4" />}
             </Button>
             {hasFilters ? (
               <Button
@@ -258,7 +259,7 @@ export function SceneListClient({
                 aria-label="Filter und Suche entfernen"
                 onClick={clearFilters}
               >
-                <FilterX className="h-4 w-4" aria-hidden />
+                <FilterXIcon className="h-4 w-4" aria-hidden />
               </Button>
             ) : null}
             <Button
@@ -268,7 +269,7 @@ export function SceneListClient({
               aria-label="Listenansicht"
               onClick={() => setViewMode("list")}
             >
-              <List className="h-4 w-4" aria-hidden="true" />
+              <ListIcon className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button
               type="button"
@@ -277,7 +278,7 @@ export function SceneListClient({
               aria-label="Kachelansicht"
               onClick={() => setViewMode("tiles")}
             >
-              <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+              <LayoutGridIcon className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -329,7 +330,7 @@ export function SceneListClient({
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button type="button" variant="ghost" size="icon" aria-label="Szene erweitern">
-                          <Plus className="h-4 w-4" aria-hidden />
+                          <PlusIcon className="h-4 w-4" aria-hidden />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent align="end" className="w-56 p-2">
@@ -466,7 +467,7 @@ export function SceneListClient({
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button type="button" variant="ghost" size="icon" aria-label="Szene bearbeiten">
-                          <Pencil className="h-4 w-4" aria-hidden />
+                          <PencilIcon className="h-4 w-4" aria-hidden />
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-3xl">
@@ -516,7 +517,7 @@ export function SceneListClient({
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button type="button" variant="ghost" size="icon" aria-label="Szene entfernen">
-                          <Trash2 className="h-4 w-4" aria-hidden />
+                          <Trash2Icon className="h-4 w-4" aria-hidden />
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-md">
@@ -551,7 +552,7 @@ export function SceneListClient({
                       <details className="group [&_summary::-webkit-details-marker]:hidden">
                         <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-foreground">
                           <span>Mitwirkende Figuren</span>
-                          <ChevronDown className="h-4 w-4 transition duration-200 group-open:rotate-180" aria-hidden />
+                          <ChevronDownIcon className="h-4 w-4 transition duration-200 group-open:rotate-180" aria-hidden />
                         </summary>
                         <div className="mt-3 space-y-2">
                           {scene.characters.length === 0 ? (
@@ -585,7 +586,7 @@ export function SceneListClient({
                                   <input type="hidden" name="assignmentId" value={entry.id} />
                                   <input type="hidden" name="redirectPath" value={currentPath} />
                                   <Button type="submit" variant="ghost" size="icon" aria-label="Rolle entfernen">
-                                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                    <Trash2Icon className="h-4 w-4" aria-hidden="true" />
                                   </Button>
                                 </form>
                               </div>
@@ -599,7 +600,7 @@ export function SceneListClient({
                       <details className="group rounded-lg border border-border/60 bg-background/70 p-4 [&_summary::-webkit-details-marker]:hidden">
                         <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-foreground">
                           <span>Breakdown-Aufgaben</span>
-                          <ChevronDown className="h-4 w-4 transition duration-200 group-open:rotate-180" aria-hidden />
+                          <ChevronDownIcon className="h-4 w-4 transition duration-200 group-open:rotate-180" aria-hidden />
                         </summary>
                         <div className="mt-3 space-y-3">
                           {scene.breakdownItems.length === 0 ? (

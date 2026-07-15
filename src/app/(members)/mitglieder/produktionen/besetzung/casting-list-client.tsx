@@ -1,8 +1,9 @@
 "use client";
 
+import { ArrowDownAZIcon, ArrowUpAZIcon, ChevronDownIcon, EyeIcon, FilterXIcon, PencilIcon, PlusIcon, Trash2Icon, UserRoundCheckIcon } from "@/components/ui/action-icons";
+
 import { useMemo, useState } from "react";
 import { CharacterCastingType } from "@prisma/client";
-import { ArrowDownAZ, ArrowUpAZ, ChevronDown, Eye, FilterX, Pencil, Plus, Trash2, UserRoundCheck } from "lucide-react";
 
 import { getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
 import { cn } from "@/lib/utils";
@@ -77,7 +78,7 @@ function CastingAssignments({ castings, currentPath }: { castings: CharacterCast
                 className="h-8 w-8"
                 aria-label="Besetzung entfernen"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2Icon className="h-4 w-4" />
               </Button>
             </form>
           </div>
@@ -92,7 +93,7 @@ function AssignCastingDialog({ characterId, users, currentPath }: { characterId:
     <Dialog>
       <DialogTrigger asChild>
         <Button type="button" variant="ghost" size="icon" className="h-9 w-9" aria-label="Besetzung hinzufügen">
-          <Plus className="h-4 w-4" />
+          <PlusIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
@@ -151,7 +152,7 @@ function UpdateCharacterDialog({ character, currentPath }: { character: Characte
     <Dialog>
       <DialogTrigger asChild>
         <Button type="button" variant="ghost" size="icon" className="h-9 w-9" aria-label="Rolle bearbeiten">
-          <Pencil className="h-4 w-4" />
+          <PencilIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-3xl">
@@ -221,7 +222,7 @@ function CharacterDetailsDialog({ character }: { character: Character }) {
     <Dialog>
       <DialogTrigger asChild>
         <Button type="button" variant="ghost" size="icon" className="h-9 w-9" aria-label="Details anzeigen">
-          <Eye className="h-4 w-4" />
+          <EyeIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
@@ -304,7 +305,7 @@ function CharacterCard({ character, users, currentPath }: { character: Character
                 <input type="hidden" name="characterId" value={character.id} />
                 <input type="hidden" name="redirectPath" value={currentPath} />
                 <Button type="submit" variant="ghost" size="icon" className="h-9 w-9" aria-label="Rolle entfernen">
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2Icon className="h-4 w-4" />
                 </Button>
               </form>
             </div>
@@ -320,11 +321,11 @@ function CharacterCard({ character, users, currentPath }: { character: Character
             <span className="flex items-center gap-2">
               <span>Besetzung</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                <UserRoundCheck className="h-3 w-3" aria-hidden />
+                <UserRoundCheckIcon className="h-3 w-3" aria-hidden />
                 {sortedCastings.length}
               </span>
             </span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition duration-200 group-open:rotate-180" aria-hidden />
+            <ChevronDownIcon className="h-4 w-4 text-muted-foreground transition duration-200 group-open:rotate-180" aria-hidden />
           </summary>
           <div className="space-y-2 border-t border-border/60 px-3 py-3">
             <CastingAssignments castings={sortedCastings} currentPath={currentPath} />
@@ -458,7 +459,7 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
               aria-label={sortDirection === "asc" ? "Rollengröße A bis Z sortieren" : "Rollengröße Z bis A sortieren"}
               onClick={() => setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
             >
-              {sortDirection === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowUpAZ className="h-4 w-4" />}
+              {sortDirection === "asc" ? <ArrowDownAZIcon className="h-4 w-4" /> : <ArrowUpAZIcon className="h-4 w-4" />}
             </Button>
             {hasFilters ? (
               <Button
@@ -468,7 +469,7 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
                 aria-label="Filter und Suche entfernen"
                 onClick={clearFilters}
               >
-                <FilterX className="h-4 w-4" aria-hidden />
+                <FilterXIcon className="h-4 w-4" aria-hidden />
               </Button>
             ) : null}
           </div>

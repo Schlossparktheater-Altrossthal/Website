@@ -1,9 +1,9 @@
 "use client";
 
+import { CalendarPlusIcon, IconComponent } from "@/components/ui/action-icons";
+
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
-import { CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -36,7 +36,7 @@ type DefaultValues = Partial<{
 
 type TriggerProps = {
   label?: string;
-  icon?: LucideIcon;
+  icon?: IconComponent;
   className?: string;
 } & Pick<ButtonProps, "size" | "variant">;
 
@@ -105,7 +105,7 @@ export function CreateDepartmentEventButton({
 
   const {
     label: triggerLabel = "Termin planen",
-    icon: TriggerIcon = CalendarPlus,
+    icon: TriggerIcon = CalendarPlusIcon,
     variant: triggerVariant = "secondary",
     size: triggerSize = "sm",
     className: triggerClassName,

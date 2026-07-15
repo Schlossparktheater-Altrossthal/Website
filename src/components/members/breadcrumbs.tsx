@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { MembersBreadcrumbItem } from "@/lib/members-breadcrumbs";
+import { ChevronRightIcon } from "@/components/ui/action-icons";
 
 const ROOT_ID = "__members-root";
 
@@ -57,7 +57,7 @@ export function MembersBreadcrumbs({
         return (
           <li key={key} className="flex min-w-0 items-center gap-2">
             {index > 0 ? (
-              <ChevronRight
+              <ChevronRightIcon
                 aria-hidden="true"
                 className="h-3 w-3 flex-shrink-0 text-muted-foreground/60"
               />

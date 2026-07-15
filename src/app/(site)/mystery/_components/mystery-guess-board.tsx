@@ -1,7 +1,8 @@
 "use client";
 
+import { RefreshCwIcon } from "@/components/ui/action-icons";
+
 import { type FocusEvent, type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
 
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
@@ -260,7 +261,7 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
                   Tipp abschicken
                 </AsyncButton>
                 <Button type="button" variant="ghost" onClick={refreshTips} disabled={isLoading} className="gap-2">
-                  <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden />
+                  <RefreshCwIcon className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden />
                   Aktualisieren
                 </Button>
               </div>

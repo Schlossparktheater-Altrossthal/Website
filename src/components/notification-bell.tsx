@@ -1,9 +1,10 @@
 "use client";
 
+import { BellIcon } from "@/components/ui/action-icons";
+
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -314,7 +315,7 @@ export function NotificationBell({ className }: { className?: string }) {
         aria-controls={!isMobile && open ? panelId : undefined}
         aria-label={unreadCount ? `${unreadCount} ungelesene Benachrichtigungen` : "Benachrichtigungen"}
       >
-        <Bell size={18} />
+        <BellIcon size={18} />
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[0.6rem] font-semibold text-primary-foreground">
             {unreadCount}

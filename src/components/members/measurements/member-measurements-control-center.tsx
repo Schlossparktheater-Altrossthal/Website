@@ -1,18 +1,9 @@
 "use client";
 
+import { AlertTriangleIcon, ArrowDownAZIcon, ArrowUpAZIcon, BarChart3Icon, Clock3Icon, FileDownIcon, RulerIcon, SettingsIcon, UsersIcon } from "@/components/ui/action-icons";
+
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import {
-  AlertTriangle,
-  ArrowDownAZ,
-  ArrowUpAZ,
-  BarChart3,
-  Clock3,
-  FileDown,
-  Ruler,
-  Settings,
-  Users,
-} from "lucide-react";
 
 import { MeasurementForm } from "@/components/forms/measurement-form";
 import { Badge } from "@/components/ui/badge";
@@ -547,17 +538,17 @@ export function MemberMeasurementsControlCenter({
           <StatBlock
             label="Ensemble"
             value={NUMBER_FORMATTER.format(globalStats.totalMembers)}
-            icon={<Users className="h-4 w-4" aria-hidden />}
+            icon={<UsersIcon className="h-4 w-4" aria-hidden />}
           />
           <StatBlock
             label="Erfasste Maße"
             value={NUMBER_FORMATTER.format(globalStats.totalMeasurements)}
-            icon={<Ruler className="h-4 w-4" aria-hidden />}
+            icon={<RulerIcon className="h-4 w-4" aria-hidden />}
           />
           <StatBlock
             label="Abdeckung"
             value={PERCENT_FORMATTER.format(globalStats.averageCompletion)}
-            icon={<BarChart3 className="h-4 w-4" aria-hidden />}
+            icon={<BarChart3Icon className="h-4 w-4" aria-hidden />}
           />
         </div>
       </div>
@@ -588,9 +579,9 @@ export function MemberMeasurementsControlCenter({
                 onClick={() => setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
               >
                 {sortDirection === "asc" ? (
-                  <ArrowDownAZ className="h-4 w-4" aria-hidden />
+                  <ArrowDownAZIcon className="h-4 w-4" aria-hidden />
                 ) : (
-                  <ArrowUpAZ className="h-4 w-4" aria-hidden />
+                  <ArrowUpAZIcon className="h-4 w-4" aria-hidden />
                 )}
               </Button>
               <DropdownMenu>
@@ -601,7 +592,7 @@ export function MemberMeasurementsControlCenter({
                     className="w-full justify-between border-warning/60 text-warning hover:border-warning/80 hover:text-warning sm:w-auto"
                   >
                     Export
-                    <FileDown className="h-4 w-4 text-warning" />
+                    <FileDownIcon className="h-4 w-4 text-warning" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -618,7 +609,7 @@ export function MemberMeasurementsControlCenter({
                       size="icon"
                       aria-label="Benötigte Maße festlegen"
                     >
-                      <Settings className="h-4 w-4" aria-hidden />
+                      <SettingsIcon className="h-4 w-4" aria-hidden />
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-lg">
@@ -740,13 +731,13 @@ export function MemberMeasurementsControlCenter({
               <DataTable columns={columns} data={measurementRows} tableClassName="w-full min-w-[480px] text-xs" />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
-                <AlertTriangle className="h-5 w-5" />
+                <AlertTriangleIcon className="h-5 w-5" />
                 <p>Keine Maße entsprechen den aktuellen Filtern. Passe die Auswahl an.</p>
               </div>
             )
           ) : (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
-              <AlertTriangle className="h-5 w-5" />
+              <AlertTriangleIcon className="h-5 w-5" />
               <p>Keine Mitglieder mit Besetzung gefunden. Lege eine Besetzung an oder entferne Filter.</p>
             </div>
           )}
@@ -794,7 +785,7 @@ export function MemberMeasurementsControlCenter({
                       )}
                     </div>
                     <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock3 className="h-3.5 w-3.5" />
+                      <Clock3Icon className="h-3.5 w-3.5" />
                       <span>{formatLastUpdated(memberModalMember.stats.lastUpdated)}</span>
                     </div>
                   </div>
@@ -893,7 +884,7 @@ export function MemberMeasurementsControlCenter({
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4 py-10 text-center text-sm text-muted-foreground">
-              <AlertTriangle className="h-6 w-6 text-muted-foreground" />
+              <AlertTriangleIcon className="h-6 w-6 text-muted-foreground" />
               <p>Profilinformationen konnten nicht geladen werden. Schließe das Fenster und versuche es erneut.</p>
             </div>
           )}

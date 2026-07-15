@@ -1,5 +1,7 @@
 "use client";
 
+import { FilterIcon, LayersIcon, PowerIcon } from "@/components/ui/action-icons";
+
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import {
   Sheet,
@@ -19,7 +21,6 @@ import type {
   PermissionWorkbenchDepartment,
   PermissionWorkbenchPermission,
 } from "@/components/members/permissions/permission-workbench-types";
-import { Filter, Layers, Power } from "lucide-react";
 
 type DepartmentPermissionDrawerProps = {
   open: boolean;
@@ -223,7 +224,7 @@ export function DepartmentPermissionDrawer({
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                         <span>Kategorien</span>
-                        <Layers className="h-4 w-4" aria-hidden />
+                        <LayersIcon className="h-4 w-4" aria-hidden />
                       </div>
                       <div className="grid gap-2">
                         {categorySummaries.map((category) => {
@@ -251,7 +252,7 @@ export function DepartmentPermissionDrawer({
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                         <span>Status</span>
-                        <Power className="h-4 w-4" aria-hidden />
+                        <PowerIcon className="h-4 w-4" aria-hidden />
                       </div>
                       <Button
                         type="button"
@@ -274,7 +275,7 @@ export function DepartmentPermissionDrawer({
                       disabled={activeFilterCount === 0}
                       onClick={resetFilters}
                     >
-                      <Filter className="mr-2 h-4 w-4" /> Filter leeren
+                      <FilterIcon className="mr-2 h-4 w-4" /> Filter leeren
                     </Button>
                   </CardContent>
                 </Card>

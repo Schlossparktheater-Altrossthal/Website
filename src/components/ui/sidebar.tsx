@@ -1,9 +1,10 @@
 "use client";
 
+import { PanelLeftIcon } from "@/components/ui/action-icons";
+
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { PanelLeft } from "lucide-react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
@@ -528,7 +529,7 @@ const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      <PanelLeft className="h-5 w-5" />
+      <PanelLeftIcon className="h-5 w-5" />
       <span className="sr-only">Sidebar umschalten</span>
     </Button>
   );

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, CalendarDays, FolderOpen, Wrench } from "lucide-react";
 
 import { PageHeader } from "@/components/members/page-header";
 import { Button } from "@/components/ui/button";
@@ -8,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
+import { Building2Icon, CalendarDaysIcon, FolderOpenIcon, WrenchIcon } from "@/components/ui/action-icons";
 
 type StatItem = {
   label: string;
   value: string;
   hint: string;
-  icon: typeof Building2;
+  icon: typeof Building2Icon;
 };
 
 export default async function MeineGewerkePage() {
@@ -67,10 +67,10 @@ export default async function MeineGewerkePage() {
   const documentCount = memberships.reduce((sum, entry) => sum + entry.department.documents.length, 0);
 
   const stats: StatItem[] = [
-    { label: "Gewerke", value: teamCount.toString(), hint: "Teams mit Zugriff", icon: Wrench },
-    { label: "Offene Aufgaben", value: openTasks.toString(), hint: "Todos in deinen Gewerken", icon: Wrench },
-    { label: "Termine", value: eventCount.toString(), hint: "Ereignisse in den Teams", icon: CalendarDays },
-    { label: "Dokumente", value: documentCount.toString(), hint: "Dateien aus den Gewerken", icon: FolderOpen },
+    { label: "Gewerke", value: teamCount.toString(), hint: "Teams mit Zugriff", icon: WrenchIcon },
+    { label: "Offene Aufgaben", value: openTasks.toString(), hint: "Todos in deinen Gewerken", icon: WrenchIcon },
+    { label: "Termine", value: eventCount.toString(), hint: "Ereignisse in den Teams", icon: CalendarDaysIcon },
+    { label: "Dokumente", value: documentCount.toString(), hint: "Dateien aus den Gewerken", icon: FolderOpenIcon },
   ];
 
   const firstDepartmentSlug = memberships.find((entry) => entry.department.slug)?.department.slug;

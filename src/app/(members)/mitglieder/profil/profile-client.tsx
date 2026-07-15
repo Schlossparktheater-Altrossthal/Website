@@ -1,30 +1,11 @@
 "use client";
 
+import { AlertTriangleIcon, ArrowRightIcon, CalendarDaysIcon, CheckCircle2Icon, CheckIcon, CreditCardIcon, EyeIcon, HeartIcon, Loader2Icon, MailIcon, MessageCircleIcon, PencilIcon, ShieldCheckIcon, SparklesIcon, TheaterIcon, Trash2Icon, UserIcon, UsersIcon, UtensilsIcon } from "@/components/ui/action-icons";
+
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { toast } from "sonner";
-import {
-  ArrowRight,
-  AlertTriangle,
-  Check,
-  CheckCircle2,
-  CalendarDays,
-  Loader2,
-  Mail,
-  Pencil,
-  MessageCircle,
-  ShieldCheck,
-  Trash2,
-  Users,
-  User,
-  CreditCard,
-  Utensils,
-  Heart,
-  Eye,
-  Sparkles,
-  Theater,
-} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -868,7 +849,7 @@ function ProfileClientInner({
     return [
       {
         id: "whatsapp",
-        icon: <MessageCircle className="h-5 w-5" aria-hidden />,
+        icon: <MessageCircleIcon className="h-5 w-5" aria-hidden />,
         title: "Team-Chat",
         description: whatsappVisitedAtLabel
           ? `Bereits geöffnet am ${whatsappVisitedAtLabel}.`
@@ -893,7 +874,7 @@ function ProfileClientInner({
             }}
           >
             <span>{whatsappVisitedAt ? "Erneut öffnen" : "Chat öffnen"}</span>
-            <ArrowRight className="h-4 w-4" aria-hidden />
+            <ArrowRightIcon className="h-4 w-4" aria-hidden />
           </Button>
         ),
       },
@@ -902,14 +883,14 @@ function ProfileClientInner({
 
   const tabOptions = useMemo(
     () => {
-      const options: Array<{ value: string; label: string; icon: typeof User }> = [
-        { value: "stammdaten", label: "Stammdaten", icon: User },
-        { value: "zahlungen", label: "Zahlungsdaten", icon: CreditCard },
-        { value: "ernaehrung", label: "Ernährung", icon: Utensils },
-        { value: "interessen", label: "Interessen", icon: Heart },
-        { value: "freigaben", label: "Freigaben", icon: Eye },
-        { value: "onboarding", label: "Onboarding", icon: Sparkles },
-        { value: "rollen", label: "Präferenzen", icon: Theater },
+      const options: Array<{ value: string; label: string; icon: typeof UserIcon }> = [
+        { value: "stammdaten", label: "Stammdaten", icon: UserIcon },
+        { value: "zahlungen", label: "Zahlungsdaten", icon: CreditCardIcon },
+        { value: "ernaehrung", label: "Ernährung", icon: UtensilsIcon },
+        { value: "interessen", label: "Interessen", icon: HeartIcon },
+        { value: "freigaben", label: "Freigaben", icon: EyeIcon },
+        { value: "onboarding", label: "Onboarding", icon: SparklesIcon },
+        { value: "rollen", label: "Präferenzen", icon: TheaterIcon },
       ];
 
       return options;
@@ -1110,18 +1091,18 @@ function ProfileOverviewCard({
                     href={`mailto:${email}`}
                     className="flex items-center justify-center gap-2 font-medium text-foreground transition hover:text-primary sm:justify-start"
                   >
-                    <Mail className="h-4 w-4 shrink-0" aria-hidden />
+                    <MailIcon className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="truncate">{email}</span>
                   </a>
                 ) : (
                   <span className="flex items-center justify-center gap-2 text-muted-foreground/80 sm:justify-start">
-                    <Mail className="h-4 w-4 shrink-0" aria-hidden />
+                    <MailIcon className="h-4 w-4 shrink-0" aria-hidden />
                     Keine E-Mail hinterlegt
                   </span>
                 )}
                 {memberSinceLabel || createdAtLabel ? (
                   <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground sm:justify-start">
-                    <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
+                    <CalendarDaysIcon className="h-4 w-4 shrink-0" aria-hidden />
                     <span>{memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}</span>
                   </div>
                 ) : null}
@@ -1198,7 +1179,7 @@ function ProfileOverviewCard({
                           )}
                           aria-hidden
                         >
-                          {isComplete ? <Check className="h-3 w-3" aria-hidden /> : null}
+                          {isComplete ? <CheckIcon className="h-3 w-3" aria-hidden /> : null}
                         </span>
                         <span
                           className={cn(
@@ -1258,7 +1239,7 @@ function ProfileOverviewCard({
         ) : null}
         {show ? (
           <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
-            <Users className="h-4 w-4 text-muted-foreground/80" aria-hidden />
+            <UsersIcon className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>
               Produktion: {showLabel}
               {show?.periodLabel ? ` · ${show.periodLabel}` : ""}
@@ -1663,7 +1644,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                           >
                             {avatarCrop.avatarCropLoading ? (
                               <>
-                                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden />
+                                <Loader2Icon className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden />
                                 Ausschnitt wird geladen…
                               </>
                             ) : (
@@ -1724,7 +1705,7 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
               <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
                 {submitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                     Speichern…
                   </>
                 ) : (
@@ -1964,7 +1945,7 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
             <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
               {submitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   Speichern…
                 </>
               ) : (
@@ -2220,14 +2201,14 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                   {dietaryDescription.label} · {dietaryDescription.strictnessLabel}
                 </p>
               </div>
-              <CheckCircle2 className="h-5 w-5 text-success" aria-hidden="true" />
+              <CheckCircle2Icon className="h-5 w-5 text-success" aria-hidden="true" />
             </div>
 
             <div className="flex flex-col items-stretch justify-end sm:flex-row sm:items-center">
               <Button type="submit" disabled={dietarySubmitting} className="w-full sm:w-auto">
                 {dietarySubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                     Speichern…
                   </>
                 ) : (
@@ -2316,7 +2297,7 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <Button type="submit" disabled={allergySubmitting} className="w-full sm:w-auto">
                 {allergySubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                     Speichern…
                   </>
                 ) : editingAllergyId ? (
@@ -2350,7 +2331,7 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                           className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-foreground"
                           onClick={() => handleAllergyEdit(entry)}
                         >
-                          <Pencil className="h-3 w-3" aria-hidden="true" />
+                          <PencilIcon className="h-3 w-3" aria-hidden="true" />
                           Bearbeiten
                         </button>
                         <button
@@ -2358,7 +2339,7 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                           className="inline-flex items-center gap-1 rounded-md border border-destructive/60 px-2 py-1 text-destructive hover:bg-destructive/10"
                           onClick={() => handleAllergyDelete(entry.allergen)}
                         >
-                          <Trash2 className="h-3 w-3" aria-hidden="true" />
+                          <Trash2Icon className="h-3 w-3" aria-hidden="true" />
                           Entfernen
                         </button>
                       </div>
@@ -2368,7 +2349,7 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                       {entry.treatment ? <p>Behandlung: {entry.treatment}</p> : null}
                       {entry.note ? <p>Hinweis: {entry.note}</p> : null}
                       <p className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground/70">
-                        <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                        <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
                         Aktualisiert am {formatDate(entry.updatedAt) ?? "unbekannt"}
                       </p>
                     </div>
@@ -2588,7 +2569,7 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
             <Button type="submit" disabled={!state.dirty || saving} className="w-full sm:w-auto">
               {saving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   Speichern…
                 </>
               ) : (
@@ -2870,7 +2851,7 @@ export function OnboardingSection({
           whatsappVisitedAt ? (
             <div className="flex flex-col flex-wrap items-start gap-3 text-sm sm:flex-row sm:items-center">
               <span className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+                <CheckCircle2Icon className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
                 {`WhatsApp-Onboarding bestätigt${
                   whatsappVisitedLabel ? ` am ${whatsappVisitedLabel}` : ""
                 }.`}
@@ -2884,7 +2865,7 @@ export function OnboardingSection({
               >
                 {whatsappSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                     Aktualisiere…
                   </>
                 ) : (
@@ -2900,7 +2881,7 @@ export function OnboardingSection({
               )}
             >
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                <AlertTriangleIcon className="h-4 w-4" aria-hidden="true" />
                 <span>WhatsApp-Onboarding steht noch aus.</span>
               </div>
               <p className="text-xs text-primary/80">
@@ -2909,7 +2890,7 @@ export function OnboardingSection({
               <Button size="sm" onClick={handleWhatsAppClick} disabled={whatsappSubmitting} className="w-full sm:w-auto">
                 {whatsappSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                     Aktualisiere…
                   </>
                 ) : (
@@ -3073,7 +3054,7 @@ export function OnboardingSection({
             <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
               {submitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   Speichern…
                 </>
               ) : (
@@ -3133,12 +3114,12 @@ export function OnboardingSection({
                       <div className="mt-3 flex items-center gap-2 text-xs">
                         {active ? (
                           <>
-                            <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
+                            <CheckCircle2Icon className="h-4 w-4 text-primary" aria-hidden="true" />
                             <span className="font-medium text-primary">Ausgewählt</span>
                           </>
                         ) : (
                           <>
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                            <ArrowRightIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                             <span className="text-muted-foreground">Auswählen</span>
                           </>
                         )}
@@ -3159,7 +3140,7 @@ export function OnboardingSection({
             <Button type="button" onClick={handleShowAssign} disabled={showSubmitting || !selectedShowId}>
               {showSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   Speichern…
                 </>
               ) : currentShow ? (
@@ -3465,7 +3446,7 @@ export function RolePreferencesSection({
             <Button type="submit" disabled={preferenceSubmitting} className="w-full sm:w-auto">
               {preferenceSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   Speichern…
                 </>
               ) : (

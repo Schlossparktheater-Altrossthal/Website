@@ -1,5 +1,7 @@
 'use client';
 
+import { FileDownIcon } from "@/components/ui/action-icons";
+
 import { useMemo, useState } from 'react';
 import { addDays, addMonths, eachDayOfInterval, format, startOfMonth, startOfToday } from 'date-fns';
 import { de } from 'date-fns/locale/de';
@@ -15,7 +17,6 @@ import {
 } from '@/components/ui/dialog';
 import { formatWeekdayList, getWeekdayLabel, sortWeekdays, type WeekdayValue } from '@/lib/weekdays';
 import { toast } from 'sonner';
-import { FileDown } from 'lucide-react';
 
 import type { HolidayRange } from '@/types/holidays';
 
@@ -365,7 +366,7 @@ export function BlockOverview({
                 aria-busy={isExportingPdf}
                 className="sm:w-auto"
               >
-                <FileDown className="h-4 w-4" aria-hidden />
+                <FileDownIcon className="h-4 w-4" aria-hidden />
                 PDF exportieren
               </Button>
             </div>

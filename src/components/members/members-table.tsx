@@ -1,10 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 
-import { EditIcon, EyeIcon, LoadingIcon, TrashIcon } from "@/components/ui/action-icons";
+import { EditIcon, EyeIcon, LoadingIcon, TrashIcon, UserCheckIcon, UserXIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -383,7 +382,7 @@ function MemberActionButtons({
   const statusTitle = user.isDeactivated
     ? `${actionTarget} reaktivieren`
     : `${actionTarget} deaktivieren`;
-  const StatusIcon = user.isDeactivated ? UserCheck : UserX;
+  const StatusIcon = user.isDeactivated ? UserCheckIcon : UserXIcon;
   const baseButtonClass = "rounded-full border shadow-sm";
   const statusButtonClass = user.isDeactivated
     ? "border-success/60 bg-success/10 text-success hover:bg-success/20 hover:text-success-foreground"

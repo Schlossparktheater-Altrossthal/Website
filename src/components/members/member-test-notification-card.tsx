@@ -1,7 +1,8 @@
 "use client";
 
+import { AlertTriangleIcon, BellRingIcon } from "@/components/ui/action-icons";
+
 import { useState } from "react";
-import { AlertTriangle, BellRing } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export function MemberTestNotificationCard({
             disabled={Boolean(pending)}
             onClick={() => sendTestNotification("normal")}
           >
-            <BellRing className="h-4 w-4" aria-hidden />
+            <BellRingIcon className="h-4 w-4" aria-hidden />
             {pending === "normal" ? "Sende…" : "Normale Testbenachrichtigung"}
           </Button>
           <Button
@@ -82,7 +83,7 @@ export function MemberTestNotificationCard({
             disabled={Boolean(pending)}
             onClick={() => sendTestNotification("emergency")}
           >
-            <AlertTriangle className="h-4 w-4" aria-hidden />
+            <AlertTriangleIcon className="h-4 w-4" aria-hidden />
             {pending === "emergency" ? "Sende…" : "Notfall-Testbenachrichtigung"}
           </Button>
         </div>
