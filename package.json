@@ -72,7 +72,7 @@
     "idb-keyval": "^6.2.1",
     "ioredis": "^5.4.1",
     "lucide-react": "^1.16.0",
-    "next": "16.2.9",
+    "next": "16.2.11",
     "next-auth": "^4.24.11",
     "node-ical": "^0.26.1",
     "nodemailer": "^9.0.1",
