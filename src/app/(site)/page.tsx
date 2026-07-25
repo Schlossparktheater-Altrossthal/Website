@@ -72,7 +72,7 @@ export default async function PublicHomePage() {
           </section>
           <ShowFlyerSection active={productionFlyer?.aktiv ?? false} title={productionFlyer?.titel ?? null} description={productionFlyer?.beschreibung ?? null} hasImage={Boolean(productionFlyer?.bildData && productionFlyer?.bildMimeType)} />
           <HomepageLinkCards />
-          <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
+          <section className="relative mt-24 overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--primary)_35%,transparent),_transparent_60%),radial-gradient(circle_at_bottom,_color-mix(in_oklab,var(--info)_25%,transparent),_transparent_55%)]"
               aria-hidden="true"

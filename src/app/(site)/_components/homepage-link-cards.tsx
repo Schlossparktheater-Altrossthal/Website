@@ -3,7 +3,7 @@ import type { ReactNode, SVGProps } from "react";
 
 import { Card } from "@/components/ui/card";
 import { Heading, Text } from "@/components/ui/typography";
-import { ArrowRightIcon, BookOpenTextIcon, CatIcon, UsersIcon } from "@/components/ui/action-icons";
+import { BookOpenTextIcon, CatIcon, UsersIcon } from "@/components/ui/action-icons";
 
 type HomepageLinkCard = {
   href: string;
@@ -35,7 +35,7 @@ const LINK_CARDS: HomepageLinkCard[] = [
 
 export function HomepageLinkCards() {
   return (
-    <section aria-labelledby="home-links-heading" className="space-y-6">
+    <section aria-labelledby="home-links-heading" className="mb-56 space-y-6">
       <div className="text-center">
         <Heading id="home-links-heading" level="h2" align="center" className="text-[clamp(1.8rem,4vw,2.6rem)] font-bold">
           Mehr entdecken
@@ -43,20 +43,26 @@ export function HomepageLinkCards() {
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {LINK_CARDS.map(({ href, title, description, Icon }) => (
-          <Card key={href} className="group flex h-full flex-col items-center border border-primary/60 bg-card/70 p-4 text-center shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
-            <Link href={href} className="flex h-full w-full flex-col items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-primary/60 bg-muted text-foreground">
-                <Icon className="h-5 w-5" />
+          <Card key={href} className="group flex h-full items-start border border-primary/60 bg-card/70 p-5 text-left shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <Link href={href} className="flex h-full w-full flex-col text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              <div className="flex flex-row items-start gap-4">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-primary/60 bg-muted text-foreground">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Heading level="h3" className="text-xl font-semibold">
+                    {title}
+                  </Heading>
+                  <Text tone="muted" className="leading-relaxed">
+                    {description}
+                  </Text>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Heading level="h3" className="text-xl font-semibold">
-                  {title}
-                </Heading>
-                <Text tone="muted" className="leading-relaxed">
-                  {description}
-                </Text>
+              <div className="mt-3 flex justify-center">
+                <span className="inline-flex w-auto items-center justify-center rounded-full border border-primary px-6 py-1.5 text-base font-semibold text-primary transition-all duration-200 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-lg">
+                  Mehr lesen
+                </span>
               </div>
-              <ArrowRightIcon className="mt-auto h-4 w-4 text-muted-foreground transition group-hover:translate-y-0.5 group-hover:text-foreground" />
             </Link>
           </Card>
         ))}
