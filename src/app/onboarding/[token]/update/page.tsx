@@ -145,7 +145,6 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         treatment: true,
         note: true,
       },
-      orderBy: { createdAt: "asc" },
     }),
     prisma.memberRolePreference.findMany({
       where: { userId },
