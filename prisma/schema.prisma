@@ -270,6 +270,8 @@ model User {
   createdAt DateTime @default(now())
   dateOfBirth DateTime?
   deactivatedAt DateTime?
+  onboardingCompletedAt DateTime?
+  onboardingUpdatedAt DateTime?
   avatarSource        AvatarSource @default(GRAVATAR)
   avatarImage         Bytes?
   avatarImageMime     String?
@@ -1396,7 +1398,15 @@ model MemberOnboardingProfile {
   redemptionId String?         @unique
   showId       String?
   focus        OnboardingFocus
+  educationCategory String?
+  educationSchoolName String?
+  educationClassName String?
+  educationWorkDescription String?
+  educationUniversityName String?
+  educationOtherDescription String?
+  /// @deprecated Use educationCategory and the structured education fields instead.
   background   String?
+  /// @deprecated Use educationCategory and the structured education fields instead.
   backgroundClass String?
   notes        String?
   gender       String?

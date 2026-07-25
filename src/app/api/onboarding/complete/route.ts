@@ -386,6 +386,11 @@ export async function POST(request: NextRequest) {
         select: { id: true, email: true },
       });
 
+      await tx.user.update({
+        where: { id: user.id },
+        data: { onboardingCompletedAt: new Date() },
+      });
+
       await tx.memberInvite.update({
         where: { id: invite.id },
         data: { usageCount: { increment: 1 } },

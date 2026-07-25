@@ -153,6 +153,7 @@ type InviteMeta = {
 type OnboardingWizardVariant = "default" | "regie";
 
 type OnboardingWizardProps = {
+  token: string;
   sessionToken: string;
   invite: InviteMeta;
   variant?: OnboardingWizardVariant;
@@ -283,7 +284,7 @@ function formatProductionLabel(production: InviteMeta["production"]) {
   return `Produktion ${production.year}`;
 }
 
-export function OnboardingWizard({ sessionToken, invite, variant = "default" }: OnboardingWizardProps) {
+export function OnboardingWizard({ token, sessionToken, invite, variant = "default" }: OnboardingWizardProps) {
   const router = useRouter();
   const isRegieVariant = variant === "regie";
   const [step, setStep] = useState(0);
@@ -1166,9 +1167,14 @@ export function OnboardingWizard({ sessionToken, invite, variant = "default" }: 
           <CardContent className="space-y-5 px-5 py-6 text-center sm:space-y-6 sm:px-8 sm:py-8">
             <h2 className="text-2xl font-semibold sm:text-3xl">{getIntroHeading(variant)}</h2>
             <p className="text-sm text-muted-foreground sm:text-base">{getIntroDescription(variant)}</p>
-            <Button size="lg" onClick={goNext}>
-              Los geht&apos;s
-            </Button>
+            <div className="flex flex-row justify-center gap-2">
+              <Button size="lg" onClick={goNext}>
+                Los geht&apos;s
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href={`/onboarding/${token}/update`}>Ich habe bereits einen Account</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

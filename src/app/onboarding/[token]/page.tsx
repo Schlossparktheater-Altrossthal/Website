@@ -84,6 +84,7 @@ export default async function OnboardingInvitePage({
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <OnboardingWizard
+        token={token}
         sessionToken={redemption.sessionToken}
         invite={{
           label: invite.label,
