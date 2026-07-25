@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { AllergyLevel } from "@prisma/client";
 import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
               },
             },
             update: {
-              level: entry.level,
+              level: entry.level as AllergyLevel,
               symptoms: entry.symptoms,
               treatment: entry.treatment,
               note: entry.note,
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
             create: {
               userId,
               allergen: entry.allergen,
-              level: entry.level,
+              level: entry.level as AllergyLevel,
               symptoms: entry.symptoms,
               treatment: entry.treatment,
               note: entry.note,
