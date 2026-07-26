@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 
 type ExistingProfile = {
   educationCategory?: string | null;
@@ -37,6 +38,13 @@ type ExistingPreference = {
   code: string;
   domain: string;
   weight: number;
+};
+
+type PreferenceEntry = {
+  code: string;
+  domain: string;
+  weight: number;
+  enabled: boolean;
 };
 
 type ReturneeUpdateWizardProps = {
@@ -66,7 +74,7 @@ type FormState = {
   educationWorkDescription: string;
   educationUniversityName: string;
   educationOtherDescription: string;
-  preferences: ExistingPreference[];
+  preferences: PreferenceEntry[];
   photoConsent: boolean;
   dietaryPreference: string;
   dietaryPreferenceStrictness: string;
@@ -115,6 +123,27 @@ function createInitialState(
   existingPhotoConsent: boolean | null,
 ): FormState {
   const educationCategory = normalizeEducationCategory(existingProfile.educationCategory);
+  const existingPreferencesByCode = new Map(
+    existingPreferences.map((preference) => [preference.code, preference]),
+  );
+  const actingPreferences: PreferenceEntry[] = listRolePreferenceDefinitions("acting").map((definition) => {
+    const existingPreference = existingPreferencesByCode.get(definition.code);
+    return {
+      code: definition.code,
+      domain: definition.domain,
+      enabled: Boolean(existingPreference),
+      weight: existingPreference?.weight ?? 0,
+    };
+  });
+  const crewPreferences: PreferenceEntry[] = listRolePreferenceDefinitions("crew").map((definition) => {
+    const existingPreference = existingPreferencesByCode.get(definition.code);
+    return {
+      code: definition.code,
+      domain: definition.domain,
+      enabled: Boolean(existingPreference),
+      weight: existingPreference?.weight ?? 0,
+    };
+  });
   return {
     educationCategory,
     schoolVariant:
@@ -128,7 +157,7 @@ function createInitialState(
     educationWorkDescription: existingProfile.educationWorkDescription ?? "",
     educationUniversityName: existingProfile.educationUniversityName ?? "",
     educationOtherDescription: existingProfile.educationOtherDescription ?? "",
-    preferences: existingPreferences.map((preference) => ({ ...preference })),
+    preferences: [...actingPreferences, ...crewPreferences],
     photoConsent: existingPhotoConsent ?? true,
     dietaryPreference: existingProfile.dietaryPreference ?? "",
     dietaryPreferenceStrictness: existingProfile.dietaryPreferenceStrictness ?? "",
@@ -160,7 +189,7 @@ export function ReturneeUpdateWizard({
   );
 
   const selectedPreferences = useMemo(
-    () => form.preferences.filter((preference) => preference.weight > 0),
+    () => form.preferences.filter((preference) => preference.enabled),
     [form.preferences],
   );
 
@@ -188,7 +217,7 @@ export function ReturneeUpdateWizard({
     form.educationWorkDescription,
   ]);
 
-  const updatePreference = (code: string, updates: Partial<ExistingPreference>) => {
+  const updatePreference = (code: string, updates: Partial<PreferenceEntry>) => {
     setForm((prev) => ({
       ...prev,
       preferences: prev.preferences.map((preference) =>
@@ -486,7 +515,7 @@ export function ReturneeUpdateWizard({
               </p>
               <div className="grid gap-4 md:grid-cols-2">
                 {form.preferences.map((preference) => {
-                  const active = preference.weight > 0;
+                  const active = preference.enabled;
                   return (
                     <div
                       key={preference.code}
@@ -497,14 +526,19 @@ export function ReturneeUpdateWizard({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <h4 className="font-medium">{preference.code}</h4>
+                          <h4 className="font-medium">{preference.title}</h4>
                           <p className="text-xs text-muted-foreground">Bereich: {preference.domain}</p>
                         </div>
                         <Button
                           type="button"
                           size="sm"
                           variant={active ? "primary" : "outline"}
-                          onClick={() => updatePreference(preference.code, { weight: active ? 0 : 50 })}
+                          onClick={() =>
+                            updatePreference(preference.code, {
+                              enabled: !active,
+                              weight: active ? 0 : 50,
+                            })
+                          }
                         >
                           {active ? "Aktiv" : "Wählen"}
                         </Button>
@@ -517,12 +551,8 @@ export function ReturneeUpdateWizard({
                             max={100}
                             step={10}
                             value={preference.weight}
-                            onChange={(event) =>
-                              updatePreference(preference.code, { weight: event.currentTarget.valueAsNumber })
-                            }
-                            onInput={(event) =>
-                              updatePreference(preference.code, { weight: event.currentTarget.valueAsNumber })
-                            }
+                            onChange={(event) => updatePreference(preference.code, { weight: event.currentTarget.valueAsNumber })}
+                            onInput={(event) => updatePreference(preference.code, { weight: event.currentTarget.valueAsNumber })}
                             className="w-full accent-primary"
                           />
                           <div className="flex items-center justify-between text-xs text-muted-foreground">

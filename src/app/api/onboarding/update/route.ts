@@ -14,18 +14,10 @@ const educationCategorySchema = z.enum([
   "other",
 ]);
 
-const focusSchema = z.enum(["acting", "tech", "both"]);
-
 const preferenceSchema = z.object({
   code: z.string().min(1),
   domain: z.enum(["acting", "crew"]),
   weight: z.number(),
-});
-
-const dietaryPreferenceSchema = z.object({
-  style: z.string(),
-  custom: z.string().nullable(),
-  strictness: z.string(),
 });
 
 const dietarySchema = z.object({
@@ -43,9 +35,9 @@ const payloadSchema = z.object({
   educationWorkDescription: z.string().nullable(),
   educationUniversityName: z.string().nullable(),
   educationOtherDescription: z.string().nullable(),
-  focus: focusSchema,
   preferences: z.array(preferenceSchema),
-  dietaryPreference: dietaryPreferenceSchema,
+  dietaryPreference: z.string().nullable(),
+  dietaryPreferenceStrictness: z.string().nullable(),
   dietary: z.array(dietarySchema),
   notes: z.string().nullable(),
   photoConsent: z.object({
@@ -91,8 +83,8 @@ export async function POST(request: NextRequest) {
   const educationUniversityName = normalizeNullableString(data.educationUniversityName);
   const educationOtherDescription = normalizeNullableString(data.educationOtherDescription);
   const notes = normalizeNullableString(data.notes);
-  const dietaryPreferenceStyle = normalizeString(data.dietaryPreference.style);
-  const dietaryPreferenceStrictness = normalizeString(data.dietaryPreference.strictness);
+  const dietaryPreference = normalizeNullableString(data.dietaryPreference);
+  const dietaryPreferenceStrictness = normalizeString(data.dietaryPreferenceStrictness);
 
   const preferences = data.preferences.map((preference) => ({
     code: normalizeString(preference.code),
@@ -132,12 +124,12 @@ export async function POST(request: NextRequest) {
           educationUniversityName,
           educationOtherDescription,
           notes,
-          dietaryPreference: dietaryPreferenceStyle,
+          dietaryPreference,
           dietaryPreferenceStrictness: dietaryPreferenceStrictness,
         },
         create: {
           userId,
-          focus: data.focus,
+          focus: "both",
           educationCategory: data.educationCategory,
           educationSchoolName,
           educationClassName,
@@ -145,7 +137,7 @@ export async function POST(request: NextRequest) {
           educationUniversityName,
           educationOtherDescription,
           notes,
-          dietaryPreference: dietaryPreferenceStyle,
+          dietaryPreference,
           dietaryPreferenceStrictness: dietaryPreferenceStrictness,
         },
         select: { id: true },
