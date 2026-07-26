@@ -26,7 +26,7 @@ import {
   updateProductionAction,
 } from "./actions";
 
-const INITIAL_ACTION_STATE: ProductionActionResult = { ok: false };
+const INITIAL_ACTION_STATE: ProductionActionResult = { ok: false, error: "" };
 
 function formatDateInput(value: string | Date | null | undefined): string {
   if (!value) return "";

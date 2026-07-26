@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   const educationOtherDescription = normalizeNullableString(data.educationOtherDescription);
   const notes = normalizeNullableString(data.notes);
   const dietaryPreference = normalizeNullableString(data.dietaryPreference);
-  const dietaryPreferenceStrictness = normalizeString(data.dietaryPreferenceStrictness);
+  const dietaryPreferenceStrictness = normalizeString(data.dietaryPreferenceStrictness ?? "");
 
   const preferences = data.preferences.map((preference) => ({
     code: normalizeString(preference.code),

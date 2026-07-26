@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
+import { getRolePreferenceTitle, listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 
 type ExistingProfile = {
   educationCategory?: string | null;
@@ -526,7 +526,7 @@ export function ReturneeUpdateWizard({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <h4 className="font-medium">{preference.title}</h4>
+                          <h4 className="font-medium">{getRolePreferenceTitle(preference.code)}</h4>
                           <p className="text-xs text-muted-foreground">Bereich: {preference.domain}</p>
                         </div>
                         <Button
