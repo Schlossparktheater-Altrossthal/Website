@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, LockIcon, MessageCircleIcon, ShieldCheckIcon, SparklesIcon, TargetIcon } from "@/components/ui/action-icons";
+import { CheckIcon, LockIcon, MessageCircleIcon, ShieldCheckIcon, TargetIcon } from "@/components/ui/action-icons";
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
@@ -43,9 +43,6 @@ import {
   type DietaryStyleOption,
 } from "@/data/dietary-preferences";
 import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
-import { BACKGROUND_TAGS, normalizeBackgroundLabel } from "@/data/onboarding-backgrounds";
-import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
-
 const allergyLevelLabels: Record<AllergyLevel, string> = {
   MILD: "Leicht (Unbehagen)",
   MODERATE: "Mittel (Reaktion möglich)",
@@ -68,7 +65,22 @@ type GenderOption = (typeof genderOptions)[number]["value"];
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-const BASE_BACKGROUND_SUGGESTIONS = ["Schule", "Berufsschule", "Universität", "Ausbildung", "Beruf"] as const;
+const EDUCATION_CATEGORY_OPTIONS = [
+  { value: "school", label: "Schule" },
+  { value: "work", label: "Beruf" },
+  { value: "university", label: "Universität" },
+  { value: "other", label: "Anderes" },
+] as const;
+
+const SCHOOL_VARIANT_OPTIONS = [
+  { value: "bsz", label: "BSZ für Agrarwirtschaft & Ernährung Dresden" },
+  { value: "other", label: "Andere Schule" },
+] as const;
+
+const BSZ_CAMPUS_OPTIONS = [
+  { value: "altroessthal", label: "Altroßthal" },
+  { value: "canalettostrasse", label: "Canalettostraße" },
+] as const;
 
 const allergyLevelStyles = ALLERGY_LEVEL_STYLES;
 
@@ -237,13 +249,17 @@ function createInitialFormState(variant: OnboardingWizardVariant) {
     email: "",
     password: "",
     passwordConfirm: "",
-    background: "",
-    backgroundClass: "",
+    educationCategory: "" as "" | (typeof EDUCATION_CATEGORY_OPTIONS)[number]["value"],
+    educationSchoolName: "",
+    educationClassName: "",
+    educationWorkDescription: "",
+    educationUniversityName: "",
+    educationOtherDescription: "",
     notes: "",
     dateOfBirth: "",
     genderOption: "no_answer" as GenderOption,
     genderCustom: "",
-    memberSinceYear: "",
+    memberSinceYear: String(CURRENT_YEAR),
     actingPreferences: createInitialActingPreferences(),
     crewPreferences: createInitialCrewPreferences(variant),
     interests: [] as string[],
@@ -300,14 +316,6 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
     loading: interestsLoading,
   } = useInterestSuggestions();
   const [form, setForm] = useState(() => createInitialFormState(variant));
-  const {
-    backgroundSuggestions,
-    classSuggestions: backgroundClassSuggestions,
-    activeTag: activeBackgroundTag,
-    requiresClass: requiresBackgroundClass,
-  } = useOnboardingBackgroundData(form.background, {
-    initialSuggestions: BASE_BACKGROUND_SUGGESTIONS,
-  });
   const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
   const [customCrewError, setCustomCrewError] = useState<string | null>(null);
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
@@ -346,32 +354,69 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
   const isMinor = age !== null && age < 18;
-  const backgroundTagValueKeys = useMemo(
-    () => new Set(BACKGROUND_TAGS.map((tag) => normalizeBackgroundLabel(tag.value))),
-    [],
-  );
-  const filteredBackgroundSuggestions = useMemo(
-    () =>
-      backgroundSuggestions.filter((suggestion) => {
-        const key = normalizeBackgroundLabel(suggestion);
-        if (!key) return false;
-        return !backgroundTagValueKeys.has(key);
-      }),
-    [backgroundSuggestions, backgroundTagValueKeys],
-  );
-  const backgroundClassLabel = useMemo(() => {
-    const trimmed = form.backgroundClass.trim();
-    return trimmed ? trimmed : null;
-  }, [form.backgroundClass]);
+  const educationCategory = form.educationCategory;
+  const isSchoolEducation = educationCategory === "school";
+  const isWorkEducation = educationCategory === "work";
+  const isUniversityEducation = educationCategory === "university";
+  const isOtherEducation = educationCategory === "other";
+  const isBszSchool = form.educationSchoolName === "bsz";
 
   useEffect(() => {
-    if (requiresBackgroundClass) return;
-    if (!form.backgroundClass) return;
+    if (educationCategory === "school") {
+      return;
+    }
     setForm((prev) => {
-      if (!prev.backgroundClass) return prev;
-      return { ...prev, backgroundClass: "" };
+      if (
+        !prev.educationCategory &&
+        !prev.educationSchoolName &&
+        !prev.educationClassName &&
+        !prev.educationWorkDescription &&
+        !prev.educationUniversityName &&
+        !prev.educationOtherDescription
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        educationSchoolName: "",
+        educationClassName: "",
+        educationWorkDescription: "",
+        educationUniversityName: "",
+        educationOtherDescription: "",
+      };
     });
-  }, [form.backgroundClass, requiresBackgroundClass]);
+  }, [educationCategory]);
+
+  useEffect(() => {
+    if (isBszSchool) return;
+    setForm((prev) => {
+      if (!prev.educationClassName) return prev;
+      return { ...prev, educationClassName: "" };
+    });
+  }, [isBszSchool]);
+
+  useEffect(() => {
+    if (!isSchoolEducation && !isWorkEducation && !isUniversityEducation && !isOtherEducation) {
+      return;
+    }
+    setForm((prev) => {
+      const next = { ...prev };
+      if (!isSchoolEducation) {
+        next.educationSchoolName = "";
+        next.educationClassName = "";
+      }
+      if (!isWorkEducation) {
+        next.educationWorkDescription = "";
+      }
+      if (!isUniversityEducation) {
+        next.educationUniversityName = "";
+      }
+      if (!isOtherEducation) {
+        next.educationOtherDescription = "";
+      }
+      return next;
+    });
+  }, [isOtherEducation, isSchoolEducation, isUniversityEducation, isWorkEducation]);
 
   const genderLabel = useMemo(() => {
     if (form.genderOption === "custom") {
@@ -808,13 +853,31 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
         setError("Die Passwörter stimmen nicht überein.");
         return;
       }
-      if (!form.background.trim()) {
-        setError("Wo kommst du her? Schule, Uni, Ausbildung – ein Stichwort genügt.");
+      if (!form.dateOfBirth) {
+        setError("Bitte gib dein Geburtsdatum an.");
         return;
       }
-      if (requiresBackgroundClass && !form.backgroundClass.trim()) {
-        setError(activeBackgroundTag?.classRequiredError ?? "Bitte gib deine Klasse an.");
+      if (age !== null && age < 10) {
+        setError("Du musst mindestens 10 Jahre alt sein, um teilzunehmen.");
         return;
+      }
+      if (!form.educationCategory) {
+        setError("Bitte wähle dein schulisches oder berufliches Umfeld aus.");
+        return;
+      }
+      if (form.educationCategory === "school") {
+        if (!form.educationSchoolName) {
+          setError("Bitte wähle deine Schule aus.");
+          return;
+        }
+        if (form.educationSchoolName === "bsz" && !form.educationClassName.trim()) {
+          setError("Bitte gib deine Klasse an.");
+          return;
+        }
+        if (form.educationSchoolName === "other" && !form.educationSchoolName.trim()) {
+          setError("Bitte gib den Namen deiner Schule an.");
+          return;
+        }
       }
       if (form.genderOption === "custom" && !form.genderCustom.trim()) {
         setError("Bitte beschreibe dein Geschlecht oder wähle eine Option aus der Liste.");
@@ -921,6 +984,23 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
       const parsedYear = trimmedYear ? Number.parseInt(trimmedYear, 10) : Number.NaN;
       const memberSinceYear = Number.isFinite(parsedYear) ? parsedYear : null;
       const notes = form.notes.trim();
+      const educationCategory = form.educationCategory || null;
+      const educationSchoolName =
+        form.educationCategory === "school" && form.educationSchoolName === "other"
+          ? form.educationSchoolName.trim() || null
+          : form.educationCategory === "school" && form.educationSchoolName
+            ? form.educationSchoolName
+            : null;
+      const educationClassName =
+        form.educationCategory === "school" && form.educationSchoolName === "bsz"
+          ? form.educationClassName.trim() || null
+          : null;
+      const educationWorkDescription =
+        form.educationCategory === "work" ? form.educationWorkDescription.trim() || null : null;
+      const educationUniversityName =
+        form.educationCategory === "university" ? form.educationUniversityName.trim() || null : null;
+      const educationOtherDescription =
+        form.educationCategory === "other" ? form.educationOtherDescription.trim() || null : null;
       const signatureSubmission =
         documentMode === "signature" && signatureResult
           ? { version: signatureResult.payload.version, payload: signatureResult.payload }
@@ -932,8 +1012,12 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         password: form.password,
-        background: form.background.trim(),
-        backgroundClass: backgroundClassLabel,
+        educationCategory,
+        educationSchoolName,
+        educationClassName,
+        educationWorkDescription,
+        educationUniversityName,
+        educationOtherDescription,
         notes: notes || null,
         dateOfBirth: form.dateOfBirth ? form.dateOfBirth : null,
         gender: {
@@ -1488,125 +1572,83 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
             )}
 
             <section className="space-y-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  {getCrewSectionHeading(variant)}
-                </h3>
-                <p className="text-xs text-muted-foreground">{getCrewSectionDescription(variant)}</p>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {form.crewPreferences.map((pref) => {
-                    const active = pref.enabled;
-                    const weightLabel = getRolePreferenceWeightLabel(pref.weight);
-                    return (
-                      <div
-                        key={pref.code}
-                        className={cn(
-                          "flex flex-col gap-4 rounded-2xl border p-4 transition",
-                          active ? "border-primary/70 bg-primary/5 shadow-sm" : "border-border bg-background/90",
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{pref.title}</h4>
-                              {pref.isCustom && (
-                                <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
-                                  Eigenes Gewerk
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {pref.description || "Individuelle Aufgabe im Team"}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={active ? "default" : "outline"}
-                              onClick={() => togglePreference("crew", pref.code)}
-                            >
-                              {active ? "Ausgewählt" : "Wählen"}
-                            </Button>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                {getCrewSectionHeading(variant)}
+              </h3>
+              <p className="text-xs text-muted-foreground">{getCrewSectionDescription(variant)}</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                {form.crewPreferences.map((pref) => {
+                  const active = pref.enabled;
+                  const weightLabel = getRolePreferenceWeightLabel(pref.weight);
+                  return (
+                    <div
+                      key={pref.code}
+                      className={cn(
+                        "flex flex-col gap-4 rounded-2xl border p-4 transition",
+                        active ? "border-primary/70 bg-primary/5 shadow-sm" : "border-border bg-background/90",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{pref.title}</h4>
                             {pref.isCustom && (
-                              <button
-                                type="button"
-                                className="text-xs text-destructive transition hover:underline"
-                                onClick={() => removeCustomCrewPreference(pref.code)}
-                              >
-                                Entfernen
-                              </button>
+                              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                                Eigenes Gewerk
+                              </Badge>
                             )}
                           </div>
+                          <p className="text-sm text-muted-foreground">
+                            {pref.description || "Individuelle Aufgabe im Team"}
+                          </p>
                         </div>
-                        {active && (
-                          <div className="space-y-2">
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              step={10}
-                              value={pref.weight}
-                              onChange={(event) =>
-                                updatePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
-                              }
-                              onInput={(event) =>
-                                updatePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
-                              }
-                              className="w-full accent-primary"
-                            />
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>Intensität</span>
-                              <span>{weightLabel}</span>
-                            </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={active ? "default" : "outline"}
+                            onClick={() => togglePreference("crew", pref.code)}
+                          >
+                            {active ? "Ausgewählt" : "Wählen"}
+                          </Button>
+                          {pref.isCustom && (
+                            <button
+                              type="button"
+                              className="text-xs text-destructive transition hover:underline"
+                              onClick={() => removeCustomCrewPreference(pref.code)}
+                            >
+                              Entfernen
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {active && (
+                        <div className="space-y-2">
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={10}
+                            value={pref.weight}
+                            onChange={(event) =>
+                              updatePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
+                            }
+                            onInput={(event) =>
+                              updatePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
+                            }
+                            className="w-full accent-primary"
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Intensität</span>
+                            <span>{weightLabel}</span>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4 md:col-span-2">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                          <SparklesIcon className="h-4 w-4" />
-                          Eigenes Gewerk ergänzen
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Fehlt ein Bereich? Beschreibe kurz das Team oder Projekt, das du übernehmen möchtest.
-                        </p>
-                      </div>
-                      <Button type="button" size="sm" variant="outline" onClick={addCustomCrewPreference}>
-                        Hinzufügen
-                      </Button>
+                      )}
                     </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <label className="space-y-1 text-sm">
-                        <span>Titel</span>
-                        <Input
-                          value={customCrewDraft.title}
-                          onChange={(event) => {
-                            setCustomCrewError(null);
-                            setCustomCrewDraft((prev) => ({ ...prev, title: event.target.value }));
-                          }}
-                          placeholder="z.B. Social Media, Podcast, Stage Crew …"
-                        />
-                      </label>
-                      <label className="space-y-1 text-sm md:col-span-2">
-                        <span>Beschreibung (optional)</span>
-                        <Textarea
-                          value={customCrewDraft.description}
-                          onChange={(event) => {
-                            setCustomCrewError(null);
-                            setCustomCrewDraft((prev) => ({ ...prev, description: event.target.value }));
-                          }}
-                          placeholder="Was möchtest du übernehmen? Material, Organisation, besondere Idee …"
-                          rows={3}
-                        />
-                      </label>
-                    </div>
-                    {customCrewError && <p className="text-xs text-destructive">{customCrewError}</p>}
-                  </div>
-                </div>
-              </section>
+                  );
+                })}
+              </div>
+            </section>
           </CardContent>
         </Card>
       )}
