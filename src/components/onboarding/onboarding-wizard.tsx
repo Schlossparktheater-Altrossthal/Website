@@ -28,7 +28,6 @@ import { useInterestSuggestions } from "@/hooks/useInterestSuggestions";
 import { cn } from "@/lib/utils";
 import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 import {
-  createCustomRolePreferenceCode,
   deriveOnboardingFocusFromPreferences,
   getRolePreferenceWeightLabel,
   normalizeRolePreferenceWeight,
@@ -81,6 +80,145 @@ const BSZ_CAMPUS_OPTIONS = [
   { value: "altroessthal", label: "Altroßthal" },
   { value: "canalettostrasse", label: "Canalettostraße" },
 ] as const;
+
+type EducationCategory = (typeof EDUCATION_CATEGORY_OPTIONS)[number]["value"];
+type SchoolVariant = (typeof SCHOOL_VARIANT_OPTIONS)[number]["value"];
+
+type EducationFormSlice = {
+  educationCategory: "" | EducationCategory;
+  schoolVariant: "" | SchoolVariant;
+  educationSchoolName: string;
+  educationClassName: string;
+  educationWorkDescription: string;
+  educationUniversityName: string;
+  educationOtherDescription: string;
+};
+
+type EducationApiPayload = {
+  educationCategory: "school_bsz" | "school_other" | "work" | "university" | "other" | null;
+  educationSchoolName: string | null;
+  educationClassName: string | null;
+  educationWorkDescription: string | null;
+  educationUniversityName: string | null;
+  educationOtherDescription: string | null;
+};
+
+function resolveBszCampusLabel(value: string) {
+  const campusLabel = BSZ_CAMPUS_OPTIONS.find((option) => option.value === value)?.label;
+  if (campusLabel) {
+    return campusLabel;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
+  if (!form.educationCategory) {
+    return {
+      educationCategory: null,
+      educationSchoolName: null,
+      educationClassName: null,
+      educationWorkDescription: null,
+      educationUniversityName: null,
+      educationOtherDescription: null,
+    };
+  }
+
+  if (form.educationCategory === "school") {
+    if (form.schoolVariant === "bsz") {
+      return {
+        educationCategory: "school_bsz",
+        educationSchoolName: resolveBszCampusLabel(form.educationSchoolName),
+        educationClassName: form.educationClassName.trim() || null,
+        educationWorkDescription: null,
+        educationUniversityName: null,
+        educationOtherDescription: null,
+      };
+    }
+    if (form.schoolVariant === "other") {
+      return {
+        educationCategory: "school_other",
+        educationSchoolName: form.educationSchoolName.trim() || null,
+        educationClassName: null,
+        educationWorkDescription: null,
+        educationUniversityName: null,
+        educationOtherDescription: null,
+      };
+    }
+    return {
+      educationCategory: null,
+      educationSchoolName: null,
+      educationClassName: null,
+      educationWorkDescription: null,
+      educationUniversityName: null,
+      educationOtherDescription: null,
+    };
+  }
+
+  if (form.educationCategory === "work") {
+    return {
+      educationCategory: "work",
+      educationSchoolName: null,
+      educationClassName: null,
+      educationWorkDescription: form.educationWorkDescription.trim() || null,
+      educationUniversityName: null,
+      educationOtherDescription: null,
+    };
+  }
+
+  if (form.educationCategory === "university") {
+    return {
+      educationCategory: "university",
+      educationSchoolName: null,
+      educationClassName: null,
+      educationWorkDescription: null,
+      educationUniversityName: form.educationUniversityName.trim() || null,
+      educationOtherDescription: null,
+    };
+  }
+
+  return {
+    educationCategory: "other",
+    educationSchoolName: null,
+    educationClassName: null,
+    educationWorkDescription: null,
+    educationUniversityName: null,
+    educationOtherDescription: form.educationOtherDescription.trim() || null,
+  };
+}
+
+function getEducationSummary(form: EducationFormSlice) {
+  if (!form.educationCategory) {
+    return null;
+  }
+
+  const categoryLabel =
+    EDUCATION_CATEGORY_OPTIONS.find((option) => option.value === form.educationCategory)?.label ?? form.educationCategory;
+  const details: string[] = [];
+
+  if (form.educationCategory === "school") {
+    if (form.schoolVariant === "bsz") {
+      details.push(SCHOOL_VARIANT_OPTIONS.find((option) => option.value === "bsz")?.label ?? "BSZ");
+      const campusLabel = resolveBszCampusLabel(form.educationSchoolName);
+      if (campusLabel) {
+        details.push(campusLabel);
+      }
+      if (form.educationClassName.trim()) {
+        details.push(`Klasse ${form.educationClassName.trim()}`);
+      }
+    } else if (form.schoolVariant === "other" && form.educationSchoolName.trim()) {
+      details.push(form.educationSchoolName.trim());
+    }
+  } else if (form.educationCategory === "work" && form.educationWorkDescription.trim()) {
+    details.push(form.educationWorkDescription.trim());
+  } else if (form.educationCategory === "university" && form.educationUniversityName.trim()) {
+    details.push(form.educationUniversityName.trim());
+  } else if (form.educationCategory === "other" && form.educationOtherDescription.trim()) {
+    details.push(form.educationOtherDescription.trim());
+  }
+
+  return { categoryLabel, details };
+}
 
 const allergyLevelStyles = ALLERGY_LEVEL_STYLES;
 
@@ -231,8 +369,8 @@ function getCrewSectionHeading(variant: OnboardingWizardVariant) {
 
 function getCrewSectionDescription(variant: OnboardingWizardVariant) {
   return variant === "regie"
-    ? "Markiere, welche Verantwortungsbereiche du in Regie und Produktionsleitung übernimmst oder ergänze ein eigenes Aufgabenfeld."
-    : "Wähle bestehende Bereiche oder ergänze dein eigenes Gewerk, wenn dir noch etwas fehlt.";
+    ? "Markiere, welche Verantwortungsbereiche du in Regie und Produktionsleitung übernimmst."
+    : "Wähle die Bereiche aus, in denen du dich einbringen möchtest.";
 }
 
 function getDomainLabel(domain: "acting" | "crew", variant: OnboardingWizardVariant) {
@@ -249,7 +387,8 @@ function createInitialFormState(variant: OnboardingWizardVariant) {
     email: "",
     password: "",
     passwordConfirm: "",
-    educationCategory: "" as "" | (typeof EDUCATION_CATEGORY_OPTIONS)[number]["value"],
+    educationCategory: "" as "" | EducationCategory,
+    schoolVariant: "" as "" | SchoolVariant,
     educationSchoolName: "",
     educationClassName: "",
     educationWorkDescription: "",
@@ -316,8 +455,6 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
     loading: interestsLoading,
   } = useInterestSuggestions();
   const [form, setForm] = useState(() => createInitialFormState(variant));
-  const [customCrewDraft, setCustomCrewDraft] = useState({ title: "", description: "" });
-  const [customCrewError, setCustomCrewError] = useState<string | null>(null);
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
   const derivedFocus = useMemo(() => {
     if (isRegieVariant) {
@@ -359,7 +496,9 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
   const isWorkEducation = educationCategory === "work";
   const isUniversityEducation = educationCategory === "university";
   const isOtherEducation = educationCategory === "other";
-  const isBszSchool = form.educationSchoolName === "bsz";
+  const isBszSchool = form.schoolVariant === "bsz";
+  const isOtherSchool = form.schoolVariant === "other";
+  const educationSummary = useMemo(() => getEducationSummary(form), [form]);
 
   useEffect(() => {
     if (educationCategory === "school") {
@@ -367,44 +506,39 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
     }
     setForm((prev) => {
       if (
-        !prev.educationCategory &&
+        !prev.schoolVariant &&
         !prev.educationSchoolName &&
-        !prev.educationClassName &&
-        !prev.educationWorkDescription &&
-        !prev.educationUniversityName &&
-        !prev.educationOtherDescription
+        !prev.educationClassName
       ) {
         return prev;
       }
       return {
         ...prev,
+        schoolVariant: "",
         educationSchoolName: "",
         educationClassName: "",
-        educationWorkDescription: "",
-        educationUniversityName: "",
-        educationOtherDescription: "",
       };
     });
   }, [educationCategory]);
 
   useEffect(() => {
-    if (isBszSchool) return;
+    if (isBszSchool) {
+      return;
+    }
     setForm((prev) => {
-      if (!prev.educationClassName) return prev;
+      if (!prev.educationClassName) {
+        return prev;
+      }
       return { ...prev, educationClassName: "" };
     });
   }, [isBszSchool]);
 
   useEffect(() => {
-    if (!isSchoolEducation && !isWorkEducation && !isUniversityEducation && !isOtherEducation) {
+    if (!isWorkEducation && !isUniversityEducation && !isOtherEducation) {
       return;
     }
     setForm((prev) => {
       const next = { ...prev };
-      if (!isSchoolEducation) {
-        next.educationSchoolName = "";
-        next.educationClassName = "";
-      }
       if (!isWorkEducation) {
         next.educationWorkDescription = "";
       }
@@ -416,7 +550,7 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
       }
       return next;
     });
-  }, [isOtherEducation, isSchoolEducation, isUniversityEducation, isWorkEducation]);
+  }, [isOtherEducation, isUniversityEducation, isWorkEducation]);
 
   const genderLabel = useMemo(() => {
     if (form.genderOption === "custom") {
@@ -556,45 +690,6 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
       return { ...prev, [key]: updated };
     });
   }, []);
-
-  const addCustomCrewPreference = useCallback(() => {
-    setCustomCrewError(null);
-    const title = customCrewDraft.title.trim();
-    const description = customCrewDraft.description.trim();
-    if (title.length < 2) {
-      setCustomCrewError("Bitte gib deinem Gewerk einen Namen.");
-      return;
-    }
-    let wasAdded = false;
-    setForm((prev) => {
-      const exists = prev.crewPreferences.some(
-        (pref) => pref.title.trim().toLowerCase() === title.toLowerCase(),
-      );
-      if (exists) {
-        setCustomCrewError("Dieses Gewerk hast du bereits markiert.");
-        return prev;
-      }
-      wasAdded = true;
-      return {
-        ...prev,
-        crewPreferences: [
-          ...prev.crewPreferences,
-          {
-            code: createCustomRolePreferenceCode(),
-            title,
-            description: description || "Individuelle Aufgabe im Team",
-            weight: 60,
-            enabled: true,
-            domain: "crew",
-            isCustom: true,
-          },
-        ],
-      };
-    });
-    if (wasAdded) {
-      setCustomCrewDraft({ title: "", description: "" });
-    }
-  }, [customCrewDraft.description, customCrewDraft.title]);
 
   const removeCustomCrewPreference = useCallback((code: string) => {
     setForm((prev) => ({
@@ -866,15 +961,21 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
         return;
       }
       if (form.educationCategory === "school") {
-        if (!form.educationSchoolName) {
+        if (!form.schoolVariant) {
           setError("Bitte wähle deine Schule aus.");
           return;
         }
-        if (form.educationSchoolName === "bsz" && !form.educationClassName.trim()) {
-          setError("Bitte gib deine Klasse an.");
-          return;
+        if (form.schoolVariant === "bsz") {
+          if (!form.educationSchoolName) {
+            setError("Bitte wähle einen Campus aus.");
+            return;
+          }
+          if (!form.educationClassName.trim()) {
+            setError("Bitte gib deine Klasse an.");
+            return;
+          }
         }
-        if (form.educationSchoolName === "other" && !form.educationSchoolName.trim()) {
+        if (form.schoolVariant === "other" && !form.educationSchoolName.trim()) {
           setError("Bitte gib den Namen deiner Schule an.");
           return;
         }
@@ -984,23 +1085,7 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
       const parsedYear = trimmedYear ? Number.parseInt(trimmedYear, 10) : Number.NaN;
       const memberSinceYear = Number.isFinite(parsedYear) ? parsedYear : null;
       const notes = form.notes.trim();
-      const educationCategory = form.educationCategory || null;
-      const educationSchoolName =
-        form.educationCategory === "school" && form.educationSchoolName === "other"
-          ? form.educationSchoolName.trim() || null
-          : form.educationCategory === "school" && form.educationSchoolName
-            ? form.educationSchoolName
-            : null;
-      const educationClassName =
-        form.educationCategory === "school" && form.educationSchoolName === "bsz"
-          ? form.educationClassName.trim() || null
-          : null;
-      const educationWorkDescription =
-        form.educationCategory === "work" ? form.educationWorkDescription.trim() || null : null;
-      const educationUniversityName =
-        form.educationCategory === "university" ? form.educationUniversityName.trim() || null : null;
-      const educationOtherDescription =
-        form.educationCategory === "other" ? form.educationOtherDescription.trim() || null : null;
+      const educationPayload = mapFormEducationToApi(form);
       const signatureSubmission =
         documentMode === "signature" && signatureResult
           ? { version: signatureResult.payload.version, payload: signatureResult.payload }
@@ -1012,12 +1097,7 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         password: form.password,
-        educationCategory,
-        educationSchoolName,
-        educationClassName,
-        educationWorkDescription,
-        educationUniversityName,
-        educationOtherDescription,
+        ...educationPayload,
         notes: notes || null,
         dateOfBirth: form.dateOfBirth ? form.dateOfBirth : null,
         gender: {
@@ -1369,96 +1449,180 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                 </span>
               </div>
             </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <label className="space-y-1 text-sm">
-                <span className="font-medium">Was machst du aktuell schulisch oder beruflich?</span>
-                <Input
-                  value={form.background}
-                  onChange={(event) => setForm((prev) => ({ ...prev, background: event.target.value }))}
-                  placeholder="z.B. BSZ Altroßthal – Berufsschule"
-                />
-                <span className="text-xs text-muted-foreground">
-                  Erzähl uns kurz, ob du zur Schule gehst, eine Ausbildung machst oder bereits arbeitest.
-                </span>
-                <div className="space-y-2 pt-2">
-                  {BACKGROUND_TAGS.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {BACKGROUND_TAGS.map((tag) => {
-                        const isActive = activeBackgroundTag?.id === tag.id;
-                        return (
-                          <button
-                            key={tag.id}
-                            type="button"
-                            className={cn(
-                              "rounded-full border px-3 py-1 text-xs transition",
-                              isActive
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border text-muted-foreground hover:border-primary hover:text-primary",
-                            )}
-                            onClick={() =>
-                              setForm((prev) => ({
-                                ...prev,
-                                background: tag.value,
-                              }))
-                            }
-                          >
-                            {tag.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {filteredBackgroundSuggestions.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {filteredBackgroundSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                          onClick={() => setForm((prev) => ({ ...prev, background: suggestion }))}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </label>
-              {requiresBackgroundClass && (
-                <label className="space-y-1 text-sm lg:col-start-2">
-                  <span className="font-medium">
-                    {activeBackgroundTag?.classLabel ?? "Welche Klasse besuchst du?"}
-                  </span>
-                  <Input
-                    value={form.backgroundClass}
-                    onChange={(event) => setForm((prev) => ({ ...prev, backgroundClass: event.target.value }))}
-                    placeholder={activeBackgroundTag?.classPlaceholder ?? "z.B. BFS 23A"}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {activeBackgroundTag?.classHelper ?? "Hilft uns bei der Zuordnung."}
-                  </span>
-                  {backgroundClassSuggestions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {backgroundClassSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                          onClick={() =>
+            <div className="space-y-6">
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-medium">Schulisches / Berufliches</legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {EDUCATION_CATEGORY_OPTIONS.map((option) => {
+                    const checked = form.educationCategory === option.value;
+                    return (
+                      <label
+                        key={option.value}
+                        className={cn(
+                          "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
+                          checked ? "border-primary bg-primary/5 text-foreground" : "border-border bg-background",
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="educationCategory"
+                          value={option.value}
+                          checked={checked}
+                          onChange={() =>
                             setForm((prev) => ({
                               ...prev,
-                              backgroundClass: suggestion,
+                              educationCategory: option.value,
+                              schoolVariant: option.value === "school" ? prev.schoolVariant : "",
+                              educationSchoolName: option.value === "school" ? prev.educationSchoolName : "",
+                              educationClassName: option.value === "school" ? prev.educationClassName : "",
                             }))
                           }
+                          className="h-4 w-4 accent-primary"
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              {isSchoolEducation ? (
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-medium">Schule</legend>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {SCHOOL_VARIANT_OPTIONS.map((option) => {
+                      const checked = form.schoolVariant === option.value;
+                      return (
+                        <label
+                          key={option.value}
+                          className={cn(
+                            "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
+                            checked ? "border-primary bg-primary/5 text-foreground" : "border-border bg-background",
+                          )}
                         >
-                          {suggestion}
-                        </button>
-                      ))}
+                          <input
+                            type="radio"
+                            name="schoolVariant"
+                            value={option.value}
+                            checked={checked}
+                            onChange={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                schoolVariant: option.value,
+                                educationSchoolName: "",
+                                educationClassName: "",
+                              }))
+                            }
+                            className="h-4 w-4 accent-primary"
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {isBszSchool ? (
+                    <div className="space-y-4">
+                      <fieldset className="space-y-3">
+                        <legend className="text-sm font-medium">Campus</legend>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {BSZ_CAMPUS_OPTIONS.map((option) => {
+                            const checked = form.educationSchoolName === option.value;
+                            return (
+                              <label
+                                key={option.value}
+                                className={cn(
+                                  "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
+                                  checked ? "border-primary bg-primary/5 text-foreground" : "border-border bg-background",
+                                )}
+                              >
+                                <input
+                                  type="radio"
+                                  name="bszCampus"
+                                  value={option.value}
+                                  checked={checked}
+                                  onChange={() =>
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      educationSchoolName: option.value,
+                                    }))
+                                  }
+                                  className="h-4 w-4 accent-primary"
+                                />
+                                <span>{option.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
+                      <label className="space-y-1 text-sm">
+                        <span className="font-medium">Klasse</span>
+                        <Input
+                          value={form.educationClassName}
+                          onChange={(event) =>
+                            setForm((prev) => ({ ...prev, educationClassName: event.target.value }))
+                          }
+                          placeholder="z.B. BFS 23A"
+                        />
+                      </label>
                     </div>
-                  )}
+                  ) : null}
+
+                  {isOtherSchool ? (
+                    <label className="space-y-1 text-sm">
+                      <span className="font-medium">Schulname</span>
+                      <Input
+                        value={form.educationSchoolName}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, educationSchoolName: event.target.value }))
+                        }
+                        placeholder="Name deiner Schule"
+                      />
+                    </label>
+                  ) : null}
+                </fieldset>
+              ) : null}
+
+              {isWorkEducation ? (
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Beruf / Tätigkeit (optional)</span>
+                  <Input
+                    value={form.educationWorkDescription}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, educationWorkDescription: event.target.value }))
+                    }
+                    placeholder="z.B. Ausbildung, Job oder Tätigkeit"
+                  />
                 </label>
-              )}
-              <label className="space-y-1 text-sm lg:col-span-2">
+              ) : null}
+
+              {isUniversityEducation ? (
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Universität / Hochschule (optional)</span>
+                  <Input
+                    value={form.educationUniversityName}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, educationUniversityName: event.target.value }))
+                    }
+                    placeholder="Name deiner Hochschule"
+                  />
+                </label>
+              ) : null}
+
+              {isOtherEducation ? (
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Beschreibung (optional)</span>
+                  <Input
+                    value={form.educationOtherDescription}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, educationOtherDescription: event.target.value }))
+                    }
+                    placeholder="Kurze Beschreibung deines Umfelds"
+                  />
+                </label>
+              ) : null}
+
+              <label className="space-y-1 text-sm">
                 <span className="font-medium">Seit wann bist du beim Theater?</span>
                 <Input
                   type="number"
@@ -1471,7 +1635,7 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                   max={String(CURRENT_YEAR)}
                 />
                 <span className="text-xs text-muted-foreground">
-                  Falls du gerade startest, lass das Feld frei oder nutze das aktuelle Jahr.
+                  Das aktuelle Jahr ist vorausgefüllt. Du kannst es jederzeit anpassen.
                 </span>
               </label>
             </div>
@@ -2172,16 +2336,20 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                 </dl>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <span className="text-xs uppercase tracking-wide text-muted-foreground">Kontext</span>
-                  {form.background ? (
+                  {educationSummary ? (
                     <>
                       <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-                        {form.background}
+                        {educationSummary.categoryLabel}
                       </Badge>
-                      {backgroundClassLabel && (
-                        <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-                          Klasse {backgroundClassLabel}
+                      {educationSummary.details.map((detail) => (
+                        <Badge
+                          key={detail}
+                          variant="outline"
+                          className="border-primary/30 bg-primary/5 text-primary"
+                        >
+                          {detail}
                         </Badge>
-                      )}
+                      ))}
                     </>
                   ) : (
                     <span className="text-xs text-muted-foreground">Keine Angaben</span>

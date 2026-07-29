@@ -53,6 +53,14 @@ const dietaryStrictnessLabels = {
 
 type DietaryStrictnessOption = keyof typeof dietaryStrictnessLabels;
 
+const educationCategorySchema = z.enum([
+  "school_bsz",
+  "school_other",
+  "work",
+  "university",
+  "other",
+]);
+
 const preferenceSchema = z.object({
   code: z.string().min(1),
   domain: z.enum(["acting", "crew"]),
@@ -110,8 +118,12 @@ const payloadSchema = z.object({
   lastName: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6).max(128),
-  background: z.string().min(2),
-  backgroundClass: z.string().max(120).optional().nullable(),
+  educationCategory: educationCategorySchema,
+  educationSchoolName: z.string().nullable(),
+  educationClassName: z.string().nullable(),
+  educationWorkDescription: z.string().nullable(),
+  educationUniversityName: z.string().nullable(),
+  educationOtherDescription: z.string().nullable(),
   notes: z.string().max(1000).optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
   gender: genderSchema,
@@ -185,9 +197,12 @@ export async function POST(request: NextRequest) {
   const firstName = payload.firstName.trim();
   const lastName = payload.lastName.trim();
   const fullName = combineNameParts(firstName, lastName) ?? null;
-  const background = payload.background.trim();
-  const backgroundClass = normalizeString(payload.backgroundClass);
   const notes = normalizeString(payload.notes);
+  const educationSchoolName = normalizeString(payload.educationSchoolName);
+  const educationClassName = normalizeString(payload.educationClassName);
+  const educationWorkDescription = normalizeString(payload.educationWorkDescription);
+  const educationUniversityName = normalizeString(payload.educationUniversityName);
+  const educationOtherDescription = normalizeString(payload.educationOtherDescription);
   const focus = payload.focus;
   const password = payload.password;
   const preferences = payload.preferences.filter((pref) => pref.weight > 0);
@@ -337,8 +352,12 @@ export async function POST(request: NextRequest) {
     name: fullName,
     email,
     focus,
-    background,
-    backgroundClass,
+    educationCategory: payload.educationCategory,
+    educationSchoolName,
+    educationClassName,
+    educationWorkDescription,
+    educationUniversityName,
+    educationOtherDescription,
     notes,
     dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
     gender: {
@@ -420,8 +439,12 @@ export async function POST(request: NextRequest) {
           redemptionId: redemption.id,
           showId: invite.showId,
           focus,
-          background,
-          backgroundClass: backgroundClass ?? undefined,
+          educationCategory: payload.educationCategory,
+          educationSchoolName: educationSchoolName ?? undefined,
+          educationClassName: educationClassName ?? undefined,
+          educationWorkDescription: educationWorkDescription ?? undefined,
+          educationUniversityName: educationUniversityName ?? undefined,
+          educationOtherDescription: educationOtherDescription ?? undefined,
           notes: notes ?? undefined,
           gender: genderDisplay,
           memberSinceYear: memberSinceYear ?? undefined,
