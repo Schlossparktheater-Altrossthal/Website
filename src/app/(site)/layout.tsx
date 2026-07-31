@@ -3,6 +3,7 @@ import type { Session } from "next-auth";
 import { execSync } from "node:child_process";
 
 import { MysticBackground } from "@/components/mystic-background";
+import { BackToTop } from "@/components/ui/back-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { primaryNavigation } from "@/config/navigation";
@@ -120,6 +121,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           children
         )}
       </main>
+      {!showMaintenanceNotice ? <BackToTop /> : null}
       {!showMaintenanceNotice ? (
         <SiteFooter
           buildInfo={buildInfo}
