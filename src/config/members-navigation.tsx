@@ -521,6 +521,12 @@ export const membersNavigation = [
     label: "Verwaltung",
     items: [
       {
+        href: "/mitglieder/verzeichnis",
+        label: "Verzeichnis",
+        permissionKey: "PRIVATE.ADMIN.MEMBERS.MANAGE",
+        icon: MembersAdminIcon,
+      },
+      {
         href: "/mitglieder/mitgliederverwaltung",
         label: "Mitgliederverwaltung",
         permissionKey: "PRIVATE.ADMIN.MEMBERS.MANAGE",
