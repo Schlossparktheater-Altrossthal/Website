@@ -120,7 +120,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     );
   }
 
-  const [existingProfile, existingDietary, existingPreferences, existingPhotoConsent] = await Promise.all([
+  const [existingProfile, existingDietary, existingPreferences, existingPhotoConsent, existingUser] = await Promise.all([
     prisma.memberOnboardingProfile.findUnique({
       where: { userId },
       select: {
@@ -159,6 +159,10 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
       where: { userId },
       select: { consentGiven: true },
     }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { dateOfBirth: true },
+    }),
   ]);
 
   const profile: ExistingProfile = {
@@ -195,6 +199,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         existingDietary={dietary}
         existingPreferences={preferences}
         existingPhotoConsent={existingPhotoConsent?.consentGiven ?? null}
+        dateOfBirth={existingUser?.dateOfBirth ? existingUser.dateOfBirth.toISOString() : null}
         isLoggedIn={true}
       />
     </main>

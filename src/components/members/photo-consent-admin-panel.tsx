@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentProps } from "react";
 import Image from "next/image";
-import { LoadingIcon, RefreshIcon, SearchIcon } from "@/components/ui/action-icons";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,14 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentAdminEntry } from "@/types/photo-consent";
 import { SignatureVisualizer } from "@/components/signature/signature-visualizer";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import {
+  SearchIcon,
+  RefreshIcon,
+  LoadingIcon,
+  UploadIcon,
+  FileIcon,
+} from "@/components/ui/action-icons";
 
 const statusLabels: Record<PhotoConsentAdminEntry["status"], string> = {
   pending: "In Prüfung",
@@ -19,7 +27,7 @@ const statusLabels: Record<PhotoConsentAdminEntry["status"], string> = {
   rejected: "Abgelehnt",
 };
 
-const statusVariants: Record<PhotoConsentAdminEntry["status"], "default" | "secondary" | "destructive"> = {
+const statusVariants: Record<PhotoConsentAdminEntry["status"], ComponentProps<typeof Badge>["variant"]> = {
   pending: "secondary",
   approved: "default",
   rejected: "destructive",
@@ -94,14 +102,6 @@ function DocumentPreview({ previewUrl, documentName, signatureVersion, signature
     }
     return hasPreview ? "preview" : "outline";
   });
-
-  useEffect(() => {
-    if (!hasSignature) {
-      setMode("preview");
-      return;
-    }
-    setMode(hasPreview ? "preview" : "outline");
-  }, [hasPreview, hasSignature]);
 
   if (!hasPreview && !hasSignature) {
     return null;
@@ -209,9 +209,12 @@ export function PhotoConsentAdminPanel() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [isUploading, setIsUploading] = useState(false);
+  const [templatePreviewFile, setTemplatePreviewFile] = useState<File | null>(null);
+  const [templatePreviewOpen, setTemplatePreviewOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       const response = await fetch("/api/photo-consents/admin", { cache: "no-store" });
@@ -228,9 +231,75 @@ export function PhotoConsentAdminPanel() {
     }
   }, []);
 
+  const didLoadRef = useRef(false);
   useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
     void load();
   }, [load]);
+
+  const handleParentalTemplateUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("template", file);
+
+        const response = await fetch("/api/photo-consents/parental-template", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          toast.error(data?.error ?? "Fehler beim Hochladen des Elternformulars");
+          return;
+        }
+        toast.success("Elternformular erfolgreich hochgeladen");
+        setTemplatePreviewFile(file);
+        setTemplatePreviewOpen(true);
+      } catch {
+        toast.error("Netzwerkfehler beim Hochladen");
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    },
+    [],
+  );
+
+  const handleRemoveTemplate = useCallback(async () => {
+    setTemplatePreviewOpen(false);
+    setTemplatePreviewFile(null);
+    try {
+      const response = await fetch("/api/photo-consents/parental-template", { method: "DELETE" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        toast.error(data?.error ?? "Fehler beim Entfernen des Elternformulars");
+        return;
+      }
+      toast.success("Elternformular entfernt");
+    } catch {
+      toast.error("Netzwerkfehler beim Entfernen");
+    }
+  }, []);
+
+  const handleReplaceTemplate = useCallback(() => {
+    setTemplatePreviewOpen(false);
+    setTemplatePreviewFile(null);
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleTemplateDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setTemplatePreviewOpen(false);
+      setTemplatePreviewFile(null);
+    }
+  }, []);
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
 
@@ -328,6 +397,11 @@ export function PhotoConsentAdminPanel() {
     [],
   );
 
+  const templatePreviewUrl = useMemo(() => {
+    if (!templatePreviewFile) return null;
+    return URL.createObjectURL(templatePreviewFile);
+  }, [templatePreviewFile]);
+
   const summary = useMemo(() => {
     const rejected = allProcessedEntries.filter((entry) => entry.status === "rejected").length;
     const missingBirthdays = entries.filter((entry) => entry.requiresDateOfBirth).length;
@@ -347,6 +421,29 @@ export function PhotoConsentAdminPanel() {
           <Badge variant="secondary">Wartend: {summary.pending}</Badge>
           <Badge variant="outline">Fehlende Geburtsdaten: {summary.missingBirthdays}</Badge>
           <Badge variant="destructive">Abgelehnt: {summary.rejected}</Badge>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(event) => {
+              void handleParentalTemplateUpload(event);
+            }}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isUploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {isUploading ? (
+              <LoadingIcon className="mr-1.5 h-3.5 w-3.5" />
+            ) : (
+              <UploadIcon className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Elternformular hochladen
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -468,6 +565,58 @@ export function PhotoConsentAdminPanel() {
           </p>
         </div>
       </CardContent>
+
+      <Dialog open={templatePreviewOpen} onOpenChange={handleTemplateDialogOpenChange}>
+        <DialogContent className="max-w-2xl" onClick={(e) => e.stopPropagation()}>
+          <DialogTitle className="sr-only">Elternformular Vorschau</DialogTitle>
+          <DialogDescription className="sr-only">
+            Vorschau des hochgeladenen Elternformulars mit Optionen zum Entfernen oder Austauschen.
+          </DialogDescription>
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-lg border border-border">
+              {templatePreviewUrl && templatePreviewFile ? (
+                <div className="flex min-h-40 flex-col items-center justify-center gap-3 p-6 text-center">
+                  <FileIcon className="h-12 w-12 text-muted-foreground" />
+                  <p className="min-w-0 w-full truncate text-sm font-medium text-foreground">
+                    {templatePreviewFile.name}
+                  </p>
+                  <Button variant="ghost" asChild className="gap-2">
+                    <a href={templatePreviewUrl} download={templatePreviewFile.name}>
+                      Herunterladen
+                    </a>
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+                  {templatePreviewFile?.name ?? "Keine Vorschau verfügbar"}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleRemoveTemplate();
+                }}
+              >
+                Entfernen
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReplaceTemplate();
+                }}
+              >
+                Austauschen
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
@@ -579,6 +728,7 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
             </div>
           )}
           <DocumentPreview
+            key={`${entry.signatureVersion ?? "none"}-${entry.documentPreviewUrl ?? "nopreview"}`}
             previewUrl={entry.documentPreviewUrl}
             documentName={entry.documentName}
             signatureVersion={entry.signatureVersion}
@@ -734,6 +884,7 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
           </div>
         )}
         <DocumentPreview
+          key={`${entry.signatureVersion ?? "none"}-${entry.documentPreviewUrl ?? "nopreview"}`}
           previewUrl={entry.documentPreviewUrl}
           documentName={entry.documentName}
           signatureVersion={entry.signatureVersion}

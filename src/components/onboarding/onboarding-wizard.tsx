@@ -2,7 +2,7 @@
 
 import { CheckIcon, LockIcon, MessageCircleIcon, ShieldCheckIcon, TargetIcon } from "@/components/ui/action-icons";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -92,6 +92,7 @@ type EducationFormSlice = {
   educationWorkDescription: string;
   educationUniversityName: string;
   educationOtherDescription: string;
+  educationCampus: string | null;
 };
 
 type EducationApiPayload = {
@@ -101,14 +102,15 @@ type EducationApiPayload = {
   educationWorkDescription: string | null;
   educationUniversityName: string | null;
   educationOtherDescription: string | null;
+  educationCampus: string | null;
 };
 
-function resolveBszCampusLabel(value: string) {
-  const campusLabel = BSZ_CAMPUS_OPTIONS.find((option) => option.value === value)?.label;
+function resolveBszCampusLabel(value: string | null) {
+  const campusLabel = BSZ_CAMPUS_OPTIONS.find((option) => option.value === (value ?? ""))?.label;
   if (campusLabel) {
     return campusLabel;
   }
-  const trimmed = value.trim();
+  const trimmed = (value ?? "").trim();
   return trimmed ? trimmed : null;
 }
 
@@ -121,6 +123,7 @@ function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
       educationWorkDescription: null,
       educationUniversityName: null,
       educationOtherDescription: null,
+      educationCampus: null,
     };
   }
 
@@ -128,11 +131,12 @@ function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
     if (form.schoolVariant === "bsz") {
       return {
         educationCategory: "school_bsz",
-        educationSchoolName: resolveBszCampusLabel(form.educationSchoolName),
+        educationSchoolName: resolveBszCampusLabel(form.educationCampus),
         educationClassName: form.educationClassName.trim() || null,
         educationWorkDescription: null,
         educationUniversityName: null,
         educationOtherDescription: null,
+        educationCampus: resolveBszCampusLabel(form.educationCampus),
       };
     }
     if (form.schoolVariant === "other") {
@@ -143,6 +147,7 @@ function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
         educationWorkDescription: null,
         educationUniversityName: null,
         educationOtherDescription: null,
+        educationCampus: null,
       };
     }
     return {
@@ -152,6 +157,7 @@ function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
       educationWorkDescription: null,
       educationUniversityName: null,
       educationOtherDescription: null,
+      educationCampus: null,
     };
   }
 
@@ -163,6 +169,7 @@ function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
       educationWorkDescription: form.educationWorkDescription.trim() || null,
       educationUniversityName: null,
       educationOtherDescription: null,
+      educationCampus: null,
     };
   }
 
@@ -174,6 +181,7 @@ function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
       educationWorkDescription: null,
       educationUniversityName: form.educationUniversityName.trim() || null,
       educationOtherDescription: null,
+      educationCampus: null,
     };
   }
 
@@ -184,6 +192,7 @@ function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
     educationWorkDescription: null,
     educationUniversityName: null,
     educationOtherDescription: form.educationOtherDescription.trim() || null,
+    educationCampus: null,
   };
 }
 
@@ -199,7 +208,7 @@ function getEducationSummary(form: EducationFormSlice) {
   if (form.educationCategory === "school") {
     if (form.schoolVariant === "bsz") {
       details.push(SCHOOL_VARIANT_OPTIONS.find((option) => option.value === "bsz")?.label ?? "BSZ");
-      const campusLabel = resolveBszCampusLabel(form.educationSchoolName);
+      const campusLabel = resolveBszCampusLabel(form.educationCampus);
       if (campusLabel) {
         details.push(campusLabel);
       }
@@ -394,6 +403,7 @@ function createInitialFormState(variant: OnboardingWizardVariant) {
     educationWorkDescription: "",
     educationUniversityName: "",
     educationOtherDescription: "",
+    educationCampus: null as string | null,
     notes: "",
     dateOfBirth: "",
     genderOption: "no_answer" as GenderOption,
@@ -448,8 +458,11 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
   const [success, setSuccess] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [parentalTemplateDownloaded, setParentalTemplateDownloaded] = useState(false);
   const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
   const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const {
     suggestions: interestSuggestions,
     loading: interestsLoading,
@@ -508,7 +521,8 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
       if (
         !prev.schoolVariant &&
         !prev.educationSchoolName &&
-        !prev.educationClassName
+        !prev.educationClassName &&
+        !prev.educationCampus
       ) {
         return prev;
       }
@@ -517,6 +531,7 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
         schoolVariant: "",
         educationSchoolName: "",
         educationClassName: "",
+        educationCampus: null,
       };
     });
   }, [educationCategory]);
@@ -526,10 +541,10 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
       return;
     }
     setForm((prev) => {
-      if (!prev.educationClassName) {
+      if (!prev.educationClassName && !prev.educationCampus) {
         return prev;
       }
-      return { ...prev, educationClassName: "" };
+      return { ...prev, educationClassName: "", educationCampus: null };
     });
   }, [isBszSchool]);
 
@@ -850,21 +865,29 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
     setDocumentFromFile(null);
   };
 
-  const handleGuardianDocumentSkipChange = useCallback(
-    (skip: boolean) => {
-      setForm((prev) => ({
-        ...prev,
-        photoConsent: { ...prev.photoConsent, skipDocument: skip },
-      }));
-      if (skip) {
-        setDocumentMode("upload");
-        setSignatureResult(null);
-        setDocumentFromFile(null);
-        setDocumentError(null);
+const handleDownloadParentalTemplate = async () => {
+    setDownloadError(null);
+    try {
+      const response = await fetch("/api/photo-consents/parental-template");
+      if (!response.ok) {
+        setDownloadError("Elternformular nicht verfügbar.");
+        return;
       }
-    },
-    [setDocumentError, setDocumentFromFile, setDocumentMode, setForm, setSignatureResult],
-  );
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "einverstaendnis-eltern.pdf";
+      document.body.appendChild(link);
+      link.click();
+      setParentalTemplateDownloaded(true);
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("[onboarding-wizard.parental-template]", e);
+      setDownloadError("Elternformular nicht verfügbar.");
+    }
+  };
 
   useEffect(() => {
     if (!isMinor) {
@@ -966,8 +989,8 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
           return;
         }
         if (form.schoolVariant === "bsz") {
-          if (!form.educationSchoolName) {
-            setError("Bitte wähle einen Campus aus.");
+          if (!form.educationCampus) {
+            setError("Bitte wähle einen Standort aus.");
             return;
           }
           if (!form.educationClassName.trim()) {
@@ -1018,11 +1041,13 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
         setError("Bitte bestätige dein eigenes Fotoeinverständnis über das Kästchen oben.");
         return;
       }
+      if (isMinor && !documentFile && !parentalTemplateDownloaded) {
+        setError("Bitte lade das unterschriebene Elternformular hoch oder lade zuerst das Elternformular herunter.");
+        return;
+      }
       if (form.photoConsent.consent && !form.photoConsent.skipDocument && !documentFile) {
         setError(
-          isMinor
-            ? "Bitte lade die unterschriebene Erklärung deiner Erziehungsberechtigten hoch oder wähle aus, dass du sie später nachreichst."
-            : "Bitte lade dein unterschriebenes Einverständnis hoch, unterschreibe digital oder markiere, dass du es später nachreichst.",
+          "Bitte lade dein unterschriebenes Einverständnis hoch, unterschreibe digital oder markiere, dass du es später nachreichst.",
         );
         return;
       }
@@ -1511,6 +1536,7 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                                 schoolVariant: option.value,
                                 educationSchoolName: "",
                                 educationClassName: "",
+                                educationCampus: null,
                               }))
                             }
                             className="h-4 w-4 accent-primary"
@@ -1524,10 +1550,10 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                   {isBszSchool ? (
                     <div className="space-y-4">
                       <fieldset className="space-y-3">
-                        <legend className="text-sm font-medium">Campus</legend>
+                        <legend className="text-sm font-medium">Welcher Standort?</legend>
                         <div className="grid gap-2 sm:grid-cols-2">
                           {BSZ_CAMPUS_OPTIONS.map((option) => {
-                            const checked = form.educationSchoolName === option.value;
+                            const checked = form.educationCampus === option.value;
                             return (
                               <label
                                 key={option.value}
@@ -1544,12 +1570,12 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                                   onChange={() =>
                                     setForm((prev) => ({
                                       ...prev,
-                                      educationSchoolName: option.value,
+                                      educationCampus: option.value,
                                     }))
                                   }
                                   className="h-4 w-4 accent-primary"
                                 />
-                                <span>{option.label}</span>
+                                <span className="min-w-0">{option.label}</span>
                               </label>
                             );
                           })}
@@ -1937,6 +1963,15 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
               {isMinor ? (
                 <div className="space-y-3">
                   <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-primary"
+                      onClick={handleDownloadParentalTemplate}
+                    >
+                      Elternformular herunterladen
+                    </Button>
+                    {downloadError && <p className="text-xs text-destructive">Elternformular nicht verfügbar.</p>}
                     <label className="block font-medium">Einverständnis der Erziehungsberechtigten (PDF, JPG, PNG)</label>
                     <Input
                       type="file"
@@ -1946,23 +1981,9 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                     <p className="text-xs text-muted-foreground">
                       {documentFile
                         ? `Ausgewählt: ${documentFile.name}`
-                        : "Lade die unterschriebene Zustimmung deiner Erziehungsberechtigten hoch oder nutze die Option darunter, um sie später nachzureichen."}
+                        : "Lade die unterschriebene Zustimmung deiner Erziehungsberechtigten hoch."}
                     </p>
                   </div>
-                  <label className="flex items-start gap-3 rounded-lg border border-border/70 p-3">
-                    <input
-                      type="checkbox"
-                      checked={form.photoConsent.skipDocument}
-                      onChange={(event) => handleGuardianDocumentSkipChange(event.target.checked)}
-                      className="mt-1 h-4 w-4"
-                    />
-                    <div className="space-y-1 text-sm">
-                      <p className="font-medium">Ich reiche die Zustimmung meiner Erziehungsberechtigten später nach.</p>
-                      <p className="text-xs text-muted-foreground">
-                        Du kannst das Formular jederzeit im Mitgliederbereich hochladen.
-                      </p>
-                    </div>
-                  </label>
                 </div>
               ) : (
                 <>
@@ -1970,35 +1991,31 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                     <Button
                       type="button"
                       size="sm"
-                      variant={documentMode === "upload" ? "default" : "outline"}
-                      onClick={handleSelectUploadMode}
+                      variant="outline"
+                      className="text-primary"
+                      onClick={() => documentInputRef.current?.click()}
                     >
-                      Dokument hochladen
+                      Unterschrift hochladen
                     </Button>
                     <Button
                       type="button"
                       size="sm"
-                      variant={documentMode === "signature" ? "default" : "outline"}
+                      variant="outline"
+                      className="text-primary"
                       onClick={handleSelectSignatureMode}
                     >
                       Digital unterschreiben
                     </Button>
                   </div>
-                  {documentMode === "upload" ? (
-                    <div className="space-y-2">
-                      <label className="block font-medium">Einverständnis (PDF, JPG, PNG)</label>
-                      <Input
-                        type="file"
-                        accept="application/pdf,image/jpeg,image/png"
-                        onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {documentFile
-                          ? `Ausgewählt: ${documentFile.name}`
-                          : "Lade dein unterschriebenes Formular hoch."}
-                      </p>
-                    </div>
-                  ) : (
+                  <input
+                    ref={documentInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,application/pdf"
+                    capture="environment"
+                    onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
+                  />
+                  {documentMode === "signature" ? (
                     <div className="space-y-2">
                       <label className="block font-medium">Digital unterschreiben</label>
                       <SignaturePad value={signatureResult} onChange={handleSignatureChange} />
@@ -2015,7 +2032,12 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
                         </p>
                       </div>
                     </div>
-                  )}
+                  ) : null}
+                  {documentFile ? (
+                    <p className="text-xs text-muted-foreground">
+                      Ausgewählt: <span className="min-w-0 truncate">{documentFile.name}</span>
+                    </p>
+                  ) : null}
                 </>
               )}
               {documentError && <p className="text-xs text-destructive">{documentError}</p>}

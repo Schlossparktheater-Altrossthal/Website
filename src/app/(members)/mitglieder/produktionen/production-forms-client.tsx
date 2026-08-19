@@ -115,22 +115,23 @@ export function CreateProductionForm({
     [],
   );
   const [state, formAction, isPending] = useActionState(action, INITIAL_ACTION_STATE);
-  const isInitialRender = useRef(true);
+  const onSuccessRef = useRef(onSuccess);
 
   useEffect(() => {
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
-      return;
-    }
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    if (state === INITIAL_ACTION_STATE) return;
     if (!state.ok) {
       toast.error(state.error);
       return;
     }
     const message = state.message ?? "Produktion wurde erstellt.";
     toast.success(message);
-    onSuccess?.();
+    onSuccessRef.current?.();
     formRef.current?.reset();
-  }, [state, onSuccess]);
+  }, [state]);
 
   return (
     <form ref={formRef} action={formAction} className="grid gap-6">
@@ -369,25 +370,26 @@ export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdatePr
     [],
   );
   const [state, formAction, isPending] = useActionState(action, INITIAL_ACTION_STATE);
-  const isInitialRender = useRef(true);
+  const onSuccessRef = useRef(onSuccess);
 
   const { start: startDate, end: endDate } = extractDateRangeInput(show.dates);
   const revealDate = formatDateInput(show.revealedAt);
 
   useEffect(() => {
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
-      return;
-    }
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    if (state === INITIAL_ACTION_STATE) return;
     if (!state.ok) {
       toast.error(state.error);
       return;
     }
     const message = state.message ?? "Produktion wurde aktualisiert.";
     toast.success(message);
-    onSuccess?.();
+    onSuccessRef.current?.();
     formRef.current?.reset();
-  }, [state, onSuccess]);
+  }, [state]);
 
   return (
     <form ref={formRef} action={formAction} className="grid gap-6">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, PlusIcon, TrashIcon } from "@/components/ui/action-icons";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { getRolePreferenceTitle, listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
+import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
 
 type ExistingProfile = {
   educationCategory?: string | null;
@@ -52,6 +53,7 @@ type ReturneeUpdateWizardProps = {
   existingDietary: ExistingDietary[];
   existingPreferences: ExistingPreference[];
   existingPhotoConsent: boolean | null;
+  dateOfBirth: string | null;
   isLoggedIn: boolean;
 };
 
@@ -71,6 +73,7 @@ type FormState = {
   schoolVariant: "bsz" | "other" | "";
   educationSchoolName: string;
   educationClassName: string;
+  educationCampus: string | null;
   educationWorkDescription: string;
   educationUniversityName: string;
   educationOtherDescription: string;
@@ -96,11 +99,29 @@ const DIETARY_LEVEL_OPTIONS = [
   { value: "LETHAL", label: "Kritisch" },
 ];
 
+const BSZ_CAMPUS_OPTIONS = [
+  { value: "altroessthal", label: "Altroßthal" },
+  { value: "canalettostrasse", label: "Canalettostraße" },
+] as const;
+
 function createId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
   return Math.random().toString(36).slice(2, 10);
+}
+
+function calculateAge(value: string | null) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.valueOf())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - parsed.getFullYear();
+  const monthDiff = now.getMonth() - parsed.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < parsed.getDate())) {
+    age -= 1;
+  }
+  return age;
 }
 
 function normalizeEducationCategory(value: string | null | undefined): EducationCategory | "" {
@@ -154,6 +175,7 @@ function createInitialState(
           : "",
     educationSchoolName: existingProfile.educationSchoolName ?? "",
     educationClassName: existingProfile.educationClassName ?? "",
+    educationCampus: null,
     educationWorkDescription: existingProfile.educationWorkDescription ?? "",
     educationUniversityName: existingProfile.educationUniversityName ?? "",
     educationOtherDescription: existingProfile.educationOtherDescription ?? "",
@@ -178,6 +200,7 @@ export function ReturneeUpdateWizard({
   existingDietary,
   existingPreferences,
   existingPhotoConsent,
+  dateOfBirth,
   isLoggedIn,
 }: ReturneeUpdateWizardProps) {
   const router = useRouter();
@@ -187,16 +210,112 @@ export function ReturneeUpdateWizard({
   const [form, setForm] = useState(() =>
     createInitialState(existingProfile, existingDietary, existingPreferences, existingPhotoConsent),
   );
+  const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
+
+  const age = useMemo(() => calculateAge(dateOfBirth), [dateOfBirth]);
+  const isMinor = age !== null && age < 18;
 
   const selectedPreferences = useMemo(
     () => form.preferences.filter((preference) => preference.enabled),
     [form.preferences],
   );
 
+  const setDocumentFromSignature = (result: SignatureResult | null) => {
+    if (!result) {
+      setDocumentFile(null);
+      setDocumentError(null);
+      return;
+    }
+    const dataUrl = result.dataUrl;
+    const commaIndex = dataUrl.indexOf(",");
+    if (commaIndex === -1) {
+      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
+      setDocumentFile(null);
+      return;
+    }
+    const header = dataUrl.slice(0, commaIndex);
+    const mimeMatch = header.match(/data:(.*?);base64/);
+    const mime = (mimeMatch?.[1] ?? "image/png").toLowerCase();
+    const base64 = dataUrl.slice(commaIndex + 1);
+    try {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      const file = new File([bytes], "signature.png", { type: mime || "image/png" });
+      setDocumentFile(file);
+      setDocumentError(null);
+    } catch (conversionError) {
+      console.error("[returnee-update-wizard.signature]", conversionError);
+      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
+      setDocumentFile(null);
+    }
+  };
+
+  const handleDocumentInput = (file: File | null) => {
+    if (!file) {
+      setDocumentFile(null);
+      setDocumentError(null);
+      return;
+    }
+    setDocumentFile(file);
+    setDocumentError(null);
+    if (documentMode !== "upload") {
+      setDocumentMode("upload");
+    }
+  };
+
+  const handleSelectUploadMode = () => {
+    setDocumentMode("upload");
+    setSignatureResult(null);
+  };
+
+  const handleSelectSignatureMode = () => {
+    if (isMinor) return;
+    setDocumentMode("signature");
+    setDocumentFile(null);
+  };
+
+  const handleSignatureChange = (result: SignatureResult | null) => {
+    if (documentMode !== "signature") {
+      setDocumentMode("signature");
+    }
+    setSignatureResult(result);
+    setDocumentFromSignature(result);
+  };
+
+  const handleDownloadParentalTemplate = async () => {
+    setDocumentError(null);
+    try {
+      const response = await fetch("/api/photo-consents/parental-template");
+      if (!response.ok) {
+        setDocumentError("Das Elternformular konnte nicht heruntergeladen werden.");
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "einverstaendnis-eltern.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      console.error("[returnee-update-wizard.parental-template]", downloadError);
+      setDocumentError("Das Elternformular konnte nicht heruntergeladen werden.");
+    }
+  };
+
   const canContinueStep1 = useMemo(() => {
     if (!form.educationCategory) return false;
     if (form.educationCategory === "school_bsz") {
-      return form.educationClassName.trim().length > 0;
+      return form.educationCampus != null && form.educationClassName.trim().length > 0;
     }
     if (form.educationCategory === "school_other") {
       return form.educationSchoolName.trim().length > 0;
@@ -210,6 +329,7 @@ export function ReturneeUpdateWizard({
     return form.educationOtherDescription.trim().length > 0;
   }, [
     form.educationCategory,
+    form.educationCampus,
     form.educationClassName,
     form.educationOtherDescription,
     form.educationSchoolName,
@@ -256,13 +376,29 @@ export function ReturneeUpdateWizard({
 
   const goNext = () => {
     setError(null);
-    if (step === 0 && !canContinueStep1) {
-      setError("Bitte fülle die Angaben zu Schule, Beruf, Universität oder Anderem vollständig aus.");
-      return;
+    if (step === 0) {
+      if (form.educationCategory === "school_bsz" && !form.educationCampus) {
+        setError("Bitte wähle einen Standort aus.");
+        return;
+      }
+      if (!canContinueStep1) {
+        setError("Bitte fülle die Angaben zu Schule, Beruf, Universität oder Anderem vollständig aus.");
+        return;
+      }
     }
     if (step === 1 && !selectedPreferences.length) {
       setError("Bitte wähle mindestens einen Bereich mit Gewichtung über 0.");
       return;
+    }
+    if (step === 2) {
+      if (!documentFile) {
+        setError(
+          isMinor
+            ? "Bitte lade das unterschriebene Elternformular hoch."
+            : "Bitte lade ein Dokument hoch oder unterschreibe digital.",
+        );
+        return;
+      }
     }
     setStep((current) => Math.min(current + 1, steps.length - 1));
   };
@@ -288,6 +424,7 @@ export function ReturneeUpdateWizard({
         educationCategory: form.educationCategory || null,
         educationSchoolName: form.educationSchoolName.trim() || null,
         educationClassName: form.educationClassName.trim() || null,
+        educationCampus: form.educationCampus?.trim() || null,
         educationWorkDescription: form.educationWorkDescription.trim() || null,
         educationUniversityName: form.educationUniversityName.trim() || null,
         educationOtherDescription: form.educationOtherDescription.trim() || null,
@@ -311,12 +448,15 @@ export function ReturneeUpdateWizard({
         notes: form.notes.trim() || null,
       };
 
+      const body = new FormData();
+      body.append("payload", JSON.stringify(payload));
+      if (documentFile) {
+        body.append("document", documentFile);
+      }
+
       const response = await fetch("/api/onboarding/update", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body,
       });
 
       const data = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -435,7 +575,9 @@ export function ReturneeUpdateWizard({
                         "rounded-xl border px-4 py-3 text-left text-sm transition",
                         form.schoolVariant === "bsz" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background",
                       )}
-                      onClick={() => setForm((prev) => ({ ...prev, schoolVariant: "bsz", educationCategory: "school_bsz" }))}
+                      onClick={() =>
+                        setForm((prev) => ({ ...prev, schoolVariant: "bsz", educationCategory: "school_bsz", educationCampus: null }))
+                      }
                     >
                       BSZ für Agrarwirtschaft &amp; Ernährung Dresden
                     </button>
@@ -445,21 +587,49 @@ export function ReturneeUpdateWizard({
                         "rounded-xl border px-4 py-3 text-left text-sm transition",
                         form.schoolVariant === "other" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background",
                       )}
-                      onClick={() => setForm((prev) => ({ ...prev, schoolVariant: "other", educationCategory: "school_other" }))}
+                      onClick={() =>
+                        setForm((prev) => ({ ...prev, schoolVariant: "other", educationCategory: "school_other", educationCampus: null }))
+                      }
                     >
                       Andere Schule
                     </button>
                   </div>
 
                   {form.schoolVariant === "bsz" ? (
-                    <label className="space-y-2 text-sm">
-                      <span className="font-medium">Klasse</span>
-                      <Input
-                        value={form.educationClassName}
-                        onChange={(event) => setForm((prev) => ({ ...prev, educationClassName: event.target.value }))}
-                        placeholder="z.B. BFS 23A"
-                      />
-                    </label>
+                    <div className="space-y-4">
+                      <fieldset>
+                        <legend className="mb-2 text-sm font-medium">Welcher Standort?</legend>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {BSZ_CAMPUS_OPTIONS.map((option) => {
+                            const isActive = form.educationCampus === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  setForm((prev) => ({ ...prev, educationCampus: option.value }))
+                                }
+                                aria-pressed={isActive}
+                                className={cn(
+                                  "rounded-xl border px-4 py-3 text-left text-sm transition",
+                                  isActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-background",
+                                )}
+                              >
+                                <span className="min-w-0">{option.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
+                      <label className="space-y-2 text-sm">
+                        <span className="font-medium">Klasse</span>
+                        <Input
+                          value={form.educationClassName}
+                          onChange={(event) => setForm((prev) => ({ ...prev, educationClassName: event.target.value }))}
+                          placeholder="z.B. BFS 23A"
+                        />
+                      </label>
+                    </div>
                   ) : form.schoolVariant === "other" ? (
                     <label className="space-y-2 text-sm">
                       <span className="font-medium">Schulname</span>
@@ -580,6 +750,79 @@ export function ReturneeUpdateWizard({
                   <p className="text-xs text-muted-foreground">Die Zustimmung kann jederzeit im Profil angepasst werden.</p>
                 </div>
               </label>
+
+              {isMinor ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-muted p-4 text-sm">
+                    <p className="font-medium">Zustimmung der Erziehungsberechtigten</p>
+                    <p className="text-xs text-muted-foreground">
+                      Da du noch minderjährig bist, benötigen wir die unterschriebene Einverständniserklärung deiner
+                      Erziehungsberechtigten. Lade sie als PDF oder Bilddatei (JPG/PNG) hoch.
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" onClick={handleDownloadParentalTemplate}>
+                    Elternformular herunterladen
+                  </Button>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium">Unterschriebenes Elternformular (PDF, JPG, PNG)</label>
+                    <Input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {documentFile ? `Ausgewählt: ${documentFile.name}` : "Lade das unterschriebene Formular deiner Erziehungsberechtigten hoch."}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-primary"
+                      onClick={() => documentInputRef.current?.click()}
+                    >
+                      Unterschrift hochladen
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-primary"
+                      onClick={handleSelectSignatureMode}
+                    >
+                      Digital unterschreiben
+                    </Button>
+                  </div>
+                  <input
+                    ref={documentInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*,application/pdf"
+                    capture="environment"
+                    onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
+                  />
+                  {documentMode === "signature" ? (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium">Digital unterschreiben</label>
+                      <SignaturePad value={signatureResult} onChange={handleSignatureChange} />
+                      <p className="text-xs text-muted-foreground">
+                        {documentFile ? "Deine digitale Unterschrift ist hinterlegt." : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
+                      </p>
+                    </div>
+                  ) : null}
+                  {documentFile ? (
+                    <p className="text-xs text-muted-foreground">
+                      Ausgewählt: <span className="min-w-0 truncate">{documentFile.name}</span>
+                    </p>
+                  ) : null}
+                </div>
+              )}
+
+              {documentError ? <p className="text-xs text-destructive">{documentError}</p> : null}
             </section>
           ) : null}
 

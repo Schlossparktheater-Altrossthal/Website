@@ -332,6 +332,7 @@ model User {
   fileLibraryFoldersCreated FileLibraryFolder[] @relation("FileLibraryFoldersCreated")
   fileLibraryItemsUploaded  FileLibraryItem[]   @relation("FileLibraryItemsUploaded")
   websiteContentEdits    WebsiteContent[]
+  parentalConsentTemplatesUpdated ServerSettings[] @relation("ServerSettingsParentalConsentUploader")
 }
 
 model Account {
@@ -718,17 +719,22 @@ model SperrlisteSettings {
 }
 
 model ServerSettings {
-  id              String   @id @default("default")
-  mailHost        String?
-  mailPort        Int      @default(587)
-  mailSecure      Boolean  @default(false)
-  mailUsername    String?
-  mailPassword    String?
-  mailFromAddress String?
-  mailFromName    String?
-  mailReplyTo     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                           String    @id @default("default")
+  mailHost                     String?
+  mailPort                     Int       @default(587)
+  mailSecure                   Boolean   @default(false)
+  mailUsername                 String?
+  mailPassword                 String?
+  mailFromAddress              String?
+  mailFromName                 String?
+  mailReplyTo                  String?
+  parentalConsentData          Bytes?
+  parentalConsentName          String?
+  parentalConsentMime          String?
+  parentalConsentSize          Int?
+  parentalConsentUploadedAt    DateTime?
+  parentalConsentUploadedById  String?
+  parentalConsentUploadedBy    User? @relation("ServerSettingsParentalConsentUploader", fields: [parentalConsentUploadedById], references: [id], onDelete: SetNull)
 }
 
 model MysteryTip {

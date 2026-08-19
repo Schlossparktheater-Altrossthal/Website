@@ -6,6 +6,21 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
+const ALLOWED_DOCUMENT_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/jpg",
+]);
+
+function sanitizeFilename(name: string | undefined | null) {
+  if (!name) return "einverstaendnis.pdf";
+  const trimmed = name.trim();
+  if (!trimmed) return "einverstaendnis.pdf";
+  return trimmed.replace(/[^\w. -]+/g, "_");
+}
+
 const educationCategorySchema = z.enum([
   "school_bsz",
   "school_other",
@@ -63,7 +78,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
-  const payload = await request.json().catch(() => null);
+  const formData = await request.formData();
+  const rawPayload = formData.get("data");
+  const documentFile = formData.get("document");
+
+  if (typeof rawPayload !== "string") {
+    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(rawPayload);
+  } catch {
+    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+  }
+
   if (!payload || typeof payload !== "object") {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
@@ -111,6 +140,26 @@ export async function POST(request: NextRequest) {
     }
     return result;
   })();
+
+  let documentBuffer: Uint8Array<ArrayBuffer> | null = null;
+  let documentMime: string | null = null;
+  let documentName: string | null = null;
+  let documentSize: number | null = null;
+
+  if (documentFile instanceof File && documentFile.size > 0) {
+    if (documentFile.size > MAX_DOCUMENT_BYTES) {
+      return NextResponse.json({ error: "Dokument darf maximal 8 MB groß sein" }, { status: 400 });
+    }
+    const type = documentFile.type?.toLowerCase() ?? "";
+    if (type && !ALLOWED_DOCUMENT_TYPES.has(type)) {
+      return NextResponse.json({ error: "Bitte nutze PDF oder Bilddateien (JPG/PNG)" }, { status: 400 });
+    }
+    const arrayBuffer = await documentFile.arrayBuffer();
+    documentBuffer = new Uint8Array(arrayBuffer);
+    documentMime = type || null;
+    documentName = sanitizeFilename(documentFile.name);
+    documentSize = documentBuffer.length;
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -203,10 +252,28 @@ export async function POST(request: NextRequest) {
         where: { userId },
         update: {
           consentGiven: data.photoConsent.consent,
+          ...(documentBuffer
+            ? {
+                documentData: documentBuffer,
+                documentMime,
+                documentName,
+                documentSize,
+                documentUploadedAt: new Date(),
+              }
+            : {}),
         },
         create: {
           userId,
           consentGiven: data.photoConsent.consent,
+          ...(documentBuffer
+            ? {
+                documentData: documentBuffer,
+                documentMime,
+                documentName,
+                documentSize,
+                documentUploadedAt: new Date(),
+              }
+            : {}),
         },
       });
 
