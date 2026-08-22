@@ -339,26 +339,30 @@ const authConfig = {
     updateAge: 24 * 60 * 60, // refresh token after one day of inactivity
   },
   providers: [
-    EmailProvider({
-      server: process.env.EMAIL_SERVER,
-      from: process.env.EMAIL_FROM,
-      async sendVerificationRequest({ identifier, url, provider }) {
-        const email = normalizeMagicLinkEmail(identifier);
-        const user = await prisma.user.findUnique({
-          where: { email },
-          select: { id: true },
-        });
-        if (!user) {
-          return;
-        }
+    ...(process.env.EMAIL_SERVER
+      ? [
+          EmailProvider({
+            server: process.env.EMAIL_SERVER,
+            from: process.env.EMAIL_FROM,
+            async sendVerificationRequest({ identifier, url, provider }) {
+              const email = normalizeMagicLinkEmail(identifier);
+              const user = await prisma.user.findUnique({
+                where: { email },
+                select: { id: true },
+              });
+              if (!user) {
+                return;
+              }
 
-        try {
-          await sendMagicLinkEmail({ identifier: email, url, provider });
-        } catch (error) {
-          console.error("[MAGIC LINK ERROR]", error);
-        }
-      },
-    }),
+              try {
+                await sendMagicLinkEmail({ identifier: email, url, provider });
+              } catch (error) {
+                console.error("[MAGIC LINK ERROR]", error);
+              }
+            },
+          }),
+        ]
+      : []),
     credentialsProvider,
   ],
   pages: { signIn: "/login", error: "/login" },
