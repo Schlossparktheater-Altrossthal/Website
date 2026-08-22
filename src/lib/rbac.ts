@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import type { Role } from "@/lib/roles";
 import { applyImpersonation } from "@/lib/auth/impersonation";
@@ -31,7 +30,7 @@ type SessionOptions = {
 };
 
 export async function getSession(options?: SessionOptions) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const allowImpersonation = options?.allowImpersonation !== false;
   return applyImpersonation(session, allowImpersonation);
 }

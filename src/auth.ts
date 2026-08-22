@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/prisma";
-import type { NextAuthOptions } from "next-auth";
-import type { AvatarSource, Role } from "@prisma/client";
-import type { Adapter, AdapterUser } from "next-auth/adapters";
+import NextAuth, { CredentialsSignin } from "next-auth";
+import type { NextAuthConfig } from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter } from "@auth/core/adapters";
 import type { JWT } from "next-auth/jwt";
+import type { AvatarSource, Role } from "@prisma/client";
 import EmailProvider from "next-auth/providers/email";
 import Credentials from "next-auth/providers/credentials";
 import type { CredentialInput } from "next-auth/providers/credentials";
+import { prisma } from "@/lib/prisma";
 import { sortRoles, ROLES } from "@/lib/roles";
 import {
   DEV_TEST_USER_EMAILS,
@@ -23,8 +24,6 @@ import {
   recordMagicLinkAttempt,
   sendMagicLinkEmail,
 } from "@/lib/auth/magic-link";
-// trigger build
-// trigger build
 
 type MutableToken = JWT & {
   id?: string;
@@ -251,22 +250,41 @@ const credentialsProvider = Credentials({
   name: "Passwort Login",
   credentials: credentialInputs,
   async authorize(credentials) {
-    const email = credentials?.email?.toString().toLowerCase();
-    const password = credentials?.password?.toString();
+    const rawEmail =
+      typeof credentials?.email === "string" ? credentials.email : undefined;
+    const rawPassword =
+      typeof credentials?.password === "string" ? credentials.password : undefined;
+    const devFlag =
+      typeof credentials?.dev === "string" ? credentials.dev : undefined;
+    const email = rawEmail?.toLowerCase();
     const devFastLogin =
-      process.env.NODE_ENV !== "production" && credentials?.dev === "1";
+      process.env.NODE_ENV !== "production" && devFlag === "1";
 
-    if (!email) return null;
+    if (!email) throw new CredentialsSignin();
 
     if (devFastLogin) {
-      if (!DEV_TEST_USER_EMAILS.includes(email)) return null;
+      if (!DEV_TEST_USER_EMAILS.includes(email)) throw new CredentialsSignin();
       const role = DEV_TEST_USER_ROLE_MAP[email];
-      if (!role) return null;
-      return ensureDevTestUser(email, role);
+      if (!role) throw new CredentialsSignin();
+
+      const profile = await ensureDevTestUser(email, role);
+      return {
+        id: profile.id,
+        email: profile.email,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        name: profile.name,
+        role: profile.role,
+        roles: profile.roles,
+        avatarSource: profile.avatarSource,
+        avatarUpdatedAt: profile.avatarImageUpdatedAt
+          ? profile.avatarImageUpdatedAt.toISOString()
+          : null,
+      };
     }
 
-    if (!password) {
-      throw new Error("Passwort erforderlich");
+    if (!rawPassword) {
+      throw new CredentialsSignin("Passwort erforderlich");
     }
 
     const user = await prisma.user.findUnique({
@@ -275,16 +293,16 @@ const credentialsProvider = Credentials({
     });
 
     if (!user || !user.passwordHash) {
-      throw new Error("Ungültige Zugangsdaten");
+      throw new CredentialsSignin("Ungültige Zugangsdaten");
     }
 
     if (user.deactivatedAt) {
-      throw new Error("Dieses Konto wurde deaktiviert.");
+      throw new CredentialsSignin("Dieses Konto wurde deaktiviert.");
     }
 
-    const valid = await verifyPassword(password, user.passwordHash);
+    const valid = await verifyPassword(rawPassword, user.passwordHash);
     if (!valid) {
-      throw new Error("Ungültige Zugangsdaten");
+      throw new CredentialsSignin("Ungültige Zugangsdaten");
     }
 
     const combinedRoles = sortRoles([
@@ -302,12 +320,14 @@ const credentialsProvider = Credentials({
       role: combinedRoles[combinedRoles.length - 1],
       roles: combinedRoles,
       avatarSource: user.avatarSource,
-      avatarImageUpdatedAt: user.avatarImageUpdatedAt,
+      avatarUpdatedAt: user.avatarImageUpdatedAt
+        ? user.avatarImageUpdatedAt.toISOString()
+        : null,
     };
   },
 });
 
-export const authOptions = {
+const authConfig = {
   adapter: authAdapter,
   useSecureCookies,
   // Use JWT sessions for reliability in dev (works with Credentials + Email).
@@ -397,9 +417,7 @@ export const authOptions = {
         mutableToken.deactivatedAt = null;
         mutableToken.isDeactivated = false;
         applyNameFields(mutableToken, user);
-        const userRoles = extractRolesFromSource(
-          user as AdapterUser & RoleSource,
-        );
+        const userRoles = extractRolesFromSource(user);
         if (userRoles) applyRoles(userRoles);
         applyAvatarFields(mutableToken, user);
       }
@@ -415,9 +433,7 @@ export const authOptions = {
           applyNameFields(mutableToken, updateSource);
           const nextEmail = extractString(updateSource.email);
           if (nextEmail) mutableToken.email = nextEmail;
-          const updatedRoles = extractRolesFromSource(
-            updateSource as RoleSource,
-          );
+          const updatedRoles = extractRolesFromSource(updateSource);
           if (updatedRoles) applyRoles(updatedRoles);
           applyAvatarFields(mutableToken, updateSource);
         }
@@ -520,14 +536,17 @@ export const authOptions = {
         roles,
       });
     },
-    async signOut({ token }) {
-      const mutableToken = token as MutableToken;
+    async signOut(message) {
+      const token = "token" in message ? message.token : null;
+      const mutableToken = token as MutableToken | null;
       await recordSessionEnd({
-        analyticsSessionId: mutableToken.analyticsSessionId ?? null,
+        analyticsSessionId: mutableToken?.analyticsSessionId ?? null,
       });
     },
   },
   get secret() {
     return getAuthSecret();
   },
-} satisfies NextAuthOptions;
+} satisfies NextAuthConfig;
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

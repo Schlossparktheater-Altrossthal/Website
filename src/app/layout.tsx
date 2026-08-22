@@ -132,7 +132,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           "overflow-x-hidden",
         )}
       >
-        <Providers session={session} syncToken={syncToken}>
+        <Providers syncToken={syncToken}>
           <a
             href="#main"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-card/90 focus:px-3 focus:py-2"

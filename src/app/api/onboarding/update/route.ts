@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { AllergyLevel } from "@prisma/client";
 import { z } from "zod";
 
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
@@ -71,7 +70,7 @@ function normalizeString(value: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const userId = session?.user?.id;
 
   if (!userId) {

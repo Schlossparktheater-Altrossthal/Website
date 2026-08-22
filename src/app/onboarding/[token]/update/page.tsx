@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { getServerSession } from "next-auth";
 import { notFound } from "next/navigation";
 
 import { ReturneeUpdateWizard } from "@/components/onboarding/returnee-update-wizard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/auth";
 import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
 import { prisma } from "@/lib/prisma";
 
@@ -92,7 +91,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     );
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const userId = session?.user?.id ?? null;
 
   if (!userId) {

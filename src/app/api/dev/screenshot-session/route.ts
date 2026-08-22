@@ -13,8 +13,8 @@ import { getAuthSecret } from "@/lib/auth-secret";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const SESSION_COOKIE_NAME = IS_PRODUCTION
-  ? "__Secure-next-auth.session-token"
-  : "next-auth.session-token";
+  ? "__Secure-authjs.session-token"
+  : "authjs.session-token";
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
 const ROLE_SET = new Set<Role>(ROLES);
@@ -88,6 +88,7 @@ async function createSessionCookie({
   const sessionToken = await encode({
     token: tokenPayload,
     secret,
+    salt: SESSION_COOKIE_NAME,
     maxAge: SESSION_MAX_AGE,
   });
 
