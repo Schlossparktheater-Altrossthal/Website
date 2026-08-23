@@ -6,6 +6,11 @@ export default defineConfig({
     environment: "node",
     globals: true,
     exclude: [...configDefaults.exclude, "realtime-server/**", "e2e/**"],
+    server: {
+      deps: {
+        inline: ["next-auth"],
+      },
+    },
   },
   resolve: {
     alias: [
@@ -17,6 +22,10 @@ export default defineConfig({
       {
         find: /^react-easy-crop\/react-easy-crop\.css$/,
         replacement: path.resolve(__dirname, "./src/test/mocks/react-easy-crop.css"),
+      },
+      {
+        find: "next/server",
+        replacement: "next/server.js",
       },
     ],
   },

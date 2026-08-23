@@ -66,7 +66,7 @@ describe("GET /api/dev/screenshot-session", () => {
         offlineProfile: true,
       });
 
-      const sessionCookie = response.cookies.get("next-auth.session-token");
+      const sessionCookie = response.cookies.get("authjs.session-token");
       expect(sessionCookie).toBeDefined();
       expect(sessionCookie?.value).toBeTruthy();
       expect(prismaMock.userRoleUpsert).not.toHaveBeenCalled();
