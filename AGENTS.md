@@ -174,3 +174,5 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Warnhinweise verwenden bg-warning/10 border border-warning text-warning-foreground rounded-lg p-4.
 - Fehlerhinweise verwenden bg-destructive/10 border border-destructive text-destructive-foreground rounded-lg p-4.
 - Nie eigene Farben oder hardcodierte Hintergründe für Hinweisboxen.
+
+
