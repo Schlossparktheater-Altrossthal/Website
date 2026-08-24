@@ -1,5 +1,6 @@
 # AGENTS.md
 
+
 ## Stack & Einstieg
 
 Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion; aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
