@@ -42,6 +42,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Schemaänderungen in `prisma/schema.prisma` stets mit Migration begleiten, danach `pnpm prisma:generate`.
 - ENV-Variablen in `.env.example` und README dokumentieren.
 - Realtime-Ereignisse über `@/hooks/useRealtime` und `realtime-server/src`. Frontend und Backend gleichzeitig pflegen.
+- Geteilte Module des Realtime-Servers (`src/lib/realtime/shared/*`, `src/lib/server-analytics-*`) bleiben handgepflegt als `.js` + `.d.ts`. Der Realtime-Server hat keine Build-Stufe und kann `.ts` nicht laden – keine TS-Migration. Bei Änderungen an der `.js` die zugehörige `.d.ts` synchron halten.
 - Neue Permission-Keys müssen in `DEFAULT_PERMISSION_DEFINITIONS` in `src/lib/permissions.ts` registriert werden, bevor sie verwendet werden.
 - Neue Feature-Keys für öffentliche Seiten müssen in `FEATURE_DEFINITIONS` in `src/lib/frontend-editing.ts` eingetragen werden.
 - Bei Umbenennung von Permission-Keys eine neue Prisma-Migration erstellen, die alte Keys in der DB umbenennt.

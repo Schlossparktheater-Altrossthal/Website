@@ -31,5 +31,6 @@ Server-Metriken (HTTP, Sessions, Seiten-Performance).
 - Die Analytics-Aggregation läuft über die API-Route `/api/cron/server-analytics`
   (Header `x-cron-secret`) oder manuell via `pnpm tsx scripts/cron/*`.
 - `server-analytics-content.tsx` enthält Animations-/Interpolationslogik (`interpolateValue`).
-- Es existierten handgepflegte `.js`-Dateien (`server-analytics-*.js`) im Source – Status prüfen
-  (Aufgabe „JS-Dateien klären").
+- Server-seitige Analytics-Module (`src/lib/server-analytics-data.js`, `src/lib/server-analytics-settings.js`)
+  sind bewusst handgepflegtes JavaScript mit begleitender `.d.ts`-Datei. Der Realtime-Server hat keine
+  Build-Stufe und kann `.ts` nicht laden – daher keine TS-Migration dieser Module.
