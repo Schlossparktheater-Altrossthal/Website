@@ -48,7 +48,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="text-sm text-red-600">
+        <div className="text-sm text-destructive">
           Kein Zugriff auf die persönliche Gewerkeübersicht.
         </div>
       </div>

@@ -53,7 +53,7 @@ export default async function RehearsalDetailPage({
   ]);
 
   if (!canViewOwn && !canPlan) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die Probenansicht.</div>;
+    return <div className="text-sm text-destructive">Kein Zugriff auf die Probenansicht.</div>;
   }
 
   const resolvedParams = await params;
@@ -83,7 +83,7 @@ export default async function RehearsalDetailPage({
   });
 
   if (!rehearsal) {
-    return <div className="text-sm text-red-600">Diese Probe existiert nicht.</div>;
+    return <div className="text-sm text-destructive">Diese Probe existiert nicht.</div>;
   }
 
   if (rehearsal.status === "DRAFT" && !canPlan) {

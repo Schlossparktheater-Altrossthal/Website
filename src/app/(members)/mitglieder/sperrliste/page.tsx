@@ -50,7 +50,7 @@ export default async function BlocklistPage() {
   }
 
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die Sperrliste</div>;
+    return <div className="text-sm text-destructive">Kein Zugriff auf die Sperrliste</div>;
   }
 
   if (!databaseOnline) {

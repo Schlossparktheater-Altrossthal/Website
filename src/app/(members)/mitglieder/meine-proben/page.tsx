@@ -45,7 +45,9 @@ export default async function MyRehearsalsPage() {
   const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.OWN.VIEW");
   if (!allowed) {
     return (
-      <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Probenübersicht.</div>
+      <div className="text-sm text-destructive">
+        Kein Zugriff auf die persönliche Probenübersicht.
+      </div>
     );
   }
 

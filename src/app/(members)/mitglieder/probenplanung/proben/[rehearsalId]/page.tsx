@@ -29,7 +29,7 @@ export default async function RehearsalEditorPage({
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die Probenplanung</div>;
+    return <div className="text-sm text-destructive">Kein Zugriff auf die Probenplanung</div>;
   }
 
   const resolvedParams = await params;

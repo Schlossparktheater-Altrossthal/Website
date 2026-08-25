@@ -8,7 +8,7 @@ export default async function RechteVerwaltungPage() {
   const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE");
   if (!allowed) {
     // Next.js server components cannot return 403 easily; show message
-    return <div className="text-sm text-red-600">Kein Zugriff auf die Rechteverwaltung</div>;
+    return <div className="text-sm text-destructive">Kein Zugriff auf die Rechteverwaltung</div>;
   }
   return (
     <div className="space-y-6">

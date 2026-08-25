@@ -29,7 +29,7 @@ export default async function MeineGewerkePage() {
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="text-sm text-red-600">
+        <div className="text-sm text-destructive">
           Kein Zugriff auf die persönliche Gewerkeübersicht.
         </div>
       </div>
@@ -46,7 +46,7 @@ export default async function MeineGewerkePage() {
     if (leadCount === 0) {
       return (
         <div className="space-y-6">
-          <div className="text-sm text-red-600">
+          <div className="text-sm text-destructive">
             Kein Zugriff auf die persönliche Gewerkeübersicht.
           </div>
         </div>

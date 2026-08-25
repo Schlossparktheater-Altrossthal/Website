@@ -26,7 +26,9 @@ export default async function DepartmentTodosPage() {
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="text-sm text-red-600">Kein Zugriff auf die Gewerke-Aufgabenübersicht.</div>
+        <div className="text-sm text-destructive">
+          Kein Zugriff auf die Gewerke-Aufgabenübersicht.
+        </div>
       </div>
     );
   }

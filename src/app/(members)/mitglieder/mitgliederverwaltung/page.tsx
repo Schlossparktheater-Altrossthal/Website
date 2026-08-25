@@ -11,7 +11,9 @@ export default async function MemberManagementPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE");
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die Mitgliederverwaltung</div>;
+    return (
+      <div className="text-sm text-destructive">Kein Zugriff auf die Mitgliederverwaltung</div>
+    );
   }
 
   const canManageInvites =

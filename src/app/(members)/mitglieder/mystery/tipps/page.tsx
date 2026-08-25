@@ -16,7 +16,7 @@ export default async function MysteryTipsAdminPage({
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "PUBLIC.MYSTERY.TIPS.MANAGE");
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die Mystery-Tipps</div>;
+    return <div className="text-sm text-destructive">Kein Zugriff auf die Mystery-Tipps</div>;
   }
 
   if (!process.env.DATABASE_URL) {

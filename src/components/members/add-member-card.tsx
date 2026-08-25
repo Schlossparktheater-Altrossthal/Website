@@ -209,7 +209,7 @@ export function AddMemberModal() {
               </p>
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             <DialogFooter className="gap-2 sm:space-x-2">
               <Button
