@@ -1,5 +1,5 @@
 /* global workbox */
-const WORKBOX_VERSION = "7.1.0";
+const WORKBOX_VERSION = "7.4.1";
 importScripts(`./workbox/workbox-v${WORKBOX_VERSION}/workbox-sw.js`);
 
 if (workbox) {
