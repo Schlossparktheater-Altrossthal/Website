@@ -112,3 +112,14 @@ Alle oben genannten Endpunkte verlangen eine angemeldete Sitzung mit der Berecht
 - Themes werden nach `name` sortiert, das Standard-Theme steht immer an erster Stelle.
 - Presets werden automatisch nachgezogen, wenn neue Varianten im Code ergänzt werden.
 - Beim Löschen oder Zurücksetzen eines Themes muss anschließend ein anderes Theme aktiv ausgewählt werden, damit die Website konsistente Tokens erhält.
+
+## Farben im Frontend
+
+Die über Themes verwalteten Tokens (`success`, `warning`, `info`, `destructive`, `primary` …) werden
+als Tailwind-Utilities bereitgestellt (`bg-success`, `text-warning`, `border-destructive` …). Im
+Frontend dürfen diese Farben niemals hardcoded werden:
+
+- Status-Indikatoren über die semantischen Tokens (`success`/`warning`/`info`/`destructive`).
+- Kategorie- und Identitätsfarben (Rollen, Gewerke, Interessen) zentral in `src/config/category-colors.ts`.
+
+Das vollständige Mapping inklusive verbotener Ersetzungen steht in `docs/design-system.md`.

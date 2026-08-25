@@ -144,6 +144,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 
 - Farben immer über semantische CSS-Variablen aus `src/design-system/tokens.json` verwenden, z. B. `text-primary`, `text-destructive`, `bg-muted`.
 - Hardcodierte Farbwerte sind nicht erlaubt.
+- Kategorie- und Identitätsfarben (Rollen, Gewerke, Interessen) ausschließlich zentral in `src/config/category-colors.ts` pflegen – nie in Komponenten hardcoden.
 - Die autoritative Token-Referenz ist `docs/design-system.md`. Bei Konflikten hat `AGENTS.md` Vorrang.
 
 ## Surface & Card Hierarchie

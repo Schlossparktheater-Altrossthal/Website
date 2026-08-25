@@ -290,6 +290,15 @@ Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch di
 | `text-slate-500`   | `text-muted-foreground`        | Labels, Platzhalter      |
 | `text-slate-400`   | `text-muted-foreground/60`     | Deaktivierte Elemente    |
 
+| Hard-coded Status (❌)              | Design Token (✅)             | Verwendung              |
+| ----------------------------------- | ----------------------------- | ----------------------- |
+| `text-red-600`                      | `text-destructive`            | Fehlermeldungen         |
+| `bg-red-500` / `bg-rose-500`        | `bg-destructive`              | Fehler, gesperrt        |
+| `bg-emerald-500` / `text-emerald-*` | `bg-success` / `text-success` | Erfolg, aktiv           |
+| `bg-amber-500` / `text-amber-*`     | `bg-warning` / `text-warning` | Ausstehend, Hinweis     |
+| `bg-orange-500`                     | `bg-warning`                  | Warnung                 |
+| `bg-sky-500` / `bg-indigo-500`      | `bg-info`                     | Info, neutraler Hinweis |
+
 ### Status-Farben
 
 Für Status-Indikatoren nutze die semantischen Tokens statt direkter Farbnamen:
@@ -311,6 +320,32 @@ Für Status-Indikatoren nutze die semantischen Tokens statt direkter Farbnamen:
 <Badge variant="info">Information</Badge>
 <div className="bg-info/15 text-info border-info/40">
 ```
+
+**Hinweisboxen** nutzen die abgeschwächte Form mit `-foreground`-Text:
+
+```tsx
+// Erfolg
+<div className="border-success/40 bg-success/10 text-success-foreground rounded-lg p-4">
+// Warnung
+<div className="border-warning/50 bg-warning/10 text-warning-foreground rounded-lg p-4">
+// Fehler
+<div className="border-destructive/40 bg-destructive/10 text-destructive rounded-lg p-4">
+```
+
+### Kategorie- und Identitätsfarben
+
+Rollen, Gewerke und Interessen besitzen bewusst feste Identitätsfarben, die sich nicht über die
+Status-Tokens abbilden lassen. Diese Farben werden **ausschließlich zentral** in
+`src/config/category-colors.ts` gepflegt:
+
+- `FOCUS_BADGE_STYLES` – Onboarding-Fokus (Schauspiel / Gewerke / beides)
+- `FOCUS_ACCENT_STYLES` – Verlaufs-Akzente für Fokus-Karten
+- `INTEREST_CLUSTER_STYLES` – Interessen-Cluster der Wortwolken-Auswertung
+- `RANKING_ROLE_STYLES` – Ranking-Rollen (Schauspiel- und Crew-Untergruppen)
+
+Komponenten importieren diese Maps, statt Farben lokal zu definieren. Neue Kategorie-Farben gehören
+ausschließlich in diese Datei. Sobald das Design-System eigene Kategorie-Tokens besitzt, werden die
+Zuordnungen dort auf Tokens umgestellt.
 
 ### CSS-Override-Strategie für Legacy-Komponenten
 
