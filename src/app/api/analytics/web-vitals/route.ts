@@ -11,27 +11,27 @@ const deviceSchema = z.object({
   userAgent: z.string().trim().min(1).max(1024),
   deviceHint: z.string().trim().min(1).max(120).optional().nullable(),
   platform: z.string().trim().min(1).max(120).optional().nullable(),
-  hardwareConcurrency: z.number().int().positive().max(4096).optional(),
-  deviceMemoryGb: z.number().positive().max(1024).optional(),
-  touchSupport: z.number().int().nonnegative().max(64).optional(),
-  reducedMotion: z.boolean().optional(),
-  prefersDarkMode: z.boolean().optional(),
+  hardwareConcurrency: z.number().int().positive().max(4096).nullish(),
+  deviceMemoryGb: z.number().positive().max(1024).nullish(),
+  touchSupport: z.number().int().nonnegative().max(64).nullish(),
+  reducedMotion: z.boolean().nullish(),
+  prefersDarkMode: z.boolean().nullish(),
   colorSchemePreference: z.string().trim().min(1).max(32).optional().nullable(),
   connection: z
     .object({
-      type: z.string().trim().min(1).max(48).optional(),
-      effectiveType: z.string().trim().min(1).max(48).optional(),
-      rttMs: z.number().nonnegative().max(120_000).optional(),
-      downlinkMbps: z.number().nonnegative().max(10_000).optional(),
+      type: z.string().trim().min(1).max(48).nullish(),
+      effectiveType: z.string().trim().min(1).max(48).nullish(),
+      rttMs: z.number().nonnegative().max(120_000).nullish(),
+      downlinkMbps: z.number().nonnegative().max(10_000).nullish(),
     })
     .partial()
     .optional()
     .nullable(),
   viewport: z
     .object({
-      width: z.number().int().nonnegative().max(20_000).optional(),
-      height: z.number().int().nonnegative().max(20_000).optional(),
-      pixelRatio: z.number().positive().max(48).optional(),
+      width: z.number().int().nonnegative().max(20_000).nullish(),
+      height: z.number().int().nonnegative().max(20_000).nullish(),
+      pixelRatio: z.number().positive().max(48).nullish(),
     })
     .partial()
     .optional()
