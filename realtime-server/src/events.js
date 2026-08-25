@@ -1,4 +1,4 @@
-import { createRealtimeCore } from "../../src/lib/realtime/shared/core.ts";
+import { createRealtimeCore } from "../../src/lib/realtime/shared/core.js";
 
 export function createEventHandlers({ io, logger, toISO }) {
   if (!io) {

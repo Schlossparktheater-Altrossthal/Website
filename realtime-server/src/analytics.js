@@ -4,7 +4,7 @@ import { setTimeout as wait } from "node:timers/promises";
 import {
   getDefaultServerAnalyticsSettings,
   loadServerAnalyticsSettings,
-} from "../../src/lib/server-analytics-settings.ts";
+} from "../../src/lib/server-analytics-settings.js";
 const BASELINE_ANALYTICS = Object.freeze({
   summary: {
     uptimePercentage: 0,

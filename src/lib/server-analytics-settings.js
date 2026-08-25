@@ -5,29 +5,17 @@ import { Pool } from "pg";
 import {
   DEFAULT_SERVER_ANALYTICS_SETTINGS,
   SERVER_ANALYTICS_SETTINGS_LIMITS,
-} from "./server-analytics-settings-constants.ts";
+} from "./server-analytics-settings-constants.js";
 export { DEFAULT_SERVER_ANALYTICS_SETTINGS, SERVER_ANALYTICS_SETTINGS_LIMITS };
 
-export type ServerAnalyticsSettings = {
-  httpWindowMinutes: number;
-  httpBucketMinutes: number;
-  sessionWindowDays: number;
-  sessionRetentionDays: number;
-  realtimeWindowHours: number;
-  pageWindowDays: number;
-  pageRetentionDays: number;
-};
-
-export type ServerAnalyticsSettingsInput = Partial<ServerAnalyticsSettings>;
-
 const SETTINGS_ID = "default";
-const globalForAnalyticsSettings = globalThis as typeof globalThis & Record<symbol, unknown>;
+const globalForAnalyticsSettings = globalThis;
 
-function cloneDefaultSettings(): ServerAnalyticsSettings {
-  return JSON.parse(JSON.stringify(DEFAULT_SERVER_ANALYTICS_SETTINGS)) as ServerAnalyticsSettings;
+function cloneDefaultSettings() {
+  return JSON.parse(JSON.stringify(DEFAULT_SERVER_ANALYTICS_SETTINGS));
 }
 
-function getAnalyticsPrisma(client?: PrismaClient): PrismaClient | null {
+function getAnalyticsPrisma(client) {
   if (client) {
     return client;
   }
@@ -44,33 +32,31 @@ function getAnalyticsPrisma(client?: PrismaClient): PrismaClient | null {
         connectionString: process.env.DATABASE_URL,
       });
     }
-    const adapter = new PrismaPg(globalForAnalyticsSettings[poolKey] as Pool);
+    const adapter = new PrismaPg(globalForAnalyticsSettings[poolKey]);
     globalForAnalyticsSettings[globalKey] = new PrismaClient({
       adapter,
       log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
     });
   }
 
-  return globalForAnalyticsSettings[globalKey] as PrismaClient;
+  return globalForAnalyticsSettings[globalKey];
 }
 
-function isTableMissingError(error: unknown): boolean {
+function isTableMissingError(error) {
   if (!error || typeof error !== "object") {
     return false;
   }
 
-  const candidate = error as { code?: unknown; meta?: { cause?: unknown } };
-
-  if (candidate.code === "P2021") {
+  if (error.code === "P2021") {
     return true;
   }
 
-  const cause = candidate.meta?.cause;
+  const cause = error.meta?.cause;
   if (typeof cause === "string" && cause.includes("does not exist")) {
     return true;
   }
 
-  const sqlCode = (candidate.code as { code?: unknown } | undefined)?.code ?? candidate.code;
+  const sqlCode = error.code?.code ?? error.code;
   if (typeof sqlCode === "string" && sqlCode.toUpperCase() === "42P01") {
     return true;
   }
@@ -78,7 +64,7 @@ function isTableMissingError(error: unknown): boolean {
   return false;
 }
 
-function normaliseSetting(value: unknown, key: keyof ServerAnalyticsSettings): number {
+function normaliseSetting(value, key) {
   const defaults = DEFAULT_SERVER_ANALYTICS_SETTINGS;
   const limits = SERVER_ANALYTICS_SETTINGS_LIMITS[key] ?? {};
   const fallback = defaults[key];
@@ -97,53 +83,47 @@ function normaliseSetting(value: unknown, key: keyof ServerAnalyticsSettings): n
   return normalised;
 }
 
-function normaliseSettings(record: unknown): ServerAnalyticsSettings {
+function normaliseSettings(record) {
   const defaults = cloneDefaultSettings();
   if (!record || typeof record !== "object") {
     return defaults;
   }
 
-  const source = record as Record<string, unknown>;
   return {
-    httpWindowMinutes: normaliseSetting(source.httpWindowMinutes, "httpWindowMinutes"),
-    httpBucketMinutes: normaliseSetting(source.httpBucketMinutes, "httpBucketMinutes"),
-    sessionWindowDays: normaliseSetting(source.sessionWindowDays, "sessionWindowDays"),
-    sessionRetentionDays: normaliseSetting(source.sessionRetentionDays, "sessionRetentionDays"),
-    realtimeWindowHours: normaliseSetting(source.realtimeWindowHours, "realtimeWindowHours"),
-    pageWindowDays: normaliseSetting(source.pageWindowDays, "pageWindowDays"),
-    pageRetentionDays: normaliseSetting(source.pageRetentionDays, "pageRetentionDays"),
+    httpWindowMinutes: normaliseSetting(record.httpWindowMinutes, "httpWindowMinutes"),
+    httpBucketMinutes: normaliseSetting(record.httpBucketMinutes, "httpBucketMinutes"),
+    sessionWindowDays: normaliseSetting(record.sessionWindowDays, "sessionWindowDays"),
+    sessionRetentionDays: normaliseSetting(record.sessionRetentionDays, "sessionRetentionDays"),
+    realtimeWindowHours: normaliseSetting(record.realtimeWindowHours, "realtimeWindowHours"),
+    pageWindowDays: normaliseSetting(record.pageWindowDays, "pageWindowDays"),
+    pageRetentionDays: normaliseSetting(record.pageRetentionDays, "pageRetentionDays"),
   };
 }
 
-function buildUpdatePayload(input: unknown): Record<string, number> {
+function buildUpdatePayload(input) {
   if (!input || typeof input !== "object") {
     return {};
   }
 
-  const source = input as Record<string, unknown>;
-  const update: Record<string, number> = {};
+  const update = {};
   for (const key of Object.keys(SERVER_ANALYTICS_SETTINGS_LIMITS)) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
-      update[key] = normaliseSetting(source[key], key as keyof ServerAnalyticsSettings);
+    if (Object.prototype.hasOwnProperty.call(input, key)) {
+      update[key] = normaliseSetting(input[key], key);
     }
   }
 
   return update;
 }
 
-export function getDefaultServerAnalyticsSettings(): ServerAnalyticsSettings {
+export function getDefaultServerAnalyticsSettings() {
   return cloneDefaultSettings();
 }
 
-export async function ensureServerAnalyticsSettings(
-  prisma?: PrismaClient,
-): Promise<ServerAnalyticsSettings> {
+export async function ensureServerAnalyticsSettings(prisma) {
   return saveServerAnalyticsSettings({}, prisma);
 }
 
-export async function loadServerAnalyticsSettings(
-  prisma?: PrismaClient,
-): Promise<ServerAnalyticsSettings> {
+export async function loadServerAnalyticsSettings(prisma) {
   const client = getAnalyticsPrisma(prisma);
   if (!client) {
     return cloneDefaultSettings();
@@ -157,6 +137,7 @@ export async function loadServerAnalyticsSettings(
       });
       return normaliseSettings(created);
     }
+
     return normaliseSettings(record);
   } catch (error) {
     if (isTableMissingError(error)) {
@@ -166,10 +147,7 @@ export async function loadServerAnalyticsSettings(
   }
 }
 
-export async function saveServerAnalyticsSettings(
-  input: ServerAnalyticsSettingsInput = {},
-  prisma?: PrismaClient,
-): Promise<ServerAnalyticsSettings> {
+export async function saveServerAnalyticsSettings(input = {}, prisma) {
   const client = getAnalyticsPrisma(prisma);
   if (!client) {
     return cloneDefaultSettings();
