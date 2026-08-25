@@ -7,7 +7,7 @@ function sanitizeAvailabilityMinute(value: unknown): number | null | undefined {
     return null;
   }
 
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value >= 1440) {
     return undefined;
   }
 
@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
     }
 
     const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return NextResponse.json({ error: "Ungültiges Datum" }, { status: 400 });
+    }
 
     const sanitizedAvailableFromMin = sanitizeAvailabilityMinute(availableFromMin);
     if (sanitizedAvailableFromMin === undefined) {
@@ -41,6 +44,17 @@ export async function POST(request: NextRequest) {
     if (sanitizedAvailableToMin === undefined) {
       return NextResponse.json(
         { error: "availableToMin must be a non-negative integer or null" },
+        { status: 400 },
+      );
+    }
+
+    if (
+      sanitizedAvailableFromMin !== null &&
+      sanitizedAvailableToMin !== null &&
+      sanitizedAvailableToMin < sanitizedAvailableFromMin
+    ) {
+      return NextResponse.json(
+        { error: "availableToMin must be greater than or equal to availableFromMin" },
         { status: 400 },
       );
     }
