@@ -2,7 +2,7 @@
 
 ## Stack & Einstieg
 
-Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion; aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
+Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion; aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
 
 - App-Code liegt im `src`-Ordner: `src/app` (Routing), `src/components` (UI), `src/lib` (Logik), `prisma` (Schema), `realtime-server` (Socket.io).
 - Globale Provider kommen aus `src/app/providers.tsx`. Neue Kontexte dort integrieren, nicht lokal verschachteln.

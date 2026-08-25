@@ -1,6 +1,6 @@
 # Theater Website
 
-This repository combines the public Next.js 15 website and the Socket.IO based
+This repository combines the public Next.js 16 website and the Socket.IO based
 realtime server for the theater collective. Both services run inside the same
 Node.js process and expose the realtime API under `/realtime` (websocket path
 `/realtime/socket.io`). The published Docker images wrap the combined server in a
@@ -80,11 +80,11 @@ on [http://localhost:3000](http://localhost:3000).
 - `pnpm start:proxy` – emulate the Docker proxy setup locally.
 - `pnpm swatches:gen` / `pnpm design-system:tokens` – update color palettes and
   design tokens.
-- `pnpm ts-node scripts/cron/aggregate-http-metrics.ts` – aggregate raw HTTP
+- `pnpm tsx scripts/cron/aggregate-http-metrics.ts` – aggregate raw HTTP
   analytics into the summary tables.
-- `pnpm ts-node scripts/cron/aggregate-session-metrics.ts` – derive session,
+- `pnpm tsx scripts/cron/aggregate-session-metrics.ts` – derive session,
   traffic and realtime insights.
-- `pnpm ts-node scripts/cron/aggregate-page-metrics.ts` – compute page and device
+- `pnpm tsx scripts/cron/aggregate-page-metrics.ts` – compute page and device
   performance metrics.
 
 ### Server analytics aggregation
