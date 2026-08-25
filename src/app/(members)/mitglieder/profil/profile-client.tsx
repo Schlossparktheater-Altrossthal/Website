@@ -22,7 +22,7 @@ import {
   UtensilsIcon,
 } from "@/components/ui/action-icons";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -643,7 +643,7 @@ function ProfileClientInner({
     return CHECKLIST_TARGETS.includes(maybeTarget) ? maybeTarget : undefined;
   }, [activeTab]);
 
-  const [, setChecklistState] = useState<ChecklistState>(() => ({
+  const [checklistState, setChecklistState] = useState<ChecklistState>(() => ({
     hasBasicData: Boolean(initialUser.firstName?.trim() && initialUser.email?.trim()),
     hasBirthdate: Boolean(initialUser.dateOfBirth),
     hasPaymentDetails: isProfilePaymentComplete(initialUser),
@@ -671,17 +671,18 @@ function ProfileClientInner({
     [whatsappLink],
   );
 
-  const updateChecklist = useCallback(
-    (patch: Partial<ChecklistState> = {}) => {
-      setChecklistState((prev) => {
-        const next = { ...prev, ...patch };
-        const nextSummary = buildSummaryFromState(next);
-        replaceSummary(nextSummary);
-        return next;
-      });
-    },
-    [buildSummaryFromState, replaceSummary],
-  );
+  const updateChecklist = useCallback((patch: Partial<ChecklistState> = {}) => {
+    setChecklistState((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const checklistMountedRef = useRef(false);
+  useEffect(() => {
+    if (!checklistMountedRef.current) {
+      checklistMountedRef.current = true;
+      return;
+    }
+    replaceSummary(buildSummaryFromState(checklistState));
+  }, [checklistState, buildSummaryFromState, replaceSummary]);
 
   const hasPhotoConsentChecklist = useMemo(
     () => summary.items.some((item) => item.id === "photo-consent"),
