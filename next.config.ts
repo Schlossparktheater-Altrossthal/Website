@@ -82,9 +82,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  turbopack: {
-    root: process.cwd(),
-  },
+  turbopack: {},
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {
