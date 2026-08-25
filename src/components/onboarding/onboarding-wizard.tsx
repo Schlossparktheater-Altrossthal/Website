@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FOCUS_ACCENT_STYLES, FOCUS_BADGE_STYLES } from "@/config/category-colors";
 import { useInterestSuggestions } from "@/hooks/useInterestSuggestions";
 import { cn } from "@/lib/utils";
 import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
@@ -248,17 +249,6 @@ const focusDescriptions: Record<"acting" | "tech" | "both", string> = {
   acting: "Du möchtest auf der Bühne wirken und Rollen gestalten.",
   tech: "Du möchtest hinter den Kulissen organisieren, bauen oder für Licht & Ton sorgen.",
   both: "Du bleibst flexibel zwischen Schauspiel und Gewerken.",
-};
-
-const focusBadgeStyles: Record<"acting" | "tech" | "both", string> = {
-  acting: "border-violet-400/40 bg-violet-500/10 text-violet-600",
-  tech: "border-cyan-400/40 bg-cyan-500/10 text-cyan-600",
-  both: "border-indigo-400/40 bg-indigo-500/10 text-indigo-600",
-};
-
-const preferenceAccent: Record<"acting" | "crew", string> = {
-  acting: "from-violet-500/70 to-fuchsia-500/70",
-  crew: "from-cyan-500/70 to-teal-500/70",
 };
 
 const steps = [
@@ -2547,7 +2537,7 @@ export function OnboardingWizard({
                     className={cn(
                       "rounded-full border px-3 py-1 text-xs font-medium",
                       derivedFocus
-                        ? focusBadgeStyles[derivedFocus]
+                        ? FOCUS_BADGE_STYLES[derivedFocus]
                         : "border-border text-muted-foreground",
                     )}
                   >
@@ -2600,7 +2590,7 @@ export function OnboardingWizard({
                                     <div
                                       className={cn(
                                         "h-full rounded-full bg-gradient-to-r",
-                                        preferenceAccent[pref.domain],
+                                        FOCUS_ACCENT_STYLES[pref.domain],
                                       )}
                                       style={{ width: `${pref.weight}%` }}
                                     />

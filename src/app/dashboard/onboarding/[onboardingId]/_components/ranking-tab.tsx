@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
+import { RANKING_ROLE_STYLES } from "@/config/category-colors";
 import { cn } from "@/lib/utils";
 import { RoleSpiderChart } from "./role-spider-chart";
 import {
@@ -66,27 +67,6 @@ const scoreFormatter = new Intl.NumberFormat("de-DE", {
 });
 
 type RoleFilter = "all" | string;
-
-const roleAccentStyles: Record<string, string> = {
-  acting_lead: "border-amber-400/60 bg-amber-500/10 dark:border-amber-400/40 dark:bg-amber-500/5",
-  acting_medium:
-    "border-orange-400/60 bg-orange-500/10 dark:border-orange-400/40 dark:bg-orange-500/5",
-  acting_scout:
-    "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-400/40 dark:bg-emerald-500/5",
-  acting_statist: "border-primary/60 bg-primary/10 dark:border-primary/40 dark:bg-primary/5",
-  crew_stage:
-    "border-purple-400/55 bg-purple-500/10 dark:border-purple-400/40 dark:bg-purple-500/5",
-  crew_tech: "border-cyan-400/55 bg-cyan-500/10 dark:border-cyan-400/40 dark:bg-cyan-500/5",
-  crew_costume: "border-pink-400/55 bg-pink-500/10 dark:border-pink-400/40 dark:bg-pink-500/5",
-  crew_makeup: "border-rose-400/55 bg-rose-500/10 dark:border-rose-400/40 dark:bg-rose-500/5",
-  crew_direction:
-    "border-indigo-400/55 bg-indigo-500/10 dark:border-indigo-400/40 dark:bg-indigo-500/5",
-  crew_music: "border-lime-400/55 bg-lime-500/10 dark:border-lime-400/40 dark:bg-lime-500/5",
-  crew_props: "border-teal-400/55 bg-teal-500/10 dark:border-teal-400/40 dark:bg-teal-500/5",
-  crew_marketing:
-    "border-amber-300/55 bg-amber-400/10 dark:border-amber-300/40 dark:bg-amber-400/5",
-  default: "border-border/60 bg-muted/30",
-};
 
 type RankingTabProps = {
   ranking: OnboardingDashboardData["ranking"];
@@ -320,7 +300,7 @@ function DomainSection({
   return (
     <div className="space-y-8">
       {visibleGroups.map((group) => {
-        const accentClass = roleAccentStyles[group.roleId] ?? roleAccentStyles.default;
+        const accentClass = RANKING_ROLE_STYLES[group.roleId] ?? RANKING_ROLE_STYLES.default;
         const profileCount = group.candidates.length;
 
         return (

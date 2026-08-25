@@ -879,7 +879,7 @@ export function MemberMeasurementsControlCenter({
                   <div className="w-full min-w-[160px]">
                     <div className="h-1.5 overflow-hidden rounded-full bg-muted/40">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary via-sky-500 to-violet-500"
+                        className="h-full rounded-full bg-gradient-to-r from-primary via-info to-accent"
                         style={{
                           width: `${Math.round(memberModalMember.stats.completion * 100)}%`,
                         }}
@@ -909,7 +909,7 @@ export function MemberMeasurementsControlCenter({
                       key={type}
                       className="group relative overflow-hidden rounded-3xl border border-border/50 bg-background/80 p-5 transition hover:border-primary/40 hover:bg-primary/5"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-violet-500/10 opacity-0 transition group-hover:opacity-100" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-accent/10 opacity-0 transition group-hover:opacity-100" />
                       <div className="relative z-10 flex h-full flex-col gap-3">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground/80">

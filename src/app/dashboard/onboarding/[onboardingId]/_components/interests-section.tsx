@@ -17,6 +17,7 @@ import {
   distributionEntrySchema,
 } from "@/lib/onboarding/dashboard-schemas";
 
+import { INTEREST_CLUSTER_STYLES } from "@/config/category-colors";
 import { DistributionBars } from "./distribution-bars";
 
 type WordCloudWord = { text: string; value: number };
@@ -27,14 +28,6 @@ type InterestsSectionProps = {
   coOccurrences: Array<z.infer<typeof coOccurrenceEdgeSchema>>;
   clusters: Array<z.infer<typeof clusterNodeSchema>>;
   diversity: z.infer<typeof diversityMetricSchema>;
-};
-
-const clusterColors: Record<string, string> = {
-  schauspiel: "from-rose-500/60 to-rose-500/15",
-  technik: "from-sky-500/60 to-sky-500/15",
-  musik: "from-indigo-500/60 to-indigo-500/15",
-  orga: "from-emerald-500/60 to-emerald-500/15",
-  allgemein: "from-amber-500/60 to-amber-500/15",
 };
 
 export function InterestsSection({
@@ -161,7 +154,8 @@ export function InterestsSection({
           </dl>
           <div className="grid gap-2">
             {clusters.map((cluster) => {
-              const gradient = clusterColors[cluster.id] ?? clusterColors.allgemein;
+              const gradient =
+                INTEREST_CLUSTER_STYLES[cluster.id] ?? INTEREST_CLUSTER_STYLES.allgemein;
               return (
                 <div
                   key={cluster.id}

@@ -29,6 +29,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FOCUS_BADGE_STYLES } from "@/config/category-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DateInput } from "@/components/ui/date-input";
@@ -129,11 +130,6 @@ const ONBOARDING_FOCUS_DESCRIPTIONS: Record<OnboardingFocus, string> = {
   acting: "Du konzentrierst dich aktuell auf Rollen vor der Bühne.",
   tech: "Du unterstützt hinter den Kulissen in Gewerken und Organisation.",
   both: "Du bleibst flexibel zwischen Schauspiel und Gewerken.",
-};
-const ONBOARDING_FOCUS_BADGE_STYLES: Record<OnboardingFocus, string> = {
-  acting: "border-violet-400/40 bg-violet-500/10 text-violet-600",
-  tech: "border-cyan-400/40 bg-cyan-500/10 text-cyan-600",
-  both: "border-indigo-400/40 bg-indigo-500/10 text-indigo-600",
 };
 const ONBOARDING_STATUS_LABELS: Record<OnboardingSummary["status"], string> = {
   draft: "In Vorbereitung",
@@ -3123,7 +3119,7 @@ export function OnboardingSection({
                   variant="outline"
                   className={cn(
                     "w-fit rounded-full border px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide",
-                    ONBOARDING_FOCUS_BADGE_STYLES[effectiveFocus],
+                    FOCUS_BADGE_STYLES[effectiveFocus],
                   )}
                 >
                   {ONBOARDING_FOCUS_LABELS[effectiveFocus]}
@@ -3544,7 +3540,7 @@ export function RolePreferencesSection({
               variant="outline"
               className={cn(
                 "w-fit rounded-full border px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide",
-                ONBOARDING_FOCUS_BADGE_STYLES[effectiveFocus],
+                FOCUS_BADGE_STYLES[effectiveFocus],
               )}
             >
               {ONBOARDING_FOCUS_LABELS[effectiveFocus]}

@@ -64,7 +64,7 @@ export function RoleHeatmap({
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span>niedrig</span>
-                <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-sky-100 via-teal-300 to-emerald-600" />
+                <div className="h-1 flex-1 rounded-full bg-gradient-to-r from-info/10 via-info/50 to-success" />
                 <span>hoch</span>
                 <span className="ml-auto text-[11px] font-medium text-foreground/70">
                   max {maxValue.toFixed(2)}
