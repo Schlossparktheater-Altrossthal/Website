@@ -91,6 +91,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 ## Dokumentation & Kommunikation
 
 - README, `docs/**` und `.env.example` bei relevanten Änderungen aktualisieren.
+- Bei Änderungen an Seiten (Routen, Permissions, Komponenten) die zugehörige Datei in `docs/seiten/` aktualisieren.
 - PR-Beschreibungen mit Kontext, Entscheidungspunkten und QA-Schritten versehen.
 - In Texten und Kommentaren generische Maskulina verwenden, keine Genderschreibweisen.
 - Diese `AGENTS.md` bei neuen Standards fortschreiben und Änderungen begründen.
