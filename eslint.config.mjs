@@ -22,6 +22,12 @@ const eslintConfig = [
       // unescaped entities gemeldet würden. Gezielte, begründete Ausnahme.
       "react/no-unescaped-entities": "off",
 
+      // React Compiler ist nicht aktiv (next.config.ts). Diese Regeln bleiben
+      // als Warnung sichtbar, blockieren aber nicht. Sie werden relevant,
+      // sobald der Compiler eingeführt wird.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+
       // AGENTS.md verbietet explizites any.
       "@typescript-eslint/no-explicit-any": "error",
 
