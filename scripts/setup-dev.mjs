@@ -15,7 +15,7 @@
  *   pnpm dev:services:down    # Stop Docker services
  */
 
-import { execSync, spawnSync } from "child_process";
+import { spawnSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync, copyFileSync } from "fs";
 import { randomBytes } from "crypto";
 import { join, dirname } from "path";

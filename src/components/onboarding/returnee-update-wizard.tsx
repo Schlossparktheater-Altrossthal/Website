@@ -289,11 +289,6 @@ export function ReturneeUpdateWizard({
     }
   };
 
-  const handleSelectUploadMode = () => {
-    setDocumentMode("upload");
-    setSignatureResult(null);
-  };
-
   const handleSelectSignatureMode = () => {
     if (isMinor) return;
     setDocumentMode("signature");

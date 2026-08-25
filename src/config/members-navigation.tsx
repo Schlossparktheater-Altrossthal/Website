@@ -70,89 +70,10 @@ const ProfileIcon = createMembersNavIcon(
   </>,
 );
 
-const ArchiveIcon = createMembersNavIcon(
-  <>
-    <path d="M3 8a2 2 0 0 1 2-2h2l1.2-2h5.6L15 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-    <circle cx="12" cy="12" r="3" />
-    <path d="M7 8h2" />
-  </>,
-);
-
-const FileLibraryIcon = createMembersNavIcon(
-  <>
-    <path d="M4 6a2 2 0 0 1 2-2h5l3 3h4a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
-    <path d="M11 4v4h5" />
-    <path d="M8 13h8" />
-    <path d="M8 17h5" />
-  </>,
-);
-
-const GalleryIcon = createMembersNavIcon(
-  <>
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <circle cx="9" cy="10" r="2" />
-    <path d="m3 17 4-4 3 3 4-4 6 6" />
-  </>,
-);
-
-const TimelineIcon = createMembersNavIcon(
-  <>
-    <path d="M4 6h16" />
-    <path d="M4 12h10" />
-    <path d="M4 18h7" />
-    <circle cx="14" cy="12" r="2" />
-    <circle cx="19" cy="6" r="2" />
-    <circle cx="13" cy="18" r="2" />
-  </>,
-);
-
 const FeedbackIcon = createMembersNavIcon(
   <>
     <path d="M20 15.5a4.5 4.5 0 0 0-4.5-4.5H5a2 2 0 0 0-2 2v7l3-3h7" />
     <path d="m21 11-3 3 3 3" />
-  </>,
-);
-
-const IssuesIcon = createMembersNavIcon(
-  <>
-    <path d="M21 15a2 2 0 0 1-2 2H9l-4 4v-4H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
-    <path d="M9 7h6" />
-    <path d="M9 11h6" />
-  </>,
-);
-
-const ScannerIcon = createMembersNavIcon(
-  <>
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <path d="M7 9h10" />
-    <path d="M5 13h14" />
-    <path d="M10 17h6" />
-  </>,
-);
-
-const InventoryStickersIcon = createMembersNavIcon(
-  <>
-    <path d="M4 5a2 2 0 0 1 2-2h6l8 8-8 8H6a2 2 0 0 1-2-2z" />
-    <path d="M9 7h.01" />
-    <path d="M9 11h4" />
-    <path d="M9 15h4" />
-  </>,
-);
-
-const TechInventoryIcon = createMembersNavIcon(
-  <>
-    <path d="M3 8.5 12 4l9 4.5" />
-    <path d="M5 11h14v8H5z" />
-    <path d="M9 15h6" />
-    <path d="M12 12v6" />
-  </>,
-);
-
-const CostumeInventoryIcon = createMembersNavIcon(
-  <>
-    <path d="M12 4a2 2 0 0 1 2 2c0 1.105-.895 2-2 2s-2-.895-2-2" />
-    <path d="M8 8 6 20h12L16 8" />
-    <path d="M10 16h4" />
   </>,
 );
 
@@ -217,48 +138,6 @@ const RehearsalPlanningIcon = createMembersNavIcon(
     <path d="M16 2v4" />
     <path d="M8 2v4" />
     <path d="M3 10h18" />
-  </>,
-);
-
-const DutyRosterIcon = createMembersNavIcon(
-  <>
-    <rect x="4" y="5" width="16" height="16" rx="2" />
-    <path d="M9 3v4" />
-    <path d="M15 3v4" />
-    <path d="M4 11h16" />
-    <path d="m9 16 2 2 4-4" />
-  </>,
-);
-
-const MealPlanIcon = createMembersNavIcon(
-  <>
-    <rect x="3" y="4" width="18" height="16" rx="2" />
-    <path d="M9 2v4" />
-    <path d="M15 2v4" />
-    <path d="M3 10h18" />
-    <path d="M7 14h6" />
-    <path d="M7 18h6" />
-    <path d="m17 14 2 2 2-2" />
-    <path d="M17 18h4" />
-  </>,
-);
-
-const CateringIcon = createMembersNavIcon(
-  <>
-    <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8" />
-    <path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7" />
-    <path d="m2.1 21.8 6.4-6.3" />
-    <path d="m19 5-7 7" />
-  </>,
-);
-
-const ShoppingListIcon = createMembersNavIcon(
-  <>
-    <path d="M6 4h12a2 2 0 0 1 2 2v14H4V6a2 2 0 0 1 2-2Z" />
-    <path d="M9 2v4" />
-    <path d="M15 2v4" />
-    <path d="m9 11 2 2 4-4" />
-    <path d="M9 17h6" />
   </>,
 );
 
@@ -358,43 +237,6 @@ const ServerSettingsIcon = createMembersNavIcon(
     <path d="M8 20l.7-.7" />
     <path d="M8.7 14.7l-.7.7" />
     <path d="M16 20l-.7-.7" />
-  </>,
-);
-
-const FinanceDashboardIcon = createMembersNavIcon(
-  <>
-    <rect x="3" y="6" width="18" height="12" rx="2" />
-    <path d="M7 10h10" />
-    <path d="M7 14h6" />
-    <circle cx="9" cy="10" r="0.5" fill="currentColor" />
-    <circle cx="15" cy="14" r="0.5" fill="currentColor" />
-  </>,
-);
-
-const FinanceBookingsIcon = createMembersNavIcon(
-  <>
-    <path d="M4 6h16v4H4z" />
-    <path d="M7 10v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-8" />
-    <path d="M9 14h6" />
-    <path d="M9 18h4" />
-  </>,
-);
-
-const FinanceBudgetsIcon = createMembersNavIcon(
-  <>
-    <path d="M4 19h16" />
-    <path d="M7 19v-7" />
-    <path d="M12 19v-11" />
-    <path d="M17 19v-5" />
-    <path d="M5 8h14l-2-3H7z" />
-  </>,
-);
-
-const FinanceExportIcon = createMembersNavIcon(
-  <>
-    <path d="M12 3v12" />
-    <path d="m8 11 4 4 4-4" />
-    <path d="M4 19h16" />
   </>,
 );
 

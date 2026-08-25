@@ -1,12 +1,3 @@
-import {
-  CatIcon,
-  HeartIcon,
-  IconComponent,
-  MoonStarIcon,
-  PawPrintIcon,
-  ShieldCheckIcon,
-  SunIcon,
-} from "@/components/ui/action-icons";
 export const revalidate = 60;
 
 import { readdirSync } from "node:fs";
@@ -15,8 +6,6 @@ import path from "node:path";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { Card } from "@/components/ui/card";
-import { TextLink } from "@/components/ui/text-link";
 import { Heading, Text } from "@/components/ui/typography";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 import { readSchulkatzeIntro } from "@/lib/website-content";
@@ -78,25 +67,6 @@ export async function generateMetadata(): Promise<Metadata> {
     },
   };
 }
-
-type CatProfileHighlight = {
-  icon: IconComponent;
-  title: string;
-  description: string;
-};
-
-type CatMemoryItem = {
-  icon: IconComponent;
-  title: string;
-  detail: string;
-};
-
-const catCareLessons: string[] = [
-  "Tiere, die unsere Schule begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
-  "Gemeinsame Rituale schaffen Vertrauen, besonders wenn ein Vierbeiner über so viele Jahre Teil der Gemeinschaft ist.",
-  "In Abschiedsmomenten hilft es, Erinnerungen zu teilen und Orte des Gedenkens zu schaffen.",
-  "Wer künftig eine Schulkatze willkommen heißt, sollte an Dieters Bedürfnisse denken: Ruhe, Respekt und Zeit.",
-];
 
 export default async function SchoolCatPage() {
   const visibility = await getPublicPageVisibility();

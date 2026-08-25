@@ -9,13 +9,11 @@ import {
   CheckCircle2Icon,
   HammerIcon,
   IconComponent,
-  PiggyBankIcon,
   ShieldCheckIcon,
   SparklesIcon,
   UserRoundIcon,
   UsersIcon,
   UsersRoundIcon,
-  UtensilsCrossedIcon,
   WifiIcon,
   WifiOffIcon,
 } from "@/components/ui/action-icons";

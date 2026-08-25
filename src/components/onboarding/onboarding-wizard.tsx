@@ -858,13 +858,6 @@ export function OnboardingWizard({
     setDocumentFromFile(file);
   };
 
-  const handleSelectUploadMode = () => {
-    if (documentMode === "upload") return;
-    setDocumentMode("upload");
-    setSignatureResult(null);
-    setDocumentFromFile(null);
-  };
-
   const handleSelectSignatureMode = () => {
     if (isMinor || documentMode === "signature") return;
     setDocumentMode("signature");
