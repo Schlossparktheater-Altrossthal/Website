@@ -391,166 +391,168 @@ export function PermissionWorkbenchClient({
                   const forcedOpen = hasSearch;
                   const isOpen = forcedOpen || !(collapsedCategories[category.categoryKey] ?? true);
                   return (
-                    <Collapsible
-                      key={category.categoryKey}
-                      open={isOpen}
-                      onOpenChange={(open) =>
-                        !forcedOpen &&
-                        setCollapsedCategories((s) => ({ ...s, [category.categoryKey]: !open }))
-                      }
-                      asChild
-                    >
-                      <>
-                        <tr className="bg-muted">
-                          <td
-                            colSpan={orderedRoles.length + 1}
-                            className="border-b border-border px-4 py-2"
+                    <Fragment key={category.categoryKey}>
+                      <tr className="bg-muted">
+                        <td
+                          colSpan={orderedRoles.length + 1}
+                          className="border-b border-border px-4 py-2"
+                        >
+                          <button
+                            type="button"
+                            aria-expanded={isOpen}
+                            className="flex min-h-11 w-full items-center justify-between"
+                            onClick={() => {
+                              if (!forcedOpen) {
+                                setCollapsedCategories((s) => ({
+                                  ...s,
+                                  [category.categoryKey]: isOpen,
+                                }));
+                              }
+                            }}
                           >
-                            <CollapsibleTrigger className="flex min-h-11 w-full items-center justify-between">
-                              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                {category.categoryLabel}
-                              </span>
-                              {isOpen ? (
-                                <ChevronUpIcon className="size-4 text-muted-foreground" />
-                              ) : (
-                                <ChevronDownIcon className="size-4 text-muted-foreground" />
-                              )}
-                            </CollapsibleTrigger>
-                          </td>
-                        </tr>
-                        <CollapsibleContent asChild>
-                          <>
-                            {category.groups.map((group) => {
-                              const groupOpen = openGroups[group.id] ?? hasSearch;
-                              return (
-                                <Fragment key={group.id}>
-                                  <tr className="bg-muted/40 transition-colors hover:bg-muted/60">
-                                    <td className="border-b border-border/40 px-4 py-2.5">
-                                      <button
-                                        type="button"
-                                        className="flex w-full items-start justify-between text-left"
-                                        onClick={() =>
-                                          setOpenGroups((s) => ({ ...s, [group.id]: !groupOpen }))
-                                        }
-                                      >
-                                        <span>
-                                          <span className="text-sm font-medium text-foreground">
-                                            {group.label}
-                                          </span>
-                                          <span className="block text-xs text-muted-foreground">
-                                            {group.description}
-                                          </span>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              {category.categoryLabel}
+                            </span>
+                            {isOpen ? (
+                              <ChevronUpIcon className="size-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDownIcon className="size-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                      {isOpen ? (
+                        <>
+                          {category.groups.map((group) => {
+                            const groupOpen = openGroups[group.id] ?? hasSearch;
+                            return (
+                              <Fragment key={group.id}>
+                                <tr className="bg-muted/40 transition-colors hover:bg-muted/60">
+                                  <td className="border-b border-border/40 px-4 py-2.5">
+                                    <button
+                                      type="button"
+                                      className="flex w-full items-start justify-between text-left"
+                                      onClick={() =>
+                                        setOpenGroups((s) => ({ ...s, [group.id]: !groupOpen }))
+                                      }
+                                    >
+                                      <span>
+                                        <span className="text-sm font-medium text-foreground">
+                                          {group.label}
                                         </span>
-                                        {groupOpen ? (
-                                          <ChevronUpIcon className="mt-0.5 size-4 text-muted-foreground" />
-                                        ) : (
-                                          <ChevronDownIcon className="mt-0.5 size-4 text-muted-foreground" />
-                                        )}
-                                      </button>
-                                    </td>
-                                    {orderedRoles.map((role) => {
-                                      const granted = group.keys.filter((key) =>
-                                        roleGrants[role.id]?.has(key),
-                                      ).length;
-                                      const all = granted === group.keys.length;
-                                      const some = granted > 0 && !all;
-                                      return (
+                                        <span className="block text-xs text-muted-foreground">
+                                          {group.description}
+                                        </span>
+                                      </span>
+                                      {groupOpen ? (
+                                        <ChevronUpIcon className="mt-0.5 size-4 text-muted-foreground" />
+                                      ) : (
+                                        <ChevronDownIcon className="mt-0.5 size-4 text-muted-foreground" />
+                                      )}
+                                    </button>
+                                  </td>
+                                  {orderedRoles.map((role) => {
+                                    const granted = group.keys.filter((key) =>
+                                      roleGrants[role.id]?.has(key),
+                                    ).length;
+                                    const all = granted === group.keys.length;
+                                    const some = granted > 0 && !all;
+                                    return (
+                                      <td
+                                        key={`${group.id}-${role.id}`}
+                                        className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 px-2 py-2.5 text-center`}
+                                      >
+                                        <PermissionToggle
+                                          checked={all ? true : some ? "indeterminate" : false}
+                                          onCheckedChange={(state) => {
+                                            const grant = state === true;
+                                            void Promise.all(
+                                              group.keys.map((permissionKey) =>
+                                                togglePermission(role.id, permissionKey, grant),
+                                              ),
+                                            );
+                                          }}
+                                        />
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                                {groupOpen &&
+                                  group.members.map((permission, index) => (
+                                    <tr
+                                      key={permission.key}
+                                      className={
+                                        index % 2 === 0
+                                          ? "bg-card transition-colors hover:bg-muted/10"
+                                          : "bg-muted/10 transition-colors hover:bg-muted/20"
+                                      }
+                                    >
+                                      <td className="border-b border-border/40 px-4 py-2.5 pl-8">
+                                        <span className="block text-sm font-medium text-foreground">
+                                          {permission.label}
+                                        </span>
+                                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                                          {permission.description ??
+                                            "Keine Beschreibung vorhanden."}
+                                        </span>
+                                      </td>
+                                      {orderedRoles.map((role) => (
                                         <td
-                                          key={`${group.id}-${role.id}`}
+                                          key={`${permission.key}-${role.id}`}
                                           className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 px-2 py-2.5 text-center`}
                                         >
                                           <PermissionToggle
-                                            checked={all ? true : some ? "indeterminate" : false}
-                                            onCheckedChange={(state) => {
-                                              const grant = state === true;
-                                              void Promise.all(
-                                                group.keys.map((permissionKey) =>
-                                                  togglePermission(role.id, permissionKey, grant),
-                                                ),
-                                              );
-                                            }}
+                                            disabled
+                                            checked={
+                                              roleGrants[role.id]?.has(permission.key) ?? false
+                                            }
                                           />
                                         </td>
-                                      );
-                                    })}
-                                  </tr>
-                                  {groupOpen &&
-                                    group.members.map((permission, index) => (
-                                      <tr
-                                        key={permission.key}
-                                        className={
-                                          index % 2 === 0
-                                            ? "bg-card transition-colors hover:bg-muted/10"
-                                            : "bg-muted/10 transition-colors hover:bg-muted/20"
-                                        }
-                                      >
-                                        <td className="border-b border-border/40 px-4 py-2.5 pl-8">
-                                          <span className="block text-sm font-medium text-foreground">
-                                            {permission.label}
-                                          </span>
-                                          <span className="mt-0.5 block text-xs text-muted-foreground">
-                                            {permission.description ??
-                                              "Keine Beschreibung vorhanden."}
-                                          </span>
-                                        </td>
-                                        {orderedRoles.map((role) => (
-                                          <td
-                                            key={`${permission.key}-${role.id}`}
-                                            className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 px-2 py-2.5 text-center`}
-                                          >
-                                            <PermissionToggle
-                                              disabled
-                                              checked={
-                                                roleGrants[role.id]?.has(permission.key) ?? false
-                                              }
-                                            />
-                                          </td>
-                                        ))}
-                                      </tr>
-                                    ))}
-                                </Fragment>
-                              );
-                            })}
-                            {category.singles.map((permission, idx) => (
-                              <tr
-                                key={permission.key}
-                                className={
-                                  idx % 2 === 0
-                                    ? "bg-card transition-colors hover:bg-muted/10"
-                                    : "bg-muted/10 transition-colors hover:bg-muted/20"
-                                }
-                              >
-                                <td className="border-b border-border/40 px-4 py-2.5">
-                                  <span className="block text-sm font-medium text-foreground">
-                                    {permission.label}
-                                  </span>
-                                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                                    {permission.description ?? "Keine Beschreibung vorhanden."}
-                                  </span>
+                                      ))}
+                                    </tr>
+                                  ))}
+                              </Fragment>
+                            );
+                          })}
+                          {category.singles.map((permission, idx) => (
+                            <tr
+                              key={permission.key}
+                              className={
+                                idx % 2 === 0
+                                  ? "bg-card transition-colors hover:bg-muted/10"
+                                  : "bg-muted/10 transition-colors hover:bg-muted/20"
+                              }
+                            >
+                              <td className="border-b border-border/40 px-4 py-2.5">
+                                <span className="block text-sm font-medium text-foreground">
+                                  {permission.label}
+                                </span>
+                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                  {permission.description ?? "Keine Beschreibung vorhanden."}
+                                </span>
+                              </td>
+                              {orderedRoles.map((role) => (
+                                <td
+                                  key={role.id}
+                                  className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 px-2 py-2.5 text-center`}
+                                >
+                                  <PermissionToggle
+                                    checked={roleGrants[role.id]?.has(permission.key) ?? false}
+                                    onCheckedChange={(checked) =>
+                                      void togglePermission(
+                                        role.id,
+                                        permission.key,
+                                        checked === true,
+                                      )
+                                    }
+                                  />
                                 </td>
-                                {orderedRoles.map((role) => (
-                                  <td
-                                    key={role.id}
-                                    className={`${ROLE_COLUMN_WIDTH_CLASS} border-b border-l border-border/40 px-2 py-2.5 text-center`}
-                                  >
-                                    <PermissionToggle
-                                      checked={roleGrants[role.id]?.has(permission.key) ?? false}
-                                      onCheckedChange={(checked) =>
-                                        void togglePermission(
-                                          role.id,
-                                          permission.key,
-                                          checked === true,
-                                        )
-                                      }
-                                    />
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </>
-                        </CollapsibleContent>
-                      </>
-                    </Collapsible>
+                              ))}
+                            </tr>
+                          ))}
+                        </>
+                      ) : null}
+                    </Fragment>
                   );
                 })}
               </tbody>
