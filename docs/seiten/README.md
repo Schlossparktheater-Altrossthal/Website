@@ -37,3 +37,12 @@ welche Komponenten und Datenpfade sind beteiligt und welche bekannten Baustellen
 - **Feature-Keys** für öffentliche Seiten liegen in `FEATURE_DEFINITIONS` (`src/lib/frontend-editing.ts`).
 - **Design-Tokens** statt harter Farben; Details in `docs/design-system.md`.
 - **Responsive Muster** (Tabs, Header, Sidebar) sind in `AGENTS.md` unter „Responsive Design Patterns" festgehalten.
+
+## Aktualität
+
+Diese Dokumentation wurde am 2026-08-25 erstellt. **Beim nächsten Durchgang bitte prüfen, ob
+die Angaben noch aktuell sind** – insbesondere:
+
+- Routen und Permissions (neue Seiten, geänderte Berechtigungs-Keys)
+- Komponenten-Pfade und Dateinamen
+- Die unter „Besonderheiten / Altlasten" genannten Baustellen (erledigt? noch offen?)
