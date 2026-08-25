@@ -5,7 +5,7 @@ import { Pool } from "pg";
 import {
   DEFAULT_SERVER_ANALYTICS_SETTINGS,
   SERVER_ANALYTICS_SETTINGS_LIMITS,
-} from "./server-analytics-settings-constants";
+} from "./server-analytics-settings-constants.ts";
 export { DEFAULT_SERVER_ANALYTICS_SETTINGS, SERVER_ANALYTICS_SETTINGS_LIMITS };
 
 export type ServerAnalyticsSettings = {

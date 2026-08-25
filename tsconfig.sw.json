@@ -3,6 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "noEmit": false,
+    "allowImportingTsExtensions": false,
     "lib": ["esnext", "webworker"],
     "types": []
   },

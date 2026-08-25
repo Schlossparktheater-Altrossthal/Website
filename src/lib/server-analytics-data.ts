@@ -2,7 +2,56 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
-const globalForAnalytics = globalThis;
+import type { DeviceStat, PagePerformanceEntry } from "@/lib/server-analytics";
+
+export type PagePerformanceMetricOverride = {
+  path: string;
+  avgPageLoadMs: number;
+  loadTimeMs?: number;
+  lcpMs?: number | null;
+  avgTimeOnPageSeconds?: number | null;
+  scope?: "public" | "members" | null;
+  weight?: number;
+};
+
+type TableColumnRef = {
+  original: string;
+  lower: string;
+};
+
+type TableMetadata = {
+  schema: string;
+  table: string;
+  schemaLower: string;
+  tableLower: string;
+  columns: TableColumnRef[];
+};
+
+type DeviceTableMatch = {
+  schema: string;
+  table: string;
+  columns: {
+    device: string;
+    sessions: string;
+    load: string;
+    share: string | null;
+  };
+};
+
+type PageTableMatch = {
+  schema: string;
+  table: string;
+  columns: {
+    path: string;
+    load: string;
+    scope: string | null;
+    lcp: string | null;
+    timeOnPage: string | null;
+    count: string | null;
+  };
+};
+
+const globalForAnalytics = globalThis as typeof globalThis & Record<symbol, unknown>;
 
 const DEVICE_PATTERNS = [
   "device",
@@ -82,7 +131,7 @@ const COUNT_PATTERNS = [
   "zugriffe",
 ];
 
-function getAnalyticsPrisma() {
+function getAnalyticsPrisma(): PrismaClient | null {
   if (!process.env.DATABASE_URL) {
     return null;
   }
@@ -93,43 +142,52 @@ function getAnalyticsPrisma() {
     if (!globalForAnalytics[poolKey]) {
       globalForAnalytics[poolKey] = new Pool({ connectionString: process.env.DATABASE_URL });
     }
-    const adapter = new PrismaPg(globalForAnalytics[poolKey]);
+    const adapter = new PrismaPg(globalForAnalytics[poolKey] as Pool);
     globalForAnalytics[globalKey] = new PrismaClient({
       adapter,
       log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
     });
   }
 
-  return globalForAnalytics[globalKey];
+  return globalForAnalytics[globalKey] as PrismaClient;
 }
 
-const metadataCache = {
+const metadataCache: {
+  tables: TableMetadata[] | null;
+  promise: Promise<TableMetadata[]> | null;
+} = {
   tables: null,
   promise: null,
 };
-let deviceTableCache;
-let pageTableCache;
+let deviceTableCache: DeviceTableMatch | null | undefined;
+let pageTableCache: PageTableMatch | null | undefined;
 
-function quoteIdentifier(identifier) {
+function quoteIdentifier(identifier: unknown): string {
   return `"${String(identifier).replace(/"/g, '""')}"`;
 }
 
-function formatTableName(schema, table) {
+function formatTableName(schema: unknown, table: unknown): string {
   return `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
 }
 
-function isTableMissingError(error) {
+function isTableMissingError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;
   }
-  const code = error.code || error.code?.code;
+  const candidate = error as { code?: unknown };
+  const code = (candidate.code as { code?: unknown } | undefined)?.code ?? candidate.code;
   return typeof code === "string" && code.toUpperCase() === "42P01";
 }
 
-function groupTableMetadata(rows) {
-  const tableMap = new Map();
+function groupTableMetadata(rows: unknown): TableMetadata[] {
+  const tableMap = new Map<string, TableMetadata>();
 
-  for (const row of rows) {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  for (const raw of rows) {
+    const row = raw as Record<string, unknown>;
     const schema = String(row.table_schema);
     const table = String(row.table_name);
     const column = String(row.column_name);
@@ -143,7 +201,7 @@ function groupTableMetadata(rows) {
         columns: [],
       });
     }
-    tableMap.get(key).columns.push({
+    tableMap.get(key)?.columns.push({
       original: column,
       lower: column.toLowerCase(),
     });
@@ -152,7 +210,7 @@ function groupTableMetadata(rows) {
   return Array.from(tableMap.values());
 }
 
-async function loadTableMetadata(prisma) {
+async function loadTableMetadata(prisma: PrismaClient): Promise<TableMetadata[]> {
   if (metadataCache.tables) {
     return metadataCache.tables;
   }
@@ -165,10 +223,10 @@ async function loadTableMetadata(prisma) {
   metadataCache.promise = prisma
     .$queryRawUnsafe(query)
     .then((rows) => {
-      metadataCache.tables = groupTableMetadata(rows ?? []);
+      metadataCache.tables = groupTableMetadata(rows);
       return metadataCache.tables;
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       metadataCache.promise = null;
       throw error;
     });
@@ -176,7 +234,11 @@ async function loadTableMetadata(prisma) {
   return metadataCache.promise;
 }
 
-function findColumn(table, patterns, exclude = new Set()) {
+function findColumn(
+  table: TableMetadata,
+  patterns: string[],
+  exclude: Set<string> = new Set(),
+): TableColumnRef | null {
   for (const column of table.columns) {
     if (exclude.has(column.original)) continue;
     const lower = column.lower;
@@ -190,7 +252,7 @@ function findColumn(table, patterns, exclude = new Set()) {
 }
 
 function computeScore(
-  table,
+  table: TableMetadata,
   {
     keywords = [],
     hasShare = false,
@@ -198,8 +260,15 @@ function computeScore(
     hasLcp = false,
     hasCount = false,
     hasTimeOnPage = false,
+  }: {
+    keywords?: string[];
+    hasShare?: boolean;
+    hasScope?: boolean;
+    hasLcp?: boolean;
+    hasCount?: boolean;
+    hasTimeOnPage?: boolean;
   } = {},
-) {
+): number {
   let score = 0;
   const name = table.tableLower;
   const schema = table.schemaLower;
@@ -227,14 +296,14 @@ function computeScore(
   return score;
 }
 
-async function resolveDeviceTable(prisma) {
+async function resolveDeviceTable(prisma: PrismaClient): Promise<DeviceTableMatch | null> {
   if (deviceTableCache !== undefined) {
     return deviceTableCache;
   }
 
   try {
     const tables = await loadTableMetadata(prisma);
-    let bestMatch = null;
+    let bestMatch: DeviceTableMatch | null = null;
     let bestScore = -Infinity;
 
     for (const table of tables) {
@@ -273,7 +342,7 @@ async function resolveDeviceTable(prisma) {
       }
     }
 
-    deviceTableCache = bestMatch ?? null;
+    deviceTableCache = bestMatch;
   } catch (error) {
     deviceTableCache = null;
     throw error;
@@ -282,14 +351,14 @@ async function resolveDeviceTable(prisma) {
   return deviceTableCache;
 }
 
-async function resolvePageTable(prisma) {
+async function resolvePageTable(prisma: PrismaClient): Promise<PageTableMatch | null> {
   if (pageTableCache !== undefined) {
     return pageTableCache;
   }
 
   try {
     const tables = await loadTableMetadata(prisma);
-    let bestMatch = null;
+    let bestMatch: PageTableMatch | null = null;
     let bestScore = -Infinity;
 
     for (const table of tables) {
@@ -340,7 +409,7 @@ async function resolvePageTable(prisma) {
       }
     }
 
-    pageTableCache = bestMatch ?? null;
+    pageTableCache = bestMatch;
   } catch (error) {
     pageTableCache = null;
     throw error;
@@ -349,7 +418,7 @@ async function resolvePageTable(prisma) {
   return pageTableCache;
 }
 
-function toNumber(value) {
+function toNumber(value: unknown): number {
   if (value === null || value === undefined) return NaN;
   if (typeof value === "number") return value;
   if (typeof value === "bigint") return Number(value);
@@ -360,27 +429,32 @@ function toNumber(value) {
     return Number.isFinite(parsed) ? parsed : NaN;
   }
   if (typeof value === "object") {
-    if (typeof value.toNumber === "function") {
+    const candidate = value as {
+      toNumber?: unknown;
+      valueOf?: unknown;
+      toString?: unknown;
+    };
+    if (typeof candidate.toNumber === "function") {
       try {
-        return value.toNumber();
+        return Number(candidate.toNumber());
       } catch {
         return NaN;
       }
     }
-    if (typeof value.valueOf === "function") {
-      const raw = value.valueOf();
+    if (typeof candidate.valueOf === "function") {
+      const raw = candidate.valueOf();
       if (typeof raw === "number") return raw;
       if (typeof raw === "bigint") return Number(raw);
     }
-    if (typeof value.toString === "function") {
-      const parsed = Number(value.toString());
+    if (typeof candidate.toString === "function") {
+      const parsed = Number(candidate.toString());
       return Number.isFinite(parsed) ? parsed : NaN;
     }
   }
   return NaN;
 }
 
-function clampNumber(value, min, max) {
+function clampNumber(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {
     return min;
   }
@@ -389,7 +463,7 @@ function clampNumber(value, min, max) {
   return value;
 }
 
-function normalizeDurationToMs(value) {
+function normalizeDurationToMs(value: unknown): number {
   const numeric = toNumber(value);
   if (!Number.isFinite(numeric) || numeric <= 0) {
     return 0;
@@ -403,7 +477,7 @@ function normalizeDurationToMs(value) {
   return Math.round(numeric);
 }
 
-function normalizeDeviceKey(value) {
+function normalizeDeviceKey(value: unknown): string | null {
   if (!value && value !== 0) return null;
   const raw = String(value).trim();
   if (!raw) return null;
@@ -450,7 +524,7 @@ function normalizeDeviceKey(value) {
   return lower.replace(/\s+/g, "_");
 }
 
-function deviceDisplayName(key) {
+function deviceDisplayName(key: string): string {
   switch (key) {
     case "desktop":
       return "Desktop";
@@ -477,7 +551,7 @@ function deviceDisplayName(key) {
   }
 }
 
-function normalizePath(value) {
+function normalizePath(value: unknown): string | null {
   if (!value && value !== 0) return null;
   let raw = String(value).trim();
   if (!raw) return null;
@@ -503,7 +577,7 @@ function normalizePath(value) {
   return raw || "/";
 }
 
-function normalizeScope(value, path) {
+function normalizeScope(value: unknown, path: string | null): "members" | "public" | null {
   if (value && value !== 0) {
     const lower = String(value).trim().toLowerCase();
     if (
@@ -537,20 +611,24 @@ function normalizeScope(value, path) {
   return null;
 }
 
-async function loadDeviceMetricsFromDedicatedView(prisma) {
+async function loadDeviceMetricsFromDedicatedView(
+  prisma: PrismaClient,
+): Promise<DeviceStat[] | null> {
   try {
-    const rows = await prisma.$queryRawUnsafe(
+    const rows = (await prisma.$queryRawUnsafe(
       "SELECT device, sessions, avg_load, share FROM analytics_device_metrics",
-    );
+    )) as readonly Record<string, unknown>[] | null;
     if (!Array.isArray(rows)) {
       return [];
     }
 
-    const buckets = [];
+    const buckets: { key: string; sessions: number; avgLoadMs: number; share: number }[] = [];
     let totalSessions = 0;
 
     for (const row of rows) {
       const deviceKey = normalizeDeviceKey(row?.device ?? row?.DEVICE ?? row?.device_key);
+      if (!deviceKey) continue;
+
       const sessions = Math.max(
         0,
         Math.round(toNumber(row?.sessions ?? row?.SESSIONS ?? row?.count)),
@@ -568,7 +646,7 @@ async function loadDeviceMetricsFromDedicatedView(prisma) {
     return buckets.map((bucket) => ({
       device: deviceDisplayName(bucket.key),
       sessions: bucket.sessions,
-      avgPageLoadMs: Math.max(0, Math.round(bucket.avgLoadMs ?? 0)),
+      avgPageLoadMs: Math.max(0, Math.round(bucket.avgLoadMs)),
       share: clampNumber(
         Number.isFinite(bucket.share) && bucket.share > 0
           ? bucket.share
@@ -588,16 +666,18 @@ async function loadDeviceMetricsFromDedicatedView(prisma) {
   }
 }
 
-async function loadPageMetricsFromDedicatedView(prisma) {
+async function loadPageMetricsFromDedicatedView(
+  prisma: PrismaClient,
+): Promise<PagePerformanceMetricOverride[] | null> {
   try {
-    const rows = await prisma.$queryRawUnsafe(
+    const rows = (await prisma.$queryRawUnsafe(
       "SELECT path, scope, avg_load, lcp, avg_time_on_page, weight FROM analytics_page_metrics",
-    );
+    )) as readonly Record<string, unknown>[] | null;
     if (!Array.isArray(rows)) {
       return [];
     }
 
-    const metrics = [];
+    const metrics: PagePerformanceMetricOverride[] = [];
 
     for (const row of rows) {
       const normalizedPath = normalizePath(row?.path ?? row?.PATH ?? row?.url);
@@ -643,7 +723,7 @@ async function loadPageMetricsFromDedicatedView(prisma) {
   }
 }
 
-export async function loadDeviceBreakdownFromDatabase() {
+export async function loadDeviceBreakdownFromDatabase(): Promise<DeviceStat[] | null> {
   const prisma = getAnalyticsPrisma();
   if (!prisma) {
     return null;
@@ -654,7 +734,7 @@ export async function loadDeviceBreakdownFromDatabase() {
     return dedicated;
   }
 
-  const match = await resolveDeviceTable(prisma).catch((error) => {
+  const match = await resolveDeviceTable(prisma).catch((error: unknown) => {
     console.error("[server-analytics] Failed to resolve device analytics table", error);
     return null;
   });
@@ -673,15 +753,18 @@ export async function loadDeviceBreakdownFromDatabase() {
 
   const query = `SELECT ${selectParts.join(", ")} FROM ${formatTableName(match.schema, match.table)}`;
 
-  let rows;
+  let rows: readonly Record<string, unknown>[] | null;
   try {
-    rows = await prisma.$queryRawUnsafe(query);
+    rows = (await prisma.$queryRawUnsafe(query)) as readonly Record<string, unknown>[] | null;
   } catch (error) {
     console.error("[server-analytics] Failed to load device statistics", error);
     return null;
   }
 
-  const buckets = new Map();
+  const buckets = new Map<
+    string,
+    { key: string; device: string; sessions: number; weightedLoad: number }
+  >();
 
   for (const row of rows ?? []) {
     const deviceKey = normalizeDeviceKey(row.device ?? row.DEVICE ?? row.Device);
@@ -706,6 +789,7 @@ export async function loadDeviceBreakdownFromDatabase() {
       });
     }
     const bucket = buckets.get(deviceKey);
+    if (!bucket) continue;
     bucket.sessions += sessions;
     bucket.weightedLoad += loadMs * sessions;
   }
@@ -739,7 +823,7 @@ export async function loadDeviceBreakdownFromDatabase() {
     .sort((a, b) => b.sessions - a.sessions);
 }
 
-export async function loadPagePerformanceMetrics() {
+export async function loadPagePerformanceMetrics(): Promise<PagePerformanceMetricOverride[]> {
   const prisma = getAnalyticsPrisma();
   if (!prisma) {
     return [];
@@ -750,7 +834,7 @@ export async function loadPagePerformanceMetrics() {
     return dedicated;
   }
 
-  const match = await resolvePageTable(prisma).catch((error) => {
+  const match = await resolvePageTable(prisma).catch((error: unknown) => {
     console.error("[server-analytics] Failed to resolve page analytics table", error);
     return null;
   });
@@ -777,15 +861,27 @@ export async function loadPagePerformanceMetrics() {
 
   const query = `SELECT ${selectParts.join(", ")} FROM ${formatTableName(match.schema, match.table)}`;
 
-  let rows;
+  let rows: readonly Record<string, unknown>[] | null;
   try {
-    rows = await prisma.$queryRawUnsafe(query);
+    rows = (await prisma.$queryRawUnsafe(query)) as readonly Record<string, unknown>[] | null;
   } catch (error) {
     console.error("[server-analytics] Failed to load page performance metrics", error);
     return [];
   }
 
-  const aggregated = new Map();
+  const aggregated = new Map<
+    string,
+    {
+      path: string;
+      scope: "members" | "public" | null;
+      totalWeight: number;
+      totalLoad: number;
+      totalLcp: number;
+      lcpWeight: number;
+      totalTimeOnPageSeconds: number;
+      timeOnPageWeight: number;
+    }
+  >();
 
   for (const row of rows ?? []) {
     const normalizedPath = normalizePath(row.path ?? row.PAGE ?? row.url);
@@ -808,7 +904,7 @@ export async function loadPagePerformanceMetrics() {
       }
     }
 
-    let lcpMs = null;
+    let lcpMs: number | null = null;
     if (match.columns.lcp) {
       const parsedLcp = normalizeDurationToMs(
         row.lcp ?? row.LCP ?? row.lcp_ms ?? row.largest_contentful_paint,
@@ -834,6 +930,7 @@ export async function loadPagePerformanceMetrics() {
     }
 
     const bucket = aggregated.get(key);
+    if (!bucket) continue;
     bucket.totalWeight += weight;
     bucket.totalLoad += loadMs * weight;
     if (lcpMs !== null) {
@@ -841,7 +938,7 @@ export async function loadPagePerformanceMetrics() {
       bucket.lcpWeight += weight;
     }
 
-    let timeOnPageSeconds = null;
+    let timeOnPageSeconds: number | null = null;
     if (match.columns.timeOnPage) {
       const parsedTime = normalizeDurationToMs(
         row.time_on_page ?? row.TIME_ON_PAGE ?? row.avg_time_on_page ?? row.timeOnPage,
@@ -857,7 +954,7 @@ export async function loadPagePerformanceMetrics() {
     }
   }
 
-  const result = [];
+  const result: PagePerformanceMetricOverride[] = [];
 
   for (const bucket of aggregated.values()) {
     if (!Number.isFinite(bucket.totalWeight) || bucket.totalWeight <= 0) continue;
@@ -879,16 +976,19 @@ export async function loadPagePerformanceMetrics() {
   return result;
 }
 
-export function mergeDeviceBreakdown(base, overrides) {
-  const result = [];
-  const overrideMap = new Map();
-  const orderedOverrides = [];
+export function mergeDeviceBreakdown(
+  base: DeviceStat[],
+  overrides?: DeviceStat[] | null,
+): DeviceStat[] {
+  const result: DeviceStat[] = [];
+  const overrideMap = new Map<string, DeviceStat>();
+  const orderedOverrides: { key: string; data: DeviceStat }[] = [];
 
   if (Array.isArray(overrides)) {
     for (const entry of overrides) {
       const key = normalizeDeviceKey(entry?.device);
       if (!key) continue;
-      const normalized = {
+      const normalized: DeviceStat = {
         device: deviceDisplayName(key),
         sessions: Math.max(0, Math.round(Number(entry.sessions ?? 0))),
         avgPageLoadMs: Math.max(0, Math.round(Number(entry.avgPageLoadMs ?? 0))),
@@ -899,7 +999,7 @@ export function mergeDeviceBreakdown(base, overrides) {
     }
   }
 
-  const usedKeys = new Set();
+  const usedKeys = new Set<string>();
 
   if (Array.isArray(base)) {
     for (const entry of base) {
@@ -908,8 +1008,8 @@ export function mergeDeviceBreakdown(base, overrides) {
         result.push({ ...entry });
         continue;
       }
-      if (overrideMap.has(key)) {
-        const override = overrideMap.get(key);
+      const override = overrideMap.get(key);
+      if (override) {
         result.push({ ...override });
         usedKeys.add(key);
       } else {
@@ -951,8 +1051,12 @@ export function mergeDeviceBreakdown(base, overrides) {
   }));
 }
 
-export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
-  const normalizedOverrides = new Map();
+export function applyPagePerformanceMetrics(
+  baseEntries: PagePerformanceEntry[],
+  overrides: PagePerformanceMetricOverride[] | null | undefined,
+  scope: "public" | "members",
+): PagePerformanceEntry[] {
+  const normalizedOverrides = new Map<string, Map<string, PagePerformanceMetricOverride>>();
 
   if (Array.isArray(overrides)) {
     for (const entry of overrides) {
@@ -964,7 +1068,7 @@ export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
       if (!normalizedOverrides.has(normalizedPath)) {
         normalizedOverrides.set(normalizedPath, new Map());
       }
-      normalizedOverrides.get(normalizedPath).set(scopeKey, {
+      normalizedOverrides.get(normalizedPath)?.set(scopeKey, {
         path: normalizedPath,
         avgPageLoadMs: Math.max(
           0,
@@ -982,7 +1086,7 @@ export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
     }
   }
 
-  const result = [];
+  const result: PagePerformanceEntry[] = [];
 
   for (const entry of baseEntries ?? []) {
     const normalizedPath = normalizePath(entry?.path);
@@ -998,7 +1102,7 @@ export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
       continue;
     }
 
-    const updates = {};
+    const updates: Partial<PagePerformanceEntry> = {};
     if (Number.isFinite(override.avgPageLoadMs) && override.avgPageLoadMs > 0) {
       updates.loadTimeMs = override.avgPageLoadMs;
     }
@@ -1023,7 +1127,7 @@ export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
   return result;
 }
 
-export function resetAnalyticsMetadataCache() {
+export function resetAnalyticsMetadataCache(): void {
   metadataCache.tables = null;
   metadataCache.promise = null;
   deviceTableCache = undefined;
