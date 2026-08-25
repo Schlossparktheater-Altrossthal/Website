@@ -13,6 +13,9 @@ export const ROLE_LABELS: Record<DepartmentMembershipRole, string> = {
   guest: "Gast",
 };
 
+/** Rolle, die ein Mitglied zur Leitung eines Gewerks macht. */
+export const DEPARTMENT_LEAD_ROLE = "lead" as const;
+
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
 export const ROLE_BADGE_VARIANTS: Record<DepartmentMembershipRole, BadgeVariant> = {

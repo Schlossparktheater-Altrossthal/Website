@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
+import { DEPARTMENT_LEAD_ROLE } from "./utils";
 import {
   Building2Icon,
   CalendarDaysIcon,
@@ -42,7 +43,9 @@ export default async function MeineGewerkePage() {
   }
 
   if (!isBoard) {
-    const leadCount = await prisma.departmentMembership.count({ where: { userId, role: "lead" } });
+    const leadCount = await prisma.departmentMembership.count({
+      where: { userId, role: DEPARTMENT_LEAD_ROLE },
+    });
     if (leadCount === 0) {
       return (
         <div className="space-y-6">
