@@ -35,6 +35,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Type-Casts wie `as never`, `as any` oder `as unknown as ...` sind verboten. Korrekte Typen und Guards verwenden.
 - Vor neuen Hilfsfunktionen mit `rg` suchen ob eine passende bereits existiert. Keine Duplikate anlegen.
 - Keine leeren catch-Blöcke. Fehler immer loggen oder explizit weitergeben.
+- Fehler lokal mit `console.error`, Warnungen mit `console.warn` loggen – kein `console.log` außerhalb von `src/lib/logger`. Server-seitige strukturierte Log-Events über `createLogger` aus `@/lib/logger` (persistiert in der DB).
 - API-Routes geben Fehler immer als `{ error: string }` mit passendem HTTP-Statuscode zurück.
 
 ## Daten, Backend & Realtime
